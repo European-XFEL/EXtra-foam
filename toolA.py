@@ -36,7 +36,8 @@ def h5close(h5_file):
 def main(inDirName):
         # inDirName ='/Users/fangohr/Desktop/data/r0079/'\
 
-    darkgainfilepath = '/home/khakhuli/AzimuthalIntegration/'
+    #darkgainfilepath = '/home/khakhuli/AzimuthalIntegration/'
+    darkgainfilepath = '/Users/fangohr/Desktop/data/DarkGain/'
     pi = math.pi;
     dist = 160*1e-3 # m
     center_X = 580
@@ -295,4 +296,6 @@ if __name__ == "__main__":
         print("Provide path to data files as argument")
         sys.exit(1)
     data_location = sys.argv[1]
+    if not data_location.endswith('/'):
+        data_location = data_location + '/'
     main(data_location)
