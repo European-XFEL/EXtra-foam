@@ -36,6 +36,7 @@ def h5close(h5_file):
 def main(inDirName):
         # inDirName ='/Users/fangohr/Desktop/data/r0079/'\
 
+    darkgainfilepath = '/home/khakhuli/AzimuthalIntegration/'
     pi = math.pi;
     dist = 160*1e-3 # m
     center_X = 580
@@ -115,11 +116,11 @@ def main(inDirName):
                 #fname='/gpfs/p900002/raw/r{0:04}/'\
                 fname=inDirName + \
                 'RAW-R{0:04}-LPD{1:02}-S{2:05}.h5'.format(runNum, i, setID)
-                fname_dark100='/home/khakhuli/AzimuthalIntegration/'+\
+                fname_dark100=darkgainfilepath+\
                 'DarkGain100_LPD{:02}.h5'.format(i)
-                fname_dark10='/home/khakhuli/AzimuthalIntegration/'+\
+                fname_dark10=darkgainfilepath+\
                 'DarkGain10_LPD{:02}.h5'.format(i)
-                fname_dark1='/home/khakhuli/AzimuthalIntegration/'+\
+                fname_dark1=darkgainfilepath+\
                 'DarkGain1_LPD{:02}.h5'.format(i)
 
                 h5_file = h5open(fname)
