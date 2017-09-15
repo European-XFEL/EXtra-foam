@@ -120,6 +120,7 @@ with h5py.File(foutname, 'w') as outFile:
 
             h5_file = h5open(fname)
             if h5_file!=0:
+                print("Opened file {}".format(fname))
                 h5path_n2Dimages = '/INSTRUMENT/FXE_DET_LPD1M-1/DET/'+str(i)+ \
                 'CH0:xtdf/image/data'
                 image_stack = h5_file[h5path_n2Dimages]
@@ -154,6 +155,7 @@ with h5py.File(foutname, 'w') as outFile:
                     print("Failed to find dark gain files.")
 
             else:
+                print("Couldn't open {}".format(fname))
                 CurrIm = np.zeros([SM_unit,SM_unit],dtype='uint16')
             FullIm[dy_map[i]:dy_map[i]+SM_unit,SM_unit*4-dx_map[i]-SM_unit:SM_unit*4-dx_map[i]] \
             =    np.rot90(CurrIm,2)
