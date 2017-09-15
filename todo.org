@@ -1,0 +1,35 @@
+* TODO[2/8]
+
+- [ ] tool A to integrate azimuthally and create hdf5 file -> new file
+  - [ ] one file per set (for now)
+
+- [ ] tool B:
+  - [ ] filename trainID pulseID -> shows corrected and uncorrected data
+  - [ ] filename trainID -> shows corrected and uncorrected data for all pulses
+
+- [X] put in repository (or take backup at least)
+
+- [ ] 'deploy and demo’; aim to do today at 15:00. Cyril should be present.
+
+- [X] hand over to Cyril and Hans
+
+- [ ] extend tool A to include some statistics:
+  - for given set and train ID, compute averages for each value of Q
+    across the pulses
+
+- [ ] factor out re-usable code
+
+- [ ] tool C:
+  - [ ] filenameOFF filenameON trainID pulseID -> computes difference and shows in plot
+  - [ ] filenameOFF filenameON trainID -> computes difference and shows in plot for all pulses
+
+Test data files in /gpfs/exfel/data/group/cas/tmp/project-dmitry
+
+
+----------------------
+
+* TODO 2 [/]
+
+- [ ] Connect to online stream
+- [ ] connect to Jupyter notebook?
+- [ ] make faster?
