@@ -40,3 +40,7 @@ def save(q, I, I_corr, basename, header):
     np.savetxt(filename, q,
                header=header)
     print("Written file {}".format(filename))
+
+
+def read(filename):
+    return np.loadtxt(filename)

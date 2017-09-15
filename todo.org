@@ -21,8 +21,8 @@
   - for given set and train ID, compute averages for each value of Q
     across the pulses
 
-- [ ] tool C:
-  - [ ] filenameOFF filenameON trainID pulseID -> computes difference and shows in plot
+- [-] tool C:
+  - [X] filenameOFF filenameON trainID pulseID -> computes difference and shows in plot
   - [ ] filenameOFF filenameON trainID -> computes difference and shows in plot for all pulses
 
 - [ ] factor out re-usable code
