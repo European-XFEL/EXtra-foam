@@ -151,7 +151,7 @@ with h5py.File(foutname, 'w') as outFile:
 
                     CorrIm = (CurrIm_np - DarkGain1)*100
                     CurrIm[np.where(CurrIm_np>8192)] = CorrIm[np.where(CurrIm_np>8192)]
-                except:
+                except TypeError:
                     print("Failed to find dark gain files.")
 
             else:
