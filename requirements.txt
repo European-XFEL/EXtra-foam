@@ -1,0 +1,3 @@
+pip install pyFAI h5py matplotlib ipython
+
+# On Mac with Anaconda, need to install matplotlib from conda, not clear why.

@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from IPython.display import display, Image
 #from numpy import *
 import scipy.misc
-from PIL import Image
+# from PIL import Image
 
 def h5open(fname):
     try:
@@ -51,7 +51,7 @@ HoleSize_pixels = np.abs(np.int(np.ceil(HoleSize/pixel_size)))
 Q_offset = 3;
 
 SM_unit = 256
-dx_map = [0, 0, SM_unit, SM_unit, 0, 0, SM_unit, SM_unit, SM_unit*2, SM_unit*2, 
+dx_map = [0, 0, SM_unit, SM_unit, 0, 0, SM_unit, SM_unit, SM_unit*2, SM_unit*2,
           SM_unit*3, SM_unit*3, SM_unit*2, SM_unit*2, SM_unit*3, SM_unit*3,]
 dy_map = [0, SM_unit, SM_unit, 0, SM_unit*2, SM_unit*3, SM_unit*3, SM_unit*2,
           SM_unit*2, SM_unit*3, SM_unit*3, SM_unit*2, 0, SM_unit, SM_unit, 0]
@@ -103,7 +103,7 @@ with h5py.File(foutname, 'w') as outFile:
 #outFile = h5py.File(foutname, 'w')
   # loop over blocks (data set files)
   for setID in setIDs:
-    #loop over pulses (or memory cells)   
+    #loop over pulses (or memory cells)
     for pulseID in pulseIDs:
         #loop over the supermodules to assemble images
         read_startTime = time.time()
@@ -135,75 +135,75 @@ with h5py.File(foutname, 'w') as outFile:
                     h5dark_file = h5open(fname_dark10)
                     DarkGain10 = np.array(h5dark_file['DarkImages'])[pulseID][:][:]
                     h5close(h5dark_file)
-                
+
                     h5dark_file = h5open(fname_dark100)
                     DarkGain100 = np.array(h5dark_file['DarkImages'])[pulseID][:][:]
                     h5close(h5dark_file)
 
                     CorrIm = CurrIm_np - DarkGain100
                     CurrIm[np.where(CurrIm_np<=4096)] = CorrIm[np.where(CurrIm_np<=4096)]
-                
+
                     CorrIm = (CurrIm_np - DarkGain10)*10
-                
+
                     CurrIm[np.where(np.logical_and(CurrIm_np<=8192,CurrIm_np>4096))] \
                     = CorrIm[np.where(np.logical_and(CurrIm_np<=8192,CurrIm_np>4096))]
-                
+
                     CorrIm = (CurrIm_np - DarkGain1)*100
                     CurrIm[np.where(CurrIm_np>8192)] = CorrIm[np.where(CurrIm_np>8192)]
                 except:
-                    print("Failed to find dark gain files.")                
-                
+                    print("Failed to find dark gain files.")
+
             else:
                 CurrIm = np.zeros([SM_unit,SM_unit],dtype='uint16')
             FullIm[dy_map[i]:dy_map[i]+SM_unit,SM_unit*4-dx_map[i]-SM_unit:SM_unit*4-dx_map[i]] \
             =    np.rot90(CurrIm,2)
-            
+
             if HoleSize>0:
                 CombFullIm[0:SM_unit*2,HoleSize_pixels:HoleSize_pixels+SM_unit*2]=\
                 FullIm[0:SM_unit*2,0:SM_unit*2]
-                #           
+                #
                 CombFullIm[SM_unit*2+HoleSize_pixels:SM_unit*4+HoleSize_pixels,SM_unit*2:SM_unit*4]=\
                 FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
-                #           
+                #
                 CombFullIm[HoleSize_pixels:SM_unit*2+HoleSize_pixels,HoleSize_pixels+SM_unit*2:HoleSize_pixels+SM_unit*4]=\
                 FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
-                
+
                 CombFullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]=\
                 FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
             else:
                 #Q1
                 CombFullIm[0:SM_unit*2,SM_unit*2+Q_offset:SM_unit*4+Q_offset]=\
-                FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]    
+                FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
                 #Q2:
                 CombFullIm[SM_unit*2+Q_offset:SM_unit*4+Q_offset,SM_unit*2+HoleSize_pixels+Q_offset:SM_unit*4+HoleSize_pixels+Q_offset]=\
                 FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
-                #Q3           
+                #Q3
                 CombFullIm[SM_unit*2+HoleSize_pixels+Q_offset:SM_unit*4+HoleSize_pixels+Q_offset,HoleSize_pixels:SM_unit*2+HoleSize_pixels]=\
                 FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
                 #Q4:
                 CombFullIm[HoleSize_pixels:HoleSize_pixels+SM_unit*2,0:SM_unit*2]=\
-                FullIm[0:SM_unit*2,0:SM_unit*2]   
-        
+                FullIm[0:SM_unit*2,0:SM_unit*2]
+
 
         print('Full Image Set #'+str(setID+1)+ '; Pulse #'+str(pulseID+1)+ \
-              ' prepared in '+ str(math.ceil((time.time()-read_startTime)*1e3)) +' ms') 
+              ' prepared in '+ str(math.ceil((time.time()-read_startTime)*1e3)) +' ms')
         """plt.figure(figsize=(10,10))
-        #plt.imshow(FullIm) 
-        plt.imshow(FullIm,vmin=-10, vmax=8000) 
+        #plt.imshow(FullIm)
+        plt.imshow(FullIm,vmin=-10, vmax=8000)
         plt.colorbar()
         plt.show()
 
-        #Final assembled image is ready, we display and start pyFAI integartion 
+        #Final assembled image is ready, we display and start pyFAI integartion
         plt.figure(figsize=(10,10))
-        plt.imshow(CombFullIm,vmin=-10, vmax=7000) 
+        plt.imshow(CombFullIm,vmin=-10, vmax=7000)
         plt.colorbar()
         plt.show()"""
-                
-        int_startTime = time.time()    
-   
+
+        int_startTime = time.time()
+
         cm_correct = CombFullIm
         mask_data = np.zeros(cm_correct.shape)
-        
+
         #cm_correct = CurrIm;
         Q,i_unc = ai.integrate1d(cm_correct,
                                   npt,method="lut",
@@ -212,11 +212,11 @@ with h5py.File(foutname, 'w') as outFile:
                                   correctSolidAngle=True,
                                   polarization_factor=1,
                                   unit="q_A^-1")
-        
-        I_unc = i_unc[:,None]                         
+
+        I_unc = i_unc[:,None]
         integrationTime = ((time.time()-int_startTime)*1000)
         print('Azimuthal integration of image took', str(math.ceil(integrationTime)), ' ms')
-    
+
         q=Q[:,None]
         tth = np.rad2deg(2*np.arcsin(q*wavelength_lambda*1e10/(4*pi))) # 2-theta scattering angle
         T_Si = (1-np.exp(-muSi*tSi))/(1-np.exp(-muSi*tSi/np.cos(np.deg2rad(tth)))) # silicon sensor absorption correction
@@ -224,9 +224,9 @@ with h5py.File(foutname, 'w') as outFile:
         Ts = Ts/Ts[0] # sample absorption correction in isotropic case (not to do here if done on the image before integration)
         Qnorm=Q[np.where(np.logical_and(Q>=Qnorm_min,Q<=Qnorm_max))]
         # normalizing:
-        
+
         N = np.trapz(i_unc[np.where(np.logical_and(Q>=Qnorm_min,Q<=Qnorm_max))],x=Qnorm)
-        # appying the corrections        
+        # appying the corrections
         I_cor = I_unc*T_Si#/Ts
 
         # correct the shape - make 1-d
@@ -272,4 +272,3 @@ with h5py.File(foutname, 'w') as outFile:
     outFile[statsPath + '/MEAN'] = np.mean(data.value, axis=0)
     outFile[statsPath + '/MEDIAN'] = np.median(data, axis=0)
     outFile[statsPath + '/STD'] = np.std(data, axis=0)
-
