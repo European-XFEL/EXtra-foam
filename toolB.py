@@ -23,7 +23,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def read(filename, trainId, pulseId):
+def readh5(filename, trainId, pulseId):
     """Can be done more effectively by using h5 index
     rather than converting whole data set into array"""
     f = h5py.File(filename, 'r')
@@ -68,7 +68,7 @@ def main(h5file, trainId, pulseId, outputfilename):
     print("trainId = {}".format(trainId))
     print("pulseId = {}".format(pulseId))
     print("outputfilename = {}".format(outputfilename))
-    q, I, I_corr = read(h5file, trainId, pulseId)
+    q, I, I_corr = readh5(h5file, trainId, pulseId)
     print (q.shape, I.shape, I_corr.shape)
 
     summary = "h5file={}, trainId={}, pulseID={}".format(
