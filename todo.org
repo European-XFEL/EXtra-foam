@@ -1,4 +1,4 @@
-* TODO[2/8]
+* TODO[3/9]
 
 - [ ] tool A to integrate azimuthally and create hdf5 file -> new file
   - [ ] one file per set (for now)
@@ -22,6 +22,8 @@
 - [ ] tool C:
   - [ ] filenameOFF filenameON trainID pulseID -> computes difference and shows in plot
   - [ ] filenameOFF filenameON trainID -> computes difference and shows in plot for all pulses
+
+- [X] take input location of files from command line
 
 Test data files in /gpfs/exfel/data/group/cas/tmp/project-dmitry
 
