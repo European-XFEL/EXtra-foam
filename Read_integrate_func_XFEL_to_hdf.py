@@ -56,7 +56,7 @@ dx_map = [0, 0, SM_unit, SM_unit, 0, 0, SM_unit, SM_unit, SM_unit*2, SM_unit*2,
 dy_map = [0, SM_unit, SM_unit, 0, SM_unit*2, SM_unit*3, SM_unit*3, SM_unit*2,
           SM_unit*2, SM_unit*3, SM_unit*3, SM_unit*2, 0, SM_unit, SM_unit, 0]
 
-FullIm = np.zeros([SM_unit*4,SM_unit*4],dtype='uint16')
+FullIm = np.zeros([SM_unit*4, SM_unit*4], dtype='uint16')
 CombFullIm = np.zeros([SM_unit*4+HoleSize_pixels+Q_offset,SM_unit*4+HoleSize_pixels+Q_offset],dtype='uint16')
 
 # setting the integrator
@@ -82,9 +82,9 @@ runNum = 79
 #TODO Q: DO you prefer upper bounds inclusive or exclusive? Currently inclusive.
 setdID_lower = 0
 sedID_upper = setdID_lower
-pulseIDs = range(0,3)
+pulseIDs = range(0, 3)
 alwaysIndexOverSets = False
-inDirName ='/gpfs/exfel/data/group/cas/waxint/r{0:04}/'\
+inDirName ='/Users/fangohr/Desktop/data/r0079/'\
 
 indexOverSets = alwaysIndexOverSets or sedID_upper != setdID_lower
 setIDs = range(setdID_lower, sedID_upper + 1)
@@ -97,7 +97,7 @@ elif setdID_lower == sedID_upper:
 else:
     foutname='INT-R{:04}-S{:05}_S{:05}.h5'.format(runNum, setdID_lower, sedID_upper)
 
-print(foutname)
+print("Output file name is {}".format(foutname))
 
 with h5py.File(foutname, 'w') as outFile:
 #outFile = h5py.File(foutname, 'w')
@@ -107,7 +107,7 @@ with h5py.File(foutname, 'w') as outFile:
     for pulseID in pulseIDs:
         #loop over the supermodules to assemble images
         read_startTime = time.time()
-        for i in range(0,16):
+        for i in range(0, 16):
             #fname='/gpfs/p900002/raw/r{0:04}/'\
             fname=inDirName + \
             'RAW-R{0:04}-LPD{1:02}-S{2:05}.h5'.format(runNum, i, setID)
@@ -119,13 +119,13 @@ with h5py.File(foutname, 'w') as outFile:
             'DarkGain1_LPD{:02}.h5'.format(i)
 
             h5_file = h5open(fname)
-            if h5_file!=0:
+            if h5_file != 0:
                 print("Opened file {}".format(fname))
                 h5path_n2Dimages = '/INSTRUMENT/FXE_DET_LPD1M-1/DET/'+str(i)+ \
                 'CH0:xtdf/image/data'
                 image_stack = h5_file[h5path_n2Dimages]
-                CurrIm = np.array(image_stack[pulseID][0][:][:],dtype='uint16')
-                CurrIm_np = np.array(CurrIm,dtype='uint16')
+                CurrIm = np.array(image_stack[pulseID][0][:][:], dtype='uint16')  # why uint16?
+                CurrIm_np = np.array(CurrIm, dtype='uint16') # unnecessary
 
                 # Don't have access to these so default values used
                 try:
@@ -156,35 +156,40 @@ with h5py.File(foutname, 'w') as outFile:
 
             else:
                 print("Couldn't open {}".format(fname))
-                CurrIm = np.zeros([SM_unit,SM_unit],dtype='uint16')
-            FullIm[dy_map[i]:dy_map[i]+SM_unit,SM_unit*4-dx_map[i]-SM_unit:SM_unit*4-dx_map[i]] \
-            =    np.rot90(CurrIm,2)
+                CurrIm = np.zeros([SM_unit, SM_unit], dtype='uint16')
 
-            if HoleSize>0:
+            FullIm[dy_map[i]:dy_map[i]+SM_unit, SM_unit*4-dx_map[i]-SM_unit:SM_unit*4-dx_map[i]] \
+                =    np.rot90(CurrIm, 2)
+
+            if HoleSize > 0:
                 CombFullIm[0:SM_unit*2,HoleSize_pixels:HoleSize_pixels+SM_unit*2]=\
-                FullIm[0:SM_unit*2,0:SM_unit*2]
+                    FullIm[0:SM_unit*2,0:SM_unit*2]
                 #
                 CombFullIm[SM_unit*2+HoleSize_pixels:SM_unit*4+HoleSize_pixels,SM_unit*2:SM_unit*4]=\
-                FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
+                    FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
                 #
                 CombFullIm[HoleSize_pixels:SM_unit*2+HoleSize_pixels,HoleSize_pixels+SM_unit*2:HoleSize_pixels+SM_unit*4]=\
-                FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
+                    FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
 
                 CombFullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]=\
-                FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
+                    FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
             else:
-                #Q1
+                # Q1
                 CombFullIm[0:SM_unit*2,SM_unit*2+Q_offset:SM_unit*4+Q_offset]=\
-                FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
-                #Q2:
-                CombFullIm[SM_unit*2+Q_offset:SM_unit*4+Q_offset,SM_unit*2+HoleSize_pixels+Q_offset:SM_unit*4+HoleSize_pixels+Q_offset]=\
-                FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
-                #Q3
-                CombFullIm[SM_unit*2+HoleSize_pixels+Q_offset:SM_unit*4+HoleSize_pixels+Q_offset,HoleSize_pixels:SM_unit*2+HoleSize_pixels]=\
-                FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
-                #Q4:
+                    FullIm[0:SM_unit*2,SM_unit*2:SM_unit*4]
+                # Q2:
+                CombFullIm[SM_unit*2+Q_offset:SM_unit*4+Q_offset,
+                           SM_unit*2+HoleSize_pixels+
+                           Q_offset:SM_unit*4+HoleSize_pixels+Q_offset]=\
+                    FullIm[SM_unit*2:SM_unit*4,SM_unit*2:SM_unit*4]
+
+                # Q3
+                CombFullIm[SM_unit*2+HoleSize_pixels+Q_offset:SM_unit*4+HoleSize_pixels+Q_offset,
+                           HoleSize_pixels:SM_unit*2+HoleSize_pixels]=\
+                    FullIm[SM_unit*2:SM_unit*4,0:SM_unit*2]
+                # Q4:
                 CombFullIm[HoleSize_pixels:HoleSize_pixels+SM_unit*2,0:SM_unit*2]=\
-                FullIm[0:SM_unit*2,0:SM_unit*2]
+                    FullIm[0:SM_unit*2,0:SM_unit*2]
 
 
         print('Full Image Set #'+str(setID+1)+ '; Pulse #'+str(pulseID+1)+ \
@@ -207,8 +212,8 @@ with h5py.File(foutname, 'w') as outFile:
         mask_data = np.zeros(cm_correct.shape)
 
         #cm_correct = CurrIm;
-        Q,i_unc = ai.integrate1d(cm_correct,
-                                  npt,method="lut",
+        Q, i_unc = ai.integrate1d(cm_correct,
+                                  npt, method="lut",
                                   radial_range = [0,3],
                                   mask=mask_data,
                                   correctSolidAngle=True,
@@ -219,7 +224,7 @@ with h5py.File(foutname, 'w') as outFile:
         integrationTime = ((time.time()-int_startTime)*1000)
         print('Azimuthal integration of image took', str(math.ceil(integrationTime)), ' ms')
 
-        q=Q[:,None]
+        q = Q[:,None]
         tth = np.rad2deg(2*np.arcsin(q*wavelength_lambda*1e10/(4*pi))) # 2-theta scattering angle
         T_Si = (1-np.exp(-muSi*tSi))/(1-np.exp(-muSi*tSi/np.cos(np.deg2rad(tth)))) # silicon sensor absorption correction
         Ts = 1/(mus*ts)*np.cos(np.deg2rad(tth))/(1-np.cos(np.deg2rad(tth)))*(np.exp(-mus*ts)-np.exp(-mus*ts/np.cos(np.deg2rad(tth))))
@@ -229,18 +234,19 @@ with h5py.File(foutname, 'w') as outFile:
 
         N = np.trapz(i_unc[np.where(np.logical_and(Q>=Qnorm_min,Q<=Qnorm_max))],x=Qnorm)
         # appying the corrections
-        I_cor = I_unc*T_Si#/Ts
+        I_cor = I_unc*T_Si  # /Ts
 
         # correct the shape - make 1-d
-        q.shape=(q.shape[0],)
-        I_cor.shape=(I_cor.shape[0],)
+        q.shape = (q.shape[0],)
+        I_cor.shape = (I_cor.shape[0],)
 
         """plt.figure(20)
         plt.plot(q,I_cor)
         plt.show()"""
 
-        dataPath = 'DATA'
+        DATAPATH= 'DATA'
         if indexOverSets:
+            # process a set of input files and put all output into one h5 file
             if firstTime:
                 firstTime = False
                 dims = (len(setIDs), len(pulseIDs), len(q))
@@ -251,6 +257,7 @@ with h5py.File(foutname, 'w') as outFile:
             ds_cor[setID, pulseID] = I_cor
             ds_unc[setID, pulseID] = i_unc
         else:
+            # process a set of N input files and put  output into N h5 files (preferred)
             if firstTime:
                 firstTime = False
                 dims = (len(pulseIDs), len(q))
