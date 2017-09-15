@@ -1,4 +1,4 @@
-* TODO[5/9]
+* TODO[5/11]
 
 - [X] tool A to integrate azimuthally and create hdf5 file -> new file
   - [X] one file per set (for now)
@@ -7,8 +7,8 @@
 - [ ] Add trainID to output file
 - [ ] Add pulseID to output file
 
-- [ ] tool B:
-  - [ ] filename trainID pulseID -> shows corrected and uncorrected data
+- [-] tool B:
+  - [X] filename trainID pulseID -> shows corrected and uncorrected data (index missing)
   - [ ] filename trainID -> shows corrected and uncorrected data for all pulses
 
 - [X] put in repository (or take backup at least)
