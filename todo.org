@@ -1,4 +1,4 @@
-* TODO[3/9]
+* TODO[4/9]
 
 - [ ] tool A to integrate azimuthally and create hdf5 file -> new file
   - [ ] one file per set (for now)
@@ -13,7 +13,7 @@
 
 - [X] hand over to Cyril and Hans
 
-- [ ] extend tool A to include some statistics:
+- [X] extend tool A to include some statistics:
   - for given set and train ID, compute averages for each value of Q
     across the pulses
 

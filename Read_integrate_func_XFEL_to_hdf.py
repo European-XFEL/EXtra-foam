@@ -272,19 +272,21 @@ def main(inDirName):
                 ds_cor[pulseID] = I_cor
                 ds_unc[pulseID] = i_unc
 
-      #statsPath = 'DATA/STATS/I_CORRECTED'
-      #dataPath = 'DATA/I_CORRECTED'
-      #data = outFile[dataPath]
-      #if indexOverSets:
-      #  pass
-      #  # TODO do we aggregate over just pulse or pulses and sets?
-      #  outFile[statsPath + '/MEAN'] = np.mean(data.value, axis=(0,1))
-      #  outFile[statsPath + '/MEDIAN'] = np.median(data, axis=(0,1))
-      #  outFile[statsPath + '/STD'] = np.std(data, axis=(0,1))
-      #else:
-      #  outFile[statsPath + '/MEAN'] = np.mean(data.value, axis=0)
-      #  outFile[statsPath + '/MEDIAN'] = np.median(data, axis=0)
-      #  outFile[statsPath + '/STD'] = np.std(data, axis=0)
+        # now that we have procesed all pulses for this set, compute
+        # some stats over the files
+        statsPath = 'DATA/STATS/I_CORRECTED'
+        dataPath = 'DATA/I_CORRECTED'
+        data = outFile[dataPath]
+        if indexOverSets:
+          pass
+          # TODO do we aggregate over just pulse or pulses and sets?
+          outFile[statsPath + '/MEAN'] = np.mean(data.value, axis=(0,1))
+          outFile[statsPath + '/MEDIAN'] = np.median(data, axis=(0,1))
+          outFile[statsPath + '/STD'] = np.std(data, axis=(0,1))
+        else:
+          outFile[statsPath + '/MEAN'] = np.mean(data.value, axis=0)
+          outFile[statsPath + '/MEDIAN'] = np.median(data, axis=0)
+          outFile[statsPath + '/STD'] = np.std(data, axis=0)
 
 
 if __name__ == "__main__":
