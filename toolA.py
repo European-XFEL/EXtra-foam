@@ -36,8 +36,10 @@ def h5close(h5_file):
 def main(inDirName):
         # inDirName ='/Users/fangohr/Desktop/data/r0079/'\
 
+    #darkgainfilepath = '/home/danilevc/sources/azimuthal-integration/DarkGain'
     #darkgainfilepath = '/home/khakhuli/AzimuthalIntegration/'
     darkgainfilepath = '/Users/fangohr/Desktop/data/DarkGain/'
+
     pi = math.pi;
     dist = 160*1e-3 # m
     center_X = 580
@@ -129,9 +131,17 @@ def main(inDirName):
                     print("Opened file {}".format(fname))
                     h5path_n2Dimages = '/INSTRUMENT/FXE_DET_LPD1M-1/DET/'+str(i)+ \
                     'CH0:xtdf/image/data'
+                    pulse_path = ('/INSTRUMENT/FXE_DET_LPD1M-1/DET/' + str(i) +
+                                  'CH0:xtdf/image/pulseId')
+                    train_path = ('/INSTRUMENT/FXE_DET_LPD1M-1/DET/' + str(i) +
+                                  'CH0:xtdf/image/trainId')
+
                     image_stack = h5_file[h5path_n2Dimages]
                     CurrIm = np.array(image_stack[pulseID][0][:][:], dtype='uint16')  # why uint16?
                     CurrIm_np = np.array(CurrIm, dtype='uint16') # unnecessary
+
+                    current_pulse = pulse_path[pulseID]
+                    current_train = train_path[pulseID]
 
                     # Don't have access to these so default values used
                     try:
@@ -259,9 +269,13 @@ def main(inDirName):
                     ds = outFile.create_dataset(dataPath + '/Q', dims)
                     ds_cor = outFile.create_dataset(dataPath + '/I_CORRECTED', dims)
                     ds_unc = outFile.create_dataset(dataPath + '/I_UNCORRECTED', dims)
+                    ds_pulse = outFile.create_dataset(dataPath + '/PULSE', 1)
+                    ds_train = outFile.create_dataset(dataPath + '/TRAIN', 1)
                 ds[setID, pulseID] = q
                 ds_cor[setID, pulseID] = I_cor
                 ds_unc[setID, pulseID] = i_unc
+                ds_pulse[pulseID] = current_pulse
+                ds_train[pulseID] = current_train
             else:
                 # process a set of N input files and put  output into N h5 files (preferred)
                 if firstTime:
@@ -270,9 +284,13 @@ def main(inDirName):
                     ds = outFile.create_dataset(dataPath + '/Q', dims)
                     ds_cor = outFile.create_dataset(dataPath + '/I_CORRECTED', dims)
                     ds_unc = outFile.create_dataset(dataPath + '/I_UNCORRECTED', dims)
+                    ds_pulse = outFile.create_dataset(dataPath + '/PULSE', 1)
+                    ds_train = outFile.create_dataset(dataPath + '/TRAIN', 1)
                 ds[pulseID] = q
                 ds_cor[pulseID] = I_cor
                 ds_unc[pulseID] = i_unc
+                ds_pulse[pulseID] = current_pulse
+                ds_train[pulseID] = current_train
 
         # now that we have procesed all pulses for this set, compute
         # some stats over the files
