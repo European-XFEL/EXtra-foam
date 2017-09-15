@@ -109,7 +109,7 @@ with h5py.File(foutname, 'w') as outFile:
         read_startTime = time.time()
         for i in range(0,16):
             #fname='/gpfs/p900002/raw/r{0:04}/'\
-            fname='/gpfs/exfel/data/group/cas/waxint/r{0:04}/'\
+            fname=inDirName + \
             'RAW-R{0:04}-LPD{1:02}-S{2:05}.h5'.format(runNum, i, setID)
             fname_dark100='/home/khakhuli/AzimuthalIntegration/'+\
             'DarkGain100_LPD{:02}.h5'.format(i)
