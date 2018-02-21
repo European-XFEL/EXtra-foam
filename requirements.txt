@@ -1,3 +1,4 @@
-pip install pyFAI h5py matplotlib ipython
-
-# On Mac with Anaconda, need to install matplotlib from conda, not clear why.
+git+https://github.com/European-XFEL/h5tools-py.git
+zmq
+msgpack
+msgpack_numpy
