@@ -1,2 +1,3 @@
 .ipynb_checkpoints
-INT-R0079-S00000.h5
+*.h5
+__pycache__/
