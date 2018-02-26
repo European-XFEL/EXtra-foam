@@ -1,5 +1,7 @@
 from collections import deque
 from functools import partial
+import msgpack
+import msgpack_numpy
 import numpy as np
 import pickle
 import sys
@@ -8,8 +10,8 @@ from time import sleep, time
 import zmq
 
 from euxfel_h5tools import RunHandler, stack_detector_data
-import msgpack
-import msgpack_numpy
+from lpd_tools import LPDConfiguration, stitch_image
+
 msgpack_numpy.patch()
 
 
@@ -20,9 +22,12 @@ _MOD_X = 256
 _MOD_Y = 256
 _SHAPE = (_PULSES, _MODULES, _MOD_X, _MOD_Y)
 
+config = LPDConfiguration(hole_size=-26.28e-3, q_offset=3)
 
-def get_combined_detector_data(path):
-    """Get the data from the files in the directory
+
+def get_stacked_detector_data(path):
+    """Get the data from the files in the directory, as a
+        stack to be assembled later.
         :param string path: the path where the data lives
         :return: a dictionary that can be decoded by the
                 KaraboBridge client.
@@ -32,6 +37,22 @@ def get_combined_detector_data(path):
         image_data = stack_detector_data(data, "image.data", only="LPD")
         # We squeeze the second dimension which is of size one. FOR NOW??
         image_data = image_data.squeeze()
+        data['FXE_DET_LPD1M-1/DET/combined'] = {"image.data": image_data}
+        yield tid, data
+
+
+def get_assembled_detector_data(path):
+    """Get the data from the files in the directory, assembled.
+        :param string path: the path where the data lives
+        :return: a dictionary that can be decoded by the
+                KaraboBridge client.
+    """
+    handler = RunHandler(path)
+    for tid, data in handler.trains():
+        image_data = stack_detector_data(data, "image.data", only="LPD")
+        # We squeeze the second dimension which is of size one. FOR NOW??
+        image_data = image_data.squeeze()
+        image_data = stitch_image(config, image_data)
         data['FXE_DET_LPD1M-1/DET/combined'] = {"image.data": image_data}
         yield tid, data
 
@@ -113,7 +134,8 @@ def gen_combined_detector_data(source):
 
 
 def read_from_files(source, path, queue):
-    getter = get_combined_detector_data(path)
+    # getter = get_stacked_detector_data(path)
+    getter = get_assembled_detector_data(path)
 
     while True:
         if len(queue) < queue.maxlen:
