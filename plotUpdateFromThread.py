@@ -31,7 +31,7 @@ asynchronously from the main thread.
 In this example, this is achieved through a Qt signal.
 
 In this example we create a subclass of
-:class:`~silx.gui.plot.PlotWindow.Plot2D`
+:class:`~silx.gui.plot.PlotWindow.Plot1D`
 that adds a thread-safe method to add curves:
 :meth:`ThreadSafePlot1D.addCurveThreadSafe`.
 This thread-safe method is then called from a thread to update the plot.
@@ -43,23 +43,19 @@ __date__ = "05/09/2017"
 
 
 import threading
-
 from silx.gui import qt
-from silx.gui.plot import Plot2D
+from silx.gui.plot import Plot1D
 
 from karabo_bridge import KaraboBridge
+
+from integration import integrate
 from lpd_tools import LPDConfiguration, offset_image
-
-
 config = LPDConfiguration(hole_size=-26.28e-3, q_offset=3)
 client = KaraboBridge("tcp://localhost:4545")
 
-Nx = 150
-Ny = 50
 
-
-class ThreadSafePlot2D(Plot2D):
-    """Add a thread-safe :meth:`addCurveThreadSafe` method to Plot2D.
+class ThreadSafePlot1D(Plot1D):
+    """Add a thread-safe :meth:`addCurveThreadSafe` method to Plot1D.
     """
 
     _sigAddCurve = qt.Signal(tuple, dict)
@@ -69,7 +65,7 @@ class ThreadSafePlot2D(Plot2D):
     """
 
     def __init__(self, parent=None):
-        super(ThreadSafePlot2D, self).__init__(parent)
+        super(ThreadSafePlot1D, self).__init__(parent)
         # Connect the signal to the method actually calling addCurve
         self._sigAddCurve.connect(self.__addCurve)
 
@@ -89,12 +85,12 @@ class ThreadSafePlot2D(Plot2D):
 
 
 class UpdateThread(threading.Thread):
-    """Thread updating the curve of a :class:`ThreadSafePlot2D`
+    """Thread updating the curve of a :class:`ThreadSafePlot1D`
 
-    :param plot2d: The ThreadSafePlot2D to update."""
+    :param plot1d: The ThreadSafePlot1D to update."""
 
-    def __init__(self, plot2d):
-        self.plot2d = plot2d
+    def __init__(self, plot1d):
+        self.plot1d = plot1d
         self.running = False
         super(UpdateThread, self).__init__()
 
@@ -103,17 +99,25 @@ class UpdateThread(threading.Thread):
         self.running = True
         super(UpdateThread, self).start()
 
-    def run(self, pos={'x0': 0, 'y0': 0}):
+    def run(self):
         """Method implementing thread loop that updates the plot"""
         while self.running:
+            self.plot1d.clearCurves()
             data = client.next()
-            d = data.pop("FXE_DET_LPD1M-1/DET/combined")["image.data"]
-            image = offset_image(config, d[0])
+            images = data.pop("FXE_DET_LPD1M-1/DET/combined")["image.data"]
             tid = data.popitem()[1]["detector.trainId"]
-            title = "Current train {}".format(tid)
-            # plot the data
-            self.plot2d.setGraphTitle(title)
-            self.plot2d.addImage(image, replace=True)
+            # images = np.array([offset_image(config, img) for img in images])
+            integ_result = integrate(images)
+            title = ("Azimuthal Integration over {} pulses {}"
+                     "".format(len(integ_result), tid))
+            self.plot1d.setGraphTitle(title)
+            for index in range(len(integ_result)):
+                entry = integ_result[index]
+                x = [item for items in entry[0] for item in items]
+                y = [item for items in entry[1] for item in items]
+                self.plot1d.addCurveThreadSafe(x, y,
+                                               resetzoom=False,
+                                               legend=str(index))
 
     def stop(self):
         """Stop the update thread"""
@@ -125,16 +129,14 @@ def main():
     global app
     app = qt.QApplication([])
 
-    # Create a ThreadSafePlot2D, set its limits and display it
-    plot2d = ThreadSafePlot2D()
-    plot2d.setLimits(-10, 6000, Nx, Ny)
-    plot2d.getDefaultColormap().setName('viridis')
-    plot2d.getDefaultColormap().setVMin(-10)
-    plot2d.getDefaultColormap().setVMax(6000)
-    plot2d.show()
+    # Create a ThreadSafePlot1D, set its limits and display it
+    plot1d = ThreadSafePlot1D()
+    plot1d.setGraphYLabel("Scattering Signal (arb. u.)")
+    plot1d.setGraphXLabel("Momentum Transfer")
+    plot1d.show()
 
-    # Create the thread that calls ThreadSafePlot2D.addCurveThreadSafe
-    updateThread = UpdateThread(plot2d)
+    # Create the thread that calls ThreadSafePlot1D.addCurveThreadSafe
+    updateThread = UpdateThread(plot1d)
     updateThread.start()  # Start updating the plot
 
     app.exec_()

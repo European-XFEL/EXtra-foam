@@ -34,6 +34,13 @@ The data is received using the KaraboBridge interface:
     plt.show()  # will display an assembled image, without offsets
 ```
 
+There are a few utilities to checkout the data.
+
+[plot2d](plotUpdateFromThread2d.py) will plot the the first pulse's image as received.
+[plot1d](plotUpdateFromThread2d.py) will perform the integration found in [integration](integration.py) and display the result live for all pulses in each train.
+
+[plotUpdate](plotUpdate.py) will show both side by side as follows:
+![screenshot of plotUpdate](plotUpdate.png)
 
 Documentation
 =============
