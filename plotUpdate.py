@@ -105,14 +105,20 @@ class UpdateThread(threading.Thread):
         """Method implementing thread loop that updates the plot"""
         self.running = True
         while self.running:
-            data = self.client.next()
+            # retreive
             t_start = time.time()
+            data = self.client.next()
             images = data.pop("FXE_DET_LPD1M-1/DET/combined")["image.data"]
             tid = data.popitem()[1]["detector.trainId"]
+            retrieval_t = time.time() - t_start
+
+            # integrate
+            t_start = time.time()
+            integ_result = integrate(images)
+            integ_t = time.time() - t_start
 
             # plot the result of the integration
-            integ_result = integrate(images)
-            print(tid, time.time() - t_start)
+            t_start = time.time()
             title = ("Azimuthal Integration over {} pulses {}"
                      "".format(len(integ_result), tid))
             self.plot1d.setGraphTitle(title)
@@ -131,6 +137,9 @@ class UpdateThread(threading.Thread):
             image = offset_image(config, images[0])
             self.plot2d.addImage(image, replace=True,
                                  copy=False, yInverted=True)
+            plot_t = time.time() - t_start
+            print(tid, "retreival", retrieval_t,
+                  "integration", integ_t, "plot", plot_t)
 
     def stop(self):
         """Stop the update thread"""
@@ -152,6 +161,8 @@ def main():
     plot2d.getDefaultColormap().setName('viridis')
     plot2d.getDefaultColormap().setVMin(-10)
     plot2d.getDefaultColormap().setVMax(6000)
+    plot2d.setGraphYLabel("")
+    plot2d.setGraphXLabel("")
     plot2d.addImage
     plot2d.show()
 
