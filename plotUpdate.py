@@ -25,6 +25,7 @@
 
 import threading
 import time
+import random
 import sys
 from silx.gui import qt
 from silx.gui.plot import Plot1D, Plot2D
@@ -32,7 +33,7 @@ from karabo_bridge import KaraboBridge
 from lpd_tools import LPDConfiguration, offset_image
 from integration import integrate
 
-config = LPDConfiguration(hole_size=-26.28e-3, q_offset=3)
+config = LPDConfiguration(hole_size=26.28e-3, q_offset=3)
 
 
 class ThreadSafePlot1D(Plot1D):
@@ -123,18 +124,23 @@ class UpdateThread(threading.Thread):
                      "".format(len(integ_result), tid))
             self.plot1d.setGraphTitle(title)
 
+            allTheMomentums = []
+
             for index in range(len(integ_result)):
                 entry = integ_result[index]
                 scattering = [item for items in entry[0] for item in items]
                 momentum = [item for items in entry[1] for item in items]
+                allTheMomentums.append(momentum)
                 self.plot1d.addCurveThreadSafe(scattering, momentum,
                                                legend=str(index),
                                                copy=False)
 
             # plot the image from the detector
+            pulse_id = random.randint(0, len(images)-1)
             title = "Current train: {}".format(tid)
+            title += "\nPulse previewed: {}".format(pulse_id)
             self.plot2d.setGraphTitle(title)
-            image = offset_image(config, images[0])
+            image = offset_image(config, images[pulse_id])
             self.plot2d.addImage(image, replace=True,
                                  copy=False, yInverted=True)
             plot_t = time.time() - t_start

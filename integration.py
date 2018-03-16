@@ -35,6 +35,20 @@ N_set = []
 train_ids = []
 
 
+def radial_profile(images, center):
+    pulse_integ_result = []
+    for pulse in range(images.shape[0]):
+        y, x = np.indices((images[pulse]))
+        r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+        r = r.astype(np.int)
+
+        tbin = np.bincount(r.ravel(), images[pulse].ravel())
+        nr = np.bincount(r.ravel())
+        radialprofile = tbin / nr
+        pulse_integ_result.append(radialprofile)
+    return pulse_integ_result
+
+
 def integrate(images):
     Sq = None
     pulse_integ_result = []
@@ -54,7 +68,7 @@ def integrate(images):
 
         Q, i_unc = ai.integrate1d(combined_imgs,
                                   npt,
-                                  method="lut",
+                                  method="numpy",
                                   mask=mask_data,
                                   radial_range=(0.1, 4),
                                   correctSolidAngle=True,
