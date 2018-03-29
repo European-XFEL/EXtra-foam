@@ -1,25 +1,13 @@
+from logging import log, INFO, ERROR, WARN
 import math
 import numpy as np
 import pyFAI
 
-from lpd_tools import LPDConfiguration, offset_image
-
 from constants import (
-    center_x, center_y, distance, hole_pixel_size, ts, tSi, mus,
-    muSi, pixel_size, qnorm_max, qnorm_min, q_offset, SM, wavelength_lambda
+    center_x, center_y, distance, pixel_size, qnorm_max, qnorm_min,
+    wavelength_lambda
 )
 
-config = LPDConfiguration(hole_size=-26.28e-3, q_offset=3)
-
-"""
-Example Data Manipulation
-=========================
-
-Do an azimuthal integration on LPD data:
- - Retrieve data from the Karabo bridge
- - Assemble modules into a single full image
- - Perform azimuthal integration
-"""
 
 # setting the integrator
 npt = 512
@@ -31,89 +19,104 @@ ai = pyFAI.AzimuthalIntegrator(dist=distance,
                                rot1=0, rot2=0, rot3=0,
                                wavelength=wavelength_lambda)
 
-N_set = []
-train_ids = []
-
-
-def radial_profile(images, center):
-    pulse_integ_result = []
-    for pulse in range(images.shape[0]):
-        y, x = np.indices((images[pulse]))
-        r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-        r = r.astype(np.int)
-
-        tbin = np.bincount(r.ravel(), images[pulse].ravel())
-        nr = np.bincount(r.ravel())
-        radialprofile = tbin / nr
-        pulse_integ_result.append(radialprofile)
-    return pulse_integ_result
-
 
 def integrate(images):
     Sq = None
     pulse_integ_result = []
+    normalised_integ_result = []
     # hole_pixel_size is the size of the gap in the center
     # of the detector
-    total_img = np.zeros([SM * 4 + hole_pixel_size + q_offset,
-                          SM * 4 + hole_pixel_size + q_offset],
-                         dtype='int32')
+    total_img = np.zeros((1024, 1024), dtype='float32')
+    for pulse in range(images.shape[2]):
+        combined_imgs = images[..., pulse]
 
-    for pulse in range(images.shape[0]):
-        combined_imgs = offset_image(config, images[pulse])
-
-        # Define mask data to substract to reduce noise
+        # Define mask data to subtract to reduce noise
         total_img = total_img + combined_imgs
         mask_data = np.zeros(combined_imgs.shape)
         mask_data[np.where(combined_imgs == 0)] = 1
 
-        Q, i_unc = ai.integrate1d(combined_imgs,
-                                  npt,
-                                  method="numpy",
-                                  mask=mask_data,
-                                  radial_range=(0.1, 4),
-                                  correctSolidAngle=True,
-                                  polarization_factor=1,
-                                  unit="q_A^-1")
-
-        I_unc = i_unc[:, None]
-
-        if Sq is None:
-            # Get the momentum transfer, q, from the integration
-            q = Q[:, None]
-            scattering = q * wavelength_lambda * 1e10 / (4 * math.pi)
-            # 2-theta scattering angle
-            tth = np.rad2deg(scattering)
-
-            # silicon sensor absorption correction
-            T_Si = ((1 - np.exp(-muSi*tSi)) /
-                    (1 - np.exp(-muSi * tSi /
-                     np.cos(np.deg2rad(tth))))
-                    )
-
-            Ts = (1 / (mus * ts) *
-                  np.cos(np.deg2rad(tth)) /
-                  (1 - np.cos(np.deg2rad(tth))) *
-                  (np.exp(-mus * ts) -
-                  np.exp(-mus * ts / np.cos(np.deg2rad(tth))))
-                  )
-            # sample absorption correction in isotropic case
-            # (not to do here if done on the image before integration)
-            Ts = Ts/Ts[0]
-
-            Qnorm = Q[np.where(np.logical_and(Q >= qnorm_min,
-                                              Q <= qnorm_max))]
-
-        # Normalize
-        to_trapz = i_unc[np.where(np.logical_and(Q >= qnorm_min,
-                                                 Q <= qnorm_max))]
-        N = np.trapz(to_trapz, x=Qnorm)
-
-        # Apply corrections
-        I_cor = I_unc * T_Si / Ts
+        momentum, i_unc = ai.integrate1d(combined_imgs,
+                                         npt,
+                                         method="lut",
+                                         mask=mask_data,
+                                         radial_range=(0.1, 4),
+                                         correctSolidAngle=True,
+                                         polarization_factor=1,
+                                         unit="q_A^-1")
 
         # Define or update the scattering signal
-        Sq = I_unc if Sq is None else np.concatenate((Sq, I_unc),
-                                                     axis=1)
-        pulse_integ_result.append((q, I_unc))
+        if Sq is None:
+            # Get the momentum transfer, known as q or scattering,
+            # from the integration
+            scattering = momentum * wavelength_lambda * 1e10 / (4 * math.pi)
+            # 2-theta scattering angle
 
-    return pulse_integ_result
+            Qnorm = momentum[np.where(np.logical_and(momentum >= qnorm_min,
+                                                     momentum <= qnorm_max))]
+            Sq = i_unc
+        else:
+            Sq = np.concatenate((Sq, i_unc))
+
+        # Normalise
+        to_integrate = i_unc[np.where(np.logical_and(momentum >= qnorm_min,
+                                                     momentum <= qnorm_max))]
+        N = np.trapz(to_integrate, x=Qnorm)
+
+        i_unc = i_unc / N
+        # Integration results are lists of tuples for each pulse, where the
+        # content of the tuple is momentum, scattering
+        pulse_integ_result.append(i_unc)
+        normalised_integ_result.append(i_unc/N)
+
+    return momentum, np.array(pulse_integ_result), np.array(normalised_integ_result)
+
+
+means = {}  # dict of dicts where the key is an int, matching pulse_indices
+
+
+def running_mean(normalised_data, pulse_indices):
+    for idx in pulse_indices:
+        scattering = normalised_data[idx]
+
+        mean = means.get(idx, None)
+        if not mean:
+            means[idx] = {'scattering': scattering, 'count': 1}
+            continue
+ 
+        mean['scattering'] = np.array([((old * (mean['count']-1)) + new) / mean['count']
+                                      for old, new in zip(mean['scattering'], scattering)])
+        mean['count'] += 1
+
+    return means
+
+
+def differences(normalised_data, pulse_indices):
+    diffs = {}
+    for idx in pulse_indices:
+        scattering = normalised_data[idx]
+        mean = means.get(idx, None)
+        if not mean:
+            log(ERROR, "I was told to compute the difference for {}".format(idx))
+            continue
+
+        diff_scattering = np.array(scattering) - np.array(mean['scattering'])
+        diffs[idx] = diff_scattering
+
+    return diffs
+
+
+def diff_integrals(differences, momentum, pulse_indices):
+    integrals = {}
+    for idx in pulse_indices:
+        scattering = differences[idx]
+        scattering = np.absolute(scattering)
+    	# Normalise
+        to_integrate = scattering[np.where(np.logical_and(momentum >= qnorm_min,
+    	                                                  momentum <= qnorm_max))]
+
+        Qnorm = momentum[np.where(np.logical_and(momentum >= qnorm_min,
+    	                                         momentum <= qnorm_max))]
+        val = np.trapz(to_integrate, x=Qnorm)
+        integrals[idx] = val
+
+    return integrals

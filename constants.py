@@ -1,15 +1,15 @@
 import numpy as np
 
 distance = 275 * 1e-3  # Meter: 160 Millimeters
-center_x = 546
-center_y = 532
+center_x = 750 #546
+center_y = 750 #532
 pixel_size = 0.5e-3  # Meter: 0.5 Millimeter
 energy = 9.33  # keV
 wavelength_lambda = 12.3984 / energy * 1e-10  # Meter: 0.132 Nanometer
 
 muSi = 91  # silicon sensor absorption coefficient
 tSi = 500 * 1e-4  # sensor thickness
-mus = 6.3  # sample absorption coefficien
+mus = 6.3  # sample absorption coefficient
 ts = 100 * 1e-4  # sample thickness
 
 # `hole_size` is the size, in meters, of the gap at the center of the
@@ -35,3 +35,8 @@ dx_map = [0, 0, SM, SM, 0, 0, SM, SM, SM*2, SM*2,
 dy_map = [0, SM, SM, 0, SM*2, SM*3, SM*3, SM*2,
           SM*2, SM*3, SM*3, SM*2, 0, SM, SM, 0]
 
+bp_map_file = None
+
+bridge_key = "FXE_DET_LPD1M-1/DET/corrected"
+
+running_averages = [0, 5]
