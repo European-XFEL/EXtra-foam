@@ -119,7 +119,7 @@ def get_figures(widget):
 
         integ = ThreadSafePlotTrendLine(parent=widget)
         integ.setGraphYLabel("Integrated Mean of pulse difference")
-        integ.setGraphXLabel("Pulse count")
+        integ.setGraphXLabel("Last {} pulses".format(integ._buffer.maxlen))
         integ.setGraphTitle("Pulse {}".format(idx))
         figures.append(("pinteg{}".format(idx), integ))
 

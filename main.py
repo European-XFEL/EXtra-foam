@@ -1,3 +1,4 @@
+from math import sqrt
 import random
 import sys
 import threading
@@ -21,6 +22,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
 
         self.client = bridge_client
         self.running = False
+        self.first_loop = True
 
     def __init_window(self):
         # Initialise the main window
@@ -34,8 +36,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
         widget.setLayout(layout)
 
         figures, _ = get_figures(widget)
-        k = 0
-        plots_per_line = 4
+        plots_per_line = int(sqrt(len(figures)))
         for k in range(len(figures)):
             try:
                 name, plot  = figures[k]
@@ -45,7 +46,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
             except IndexError:
                 break
 
-    def update_figures(self, momentum, azi, normalised, means, 
+    def update_figures(self, momentum, azi, normalised, means,
                        diffs, diffs_integs, images, tid):
             # plot results
             title = ("Azimuthal Integration over {} pulses {}"
@@ -54,6 +55,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
 
             assert len(azi) == len(normalised)
 
+
             for index in range(len(azi)):
                 scattering = azi[index]
                 norm_scattering = normalised[index]
@@ -61,12 +63,12 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
                 self.integ.addCurveThreadSafe(momentum, scattering,
                                                legend=str(index),
                                                copy=False,
-                                               resetzoom=False)
+                                               resetzoom=self.first_loop)
 
                 self.normalised.addCurveThreadSafe(momentum, norm_scattering,
                                                    legend=str(index),
                                                    copy=False,
-                                                   resetzoom=False)
+                                                   resetzoom=self.first_loop)
 
             # Red is the difference between the running average and the
             # current pulse, pink is the running mean, and blue the current
@@ -98,7 +100,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
                                  copy=False, yInverted=True)
 
     def run(self):
-        """Method implementing thread loop that gets data, 
+        """Method implementing thread loop that gets data,
            integrates, and plots
         """
         bp_map = None
@@ -138,13 +140,14 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
 
             # display
             t_start = time.time()
-            self.update_figures(momentum, azi, normalised, 
+            self.update_figures(momentum, azi, normalised,
                                 means, diffs, diffs_integs,
                                 images, tid)
             plot_t = time.time() - t_start
 
             print(tid, "retrieval", retrieval_t,
                   "integration", integ_t, "plot", plot_t)
+            self.first_loop = False
 
     def stop(self):
         """Stop the update thread"""
