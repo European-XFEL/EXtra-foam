@@ -1,16 +1,17 @@
-from asyncio import (
-    FIRST_COMPLETED, Future, get_event_loop, Lock, sleep, wait, wait_for
-)
+from asyncio import FIRST_COMPLETED, get_event_loop, Lock, sleep, wait
 from collections import deque
 from functools import partial
 import logging
+from signal import SIGINT, SIGTERM
+import sys
+import time
+
+from h5py import File
 import msgpack
 import msgpack_numpy
 import numpy as np
-import sys
 import zmq
-
-from h5py import File
+import zmq.asyncio as zio
 
 from karabo_data import RunDirectory, RunHandler, stack_detector_data
 from karabo_data.geometry import LPDGeometry
@@ -25,9 +26,13 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger()
 
 
-class DataServer(Future):
+def cancel(tasks):
+    for task in tasks:
+        task.cancel()
+
+
+class DataServer:
     def __init__(self, port, datapath, geopath, loop=None):
-        super().__init__(loop=loop)
         self.q_lock = Lock()
         self.port = port
         self.path = datapath
@@ -38,12 +43,10 @@ class DataServer(Future):
                                  use_bin_type=True,
                                  default=msgpack_numpy.encode)
 
-        # The following is valid for the 20180318 geometry
+        # The following is valid-ish for the 20180318 geometry
         pos = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
         with File(geopath, 'r') as f:
             self.geometry = LPDGeometry.from_h5_file_and_quad_positions(f, pos)
-
-        log.info("%s instantiated" % self.__class__)
 
     def get_detector_data(self):
         """Get the data from the files in the directory, assembled.
@@ -54,6 +57,7 @@ class DataServer(Future):
         run = RunHandler(self.path)
         log.info("Run is %s" % run)
         for tid, data in run.trains():
+            loadtime = time.time()
             image_data = stack_detector_data(data, "image.data", only="LPD")
             cell_data = stack_detector_data(data, "image.cellId", only="LPD")
             # We squeeze the second dimension which is of size one. FOR NOW??
@@ -64,11 +68,10 @@ class DataServer(Future):
             image_data = np.moveaxis(image_data, 0, 2)
             image_data[np.where(image_data == np.nan)] = 0
 
-            print(image_data.shape)
             data[bridge_key] = {"image.data": image_data,
                                 "image.cellId": cell_data,
                                 "header.trainId": tid}
-            yield tid, data
+            yield tid, data, loadtime
 
     async def blocking(self, func, *args):
         return await self.loop.run_in_executor(None, func, *args)
@@ -80,41 +83,40 @@ class DataServer(Future):
         while True:
             while not len(self.queue) < self.queue.maxlen:
                 await sleep(0.1)
-            try:
-                log.info("getting")
-                tid, data = await self.blocking(next, getter)
-                log.info("appended")
-                self.queue.append(data)
-                log.info(tid)
-            except StopIteration:
-                break
-
-        self.set_result("Served all trains")
-        return
+            with await self.q_lock:
+                try:
+                    tid, data, loadtime = await self.blocking(next, getter)
+                    self.queue.append((tid, data, loadtime))
+                    log.info("Loaded %s" % tid)
+                except StopIteration:
+                    break
+            log.info("Served all trains")
 
     async def serve(self):
         log.info("Starting serving data")
-        context = zmq.Context()
+        context = zio.Context()
         socket = context.socket(zmq.REP)
         socket.bind('tcp://*:%s' % self.port)
 
         while True:
-            msg = await self.blocking(socket.recv)
+            msg = await socket.recv()
             if msg == b'next':
                 with await self.q_lock:
-                    data = self.queue.popleft()
-                    await self.blocking(socket.send, self.serialize(data))
+                    tid, data, loadtime = self.queue.popleft()
+                    data = await self.blocking(self.serialize, data)
+                    await socket.send(data)
+                    log.info("Served %s" % tid)
+                    time_ = time.time() - loadtime
+                    log.debug("{} was in cached for {}".format(tid, time_))
             else:
-                log.error("request was %s" % msg)
+                log.error("unsupported request %s" % msg)
                 break
-            await sleep(0)  # Give the event loop a chance
         else:
-            await self.blocking(socket.close)
-            await self.blocking(context.destroy)
+            await socket.close()
+            await context.destroy()
 
 
 if __name__ == '__main__':
-
     if len(sys.argv) < 3:
         exit("Usage:\n\tpython %s PORT DATAPATH [GEOPATH]" % sys.argv[0])
 
@@ -129,6 +131,7 @@ if __name__ == '__main__':
 
     tasks = [loop.create_task(server.read_files()),
              loop.create_task(server.serve())]
-
+    loop.add_signal_handler(SIGINT, cancel, tasks)
+    loop.add_signal_handler(SIGTERM, cancel, tasks)
     loop.run_until_complete(wait(tasks, return_when=FIRST_COMPLETED))
     loop.close()
