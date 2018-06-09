@@ -13,7 +13,7 @@ import numpy as np
 import zmq
 import zmq.asyncio as zio
 
-from karabo_data import RunDirectory, RunHandler, stack_detector_data
+from karabo_data import RunDirectory, stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from constants import bridge_key
@@ -54,8 +54,8 @@ class DataServer:
             :return: a dictionary that can be decoded by the
                     KaraboBridge client.
         """
-        run = RunHandler(self.path)
-        log.info("Run is %s" % run)
+        run = RunDirectory(self.path)
+        run.info()
         for tid, data in run.trains():
             loadtime = time.time()
             image_data = stack_detector_data(data, "image.data", only="LPD")
@@ -66,7 +66,9 @@ class DataServer:
 
             # Fake being the online preview with funny axes
             image_data = np.moveaxis(image_data, 0, 2)
-            image_data[np.where(image_data == np.nan)] = 0
+
+            # Replace the LPDGeometry-induced NaNs with zeroes
+            image_data = np.nan_to_num(image_data)
 
             data[bridge_key] = {"image.data": image_data,
                                 "image.cellId": cell_data,
@@ -90,7 +92,8 @@ class DataServer:
                     log.info("Loaded %s" % tid)
                 except StopIteration:
                     break
-            log.info("Served all trains")
+
+        log.info("Served all trains")
 
     async def serve(self):
         log.info("Starting serving data")
