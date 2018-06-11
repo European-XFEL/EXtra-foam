@@ -21,11 +21,11 @@ Receiving Data
 The data is received using the KaraboBridge interface::
 
     import matplotlib.pyplot as plt
-    from karabo_bridge import KaraboBridge
+    from karabo_bridge import Client
 
-    KaraboBridge("tcp://localhost:4545")
+    client = Client("tcp://localhost:4545")
     data = client.next()
-    d = data["FXE_DET_LPD1M-1/DET/combined"]["image.data"]
+    d = data["FXE_DET_LPD1M-1/DET/corrected"]["image.data"]
     
     plt.imshow(d[0], vmin=-10, vmax=6000)
     plt.show()  # Will display data with geometry
