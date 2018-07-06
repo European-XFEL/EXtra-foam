@@ -132,10 +132,14 @@ plotting = 1
 
 
 quadpos = [(-11.4, -299), (11.5, -8), (-254.5, 16), (-278.5, -275)]  # MAR 18
-with h5py.File('/home/khakhuli/AzimuthalIntegration/lpd_mar_18.h5', 'r') as f:
+# geometry_file = '/home/khakhuli/AzimuthalIntegration/lpd_mar_18.h5'
+geometry_file = './lpd_mar_18.h5'
+with h5py.File(geometry_file, 'r') as f:
     geom = LPDGeometry.from_h5_file_and_quad_positions(f, quadpos)
-    
-run = RunDirectory('/gpfs/exfel/exp/FXE/201701/p002026/proc/' + runStr)
+
+# run_folder = '/gpfs/exfel/exp/FXE/201701/p002026/proc/'
+run_folder = './'
+run = RunDirectory(run_folder + runStr)
 #run.info()
 trainIDs = np.array(run.train_ids,'uint32')
 print("Processing data from trainID",trainIDs[takeTrainsBegin], "to train",trainIDs[takeTrainsEnd])
