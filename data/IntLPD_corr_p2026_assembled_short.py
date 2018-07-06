@@ -116,8 +116,8 @@ Qnorm_max = 4
 
 #
 runNum = 78
-takeTrainsBegin =54
-takeTrainsEnd=64
+takeTrainsBegin =24 #54
+takeTrainsEnd=34 #64
 minSet  = 0
 maxSet  = 0
 plotfinal = 0 
@@ -163,6 +163,8 @@ k=0
 PulsesPerTrain = 16
 k=0
 
+TotalIm = None  # Add by Jun
+
 for trainID in trainIDs[takeTrainsBegin:takeTrainsEnd+1]:
 #    print("Processing train",trainID)
     
@@ -181,7 +183,16 @@ for trainID in trainIDs[takeTrainsBegin:takeTrainsEnd+1]:
         continue
     
     modules_data = stack_detector_data(train_data, 'image.data')
+
+    # Add by Jun
+    # ----------
+    if hasattr(modules_data, 'shape') is False or \
+            modules_data.shape[-3:] != (16, 256, 256):
+        continue
+
     res, centre = geom.position_all_modules(modules_data)
+    # ----------
+
     if not k:
         TotalIm = np.zeros((res.shape[1],res.shape[2]))   
     assembl_image = np.nan_to_num(res)
@@ -224,19 +235,22 @@ for trainID in trainIDs[takeTrainsBegin:takeTrainsEnd+1]:
             Sq_sa0=np.concatenate((Sq_sa0,i_unc_sa0[:,None]),axis=1)
         k+=1
         print("Integration took",(time.time()-IntStartTime)*1000,"ms")
-plt.figure(figsize=(10, 10))
-plt.imshow((TotalIm),vmin=-100, vmax=500000)
-plt.show()    
-plt.figure(runNum,figsize=(12,5))
-#    plt.plot(q,np.median(Sq,axis=1),label='median')
-#    plt.plot(q,np.mean(Sq,axis=1),label='mean')
-plt.plot(q,np.median(Sq_sa0,axis=1),label='median')
-plt.plot(q,np.mean(Sq_sa0,axis=1),label='mean')
-plt.legend()
-#    plt.title('Azimuthally integrated Run # ' + str(runNum) + '. Mean and median S(q)')
-#fig.set_size_inches((16,9))
-#    plt.savefig('/gpfs/exfel/exp/FXE/201701/p002026/scratch/ReducedScans/June2018/img_r'+str(runNum).zfill(4)+'.png')
-plt.show()   
 
-TotalTime = (time.time()-startTime)
-print('Whole set took', str(math.ceil(TotalTime)),'s or',str(math.ceil(TotalTime/k*1000)), ' ms per image')        
+
+if TotalIm is not None:  # Add by Jun
+    plt.figure(figsize=(10, 10))
+    plt.imshow((TotalIm),vmin=-100, vmax=500000)
+    plt.show()
+    plt.figure(runNum,figsize=(12,5))
+    #    plt.plot(q,np.median(Sq,axis=1),label='median')
+    #    plt.plot(q,np.mean(Sq,axis=1),label='mean')
+    plt.plot(q,np.median(Sq_sa0,axis=1),label='median')
+    plt.plot(q,np.mean(Sq_sa0,axis=1),label='mean')
+    plt.legend()
+    #    plt.title('Azimuthally integrated Run # ' + str(runNum) + '. Mean and median S(q)')
+    #fig.set_size_inches((16,9))
+    #    plt.savefig('/gpfs/exfel/exp/FXE/201701/p002026/scratch/ReducedScans/June2018/img_r'+str(runNum).zfill(4)+'.png')
+    plt.show()
+
+    TotalTime = (time.time()-startTime)
+    print('Whole set took', str(math.ceil(TotalTime)),'s or',str(math.ceil(TotalTime/k*1000)), ' ms per image')
