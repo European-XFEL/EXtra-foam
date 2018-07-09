@@ -35,7 +35,7 @@ class DataServer:
         run = RunDirectory(self.path)
         run.info()
         for tid, data in run.trains():
-            loadtime = time.time()
+            load_time = time.perf_counter()
             image_data = stack_detector_data(data, "image.data", only="LPD")
             cell_data = stack_detector_data(data, "image.cellId", only="LPD")
             # We squeeze the second dimension which is of size one. FOR NOW??
@@ -52,8 +52,8 @@ class DataServer:
                                 "image.cellId": cell_data,
                                 "header.trainId": tid}
 
-            t_ = time.time() - loadtime
-            log.info("Loaded {} in {}".format(tid, t_))
+            dt = time.perf_counter() - load_time
+            log.info("Loaded {} in {:.4f} ms".format(tid, 1000*dt))
 
             yield tid, data
 

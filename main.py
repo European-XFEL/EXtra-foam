@@ -115,12 +115,12 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
 
         while self.running:
             # retrieve
-            t_start = time.time()
+            t_start = time.perf_counter()
             data = self.client.next()
             images = data[bridge_key]["image.data"]
             cells = data[bridge_key]["image.cellId"]
             tid = data[bridge_key]["header.trainId"]
-            retrieval_t = time.time() - t_start
+            retrieval_t = time.perf_counter() - t_start
 
             if bp_map is not None:
                 import copy
@@ -129,24 +129,26 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
                 images[bps != 0] = 0
 
             # integrate
-            t_start = time.time()
+            t_start = time.perf_counter()
             # Momentum is the same for all of the data, hence, we
             # get it once and use it everywhere
             momentum, azi, normalised = integrate(images)
             means = running_mean(normalised, running_averages)
             diffs = differences(normalised, running_averages)
             diffs_integs = diff_integrals(diffs, momentum, running_averages)
-            integ_t = time.time() - t_start
+            integ_t = time.perf_counter() - t_start
 
             # display
-            t_start = time.time()
+            t_start = time.perf_counter()
             self.update_figures(momentum, azi, normalised,
                                 means, diffs, diffs_integs,
                                 images, tid)
-            plot_t = time.time() - t_start
+            plot_t = time.perf_counter() - t_start
 
-            print(tid, "retrieval", retrieval_t,
-                  "integration", integ_t, "plot", plot_t)
+            print(tid,
+                  "retrieval", "{:.4f} ms".format(retrieval_t*1000),
+                  "integration", "{:.4f} ms".format(integ_t*1000),
+                  "plot", "{:.4f} ms".format(plot_t*1000))
             self.first_loop = False
 
     def stop(self):
