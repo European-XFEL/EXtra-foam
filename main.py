@@ -1,5 +1,6 @@
 from math import sqrt
 import sys
+import time
 import threading
 
 from karabo_bridge import Client
@@ -8,6 +9,7 @@ from silx.gui import qt
 from data_processing import process_data
 from plots import get_figures
 import config as cfg
+from logger import log
 
 
 class UpdateThread(threading.Thread, qt.QMainWindow):
@@ -44,15 +46,7 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
             except IndexError:
                 break
 
-    def update_figures(self, kb_data):
-        """
-
-        :param tuple kb_data: (data, metadata)
-        """
-        data = process_data(kb_data)
-        if data is None:
-            return
-
+    def update_figures(self, data):
         # plot results
         title = ("Azimuthal Integration over {} pulses {}"
                  "".format(len(data["intensity"]), data["tid"]))
@@ -119,8 +113,24 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
         self.running = True
         while self.running:
             # retrieve
+            t0 = time.perf_counter()
             kb_data = self.client.next()
-            self.update_figures(kb_data)
+            log.info("Time for retrieving data from the server: {:.1f} ms"
+                     .format(1000*(time.perf_counter() - t0)))
+
+            # process
+            t0 = time.perf_counter()
+            data = process_data(kb_data)
+            log.info("Time for processing the data: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
+            if data is None:
+                continue
+
+            # show
+            t0 = time.perf_counter()
+            self.update_figures(data)
+            log.info("Time for updating the plots: {:.1f} ms"
+                     .format(1000*(time.perf_counter() - t0)))
 
             self.first_loop = False
 

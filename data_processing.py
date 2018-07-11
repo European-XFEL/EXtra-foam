@@ -1,6 +1,3 @@
-import logging
-import sys
-import time
 import numpy as np
 import pyFAI
 from h5py import File
@@ -9,12 +6,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 import config as cfg
-
-
-logging.basicConfig(level=logging.INFO,
-                    format="PID %(process)5s: %(message)s",
-                    stream=sys.stderr)
-log = logging.getLogger()
+from logger import log
 
 
 def process_data(kb_data):
