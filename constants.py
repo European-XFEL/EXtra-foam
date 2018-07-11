@@ -40,3 +40,7 @@ bp_map_file = None
 bridge_key = "FXE_DET_LPD1M-1/DET/corrected"
 
 running_averages = [0, 5]
+
+# The following is valid-ish for the 20180318 geometry
+QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
+GEOMETRY_FILE = "data/lpd_mar_18.h5"

@@ -1,5 +1,5 @@
 from math import sqrt
-import random
+import logging
 import sys
 import threading
 import time
@@ -7,8 +7,8 @@ import time
 from karabo_bridge import Client
 from silx.gui import qt
 
-from constants import bp_map_file, bridge_key, running_averages
-from integration import integrate, running_mean, differences, diff_integrals
+from data_processing import process_data
+from constants import bp_map_file, running_averages
 from plots import get_figures
 
 
@@ -46,58 +46,65 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
             except IndexError:
                 break
 
-    def update_figures(self, momentum, azi, normalised, means,
-                       diffs, diffs_integs, images, tid):
-            # plot results
-            title = ("Azimuthal Integration over {} pulses {}"
-                     "".format(len(azi), tid))
-            self.setWindowTitle(title)
+    def update_figures(self, kb_data):
+        """
 
-            assert len(azi) == len(normalised)
+        :param tuple kb_data: (data, metadata)
+        """
+        data = process_data(kb_data)
+        if data is None:
+            return
 
+        # plot results
+        title = ("Azimuthal Integration over {} pulses {}"
+                 "".format(len(data["intensity"]), data["tid"]))
+        self.setWindowTitle(title)
 
-            for index in range(len(azi)):
-                scattering = azi[index]
-                norm_scattering = normalised[index]
-
-                self.integ.addCurveThreadSafe(momentum, scattering,
-                                               legend=str(index),
-                                               copy=False,
-                                               resetzoom=self.first_loop)
-
-                self.normalised.addCurveThreadSafe(momentum, norm_scattering,
-                                                   legend=str(index),
-                                                   copy=False,
-                                                   resetzoom=self.first_loop)
-
-            # Red is the difference between the running average and the
-            # current pulse, pink is the running mean, and blue the current
-            # pulse
-            for idx in running_averages:
-                p = getattr(self, "p{}".format(idx))
-                p.addCurveThreadSafe(momentum,
-                                     means[idx]['scattering'],
-                                     legend="mean",copy=False,
-                                     color="#FF0000")
-                p.addCurveThreadSafe(momentum, diffs[idx],
-                                     legend="diff",copy=False,
-                                     color="#FF9099")
-                p.addCurveThreadSafe(momentum, normalised[idx],
-                                     legend="pulse", copy=False,
-                                     resetzoom=False, color="#0000FF")
-
-                p = getattr(self, "pinteg{}".format(idx))
-                p.addPointThreadSafe(diffs_integs[idx])
-
-
-            # plot the image from the detector
-            pulse_id = random.randint(0, len(azi)-1)
-            title = "Current train: {}".format(tid)
-            title += "\nPulse previewed: {}".format(pulse_id)
-            self.plt2d.setGraphTitle(title)
-            image = images[..., pulse_id]
-            self.plt2d.addImage(image, replace=True,
-                                 copy=False, yInverted=True)
+        # assert len(data["azi"]) == len(data["normalised"])
+        #
+        for i, intensity in enumerate(data["intensity"]):
+            # norm_scattering = data["normalised"][i]
+            self.integ.addCurveThreadSafe(data["momentum"],
+                                          intensity,
+                                          legend=str(i),
+                                          copy=False,
+                                          resetzoom=self.first_loop)
+        #
+        #     self.normalised.addCurveThreadSafe(data["momentum"],
+        #                                        norm_scattering,
+        #                                        legend=str(index),
+        #                                        copy=False,
+        #                                        resetzoom=self.first_loop)
+        #
+        # Red is the difference between the running average and the
+        # current pulse, pink is the running mean, and blue the current
+        # pulse
+        for idx in running_averages:
+            p = getattr(self, "p{}".format(idx))
+            p.addCurveThreadSafe(data["momentum"],
+                                 data["intensity"].mean(axis=0),
+                                 legend="mean",
+                                 copy=False,
+                                 color="#FF0000")
+            # p.addCurveThreadSafe(data["momentum"],
+            #                      data["diffs"][idx],
+            #                      legend="diff",
+            #                      copy=False,
+            #                      color="#FF9099")
+        #     p.addCurveThreadSafe(data["momentum"], data["normalised"][idx],
+        #                          legend="pulse", copy=False,
+        #                          resetzoom=False, color="#0000FF")
+        #
+        #     p = getattr(self, "pinteg{}".format(idx))
+        #     p.addPointThreadSafe(data["diffs_integs"][idx])
+        #
+        # # plot the image from the detector
+        # pulse_id = random.randint(0, len(data["azi"])-1)
+        # title = "Current train: {}".format(data["tid"])
+        # title += "\nPulse previewed: {}".format(pulse_id)
+        # self.plt2d.setGraphTitle(title)
+        # image = data["images"][..., pulse_id]
+        # self.plt2d.addImage(image, replace=True, copy=False, yInverted=True)
 
     def run(self):
         """Method implementing thread loop that gets data,
@@ -112,43 +119,11 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
             print("Using bad pixel mask of shape {}".format(bp_map.shape))
 
         self.running = True
-
         while self.running:
             # retrieve
-            t_start = time.perf_counter()
-            data = self.client.next()
-            images = data[bridge_key]["image.data"]
-            cells = data[bridge_key]["image.cellId"]
-            tid = data[bridge_key]["header.trainId"]
-            retrieval_t = time.perf_counter() - t_start
+            kb_data = self.client.next()
+            self.update_figures(kb_data)
 
-            if bp_map is not None:
-                import copy
-                images = copy.copy(images[::-1,::-1,:])
-                bps = bp_map[...,cells]
-                images[bps != 0] = 0
-
-            # integrate
-            t_start = time.perf_counter()
-            # Momentum is the same for all of the data, hence, we
-            # get it once and use it everywhere
-            momentum, azi, normalised = integrate(images)
-            means = running_mean(normalised, running_averages)
-            diffs = differences(normalised, running_averages)
-            diffs_integs = diff_integrals(diffs, momentum, running_averages)
-            integ_t = time.perf_counter() - t_start
-
-            # display
-            t_start = time.perf_counter()
-            self.update_figures(momentum, azi, normalised,
-                                means, diffs, diffs_integs,
-                                images, tid)
-            plot_t = time.perf_counter() - t_start
-
-            print(tid,
-                  "retrieval", "{:.4f} ms".format(retrieval_t*1000),
-                  "integration", "{:.4f} ms".format(integ_t*1000),
-                  "plot", "{:.4f} ms".format(plot_t*1000))
             self.first_loop = False
 
     def stop(self):
@@ -158,7 +133,8 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
 
 
 if __name__ == '__main__':
-    addr = sys.argv[1] if len(sys.argv) > 1 else "tcp://10.253.0.53:4501"
+    # addr = sys.argv[1] if len(sys.argv) > 1 else "tcp://10.253.0.53:4501"
+    addr = sys.argv[1] if len(sys.argv) > 1 else "tcp://localhost:1236"
     client = Client(addr)
 
     global app
