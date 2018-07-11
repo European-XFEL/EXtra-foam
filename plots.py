@@ -4,7 +4,7 @@ from silx.gui.plot import Plot1D, Plot2D, PlotWidget, PlotWindow
 from silx.gui.plot.utils.axis import SyncAxes
 from silx.gui import qt
 
-from constants import running_averages
+import config as cfg
 
 
 class PlotTrendLine(PlotWidget):
@@ -110,7 +110,7 @@ def get_figures(widget):
     normalised.setGraphTitle("Normalised")
     figures.append(('normalised', normalised))
 
-    for idx in running_averages:
+    for idx in cfg.RUNNING_AVERAGES:
         p = ThreadSafePlotWidget(parent=widget)
         p.setGraphYLabel("Normalised Scattering Signal, S(q) [arb. u.]")
         p.setGraphXLabel("Momentum Transfer, q[1/A]")

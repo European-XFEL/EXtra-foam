@@ -1,0 +1,27 @@
+# distance sample - detector plan (orthogonal distance, not along the
+# beam), in meter
+DIST = 0.2
+# coordinate of the point of normal incidence along the detector's first
+# dimension, in meter
+CENTER_Y = 620
+# coordinate of the point of normal incidence along the detector's second
+# dimension, in meter
+CENTER_X = 580
+PIXEL_SIZE = 0.5e-3  # in meter
+
+ENERGY = 9.30  # in, keV
+LAMBDA_R = 12.3984 / ENERGY * 1e-10  # in m
+
+PULSES_PER_TRAIN = 16
+
+INTEGRATION_METHOD = "BBox"
+RADIAL_RANGE = (0.2, 5)  # the lower and upper range of the radial unit.
+N_POINTS = 512  # number of points in the output pattern
+
+BP_MAP_FILE = None
+
+RUNNING_AVERAGES = [0, 5]
+
+# The following is valid-ish for the 20180318 geometry
+QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
+GEOMETRY_FILE = "data/lpd_mar_18.h5"

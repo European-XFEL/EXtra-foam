@@ -3,16 +3,12 @@ import sys
 import time
 import numpy as np
 import pyFAI
-
 from h5py import File
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
-from constants import (
-    center_x, center_y, distance, pixel_size, qnorm_max, qnorm_min,
-    wavelength_lambda, QUAD_POSITIONS, GEOMETRY_FILE
-)
+import config as cfg
 
 
 logging.basicConfig(level=logging.INFO,
@@ -23,8 +19,9 @@ log = logging.getLogger()
 
 def process_data(kb_data):
     """"""
-    with File(GEOMETRY_FILE, 'r') as f:
-        geom = LPDGeometry.from_h5_file_and_quad_positions(f, QUAD_POSITIONS)
+    with File(cfg.GEOMETRY_FILE, 'r') as f:
+        geom = LPDGeometry.from_h5_file_and_quad_positions(
+            f, cfg.QUAD_POSITIONS)
 
     data, metadata = kb_data
 
@@ -51,24 +48,24 @@ def process_data(kb_data):
     assembled[data_mask == 1] = 0
     integrated += np.sum(assembled, axis=0)
 
-    ai = pyFAI.AzimuthalIntegrator(dist=distance,
-                                   poni1=center_y * pixel_size,
-                                   poni2=center_x * pixel_size,
-                                   pixel1=pixel_size,
-                                   pixel2=pixel_size,
+    ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
+                                   poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
+                                   poni2=cfg.CENTER_X*cfg.PIXEL_SIZE,
+                                   pixel1=cfg.PIXEL_SIZE,
+                                   pixel2=cfg.PIXEL_SIZE,
                                    rot1=0,
                                    rot2=0,
                                    rot3=0,
-                                   wavelength=wavelength_lambda)
+                                   wavelength=cfg.LAMBDA_R)
 
     momentum = None
     intensities = []
-    for i in range(np.minimum(modules_data.shape[0], 16)):
+    for i in range(np.minimum(modules_data.shape[0], cfg.PULSES_PER_TRAIN)):
         res = ai.integrate1d(assembled[i],
-                             512,
-                             method="BBox",
+                             cfg.N_POINTS,
+                             method=cfg.INTEGRATION_METHOD,
                              mask=data_mask[i],
-                             radial_range=(0.2, 5),
+                             radial_range=cfg.RADIAL_RANGE,
                              correctSolidAngle=True,
                              polarization_factor=1,
                              unit="q_A^-1")

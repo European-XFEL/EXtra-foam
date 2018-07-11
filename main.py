@@ -1,15 +1,13 @@
 from math import sqrt
-import logging
 import sys
 import threading
-import time
 
 from karabo_bridge import Client
 from silx.gui import qt
 
 from data_processing import process_data
-from constants import bp_map_file, running_averages
 from plots import get_figures
+import config as cfg
 
 
 class UpdateThread(threading.Thread, qt.QMainWindow):
@@ -75,11 +73,11 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
         #                                        legend=str(index),
         #                                        copy=False,
         #                                        resetzoom=self.first_loop)
-        #
+
         # Red is the difference between the running average and the
         # current pulse, pink is the running mean, and blue the current
         # pulse
-        for idx in running_averages:
+        for idx in cfg.RUNNING_AVERAGES:
             p = getattr(self, "p{}".format(idx))
             p.addCurveThreadSafe(data["momentum"],
                                  data["intensity"].mean(axis=0),
@@ -111,9 +109,9 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
            integrates, and plots
         """
         bp_map = None
-        if bp_map_file:
+        if cfg.BP_MAP_FILE:
             import h5py
-            f = h5py.File(bp_map_file, "r")
+            f = h5py.File(cfg.BP_MAP_FILE, "r")
             bp_map = f["/MappedBadPixels"][()][::-1,::-1,:]
             f.close()
             print("Using bad pixel mask of shape {}".format(bp_map.shape))
