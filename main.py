@@ -2,6 +2,7 @@ from math import sqrt
 import sys
 import time
 import threading
+import numpy as np
 
 from karabo_bridge import Client
 from silx.gui import qt
@@ -18,13 +19,13 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
         :param client: A KaraboBridge client.
         """
         super(UpdateThread, self).__init__()
-        self.__init_window()
+        self._init_window()
 
         self.client = bridge_client
         self.running = False
         self.first_loop = True
 
-    def __init_window(self):
+    def _init_window(self):
         # Initialise the main window
         qt.QMainWindow.__init__(self)
         self.setWindowTitle("LPD Integration")
@@ -47,69 +48,68 @@ class UpdateThread(threading.Thread, qt.QMainWindow):
                 break
 
     def update_figures(self, data):
-        # plot results
+        """plot results"""
         title = ("Azimuthal Integration over {} pulses {}"
                  "".format(len(data["intensity"]), data["tid"]))
         self.setWindowTitle(title)
 
-        # assert len(data["azi"]) == len(data["normalised"])
-        #
         for i, intensity in enumerate(data["intensity"]):
-            # norm_scattering = data["normalised"][i]
             self.integ.addCurveThreadSafe(data["momentum"],
                                           intensity,
                                           legend=str(i),
                                           copy=False,
                                           resetzoom=self.first_loop)
-        #
-        #     self.normalised.addCurveThreadSafe(data["momentum"],
-        #                                        norm_scattering,
-        #                                        legend=str(index),
-        #                                        copy=False,
-        #                                        resetzoom=self.first_loop)
 
-        # Red is the difference between the running average and the
-        # current pulse, pink is the running mean, and blue the current
-        # pulse
-        for idx in cfg.RUNNING_AVERAGES:
+            self.normalised.addCurveThreadSafe(data["momentum"],
+                                               intensity/intensity.max(),
+                                               legend=str(i),
+                                               copy=False,
+                                               resetzoom=self.first_loop)
+
+        for idx in cfg.ON_PULSES:
             p = getattr(self, "p{}".format(idx))
-            p.addCurveThreadSafe(data["momentum"],
-                                 data["intensity"].mean(axis=0),
+            ave = data["intensity"].mean(axis=0)
+            # average over all pulses (in red)
+            p.addCurveThreadSafe(data["momentum"], ave,
                                  legend="mean",
                                  copy=False,
                                  color="#FF0000")
-            # p.addCurveThreadSafe(data["momentum"],
-            #                      data["diffs"][idx],
-            #                      legend="diff",
-            #                      copy=False,
-            #                      color="#FF9099")
-        #     p.addCurveThreadSafe(data["momentum"], data["normalised"][idx],
-        #                          legend="pulse", copy=False,
-        #                          resetzoom=False, color="#0000FF")
-        #
-        #     p = getattr(self, "pinteg{}".format(idx))
-        #     p.addPointThreadSafe(data["diffs_integs"][idx])
-        #
-        # # plot the image from the detector
-        # pulse_id = random.randint(0, len(data["azi"])-1)
-        # title = "Current train: {}".format(data["tid"])
-        # title += "\nPulse previewed: {}".format(pulse_id)
-        # self.plt2d.setGraphTitle(title)
-        # image = data["images"][..., pulse_id]
-        # self.plt2d.addImage(image, replace=True, copy=False, yInverted=True)
+
+            # the current pulse (in blue)
+            p.addCurveThreadSafe(data["momentum"],
+                                 data["intensity"][idx],
+                                 legend="pulse", copy=False,
+                                 resetzoom=False, color="#0000FF")
+
+            # difference of the current pulse to the average over all pulses
+            # (in bright gold)
+            p.addCurveThreadSafe(data["momentum"],
+                                 data["intensity"][idx] - ave,
+                                 legend="diff",
+                                 copy=False,
+                                 color="#FDD017")
+
+        # plot the image from the detector
+        title = "Current train: {}".format(data["tid"])
+        title += "\nPulse previewed: {}".format(cfg.VIEW_PULSE)
+        self.plt2d.setGraphTitle(title)
+        image = self._clip_image(data["images"][cfg.VIEW_PULSE])
+        self.plt2d.addImage(image, replace=True, copy=False, yInverted=True)
+
+    @staticmethod
+    def _clip_image(array, min=-10000, max=800):
+        x = array.copy()
+        finite = np.isfinite(x)
+        # Suppress warnings comparing numbers to nan
+        with np.errstate(invalid='ignore'):
+            x[finite & (x < min)] = np.nan
+            x[finite & (x > max)] = np.nan
+        return x
 
     def run(self):
         """Method implementing thread loop that gets data,
            integrates, and plots
         """
-        bp_map = None
-        if cfg.BP_MAP_FILE:
-            import h5py
-            f = h5py.File(cfg.BP_MAP_FILE, "r")
-            bp_map = f["/MappedBadPixels"][()][::-1,::-1,:]
-            f.close()
-            print("Using bad pixel mask of shape {}".format(bp_map.shape))
-
         self.running = True
         while self.running:
             # retrieve

@@ -18,9 +18,8 @@ INTEGRATION_METHOD = "BBox"
 RADIAL_RANGE = (0.2, 5)  # the lower and upper range of the radial unit.
 N_POINTS = 512  # number of points in the output pattern
 
-BP_MAP_FILE = None
-
-RUNNING_AVERAGES = [0, 5]
+ON_PULSES = [0, 5, 10]
+VIEW_PULSE = 0
 
 # The following is valid-ish for the 20180318 geometry
 QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]

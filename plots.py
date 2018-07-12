@@ -110,7 +110,7 @@ def get_figures(widget):
     normalised.setGraphTitle("Normalised")
     figures.append(('normalised', normalised))
 
-    for idx in cfg.RUNNING_AVERAGES:
+    for idx in cfg.ON_PULSES:
         p = ThreadSafePlotWidget(parent=widget)
         p.setGraphYLabel("Normalised Scattering Signal, S(q) [arb. u.]")
         p.setGraphXLabel("Momentum Transfer, q[1/A]")
