@@ -1,3 +1,5 @@
+FROM_ASSEMBLED_DATA = False
+
 # distance sample - detector plan (orthogonal distance, not along the
 # beam), in meter
 DIST = 0.2
