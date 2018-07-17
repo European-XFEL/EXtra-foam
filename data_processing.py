@@ -15,13 +15,12 @@ def _process_assembled_data(assembled_image, tid):
     :param numpy.ndarray assembled_image: assembled image data.
     :param int tid: pulse id
 
-    :return: assembled image, azimuthal integration results, etc.
+    :return: results stored in a dictionary.
     """
     assembled = np.nan_to_num(assembled_image)
     data_mask = np.zeros(assembled.shape)  # 0 for valid pixel
-    data_mask[(assembled <= 0) | (assembled > 1e4)] = 1
-
-    assembled[data_mask == 1] = 0
+    data_mask[(assembled <= cfg.MASK_RANGE[0])
+              | (assembled > cfg.MASK_RANGE[1])] = 1
 
     ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
                                    poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
@@ -35,7 +34,7 @@ def _process_assembled_data(assembled_image, tid):
 
     momentum = None
     intensities = []
-    for i in range(assembled_image.shape[0]):
+    for i in range(assembled.shape[0]):
         res = ai.integrate1d(assembled[i],
                              cfg.N_POINTS,
                              method=cfg.INTEGRATION_METHOD,

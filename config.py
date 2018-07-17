@@ -17,8 +17,9 @@ LAMBDA_R = 12.3984 / ENERGY * 1e-10  # in m
 PULSES_PER_TRAIN = 16
 
 INTEGRATION_METHOD = "BBox"
-RADIAL_RANGE = (0.2, 5)  # the lower and upper range of the radial unit.
+RADIAL_RANGE = (0.2, 5)  # the lower and upper range of the radial unit
 N_POINTS = 512  # number of points in the output pattern
+MASK_RANGE = (0, 1e4)  # image pixels beyond this range will be masked
 
 ON_PULSES = [0, 5, 10]
 VIEW_PULSE = 0
