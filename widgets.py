@@ -17,7 +17,7 @@ def get_style_sheet(bg_color):
 
 class PlotButton(QPushButton):
     """Inherited from QPushButton."""
-    def __init__(self, name, parent=None, size=(160, 40)):
+    def __init__(self, name, parent=None, size=(140, 30)):
         """Initialization."""
         super().__init__(name, parent)
         self.setStyleSheet(get_style_sheet("#610B4B"))

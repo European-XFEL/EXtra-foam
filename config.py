@@ -27,3 +27,13 @@ VIEW_PULSE = 0
 # The following is valid-ish for the 20180318 geometry
 QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 GEOMETRY_FILE = "data/lpd_mar_18.h5"
+
+# *********************************************************************
+WINDOW_HEIGHT = 900
+WINDOW_WIDTH = 600
+
+MAX_LOGGING = 1000
+LOGGER_FONT_SIZE = 10
+
+LINE_PLOT_WIDTH = WINDOW_WIDTH - 20
+LINE_PLOT_HEIGHT = 200

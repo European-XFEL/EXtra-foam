@@ -6,9 +6,9 @@ import numpy as np
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import (
-    QMainWindow,
+    QMainWindow, QGroupBox,
     QApplication, QWidget, QGridLayout, QLabel, QPlainTextEdit,
-    QTextEdit, QSlider, QHBoxLayout
+    QTextEdit, QSlider, QRadioButton, QHBoxLayout
 )
 from PyQt5.QtCore import Qt
 
@@ -16,18 +16,10 @@ from karabo_bridge import Client
 
 import pyqtgraph as pg
 from logger import log, GuiLogger
-from data_processing import process_data
-from buttons import RunButton
-from plots import LinePlotWidget, ImageViewWidget
-
-
-WINDOW_HEIGHT = 900
-WINDOW_WIDTH = 600
-
-MAX_LOGGING = 1000
-
-LOGGER_FONT = QtGui.QFont()
-LOGGER_FONT.setPointSize(10)
+from widgets import RunButton, PlotButton
+from plots import LinePlotWidget, ImageViewWidget, LinePlotWindow
+from data_acquisition import acquire_data
+import config as cfg
 
 
 class MainGUI(QMainWindow):
@@ -37,31 +29,34 @@ class MainGUI(QMainWindow):
         super().__init__()
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setFixedSize(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.setFixedSize(cfg.WINDOW_WIDTH, cfg.WINDOW_HEIGHT)
         self.setWindowTitle('FXE')
+
+        self._image = ImageViewWidget(280, 280)
+        self._plot = LinePlotWidget(2, size=(cfg.WINDOW_WIDTH - 40, 200))
 
         self._cw = QWidget()
         self.setCentralWidget(self._cw)
 
-        self._btn_run = RunButton()
-        self._btn_run.attach(self)
-        self._btn_run.clicked.connect(self._btn_run.update)
+        self._btn_run = None
+        self._btn_plt = None
+        self._show_image_rbtn = QRadioButton()
 
         self._log_window = QPlainTextEdit()
         self._log_window.setReadOnly(True)
-        self._log_window.setMaximumBlockCount(MAX_LOGGING)
-        self._log_window.setFont(LOGGER_FONT)
+        self._log_window.setMaximumBlockCount(cfg.MAX_LOGGING)
+        logger_font = QtGui.QFont()
+        logger_font.setPointSize(cfg.LOGGER_FONT_SIZE)
+        self._log_window.setFont(logger_font)
         self._logger = GuiLogger(self._log_window)
         logging.getLogger().addHandler(self._logger)
 
+        self._pulses_to_show = QTextEdit()
         self._param1 = None
         self._param2 = None
         self._param3 = None
-        self._param4 = None
 
         self._title = QWidget()
-        self._image = ImageViewWidget(280, 280)
-        self._lines = LinePlotWidget(WINDOW_WIDTH - 40, 400)
         self._ctrl_pannel = QWidget()
         self.initTitleUI()
         self.initCtrlUI()
@@ -70,10 +65,10 @@ class MainGUI(QMainWindow):
         if screen_size is None:
             self.move(0, 0)
         else:
-            self.move(screen_size.width()/2 - WINDOW_WIDTH/2,
+            self.move(screen_size.width()/2 - cfg.WINDOW_WIDTH/2,
                       screen_size.height()/20)
 
-        self.client = Client("tcp://localhost:1236")
+        self._client = Client("tcp://localhost:1236")
 
         # For real time plot
         self.is_running = False
@@ -91,7 +86,7 @@ class MainGUI(QMainWindow):
         layout.addWidget(self._ctrl_pannel, 1, 3, 3, 3)
         layout.addWidget(self._image, 1, 0, 3, 3)
         # 3rd row
-        layout.addWidget(self._lines, 4, 0, 3, 6)
+        layout.addWidget(self._plot, 4, 0, 3, 6)
         # 4th row
         layout.addWidget(self._log_window, 7, 0, 3, 6)
 
@@ -115,7 +110,9 @@ class MainGUI(QMainWindow):
         self._title.setLayout(layout)
 
     def initCtrlUI(self):
-        self._btn_run.setFixedSize(100, 30)
+        self._btn_run = RunButton()
+        self._btn_run.attach(self)
+        self._btn_run.clicked.connect(self._btn_run.update)
 
         param1 = QLabel("Param1")
         param1_edit = QTextEdit()
@@ -130,10 +127,21 @@ class MainGUI(QMainWindow):
         param3_slider.setTickPosition(QSlider.TicksBelow)
         param3_slider.setFixedSize(100, 30)
 
-        param4 = QLabel("Param4")
-        param4_slider = QSlider(Qt.Horizontal)
-        param4_slider.setTickPosition(QSlider.TicksBelow)
-        param4_slider.setFixedSize(100, 30)
+        pulses_to_show_gp = QGroupBox()
+
+        self._btn_plt = PlotButton("Individual Pulses")
+        self._btn_plt.clicked.connect(self._new_window)
+
+        self._pulses_to_show.setFixedSize(100, 30)
+
+        self._show_image_rbtn.setText("Include LPD Image")
+        self._show_image_rbtn.setChecked(True)
+
+        gp_layout = QGridLayout()
+        gp_layout.addWidget(self._btn_plt, 0, 0, 1, 2)
+        gp_layout.addWidget(self._pulses_to_show, 0, 2, 1, 3)
+        gp_layout.addWidget(self._show_image_rbtn, 1, 0, 1, 3)
+        pulses_to_show_gp.setLayout(gp_layout)
 
         layout = QGridLayout()
         layout.addWidget(self._btn_run, 0, 0, 1, 2)
@@ -143,8 +151,7 @@ class MainGUI(QMainWindow):
         layout.addWidget(param2_edit, 2, 1)
         layout.addWidget(param3, 3, 0)
         layout.addWidget(param3_slider, 3, 1)
-        layout.addWidget(param4, 4, 0)
-        layout.addWidget(param4_slider, 4, 1)
+        layout.addWidget(pulses_to_show_gp, 4, 0, 1, 2)
 
         self._ctrl_pannel.setLayout(layout)
 
@@ -153,26 +160,17 @@ class MainGUI(QMainWindow):
         if self.is_running is False:
             return
 
-        # retrieve
-        t0 = time.perf_counter()
-        kb_data = self.client.next()
-        log.info("Time for retrieving data from the server: {:.1f} ms"
-                 .format(1000 * (time.perf_counter() - t0)))
-
-        # process
-        t0 = time.perf_counter()
-        data = process_data(kb_data)
-        log.info("Time for processing the data: {:.1f} ms"
-                 .format(1000 * (time.perf_counter() - t0)))
+        data = acquire_data(self._client)
         if data is None:
             return
 
         # show
         t0 = time.perf_counter()
 
-        self._lines.p1.clear()
+        p1 = self._plots.plot_items[0]
+        p1.clear()
         for i, intensity in enumerate(data["intensity"]):
-            self._lines.p1.plot(data["momentum"], intensity)
+            p1.plot(data["momentum"], intensity)
 
         self._image.set_image(np.nan_to_num(data["images"][0]))
 
@@ -180,6 +178,28 @@ class MainGUI(QMainWindow):
                  .format(1000 * (time.perf_counter() - t0)))
 
         self.first_loop = False
+
+    def _new_window(self):
+        text = self._pulses_to_show.toPlainText()
+        pulse_ids = []
+        try:
+            if text:
+                pulse_ids = text.split(",")
+                pulse_ids = [int(i.strip()) for i in pulse_ids]
+        except ValueError:
+            log.error(
+                "Invalid input! Please specify pulse ids separated by ','.")
+            return
+
+        if pulse_ids:
+            w = LinePlotWindow(len(pulse_ids),
+                               parent=self,
+                               show_image=self._show_image_rbtn.isChecked())
+            log.info("Open line plots for pulse(s): {}".
+                     format(", ".join(str(i) for i in pulse_ids)))
+            w.show()
+        else:
+            log.info("Please specify the pulse id(s)!")
 
 
 def main_gui():
