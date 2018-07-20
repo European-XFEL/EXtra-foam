@@ -167,7 +167,7 @@ class MainGUI(QMainWindow):
         # show
         t0 = time.perf_counter()
 
-        p1 = self._plots.plot_items[0]
+        p1 = self._plot.plot_items[0]
         p1.clear()
         for i, intensity in enumerate(data["intensity"]):
             p1.plot(data["momentum"], intensity)
