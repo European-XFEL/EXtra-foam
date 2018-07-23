@@ -17,6 +17,7 @@ class DataProcessor(object):
             with File(geom_file, 'r') as f:
                 self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                 f, cfg.QUAD_POSITIONS)
+            log.info("Use geometry file: {}".format(geom_file))
 
     def process_assembled_data(self, assembled_image, tid):
         """Process assembled image data.

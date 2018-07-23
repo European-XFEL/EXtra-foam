@@ -66,7 +66,7 @@ class MainGUI(QtGui.QMainWindow):
         self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
         # A worker which process the data in another thread
         self._daq_worker = None
-        self._geom_file = cfg.GEOMETRY_FILE
+        self._geom_file = cfg.DEFAULT_GEOMETRY_FILE
 
         self.threadpool = QtCore.QThreadPool()
 
@@ -98,6 +98,8 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon.fromTheme("drive-optical"),
             "Specify geometry file",
             self)
+        self._open_geometry_file_at.triggered.connect(
+            self._choose_geometry_file)
         tool_bar.addAction(self._open_geometry_file_at)
 
         # *************************************************************
@@ -301,6 +303,9 @@ class MainGUI(QtGui.QMainWindow):
         else:
             log.info("Please specify the pulse id(s)!")
 
+    def _choose_geometry_file(self):
+        self._geom_file = QtGui.QFileDialog.getOpenFileName()[0]
+
     def remove_window(self, w_id):
         del self._opened_windows[w_id]
 
@@ -311,6 +316,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._daq_worker.terminate()
 
+        self._open_geometry_file_at.setEnabled(True)
         self._hostname_le.setEnabled(True)
         self._port_le.setEnabled(True)
         self._start_at.setEnabled(True)
@@ -341,6 +347,7 @@ class MainGUI(QtGui.QMainWindow):
 
         log.info("DAQ started!")
 
+        self._open_geometry_file_at.setEnabled(False)
         self._hostname_le.setEnabled(False)
         self._port_le.setEnabled(False)
         self._start_at.setEnabled(False)
