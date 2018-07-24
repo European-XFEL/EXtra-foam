@@ -33,8 +33,8 @@ class Config:
     # The following is valid-ish for the 20180318 geometry
     QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 
-    DEFAULT_GEOMETRY_FILE = os.path.join(os.path.dirname(__file__),
-                                        "../../data/lpd_mar_18.h5")
+    DEFAULT_GEOMETRY_FILE = os.path.join(os.path.expanduser("~"),
+                                         "fxe-data/lpd_mar_18.h5")
 
     # *********************************************************************
     MAX_QUEUE_SIZE = 10

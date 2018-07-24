@@ -339,10 +339,15 @@ class MainGUI(QtGui.QMainWindow):
         else:
             data_source = DataSource.PROCESSED
 
-        self._daq_worker = DaqWorker(self._client,
-                                     self._daq_queue,
-                                     data_source,
-                                     geom_file=self._geom_file)
+        try:
+            self._daq_worker = DaqWorker(self._client,
+                                         self._daq_queue,
+                                         data_source,
+                                         geom_file=self._geom_file)
+        except OSError as e:
+            log.info(e)
+            return
+
         self._daq_worker.start()
 
         log.info("DAQ started!")
