@@ -76,18 +76,22 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar = self.addToolBar("Control")
 
         self._start_at = QtGui.QAction(
-            QtGui.QIcon.fromTheme("media-playback-start"), "Start", self)
+            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaPlay)),
+            "Start",
+            self)
         tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.on_enter_running)
 
         self._stop_at = QtGui.QAction(
-            QtGui.QIcon.fromTheme("media-playback-stop"), "Stop", self)
+            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaStop)),
+            "Stop",
+            self)
         tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.on_exit_running)
         self._stop_at.setEnabled(False)
 
         self._insert_image_at = QtGui.QAction(
-            QtGui.QIcon.fromTheme("insert-image"),
+            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
             "Plot individual pulse",
             self)
         self._insert_image_at.triggered.connect(
@@ -95,7 +99,7 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._insert_image_at)
 
         self._open_geometry_file_at = QtGui.QAction(
-            QtGui.QIcon.fromTheme("drive-optical"),
+            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
             "Specify geometry file",
             self)
         self._open_geometry_file_at.triggered.connect(
