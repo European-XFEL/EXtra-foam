@@ -50,7 +50,7 @@ class Config:
     LOGGER_FONT_SIZE = 12
 
     LINE_PLOT_WIDTH = WINDOW_WIDTH - 20
-    LINE_PLOT_HEIGHT = 250
+    LINE_PLOT_HEIGHT = 280
     LINE_PLOT_LEGEND_OFFSET = (-10, -50)
 
     # *********************************************************************

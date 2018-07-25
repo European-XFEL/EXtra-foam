@@ -265,8 +265,9 @@ class MainGUI(QtGui.QMainWindow):
                 self._plot.update(data["momentum"], intensity,
                                   pen=mkPen(intColor(i, hues=9, values=5),
                                             width=2))
-
-            self._image.update(np.sum(data["image"], axis=0))
+            self._plot.set_title("Train ID: {}, No. pulses: {}".
+                                 format(data["tid"], i+1))
+            self._image.update(np.mean(data["image"], axis=0))
 
         # update the plots in other opened windows
         for w in self._opened_windows.values():

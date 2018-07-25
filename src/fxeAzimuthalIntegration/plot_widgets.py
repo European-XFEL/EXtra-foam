@@ -17,11 +17,13 @@ class LinePlotWidget(GraphicsLayoutWidget):
         h = min(cfg.MAX_WINDOW_HEIGHT, cfg.LINE_PLOT_HEIGHT)
         self.setFixedSize(w, h)
 
-        self.addLabel("Azimuthal integration")
-        self.nextRow()
         self._plot = self.addPlot()
+        self._plot.setTitle("")
         self._plot.setLabel('bottom', cfg.X_LABEL)
         self._plot.setLabel('left', cfg.Y_LABEL)
+
+    def set_title(self, text):
+        self._plot.setTitle(text)
 
     def clear_(self):
         self._plot.clear()
@@ -53,7 +55,7 @@ class LinePlotWindow(QtGui.QMainWindow):
     def __init__(self, window_id, pulse_ids, *,
                  parent=None,
                  show_image=False,
-                 title="FXE instrument plot",
+                 title="FXE Azimuthal integration",
                  **kwargs):
         """Initialization."""
         super().__init__(parent=parent)
