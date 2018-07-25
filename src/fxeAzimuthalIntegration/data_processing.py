@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pyFAI
 from h5py import File
@@ -27,10 +29,15 @@ class DataProcessor(object):
 
         :return: results stored in a dictionary.
         """
+        t0 = time.perf_counter()
+
         assembled = np.nan_to_num(assembled_image)
         data_mask = np.zeros(assembled.shape)  # 0 for valid pixel
         data_mask[(assembled <= cfg.MASK_RANGE[0])
                   | (assembled > cfg.MASK_RANGE[1])] = 1
+
+        log.debug("Time for creating the mask: {:.1f} ms"
+                  .format(1000 * (time.perf_counter() - t0)))
 
         ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
                                        poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
@@ -41,6 +48,8 @@ class DataProcessor(object):
                                        rot2=0,
                                        rot3=0,
                                        wavelength=cfg.LAMBDA_R)
+
+        t0 = time.perf_counter()
 
         momentum = None
         intensities = []
@@ -55,6 +64,9 @@ class DataProcessor(object):
                                  unit="q_A^-1")
             momentum = res.radial
             intensities.append(res.intensity)
+
+        log.debug("Time for azimuthal integration: {:.1f} ms"
+                  .format(1000 * (time.perf_counter() - t0)))
 
         data = dict()
         data["tid"] = tid
@@ -73,7 +85,11 @@ class DataProcessor(object):
 
         tid = next(iter(metadata.values()))["timestamp.tid"]
 
+        t0 = time.perf_counter()
+
         modules_data = stack_detector_data(data, "image.data", only="LPD")
+        log.debug("Time for stacking detector data: {:.1f} ms"
+                  .format(1000 * (time.perf_counter() - t0)))
 
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):
@@ -82,9 +98,13 @@ class DataProcessor(object):
 
         # cell_data = stack_detector_data(train_data, "image.cellId",
         #                                 only="LPD")
+        t0 = time.perf_counter()
 
         assembled_orig, centre = \
             self._geom.position_all_modules(modules_data)
+
+        log.debug("Time for assembling: {:.1f} ms"
+                  .format(1000 * (time.perf_counter() - t0)))
 
         n_pulses = np.minimum(assembled_orig.shape[0], cfg.PULSES_PER_TRAIN)
         return self.process_assembled_data(assembled_orig[:n_pulses], tid)

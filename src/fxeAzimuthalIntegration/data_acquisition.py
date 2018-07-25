@@ -39,7 +39,7 @@ class DaqWorker(Thread):
 
             # this information will flood the GUI logger window and
             # crash the GUI.
-            log.debug("Time for processing the data: {:.1f} ms"
+            log.debug("Total time for processing the data: {:.1f} ms"
                       .format(1000 * (time.perf_counter() - t0)))
 
             self._out_queue.append(processed_data)

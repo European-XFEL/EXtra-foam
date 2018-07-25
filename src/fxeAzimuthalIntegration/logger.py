@@ -4,7 +4,7 @@ import sys
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format="%(filename)s: %(funcName)s: %(levelname)s: %(message)s",
+    format="%(filename)s: %(levelname)s: %(message)s",
     stream=sys.stderr)
 log = logging.getLogger(__name__)
 # disable DEBUG information from imported module pyFAI
