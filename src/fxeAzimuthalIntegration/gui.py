@@ -107,10 +107,14 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._open_geometry_file_at)
 
         # *************************************************************
-        # Other UI
+        # Plots
         # *************************************************************
         self._plot = LinePlotWidget()
         self._image = ImageViewWidget()
+
+        # *************************************************************
+        # Other UI
+        # *************************************************************
 
         self._opened_windows_count = 0
         self._opened_windows = dict()  # book keeping opened windows
@@ -243,7 +247,8 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the old plots
-        self._plot.plot.clear()
+        self._plot.clear_()
+        self._image.clear_()
         for w in self._opened_windows.values():
             w.clear()
 
@@ -256,11 +261,12 @@ class MainGUI(QtGui.QMainWindow):
                     # data["intensity"] is also changed, so the plots in
                     # the other windows also become normalized.
                     intensity /= max_intensity
-                self._plot.plot.plot(data["momentum"], intensity,
-                                     pen=mkPen(intColor(i, hues=9, values=5),
-                                               width=2))
 
-            self._image.set_image(np.sum(data["image"], axis=0))
+                self._plot.update(data["momentum"], intensity,
+                                  pen=mkPen(intColor(i, hues=9, values=5),
+                                            width=2))
+
+            self._image.update(np.sum(data["image"], axis=0))
 
         # update the plots in other opened windows
         for w in self._opened_windows.values():

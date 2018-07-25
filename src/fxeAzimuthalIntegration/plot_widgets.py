@@ -6,13 +6,12 @@ from .config import Config as cfg
 
 
 class LinePlotWidget(GraphicsLayoutWidget):
-    """A widget has multiple PlotItems stacked vertically."""
-    def __init__(self, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         """Initialization.
 
         :param int n_lines: Number of PlotItems.
         """
-        super().__init__(**kwargs)
+        super().__init__(parent, **kwargs)
 
         w = cfg.LINE_PLOT_WIDTH
         h = min(cfg.MAX_WINDOW_HEIGHT, cfg.LINE_PLOT_HEIGHT)
@@ -20,25 +19,33 @@ class LinePlotWidget(GraphicsLayoutWidget):
 
         self.addLabel("Azimuthal integration")
         self.nextRow()
-        self.plot = self.addPlot()
-        self.plot.setLabel('bottom', cfg.X_LABEL)
-        self.plot.setLabel('left', cfg.Y_LABEL)
+        self._plot = self.addPlot()
+        self._plot.setLabel('bottom', cfg.X_LABEL)
+        self._plot.setLabel('left', cfg.Y_LABEL)
+
+    def clear_(self):
+        self._plot.clear()
+
+    def update(self, *args, **kwargs):
+        self._plot.plot(*args, **kwargs)
 
 
 class ImageViewWidget(GraphicsLayoutWidget):
-    def __init__(self, **kwargs):
+    def __init__(self, parent=None, **kwargs):
         """Initialization."""
-        super().__init__(**kwargs)
+        super().__init__(parent, **kwargs)
 
         self.setFixedSize(240, 240)
 
         self._img = ImageItem(border='w')
-        self._view = self.addViewBox()
+        self._view = self.addViewBox(lockAspect=True)
         self._view.addItem(self._img)
 
-    def set_image(self, data):
+    def clear_(self):
         self._img.clear()
-        self._img.setImage(data)
+
+    def update(self, *args, **kwargs):
+        self._img.setImage(*args, **kwargs)
         self._view.autoRange()
 
 
@@ -81,7 +88,7 @@ class LinePlotWindow(QtGui.QMainWindow):
 
             if self._show_image is True:
                 vb = gl_widget.addViewBox(lockAspect=True, colspan=1)
-                img = ImageItem()
+                img = ImageItem(border='w')
                 vb.addItem(img)
                 self.image_items.append(img)
 
