@@ -54,8 +54,8 @@ class Config:
     LINE_PLOT_LEGEND_OFFSET = (-10, -50)
 
     # *********************************************************************
-    X_LABEL = "Momentum"
-    Y_LABEL = "Intensity"
+    X_LABEL = "Momentum transfer (1/A)"
+    Y_LABEL = "Scattering signal (arb. u.)"
 
     CUSTOM_PEN = [
         {'color': (255, 0, 255), 'width': 3},
