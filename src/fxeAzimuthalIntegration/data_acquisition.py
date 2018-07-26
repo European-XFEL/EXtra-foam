@@ -2,7 +2,7 @@ import time
 from threading import Thread
 
 from .data_processing import DataProcessor
-from .logger import log
+from .logging import logger
 from .config import DataSource
 
 
@@ -23,8 +23,8 @@ class DaqWorker(Thread):
 
             data = self._client.next()
 
-            log.debug("Time for retrieving data from the server: {:.1f} ms"
-                      .format(1000 * (time.perf_counter() - t0)))
+            logger.debug("Time for retrieving data from the server: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
 
             t0 = time.perf_counter()
 
@@ -39,8 +39,8 @@ class DaqWorker(Thread):
 
             # this information will flood the GUI logger window and
             # crash the GUI.
-            log.debug("Total time for processing the data: {:.1f} ms"
-                      .format(1000 * (time.perf_counter() - t0)))
+            logger.debug("Total time for processing the data: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
 
             self._out_queue.append(processed_data)
 

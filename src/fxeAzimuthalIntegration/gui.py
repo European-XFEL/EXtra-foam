@@ -9,7 +9,7 @@ from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import mkPen, intColor
-from .logger import log, GuiLogger
+from .logging import logger, GuiLogger
 from .plot_widgets import LinePlotWidget, ImageViewWidget, LinePlotWindow
 from .data_acquisition import DaqWorker
 from .config import Config as cfg
@@ -273,8 +273,8 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._opened_windows.values():
             w.update(data)
 
-        log.debug("Time for updating the plots: {:.1f} ms"
-                  .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for updating the plots: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
     def _show_individual_pulse_dialog(self):
         result, ok = InputDialogWithCheckBox.getResult(
@@ -290,14 +290,14 @@ class MainGUI(QtGui.QMainWindow):
         text = result[0]
         show_image = result[1]
         if not text:
-            log.info("Invalid input! Please specify pulse IDs!")
+            logger.info("Invalid input! Please specify pulse IDs!")
             return
 
         try:
             pulse_ids = text.split(",")
             pulse_ids = [int(i.strip()) for i in pulse_ids]
         except ValueError:
-            log.info(
+            logger.info(
                 "Invalid input! Please specify pulse IDs separated by ','.")
             return
 
@@ -308,11 +308,11 @@ class MainGUI(QtGui.QMainWindow):
                                show_image=show_image)
             self._opened_windows_count += 1
             self._opened_windows[window_id] = w
-            log.info("Open new window for pulse(s): {}".
-                     format(", ".join(str(i) for i in pulse_ids)))
+            logger.info("Open new window for pulse(s): {}".
+                        format(", ".join(str(i) for i in pulse_ids)))
             w.show()
         else:
-            log.info("Please specify the pulse id(s)!")
+            logger.info("Please specify the pulse id(s)!")
 
     def _choose_geometry_file(self):
         self._geom_file = QtGui.QFileDialog.getOpenFileName()[0]
@@ -323,7 +323,7 @@ class MainGUI(QtGui.QMainWindow):
     def on_exit_running(self):
         """Actions taken at the beginning of run state."""
         self._is_running = False
-        log.info("DAQ stopped!")
+        logger.info("DAQ stopped!")
 
         self._daq_worker.terminate()
 
@@ -341,7 +341,7 @@ class MainGUI(QtGui.QMainWindow):
         self._is_running = True
 
         self._client = Client(self._client_addr)
-        log.info("Bind to {}".format(self._client_addr))
+        logger.info("Bind to {}".format(self._client_addr))
 
         if self._src_calibrated_rbt.isChecked() is True:
             data_source = DataSource.CALIBRATED
@@ -356,12 +356,12 @@ class MainGUI(QtGui.QMainWindow):
                                          data_source,
                                          geom_file=self._geom_file)
         except OSError as e:
-            log.info(e)
+            logger.info(e)
             return
 
         self._daq_worker.start()
 
-        log.info("DAQ started!")
+        logger.info("DAQ started!")
 
         self._open_geometry_file_at.setEnabled(False)
         self._hostname_le.setEnabled(False)

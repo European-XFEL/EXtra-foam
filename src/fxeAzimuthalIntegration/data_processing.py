@@ -8,7 +8,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from .config import Config as cfg
-from .logger import log
+from .logging import logger
 
 
 class DataProcessor(object):
@@ -19,7 +19,7 @@ class DataProcessor(object):
             with File(geom_file, 'r') as f:
                 self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                     f, cfg.QUAD_POSITIONS)
-            log.info("Use geometry file: {}".format(geom_file))
+            logger.info("Use geometry file: {}".format(geom_file))
 
     def process_assembled_data(self, assembled_image, tid):
         """Process assembled image data.
@@ -36,8 +36,8 @@ class DataProcessor(object):
         data_mask[(assembled <= cfg.MASK_RANGE[0])
                   | (assembled > cfg.MASK_RANGE[1])] = 1
 
-        log.debug("Time for creating the mask: {:.1f} ms"
-                  .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for creating the mask: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
                                        poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
@@ -65,8 +65,8 @@ class DataProcessor(object):
             momentum = res.radial
             intensities.append(res.intensity)
 
-        log.debug("Time for azimuthal integration: {:.1f} ms"
-                  .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for azimuthal integration: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         data = dict()
         data["tid"] = tid
@@ -80,7 +80,8 @@ class DataProcessor(object):
     def process_calibrated_data(self, kb_data):
         """Process data streaming by karabo_data from files."""
         if self._geom is None:
-            log.info("Geometry file is required to process calibrated data!")
+            logger.info(
+                "Geometry file is required to process calibrated data!")
         data, metadata = kb_data
 
         tid = next(iter(metadata.values()))["timestamp.tid"]
@@ -88,12 +89,12 @@ class DataProcessor(object):
         t0 = time.perf_counter()
 
         modules_data = stack_detector_data(data, "image.data", only="LPD")
-        log.debug("Time for stacking detector data: {:.1f} ms"
-                  .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for stacking detector data: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):
-            log.debug("Error in modules data of train {}".format(tid))
+            logger.debug("Error in modules data of train {}".format(tid))
             return None
 
         # cell_data = stack_detector_data(train_data, "image.cellId",
@@ -103,8 +104,8 @@ class DataProcessor(object):
         assembled_orig, centre = \
             self._geom.position_all_modules(modules_data)
 
-        log.debug("Time for assembling: {:.1f} ms"
-                  .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for assembling: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         n_pulses = np.minimum(assembled_orig.shape[0], cfg.PULSES_PER_TRAIN)
         return self.process_assembled_data(assembled_orig[:n_pulses], tid)
