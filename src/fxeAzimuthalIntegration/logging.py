@@ -13,15 +13,18 @@ def create_logger():
 
     fh = TimedRotatingFileHandler(name + ".log", when='midnight')
     fh.suffix = "%Y%m%d"
-    fh.setLevel(logging.DEBUG)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-
+    fh.setLevel(logging.INFO)
     formatter = logging.Formatter(
         '%(asctime)s - %(filename)s - %(levelname)s - %(message)s'
     )
     fh.setFormatter(formatter)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(filename)s - %(levelname)s - %(message)s'
+    )
+
     ch.setFormatter(formatter)
 
     logger.addHandler(fh)
