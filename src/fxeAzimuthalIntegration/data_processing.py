@@ -42,17 +42,17 @@ class DataProcessor(object):
                                        wavelength=cfg.LAMBDA_R)
 
         assembled = np.nan_to_num(assembled_data)
-        data_mask = np.zeros(assembled.shape)  # 0 for valid pixel
-        data_mask[(assembled <= cfg.MASK_RANGE[0])
-                  | (assembled > cfg.MASK_RANGE[1])] = 1
 
         momentum = None
         intensities = []
-        for i in range(assembled_data.shape[0]):
+        for i in range(assembled.shape[0]):
+            data_mask = np.zeros(assembled[i].shape)  # 0 for valid pixel
+            data_mask[(assembled[i] <= cfg.MASK_RANGE[0])
+                      | (assembled[i] > cfg.MASK_RANGE[1])] = 1
             res = ai.integrate1d(assembled[i],
                                  cfg.N_POINTS,
                                  method=cfg.INTEGRATION_METHOD,
-                                 mask=data_mask[i],
+                                 mask=data_mask,
                                  radial_range=cfg.RADIAL_RANGE,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
@@ -67,6 +67,7 @@ class DataProcessor(object):
         data["tid"] = tid
         data["intensity"] = np.array(intensities)
         data["momentum"] = momentum
+        # trunc the data only for plot
         assembled[(assembled <= cfg.MASK_RANGE[0])
                   | (assembled > cfg.MASK_RANGE[1])] = 0
         data["image"] = assembled
