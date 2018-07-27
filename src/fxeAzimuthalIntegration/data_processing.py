@@ -21,23 +21,15 @@ class DataProcessor(object):
                     f, cfg.QUAD_POSITIONS)
             logger.info("Use geometry file: {}".format(geom_file))
 
-    def process_assembled_data(self, assembled_image, tid):
+    def process_assembled_data(self, assembled_data, tid):
         """Process assembled image data.
 
-        :param numpy.ndarray assembled_image: assembled image data.
+        :param numpy.ndarray assembled_data: assembled image data.
         :param int tid: pulse id
 
         :return: results stored in a dictionary.
         """
         t0 = time.perf_counter()
-
-        assembled = np.nan_to_num(assembled_image)
-        data_mask = np.zeros(assembled.shape)  # 0 for valid pixel
-        data_mask[(assembled <= cfg.MASK_RANGE[0])
-                  | (assembled > cfg.MASK_RANGE[1])] = 1
-
-        logger.debug("Time for creating the mask: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
 
         ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
                                        poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
@@ -49,11 +41,14 @@ class DataProcessor(object):
                                        rot3=0,
                                        wavelength=cfg.LAMBDA_R)
 
-        t0 = time.perf_counter()
+        assembled = np.nan_to_num(assembled_data)
+        data_mask = np.zeros(assembled.shape)  # 0 for valid pixel
+        data_mask[(assembled <= cfg.MASK_RANGE[0])
+                  | (assembled > cfg.MASK_RANGE[1])] = 1
 
         momentum = None
         intensities = []
-        for i in range(assembled.shape[0]):
+        for i in range(assembled_data.shape[0]):
             res = ai.integrate1d(assembled[i],
                                  cfg.N_POINTS,
                                  method=cfg.INTEGRATION_METHOD,
@@ -77,12 +72,12 @@ class DataProcessor(object):
         data["image"] = assembled
         return data
 
-    def process_calibrated_data(self, kb_data):
+    def process_calibrated_data(self, calibrated_data):
         """Process data streaming by karabo_data from files."""
         if self._geom is None:
             logger.info(
                 "Geometry file is required to process calibrated data!")
-        data, metadata = kb_data
+        data, metadata = calibrated_data
 
         tid = next(iter(metadata.values()))["timestamp.tid"]
 
