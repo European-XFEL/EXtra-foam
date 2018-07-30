@@ -284,7 +284,7 @@ class MainGUI(QtGui.QMainWindow):
             self,
             'Input Dialog',
             'Enter pulse IDs (separated by comma):',
-            "Include LPD image")
+            "Include detector image")
 
         if ok is True:
             self._open_individual_pulse_window(result)
