@@ -1,31 +1,34 @@
 FXE tools for train integration
 ===============================
 
-All the following requires Python 3.5 or greater
+This tool has only been tested under Python3.6 environment.
 
-Server
-------
-To use this server launch it as follows::
+Installation
+------------
 
-    python server.py 4545 /path/to/run/dir /path/to/geometry_file.h5
+.. code-block:: bash
 
-The server reads the run and stores a certain quantity of trains in memory
-before serving them on request of a KaraboBridge client.
+    $ pip install -e .
 
-.. note:
-    The images are currently served with axes moved, as provided by the 
-    online calibration pipeline.
 
-Receiving Data
---------------
-The data is received using the KaraboBridge interface::
+GUI
+---
 
-    import matplotlib.pyplot as plt
-    from karabo_bridge import Client
+To start the GUI, simply type:
 
-    client = Client("tcp://localhost:4545")
-    data = client.next()
-    d = data["FXE_DET_LPD1M-1/DET/corrected"]["image.data"]
-    
-    plt.imshow(d[0], vmin=-10, vmax=6000)
-    plt.show()  # Will display data with geometry
+.. code-block:: bash
+
+    $ fxe-gui
+
+
+Start a file server
+-------------------
+
+One can start a virtual bridge by streaming from files:
+
+.. code-block:: bash
+
+    $ karabo-bridge-serve-files dirname port
+
+In the meanwhile, one should select ``Calibrated (file)`` as the
+``Data source`` in the GUI.
