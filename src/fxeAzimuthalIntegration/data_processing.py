@@ -87,11 +87,13 @@ class DataProcessor(object):
         if from_file is False:
             modules_data = next(iter(data.values()))["image.data"]
             modules_data = np.moveaxis(modules_data, 3, 0)
+            logger.debug("Time for manipulating stacked data: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
         else:
             modules_data = stack_detector_data(data, "image.data", only="LPD")
-            
-        logger.debug("Time for stacking detector data: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
+            logger.debug("Time for stacking detector data: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
+
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):
             logger.debug("Error in modules data of train {}".format(tid))

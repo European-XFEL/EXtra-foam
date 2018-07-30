@@ -347,7 +347,7 @@ class MainGUI(QtGui.QMainWindow):
         self._client = Client(self._client_addr)
         logger.info("Bind to {}".format(self._client_addr))
 
-        if self._src_calibrated_rbt.isChecked() is True:
+        if self._src_calibrated_file_rbt.isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
         elif self._src_calibrated_rbt.isChecked() is True:
             data_source = DataSource.CALIBRATED
