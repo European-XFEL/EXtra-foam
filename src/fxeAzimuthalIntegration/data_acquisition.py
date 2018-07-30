@@ -28,12 +28,15 @@ class DaqWorker(Thread):
 
             t0 = time.perf_counter()
 
-            if self._source == DataSource.CALIBRATED:
+          
+            if self._source == DataSource.CALIBRATED_FILE:
                 processed_data = self._processor.process_calibrated_data(data)
+            elif self._source == DataSource.CALIBRATED:
+                processed_data = self._processor.process_calibrated_data(data, from_file=True)
             elif self._source == DataSource.ASSEMBLED:
                 processed_data = self._processor.process_assembled_data(data)
             elif self._source == DataSource.PROCESSED:
-                processed_data = data
+                processed_data = data[0]
             else:
                 raise ValueError("Unknown data source!")
 

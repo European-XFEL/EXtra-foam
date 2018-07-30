@@ -73,7 +73,7 @@ class DataProcessor(object):
         data["image"] = assembled
         return data
 
-    def process_calibrated_data(self, calibrated_data):
+    def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process data streaming by karabo_data from files."""
         if self._geom is None:
             logger.info(
@@ -84,10 +84,14 @@ class DataProcessor(object):
 
         t0 = time.perf_counter()
 
-        modules_data = stack_detector_data(data, "image.data", only="LPD")
+        if from_file is False:
+            modules_data = next(iter(data.values()))["image.data"]
+            modules_data = np.moveaxis(modules_data, 3, 0)
+        else:
+            modules_data = stack_detector_data(data, "image.data", only="LPD")
+            
         logger.debug("Time for stacking detector data: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
-
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):
             logger.debug("Error in modules data of train {}".format(tid))

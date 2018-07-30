@@ -3,9 +3,10 @@ import os
 
 
 class DataSource(Enum):
-    CALIBRATED = 1  # From file or Karabo-bridge
-    ASSEMBLED = 2  # Assembled by hardware
-    PROCESSED = 3  # From the Middle-layer device
+    CALIBRATED = 1  # calibrated data from Karabo-bridge
+    ASSEMBLED = 2  # assembled data from Karabo-bridge
+    PROCESSED = 3  # processed data from the Middle-layer device
+    CALIBRATED_FILE = 4  # calibrated data from files 
 
 
 class Config:
@@ -33,6 +34,8 @@ class Config:
     # The following is valid-ish for the 20180318 geometry
     QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 
+    DEFAULT_SERVER_ADDR = "10.253.0.53"  # "localhost"
+    DEFAULT_SERVER_PORT = "4501"  # "12345"
     DEFAULT_GEOMETRY_FILE = os.path.join(os.path.expanduser("~"),
                                          "fxe-data/lpd_mar_18.h5")
 

@@ -125,18 +125,20 @@ class MainGUI(QtGui.QMainWindow):
         self._pulse_plot_bt = QtGui.QPushButton("Show Individual Pulses")
         self._pulse_plot_bt.clicked.connect(self._open_individual_pulse_window)
 
-        self._src_calibrated_rbt = QtGui.QRadioButton("Calibrated")
+        self._src_calibrated_file_rbt = QtGui.QRadioButton("Calibrated (file)")
+        self._src_calibrated_rbt = QtGui.QRadioButton("Calibrated (bridge)")
+        self._src_assembled_rbt = QtGui.QRadioButton("Assembled (bridge)")
+        self._src_processed_rbt = QtGui.QRadioButton("Processed (bridge)")
         self._src_calibrated_rbt.setChecked(True)
-        self._src_assembled_rbt = QtGui.QRadioButton("Assembled")
-        self._src_processed_rbt = QtGui.QRadioButton("Processed")
+        self._src_processed_rbt.setEnabled(False)
 
         self._is_normalized_cb = QtGui.QCheckBox("Normalize")
         self._is_normalized_cb.setChecked(False)
 
-        self._hostname_le = QtGui.QLineEdit("localhost")
+        self._hostname_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_ADDR)
         self._hostname_le.returnPressed.connect(self._update_client)
 
-        self._port_le = QtGui.QLineEdit("12345")
+        self._port_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_PORT)
         self._port_le.returnPressed.connect(self._update_client)
 
         self._log_window = QtGui.QPlainTextEdit()
@@ -207,6 +209,7 @@ class MainGUI(QtGui.QMainWindow):
                 'margin-top: 0.2em;}'
         )
         layout = QtGui.QVBoxLayout()
+        layout.addWidget(self._src_calibrated_file_rbt)
         layout.addWidget(self._src_calibrated_rbt)
         layout.addWidget(self._src_assembled_rbt)
         layout.addWidget(self._src_processed_rbt)
@@ -332,9 +335,10 @@ class MainGUI(QtGui.QMainWindow):
         self._port_le.setEnabled(True)
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
+        self._src_calibrated_file_rbt.setEnabled(True)
         self._src_calibrated_rbt.setEnabled(True)
         self._src_assembled_rbt.setEnabled(True)
-        self._src_processed_rbt.setEnabled(True)
+#         self._src_processed_rbt.setEnabled(True)
 
     def on_enter_running(self):
         """Actions taken at the end of run state."""
@@ -344,6 +348,8 @@ class MainGUI(QtGui.QMainWindow):
         logger.info("Bind to {}".format(self._client_addr))
 
         if self._src_calibrated_rbt.isChecked() is True:
+            data_source = DataSource.CALIBRATED_FILE
+        elif self._src_calibrated_rbt.isChecked() is True:
             data_source = DataSource.CALIBRATED
         elif self._src_assembled_rbt.isChecked() is True:
             data_source = DataSource.ASSEMBLED
@@ -368,6 +374,7 @@ class MainGUI(QtGui.QMainWindow):
         self._port_le.setEnabled(False)
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
+        self._src_calibrated_file_rbt.setEnabled(False)
         self._src_calibrated_rbt.setEnabled(False)
         self._src_assembled_rbt.setEnabled(False)
         self._src_processed_rbt.setEnabled(False)
