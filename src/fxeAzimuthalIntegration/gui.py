@@ -18,6 +18,15 @@ from .config import Config as cfg
 from .config import DataSource
 
 
+GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
+                        'border: 1px;'\
+                        'subcontrol-origin: margin;'\
+                        'subcontrol-position: top left;'\
+                        'padding-left: 10px;'\
+                        'padding-top: 10px;'\
+                        'margin-top: 0.0em;}'
+
+
 class InputDialogWithCheckBox(QtGui.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -194,44 +203,33 @@ class MainGUI(QtGui.QMainWindow):
         # Azimuthal integration setup
         # *************************************************************
         ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
-        ai_setup_gp.setStyleSheet(
-            'QGroupBox:title {'
-                'border: 1px;'
-                'subcontrol-origin: margin;'
-                'subcontrol-position: top left;'
-                'padding-left: 10px;'
-                'padding-top: 10px;'
-                'margin-top: 0.0em;}'
-        )
+        ai_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
         # *************************************************************
         # hostname and port
         # *************************************************************
-        addr_layout = QtGui.QHBoxLayout()
+        tcp_connection_gp = QtGui.QGroupBox("TCP connection")
+        tcp_connection_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET
+                                        )
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
         self._hostname_le.setFixedHeight(30)
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(30)
-        addr_layout.addWidget(hostname_lb, 2)
-        addr_layout.addWidget(self._hostname_le, 3)
-        addr_layout.addWidget(port_lb, 1)
-        addr_layout.addWidget(self._port_le, 2)
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(hostname_lb, 2)
+        layout.addWidget(self._hostname_le, 3)
+        layout.addWidget(port_lb, 1)
+        layout.addWidget(self._port_le, 2)
+        tcp_connection_gp.setLayout(layout)
 
         # *************************************************************
         # data source panel
         # *************************************************************
         data_src_gp = QtGui.QGroupBox("Data source")
-        data_src_gp.setStyleSheet(
-            'QGroupBox:title {'
-                'border: 1px;'
-                'subcontrol-origin: margin;'
-                'subcontrol-position: top left;'
-                'padding-left: 10px;'
-                'padding-top: 10px; '
-                'margin-top: 0.2em;}'
-        )
+        data_src_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._src_calibrated_file_rbt)
         layout.addWidget(self._src_calibrated_rbt)
@@ -243,22 +241,14 @@ class MainGUI(QtGui.QMainWindow):
         # plot option panel
         # *************************************************************
         plot_option_gp = QtGui.QGroupBox('Plot options')
-        plot_option_gp.setStyleSheet(
-            'QGroupBox:title {'
-                'border: 1px;'
-                'subcontrol-origin: margin;'
-                'subcontrol-position: top left;'
-                'padding-left: 10px;'
-                'padding-top: 10px; '
-                'margin-top: 0.2em;}'
-        )
+        plot_option_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._is_normalized_cb)
         plot_option_gp.setLayout(layout)
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(ai_setup_gp, 1, 0, 3, 3)
-        layout.addLayout(addr_layout, 0, 3, 1, 2)
+        layout.addWidget(ai_setup_gp, 0, 0, 4, 3)
+        layout.addWidget(tcp_connection_gp, 0, 3, 1, 2)
         layout.addWidget(plot_option_gp, 1, 3, 3, 1)
         layout.addWidget(data_src_gp, 1, 4, 3, 1)
 
