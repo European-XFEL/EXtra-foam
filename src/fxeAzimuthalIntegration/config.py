@@ -14,10 +14,10 @@ class Config:
     # beam), in meter
     DIST = 0.2
     # coordinate of the point of normal incidence along the detector's first
-    # dimension, in meter
+    # dimension, in pixels
     CENTER_Y = 620
     # coordinate of the point of normal incidence along the detector's second
-    # dimension, in meter
+    # dimension, in pixels
     CENTER_X = 580
     PIXEL_SIZE = 0.5e-3  # in meter
 
@@ -45,14 +45,14 @@ class Config:
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz
 
-    WINDOW_HEIGHT = 800
-    WINDOW_WIDTH = 640
-    MAX_WINDOW_HEIGHT = 1000
+    MAIN_WINDOW_HEIGHT = 800
+    MAIN_WINDOW_WIDTH = 640
+    MAIN_LINE_PLOT_HEIGHT = 360
 
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
 
-    LINE_PLOT_WIDTH = WINDOW_WIDTH - 20
+    LINE_PLOT_WIDTH = MAIN_WINDOW_WIDTH - 20
     LINE_PLOT_HEIGHT = 280
     LINE_PLOT_LEGEND_OFFSET = (-10, -50)
 

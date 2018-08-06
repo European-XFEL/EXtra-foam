@@ -10,7 +10,9 @@ from karabo_bridge import Client
 from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import mkPen, intColor
 from .logging import logger, GuiLogger
-from .plot_widgets import LinePlotWidget, ImageViewWidget, LinePlotWindow
+from .plot_widgets import (
+    MainLinePlotWidget, ImageViewWidget, LinePlotWindow
+)
 from .data_acquisition import DaqWorker
 from .config import Config as cfg
 from .config import DataSource
@@ -59,7 +61,7 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setFixedSize(cfg.WINDOW_WIDTH, cfg.WINDOW_HEIGHT)
+        self.setFixedSize(cfg.MAIN_WINDOW_WIDTH, cfg.MAIN_WINDOW_HEIGHT)
         self.setWindowTitle('FXE Azimuthal Integration')
 
         # drop the oldest element is queue is full
@@ -109,7 +111,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Plots
         # *************************************************************
-        self._plot = LinePlotWidget()
+        self._plot = MainLinePlotWidget()
         self._image = ImageViewWidget()
 
         # *************************************************************
@@ -160,7 +162,7 @@ class MainGUI(QtGui.QMainWindow):
         if screen_size is None:
             self.move(0, 0)
         else:
-            self.move(screen_size.width()/2 - cfg.WINDOW_WIDTH/2,
+            self.move(screen_size.width()/2 - cfg.MAIN_WINDOW_WIDTH/2,
                       screen_size.height()/20)
 
         self._client_addr = None

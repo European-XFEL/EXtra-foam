@@ -5,7 +5,7 @@ from .pyqtgraph import GraphicsLayoutWidget, ImageItem, mkPen
 from .config import Config as cfg
 
 
-class LinePlotWidget(GraphicsLayoutWidget):
+class MainLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, parent=None, **kwargs):
         """Initialization.
 
@@ -13,8 +13,8 @@ class LinePlotWidget(GraphicsLayoutWidget):
         """
         super().__init__(parent, **kwargs)
 
-        w = cfg.LINE_PLOT_WIDTH
-        h = min(cfg.MAX_WINDOW_HEIGHT, cfg.LINE_PLOT_HEIGHT)
+        w = cfg.MAIN_WINDOW_WIDTH - 20
+        h = cfg.MAIN_LINE_PLOT_HEIGHT
         self.setFixedSize(w, h)
 
         self._plot = self.addPlot()
