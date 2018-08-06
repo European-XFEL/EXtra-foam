@@ -140,6 +140,20 @@ class MainGUI(QtGui.QMainWindow):
         self._port_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_PORT)
 
         # *************************************************************
+        # Azimuthal integration setup
+        # *************************************************************
+        self._sample_dist_le = QtGui.QLineEdit(str(cfg.DIST))
+        self._cx_le = QtGui.QLineEdit(str(cfg.CENTER_X))
+        self._cy_le = QtGui.QLineEdit(str(cfg.CENTER_Y))
+        self._energy_le = QtGui.QLineEdit(str(cfg.PHOTON_ENERGY))
+        self._itgt_method_le = QtGui.QLineEdit(cfg.INTEGRATION_METHOD)
+        self._itgt_range_lb_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
+        self._itgt_range_ub_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
+        self._itgt_points_le = QtGui.QLineEdit(str(cfg.INTEGRATION_POINTS))
+
+        # *************************************************************
         # data source
         # *************************************************************
         self._src_calibrated_file_rbt = QtGui.QRadioButton("Calibrated (file)")
@@ -204,6 +218,38 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
         ai_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
+
+        energy_lb = QtGui.QLabel("Photon energy (eV): ")
+        sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
+        cx = QtGui.QLabel("Cx (pixel): ")
+        cy = QtGui.QLabel("Cy (pixel): ")
+        itgt_method_lb = QtGui.QLabel("Integration method: ")
+        itgt_range_lb1 = QtGui.QLabel("Integration range: ")
+        itgt_range_lb2 = QtGui.QLabel(" to ")
+        itgt_points_lb = QtGui.QLabel("Integration points: ")
+
+        itgt_range_layout = QtGui.QHBoxLayout()
+        itgt_range_layout.addWidget(itgt_range_lb1)
+        itgt_range_layout.addWidget(self._itgt_range_lb_le)
+        itgt_range_layout.addWidget(itgt_range_lb2)
+        itgt_range_layout.addWidget(self._itgt_range_ub_le)
+
+        layout = QtGui.QGridLayout()
+        layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
+        layout.addWidget(self._sample_dist_le, 0, 1, 1, 1)
+        layout.addWidget(cx, 1, 0, 1, 1)
+        layout.addWidget(self._cx_le, 1, 1, 1, 1)
+        layout.addWidget(cy, 2, 0, 1, 1)
+        layout.addWidget(self._cy_le, 2, 1, 1, 1)
+        layout.addWidget(energy_lb, 3, 0, 1, 1)
+        layout.addWidget(self._energy_le, 3, 1, 1, 1)
+        layout.addWidget(itgt_method_lb, 0, 2, 1, 1)
+        layout.addWidget(self._itgt_method_le, 0, 3, 1, 1)
+        layout.addLayout(itgt_range_layout, 1, 2, 1, 2)
+        layout.addWidget(itgt_points_lb, 2, 2, 1, 1)
+        layout.addWidget(self._itgt_points_le, 2, 3, 1, 1)
+
+        ai_setup_gp.setLayout(layout)
 
         # *************************************************************
         # hostname and port
@@ -380,10 +426,22 @@ class MainGUI(QtGui.QMainWindow):
             data_source = DataSource.PROCESSED
 
         try:
-            self._daq_worker = DaqWorker(self._client,
-                                         self._daq_queue,
-                                         data_source,
-                                         geom_file=self._geom_file)
+            self._daq_worker = DaqWorker(
+                self._client,
+                self._daq_queue,
+                data_source,
+                geom_file=self._geom_file,
+                photon_energy=float(self._energy_le.text().strip()),
+                sample_dist=float(self._sample_dist_le.text().strip()),
+                cx=float(self._cx_le.text().strip()),
+                cy=float(self._cy_le.text().strip()),
+                integration_method=self._itgt_method_le.text().strip(),
+                integration_range=(
+                    float(self._itgt_range_lb_le.text().strip()),
+                    float(self._itgt_range_ub_le.text().strip())
+                ),
+                integration_points=float(self._itgt_points_le.text().strip())
+            )
         except OSError as e:
             logger.info(e)
             return

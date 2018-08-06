@@ -21,14 +21,15 @@ class Config:
     CENTER_X = 580
     PIXEL_SIZE = 0.5e-3  # in meter
 
-    ENERGY = 9.30  # in, keV
-    LAMBDA_R = 12.3984 / ENERGY * 1e-10  # in m
+    PHOTON_ENERGY = 9.30  # in, keV
 
     PULSES_PER_TRAIN = 16
 
     INTEGRATION_METHOD = "BBox"
-    RADIAL_RANGE = (0.2, 5)  # the lower and upper range of the radial unit
-    N_POINTS = 512  # number of points in the output pattern
+    # the lower and upper range of the radial unit
+    INTEGRATION_RANGE = (0.2, 5)
+    INTEGRATION_POINTS = 512  # number of points in the output pattern
+
     MASK_RANGE = (0, 1e4)  # image pixels beyond this range will be masked
 
     # The following is valid-ish for the 20180318 geometry

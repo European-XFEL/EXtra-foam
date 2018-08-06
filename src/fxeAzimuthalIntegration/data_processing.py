@@ -12,14 +12,31 @@ from .logging import logger
 
 
 class DataProcessor(object):
-    def __init__(self, geom_file=None):
+    def __init__(self, **kwargs):
         """"""
         self._geom = None
-        if geom_file is not None:
-            with File(geom_file, 'r') as f:
-                self._geom = LPDGeometry.from_h5_file_and_quad_positions(
-                    f, cfg.QUAD_POSITIONS)
-            logger.info("Use geometry file: {}".format(geom_file))
+
+        for key in kwargs:
+            if key == 'geom_file':
+                with File(kwargs[key], 'r') as f:
+                    self._geom = LPDGeometry.from_h5_file_and_quad_positions(
+                        f, cfg.QUAD_POSITIONS)
+                logger.info("Use geometry file: {}".format(kwargs[key]))
+            elif key == 'photon_energy':
+                # convert energy to wavelength
+                self.wavelength = 1e-10 * 12.3984 / kwargs[key]
+            elif key == 'sample_dist':
+                self.sample_dist = kwargs[key]
+            elif key == 'cx':
+                self.cx = kwargs[key] * cfg.PIXEL_SIZE
+            elif key == 'cy':
+                self.cy = kwargs[key] * cfg.PIXEL_SIZE
+            elif key == 'integration_method':
+                self.integration_method = kwargs[key]
+            elif key == 'integration_range':
+                self.integration_range = kwargs[key]
+            elif key == 'integration_points':
+                self.integration_points = kwargs[key]
 
     def process_assembled_data(self, assembled_data, tid):
         """Process assembled image data.
@@ -31,15 +48,15 @@ class DataProcessor(object):
         """
         t0 = time.perf_counter()
 
-        ai = pyFAI.AzimuthalIntegrator(dist=cfg.DIST,
-                                       poni1=cfg.CENTER_Y*cfg.PIXEL_SIZE,
-                                       poni2=cfg.CENTER_X*cfg.PIXEL_SIZE,
+        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
+                                       poni1=self.cy,
+                                       poni2=self.cx,
                                        pixel1=cfg.PIXEL_SIZE,
                                        pixel2=cfg.PIXEL_SIZE,
                                        rot1=0,
                                        rot2=0,
                                        rot3=0,
-                                       wavelength=cfg.LAMBDA_R)
+                                       wavelength=self.wavelength)
 
         assembled = np.nan_to_num(assembled_data)
 
@@ -50,10 +67,10 @@ class DataProcessor(object):
             data_mask[(assembled[i] <= cfg.MASK_RANGE[0])
                       | (assembled[i] > cfg.MASK_RANGE[1])] = 1
             res = ai.integrate1d(assembled[i],
-                                 cfg.N_POINTS,
-                                 method=cfg.INTEGRATION_METHOD,
+                                 self.integration_points,
+                                 method=self.integration_method,
                                  mask=data_mask,
-                                 radial_range=cfg.RADIAL_RANGE,
+                                 radial_range=self.integration_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")

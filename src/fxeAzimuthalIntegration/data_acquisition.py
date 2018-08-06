@@ -7,13 +7,13 @@ from .config import DataSource
 
 
 class DaqWorker(Thread):
-    def __init__(self, client, out_queue, source, *, geom_file=None):
+    def __init__(self, client, out_queue, source, **kwargs):
         super().__init__()
 
         self._source = source
         self._client = client
         self._out_queue = out_queue
-        self._processor = DataProcessor(geom_file)
+        self._processor = DataProcessor(**kwargs)
         self._running = True
 
     def run(self):
