@@ -219,7 +219,7 @@ class MainGUI(QtGui.QMainWindow):
         ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
         ai_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
-        energy_lb = QtGui.QLabel("Photon energy (eV): ")
+        energy_lb = QtGui.QLabel("Photon energy (keV): ")
         sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
         cx = QtGui.QLabel("Cx (pixel): ")
         cy = QtGui.QLabel("Cy (pixel): ")
