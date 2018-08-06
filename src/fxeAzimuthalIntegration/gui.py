@@ -124,9 +124,15 @@ class MainGUI(QtGui.QMainWindow):
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
 
-        self._pulse_plot_bt = QtGui.QPushButton("Show Individual Pulses")
-        self._pulse_plot_bt.clicked.connect(self._open_individual_pulse_window)
+        # *************************************************************
+        # hostname and port
+        # *************************************************************
+        self._hostname_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_ADDR)
+        self._port_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_PORT)
 
+        # *************************************************************
+        # data source
+        # *************************************************************
         self._src_calibrated_file_rbt = QtGui.QRadioButton("Calibrated (file)")
         self._src_calibrated_rbt = QtGui.QRadioButton("Calibrated (bridge)")
         self._src_assembled_rbt = QtGui.QRadioButton("Assembled (bridge)")
@@ -134,15 +140,15 @@ class MainGUI(QtGui.QMainWindow):
         self._src_calibrated_rbt.setChecked(True)
         self._src_processed_rbt.setEnabled(False)
 
+        # *************************************************************
+        # plot options
+        # *************************************************************
         self._is_normalized_cb = QtGui.QCheckBox("Normalize")
         self._is_normalized_cb.setChecked(False)
 
-        self._hostname_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_ADDR)
-        self._hostname_le.returnPressed.connect(self._update_client)
-
-        self._port_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_PORT)
-        self._port_le.returnPressed.connect(self._update_client)
-
+        # *************************************************************
+        # log window
+        # *************************************************************
         self._log_window = QtGui.QPlainTextEdit()
         self._log_window.setReadOnly(True)
         self._log_window.setMaximumBlockCount(cfg.MAX_LOGGING)
@@ -151,8 +157,6 @@ class MainGUI(QtGui.QMainWindow):
         self._log_window.setFont(logger_font)
         self._logger = GuiLogger(self._log_window)
         logging.getLogger().addHandler(self._logger)
-
-        self._title = QtGui.QWidget()
 
         self._ctrl_pannel = QtGui.QWidget()
 
@@ -165,9 +169,7 @@ class MainGUI(QtGui.QMainWindow):
             self.move(screen_size.width()/2 - cfg.MAIN_WINDOW_WIDTH/2,
                       screen_size.height()/20)
 
-        self._client_addr = None
         self._client = None
-        self._update_client()
 
         # For real time plot
         self._is_running = False
@@ -188,6 +190,9 @@ class MainGUI(QtGui.QMainWindow):
         self._cw.setLayout(layout)
 
     def _initCtrlUI(self):
+        # *************************************************************
+        # hostname and port
+        # *************************************************************
         addr_layout = QtGui.QHBoxLayout()
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
@@ -200,6 +205,9 @@ class MainGUI(QtGui.QMainWindow):
         addr_layout.addWidget(port_lb, 1)
         addr_layout.addWidget(self._port_le, 2)
 
+        # *************************************************************
+        # data source panel
+        # *************************************************************
         data_src_gp = QtGui.QGroupBox("Data source")
         data_src_gp.setStyleSheet(
             'QGroupBox:title {'
@@ -217,18 +225,13 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._src_processed_rbt)
         data_src_gp.setLayout(layout)
 
+        # *************************************************************
+        # plot option panel
+        # *************************************************************
         plot_option_gp = QtGui.QGroupBox()
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._is_normalized_cb)
         plot_option_gp.setLayout(layout)
-
-        self._pulse_plot_bt.setStyleSheet(
-            'QPushButton {'
-                'color: white;'
-                'font: bold;'
-                'padding: 5px;'
-                'background-color: "#610B4B";}'
-        )
 
         layout = QtGui.QGridLayout()
         layout.addLayout(addr_layout, 0, 0, 1, 2)
@@ -346,8 +349,12 @@ class MainGUI(QtGui.QMainWindow):
         """Actions taken at the end of run state."""
         self._is_running = True
 
-        self._client = Client(self._client_addr)
-        logger.info("Bind to {}".format(self._client_addr))
+        client_addr = "tcp://" \
+                      + self._hostname_le.text().strip() \
+                      + ":" \
+                      + self._port_le.text().strip()
+        self._client = Client(client_addr)
+        logger.info("Bind to {}".format(client_addr))
 
         if self._src_calibrated_file_rbt.isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
@@ -380,12 +387,6 @@ class MainGUI(QtGui.QMainWindow):
         self._src_calibrated_rbt.setEnabled(False)
         self._src_assembled_rbt.setEnabled(False)
         self._src_processed_rbt.setEnabled(False)
-
-    def _update_client(self):
-        self._client_addr = "tcp://" \
-                            + self._hostname_le.text().strip() \
-                            + ":" \
-                            + self._port_le.text().strip()
 
 
 def fxe():
