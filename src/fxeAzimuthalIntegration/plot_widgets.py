@@ -13,7 +13,7 @@ class MainLinePlotWidget(GraphicsLayoutWidget):
         """
         super().__init__(parent, **kwargs)
 
-        w = cfg.MAIN_WINDOW_WIDTH - 20
+        w = cfg.MAIN_WINDOW_WIDTH - cfg.MAIN_LINE_PLOT_HEIGHT - 25
         h = cfg.MAIN_LINE_PLOT_HEIGHT
         self.setFixedSize(w, h)
 
@@ -37,7 +37,7 @@ class ImageViewWidget(GraphicsLayoutWidget):
         """Initialization."""
         super().__init__(parent, **kwargs)
 
-        self.setFixedSize(240, 240)
+        self.setFixedSize(cfg.MAIN_LINE_PLOT_HEIGHT, cfg.MAIN_LINE_PLOT_HEIGHT)
 
         self._img = ImageItem(border='w')
         self._view = self.addViewBox(lockAspect=True)

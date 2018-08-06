@@ -182,14 +182,28 @@ class MainGUI(QtGui.QMainWindow):
     def _initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self._image, 0, 0, 4, 2)
-        layout.addWidget(self._ctrl_pannel, 0, 2, 4, 3)
-        layout.addWidget(self._plot, 4, 0, 3, 5)
-        layout.addWidget(self._log_window, 7, 0, 3, 5)
+        layout.addWidget(self._ctrl_pannel, 0, 0, 4, 5)
+        layout.addWidget(self._image, 4, 0, 5, 2)
+        layout.addWidget(self._plot, 4, 2, 5, 3)
+        layout.addWidget(self._log_window, 9, 0, 2, 3)
 
         self._cw.setLayout(layout)
 
     def _initCtrlUI(self):
+        # *************************************************************
+        # Azimuthal integration setup
+        # *************************************************************
+        ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
+        ai_setup_gp.setStyleSheet(
+            'QGroupBox:title {'
+                'border: 1px;'
+                'subcontrol-origin: margin;'
+                'subcontrol-position: top left;'
+                'padding-left: 10px;'
+                'padding-top: 10px;'
+                'margin-top: 0.0em;}'
+        )
+
         # *************************************************************
         # hostname and port
         # *************************************************************
@@ -228,15 +242,25 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # plot option panel
         # *************************************************************
-        plot_option_gp = QtGui.QGroupBox()
+        plot_option_gp = QtGui.QGroupBox('Plot options')
+        plot_option_gp.setStyleSheet(
+            'QGroupBox:title {'
+                'border: 1px;'
+                'subcontrol-origin: margin;'
+                'subcontrol-position: top left;'
+                'padding-left: 10px;'
+                'padding-top: 10px; '
+                'margin-top: 0.2em;}'
+        )
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._is_normalized_cb)
         plot_option_gp.setLayout(layout)
 
         layout = QtGui.QGridLayout()
-        layout.addLayout(addr_layout, 0, 0, 1, 2)
-        layout.addWidget(plot_option_gp, 1, 0, 1, 1)
-        layout.addWidget(data_src_gp, 1, 1, 1, 1)
+        layout.addWidget(ai_setup_gp, 1, 0, 3, 3)
+        layout.addLayout(addr_layout, 0, 3, 1, 2)
+        layout.addWidget(plot_option_gp, 1, 3, 3, 1)
+        layout.addWidget(data_src_gp, 1, 4, 3, 1)
 
         self._ctrl_pannel.setLayout(layout)
 
