@@ -224,7 +224,7 @@ class MainGUI(QtGui.QMainWindow):
         cx = QtGui.QLabel("Cx (pixel): ")
         cy = QtGui.QLabel("Cy (pixel): ")
         itgt_method_lb = QtGui.QLabel("Integration method: ")
-        itgt_range_lb1 = QtGui.QLabel("Integration range: ")
+        itgt_range_lb1 = QtGui.QLabel("Integration range (1/A): ")
         itgt_range_lb2 = QtGui.QLabel(" to ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
 
