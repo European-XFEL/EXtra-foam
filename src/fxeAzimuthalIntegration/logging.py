@@ -7,6 +7,7 @@ Logging module.
 Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
+import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
@@ -20,7 +21,12 @@ def create_logger():
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
-    fh = TimedRotatingFileHandler(name + ".log", when='midnight')
+    log_file_dir = os.path.join(os.path.expanduser('~'), '.fxe-tools')
+    if not os.path.isdir(log_file_dir):
+        os.mkdir(log_file_dir)
+    log_file = os.path.join(log_file_dir, name + ".log")
+    fh = TimedRotatingFileHandler(log_file, when='midnight')
+
     fh.suffix = "%Y%m%d"
     fh.setLevel(logging.INFO)
     formatter = logging.Formatter(
