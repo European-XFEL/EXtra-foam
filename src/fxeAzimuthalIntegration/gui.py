@@ -427,24 +427,20 @@ class MainGUI(QtGui.QMainWindow):
 
         try:
             pulse_ids = text.split(",")
-            pulse_ids = [int(i.strip()) for i in pulse_ids]
+            pulse_ids = [int(i.strip()) for i in pulse_ids if i.strip()]
         except ValueError:
-            logger.info(
-                "Invalid input! Please specify pulse IDs separated by ','.")
+            logger.info("Invalid input! Enter pulse IDs separated by ','!")
             return
 
-        if pulse_ids:
-            window_id = "{:06d}".format(self._opened_windows_count)
-            w = LinePlotWindow(window_id, pulse_ids,
-                               parent=self,
-                               show_image=show_image)
-            self._opened_windows_count += 1
-            self._opened_windows[window_id] = w
-            logger.info("Open new window for pulse(s): {}".
-                        format(", ".join(str(i) for i in pulse_ids)))
-            w.show()
-        else:
-            logger.info("Please specify at least one pulse ID!")
+        window_id = "{:06d}".format(self._opened_windows_count)
+        w = LinePlotWindow(window_id, pulse_ids,
+                           parent=self,
+                           show_image=show_image)
+        self._opened_windows_count += 1
+        self._opened_windows[window_id] = w
+        logger.info("Open new window for pulse(s): {}".
+                    format(", ".join(str(i) for i in pulse_ids)))
+        w.show()
 
     def _choose_geometry_file(self):
         self._geom_file = QtGui.QFileDialog.getOpenFileName()[0]
