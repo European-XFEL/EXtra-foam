@@ -1,3 +1,11 @@
+"""
+Offline and online data analysis tool for Azimuthal integration at
+FXE instrument, European XFEL.
+
+Data processing module.
+
+Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+"""
 import time
 
 import numpy as np

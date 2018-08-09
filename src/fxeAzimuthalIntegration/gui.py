@@ -1,19 +1,28 @@
+"""
+Offline and online data analysis tool for Azimuthal integration at
+FXE instrument, European XFEL.
+
+Main GUI module.
+
+Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+"""
 import sys
 import logging
 import time
 from collections import deque
 
 import numpy as np
+import zmq
 
 from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import mkPen, intColor
 from .logging import logger, GuiLogger
-from .plot_widgets import (
-    MainLinePlotWidget, ImageViewWidget, LinePlotWindow
-)
+from .plot_widgets import MainLinePlotWidget, ImageViewWidget, LinePlotWindow
+
 from .data_acquisition import DaqWorker
+from .file_server import FileServer
 from .config import Config as cfg
 from .config import DataSource
 
@@ -73,13 +82,17 @@ class MainGUI(QtGui.QMainWindow):
         self.setFixedSize(cfg.MAIN_WINDOW_WIDTH, cfg.MAIN_WINDOW_HEIGHT)
         self.setWindowTitle('FXE Azimuthal Integration')
 
-        # drop the oldest element is queue is full
-        self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
-        # A worker which process the data in another thread
-        self._daq_worker = None
-        self._geom_file = cfg.DEFAULT_GEOMETRY_FILE
+        self._opened_windows_count = 0
+        self._opened_windows = dict()  # book keeping opened windows
 
-        self.threadpool = QtCore.QThreadPool()
+        self._cw = QtGui.QWidget()  # the central widget
+        self.setCentralWidget(self._cw)
+
+        # drop the oldest element when the queue is full
+        self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
+        # a DAQ worker which process the data in another thread
+        self._daq_worker = None
+        self._client = None
 
         # *************************************************************
         # Tool bar
@@ -123,15 +136,7 @@ class MainGUI(QtGui.QMainWindow):
         self._plot = MainLinePlotWidget()
         self._image = ImageViewWidget()
 
-        # *************************************************************
-        # Other UI
-        # *************************************************************
-
-        self._opened_windows_count = 0
-        self._opened_windows = dict()  # book keeping opened windows
-
-        self._cw = QtGui.QWidget()
-        self.setCentralWidget(self._cw)
+        self._ctrl_pannel = QtGui.QWidget()
 
         # *************************************************************
         # hostname and port
@@ -142,11 +147,15 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Azimuthal integration setup
         # *************************************************************
+        self._geom_file = cfg.DEFAULT_GEOMETRY_FILE
+
         self._sample_dist_le = QtGui.QLineEdit(str(cfg.DIST))
         self._cx_le = QtGui.QLineEdit(str(cfg.CENTER_X))
         self._cy_le = QtGui.QLineEdit(str(cfg.CENTER_Y))
         self._energy_le = QtGui.QLineEdit(str(cfg.PHOTON_ENERGY))
-        self._itgt_method_le = QtGui.QLineEdit(cfg.INTEGRATION_METHOD)
+        self._itgt_method_cb = QtGui.QComboBox()
+        for method in cfg.INTEGRATION_METHODS:
+            self._itgt_method_cb.addItem(method)
         self._itgt_range_lb_le = \
             QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
         self._itgt_range_ub_le = \
@@ -154,19 +163,19 @@ class MainGUI(QtGui.QMainWindow):
         self._itgt_points_le = QtGui.QLineEdit(str(cfg.INTEGRATION_POINTS))
 
         # *************************************************************
-        # data source
+        # data source options
         # *************************************************************
-        self._src_calibrated_file_rbt = QtGui.QRadioButton("Calibrated (file)")
-        self._src_calibrated_rbt = QtGui.QRadioButton("Calibrated (bridge)")
-        self._src_assembled_rbt = QtGui.QRadioButton("Assembled (bridge)")
-        self._src_processed_rbt = QtGui.QRadioButton("Processed (bridge)")
-        self._src_calibrated_rbt.setChecked(True)
-        self._src_processed_rbt.setEnabled(False)
+        self._data_src_rbts = []
+        self._data_src_rbts.append(QtGui.QRadioButton("Calibrated (file)"))
+        self._data_src_rbts.append(QtGui.QRadioButton("Calibrated (bridge)"))
+        self._data_src_rbts.append(QtGui.QRadioButton("Assembled (bridge)"))
+        self._data_src_rbts.append(QtGui.QRadioButton("Processed (bridge)"))
+        self._data_src_rbts[int(cfg.DEFAULT_SERVER_SRC)].setChecked(True)
 
         # *************************************************************
         # plot options
         # *************************************************************
-        self._is_normalized_cb = QtGui.QCheckBox("Normalize")
+        self._is_normalized_cb = QtGui.QCheckBox("Normalized")
         self._is_normalized_cb.setChecked(False)
 
         # *************************************************************
@@ -181,9 +190,35 @@ class MainGUI(QtGui.QMainWindow):
         self._logger = GuiLogger(self._log_window)
         logging.getLogger().addHandler(self._logger)
 
-        self._ctrl_pannel = QtGui.QWidget()
+        # *************************************************************
+        # file server
+        # *************************************************************
+        self._file_server = None
 
+        self._file_server_widget = QtGui.QGroupBox("Data stream server")
+        self._file_server_widget.setStyleSheet(GROUP_BOX_STYLE_SHEET)
+        self._server_start_btn = QtGui.QPushButton("Serve")
+        self._server_start_btn.clicked.connect(self._on_start_serve_file)
+        self._server_terminate_btn = QtGui.QPushButton("Terminate")
+        self._server_terminate_btn.setEnabled(False)
+        self._server_terminate_btn.clicked.connect(self._on_terminate_serve_file)
+        self._select_btn = QtGui.QPushButton("Select")
+        self._file_server_port_le = QtGui.QLineEdit(
+            cfg.DEFAULT_FILE_SERVER_PORT)
+        self._file_server_data_folder_le = QtGui.QLineEdit(
+            cfg.DEFAULT_FILE_SERVER_FOLDER)
+
+        self._disabled_widgets_during_file_serving = [
+            self._file_server_port_le,
+            self._file_server_data_folder_le,
+            self._select_btn
+        ]
+
+        # *************************************************************
+        # Initialize UI
+        # *************************************************************
         self._initCtrlUI()
+        self._initFileServerUI()
         self._initUI()
 
         if screen_size is None:
@@ -192,7 +227,20 @@ class MainGUI(QtGui.QMainWindow):
             self.move(screen_size.width()/2 - cfg.MAIN_WINDOW_WIDTH/2,
                       screen_size.height()/20)
 
-        self._client = None
+        self._disabled_widgets_during_daq = [
+            self._open_geometry_file_at,
+            self._hostname_le,
+            self._port_le,
+            self._sample_dist_le,
+            self._cx_le,
+            self._cy_le,
+            self._energy_le,
+            self._itgt_method_cb,
+            self._itgt_range_lb_le,
+            self._itgt_range_ub_le,
+            self._itgt_points_le
+        ]
+        self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
         # For real time plot
         self._is_running = False
@@ -205,16 +253,17 @@ class MainGUI(QtGui.QMainWindow):
     def _initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self._ctrl_pannel, 0, 0, 4, 5)
+        layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
         layout.addWidget(self._image, 4, 0, 5, 2)
-        layout.addWidget(self._plot, 4, 2, 5, 3)
-        layout.addWidget(self._log_window, 9, 0, 2, 3)
+        layout.addWidget(self._plot, 4, 2, 5, 4)
+        layout.addWidget(self._log_window, 9, 0, 2, 4)
+        layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
 
         self._cw.setLayout(layout)
 
     def _initCtrlUI(self):
         # *************************************************************
-        # Azimuthal integration setup
+        # Azimuthal integration setup panel
         # *************************************************************
         ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
         ai_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
@@ -244,7 +293,7 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(energy_lb, 3, 0, 1, 1)
         layout.addWidget(self._energy_le, 3, 1, 1, 1)
         layout.addWidget(itgt_method_lb, 0, 2, 1, 1)
-        layout.addWidget(self._itgt_method_le, 0, 3, 1, 1)
+        layout.addWidget(self._itgt_method_cb, 0, 3, 1, 1)
         layout.addLayout(itgt_range_layout, 1, 2, 1, 2)
         layout.addWidget(itgt_points_lb, 2, 2, 1, 1)
         layout.addWidget(self._itgt_points_le, 2, 3, 1, 1)
@@ -252,17 +301,17 @@ class MainGUI(QtGui.QMainWindow):
         ai_setup_gp.setLayout(layout)
 
         # *************************************************************
-        # hostname and port
+        # TCP connection panel
         # *************************************************************
         tcp_connection_gp = QtGui.QGroupBox("TCP connection")
         tcp_connection_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET
                                         )
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._hostname_le.setFixedHeight(30)
+        self._hostname_le.setFixedHeight(28)
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._port_le.setFixedHeight(30)
+        self._port_le.setFixedHeight(28)
 
         layout = QtGui.QHBoxLayout()
         layout.addWidget(hostname_lb, 2)
@@ -277,10 +326,8 @@ class MainGUI(QtGui.QMainWindow):
         data_src_gp = QtGui.QGroupBox("Data source")
         data_src_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
         layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._src_calibrated_file_rbt)
-        layout.addWidget(self._src_calibrated_rbt)
-        layout.addWidget(self._src_assembled_rbt)
-        layout.addWidget(self._src_processed_rbt)
+        for btn in self._data_src_rbts:
+            layout.addWidget(btn)
         data_src_gp.setLayout(layout)
 
         # *************************************************************
@@ -300,8 +347,25 @@ class MainGUI(QtGui.QMainWindow):
 
         self._ctrl_pannel.setLayout(layout)
 
+    def _initFileServerUI(self):
+        layout = QtGui.QGridLayout()
+
+        port_lb = QtGui.QLabel("Port: ")
+        self._file_server_port_le.setFixedHeight(28)
+        self._select_btn.clicked.connect(self._set_data_folder)
+        self._file_server_data_folder_le.setFixedHeight(28)
+        self._select_btn.setToolTip("Select data folder")
+
+        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
+        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
+        layout.addWidget(port_lb, 0, 4, 1, 1)
+        layout.addWidget(self._file_server_port_le, 0, 5, 1, 1)
+        layout.addWidget(self._select_btn, 1, 0, 1, 1)
+        layout.addWidget(self._file_server_data_folder_le, 1, 1, 1, 5)
+        self._file_server_widget.setLayout(layout)
+
     def _update(self):
-        """"""
+        """Update the plots in the main GUI and child GUIs."""
         if self._is_running is False:
             return
 
@@ -314,13 +378,12 @@ class MainGUI(QtGui.QMainWindow):
         except IndexError:
             return
 
-        # clear the old plots
         self._plot.clear_()
         self._image.clear_()
         for w in self._opened_windows.values():
             w.clear()
 
-        # update the plots in the main panel
+        # update the plots in the main GUI
         t0 = time.perf_counter()
         if data is not None:
             max_intensity = data["intensity"].max()
@@ -337,7 +400,7 @@ class MainGUI(QtGui.QMainWindow):
                                  format(data["tid"], i+1))
             self._image.update(np.mean(data["image"], axis=0))
 
-        # update the plots in other opened windows
+        # update the plots in child windows
         for w in self._opened_windows.values():
             w.update(data)
 
@@ -395,15 +458,10 @@ class MainGUI(QtGui.QMainWindow):
 
         self._daq_worker.terminate()
 
-        self._open_geometry_file_at.setEnabled(True)
-        self._hostname_le.setEnabled(True)
-        self._port_le.setEnabled(True)
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
-        self._src_calibrated_file_rbt.setEnabled(True)
-        self._src_calibrated_rbt.setEnabled(True)
-        self._src_assembled_rbt.setEnabled(True)
-#         self._src_processed_rbt.setEnabled(True)
+        for widget in self._disabled_widgets_during_daq:
+            widget.setEnabled(True)
 
     def on_enter_running(self):
         """Actions taken at the end of run state."""
@@ -416,31 +474,36 @@ class MainGUI(QtGui.QMainWindow):
         self._client = Client(client_addr)
         logger.info("Bind to {}".format(client_addr))
 
-        if self._src_calibrated_file_rbt.isChecked() is True:
+        if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
-        elif self._src_calibrated_rbt.isChecked() is True:
+        elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
             data_source = DataSource.CALIBRATED
-        elif self._src_assembled_rbt.isChecked() is True:
+        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
             data_source = DataSource.ASSEMBLED
         else:
             data_source = DataSource.PROCESSED
 
+        energy = float(self._energy_le.text().strip())
+        sample_distance = float(self._sample_dist_le.text().strip())
+        center_x = float(self._cx_le.text().strip())
+        center_y = float(self._cy_le.text().strip())
+        integration_method = self._itgt_method_cb.currentText()
+        integration_range = float(self._itgt_range_lb_le.text().strip()), \
+                            float(self._itgt_range_ub_le.text().strip()),
+        integration_points = int(self._itgt_points_le.text().strip())
         try:
             self._daq_worker = DaqWorker(
                 self._client,
                 self._daq_queue,
                 data_source,
                 geom_file=self._geom_file,
-                photon_energy=float(self._energy_le.text().strip()),
-                sample_dist=float(self._sample_dist_le.text().strip()),
-                cx=float(self._cx_le.text().strip()),
-                cy=float(self._cy_le.text().strip()),
-                integration_method=self._itgt_method_le.text().strip(),
-                integration_range=(
-                    float(self._itgt_range_lb_le.text().strip()),
-                    float(self._itgt_range_ub_le.text().strip())
-                ),
-                integration_points=float(self._itgt_points_le.text().strip())
+                photon_energy=energy,
+                sample_dist=sample_distance,
+                cx=center_x,
+                cy=center_y,
+                integration_method=integration_method,
+                integration_range=integration_range,
+                integration_points=integration_points
             )
         except OSError as e:
             logger.info(e)
@@ -449,16 +512,56 @@ class MainGUI(QtGui.QMainWindow):
         self._daq_worker.start()
 
         logger.info("DAQ started!")
+        logger.info("Azimuthal integration parameters:\n"
+                    " - photon energy (keV): {}\n"
+                    " - sample distance (m): {}\n"
+                    " - cx (pixel): {}\n"
+                    " - cy (pixel): {}\n"
+                    " - integration method: '{}'\n"
+                    " - integration range (1/A): ({}, {})\n"
+                    " - number of integration points: {}".
+                    format(energy, sample_distance, center_x, center_y,
+                           integration_method, integration_range[0],
+                           integration_range[1], integration_points))
 
-        self._open_geometry_file_at.setEnabled(False)
-        self._hostname_le.setEnabled(False)
-        self._port_le.setEnabled(False)
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
-        self._src_calibrated_file_rbt.setEnabled(False)
-        self._src_calibrated_rbt.setEnabled(False)
-        self._src_assembled_rbt.setEnabled(False)
-        self._src_processed_rbt.setEnabled(False)
+        for widget in self._disabled_widgets_during_daq:
+            widget.setEnabled(False)
+
+    def _set_data_folder(self):
+        folder = QtGui.QFileDialog.getExistingDirectory(
+            self, 'Select directory', '/home')
+        self._file_server_data_folder_le.setText(folder)
+
+    def _on_start_serve_file(self):
+        folder = self._file_server_data_folder_le.text().strip()
+        port = int(self._file_server_port_le.text().strip())
+
+        self._file_server = FileServer(folder, port)
+        try:
+            # TODO: signal the end of file serving
+            self._file_server.start()
+            logger.info("Start serving file in the folder {} through port {}"
+                        .format(folder, port))
+        except FileNotFoundError:
+            logger.info("{} does not exist!".format(folder))
+            return
+        except zmq.error.ZMQError:
+            logger.info("Port {} is already in use!".format(port))
+            return
+
+        self._server_terminate_btn.setEnabled(True)
+        self._server_start_btn.setEnabled(False)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(False)
+
+    def _on_terminate_serve_file(self):
+        self._file_server.terminate()
+        self._server_terminate_btn.setEnabled(False)
+        self._server_start_btn.setEnabled(True)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(True)
 
 
 def fxe():

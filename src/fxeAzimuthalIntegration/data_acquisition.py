@@ -1,3 +1,11 @@
+"""
+Offline and online data analysis tool for Azimuthal integration at
+FXE instrument, European XFEL.
+
+DAQ module.
+
+Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+"""
 import time
 from threading import Thread
 

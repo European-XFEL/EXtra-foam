@@ -1,3 +1,11 @@
+"""
+Offline and online data analysis tool for Azimuthal integration at
+FXE instrument, European XFEL.
+
+Logging module.
+
+Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+"""
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
