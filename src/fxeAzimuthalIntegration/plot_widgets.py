@@ -5,6 +5,7 @@ FXE instrument, European XFEL.
 Plot widgets module.
 
 Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import numpy as np
 

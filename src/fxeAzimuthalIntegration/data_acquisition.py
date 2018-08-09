@@ -5,6 +5,7 @@ FXE instrument, European XFEL.
 DAQ module.
 
 Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import time
 from threading import Thread

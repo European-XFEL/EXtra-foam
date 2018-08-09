@@ -5,6 +5,7 @@ FXE instrument, European XFEL.
 Logging module.
 
 Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import logging
 from logging.handlers import TimedRotatingFileHandler
