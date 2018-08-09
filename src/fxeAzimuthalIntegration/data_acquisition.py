@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 DAQ module.
 
-Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import time
@@ -17,6 +17,7 @@ from .config import DataSource
 
 class DaqWorker(Thread):
     def __init__(self, client, out_queue, source, **kwargs):
+        """Initialization."""
         super().__init__()
 
         self._source = source
@@ -26,6 +27,7 @@ class DaqWorker(Thread):
         self._running = True
 
     def run(self):
+        """Override."""
         while self._running is True:
             # retrieve
             t0 = time.perf_counter()

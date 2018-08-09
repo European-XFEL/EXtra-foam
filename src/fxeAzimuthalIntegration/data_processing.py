@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Data processing module.
 
-Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import time
@@ -22,7 +22,7 @@ from .logging import logger
 
 class DataProcessor(object):
     def __init__(self, **kwargs):
-        """"""
+        """Initialization."""
         self._geom = None
 
         for key in kwargs:

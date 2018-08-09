@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Main GUI module.
 
-Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import sys
@@ -74,7 +74,7 @@ class InputDialogWithCheckBox(QtGui.QDialog):
 
 
 class MainGUI(QtGui.QMainWindow):
-    """The main GUI."""
+    """The main GUI for FXE azimuthal integration."""
     def __init__(self, screen_size=None):
         """Initialization."""
         super().__init__()
@@ -409,18 +409,18 @@ class MainGUI(QtGui.QMainWindow):
                      .format(1000 * (time.perf_counter() - t0)))
 
     def _show_individual_pulse_dialog(self):
-        result, ok = InputDialogWithCheckBox.getResult(
+        ret, ok = InputDialogWithCheckBox.getResult(
             self,
             'Input Dialog',
             'Enter pulse IDs (separated by comma):',
             "Include detector image")
 
         if ok is True:
-            self._open_individual_pulse_window(result)
+            self._open_individual_pulse_window(ret)
 
-    def _open_individual_pulse_window(self, result):
-        text = result[0]
-        show_image = result[1]
+    def _open_individual_pulse_window(self, ret):
+        text = ret[0]
+        show_image = ret[1]
         if not text:
             logger.info("Invalid input! Please specify pulse IDs!")
             return
@@ -444,7 +444,7 @@ class MainGUI(QtGui.QMainWindow):
                         format(", ".join(str(i) for i in pulse_ids)))
             w.show()
         else:
-            logger.info("Please specify the pulse id(s)!")
+            logger.info("Please specify at least one pulse ID!")
 
     def _choose_geometry_file(self):
         self._geom_file = QtGui.QFileDialog.getOpenFileName()[0]
@@ -453,7 +453,7 @@ class MainGUI(QtGui.QMainWindow):
         del self._opened_windows[w_id]
 
     def on_exit_running(self):
-        """Actions taken at the beginning of run state."""
+        """Actions taken at the beginning of 'run' state."""
         self._is_running = False
         logger.info("DAQ stopped!")
 
@@ -465,7 +465,7 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(True)
 
     def on_enter_running(self):
-        """Actions taken at the end of run state."""
+        """Actions taken at the end of 'run' state."""
         self._is_running = True
 
         client_addr = "tcp://" \
@@ -536,6 +536,7 @@ class MainGUI(QtGui.QMainWindow):
         self._file_server_data_folder_le.setText(folder)
 
     def _on_start_serve_file(self):
+        """Actions taken at the beginning of the file serving."""
         folder = self._file_server_data_folder_le.text().strip()
         port = int(self._file_server_port_le.text().strip())
 
@@ -558,6 +559,7 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(False)
 
     def _on_terminate_serve_file(self):
+        """Actions taken at the termination of the file serving."""
         self._file_server.terminate()
         self._server_terminate_btn.setEnabled(False)
         self._server_start_btn.setEnabled(True)

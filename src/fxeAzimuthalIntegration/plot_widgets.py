@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Plot widgets module.
 
-Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import numpy as np
@@ -16,10 +16,7 @@ from .config import Config as cfg
 
 class MainLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, parent=None, **kwargs):
-        """Initialization.
-
-        :param int n_lines: Number of PlotItems.
-        """
+        """Initialization."""
         super().__init__(parent, **kwargs)
 
         w = cfg.MAIN_WINDOW_WIDTH - cfg.MAIN_LINE_PLOT_HEIGHT - 25

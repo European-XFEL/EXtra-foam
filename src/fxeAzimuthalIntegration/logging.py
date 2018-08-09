@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Logging module.
 
-Author: Jun Zhu, jun.zhu@xfel.eu, zhujun981661@gmail.com
+Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import os
@@ -17,6 +17,7 @@ logging.getLogger("pyFAI").setLevel(logging.CRITICAL)
 
 
 def create_logger():
+    """Create the logger object for the whole API."""
     name = "FXE_Azimuthal_Integration"
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
