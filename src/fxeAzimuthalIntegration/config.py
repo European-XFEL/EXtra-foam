@@ -25,7 +25,10 @@ class Config:
 
     PULSES_PER_TRAIN = 16
 
-    INTEGRATION_METHODS = ['BBox', 'numpy', 'cython', 'splitpixel']
+    # 'full_csr" crashes the app
+    INTEGRATION_METHODS = ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
+                           'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl']
+
     # the lower and upper range of the radial unit
     INTEGRATION_RANGE = (0.2, 5)
     INTEGRATION_POINTS = 512  # number of points in the output pattern
