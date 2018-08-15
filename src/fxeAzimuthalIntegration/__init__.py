@@ -1,4 +1,3 @@
-from .gui import fxe
+from .gui import fxe_ai
 
-__all__ = ["fxe"]
-
+__all__ = ["fxe_ai"]

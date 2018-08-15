@@ -4,13 +4,14 @@ FXE instrument, European XFEL.
 
 Plot widgets module.
 
-Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
+Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import numpy as np
 
 from .pyqtgraph.Qt import QtGui
-from .pyqtgraph import GraphicsLayoutWidget, ImageItem, mkPen
+from .pyqtgraph import GraphicsLayoutWidget, ImageItem, mkPen, ColorMap
+from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from .config import Config as cfg
 
 
@@ -46,6 +47,11 @@ class ImageViewWidget(GraphicsLayoutWidget):
         self.setFixedSize(cfg.MAIN_LINE_PLOT_HEIGHT, cfg.MAIN_LINE_PLOT_HEIGHT)
 
         self._img = ImageItem(border='w')
+        # TODO: improve colormap
+        # print(Gradients.keys())
+        cmap = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
+        self._img.setLookupTable(cmap.getLookupTable())
+
         self._view = self.addViewBox(lockAspect=True)
         self._view.addItem(self._img)
 
@@ -53,11 +59,11 @@ class ImageViewWidget(GraphicsLayoutWidget):
         self._img.clear()
 
     def update(self, *args, **kwargs):
-        self._img.setImage(*args, **kwargs)
+        self._img.setImage(autoLevels=True, *args, **kwargs)
         self._view.autoRange()
 
 
-class LinePlotWindow(QtGui.QMainWindow):
+class IndividualPulseWindow(QtGui.QMainWindow):
     def __init__(self, window_id, pulse_ids, *,
                  parent=None,
                  show_image=False,
@@ -82,35 +88,32 @@ class LinePlotWindow(QtGui.QMainWindow):
         gl_widget = GraphicsLayoutWidget()
         g_layout = gl_widget.ci.layout
         g_layout.setColumnStretchFactor(0, 1)
-        g_layout.setColumnStretchFactor(1, 1)
-        g_layout.setColumnStretchFactor(2, 1)
-
+        if self._show_image:
+            g_layout.setColumnStretchFactor(1, 3)
         w = cfg.LINE_PLOT_WIDTH + self._show_image*(cfg.LINE_PLOT_HEIGHT - 20)
-        h = min(1000, len(self._pulse_ids)*cfg.LINE_PLOT_HEIGHT)
+        h = min(4, len(self._pulse_ids))*cfg.LINE_PLOT_HEIGHT
         gl_widget.setFixedSize(w, h)
 
         for pulse_id in self._pulse_ids:
-            gl_widget.addLabel("Pulse No. {:04d}".format(pulse_id),
-                               colspan=3)
-            gl_widget.nextRow()
-
             if self._show_image is True:
-                vb = gl_widget.addViewBox(lockAspect=True, colspan=1)
+                vb = gl_widget.addViewBox(lockAspect=True)
                 img = ImageItem(border='w')
                 vb.addItem(img)
                 self.image_items.append(img)
 
-                p = gl_widget.addPlot(col=1, colspan=2)
+                line = gl_widget.addPlot()
             else:
-                p = gl_widget.addPlot(col=0, colspan=3)
+                line = gl_widget.addPlot()
 
+            line.setTitle("Pulse No. {:04d}".format(pulse_id))
+            line.setLabel('left', cfg.Y_LABEL)
             if pulse_id == self._pulse_ids[-1]:
                 # all plots share one x label
-                p.setLabel('bottom', cfg.X_LABEL)
+                line.setLabel('bottom', cfg.X_LABEL)
             else:
-                p.setLabel('bottom', '')
-            p.setLabel('left', cfg.Y_LABEL)
-            self.plot_items.append(p)
+                line.setLabel('bottom', '')
+
+            self.plot_items.append(line)
             gl_widget.nextRow()
 
         layout = QtGui.QGridLayout()

@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Logging module.
 
-Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
+Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import os

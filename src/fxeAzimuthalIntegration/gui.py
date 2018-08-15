@@ -4,7 +4,7 @@ FXE instrument, European XFEL.
 
 Main GUI module.
 
-Author: Jun Zhu, <jun.zhu@xfel.eu> <zhujun981661@gmail.com>
+Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
 """
 import sys
@@ -20,7 +20,9 @@ from karabo_bridge import Client
 from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import mkPen, intColor
 from .logging import logger, GuiLogger
-from .plot_widgets import MainLinePlotWidget, ImageViewWidget, LinePlotWindow
+from .plot_widgets import (
+    MainLinePlotWidget, ImageViewWidget, IndividualPulseWindow
+)
 
 from .data_acquisition import DaqWorker
 from .file_server import FileServer
@@ -366,7 +368,7 @@ class MainGUI(QtGui.QMainWindow):
         self._file_server_widget.setLayout(layout)
 
     def _update(self):
-        """Update the plots in the main GUI and child GUIs."""
+        """Update plots in the main window and child windows."""
         if self._is_running is False:
             return
 
@@ -409,6 +411,7 @@ class MainGUI(QtGui.QMainWindow):
                      .format(1000 * (time.perf_counter() - t0)))
 
     def _show_individual_pulse_dialog(self):
+        """A pop-up window."""
         ret, ok = InputDialogWithCheckBox.getResult(
             self,
             'Input Dialog',
@@ -419,6 +422,7 @@ class MainGUI(QtGui.QMainWindow):
             self._open_individual_pulse_window(ret)
 
     def _open_individual_pulse_window(self, ret):
+        """Open another window."""
         text = ret[0]
         show_image = ret[1]
         if not text:
@@ -433,9 +437,9 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         window_id = "{:06d}".format(self._opened_windows_count)
-        w = LinePlotWindow(window_id, pulse_ids,
-                           parent=self,
-                           show_image=show_image)
+        w = IndividualPulseWindow(window_id, pulse_ids,
+                                  parent=self,
+                                  show_image=show_image)
         self._opened_windows_count += 1
         self._opened_windows[window_id] = w
         logger.info("Open new window for pulse(s): {}".
@@ -532,7 +536,7 @@ class MainGUI(QtGui.QMainWindow):
         self._file_server_data_folder_le.setText(folder)
 
     def _on_start_serve_file(self):
-        """Actions taken at the beginning of the file serving."""
+        """Actions taken at the beginning of file serving."""
         folder = self._file_server_data_folder_le.text().strip()
         port = int(self._file_server_port_le.text().strip())
 
@@ -555,7 +559,7 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(False)
 
     def _on_terminate_serve_file(self):
-        """Actions taken at the termination of the file serving."""
+        """Actions taken at the termination of file serving."""
         self._file_server.terminate()
         self._server_terminate_btn.setEnabled(False)
         self._server_start_btn.setEnabled(True)
@@ -563,7 +567,7 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(True)
 
 
-def fxe():
+def fxe_ai():
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
     ex = MainGUI(screen_size=screen_size)
