@@ -30,7 +30,7 @@ class DataProcessor(object):
                 with File(kwargs[key], 'r') as f:
                     self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                         f, cfg.QUAD_POSITIONS)
-                logger.info("Use geometry file: {}".format(kwargs[key]))
+                logger.info("Loaded geometry file: {}".format(kwargs[key]))
             elif key == 'photon_energy':
                 # convert energy to wavelength
                 self.wavelength = 1e-10 * 12.3984 / kwargs[key]

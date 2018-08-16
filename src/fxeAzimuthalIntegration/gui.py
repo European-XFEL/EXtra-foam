@@ -447,7 +447,9 @@ class MainGUI(QtGui.QMainWindow):
         w.show()
 
     def _choose_geometry_file(self):
-        self._geom_file = QtGui.QFileDialog.getOpenFileName()[0]
+        filename = QtGui.QFileDialog.getOpenFileName()[0]
+        if filename:
+            self._geom_file = filename
 
     def remove_window(self, w_id):
         del self._opened_windows[w_id]
