@@ -55,9 +55,9 @@ class Config:
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz
 
-    MAIN_WINDOW_HEIGHT = 840
-    MAIN_WINDOW_WIDTH = 1000
-    MAIN_LINE_PLOT_HEIGHT = 360
+    MAIN_WINDOW_HEIGHT = 960
+    MAIN_WINDOW_WIDTH = 1280
+    MAIN_LINE_PLOT_HEIGHT = 480
 
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
