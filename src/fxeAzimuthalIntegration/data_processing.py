@@ -21,32 +21,35 @@ from .config import Config as cfg
 from .logging import logger
 
 
+def sub_array_with_range(y, x, range_=None):
+    if range_ is None:
+        return y, x
+    indices = np.where(np.logical_and(x <= range_[1], x >= range_[0]))
+    return y[indices], x[indices]
+
+
+def integrate_curve(y, x, range_=None):
+    itgt = np.trapz(*sub_array_with_range(y, x, range_))
+    return itgt if itgt else 1.0
+
+
 class DataProcessor(object):
     def __init__(self, **kwargs):
         """Initialization."""
         self._geom = None
+        with File(kwargs['geom_file'], 'r') as f:
+            self._geom = LPDGeometry.from_h5_file_and_quad_positions(
+                f, kwargs['quad_positions'])
+            logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
 
-        for key in kwargs:
-            if key == 'geom_file':
-                with File(kwargs[key], 'r') as f:
-                    self._geom = LPDGeometry.from_h5_file_and_quad_positions(
-                        f, cfg.QUAD_POSITIONS)
-                logger.info("Loaded geometry file: {}".format(kwargs[key]))
-            elif key == 'photon_energy':
-                # convert energy to wavelength
-                self.wavelength = 1e-10 * 12.3984 / kwargs[key]
-            elif key == 'sample_dist':
-                self.sample_dist = kwargs[key]
-            elif key == 'cx':
-                self.cx = kwargs[key] * cfg.PIXEL_SIZE
-            elif key == 'cy':
-                self.cy = kwargs[key] * cfg.PIXEL_SIZE
-            elif key == 'integration_method':
-                self.integration_method = kwargs[key]
-            elif key == 'integration_range':
-                self.integration_range = kwargs[key]
-            elif key == 'integration_points':
-                self.integration_points = kwargs[key]
+        self.wavelength = 1e-10 * 12.3984 / kwargs['photon_energy']
+
+        self.sample_dist = kwargs['sample_dist']
+        self.cx = kwargs['cx'] * cfg.PIXEL_SIZE
+        self.cy = kwargs['cy'] * cfg.PIXEL_SIZE
+        self.integration_method = kwargs['integration_method']
+        self.integration_range = kwargs['integration_range']
+        self.integration_points = kwargs['integration_points']
 
     def process_assembled_data(self, assembled_data, tid):
         """Process assembled image data.

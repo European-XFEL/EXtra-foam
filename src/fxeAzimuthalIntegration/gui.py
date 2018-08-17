@@ -19,10 +19,11 @@ import zmq
 from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
-from .pyqtgraph import mkPen, intColor
+from .pyqtgraph import mkPen, intColor, TableWidget
 from .logging import logger, GuiLogger
 from .plot_widgets import (
-    MainLinePlotWidget, ImageViewWidget, IndividualPulseWindow
+    MainLinePlotWidget, ImageViewWidget, IndividualPulseWindow,
+    LaserOnOffWindow
 )
 
 from .data_acquisition import DaqWorker
@@ -38,6 +39,18 @@ GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
                         'padding-left: 10px;'\
                         'padding-top: 10px;'\
                         'margin-top: 0.0em;}'
+
+
+class FixedWidthLineEdit(QtGui.QLineEdit):
+    def __init__(self, width, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFixedWidth(width)
+
+
+class CustomGroupBox(QtGui.QGroupBox):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
 
 class InputDialogWithCheckBox(QtGui.QDialog):
@@ -73,6 +86,42 @@ class InputDialogWithCheckBox(QtGui.QDialog):
         result = dialog.exec_()
 
         return (text_le.text(), ok_cb.isChecked()), \
+               result == QtGui.QDialog.Accepted
+
+
+class InputDialogForMA(QtGui.QDialog):
+    """Input dialog for moving average on-off pulses."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    @classmethod
+    def getResult(cls, parent, *, on_pulse_ids=None, off_pulse_ids=None):
+        dialog = cls(parent)
+
+        dialog.setWindowTitle("Input dialog")
+
+        on_pulse_lb = QtGui.QLabel("On-pulse IDs")
+        on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
+        off_pulse_lb = QtGui.QLabel("Off-pulse IDs")
+        off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
+        buttons = QtGui.QDialogButtonBox(
+            QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel,
+            QtCore.Qt.Horizontal, dialog
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(on_pulse_lb)
+        layout.addWidget(on_pulse_le)
+        layout.addWidget(off_pulse_lb)
+        layout.addWidget(off_pulse_le)
+        layout.addWidget(buttons)
+        dialog.setLayout(layout)
+
+        result = dialog.exec_()
+
+        return (on_pulse_le.text(), off_pulse_le.text()), \
                result == QtGui.QDialog.Accepted
 
 
@@ -123,16 +172,16 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
             "Plot individual pulse (compared with the average of all pulses)",
             self)
-        open_ip_window_at.triggered.connect(
-            self._show_individual_pulse_dialog)
+        open_ip_window_at.triggered.connect(self._show_ip_window_dialog)
         tool_bar.addAction(open_ip_window_at)
 
         # open an input dialog for opening a moving average window
-        open_ma_window_at = QtGui.QAction(
+        open_laseronoff_window_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
             "Plot moving average for 'on' and 'off' pulses",
             self)
-        tool_bar.addAction(open_ma_window_at)
+        open_laseronoff_window_at.triggered.connect(self._show_laseronoff_window_dialog)
+        tool_bar.addAction(open_laseronoff_window_at)
 
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
@@ -151,58 +200,62 @@ class MainGUI(QtGui.QMainWindow):
         self._ctrl_pannel = QtGui.QWidget()
 
         # *************************************************************
-        # hostname and port
-        # *************************************************************
-        self._hostname_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_ADDR)
-        self._port_le = QtGui.QLineEdit(cfg.DEFAULT_SERVER_PORT)
-
-        # *************************************************************
         # Azimuthal integration setup
         # *************************************************************
-        self._geom_file = cfg.DEFAULT_GEOMETRY_FILE
+        self._ai_setup_gp = CustomGroupBox("Azimuthal integration setup")
 
-        self._sample_dist_le = QtGui.QLineEdit(str(cfg.DIST))
-        self._cx_le = QtGui.QLineEdit(str(cfg.CENTER_X))
-        self._cy_le = QtGui.QLineEdit(str(cfg.CENTER_Y))
-        self._energy_le = QtGui.QLineEdit(str(cfg.PHOTON_ENERGY))
+        w = 100
+        self._sample_dist_le = FixedWidthLineEdit(w, str(cfg.DIST))
+        self._cx_le = FixedWidthLineEdit(w, str(cfg.CENTER_X))
+        self._cy_le = FixedWidthLineEdit(w, str(cfg.CENTER_Y))
         self._itgt_method_cb = QtGui.QComboBox()
+        self._itgt_method_cb.setFixedWidth(w)
         for method in cfg.INTEGRATION_METHODS:
             self._itgt_method_cb.addItem(method)
-        self._itgt_range_lb_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
-        self._itgt_range_ub_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
-        self._itgt_points_le = QtGui.QLineEdit(str(cfg.INTEGRATION_POINTS))
+        self._itgt_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+        self._itgt_points_le = FixedWidthLineEdit(
+            w, str(cfg.INTEGRATION_POINTS))
+
+        # *************************************************************
+        # Geometry setup
+        # *************************************************************
+        self._gmt_setup_gp = CustomGroupBox("Geometry setup")
+        self._quad_positions_tb = QtGui.QTableWidget()
+        self._geom_file_le = FixedWidthLineEdit(285, cfg.DEFAULT_GEOMETRY_FILE)
 
         # *************************************************************
         # Experiment setup
         # *************************************************************
-        self._on_pulses_le = QtGui.QLineEdit()
-        self._normalization_range_lb_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
-        self._normalization_range_ub_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
-        self._FOM_range_lb_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
-        self._FOM_range_ub_le = \
-            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
+        self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
+        w = 90
+        self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
+        self._on_pulse_le = FixedWidthLineEdit(w, "1,2,3,4")
+        self._off_pulse_le = FixedWidthLineEdit(w, "5,6,7,8")
+        self._normalization_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+        self._fom_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
 
         # *************************************************************
         # data source options
         # *************************************************************
-        self._data_src_rbts = []
-        self._data_src_rbts.append(QtGui.QRadioButton("Calibrated (file)"))
-        self._data_src_rbts.append(QtGui.QRadioButton("Calibrated (bridge)"))
-        self._data_src_rbts.append(QtGui.QRadioButton("Assembled (bridge)"))
-        self._data_src_rbts.append(QtGui.QRadioButton("Processed (bridge)"))
-        self._data_src_rbts[int(cfg.DEFAULT_SERVER_SRC)].setChecked(True)
+        self._data_src_gp = CustomGroupBox("Data source")
 
-        # *************************************************************
-        # plot options
-        # *************************************************************
-        self._is_normalized_cb = QtGui.QCheckBox("Normalized")
-        self._is_normalized_cb.setChecked(False)
+        self._hostname_le = FixedWidthLineEdit(130, cfg.DEFAULT_SERVER_ADDR)
+        self._port_le = FixedWidthLineEdit(60, cfg.DEFAULT_SERVER_PORT)
+
+        self._data_src_rbts = []
+        self._data_src_rbts.append(
+            QtGui.QRadioButton("Calibrated data from files"))
+        self._data_src_rbts.append(
+            QtGui.QRadioButton("Calibrated data from ZMQ bridge"))
+        self._data_src_rbts.append(
+            QtGui.QRadioButton("Assembled data from ZMQ bridge"))
+        self._data_src_rbts.append(
+            QtGui.QRadioButton("Processed data from ZMQ bridge"))
+        self._data_src_rbts[int(cfg.DEFAULT_SERVER_SRC)].setChecked(True)
 
         # *************************************************************
         # log window
@@ -260,11 +313,16 @@ class MainGUI(QtGui.QMainWindow):
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
-            self._energy_le,
             self._itgt_method_cb,
-            self._itgt_range_lb_le,
-            self._itgt_range_ub_le,
-            self._itgt_points_le
+            self._itgt_range_le,
+            self._itgt_points_le,
+            self._geom_file_le,
+            self._quad_positions_tb,
+            self._energy_le,
+            self._on_pulse_le,
+            self._off_pulse_le,
+            self._normalization_range_le,
+            self._fom_range_le
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
@@ -291,24 +349,16 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Azimuthal integration setup panel
         # *************************************************************
-        ai_setup_gp = QtGui.QGroupBox("Azimuthal integration setup")
-        ai_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
-
-        energy_lb = QtGui.QLabel("Photon energy (keV): ")
         sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
         cx = QtGui.QLabel("Cx (pixel): ")
         cy = QtGui.QLabel("Cy (pixel): ")
         itgt_method_lb = QtGui.QLabel("Integration method: ")
-        itgt_range_lb1 = QtGui.QLabel("Integration range (1/A): ")
-        itgt_range_lb2 = QtGui.QLabel(" to ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
+        itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
 
-        itgt_range_layout = QtGui.QHBoxLayout()
-        itgt_range_layout.addWidget(itgt_range_lb1)
-        itgt_range_layout.addWidget(self._itgt_range_lb_le)
-        itgt_range_layout.addWidget(itgt_range_lb2)
-        itgt_range_layout.addWidget(self._itgt_range_ub_le)
+        self._initQuadTable()
 
+        # first column
         layout = QtGui.QGridLayout()
         layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
         layout.addWidget(self._sample_dist_le, 0, 1, 1, 1)
@@ -316,48 +366,55 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._cx_le, 1, 1, 1, 1)
         layout.addWidget(cy, 2, 0, 1, 1)
         layout.addWidget(self._cy_le, 2, 1, 1, 1)
-        layout.addWidget(energy_lb, 3, 0, 1, 1)
-        layout.addWidget(self._energy_le, 3, 1, 1, 1)
-        layout.addWidget(itgt_method_lb, 0, 2, 1, 1)
-        layout.addWidget(self._itgt_method_cb, 0, 3, 1, 1)
-        layout.addLayout(itgt_range_layout, 1, 2, 1, 2)
-        layout.addWidget(itgt_points_lb, 2, 2, 1, 1)
-        layout.addWidget(self._itgt_points_le, 2, 3, 1, 1)
+        layout.addWidget(itgt_method_lb, 4, 0, 1, 1)
+        layout.addWidget(self._itgt_method_cb, 4, 1, 1, 1)
+        layout.addWidget(itgt_points_lb, 5, 0, 1, 1)
+        layout.addWidget(self._itgt_points_le, 5, 1, 1, 1)
+        layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
+        layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
 
-        ai_setup_gp.setLayout(layout)
+        self._ai_setup_gp.setLayout(layout)
+
+        # *************************************************************
+        # Geometry setup
+        # *************************************************************
+        geom_file_lb = QtGui.QLabel("Geometry file:")
+        quad_positions_lb = QtGui.QLabel("Quadrant positions:")
+
+        layout = QtGui.QGridLayout()
+        layout.addWidget(geom_file_lb, 0, 0, 1, 3)
+        layout.addWidget(self._geom_file_le, 1, 0, 1, 3)
+        layout.addWidget(quad_positions_lb, 2, 0, 1, 2)
+        layout.addWidget(self._quad_positions_tb, 3, 0, 1, 2)
+
+        self._gmt_setup_gp.setLayout(layout)
 
         # *************************************************************
         # Experiment setup panel
         # *************************************************************
-        ep_setup_gp = QtGui.QGroupBox("Experiment setup")
-        ep_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
-
-        on_pulses_lb = QtGui.QLabel("On-pulse IDs: ")
-        normalization_range_lb1 = QtGui.QLabel("Normalization range (1/A): ")
-        normalization_range_lb2 = QtGui.QLabel(" to ")
-        FOM_range_lb1 = QtGui.QLabel("FOM range (1/A): ")
-        FOM_range_lb2 = QtGui.QLabel(" to ")
+        energy_lb = QtGui.QLabel("Photon energy (keV): ")
+        on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
+        off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
+        normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
+        fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(on_pulses_lb, 0, 0, 1, 1)
-        layout.addWidget(self._on_pulses_le, 0, 1, 1, 3)
-        layout.addWidget(normalization_range_lb1, 2, 0, 1, 1)
-        layout.addWidget(self._normalization_range_lb_le, 2, 1, 1, 1)
-        layout.addWidget(normalization_range_lb2, 2, 2, 1, 1)
-        layout.addWidget(self._normalization_range_ub_le, 2, 3, 1, 1)
-        layout.addWidget(FOM_range_lb1, 3, 0, 1, 1)
-        layout.addWidget(self._FOM_range_lb_le, 3, 1, 1, 1)
-        layout.addWidget(FOM_range_lb2, 3, 2, 1, 1)
-        layout.addWidget(self._FOM_range_ub_le, 3, 3, 1, 1)
+        layout.addWidget(energy_lb, 0, 0, 1, 1)
+        layout.addWidget(self._energy_le, 0, 1, 1, 1)
+        layout.addWidget(on_pulse_lb, 1, 0, 1, 1)
+        layout.addWidget(self._on_pulse_le, 1, 1, 1, 1)
+        layout.addWidget(off_pulse_lb, 2, 0, 1, 1)
+        layout.addWidget(self._off_pulse_le, 2, 1, 1, 1)
+        layout.addWidget(normalization_range_lb, 3, 0, 1, 1)
+        layout.addWidget(self._normalization_range_le, 3, 1, 1, 1)
+        layout.addWidget(fom_range_lb, 4, 0, 1, 1)
+        layout.addWidget(self._fom_range_le, 4, 1, 1, 1)
 
-        ep_setup_gp.setLayout(layout)
+        self._ep_setup_gp.setLayout(layout)
 
         # *************************************************************
-        # TCP connection panel
+        # data source panel
         # *************************************************************
-        tcp_connection_gp = QtGui.QGroupBox("TCP connection")
-        tcp_connection_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET
-                                        )
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
         self._hostname_le.setFixedHeight(28)
@@ -365,40 +422,42 @@ class MainGUI(QtGui.QMainWindow):
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(hostname_lb, 2)
-        layout.addWidget(self._hostname_le, 3)
-        layout.addWidget(port_lb, 1)
-        layout.addWidget(self._port_le, 2)
-        tcp_connection_gp.setLayout(layout)
-
-        # *************************************************************
-        # data source panel
-        # *************************************************************
-        data_src_gp = QtGui.QGroupBox("Data source")
-        data_src_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
         layout = QtGui.QVBoxLayout()
+        sub_layout = QtGui.QHBoxLayout()
+        sub_layout.addWidget(hostname_lb)
+        sub_layout.addWidget(self._hostname_le)
+        sub_layout.addWidget(port_lb)
+        sub_layout.addWidget(self._port_le)
+        layout.addLayout(sub_layout)
         for btn in self._data_src_rbts:
-            layout.addWidget(btn)
-        data_src_gp.setLayout(layout)
+            layout.addWidget(btn,)
+        self._data_src_gp.setLayout(layout)
 
-        # *************************************************************
-        # plot option panel
-        # *************************************************************
-        plot_option_gp = QtGui.QGroupBox('Plot options')
-        plot_option_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._is_normalized_cb)
-        plot_option_gp.setLayout(layout)
-
-        layout = QtGui.QGridLayout()
-        layout.addWidget(ai_setup_gp, 0, 0, 4, 3)
-        layout.addWidget(ep_setup_gp, 0, 3, 4, 2)
-        layout.addWidget(tcp_connection_gp, 0, 5, 1, 2)
-        layout.addWidget(plot_option_gp, 1, 5, 3, 1)
-        layout.addWidget(data_src_gp, 1, 6, 3, 1)
+        # ------------------------------------------------------------
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._ai_setup_gp)
+        layout.addWidget(self._gmt_setup_gp)
+        layout.addWidget(self._ep_setup_gp)
+        layout.addWidget(self._data_src_gp)
 
         self._ctrl_pannel.setLayout(layout)
+
+    def _initQuadTable(self):
+        n_row = 4
+        n_col = 2
+        widget = self._quad_positions_tb
+        widget.setRowCount(n_row)
+        widget.setColumnCount(n_col)
+        for i in range(n_row):
+            for j in range(n_col):
+                widget.setItem(
+                    i, j, QtGui.QTableWidgetItem(str(cfg.QUAD_POSITIONS[i][j])))
+
+        widget.move(0, 0)
+        widget.setHorizontalHeaderLabels(['x', 'y'])
+        widget.setVerticalHeaderLabels(['1', '2', '3', '4'])
+        widget.setColumnWidth(0, 80)
+        widget.setColumnWidth(1, 80)
 
     def _initFileServerUI(self):
         layout = QtGui.QGridLayout()
@@ -439,13 +498,7 @@ class MainGUI(QtGui.QMainWindow):
         # update the plots in the main GUI
         t0 = time.perf_counter()
         if data is not None:
-            max_intensity = data["intensity"].max()
             for i, intensity in enumerate(data["intensity"]):
-                if self._is_normalized_cb.isChecked() is True:
-                    # data["intensity"] is also changed, so the plots in
-                    # the other windows also become normalized.
-                    intensity /= max_intensity
-
                 self._plot.update(data["momentum"], intensity,
                                   pen=mkPen(intColor(i, hues=9, values=5),
                                             width=2))
@@ -460,28 +513,25 @@ class MainGUI(QtGui.QMainWindow):
         logger.debug("Time for updating the plots: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-    def _show_individual_pulse_dialog(self):
-        """A pop-up window."""
+    def _show_ip_window_dialog(self):
+        """A dialog for individual pulse plot."""
         ret, ok = InputDialogWithCheckBox.getResult(
             self,
             'Input Dialog',
             'Enter pulse IDs (separated by comma):',
             "Include detector image")
 
-        if ok is True:
-            self._open_individual_pulse_window(ret)
+        if ok:
+            self._open_ip_window(ret[0], ret[1])
 
-    def _open_individual_pulse_window(self, ret):
-        """Open another window."""
-        text = ret[0]
-        show_image = ret[1]
+    def _open_ip_window(self, text, show_image):
+        """Open individual pulse plot window."""
         if not text:
             logger.info("Invalid input! Please specify pulse IDs!")
             return
 
         try:
-            pulse_ids = text.split(",")
-            pulse_ids = [int(i.strip()) for i in pulse_ids if i.strip()]
+            pulse_ids = self._parse_text_for_ids(text)
         except ValueError:
             logger.info("Invalid input! Enter pulse IDs separated by ','!")
             return
@@ -496,10 +546,50 @@ class MainGUI(QtGui.QMainWindow):
                     format(", ".join(str(i) for i in pulse_ids)))
         w.show()
 
+    def _show_laseronoff_window_dialog(self):
+        """A dialog for moving average on-off pulses plot."""
+        ret, ok = InputDialogForMA.getResult(
+            self,
+            on_pulse_ids=self._on_pulse_le.text(),
+            off_pulse_ids=self._off_pulse_le.text()
+        )
+
+        if ok:
+            self._open_laseronoff_window(ret[0], ret[1])
+
+    def _open_laseronoff_window(self, on_pulse_text, off_pulse_text):
+        """Open moving average on-off pulses window."""
+        if not on_pulse_text or not off_pulse_text:
+            logger.info("Invalid input! Please specify pulse IDs for both"
+                        "on- and off-pulses!")
+            return
+
+        try:
+            on_pulse_ids = self._parse_text_for_ids(on_pulse_text)
+            off_pulse_ids = self._parse_text_for_ids(off_pulse_text)
+        except ValueError:
+            logger.info("Invalid input! Enter pulse IDs separated by ','!")
+            return
+
+        window_id = "{:06d}".format(self._opened_windows_count)
+        w = LaserOnOffWindow(
+            window_id,
+            on_pulse_ids,
+            off_pulse_ids,
+            self._parse_for_range(self._normalization_range_le.text()),
+            self._parse_for_range(self._fom_range_le.text()),
+            parent=self)
+        self._opened_windows_count += 1
+        self._opened_windows[window_id] = w
+        logger.info("Open new window for on-pulse(s): {} and off-pulse(s): {}".
+                    format(", ".join(str(i) for i in on_pulse_ids),
+                           ", ".join(str(i) for i in off_pulse_ids)))
+        w.show()
+
     def _choose_geometry_file(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
         if filename:
-            self._geom_file = filename
+            self._geom_file_le.setText(filename)
 
     def remove_window(self, w_id):
         del self._opened_windows[w_id]
@@ -536,20 +626,22 @@ class MainGUI(QtGui.QMainWindow):
         else:
             data_source = DataSource.PROCESSED
 
+        geom_file = self._geom_file_le.text()
+        quad_positions = self._parse_quadrant_table(self._quad_positions_tb)
         energy = float(self._energy_le.text().strip())
         sample_distance = float(self._sample_dist_le.text().strip())
         center_x = float(self._cx_le.text().strip())
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
-        integration_range = float(self._itgt_range_lb_le.text().strip()), \
-                            float(self._itgt_range_ub_le.text().strip()),
+        integration_range = self._parse_for_range(self._itgt_range_le.text())
         integration_points = int(self._itgt_points_le.text().strip())
         try:
             self._daq_worker = DaqWorker(
                 self._client,
                 self._daq_queue,
                 data_source,
-                geom_file=self._geom_file,
+                geom_file=geom_file,
+                quad_positions=quad_positions,
                 photon_energy=energy,
                 sample_dist=sample_distance,
                 cx=center_x,
@@ -617,6 +709,28 @@ class MainGUI(QtGui.QMainWindow):
         self._server_start_btn.setEnabled(True)
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(True)
+
+    @staticmethod
+    def _parse_for_range(text):
+        lb, ub = text.split(",")
+        return float(lb.strip()), float(ub.strip())
+
+    @staticmethod
+    def _parse_text_for_ids(text):
+        return [int(i.strip()) for i in text.split(",") if i.strip()]
+
+    @staticmethod
+    def _parse_quadrant_table(widget):
+        n_row, n_col = widget.rowCount(), widget.columnCount()
+        ret = np.zeros((n_row, n_col))
+        for i in range(n_row):
+            for j in range(n_col):
+                ret[i, j] = float(widget.item(i, j).text())
+        return ret
+
+    def _check_pulse_ids(self):
+        """Check the consistency of on- and off-pulse ids."""
+        pass
 
 
 def fxe_ai():

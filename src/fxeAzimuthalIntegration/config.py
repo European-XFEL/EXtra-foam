@@ -56,8 +56,8 @@ class Config:
     UPDATE_FREQUENCY = 10  # in Hz
 
     MAIN_WINDOW_HEIGHT = 960
-    MAIN_WINDOW_WIDTH = 1280
-    MAIN_LINE_PLOT_HEIGHT = 480
+    MAIN_WINDOW_WIDTH = 1320
+    MAIN_LINE_PLOT_HEIGHT = 440
 
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
@@ -66,17 +66,10 @@ class Config:
     LINE_PLOT_HEIGHT = 260
     LINE_PLOT_LEGEND_OFFSET = (-10, -50)
 
-    # *********************************************************************
-    X_LABEL = "Momentum transfer (1/A)"
-    Y_LABEL = "Scattering signal (arb. u.)"
-
-    CUSTOM_PEN = [
-        {'color': (255, 0, 255), 'width': 3},
-        {'color': (0, 255, 0), 'width': 3},
-        {'color': (255, 255, 0), 'width': 3}
-    ]
+    MA_PLOT_WIDTH = 800
+    MA_PLOT_HEIGHT = 900
 
     # *********************************************************************
     DEFAULT_FILE_SERVER_PORT = "12345"
     DEFAULT_FILE_SERVER_FOLDER = os.path.join(os.path.expanduser("~"),
-                                              "fxe-data/r0200")
+                                              "fxe-data/r0078")
