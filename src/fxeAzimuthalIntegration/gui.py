@@ -117,20 +117,21 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.triggered.connect(self.on_exit_running)
         self._stop_at.setEnabled(False)
 
-        self._insert_image_at = QtGui.QAction(
+        # open an input dialog for opening plots for individual pulses
+        open_ip_window_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
-            "Plot individual pulse",
+            "Plot individual pulse (compared with the average of all pulses)",
             self)
-        self._insert_image_at.triggered.connect(
+        open_ip_window_at.triggered.connect(
             self._show_individual_pulse_dialog)
-        tool_bar.addAction(self._insert_image_at)
+        tool_bar.addAction(open_ip_window_at)
 
         # open an input dialog for opening a moving average window
-        self._open_ma_window_at = QtGui.QAction(
+        open_ma_window_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
             "Plot moving average for 'on' and 'off' pulses",
             self)
-        tool_bar.addAction(self._open_ma_window_at)
+        tool_bar.addAction(open_ma_window_at)
 
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
