@@ -5,5 +5,6 @@ FXE instrument, European XFEL.
 A Karabo bound device for online data analysis.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
-Copyright (C) European XFEL GmbH Hamburg. All rights reserved.
+Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+All rights reserved.
 """
