@@ -166,6 +166,20 @@ class MainGUI(QtGui.QMainWindow):
         self._itgt_points_le = QtGui.QLineEdit(str(cfg.INTEGRATION_POINTS))
 
         # *************************************************************
+        # Experiment setup
+        # *************************************************************
+        self._on_pulses_le = QtGui.QLineEdit()
+        self._normalization_range_lb_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
+        self._normalization_range_ub_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
+        self._FOM_range_lb_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[0]))
+        self._FOM_range_ub_le = \
+            QtGui.QLineEdit(str(cfg.INTEGRATION_RANGE[1]))
+
+
+        # *************************************************************
         # data source options
         # *************************************************************
         self._data_src_rbts = []
@@ -257,8 +271,8 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
-        layout.addWidget(self._image, 4, 0, 5, 2)
-        layout.addWidget(self._plot, 4, 2, 5, 4)
+        layout.addWidget(self._image, 4, 0, 5, 1)
+        layout.addWidget(self._plot, 4, 1, 5, 5)
         layout.addWidget(self._log_window, 9, 0, 2, 4)
         layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
 
@@ -304,6 +318,32 @@ class MainGUI(QtGui.QMainWindow):
         ai_setup_gp.setLayout(layout)
 
         # *************************************************************
+        # Experiment setup panel
+        # *************************************************************
+        ep_setup_gp = QtGui.QGroupBox("Experiment setup")
+        ep_setup_gp.setStyleSheet(GROUP_BOX_STYLE_SHEET)
+
+        on_pulses_lb = QtGui.QLabel("On-pulse IDs: ")
+        normalization_range_lb1 = QtGui.QLabel("Normalization range (1/A): ")
+        normalization_range_lb2 = QtGui.QLabel(" to ")
+        FOM_range_lb1 = QtGui.QLabel("FOM range (1/A): ")
+        FOM_range_lb2 = QtGui.QLabel(" to ")
+
+        layout = QtGui.QGridLayout()
+        layout.addWidget(on_pulses_lb, 0, 0, 1, 1)
+        layout.addWidget(self._on_pulses_le, 0, 1, 1, 3)
+        layout.addWidget(normalization_range_lb1, 2, 0, 1, 1)
+        layout.addWidget(self._normalization_range_lb_le, 2, 1, 1, 1)
+        layout.addWidget(normalization_range_lb2, 2, 2, 1, 1)
+        layout.addWidget(self._normalization_range_ub_le, 2, 3, 1, 1)
+        layout.addWidget(FOM_range_lb1, 3, 0, 1, 1)
+        layout.addWidget(self._FOM_range_lb_le, 3, 1, 1, 1)
+        layout.addWidget(FOM_range_lb2, 3, 2, 1, 1)
+        layout.addWidget(self._FOM_range_ub_le, 3, 3, 1, 1)
+
+        ep_setup_gp.setLayout(layout)
+
+        # *************************************************************
         # TCP connection panel
         # *************************************************************
         tcp_connection_gp = QtGui.QGroupBox("TCP connection")
@@ -344,9 +384,10 @@ class MainGUI(QtGui.QMainWindow):
 
         layout = QtGui.QGridLayout()
         layout.addWidget(ai_setup_gp, 0, 0, 4, 3)
-        layout.addWidget(tcp_connection_gp, 0, 3, 1, 2)
-        layout.addWidget(plot_option_gp, 1, 3, 3, 1)
-        layout.addWidget(data_src_gp, 1, 4, 3, 1)
+        layout.addWidget(ep_setup_gp, 0, 3, 4, 2)
+        layout.addWidget(tcp_connection_gp, 0, 5, 1, 2)
+        layout.addWidget(plot_option_gp, 1, 5, 3, 1)
+        layout.addWidget(data_src_gp, 1, 6, 3, 1)
 
         self._ctrl_pannel.setLayout(layout)
 
