@@ -125,6 +125,13 @@ class MainGUI(QtGui.QMainWindow):
             self._show_individual_pulse_dialog)
         tool_bar.addAction(self._insert_image_at)
 
+        # open an input dialog for opening a moving average window
+        self._open_ma_window_at = QtGui.QAction(
+            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
+            "Plot moving average for 'on' and 'off' pulses",
+            self)
+        tool_bar.addAction(self._open_ma_window_at)
+
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
             "Specify geometry file",
