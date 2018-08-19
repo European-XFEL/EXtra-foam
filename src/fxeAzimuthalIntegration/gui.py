@@ -19,7 +19,7 @@ import zmq
 from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
-from .pyqtgraph import mkPen, intColor, TableWidget
+from .pyqtgraph import mkPen, intColor
 from .logging import logger, GuiLogger
 from .plot_widgets import (
     MainLinePlotWidget, ImageViewWidget, IndividualPulseWindow,
@@ -231,8 +231,8 @@ class MainGUI(QtGui.QMainWindow):
 
         w = 90
         self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
-        self._on_pulse_le = FixedWidthLineEdit(w, "1,2,3,4")
-        self._off_pulse_le = FixedWidthLineEdit(w, "5,6,7,8")
+        self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
+        self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
         self._fom_range_le = FixedWidthLineEdit(
@@ -531,7 +531,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         try:
-            pulse_ids = self._parse_text_for_ids(text)
+            pulse_ids = self._parse_ids(text)
         except ValueError:
             logger.info("Invalid input! Enter pulse IDs separated by ','!")
             return
@@ -565,8 +565,8 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         try:
-            on_pulse_ids = self._parse_text_for_ids(on_pulse_text)
-            off_pulse_ids = self._parse_text_for_ids(off_pulse_text)
+            on_pulse_ids = self._parse_ids(on_pulse_text)
+            off_pulse_ids = self._parse_ids(off_pulse_text)
         except ValueError:
             logger.info("Invalid input! Enter pulse IDs separated by ','!")
             return
@@ -576,8 +576,8 @@ class MainGUI(QtGui.QMainWindow):
             window_id,
             on_pulse_ids,
             off_pulse_ids,
-            self._parse_for_range(self._normalization_range_le.text()),
-            self._parse_for_range(self._fom_range_le.text()),
+            self._parse_boundary(self._normalization_range_le.text()),
+            self._parse_boundary(self._fom_range_le.text()),
             parent=self)
         self._opened_windows_count += 1
         self._opened_windows[window_id] = w
@@ -633,7 +633,7 @@ class MainGUI(QtGui.QMainWindow):
         center_x = float(self._cx_le.text().strip())
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
-        integration_range = self._parse_for_range(self._itgt_range_le.text())
+        integration_range = self._parse_boundary(self._itgt_range_le.text())
         integration_points = int(self._itgt_points_le.text().strip())
         try:
             self._daq_worker = DaqWorker(
@@ -711,13 +711,55 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(True)
 
     @staticmethod
-    def _parse_for_range(text):
+    def _parse_boundary(text):
         lb, ub = text.split(",")
         return float(lb.strip()), float(ub.strip())
 
     @staticmethod
-    def _parse_text_for_ids(text):
-        return [int(i.strip()) for i in text.split(",") if i.strip()]
+    def _parse_ids(text):
+        def parse_item(v):
+            if not v:
+                return []
+
+            if ':' in v:
+                x = v.split(':')
+                if len(x) < 2 or len(x) > 3:
+                    raise ValueError("Not understandable pulse IDs input!")
+                try:
+                    start = int(x[0].strip())
+                    if start < 0:
+                        raise ValueError("Pulse ID cannot be negative!")
+                    end = int(x[1].strip())
+                    if end <= start:
+                        raise ValueError("Not understandable pulse IDs input!")
+
+                    if len(x) == 3:
+                        inc = int(x[2].strip())
+                    else:
+                        inc = 1
+                except ValueError:
+                    raise
+
+                return list(range(start, end, inc))
+
+            try:
+                v = int(v)
+                if v < 0:
+                    raise ValueError("Pulse ID cannot be negative!")
+            except ValueError:
+                raise ValueError("Not understandable pulse IDs input!")
+
+            return v
+
+        ret = set()
+        for item in text.split(","):
+            item = parse_item(item.strip())
+            if isinstance(item, int):
+                ret.add(item)
+            else:
+                ret.update(item)
+
+        return list(ret)
 
     @staticmethod
     def _parse_quadrant_table(widget):
