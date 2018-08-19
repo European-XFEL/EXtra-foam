@@ -521,21 +521,23 @@ class MainGUI(QtGui.QMainWindow):
             'Enter pulse IDs (separated by comma):',
             "Include detector image")
 
-        if ok:
-            self._open_ip_window(ret[0], ret[1])
-
-    def _open_ip_window(self, text, show_image):
-        """Open individual pulse plot window."""
-        if not text:
-            logger.info("Invalid input! Please specify pulse IDs!")
-            return
+        err_msg = "Invalid input! Enter pulse IDs separated by ','!"
 
         try:
-            pulse_ids = self._parse_ids(text)
+            pulse_ids = self._parse_ids(ret[0])
         except ValueError:
-            logger.info("Invalid input! Enter pulse IDs separated by ','!")
+            logger.error(err_msg)
             return
 
+        if not pulse_ids:
+            logger.error(err_msg)
+            return
+
+        if ok:
+            self._open_ip_window(pulse_ids, ret[1])
+
+    def _open_ip_window(self, pulse_ids, show_image):
+        """Open individual pulse plot window."""
         window_id = "{:06d}".format(self._opened_windows_count)
         w = IndividualPulseWindow(window_id, pulse_ids,
                                   parent=self,
@@ -554,30 +556,50 @@ class MainGUI(QtGui.QMainWindow):
             off_pulse_ids=self._off_pulse_le.text()
         )
 
-        if ok:
-            self._open_laseronoff_window(ret[0], ret[1])
-
-    def _open_laseronoff_window(self, on_pulse_text, off_pulse_text):
-        """Open moving average on-off pulses window."""
-        if not on_pulse_text or not off_pulse_text:
-            logger.info("Invalid input! Please specify pulse IDs for both"
-                        "on- and off-pulses!")
+        err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
+                  "and/or use the range operator ':'!"
+        try:
+            on_pulse_ids = self._parse_ids(ret[0])
+            off_pulse_ids = self._parse_ids(ret[1])
+        except ValueError:
+            logger.error(err_msg)
             return
+
+        if not on_pulse_ids or not off_pulse_ids:
+            logger.error(err_msg)
+            return
+
+        common = set(on_pulse_ids).intersection(off_pulse_ids)
+        if common:
+            logger.error("Pulse IDs {} are found in both on- and off- pulses.".
+                         format(','.join([str(v) for v in common])))
+            return
+
+        if ok:
+            self._open_laseronoff_window(on_pulse_ids, off_pulse_ids)
+
+    def _open_laseronoff_window(self, on_pulse_ids, off_pulse_ids):
+        """Open moving average on-off pulses window."""
+        window_id = "{:06d}".format(self._opened_windows_count)
 
         try:
-            on_pulse_ids = self._parse_ids(on_pulse_text)
-            off_pulse_ids = self._parse_ids(off_pulse_text)
+            normalization_range = \
+                self._parse_boundary(self._normalization_range_le.text())
         except ValueError:
-            logger.info("Invalid input! Enter pulse IDs separated by ','!")
+            logger.error("Invalid input for 'Normalization_range'!")
+            return
+        try:
+            fom_range = self._parse_boundary(self._fom_range_le.text())
+        except ValueError:
+            logger.error("Invalid input for 'FOM_range'!")
             return
 
-        window_id = "{:06d}".format(self._opened_windows_count)
         w = LaserOnOffWindow(
             window_id,
             on_pulse_ids,
             off_pulse_ids,
-            self._parse_boundary(self._normalization_range_le.text()),
-            self._parse_boundary(self._fom_range_le.text()),
+            normalization_range,
+            fom_range,
             parent=self)
         self._opened_windows_count += 1
         self._opened_windows[window_id] = w
@@ -633,7 +655,12 @@ class MainGUI(QtGui.QMainWindow):
         center_x = float(self._cx_le.text().strip())
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
-        integration_range = self._parse_boundary(self._itgt_range_le.text())
+        try:
+            integration_range = self._parse_boundary(self._itgt_range_le.text())
+        except ValueError:
+            logger.error("Invalid input for 'Integration_range'!")
+            return
+
         integration_points = int(self._itgt_points_le.text().strip())
         try:
             self._daq_worker = DaqWorker(
@@ -724,14 +751,14 @@ class MainGUI(QtGui.QMainWindow):
             if ':' in v:
                 x = v.split(':')
                 if len(x) < 2 or len(x) > 3:
-                    raise ValueError("Not understandable pulse IDs input!")
+                    raise ValueError
                 try:
                     start = int(x[0].strip())
                     if start < 0:
                         raise ValueError("Pulse ID cannot be negative!")
                     end = int(x[1].strip())
                     if end <= start:
-                        raise ValueError("Not understandable pulse IDs input!")
+                        raise ValueError
 
                     if len(x) == 3:
                         inc = int(x[2].strip())
@@ -745,9 +772,9 @@ class MainGUI(QtGui.QMainWindow):
             try:
                 v = int(v)
                 if v < 0:
-                    raise ValueError("Pulse ID cannot be negative!")
+                    raise ValueError
             except ValueError:
-                raise ValueError("Not understandable pulse IDs input!")
+                raise ValueError
 
             return v
 
@@ -769,10 +796,6 @@ class MainGUI(QtGui.QMainWindow):
             for j in range(n_col):
                 ret[i, j] = float(widget.item(i, j).text())
         return ret
-
-    def _check_pulse_ids(self):
-        """Check the consistency of on- and off-pulse ids."""
-        pass
 
 
 def fxe_ai():
