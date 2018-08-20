@@ -100,7 +100,8 @@ class DataProcessor(object):
         # trunc the data only for plot
         assembled[(assembled <= cfg.MASK_RANGE[0])
                   | (assembled > cfg.MASK_RANGE[1])] = 0
-        data["image"] = assembled
+        data["image"] = np.rot90(assembled, 3, axes=(1, 2))
+
         return data
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
