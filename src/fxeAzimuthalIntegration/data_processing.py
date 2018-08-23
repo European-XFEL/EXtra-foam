@@ -108,9 +108,6 @@ class DataProcessor(object):
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process data streaming by karabo_data from files."""
-        if self._geom is None:
-            logger.info(
-                "Geometry file is required to process calibrated data!")
         data, metadata = calibrated_data
 
         tid = next(iter(metadata.values()))["timestamp.tid"]
