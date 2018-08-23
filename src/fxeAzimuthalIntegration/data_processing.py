@@ -44,7 +44,7 @@ class DataProcessor(object):
             logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
 
         self.wavelength = 1e-3 * constants.c * constants.h / constants.e\
-                          / kwargs['photon_energy']
+            / kwargs['photon_energy']
 
         self.sample_dist = kwargs['sample_dist']
         self.cx = kwargs['cx'] * cfg.PIXEL_SIZE

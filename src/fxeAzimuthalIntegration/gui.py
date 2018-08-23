@@ -86,7 +86,7 @@ class InputDialogWithCheckBox(QtGui.QDialog):
         result = dialog.exec_()
 
         return (text_le.text(), ok_cb.isChecked()), \
-               result == QtGui.QDialog.Accepted
+            result == QtGui.QDialog.Accepted
 
 
 class InputDialogForMA(QtGui.QDialog):
@@ -122,7 +122,7 @@ class InputDialogForMA(QtGui.QDialog):
         result = dialog.exec_()
 
         return (on_pulse_le.text(), off_pulse_le.text()), \
-               result == QtGui.QDialog.Accepted
+            result == QtGui.QDialog.Accepted
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -169,7 +169,8 @@ class MainGUI(QtGui.QMainWindow):
 
         # open an input dialog for opening plots for individual pulses
         open_ip_window_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
+            QtGui.QIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
             "Plot individual pulse (compared with the average of all pulses)",
             self)
         open_ip_window_at.triggered.connect(self._show_ip_window_dialog)
@@ -177,14 +178,17 @@ class MainGUI(QtGui.QMainWindow):
 
         # open an input dialog for opening a moving average window
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
+            QtGui.QIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
             "Plot moving average for 'on' and 'off' pulses",
             self)
-        open_laseronoff_window_at.triggered.connect(self._show_laseronoff_window_dialog)
+        open_laseronoff_window_at.triggered.connect(
+            self._show_laseronoff_window_dialog)
         tool_bar.addAction(open_laseronoff_window_at)
 
         self._open_geometry_file_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
+            QtGui.QIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
             "Specify geometry file",
             self)
         self._open_geometry_file_at.triggered.connect(
@@ -280,7 +284,8 @@ class MainGUI(QtGui.QMainWindow):
         self._server_start_btn.clicked.connect(self._on_start_serve_file)
         self._server_terminate_btn = QtGui.QPushButton("Terminate")
         self._server_terminate_btn.setEnabled(False)
-        self._server_terminate_btn.clicked.connect(self._on_terminate_serve_file)
+        self._server_terminate_btn.clicked.connect(
+            self._on_terminate_serve_file)
         self._select_btn = QtGui.QPushButton("Select")
         self._file_server_port_le = QtGui.QLineEdit(
             cfg.DEFAULT_FILE_SERVER_PORT)
@@ -451,7 +456,8 @@ class MainGUI(QtGui.QMainWindow):
         for i in range(n_row):
             for j in range(n_col):
                 widget.setItem(
-                    i, j, QtGui.QTableWidgetItem(str(cfg.QUAD_POSITIONS[i][j])))
+                    i, j,
+                    QtGui.QTableWidgetItem(str(cfg.QUAD_POSITIONS[i][j])))
 
         widget.move(0, 0)
         widget.setHorizontalHeaderLabels(['x', 'y'])
@@ -656,7 +662,8 @@ class MainGUI(QtGui.QMainWindow):
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
         try:
-            integration_range = self._parse_boundary(self._itgt_range_le.text())
+            integration_range = self._parse_boundary(
+                self._itgt_range_le.text())
         except ValueError:
             logger.error("Invalid input for 'Integration_range'!")
             return
