@@ -115,6 +115,11 @@ class DataProcessor(object):
         t0 = time.perf_counter()
 
         if from_file is False:
+            # TODO: should be able to specify the data source here.
+            if len(metadata.items()) > 1:
+                logger.warning(
+                    "Received data from more than one data sources!")
+
             modules_data = next(iter(data.values()))["image.data"]
             modules_data = np.moveaxis(modules_data, 3, 0)
             logger.debug("Time for manipulating stacked data: {:.1f} ms"

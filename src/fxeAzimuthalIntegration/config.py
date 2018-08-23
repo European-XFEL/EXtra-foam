@@ -39,8 +39,8 @@ class Config:
     QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 
     # DEFAULT_SERVER_SRC = DataSource.CALIBRATED
-    # DEFAULT_SERVER_ADDR = "10.253.0.53"  # "localhost"
-    # DEFAULT_SERVER_PORT = "4501"  # "12345"
+    # DEFAULT_SERVER_ADDR = "10.253.0.53"
+    # DEFAULT_SERVER_PORT = "4501"
 
     DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
     DEFAULT_SERVER_ADDR = "localhost"
