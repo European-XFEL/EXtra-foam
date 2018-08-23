@@ -11,6 +11,7 @@ All rights reserved.
 import time
 
 import numpy as np
+from scipy import constants
 import pyFAI
 from h5py import File
 
@@ -42,7 +43,8 @@ class DataProcessor(object):
                 f, kwargs['quad_positions'])
             logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
 
-        self.wavelength = 1e-10 * 12.3984 / kwargs['photon_energy']
+        self.wavelength = 1e-3 * constants.c * constants.h / constants.e\
+                          / kwargs['photon_energy']
 
         self.sample_dist = kwargs['sample_dist']
         self.cx = kwargs['cx'] * cfg.PIXEL_SIZE
