@@ -677,8 +677,8 @@ class MainGUI(QtGui.QMainWindow):
                 integration_range=integration_range,
                 integration_points=integration_points
             )
-        except OSError as e:
-            logger.info(e)
+        except Exception as e:
+            logger.error(e)
             return
 
         self._daq_worker.start()
