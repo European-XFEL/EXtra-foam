@@ -151,7 +151,6 @@ class DataProcessor(object):
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process data streaming by karabo_data from files."""
         data, metadata = calibrated_data
-
         tid = next(iter(metadata.values()))["timestamp.tid"]
 
         t0 = time.perf_counter()
@@ -186,5 +185,4 @@ class DataProcessor(object):
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        n_pulses = np.minimum(assembled_orig.shape[0], cfg.PULSES_PER_TRAIN)
-        return self.process_assembled_data(assembled_orig[:n_pulses], tid)
+        return self.process_assembled_data(assembled_orig, tid)

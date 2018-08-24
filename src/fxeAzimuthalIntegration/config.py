@@ -23,8 +23,6 @@ class Config:
 
     PHOTON_ENERGY = 9.30  # in, keV
 
-    PULSES_PER_TRAIN = 16
-
     # 'full_csr" crashes the app
     INTEGRATION_METHODS = ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                            'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl']
@@ -36,13 +34,13 @@ class Config:
     # The following is valid-ish for the 20180318 geometry
     QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 
-    # DEFAULT_SERVER_SRC = DataSource.CALIBRATED
-    # DEFAULT_SERVER_ADDR = "10.253.0.53"
-    # DEFAULT_SERVER_PORT = "4501"
+    DEFAULT_SERVER_SRC = DataSource.CALIBRATED
+    DEFAULT_SERVER_ADDR = "10.253.0.53"
+    DEFAULT_SERVER_PORT = "4501"
 
-    DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
-    DEFAULT_SERVER_ADDR = "localhost"
-    DEFAULT_SERVER_PORT = "12345"
+#      DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
+#      DEFAULT_SERVER_ADDR = "localhost"
+#      DEFAULT_SERVER_PORT = "12345"
 
     DEFAULT_GEOMETRY_FILE = os.path.join(os.path.expanduser("~"),
                                          "fxe-data/lpd_mar_18.h5")
