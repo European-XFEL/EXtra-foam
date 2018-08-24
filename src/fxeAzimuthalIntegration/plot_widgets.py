@@ -36,7 +36,7 @@ class Pen:
     yellow = mkPen((255, 255, 0), width=_w)
 
 
-class MainLinePlotWidget(GraphicsLayoutWidget):
+class MainGuiLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, parent=None, **kwargs):
         """Initialization."""
         super().__init__(parent, **kwargs)
@@ -60,7 +60,7 @@ class MainLinePlotWidget(GraphicsLayoutWidget):
         self._plot.plot(*args, **kwargs)
 
 
-class ImageViewWidget(GraphicsLayoutWidget):
+class MainGuiImageViewWidget(GraphicsLayoutWidget):
     def __init__(self, parent=None, **kwargs):
         """Initialization."""
         super().__init__(parent, **kwargs)

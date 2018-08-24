@@ -22,7 +22,7 @@ from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import mkPen, intColor
 from .logging import logger, GuiLogger
 from .plot_widgets import (
-    MainLinePlotWidget, ImageViewWidget, IndividualPulseWindow,
+    MainGuiLinePlotWidget, MainGuiImageViewWidget, IndividualPulseWindow,
     LaserOnOffWindow
 )
 
@@ -198,8 +198,8 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Plots
         # *************************************************************
-        self._plot = MainLinePlotWidget()
-        self._image = ImageViewWidget()
+        self._plot = MainGuiLinePlotWidget()
+        self._image = MainGuiImageViewWidget()
 
         self._ctrl_pannel = QtGui.QWidget()
 
@@ -510,6 +510,7 @@ class MainGUI(QtGui.QMainWindow):
                                             width=2))
             self._plot.set_title("Train ID: {}, No. pulses: {}".
                                  format(data["tid"], i+1))
+
             self._image.update(np.mean(data["image"], axis=0))
 
         # update the plots in child windows
