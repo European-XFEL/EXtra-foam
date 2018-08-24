@@ -22,6 +22,9 @@ from .config import Config as cfg
 from .logging import logger
 
 
+MASK_RANGE = (0, 1e4)  # image pixels beyond this range will be masked
+
+
 def sub_array_with_range(y, x, range_=None):
     if range_ is None:
         return y, x
@@ -77,6 +80,13 @@ class DataProcessor(object):
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
 
+        # In the process_assembled_data method, the final image is rotated
+        # by 270 deg. Therefore, we need to rotate the mask here by 90 deg
+        # to recover it.
+        self.mask = None
+        if kwargs['mask'] is not None:
+            self.mask = np.rot90(kwargs['mask'], 1, axes=(0, 1))
+
     def process_assembled_data(self, assembled_data, tid):
         """Process assembled image data.
 
@@ -103,8 +113,17 @@ class DataProcessor(object):
         intensities = []
         for i in range(assembled.shape[0]):
             data_mask = np.zeros(assembled[i].shape)  # 0 for valid pixel
-            data_mask[(assembled[i] <= cfg.MASK_RANGE[0])
-                      | (assembled[i] > cfg.MASK_RANGE[1])] = 1
+            data_mask[(assembled[i] <= MASK_RANGE[0])
+                      | (assembled[i] > MASK_RANGE[1])] = 1
+
+            if self.mask is not None:
+                if self.mask.shape != assembled[i].shape:
+                    raise ValueError(
+                        "Mask and image have different shapes! {} and {}".
+                        format(self.mask.shape, assembled[i].shape))
+                data_mask[self.mask == 255] = 1
+
+            # Here the assembled is still the original image data
             res = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
@@ -116,15 +135,15 @@ class DataProcessor(object):
             momentum = res.radial
             intensities.append(res.intensity)
 
+            # apply the mask on the original image
+            assembled[i][data_mask == 1] = 0
+
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         data = ProcessedData(tid)
         data.intensity = np.array(intensities)
         data.momentum = momentum
-        # trunc the data only for plot
-        assembled[(assembled <= cfg.MASK_RANGE[0])
-                  | (assembled > cfg.MASK_RANGE[1])] = 0
         data.image = np.rot90(assembled, 3, axes=(1, 2))
 
         return data

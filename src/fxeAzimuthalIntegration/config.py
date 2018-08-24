@@ -33,8 +33,6 @@ class Config:
     INTEGRATION_RANGE = (0.2, 5)
     INTEGRATION_POINTS = 512  # number of points in the output pattern
 
-    MASK_RANGE = (0, 1e4)  # image pixels beyond this range will be masked
-
     # The following is valid-ish for the 20180318 geometry
     QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
 

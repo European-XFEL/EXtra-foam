@@ -14,6 +14,7 @@ import time
 from collections import deque
 
 import numpy as np
+from imageio import imread, imsave
 import zmq
 
 from karabo_bridge import Client
@@ -195,11 +196,29 @@ class MainGUI(QtGui.QMainWindow):
             self._choose_geometry_file)
         tool_bar.addAction(self._open_geometry_file_at)
 
+        self._save_image_at = QtGui.QAction(
+            QtGui.QIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_DialogSaveButton)),
+            "Save image",
+            self)
+        self._save_image_at.triggered.connect(self._save_image)
+        tool_bar.addAction(self._save_image_at)
+
+        self._load_image_at = QtGui.QAction(
+            QtGui.QIcon(
+                self.style().standardIcon(QtGui.QStyle.SP_DialogOpenButton)),
+            "Load image",
+            self)
+        self._load_image_at.triggered.connect(self._choose_mask_image)
+        tool_bar.addAction(self._load_image_at)
+
         # *************************************************************
         # Plots
         # *************************************************************
-        self._plot = MainGuiLinePlotWidget()
-        self._image = MainGuiImageViewWidget()
+        self._lineplot_widget = MainGuiLinePlotWidget()
+        self._image_widget = MainGuiImageViewWidget()
+        self._image = None
+        self._mask_image = None
 
         self._ctrl_pannel = QtGui.QWidget()
 
@@ -343,8 +362,8 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
-        layout.addWidget(self._image, 4, 0, 5, 1)
-        layout.addWidget(self._plot, 4, 1, 5, 5)
+        layout.addWidget(self._image_widget, 4, 0, 5, 1)
+        layout.addWidget(self._lineplot_widget, 4, 1, 5, 5)
         layout.addWidget(self._log_window, 9, 0, 2, 4)
         layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
 
@@ -497,8 +516,8 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        self._plot.clear_()
-        self._image.clear_()
+        self._lineplot_widget.clear_()
+        self._image_widget.clear_()
         for w in self._opened_windows.values():
             w.clear()
 
@@ -510,13 +529,14 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         for i, intensity in enumerate(data.intensity):
-            self._plot.update(data.momentum, intensity,
-                              pen=mkPen(intColor(i, hues=9, values=5),
-                                        width=2))
-        self._plot.set_title("Train ID: {}, No. pulses: {}".
-                             format(data.tid, i+1))
+            self._lineplot_widget.update(
+                data.momentum, intensity,
+                pen=mkPen(intColor(i, hues=9, values=5), width=2))
+        self._lineplot_widget.set_title("Train ID: {}, No. pulses: {}".
+                                        format(data.tid, i+1))
 
-        self._image.update(np.mean(data.image, axis=0))
+        self._image = np.mean(data.image, axis=0)
+        self._image_widget.update(self._image)
 
         # update the plots in child windows
         for w in self._opened_windows.values():
@@ -690,7 +710,8 @@ class MainGUI(QtGui.QMainWindow):
                 cy=center_y,
                 integration_method=integration_method,
                 integration_range=integration_range,
-                integration_points=integration_points
+                integration_points=integration_points,
+                mask=self._mask_image
             )
         except Exception as e:
             logger.error(e)
@@ -755,6 +776,24 @@ class MainGUI(QtGui.QMainWindow):
         self._server_start_btn.setEnabled(True)
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(True)
+
+    def _choose_mask_image(self):
+        filename = QtGui.QFileDialog.getOpenFileName()[0]
+
+        if filename:
+            self._mask_image = imread(filename)
+            logger.info("Load mask image at {}".format(filename))
+        else:
+            self._mask_image = None
+
+    def _save_image(self):
+        if self._image is None:
+            return
+
+        filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File')[0]
+        if filename:
+            imsave(filename, self._image)
+            logger.info("Image saved at {}".format(filename))
 
     @staticmethod
     def _parse_boundary(text):
