@@ -25,6 +25,9 @@ from .data_processing import integrate_curve, sub_array_with_range
 X_LABEL = "Momentum transfer (1/A)"
 Y_LABEL = "Scattering signal (arb. u.)"
 
+COLOR_MAP = ColorMap(*zip(*Gradients["bipolar"]["ticks"]))
+
+
 
 class Pen:
     _w = 3
@@ -68,10 +71,7 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         self.setFixedSize(cfg.MAIN_LINE_PLOT_HEIGHT, cfg.MAIN_LINE_PLOT_HEIGHT)
 
         self._img = ImageItem(border='w')
-        # TODO: improve colormap
-        # print(Gradients.keys())
-        cmap = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
-        self._img.setLookupTable(cmap.getLookupTable())
+        self._img.setLookupTable(COLOR_MAP.getLookupTable())
 
         self._view = self.addViewBox(lockAspect=True)
         self._view.addItem(self._img)
@@ -145,10 +145,12 @@ class IndividualPulseWindow(PlotWindow):
 
         for pulse_id in self._pulse_ids:
             if self._show_image is True:
-                vb = self._gl_widget.addViewBox(lockAspect=True)
                 img = ImageItem(border='w')
-                vb.addItem(img)
+                img.setLookupTable(COLOR_MAP.getLookupTable())
                 self.image_items.append(img)
+
+                vb = self._gl_widget.addViewBox(lockAspect=True)
+                vb.addItem(img)
 
                 line = self._gl_widget.addPlot()
             else:
