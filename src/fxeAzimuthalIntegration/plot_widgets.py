@@ -175,14 +175,14 @@ class IndividualPulseWindow(PlotWindow):
         for i, pulse_id in enumerate(self._pulse_ids):
             p = self.plot_items[i]
             if data is not None:
-                p.plot(data["momentum"], data["intensity"][pulse_id],
+                p.plot(data.momentum, data.intensity[pulse_id],
                        name="origin",
                        pen=Pen.purple)
 
-                ave = np.mean(data["intensity"], axis=0)
-                p.plot(data["momentum"], ave, name="mean", pen=Pen.green)
+                ave = np.mean(data.intensity, axis=0)
+                p.plot(data.momentum, ave, name="mean", pen=Pen.green)
 
-                p.plot(data["momentum"], data["intensity"][pulse_id] - ave,
+                p.plot(data.momentum, data.intensity[pulse_id] - ave,
                        name="difference",
                        pen=Pen.yellow)
 
@@ -190,7 +190,7 @@ class IndividualPulseWindow(PlotWindow):
                     p.addLegend(offset=cfg.LINE_PLOT_LEGEND_OFFSET)
 
             if data is not None and self._show_image is True:
-                self.image_items[i].setImage(data["image"][pulse_id])
+                self.image_items[i].setImage(data.image[pulse_id])
 
 
 class LaserOnOffWindow(PlotWindow):
@@ -292,18 +292,18 @@ class LaserOnOffWindow(PlotWindow):
 
         self._count += 1
 
-        self._momentum = data["momentum"]
+        self._momentum = data.momentum
         if self._count == 1:
             self._on_pulse = \
-                data["intensity"][self._on_pulse_ids].mean(axis=0)
+                data.intensity[self._on_pulse_ids].mean(axis=0)
             self._off_pulse = \
-                data["intensity"][self._off_pulse_ids].mean(axis=0)
+                data.intensity[self._off_pulse_ids].mean(axis=0)
         else:
             self._on_pulse += \
-                data["intensity"][self._on_pulse_ids].mean(axis=0) \
+                data.intensity[self._on_pulse_ids].mean(axis=0) \
                 / self._count - self._on_pulse / (self._count - 1)
             self._off_pulse += \
-                data["intensity"][self._off_pulse_ids].mean(axis=0) \
+                data.intensity[self._off_pulse_ids].mean(axis=0) \
                 / self._count - self._off_pulse / (self._count - 1)
 
         # normalize curve
