@@ -706,10 +706,14 @@ class MainGUI(QtGui.QMainWindow):
                     " - cy (pixel): {}\n"
                     " - integration method: '{}'\n"
                     " - integration range (1/A): ({}, {})\n"
-                    " - number of integration points: {}".
+                    " - number of integration points: {}\n"
+                    " - quadrant positions: {}".
                     format(energy, sample_distance, center_x, center_y,
                            integration_method, integration_range[0],
-                           integration_range[1], integration_points))
+                           integration_range[1], integration_points,
+                           ", ".join(["({}, {})".format(p[0], p[1])
+                                      for p in quad_positions]))
+                    )
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
