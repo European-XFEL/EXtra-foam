@@ -496,26 +496,33 @@ class MainGUI(QtGui.QMainWindow):
         except IndexError:
             return
 
+        # clear the previous plots no matter what comes next
         self._plot.clear_()
         self._image.clear_()
         for w in self._opened_windows.values():
             w.clear()
 
+        if data.empty():
+            logger.info("Bad train with ID: {}".format(data.tid))
+            return
+
         # update the plots in the main GUI
         t0 = time.perf_counter()
-        if data is not None:
-            for i, intensity in enumerate(data["intensity"]):
-                self._plot.update(data["momentum"], intensity,
-                                  pen=mkPen(intColor(i, hues=9, values=5),
-                                            width=2))
-            self._plot.set_title("Train ID: {}, No. pulses: {}".
-                                 format(data["tid"], i+1))
 
-            self._image.update(np.mean(data["image"], axis=0))
+        for i, intensity in enumerate(data.intensity):
+            self._plot.update(data.momentum, intensity,
+                              pen=mkPen(intColor(i, hues=9, values=5),
+                                        width=2))
+        self._plot.set_title("Train ID: {}, No. pulses: {}".
+                             format(data.tid, i+1))
+
+        self._image.update(np.mean(data.image, axis=0))
 
         # update the plots in child windows
         for w in self._opened_windows.values():
             w.update(data)
+
+        logger.info("Updated train with ID: {}".format(data.tid))
 
         logger.debug("Time for updating the plots: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

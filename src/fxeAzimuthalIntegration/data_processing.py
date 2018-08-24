@@ -34,6 +34,30 @@ def integrate_curve(y, x, range_=None):
     return itgt if itgt else 1.0
 
 
+class ProcessedData:
+    """A class which stores the processed data."""
+    def __init__(self, tid):
+        """Initialization."""
+        if not isinstance(tid, int):
+            raise ValueError("Train ID must be an integer!")
+        # tid is not allowed to be modified once initialized.
+        self._tid = tid
+        self.intensity = None
+        self.momentum = None
+        self.image = None
+
+    @property
+    def tid(self):
+        return self._tid
+
+    def empty(self):
+        """Check the goodness of the data."""
+        if self.intensity is None or self.momentum is None \
+                or self.image is None:
+            return True
+        return False
+
+
 class DataProcessor(object):
     def __init__(self, **kwargs):
         """Initialization."""
@@ -95,14 +119,13 @@ class DataProcessor(object):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        data = dict()
-        data["tid"] = tid
-        data["intensity"] = np.array(intensities)
-        data["momentum"] = momentum
+        data = ProcessedData(tid)
+        data.intensity = np.array(intensities)
+        data.momentum = momentum
         # trunc the data only for plot
         assembled[(assembled <= cfg.MASK_RANGE[0])
                   | (assembled > cfg.MASK_RANGE[1])] = 0
-        data["image"] = np.rot90(assembled, 3, axes=(1, 2))
+        data.image = np.rot90(assembled, 3, axes=(1, 2))
 
         return data
 
@@ -132,7 +155,7 @@ class DataProcessor(object):
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):
             logger.debug("Error in modules data of train {}".format(tid))
-            return None
+            return ProcessedData(tid)
 
         # cell_data = stack_detector_data(train_data, "image.cellId",
         #                                 only="LPD")
