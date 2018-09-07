@@ -25,7 +25,7 @@ from .pyqtgraph import intColor, mkPen
 from .logging import GuiLogger, logger
 from .plot_widgets import (
     IndividualPulseWindow, LaserOnOffWindow, MainGuiImageViewWidget,
-    MainGuiLinePlotWidget
+    MainGuiLinePlotWidget, SanityCheckWindow
 )
 
 from .data_acquisition import DaqWorker
@@ -181,6 +181,15 @@ class MainGUI(QtGui.QMainWindow):
         open_laseronoff_window_at.triggered.connect(
             self._show_laseronoff_window_dialog)
         tool_bar.addAction(open_laseronoff_window_at)
+
+        # open the in-train pulse comparison window
+        open_sanitycheck_window_at = QtGui.QAction(
+            QtGui.QIcon("icons/sanity_check.png"),
+            "In-train pulses comparison",
+            self)
+        open_sanitycheck_window_at.triggered.connect(
+            self._open_sanitycheck_window)
+        tool_bar.addAction(open_sanitycheck_window_at)
 
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(
@@ -449,7 +458,7 @@ class MainGUI(QtGui.QMainWindow):
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
-        pulse_range_lb = QtGui.QLabel("Pulse range: ")
+        pulse_range_lb = QtGui.QLabel("Pulse No. range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range0_le.setFixedHeight(28)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
@@ -657,6 +666,29 @@ class MainGUI(QtGui.QMainWindow):
         logger.info("Open new window for on-pulse(s): {} and off-pulse(s): {}".
                     format(", ".join(str(i) for i in on_pulse_ids),
                            ", ".join(str(i) for i in off_pulse_ids)))
+        w.show()
+
+    def _open_sanitycheck_window(self):
+        window_id = "{:06d}".format(self._opened_windows_count)
+
+        try:
+            normalization_range = \
+                self._parse_boundary(self._normalization_range_le.text())
+        except ValueError:
+            logger.error("Invalid input for 'Normalization_range'!")
+            return
+        try:
+            fom_range = self._parse_boundary(self._fom_range_le.text())
+        except ValueError:
+            logger.error("Invalid input for 'FOM_range'!")
+            return
+
+        w = SanityCheckWindow(window_id, normalization_range, fom_range,
+                              parent=self)
+
+        self._opened_windows_count += 1
+        self._opened_windows[window_id] = w
+        logger.info("Open new window for sanity check")
         w.show()
 
     def _choose_geometry_file(self):

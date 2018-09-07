@@ -14,8 +14,8 @@ import numpy as np
 
 from .pyqtgraph.Qt import QtGui
 from .pyqtgraph import (
-    GraphicsLayoutWidget, ImageItem, mkPen, ColorMap, LinearRegionItem,
-    ScatterPlotItem, mkBrush, SpinBox
+    BarGraphItem, GraphicsLayoutWidget, ImageItem, mkPen, ColorMap,
+    LinearRegionItem, ScatterPlotItem, mkBrush, SpinBox
 )
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from .config import Config as cfg
@@ -102,6 +102,14 @@ class PlotWindow(QtGui.QMainWindow):
     @abc.abstractmethod
     def initUI(self):
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def initCtrlUI(self):
+        pass
+
+    @abc.abstractmethod
+    def initPlotUI(self):
+        pass
 
     @abc.abstractmethod
     def update(self, data):
@@ -311,7 +319,7 @@ class LaserOnOffWindow(PlotWindow):
         normalized_on_pulse = self._on_pulse / integrate_curve(
             self._on_pulse, self._momentum, self._normalization_range)
         normalized_off_pulse = self._off_pulse / integrate_curve(
-            self._off_pulse, self._momentum, self._fom_range)
+            self._off_pulse, self._momentum, self._normalization_range)
 
         # update plots
 
@@ -357,3 +365,60 @@ class LaserOnOffWindow(PlotWindow):
         The history of FOM should be untouched when the new data is invalid.
         """
         self.plot_items[0].clear()
+
+
+class SanityCheckWindow(PlotWindow):
+    def __init__(self, window_id, normalization_range, fom_range, *,
+                 parent=None,
+                 title="FXE Azimuthal integration"):
+        """Initialization."""
+        super().__init__(window_id, parent=parent, title=title)
+
+        self._normalization_range = normalization_range
+        self._fom_range = fom_range
+
+        self.initUI()
+
+    def initUI(self):
+        self.initPlotUI()
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._gl_widget)
+        self._cw.setLayout(layout)
+
+    def initPlotUI(self):
+        self._gl_widget.setFixedSize(cfg.SC_PLOT_WIDTH, cfg.SC_PLOT_HEIGHT)
+
+        self._gl_widget.nextRow()
+
+        p1 = self._gl_widget.addPlot()
+        self.plot_items.append(p1)
+        p1.setLabel('left', "Integrated difference (arb.)")
+        p1.setLabel('bottom', "Pulse No.")
+        p1.setTitle(' ')
+
+    def update(self, data):
+        """Override."""
+        if data is None:
+            return
+
+        momentum = data.momentum
+
+        normalized_pulses = []
+        for pulse in data.intensity:
+            normalized = pulse / integrate_curve(
+                pulse, momentum, self._normalization_range)
+            normalized_pulses.append(normalized)
+
+        diffs = [p - normalized_pulses[0] for p in normalized_pulses]
+        foms = []
+        for diff in diffs:
+            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            foms.append(np.sum(np.abs(fom)))
+
+        bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')
+        p = self.plot_items[0]
+        p.clear()
+
+        p.addItem(bar)
+        p.plot()
