@@ -39,15 +39,15 @@ def integrate_curve(y, x, range_=None):
 
 class ProcessedData:
     """A class which stores the processed data."""
-    def __init__(self, tid):
+    def __init__(self, tid, *, momentum=None, intensity=None, image=None):
         """Initialization."""
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
         # tid is not allowed to be modified once initialized.
         self._tid = tid
-        self.intensity = None
-        self.momentum = None
-        self.image = None
+        self.momentum = momentum
+        self.intensity = intensity
+        self.image = image
 
     @property
     def tid(self):
@@ -141,10 +141,10 @@ class DataProcessor(object):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        data = ProcessedData(tid)
-        data.intensity = np.array(intensities)
-        data.momentum = momentum
-        data.image = np.rot90(assembled, 3, axes=(1, 2))
+        data = ProcessedData(tid,
+                             momentum=momentum,
+                             intensity=np.array(intensities),
+                             image=np.rot90(assembled, 3, axes=(1, 2)))
 
         return data
 
