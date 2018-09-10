@@ -163,6 +163,7 @@ class DataProcessor(object):
 
             modules_data = next(iter(data.values()))["image.data"]
             modules_data = np.moveaxis(modules_data, 3, 0)
+            modules_data = np.moveaxis(modules_data, 3, 2)
             logger.debug("Time for manipulating stacked data: {:.1f} ms"
                          .format(1000 * (time.perf_counter() - t0)))
         else:
@@ -178,7 +179,7 @@ class DataProcessor(object):
         # cell_data = stack_detector_data(train_data, "image.cellId",
         #                                 only="LPD")
         t0 = time.perf_counter()
-
+      
         assembled_orig, centre = \
             self._geom.position_all_modules(modules_data)
 

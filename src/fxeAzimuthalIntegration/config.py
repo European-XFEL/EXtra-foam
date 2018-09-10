@@ -32,7 +32,7 @@ class Config:
     INTEGRATION_POINTS = 512  # number of points in the output pattern
 
     # The following is valid-ish for the 20180318 geometry
-    QUAD_POSITIONS = [(-11.4, -229), (11.5, -8), (-254.5, 16), (-278.5, -275)]
+    QUAD_POSITIONS = [(-13.0, -299.0), (11.0, -8.0), (-254.0, 16.0), (-278.0, -275.0)]
 
     DEFAULT_SERVER_SRC = DataSource.CALIBRATED
     DEFAULT_SERVER_ADDR = "10.253.0.53"
