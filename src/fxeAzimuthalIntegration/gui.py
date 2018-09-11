@@ -20,11 +20,11 @@ import zmq
 from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
-from .pyqtgraph import mkPen, intColor
-from .logging import logger, GuiLogger
+from .pyqtgraph import intColor, mkPen
+from .logging import GuiLogger, logger
 from .plot_widgets import (
-    MainGuiLinePlotWidget, MainGuiImageViewWidget, IndividualPulseWindow,
-    LaserOnOffWindow
+    IndividualPulseWindow, LaserOnOffWindow, MainGuiImageViewWidget,
+    MainGuiLinePlotWidget
 )
 
 from .data_acquisition import DaqWorker
