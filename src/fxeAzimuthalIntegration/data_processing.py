@@ -80,13 +80,7 @@ class DataProcessor(object):
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
 
-        # We rotate the image data by 270 degree to get the image shown
-        # in the GUI, on top of which the mask is built. Therefore, in 
-        # order to apply the mask to the image data, it is required to 
-        # rotate the mask by 90 degree (or -270 degree).
-        self.mask = None
-        if kwargs['mask'] is not None:
-            self.mask = np.rot90(kwargs['mask'], 1, axes=(0, 1))
+        self.mask = kwargs['mask']
 
     def process_assembled_data(self, assembled_data, tid):
         """Process assembled image data.
@@ -145,7 +139,7 @@ class DataProcessor(object):
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
-                             image=np.rot90(assembled, 3, axes=(1, 2)))
+                             image=assembled)
 
         return data
 
@@ -183,6 +177,7 @@ class DataProcessor(object):
       
         assembled_orig, centre = \
             self._geom.position_all_modules(modules_data)
+        assembled_orig = np.rot90(assembled_orig, 3, axes=(1, 2))
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
