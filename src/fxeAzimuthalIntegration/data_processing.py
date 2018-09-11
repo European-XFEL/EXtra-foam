@@ -80,9 +80,10 @@ class DataProcessor(object):
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
 
-        # In the process_assembled_data method, the final image is rotated
-        # by 270 deg. Therefore, we need to rotate the mask here by 90 deg
-        # to recover it.
+        # We rotate the image data by 270 degree to get the image shown
+        # in the GUI, on top of which the mask is built. Therefore, in 
+        # order to apply the mask to the image data, it is required to 
+        # rotate the mask by 90 degree (or -270 degree).
         self.mask = None
         if kwargs['mask'] is not None:
             self.mask = np.rot90(kwargs['mask'], 1, axes=(0, 1))
@@ -93,7 +94,7 @@ class DataProcessor(object):
         :param numpy.ndarray assembled_data: assembled image data.
         :param int tid: pulse id
 
-        :return: results stored in a dictionary.
+        :return ProcessedData: data after processing.
         """
         t0 = time.perf_counter()
 
@@ -162,8 +163,8 @@ class DataProcessor(object):
                     "Received data from more than one data sources!")
 
             modules_data = next(iter(data.values()))["image.data"]
-            modules_data = np.moveaxis(modules_data, 3, 0)
-            modules_data = np.moveaxis(modules_data, 3, 2)
+            # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
+            modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
             logger.debug("Time for manipulating stacked data: {:.1f} ms"
                          .format(1000 * (time.perf_counter() - t0)))
         else:
