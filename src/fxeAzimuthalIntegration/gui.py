@@ -268,16 +268,18 @@ class MainGUI(QtGui.QMainWindow):
 
         self._hostname_le = FixedWidthLineEdit(130, cfg.DEFAULT_SERVER_ADDR)
         self._port_le = FixedWidthLineEdit(60, cfg.DEFAULT_SERVER_PORT)
+        self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
+        self._pulse_range1_le = FixedWidthLineEdit(60, str(2999))
 
         self._data_src_rbts = []
         self._data_src_rbts.append(
-            QtGui.QRadioButton("Calibrated data from files"))
+            QtGui.QRadioButton("Calibrated data@files"))
         self._data_src_rbts.append(
-            QtGui.QRadioButton("Calibrated data from ZMQ bridge"))
+            QtGui.QRadioButton("Calibrated data@ZMQ bridge"))
         self._data_src_rbts.append(
-            QtGui.QRadioButton("Assembled data from ZMQ bridge"))
+            QtGui.QRadioButton("Assembled data@ZMQ bridge"))
         self._data_src_rbts.append(
-            QtGui.QRadioButton("Processed data from ZMQ bridge"))
+            QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(cfg.DEFAULT_SERVER_SRC)].setChecked(True)
 
         # *************************************************************
@@ -330,10 +332,14 @@ class MainGUI(QtGui.QMainWindow):
             self.move(screen_size.width()/2 - cfg.MAIN_WINDOW_WIDTH/2,
                       screen_size.height()/20)
 
+        # TODO: implement
+        self._pulse_range0_le.setEnabled(False)
+
         self._disabled_widgets_during_daq = [
             self._open_geometry_file_at,
             self._hostname_le,
             self._port_le,
+            self._pulse_range1_le,
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
@@ -445,24 +451,36 @@ class MainGUI(QtGui.QMainWindow):
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
+        pulse_range_lb = QtGui.QLabel("Pulse range: ")
+        self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
+        self._pulse_range0_le.setFixedHeight(28)
+        self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
+        self._pulse_range1_le.setFixedHeight(28)
 
         layout = QtGui.QVBoxLayout()
-        sub_layout = QtGui.QHBoxLayout()
-        sub_layout.addWidget(hostname_lb)
-        sub_layout.addWidget(self._hostname_le)
-        sub_layout.addWidget(port_lb)
-        sub_layout.addWidget(self._port_le)
-        layout.addLayout(sub_layout)
+        sub_layout1 = QtGui.QHBoxLayout()
+        sub_layout1.addWidget(hostname_lb)
+        sub_layout1.addWidget(self._hostname_le)
+        sub_layout1.addWidget(port_lb)
+        sub_layout1.addWidget(self._port_le)
+        sub_layout2 = QtGui.QHBoxLayout()
+        sub_layout2.addWidget(pulse_range_lb)
+        sub_layout2.addWidget(self._pulse_range0_le)
+        sub_layout2.addWidget(QtGui.QLabel(" to "))
+        sub_layout2.addWidget(self._pulse_range1_le)
+        sub_layout2.addStretch(2)
+        layout.addLayout(sub_layout1)
         for btn in self._data_src_rbts:
-            layout.addWidget(btn,)
+            layout.addWidget(btn)
+        layout.addLayout(sub_layout2)
         self._data_src_gp.setLayout(layout)
 
         # ------------------------------------------------------------
         layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._ai_setup_gp)
-        layout.addWidget(self._gmt_setup_gp)
-        layout.addWidget(self._ep_setup_gp)
-        layout.addWidget(self._data_src_gp)
+        layout.addWidget(self._ai_setup_gp, 3)
+        layout.addWidget(self._gmt_setup_gp, 2)
+        layout.addWidget(self._ep_setup_gp, 3)
+        layout.addWidget(self._data_src_gp, 3)
 
         self._ctrl_pannel.setLayout(layout)
 
@@ -555,7 +573,8 @@ class MainGUI(QtGui.QMainWindow):
             'Enter pulse IDs (separated by comma):',
             "Include detector image")
 
-        err_msg = "Invalid input! Enter pulse IDs separated by ','!"
+        err_msg = "Invalid input! " \
+                  "Enter pulse IDs within the pulse range separated by ','!"
 
         try:
             pulse_ids = self._parse_ids(ret[0])
@@ -682,6 +701,9 @@ class MainGUI(QtGui.QMainWindow):
         else:
             data_source = DataSource.PROCESSED
 
+        pulse_range = (int(self._pulse_range0_le.text()),
+                       int(self._pulse_range1_le.text()))
+
         geom_file = self._geom_file_le.text()
         quad_positions = self._parse_quadrant_table(self._quad_positions_tb)
         energy = float(self._energy_le.text().strip())
@@ -702,6 +724,7 @@ class MainGUI(QtGui.QMainWindow):
                 self._client,
                 self._daq_queue,
                 data_source,
+                pulse_range=pulse_range,
                 geom_file=geom_file,
                 quad_positions=quad_positions,
                 photon_energy=energy,
@@ -721,6 +744,7 @@ class MainGUI(QtGui.QMainWindow):
 
         logger.info("DAQ started!")
         logger.info("Azimuthal integration parameters:\n"
+                    " - pulse range: {}\n"
                     " - photon energy (keV): {}\n"
                     " - sample distance (m): {}\n"
                     " - cx (pixel): {}\n"
@@ -729,7 +753,8 @@ class MainGUI(QtGui.QMainWindow):
                     " - integration range (1/A): ({}, {})\n"
                     " - number of integration points: {}\n"
                     " - quadrant positions: {}".
-                    format(energy, sample_distance, center_x, center_y,
+                    format(pulse_range, energy, sample_distance,
+                           center_x, center_y,
                            integration_method, integration_range[0],
                            integration_range[1], integration_points,
                            ", ".join(["({}, {})".format(p[0], p[1])

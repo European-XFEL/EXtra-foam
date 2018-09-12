@@ -62,8 +62,15 @@ class ProcessedData:
 
 
 class DataProcessor(object):
+    """Class for data processing.
+
+    Attributes:
+        pulse_range (tuple): (min. pulse ID, max. pulse ID) to be processed.
+    """
     def __init__(self, **kwargs):
         """Initialization."""
+        self.pulse_range = kwargs['pulse_range']
+
         self._geom = None
         with File(kwargs['geom_file'], 'r') as f:
             self._geom = LPDGeometry.from_h5_file_and_quad_positions(
@@ -174,12 +181,15 @@ class DataProcessor(object):
         # cell_data = stack_detector_data(train_data, "image.cellId",
         #                                 only="LPD")
         t0 = time.perf_counter()
-      
-        assembled_orig, centre = \
-            self._geom.position_all_modules(modules_data)
-        assembled_orig = np.rot90(assembled_orig, 3, axes=(1, 2))
+
+        assembled, centre = self._geom.position_all_modules(modules_data)
+        # TODO: slice earlier to save computation time
+        assembled = np.rot90(
+            assembled[self.pulse_range[0]:self.pulse_range[1] + 1],
+            3,
+            axes=(1, 2))
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        return self.process_assembled_data(assembled_orig, tid)
+        return self.process_assembled_data(assembled, tid)
