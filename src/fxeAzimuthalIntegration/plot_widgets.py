@@ -25,8 +25,7 @@ from .data_processing import integrate_curve, sub_array_with_range
 X_LABEL = "Momentum transfer (1/A)"
 Y_LABEL = "Scattering signal (arb. u.)"
 
-COLOR_MAP = ColorMap(*zip(*Gradients["bipolar"]["ticks"]))
-
+COLOR_MAP = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
 
 
 class Pen:
@@ -80,7 +79,7 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         self._img.clear()
 
     def update(self, *args, **kwargs):
-        self._img.setImage(autoLevels=True, *args, **kwargs)
+        self._img.setImage(autoLevels=False, *args, **kwargs)
         self._view.autoRange()
 
 
@@ -190,7 +189,8 @@ class IndividualPulseWindow(PlotWindow):
                     p.addLegend(offset=cfg.LINE_PLOT_LEGEND_OFFSET)
 
             if data is not None and self._show_image is True:
-                self.image_items[i].setImage(data.image[pulse_id])
+                self.image_items[i].setImage(data.image[pulse_id],
+                                             autoLevels=False)
 
 
 class LaserOnOffWindow(PlotWindow):

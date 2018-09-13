@@ -217,7 +217,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._lineplot_widget = MainGuiLinePlotWidget()
         self._image_widget = MainGuiImageViewWidget()
-        self._image = None
+        self._data = None
         self._mask_image = None
 
         self._ctrl_pannel = QtGui.QWidget()
@@ -529,7 +529,8 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            data = self._daq_queue.pop()
+            # data is a np.ma.MaskedArray object
+            self._data = self._daq_queue.pop()
         except IndexError:
             return
 
@@ -539,28 +540,27 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._opened_windows.values():
             w.clear()
 
-        if data.empty():
-            logger.info("Bad train with ID: {}".format(data.tid))
+        if self._data.empty():
+            logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
         # update the plots in the main GUI
         t0 = time.perf_counter()
 
-        for i, intensity in enumerate(data.intensity):
+        for i, intensity in enumerate(self._data.intensity):
             self._lineplot_widget.update(
-                data.momentum, intensity,
+                self._data.momentum, intensity,
                 pen=mkPen(intColor(i, hues=9, values=5), width=2))
         self._lineplot_widget.set_title("Train ID: {}, No. pulses: {}".
-                                        format(data.tid, i+1))
+                                        format(self._data.tid, i+1))
 
-        self._image = np.mean(data.image, axis=0)
-        self._image_widget.update(self._image)
+        self._image_widget.update(self._data.image_avg)
 
         # update the plots in child windows
         for w in self._opened_windows.values():
-            w.update(data)
+            w.update(self._data)
 
-        logger.info("Updated train with ID: {}".format(data.tid))
+        logger.info("Updated train with ID: {}".format(self._data.tid))
 
         logger.debug("Time for updating the plots: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -812,12 +812,12 @@ class MainGUI(QtGui.QMainWindow):
             self._mask_image = None
 
     def _save_image(self):
-        if self._image is None:
+        if self._data.empty():
             return
 
         filename = QtGui.QFileDialog.getSaveFileName(self, 'Save File')[0]
         if filename:
-            imsave(filename, self._image)
+            imsave(filename, self._data.image_avg)
             logger.info("Image saved at {}".format(filename))
 
     @staticmethod

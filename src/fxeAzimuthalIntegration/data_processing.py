@@ -38,16 +38,31 @@ def integrate_curve(y, x, range_=None):
 
 
 class ProcessedData:
-    """A class which stores the processed data."""
-    def __init__(self, tid, *, momentum=None, intensity=None, image=None):
+    """A class which stores the processed data.
+
+    Attributes:
+        tid (int): train ID.
+        momentum (numpy.ndarray): x-axis of azimuthal integration result.
+        intensity (numpy.ndarray): y-axis of azimuthal integration result.
+        image (numpy.ndarray): assembled images for all the pulses.
+        image_avg (numpy.ndarray): average of the assembled images over pulses.
+    """
+    def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
         """Initialization."""
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
         # tid is not allowed to be modified once initialized.
         self._tid = tid
+
         self.momentum = momentum
         self.intensity = intensity
-        self.image = image
+
+        self.image = assembled
+        # prefer data processing outside the GUI
+        self.image_avg = np.mean(assembled, axis=0)
+        if self.image is not None:
+            self.image = self.array2image(self.image)
+            self.image_avg = self.array2image(self.image_avg)
 
     @property
     def tid(self):
@@ -59,6 +74,13 @@ class ProcessedData:
                 or self.image is None:
             return True
         return False
+
+    @staticmethod
+    def array2image(x):
+        """Convert array data to image data."""
+        x /= cfg.DISPLAY_RANGE[1]
+        x *= 255.0
+        return np.ma.filled(x.astype(np.uint8), 0)
 
 
 class DataProcessor(object):
@@ -89,10 +111,10 @@ class DataProcessor(object):
 
         self.mask = kwargs['mask']
 
-    def process_assembled_data(self, assembled_data, tid):
+    def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
 
-        :param numpy.ndarray assembled_data: assembled image data.
+        :param numpy.ndarray assembled: assembled image data.
         :param int tid: pulse id
 
         :return ProcessedData: data after processing.
@@ -109,27 +131,27 @@ class DataProcessor(object):
                                        rot3=0,
                                        wavelength=self.wavelength)
 
-        assembled = np.nan_to_num(assembled_data)
+        # apply inf, NaN and range mask to the assembled image
+        # masked is a np.ma.MaskedArray object
+        masked = np.ma.masked_outside(np.ma.masked_invalid(assembled),
+                                      MASK_RANGE[0],
+                                      MASK_RANGE[1])
 
         momentum = None
         intensities = []
         for i in range(assembled.shape[0]):
-            data_mask = np.zeros(assembled[i].shape)  # 0 for valid pixel
-            data_mask[(assembled[i] <= MASK_RANGE[0])
-                      | (assembled[i] > MASK_RANGE[1])] = 1
-
             if self.mask is not None:
                 if self.mask.shape != assembled[i].shape:
                     raise ValueError(
                         "Mask and image have different shapes! {} and {}".
                         format(self.mask.shape, assembled[i].shape))
-                data_mask[self.mask == 255] = 1
+                masked[i].mask[self.mask == 255] = True
 
             # Here the assembled is still the original image data
-            res = ai.integrate1d(assembled[i],
+            res = ai.integrate1d(masked[i],
                                  self.integration_points,
                                  method=self.integration_method,
-                                 mask=data_mask,
+                                 mask=masked[i].mask,
                                  radial_range=self.integration_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
@@ -137,16 +159,13 @@ class DataProcessor(object):
             momentum = res.radial
             intensities.append(res.intensity)
 
-            # apply the mask on the original image
-            assembled[i][data_mask == 1] = 0
-
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
-                             image=assembled)
+                             assembled=masked)
 
         return data
 

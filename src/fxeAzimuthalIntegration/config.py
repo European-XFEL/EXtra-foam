@@ -38,12 +38,14 @@ class Config:
     DEFAULT_SERVER_ADDR = "10.253.0.53"
     DEFAULT_SERVER_PORT = "4501"
 
-#      DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
-#      DEFAULT_SERVER_ADDR = "localhost"
-#      DEFAULT_SERVER_PORT = "12345"
+    # DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
+    # DEFAULT_SERVER_ADDR = "localhost"
+    # DEFAULT_SERVER_PORT = "12345"
 
     DEFAULT_GEOMETRY_FILE = os.path.join(os.path.expanduser("~"),
                                          "fxe-data/lpd_mar_18.h5")
+
+    DISPLAY_RANGE = (0, 2000)
 
     # *********************************************************************
     MAX_QUEUE_SIZE = 10
