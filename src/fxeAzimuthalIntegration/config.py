@@ -67,6 +67,8 @@ class Config:
     MA_PLOT_WIDTH = 800
     MA_PLOT_HEIGHT = 900
 
+    MASK_RANGE = (0, 10000)  # image pixels beyond this range will be masked
+
     # *********************************************************************
     DEFAULT_FILE_SERVER_PORT = "12345"
     DEFAULT_FILE_SERVER_FOLDER = os.path.join(os.path.expanduser("~"),

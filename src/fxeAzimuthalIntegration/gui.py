@@ -11,6 +11,7 @@ All rights reserved.
 import sys
 import logging
 import time
+import ast
 from collections import deque
 
 import numpy as np
@@ -239,6 +240,8 @@ class MainGUI(QtGui.QMainWindow):
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(cfg.INTEGRATION_POINTS))
+        self._mask_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in cfg.MASK_RANGE]))
 
         # *************************************************************
         # Geometry setup
@@ -346,6 +349,7 @@ class MainGUI(QtGui.QMainWindow):
             self._itgt_method_cb,
             self._itgt_range_le,
             self._itgt_points_le,
+            self._mask_range_le,
             self._geom_file_le,
             self._quad_positions_tb,
             self._energy_le,
@@ -385,6 +389,7 @@ class MainGUI(QtGui.QMainWindow):
         itgt_method_lb = QtGui.QLabel("Integration method: ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
+        mask_range_lb = QtGui.QLabel("Mask range: ")
 
         self._initQuadTable()
 
@@ -402,6 +407,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._itgt_points_le, 5, 1, 1, 1)
         layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
         layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
+        layout.addWidget(mask_range_lb, 7, 0, 1, 1)
+        layout.addWidget(self._mask_range_le, 7, 1, 1, 1)
 
         self._ai_setup_gp.setLayout(layout)
 
@@ -715,7 +722,12 @@ class MainGUI(QtGui.QMainWindow):
             integration_range = self._parse_boundary(
                 self._itgt_range_le.text())
         except ValueError:
-            logger.error("Invalid input for 'Integration_range'!")
+            logger.error("Invalid input for 'Integration range'!")
+            return
+        try:
+            mask_range = self._parse_boundary(self._mask_range_le.text())
+        except ValueError:
+            logger.error("Invalid input for 'Mask range'!")
             return
 
         integration_points = int(self._itgt_points_le.text().strip())
@@ -734,6 +746,7 @@ class MainGUI(QtGui.QMainWindow):
                 integration_method=integration_method,
                 integration_range=integration_range,
                 integration_points=integration_points,
+                mask_range=mask_range,
                 mask=self._mask_image
             )
         except Exception as e:
@@ -752,11 +765,16 @@ class MainGUI(QtGui.QMainWindow):
                     " - integration method: '{}'\n"
                     " - integration range (1/A): ({}, {})\n"
                     " - number of integration points: {}\n"
+                    " - mask range: ({:d}, {:d})\n"
                     " - quadrant positions: {}".
-                    format(pulse_range, energy, sample_distance,
+                    format(pulse_range,
+                           energy,
+                           sample_distance,
                            center_x, center_y,
-                           integration_method, integration_range[0],
-                           integration_range[1], integration_points,
+                           integration_method,
+                           integration_range[0], integration_range[1],
+                           integration_points,
+                           mask_range[0], mask_range[1],
                            ", ".join(["({}, {})".format(p[0], p[1])
                                       for p in quad_positions]))
                     )
@@ -822,8 +840,11 @@ class MainGUI(QtGui.QMainWindow):
 
     @staticmethod
     def _parse_boundary(text):
-        lb, ub = text.split(",")
-        return float(lb.strip()), float(ub.strip())
+        lb, ub = [ast.literal_eval(x.strip()) for x in text.split(",")]
+
+        if lb > ub:
+            raise ValueError("lower boundary > upper boundary!")
+        return lb, ub
 
     @staticmethod
     def _parse_ids(text):

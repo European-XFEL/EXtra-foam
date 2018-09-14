@@ -22,9 +22,6 @@ from .config import Config as cfg
 from .logging import logger
 
 
-MASK_RANGE = (0, 1e4)  # image pixels beyond this range will be masked
-
-
 def sub_array_with_range(y, x, range_=None):
     if range_ is None:
         return y, x
@@ -109,6 +106,7 @@ class DataProcessor(object):
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
 
+        self.mask_range = kwargs['mask_range']
         self.mask = kwargs['mask']
 
     def process_assembled_data(self, assembled, tid):
@@ -134,8 +132,8 @@ class DataProcessor(object):
         # apply inf, NaN and range mask to the assembled image
         # masked is a np.ma.MaskedArray object
         masked = np.ma.masked_outside(np.ma.masked_invalid(assembled),
-                                      MASK_RANGE[0],
-                                      MASK_RANGE[1])
+                                      self.mask_range[0],
+                                      self.mask_range[1])
 
         momentum = None
         intensities = []
