@@ -18,12 +18,10 @@ from .pyqtgraph import (
     LinearRegionItem, ScatterPlotItem, mkBrush, SpinBox
 )
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+from .pyqtgraph import intColor, mkPen
 from .config import Config as cfg
 from .data_processing import integrate_curve, sub_array_with_range
 
-
-X_LABEL = "Momentum transfer (1/A)"
-Y_LABEL = "Scattering signal (arb. u.)"
 
 COLOR_MAP = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
 
@@ -49,17 +47,19 @@ class MainGuiLinePlotWidget(GraphicsLayoutWidget):
 
         self._plot = self.addPlot()
         self._plot.setTitle("")
-        self._plot.setLabel('bottom', X_LABEL)
-        self._plot.setLabel('left', Y_LABEL)
-
-    def set_title(self, text):
-        self._plot.setTitle(text)
+        self._plot.setLabel('bottom', "Momentum transfer (1/A)")
+        self._plot.setLabel('left', "Scattering signal (arb. u.)")
 
     def clear_(self):
         self._plot.clear()
 
-    def update(self, *args, **kwargs):
-        self._plot.plot(*args, **kwargs)
+    def update(self, data):
+        momentum = data.momentum
+        for i, intensity in enumerate(data.intensity):
+            self._plot.plot(momentum, intensity,
+                            pen=mkPen(intColor(i, hues=9, values=5), width=2))
+        self._plot.setTitle("Train ID: {}, No. pulses: {}".
+                            format(data.tid, len(data.intensity)))
 
 
 class MainGuiImageViewWidget(GraphicsLayoutWidget):
@@ -78,26 +78,26 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
     def clear_(self):
         self._img.clear()
 
-    def update(self, img):
-        self._img.setImage(np.flip(img, axis=0), autoLevels=False)
+    def update(self, data):
+        self._img.setImage(np.flip(data.image_avg, axis=0), autoLevels=False)
         self._view.autoRange()
 
 
 class PlotWindow(QtGui.QMainWindow):
-    """Base class for various plot windows."""
-    def __init__(self, window_id, parent=None, title=None):
+    """Base class for various pop-out plot windows."""
+    def __init__(self, window_id, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setWindowTitle(title)
+        self.setWindowTitle("FXE Azimuthal integration")
         self._id = window_id
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
 
         self._gl_widget = GraphicsLayoutWidget()
 
-        self.image_items = []
-        self.plot_items = []
+        self._plot_items = []  # bookkeeping PlotItem objects
+        self._image_items = []  # bookkeeping ImageItem objects
 
     @abc.abstractmethod
     def initUI(self):
@@ -122,19 +122,17 @@ class PlotWindow(QtGui.QMainWindow):
         self.parent().remove_window(self._id)
 
     def clear(self):
-        for item in self.plot_items:
+        """Clear all plots in the window."""
+        for item in self._plot_items:
             item.clear()
-        for item in self.image_items:
+        for item in self._image_items:
             item.clear()
 
 
 class IndividualPulseWindow(PlotWindow):
-    def __init__(self, window_id, pulse_ids, *,
-                 parent=None,
-                 show_image=False,
-                 title="FXE Azimuthal integration"):
+    def __init__(self, window_id, pulse_ids, *, parent=None, show_image=False):
         """Initialization."""
-        super().__init__(window_id, parent=parent, title=title)
+        super().__init__(window_id, parent=parent)
 
         self._pulse_ids = pulse_ids
         self._show_image = show_image
@@ -142,10 +140,10 @@ class IndividualPulseWindow(PlotWindow):
         self.initUI()
 
     def initUI(self):
-        g_layout = self._gl_widget.ci.layout
-        g_layout.setColumnStretchFactor(0, 1)
+        layout = self._gl_widget.ci.layout
+        layout.setColumnStretchFactor(0, 1)
         if self._show_image:
-            g_layout.setColumnStretchFactor(1, 3)
+            layout.setColumnStretchFactor(1, 3)
         w = cfg.LINE_PLOT_WIDTH + self._show_image*(cfg.LINE_PLOT_HEIGHT - 20)
         h = min(4, len(self._pulse_ids))*cfg.LINE_PLOT_HEIGHT
         self._gl_widget.setFixedSize(w, h)
@@ -154,7 +152,7 @@ class IndividualPulseWindow(PlotWindow):
             if self._show_image is True:
                 img = ImageItem(border='w')
                 img.setLookupTable(COLOR_MAP.getLookupTable())
-                self.image_items.append(img)
+                self._image_items.append(img)
 
                 vb = self._gl_widget.addViewBox(lockAspect=True)
                 vb.addItem(img)
@@ -164,14 +162,14 @@ class IndividualPulseWindow(PlotWindow):
                 line = self._gl_widget.addPlot()
 
             line.setTitle("Pulse No. {:04d}".format(pulse_id))
-            line.setLabel('left', Y_LABEL)
+            line.setLabel('left', "Scattering signal (arb. u.)")
             if pulse_id == self._pulse_ids[-1]:
                 # all plots share one x label
-                line.setLabel('bottom', X_LABEL)
+                line.setLabel('bottom', "Momentum transfer (1/A)")
             else:
                 line.setLabel('bottom', '')
 
-            self.plot_items.append(line)
+            self._plot_items.append(line)
             self._gl_widget.nextRow()
 
         layout = QtGui.QHBoxLayout()
@@ -180,7 +178,7 @@ class IndividualPulseWindow(PlotWindow):
 
     def update(self, data):
         for i, pulse_id in enumerate(self._pulse_ids):
-            p = self.plot_items[i]
+            p = self._plot_items[i]
             if data is not None:
                 p.plot(data.momentum, data.intensity[pulse_id],
                        name="origin",
@@ -197,7 +195,7 @@ class IndividualPulseWindow(PlotWindow):
                     p.addLegend(offset=cfg.LINE_PLOT_LEGEND_OFFSET)
 
             if data is not None and self._show_image is True:
-                self.image_items[i].setImage(
+                self._image_items[i].setImage(
                     np.flip(data.image[pulse_id], axis=0), autoLevels=False)
 
 
@@ -208,18 +206,15 @@ class LaserOnOffWindow(PlotWindow):
                  off_pulse_ids,
                  normalization_range,
                  fom_range, *,
-                 parent=None,
-                 title="FXE Azimuthal integration"):
+                 parent=None):
         """Initialization."""
-        super().__init__(window_id, parent=parent, title=title)
+        super().__init__(window_id, parent=parent)
 
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
 
-        # The No. of trains received
-        self._count = 0
-        # The x-data
-        self._momentum = None
+        self._count = 0  # The number of trains received
+
         # The average data
         self._on_pulse = None
         self._off_pulse = None
@@ -230,7 +225,7 @@ class LaserOnOffWindow(PlotWindow):
         # control parameters
         # *************************************************************
         self._diff_scale_sp = SpinBox(value=10)
-        self._diff_scale_sp.setRange(1, 20)
+        self._diff_scale_sp.setRange(1, 100)
         self._diff_scale_sp.setSingleStep(1)
 
         self._normalization_range = normalization_range
@@ -266,15 +261,15 @@ class LaserOnOffWindow(PlotWindow):
         self._gl_widget.nextRow()
 
         p1 = self._gl_widget.addPlot()
-        self.plot_items.append(p1)
-        p1.setLabel('left', Y_LABEL)
-        p1.setLabel('bottom', X_LABEL)
+        self._plot_items.append(p1)
+        p1.setLabel('left', "Scattering signal (arb. u.)")
+        p1.setLabel('bottom', "Momentum transfer (1/A)")
         p1.setTitle(' ')
 
         self._gl_widget.nextRow()
 
         p2 = self._gl_widget.addPlot()
-        self.plot_items.append(p2)
+        self._plot_items.append(p2)
         p2.setLabel('left', "Integrated difference (arb.)")
         p2.setLabel('bottom', "Trains No.")
         p2.setTitle(' ')
@@ -295,18 +290,18 @@ class LaserOnOffWindow(PlotWindow):
         return control_widget
 
     def update(self, data):
-        if data is None:
-            return
-
+        # TODO: think it twice about how to deal with None data here
         self._count += 1
 
-        self._momentum = data.momentum
+        momentum = data.momentum
         if self._count == 1:
+            # the first data point
             self._on_pulse = \
                 data.intensity[self._on_pulse_ids].mean(axis=0)
             self._off_pulse = \
                 data.intensity[self._off_pulse_ids].mean(axis=0)
         else:
+            # apply moving average
             self._on_pulse += \
                 data.intensity[self._on_pulse_ids].mean(axis=0) \
                 / self._count - self._on_pulse / (self._count - 1)
@@ -314,26 +309,27 @@ class LaserOnOffWindow(PlotWindow):
                 data.intensity[self._off_pulse_ids].mean(axis=0) \
                 / self._count - self._off_pulse / (self._count - 1)
 
-        # normalize curve
-
+        # normalize azimuthal integration curves
         normalized_on_pulse = self._on_pulse / integrate_curve(
-            self._on_pulse, self._momentum, self._normalization_range)
+            self._on_pulse, momentum, self._normalization_range)
         normalized_off_pulse = self._off_pulse / integrate_curve(
-            self._off_pulse, self._momentum, self._normalization_range)
+            self._off_pulse, momentum, self._normalization_range)
 
-        # update plots
-
-        # upper plot
-        p = self.plot_items[0]
-        p.plot(self._momentum, normalized_on_pulse, name="On", pen=Pen.purple)
-
-        p.plot(self._momentum, normalized_off_pulse, name="Off", pen=Pen.green)
-
+        # then calculate the difference between on- and off pulse curves
         diff = normalized_on_pulse - normalized_off_pulse
-        p.plot(self._momentum, self._diff_scale_sp.value() * diff,
+
+        # ------------
+        # update plots
+        # ------------
+
+        # upper one
+        # plot curves of on-, off- pulses and their difference
+        p = self._plot_items[0]
+        p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
+        p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
+        p.plot(momentum, self._diff_scale_sp.value() * diff,
                name="difference",
                pen=Pen.yellow)
-
         p.addLegend()
 
         # visualize normalization range
@@ -343,20 +339,20 @@ class LaserOnOffWindow(PlotWindow):
         if self._show_fom_range_cb.isChecked():
             p.addItem(self._fom_range_lri)
 
-        # update history
-        fom = sub_array_with_range(diff, self._momentum, self._fom_range)[0]
+        # calculate figure-of-merit (FOM) and update history
+        fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
         self._fom_hist.append(np.sum(np.abs(fom)))
 
-        # lower plot
-        p = self.plot_items[1]
-        p.clear()
-
+        # lower one
+        # plot the evolution of fom
         s = ScatterPlotItem(size=20, pen=mkPen(None),
                             brush=mkBrush(120, 255, 255, 255))
         s.addPoints([{'pos': (i, v), 'data': 1}
                      for i, v in enumerate(self._fom_hist)])
-        p.addItem(s)
 
+        p = self._plot_items[1]
+        p.clear()
+        p.addItem(s)
         p.plot(self._fom_hist, pen=Pen.yellow)
 
     def clear(self):
@@ -364,15 +360,14 @@ class LaserOnOffWindow(PlotWindow):
 
         The history of FOM should be untouched when the new data is invalid.
         """
-        self.plot_items[0].clear()
+        self._plot_items[0].clear()
 
 
 class SanityCheckWindow(PlotWindow):
     def __init__(self, window_id, normalization_range, fom_range, *,
-                 parent=None,
-                 title="FXE Azimuthal integration"):
+                 parent=None):
         """Initialization."""
-        super().__init__(window_id, parent=parent, title=title)
+        super().__init__(window_id, parent=parent)
 
         self._normalization_range = normalization_range
         self._fom_range = fom_range
@@ -392,33 +387,34 @@ class SanityCheckWindow(PlotWindow):
         self._gl_widget.nextRow()
 
         p1 = self._gl_widget.addPlot()
-        self.plot_items.append(p1)
+        self._plot_items.append(p1)
         p1.setLabel('left', "Integrated difference (arb.)")
         p1.setLabel('bottom', "Pulse No.")
         p1.setTitle(' ')
 
     def update(self, data):
         """Override."""
-        if data is None:
-            return
-
         momentum = data.momentum
 
-        normalized_pulses = []
-        for pulse in data.intensity:
-            normalized = pulse / integrate_curve(
-                pulse, momentum, self._normalization_range)
-            normalized_pulses.append(normalized)
+        # normalize azimuthal integration curves for each pulse
+        normalized_pulse_intensities = []
+        for pulse_intensity in data.intensity:
+            normalized = pulse_intensity / integrate_curve(
+                pulse_intensity, momentum, self._normalization_range)
+            normalized_pulse_intensities.append(normalized)
 
-        diffs = [p - normalized_pulses[0] for p in normalized_pulses]
+        # calculate the different between each pulse and the first one
+        diffs = [p - normalized_pulse_intensities[0]
+                 for p in normalized_pulse_intensities]
+
+        # calculate the FOM for each pulse
         foms = []
         for diff in diffs:
             fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')
-        p = self.plot_items[0]
-        p.clear()
 
+        p = self._plot_items[0]
         p.addItem(bar)
         p.plot()

@@ -22,7 +22,6 @@ import zmq
 from karabo_bridge import Client
 
 from .pyqtgraph.Qt import QtCore, QtGui
-from .pyqtgraph import intColor, mkPen
 from .logging import GuiLogger, logger
 from .plot_widgets import (
     IndividualPulseWindow, LaserOnOffWindow, MainGuiImageViewWidget,
@@ -560,17 +559,11 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
-        # update the plots in the main GUI
         t0 = time.perf_counter()
 
-        for i, intensity in enumerate(self._data.intensity):
-            self._lineplot_widget.update(
-                self._data.momentum, intensity,
-                pen=mkPen(intColor(i, hues=9, values=5), width=2))
-        self._lineplot_widget.set_title("Train ID: {}, No. pulses: {}".
-                                        format(self._data.tid, i+1))
-
-        self._image_widget.update(self._data.image_avg)
+        # update the plots in the main GUI
+        self._lineplot_widget.update(self._data)
+        self._image_widget.update(self._data)
 
         # update the plots in child windows
         for w in self._opened_windows.values():
