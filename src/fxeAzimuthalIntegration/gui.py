@@ -155,34 +155,28 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar = self.addToolBar("Control")
 
         self._start_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaPlay)),
-            "Start",
-            self)
+            QtGui.QIcon("icons/start.png"), "Start DAQ", self)
         tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.on_enter_running)
 
         self._stop_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaStop)),
-            "Stop",
-            self)
+            QtGui.QIcon("icons/stop.png"), "Stop DAQ", self)
         tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.on_exit_running)
         self._stop_at.setEnabled(False)
 
         # open an input dialog for opening plots for individual pulses
         open_ip_window_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
-            "Plot individual pulse (compared with the average of all pulses)",
+            QtGui.QIcon("icons/individual_pulse.png"),
+            "Individual pulse",
             self)
         open_ip_window_at.triggered.connect(self._show_ip_window_dialog)
         tool_bar.addAction(open_ip_window_at)
 
         # open an input dialog for opening a moving average window
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
-            "Plot moving average for 'on' and 'off' pulses",
+            QtGui.QIcon("icons/fom_evolution.png"),
+            "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
             self._show_laseronoff_window_dialog)
@@ -191,7 +185,7 @@ class MainGUI(QtGui.QMainWindow):
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(
                 self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
-            "Specify geometry file",
+            "geometry file",
             self)
         self._open_geometry_file_at.triggered.connect(
             self._choose_geometry_file)
@@ -206,10 +200,7 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._save_image_at)
 
         self._load_image_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_DialogOpenButton)),
-            "Load image",
-            self)
+            QtGui.QIcon("icons/load_mask.png"), "Load mask", self)
         self._load_image_at.triggered.connect(self._choose_mask_image)
         tool_bar.addAction(self._load_image_at)
 
