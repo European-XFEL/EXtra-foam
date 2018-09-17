@@ -12,13 +12,12 @@ import abc
 
 import numpy as np
 
-from .pyqtgraph.Qt import QtGui
+from .pyqtgraph.Qt import QtCore, QtGui
 from .pyqtgraph import (
-    BarGraphItem, GraphicsLayoutWidget, ImageItem, mkPen, ColorMap,
-    LinearRegionItem, ScatterPlotItem, mkBrush, SpinBox
+    BarGraphItem, ColorMap, GraphicsLayoutWidget, ImageItem, intColor,
+    LinearRegionItem, mkBrush, mkPen, ScatterPlotItem, SpinBox,
 )
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-from .pyqtgraph import intColor, mkPen
 from .config import Config as cfg
 from .data_processing import integrate_curve, sub_array_with_range
 
@@ -230,14 +229,22 @@ class LaserOnOffWindow(PlotWindow):
 
         self._normalization_range = normalization_range
         self._fom_range = fom_range
-        self._normalization_range_lri = LinearRegionItem(normalization_range)
-        self._fom_range_lri = LinearRegionItem(fom_range)
 
-        self._show_normalization_range_cb = QtGui.QCheckBox(
-            "Show normalization range")
-        self._show_normalization_range_cb.setChecked(False)
-        self._show_fom_range_cb = QtGui.QCheckBox("Show FOM range")
-        self._show_fom_range_cb.setChecked(False)
+        pen1 = mkPen(QtGui.QColor(
+            255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
+        brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
+        self._normalization_range_lri = LinearRegionItem(
+            normalization_range, pen=pen1, brush=brush1, movable=False)
+        self._normalization_range_cb = QtGui.QCheckBox("Normalization range (w)")
+        self._normalization_range_cb.setChecked(True)
+
+        pen2 = mkPen(QtGui.QColor(
+            255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
+        brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
+        self._fom_range_lri = LinearRegionItem(
+            fom_range, pen=pen2, brush=brush2, movable=False)
+        self._fom_range_cb = QtGui.QCheckBox("FOM range (r)")
+        self._fom_range_cb.setChecked(True)
 
         self.initUI()
 
@@ -282,8 +289,8 @@ class LaserOnOffWindow(PlotWindow):
         layout = QtGui.QVBoxLayout()
         layout.addWidget(scale_lb)
         layout.addWidget(self._diff_scale_sp)
-        layout.addWidget(self._show_normalization_range_cb)
-        layout.addWidget(self._show_fom_range_cb)
+        layout.addWidget(self._normalization_range_cb)
+        layout.addWidget(self._fom_range_cb)
         layout.addStretch()
         control_widget.setLayout(layout)
 
@@ -333,10 +340,10 @@ class LaserOnOffWindow(PlotWindow):
         p.addLegend()
 
         # visualize normalization range
-        if self._show_normalization_range_cb.isChecked():
+        if self._normalization_range_cb.isChecked():
             p.addItem(self._normalization_range_lri)
         # normalize FOM range
-        if self._show_fom_range_cb.isChecked():
+        if self._fom_range_cb.isChecked():
             p.addItem(self._fom_range_lri)
 
         # calculate figure-of-merit (FOM) and update history
