@@ -54,12 +54,12 @@ class ProcessedData:
         self.momentum = momentum
         self.intensity = intensity
 
-        self.image = assembled
+        self.image = None
+        self.image_avg = None
         # prefer data processing outside the GUI
-        self.image_avg = np.mean(assembled, axis=0)
-        if self.image is not None:
-            self.image = self.array2image(self.image)
-            self.image_avg = self.array2image(self.image_avg)
+        if assembled is not None:
+            self.image = self.array2image(assembled)
+            self.image_avg = self.array2image(np.mean(assembled, axis=0))
 
     @property
     def tid(self):
@@ -75,9 +75,9 @@ class ProcessedData:
     @staticmethod
     def array2image(x):
         """Convert array data to image data."""
-        x /= cfg.DISPLAY_RANGE[1]
-        x *= 255.0
-        return np.ma.filled(x.astype(np.uint8), 0)
+        img = x / cfg.DISPLAY_RANGE[1]
+        img *= 255.0
+        return np.ma.filled(img.astype(np.uint8), 0)
 
 
 class DataProcessor(object):
