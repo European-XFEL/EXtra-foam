@@ -201,10 +201,11 @@ class DataProcessor(object):
 
         assembled, centre = self._geom.position_all_modules(modules_data)
         # TODO: slice earlier to save computation time
-        assembled = np.rot90(
-            assembled[self.pulse_range[0]:self.pulse_range[1] + 1],
-            3,
-            axes=(1, 2))
+        # assembled = np.rot90(
+        #     assembled[self.pulse_range[0]:self.pulse_range[1] + 1],
+        #     3,
+        #     axes=(1, 2))
+        assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

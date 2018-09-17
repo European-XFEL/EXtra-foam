@@ -78,8 +78,8 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
     def clear_(self):
         self._img.clear()
 
-    def update(self, *args, **kwargs):
-        self._img.setImage(autoLevels=False, *args, **kwargs)
+    def update(self, img):
+        self._img.setImage(np.flip(img, axis=0), autoLevels=False)
         self._view.autoRange()
 
 
@@ -197,8 +197,8 @@ class IndividualPulseWindow(PlotWindow):
                     p.addLegend(offset=cfg.LINE_PLOT_LEGEND_OFFSET)
 
             if data is not None and self._show_image is True:
-                self.image_items[i].setImage(data.image[pulse_id],
-                                             autoLevels=False)
+                self.image_items[i].setImage(
+                    np.flip(data.image[pulse_id], axis=0), autoLevels=False)
 
 
 class LaserOnOffWindow(PlotWindow):
