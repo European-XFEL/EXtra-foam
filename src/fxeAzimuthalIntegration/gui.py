@@ -9,6 +9,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import sys
+import os
 import logging
 import time
 import ast
@@ -154,20 +155,26 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         tool_bar = self.addToolBar("Control")
 
+        root_dir = os.path.dirname(os.path.abspath(__file__))
+
         self._start_at = QtGui.QAction(
-            QtGui.QIcon("icons/start.png"), "Start DAQ", self)
+            QtGui.QIcon(os.path.join(root_dir, "icons/start.png")),
+            "Start DAQ",
+            self)
         tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.on_enter_running)
 
         self._stop_at = QtGui.QAction(
-            QtGui.QIcon("icons/stop.png"), "Stop DAQ", self)
+            QtGui.QIcon(os.path.join(root_dir, "icons/stop.png")),
+            "Stop DAQ",
+            self)
         tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.on_exit_running)
         self._stop_at.setEnabled(False)
 
         # open an input dialog for opening plots for individual pulses
         open_ip_window_at = QtGui.QAction(
-            QtGui.QIcon("icons/individual_pulse.png"),
+            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
             "Individual pulse",
             self)
         open_ip_window_at.triggered.connect(self._show_ip_window_dialog)
@@ -175,7 +182,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # open an input dialog for opening a moving average window
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon("icons/fom_evolution.png"),
+            QtGui.QIcon(os.path.join(root_dir, "icons/fom_evolution.png")),
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
@@ -184,7 +191,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # open the in-train pulse comparison window
         open_sanitycheck_window_at = QtGui.QAction(
-            QtGui.QIcon("icons/sanity_check.png"),
+            QtGui.QIcon(os.path.join(root_dir, "icons/sanity_check.png")),
             "In-train pulses comparison",
             self)
         open_sanitycheck_window_at.triggered.connect(
@@ -209,7 +216,9 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._save_image_at)
 
         self._load_image_at = QtGui.QAction(
-            QtGui.QIcon("icons/load_mask.png"), "Load mask", self)
+            QtGui.QIcon(os.path.join(root_dir, "icons/load_mask.png")),
+            "Load mask",
+            self)
         self._load_image_at.triggered.connect(self._choose_mask_image)
         tool_bar.addAction(self._load_image_at)
 
