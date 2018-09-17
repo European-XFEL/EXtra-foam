@@ -401,11 +401,11 @@ class SanityCheckWindow(PlotWindow):
 
         self._gl_widget.nextRow()
 
-        p1 = self._gl_widget.addPlot()
-        self._plot_items.append(p1)
-        p1.setLabel('left', "Integrated difference (arb.)")
-        p1.setLabel('bottom', "Pulse No.")
-        p1.setTitle(' ')
+        p = self._gl_widget.addPlot()
+        self._plot_items.append(p)
+        p.setLabel('left', "Integrated difference (arb.)")
+        p.setLabel('bottom', "Pulse No.")
+        p.setTitle(' ')
 
     def update(self, data):
         """Override."""
@@ -432,4 +432,5 @@ class SanityCheckWindow(PlotWindow):
 
         p = self._plot_items[0]
         p.addItem(bar)
+        p.setTitle("Train ID: {}".format(data.tid))
         p.plot()
