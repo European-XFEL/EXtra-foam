@@ -178,6 +178,9 @@ class IndividualPulseWindow(PlotWindow):
     def update(self, data):
         for i, pulse_id in enumerate(self._pulse_ids):
             p = self._plot_items[i]
+            if i == 0:
+                p.addLegend(offset=(-40, 20))
+
             if data is not None:
                 p.plot(data.momentum, data.intensity[pulse_id],
                        name="origin",
@@ -189,9 +192,6 @@ class IndividualPulseWindow(PlotWindow):
                 p.plot(data.momentum, data.intensity[pulse_id] - ave,
                        name="difference",
                        pen=Pen.yellow)
-
-                if i == 0:
-                    p.addLegend(offset=cfg.LINE_PLOT_LEGEND_OFFSET)
 
             if data is not None and self._show_image is True:
                 self._image_items[i].setImage(
@@ -332,12 +332,12 @@ class LaserOnOffWindow(PlotWindow):
         # upper one
         # plot curves of on-, off- pulses and their difference
         p = self._plot_items[0]
+        p.addLegend(offset=(-60, 20))
         p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
         p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
         p.plot(momentum, self._diff_scale_sp.value() * diff,
                name="difference",
                pen=Pen.yellow)
-        p.addLegend()
 
         # visualize normalization range
         if self._normalization_range_cb.isChecked():
