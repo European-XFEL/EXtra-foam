@@ -77,7 +77,7 @@ class ProcessedData:
         """Convert array data to image data."""
         img = x / cfg.DISPLAY_RANGE[1]
         img *= 255.0
-        return np.ma.filled(img.astype(np.uint8), 0)
+        return np.ma.filled(np.clip(img, 0, 255).astype(np.uint8), 0)
 
 
 class DataProcessor(object):
