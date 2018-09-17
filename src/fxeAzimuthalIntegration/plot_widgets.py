@@ -129,6 +129,10 @@ class PlotWindow(QtGui.QMainWindow):
 
 
 class IndividualPulseWindow(PlotWindow):
+    line_plot_w = 580
+    line_plot_h = 320
+    max_plots = 4
+
     def __init__(self, window_id, pulse_ids, *, parent=None, show_image=False):
         """Initialization."""
         super().__init__(window_id, parent=parent)
@@ -143,11 +147,15 @@ class IndividualPulseWindow(PlotWindow):
         layout.setColumnStretchFactor(0, 1)
         if self._show_image:
             layout.setColumnStretchFactor(1, 3)
-        w = cfg.LINE_PLOT_WIDTH + self._show_image*(cfg.LINE_PLOT_HEIGHT - 20)
-        h = min(4, len(self._pulse_ids))*cfg.LINE_PLOT_HEIGHT
+        w = self.line_plot_w + self._show_image*(self.line_plot_h - 20)
+        h = min(self.max_plots, len(self._pulse_ids))*self.line_plot_h
         self._gl_widget.setFixedSize(w, h)
 
+        count = 0
         for pulse_id in self._pulse_ids:
+            count += 1
+            if count > self.max_plots:
+                break
             if self._show_image is True:
                 img = ImageItem(border='w')
                 img.setLookupTable(COLOR_MAP.getLookupTable())
