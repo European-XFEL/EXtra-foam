@@ -170,22 +170,24 @@ class DataProcessor(object):
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process data streaming by karabo_data from files."""
         data, metadata = calibrated_data
-        tid = next(iter(metadata.values()))["timestamp.tid"]
 
         t0 = time.perf_counter()
-
         if from_file is False:
-            # TODO: should be able to specify the data source here.
             if len(metadata.items()) > 1:
-                logger.warning(
-                    "Received data from more than one data sources!")
+                logger.warning("Found multiple data sources!")
 
-            modules_data = next(iter(data.values()))["image.data"]
+            # explicitly specify the source name to avoid potential bug
+            key = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
+
+            tid = metadata[key]["timestamp.tid"]
+            modules_data = data[key]["image.data"]
+
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
             logger.debug("Time for manipulating stacked data: {:.1f} ms"
                          .format(1000 * (time.perf_counter() - t0)))
         else:
+            tid = next(iter(metadata.values()))["timestamp.tid"]
             modules_data = stack_detector_data(data, "image.data", only="LPD")
             logger.debug("Time for stacking detector data: {:.1f} ms"
                          .format(1000 * (time.perf_counter() - t0)))
@@ -195,16 +197,10 @@ class DataProcessor(object):
             logger.debug("Error in modules data of train {}".format(tid))
             return ProcessedData(tid)
 
-        # cell_data = stack_detector_data(train_data, "image.cellId",
-        #                                 only="LPD")
         t0 = time.perf_counter()
 
         assembled, centre = self._geom.position_all_modules(modules_data)
         # TODO: slice earlier to save computation time
-        # assembled = np.rot90(
-        #     assembled[self.pulse_range[0]:self.pulse_range[1] + 1],
-        #     3,
-        #     axes=(1, 2))
         assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
 
         logger.debug("Time for assembling: {:.1f} ms"
