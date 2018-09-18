@@ -129,8 +129,8 @@ class PlotWindow(QtGui.QMainWindow):
 
 
 class IndividualPulseWindow(PlotWindow):
-    line_plot_w = 580
-    line_plot_h = 320
+    plot_w = 800
+    plot_h = 280
     max_plots = 4
 
     def __init__(self, window_id, pulse_ids, *, parent=None, show_image=False):
@@ -147,8 +147,8 @@ class IndividualPulseWindow(PlotWindow):
         layout.setColumnStretchFactor(0, 1)
         if self._show_image:
             layout.setColumnStretchFactor(1, 3)
-        w = self.line_plot_w + self._show_image*(self.line_plot_h - 20)
-        h = min(self.max_plots, len(self._pulse_ids))*self.line_plot_h
+        w = self.plot_w - self.plot_h + self._show_image*(self.plot_h - 20)
+        h = min(self.max_plots, len(self._pulse_ids))*self.plot_h
         self._gl_widget.setFixedSize(w, h)
 
         count = 0
@@ -207,6 +207,8 @@ class IndividualPulseWindow(PlotWindow):
 
 
 class LaserOnOffWindow(PlotWindow):
+    plot_w = 800
+    plot_h = 450
     def __init__(self,
                  window_id,
                  on_pulse_ids,
@@ -266,7 +268,7 @@ class LaserOnOffWindow(PlotWindow):
         self._cw.setLayout(layout)
 
     def initPlotUI(self):
-        self._gl_widget.setFixedSize(cfg.MA_PLOT_WIDTH, cfg.MA_PLOT_HEIGHT)
+        self._gl_widget.setFixedSize(self.plot_w, 2*self.plot_h)
 
         self._gl_widget.addLabel(
             "On -pulse IDs: {}<br>Off-pulse IDs: {}".
@@ -379,6 +381,8 @@ class LaserOnOffWindow(PlotWindow):
 
 
 class SanityCheckWindow(PlotWindow):
+    plot_w = 800
+    plot_h = 450
     def __init__(self, window_id, normalization_range, fom_range, *,
                  parent=None):
         """Initialization."""
@@ -397,7 +401,7 @@ class SanityCheckWindow(PlotWindow):
         self._cw.setLayout(layout)
 
     def initPlotUI(self):
-        self._gl_widget.setFixedSize(cfg.SC_PLOT_WIDTH, cfg.SC_PLOT_HEIGHT)
+        self._gl_widget.setFixedSize(self.plot_w, self.plot_h)
 
         self._gl_widget.nextRow()
 

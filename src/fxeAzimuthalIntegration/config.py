@@ -60,13 +60,7 @@ class Config:
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
 
-    MA_PLOT_WIDTH = 800
-    MA_PLOT_HEIGHT = 900
-
     MASK_RANGE = (0, 10000)  # image pixels beyond this range will be masked
-
-    SC_PLOT_WIDTH = 800
-    SC_PLOT_HEIGHT = 450
 
     # *********************************************************************
     DEFAULT_FILE_SERVER_PORT = "12345"
