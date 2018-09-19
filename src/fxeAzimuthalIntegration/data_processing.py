@@ -40,9 +40,13 @@ class ProcessedData:
     Attributes:
         tid (int): train ID.
         momentum (numpy.ndarray): x-axis of azimuthal integration result.
+            Shape = (momentum)
         intensity (numpy.ndarray): y-axis of azimuthal integration result.
+            Shape = (pulse_id, intensity)
         image (numpy.ndarray): assembled images for all the pulses.
-        image_avg (numpy.ndarray): average of the assembled images over pulses.
+            Shape = (pulse_id, y, x)
+        image_avg (2D numpy.ndarray): average of the assembled images over
+            pulses. Shape = (y, x)
     """
     def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
         """Initialization."""
