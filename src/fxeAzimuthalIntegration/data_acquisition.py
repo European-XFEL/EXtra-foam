@@ -8,9 +8,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
-
-from .logging import logger
 
 
 class DaqWorker:
@@ -25,12 +22,8 @@ class DaqWorker:
     def run(self, out_queue):
         self._running = True
         while self._running:
-            t0 = time.perf_counter()
-
-            out_queue.put(self._client.next())
-
-            logger.debug("Time for retrieving data from the server: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
+            data = self._client.next()
+            out_queue.put(data)
 
     def terminate(self):
         self._running = False

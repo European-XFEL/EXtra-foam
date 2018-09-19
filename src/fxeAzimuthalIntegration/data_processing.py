@@ -56,12 +56,17 @@ class ProcessedData:
         self.momentum = momentum
         self.intensity = intensity
 
+        t0 = time.perf_counter()
+
         self.image = None
         self.image_avg = None
         # prefer data processing outside the GUI
         if assembled is not None:
             self.image = self.array2image(assembled)
             self.image_avg = self.array2image(np.mean(assembled, axis=0))
+
+        logger.debug("Time for pre-processing: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
     @property
     def tid(self):
@@ -132,10 +137,13 @@ class DataProcessor(object):
             else:
                 raise ValueError("Unknown data source!")
 
-            logger.debug("Total time for processing the data: {:.1f} ms"
+            logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
             out_queue.put(processed_data)
+
+            logger.debug("Size of in and out queues: {}, {}".
+                         format(in_queue.qsize(), out_queue.qsize()))
 
     def terminate(self):
         self._running = False
@@ -148,8 +156,6 @@ class DataProcessor(object):
 
         :return ProcessedData: data after processing.
         """
-        t0 = time.perf_counter()
-
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
                                        poni1=self.cy,
                                        poni2=self.cx,
@@ -160,11 +166,18 @@ class DataProcessor(object):
                                        rot3=0,
                                        wavelength=self.wavelength)
 
+        t0 = time.perf_counter()
+
         # apply inf, NaN and range mask to the assembled image
         # masked is a np.ma.MaskedArray object
         masked = np.ma.masked_outside(np.ma.masked_invalid(assembled),
                                       self.mask_range[0],
                                       self.mask_range[1])
+
+        logger.debug("Time for masking: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
+
+        t0 = time.perf_counter()
 
         momentum = None
         intensities = []
@@ -203,6 +216,7 @@ class DataProcessor(object):
         data, metadata = calibrated_data
 
         t0 = time.perf_counter()
+
         if from_file is False:
             if len(metadata.items()) > 1:
                 logger.warning("Found multiple data sources!")
@@ -215,13 +229,12 @@ class DataProcessor(object):
 
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
-            logger.debug("Time for manipulating stacked data: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
             modules_data = stack_detector_data(data, "image.data", only="LPD")
-            logger.debug("Time for stacking detector data: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
+
+        logger.debug("Time for moveaxis/stacking: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):

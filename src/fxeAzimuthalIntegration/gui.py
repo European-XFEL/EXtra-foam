@@ -377,7 +377,7 @@ class MainGUI(QtGui.QMainWindow):
         self._is_running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self._update)
-        self.timer.start(100)
+        self.timer.start(10)
 
         self.show()
 
@@ -544,15 +544,12 @@ class MainGUI(QtGui.QMainWindow):
         if self._is_running is False:
             return
 
-        t0 = time.process_time()
-
         # TODO: improve plot updating
         # Use multithreading for plot updating. However, this is not the
         # bottleneck for the performance.
 
         try:
-            # data is a np.ma.MaskedArray object
-            self._data = self._proc_queue.get(timeout=0.01)
+            self._data = self._proc_queue.get_nowait()
         except Empty:
             return
 
@@ -566,8 +563,6 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
-        t00 = time.process_time()
-
         # update the plots in the main GUI
         self._lineplot_widget.update(self._data)
         self._image_widget.update(self._data)
@@ -577,12 +572,6 @@ class MainGUI(QtGui.QMainWindow):
             w.update(self._data)
 
         logger.info("Updated train with ID: {}".format(self._data.tid))
-
-        logger.debug("Time for updating the plots: {:.1f} ms"
-                     .format(1000 * (time.process_time() - t00)))
-
-        logger.debug("Time for updating one train: {:.1f} ms"
-                     .format(1000 * (time.process_time() - t0)))
 
     def _show_ip_window_dialog(self):
         """A dialog for individual pulse plot."""
@@ -795,7 +784,6 @@ class MainGUI(QtGui.QMainWindow):
                            args=(self._daq_queue, self._proc_queue)))
 
         for thread in threads:
-            thread.daemon = True
             thread.start()
 
         logger.info("DAQ started!")
