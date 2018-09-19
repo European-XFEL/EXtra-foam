@@ -11,7 +11,6 @@ All rights reserved.
 import sys
 import os
 import logging
-import time
 import ast
 from queue import Queue, Empty
 from threading import Thread

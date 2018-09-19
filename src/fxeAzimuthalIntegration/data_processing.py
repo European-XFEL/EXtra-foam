@@ -9,7 +9,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from queue import Empty
 
 import numpy as np
 from scipy import constants
