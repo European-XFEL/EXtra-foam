@@ -150,6 +150,7 @@ class DataProcessor(object):
                 masked[i].mask[self.mask == 255] = True
 
             # Here the assembled is still the original image data
+            # TODO: can pyFAI work with np.ma module?
             res = ai.integrate1d(masked[i],
                                  self.integration_points,
                                  method=self.integration_method,

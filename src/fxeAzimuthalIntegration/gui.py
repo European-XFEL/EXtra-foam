@@ -645,13 +645,13 @@ class MainGUI(QtGui.QMainWindow):
         try:
             normalization_range = \
                 self._parse_boundary(self._normalization_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Normalization_range'!")
+        except ValueError as e:
+            logger.error("<Normalization_range>: " + str(e))
             return
         try:
             fom_range = self._parse_boundary(self._fom_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'FOM_range'!")
+        except ValueError as e:
+            logger.error("<FOM range>: " + str(e))
             return
 
         w = LaserOnOffWindow(
@@ -692,13 +692,6 @@ class MainGUI(QtGui.QMainWindow):
         """Actions taken at the end of 'run' state."""
         self._is_running = True
 
-        client_addr = "tcp://" \
-                      + self._hostname_le.text().strip() \
-                      + ":" \
-                      + self._port_le.text().strip()
-        self._client = Client(client_addr)
-        logger.info("Bind to {}".format(client_addr))
-
         if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
         elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
@@ -721,17 +714,23 @@ class MainGUI(QtGui.QMainWindow):
         try:
             integration_range = self._parse_boundary(
                 self._itgt_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Integration range'!")
+        except ValueError as e:
+            logger.error("<Integration range>: " + str(e))
             return
         try:
             mask_range = self._parse_boundary(self._mask_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Mask range'!")
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
             return
 
         integration_points = int(self._itgt_points_le.text().strip())
         try:
+            client_addr = "tcp://" \
+                          + self._hostname_le.text().strip() \
+                          + ":" \
+                          + self._port_le.text().strip()
+            self._client = Client(client_addr)
+
             self._daq_worker = DaqWorker(
                 self._client,
                 self._daq_queue,
@@ -749,6 +748,8 @@ class MainGUI(QtGui.QMainWindow):
                 mask_range=mask_range,
                 mask=self._mask_image
             )
+
+            logger.info("Bind to {}".format(client_addr))
         except Exception as e:
             logger.error(e)
             return
@@ -840,10 +841,14 @@ class MainGUI(QtGui.QMainWindow):
 
     @staticmethod
     def _parse_boundary(text):
-        lb, ub = [ast.literal_eval(x.strip()) for x in text.split(",")]
+        try:
+            lb, ub = [ast.literal_eval(x.strip()) for x in text.split(",")]
+        except Exception:
+            raise ValueError("Invalid input!")
 
         if lb > ub:
             raise ValueError("lower boundary > upper boundary!")
+
         return lb, ub
 
     @staticmethod
