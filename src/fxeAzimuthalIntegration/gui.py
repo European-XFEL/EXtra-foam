@@ -13,7 +13,8 @@ import os
 import logging
 import time
 import ast
-from collections import deque
+from queue import Queue, Empty
+from threading import Thread
 
 import numpy as np
 from imageio import imread, imsave
@@ -29,6 +30,7 @@ from .plot_widgets import (
 )
 
 from .data_acquisition import DaqWorker
+from .data_processing import DataProcessor
 from .file_server import FileServer
 from .config import Config as cfg
 from .config import DataSource
@@ -144,10 +146,13 @@ class MainGUI(QtGui.QMainWindow):
         self.setCentralWidget(self._cw)
 
         # drop the oldest element when the queue is full
-        self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
+        self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+        self._proc_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+
         # a DAQ worker which process the data in another thread
         self._daq_worker = None
         self._client = None
+        self._proc_worker = None
 
         # *************************************************************
         # Tool bar
@@ -539,14 +544,16 @@ class MainGUI(QtGui.QMainWindow):
         if self._is_running is False:
             return
 
+        t0 = time.process_time()
+
         # TODO: improve plot updating
         # Use multithreading for plot updating. However, this is not the
         # bottleneck for the performance.
 
         try:
             # data is a np.ma.MaskedArray object
-            self._data = self._daq_queue.pop()
-        except IndexError:
+            self._data = self._proc_queue.get(timeout=0.01)
+        except Empty:
             return
 
         # clear the previous plots no matter what comes next
@@ -559,7 +566,7 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
-        t0 = time.perf_counter()
+        t00 = time.process_time()
 
         # update the plots in the main GUI
         self._lineplot_widget.update(self._data)
@@ -572,7 +579,10 @@ class MainGUI(QtGui.QMainWindow):
         logger.info("Updated train with ID: {}".format(self._data.tid))
 
         logger.debug("Time for updating the plots: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
+                     .format(1000 * (time.process_time() - t00)))
+
+        logger.debug("Time for updating one train: {:.1f} ms"
+                     .format(1000 * (time.process_time() - t0)))
 
     def _show_ip_window_dialog(self):
         """A dialog for individual pulse plot."""
@@ -707,6 +717,8 @@ class MainGUI(QtGui.QMainWindow):
         logger.info("DAQ stopped!")
 
         self._daq_worker.terminate()
+        if self._proc_worker is not None:
+            self._proc_worker.terminate()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
@@ -756,11 +768,12 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         integration_points = int(self._itgt_points_le.text().strip())
-        try:
-            self._daq_worker = DaqWorker(
-                self._client,
-                self._daq_queue,
-                data_source,
+
+        self._daq_worker = DaqWorker(self._client)
+
+        if not self._data_src_rbts[DataSource.PROCESSED].isChecked():
+            self._proc_worker = DataProcessor(
+                source=data_source,
                 pulse_range=pulse_range,
                 geom_file=geom_file,
                 quad_positions=quad_positions,
@@ -774,11 +787,16 @@ class MainGUI(QtGui.QMainWindow):
                 mask_range=mask_range,
                 mask=self._mask_image
             )
-        except Exception as e:
-            logger.error(e)
-            return
 
-        self._daq_worker.start()
+        threads = [Thread(target=self._daq_worker.run,
+                          args=(self._daq_queue,))]
+        if self._proc_worker is not None:
+            threads.append(Thread(target=self._proc_worker.run,
+                           args=(self._daq_queue, self._proc_queue)))
+
+        for thread in threads:
+            thread.daemon = True
+            thread.start()
 
         logger.info("DAQ started!")
         logger.info("Azimuthal integration parameters:\n"

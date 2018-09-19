@@ -9,6 +9,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
+from queue import Empty
 
 import numpy as np
 from scipy import constants
@@ -18,6 +19,7 @@ from h5py import File
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
+from .config import DataSource
 from .config import Config as cfg
 from .logging import logger
 
@@ -88,6 +90,7 @@ class DataProcessor(object):
     """
     def __init__(self, **kwargs):
         """Initialization."""
+        self.source = kwargs['source']
         self.pulse_range = kwargs['pulse_range']
 
         self._geom = None
@@ -108,6 +111,34 @@ class DataProcessor(object):
 
         self.mask_range = kwargs['mask_range']
         self.mask = kwargs['mask']
+
+        self._running = False
+
+    def run(self, in_queue, out_queue):
+        self._running = True
+        while self._running:
+            data = in_queue.get()
+
+            t0 = time.perf_counter()
+
+            if self.source == DataSource.CALIBRATED_FILE:
+                processed_data = self.process_calibrated_data(data, from_file=True)
+            elif self.source == DataSource.CALIBRATED:
+                processed_data = self.process_calibrated_data(data)
+            elif self.source == DataSource.ASSEMBLED:
+                processed_data = self.process_assembled_data(data)
+            elif self.source == DataSource.PROCESSED:
+                processed_data = data[0]
+            else:
+                raise ValueError("Unknown data source!")
+
+            logger.debug("Total time for processing the data: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
+
+            out_queue.put(processed_data)
+
+    def terminate(self):
+        self._running = False
 
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
