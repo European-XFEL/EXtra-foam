@@ -369,7 +369,7 @@ class MainGUI(QtGui.QMainWindow):
         self._is_running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self._update)
-        self.timer.start(100)
+        self.timer.start(10)
 
         self.show()
 
