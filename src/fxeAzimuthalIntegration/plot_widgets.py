@@ -79,7 +79,7 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         self._img.clear()
 
     def update(self, data):
-        self._img.setImage(np.flip(data.image_avg, axis=0), autoLevels=False)
+        self._img.setImage(np.flip(data.image_mean, axis=0), autoLevels=False)
         self._view.autoRange()
 
 
@@ -195,10 +195,12 @@ class IndividualPulseWindow(PlotWindow):
                        name="origin",
                        pen=Pen.purple)
 
-                ave = np.mean(data.intensity, axis=0)
-                p.plot(data.momentum, ave, name="mean", pen=Pen.green)
+                p.plot(data.momentum, data.intensity_mean,
+                       name="mean",
+                       pen=Pen.green)
 
-                p.plot(data.momentum, data.intensity[pulse_id] - ave,
+                p.plot(data.momentum,
+                       data.intensity[pulse_id] - data.intensity_mean,
                        name="difference",
                        pen=Pen.yellow)
 

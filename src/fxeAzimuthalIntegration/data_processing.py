@@ -56,7 +56,7 @@ class ProcessedData:
             Shape = (pulse_id, intensity)
         image (numpy.ndarray): assembled images for all the pulses.
             Shape = (pulse_id, y, x)
-        image_avg (2D numpy.ndarray): average of the assembled images over
+        image_mean (2D numpy.ndarray): average of the assembled images over
             pulses. Shape = (y, x)
     """
     def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
@@ -68,6 +68,7 @@ class ProcessedData:
 
         self.momentum = momentum
         self.intensity = intensity
+        self.intensity_mean = np.mean(intensity, axis=0)
 
         t0 = time.perf_counter()
 
@@ -78,7 +79,7 @@ class ProcessedData:
             # Visualize the individual image is optional. Therefore, we should
             # delay the array2image operation.
             self.image = assembled
-            self.image_avg = array2image(np.nanmean(assembled, axis=0))
+            self.image_mean = array2image(np.nanmean(assembled, axis=0))
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
