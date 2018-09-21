@@ -52,9 +52,7 @@ class DaqWorker(Thread):
             else:
                 raise ValueError("Unknown data source!")
 
-            # this information will flood the GUI logger window and
-            # crash the GUI.
-            logger.debug("Total time for processing the data: {:.1f} ms"
+            logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
             self._out_queue.append(processed_data)

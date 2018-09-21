@@ -11,7 +11,6 @@ All rights reserved.
 import sys
 import os
 import logging
-import time
 import ast
 from collections import deque
 
@@ -214,12 +213,12 @@ class MainGUI(QtGui.QMainWindow):
         self._save_image_at.triggered.connect(self._save_image)
         tool_bar.addAction(self._save_image_at)
 
-        self._load_image_at = QtGui.QAction(
+        self._load_mask_at = QtGui.QAction(
             QtGui.QIcon(os.path.join(root_dir, "icons/load_mask.png")),
             "Load mask",
             self)
-        self._load_image_at.triggered.connect(self._choose_mask_image)
-        tool_bar.addAction(self._load_image_at)
+        self._load_mask_at.triggered.connect(self._choose_mask_image)
+        tool_bar.addAction(self._load_mask_at)
 
         # *************************************************************
         # Plots
@@ -271,6 +270,7 @@ class MainGUI(QtGui.QMainWindow):
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
         self._fom_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+        self._ma_window_le = FixedWidthLineEdit(w, "10")
 
         # *************************************************************
         # data source options
@@ -319,13 +319,10 @@ class MainGUI(QtGui.QMainWindow):
         self._server_terminate_btn.clicked.connect(
             self._on_terminate_serve_file)
         self._select_btn = QtGui.QPushButton("Select")
-        self._file_server_port_le = QtGui.QLineEdit(
-            cfg.DEFAULT_FILE_SERVER_PORT)
         self._file_server_data_folder_le = QtGui.QLineEdit(
             cfg.DEFAULT_FILE_SERVER_FOLDER)
 
         self._disabled_widgets_during_file_serving = [
-            self._file_server_port_le,
             self._file_server_data_folder_le,
             self._select_btn
         ]
@@ -348,6 +345,8 @@ class MainGUI(QtGui.QMainWindow):
 
         self._disabled_widgets_during_daq = [
             self._open_geometry_file_at,
+            self._save_image_at,
+            self._load_mask_at,
             self._hostname_le,
             self._port_le,
             self._pulse_range1_le,
@@ -364,7 +363,8 @@ class MainGUI(QtGui.QMainWindow):
             self._on_pulse_le,
             self._off_pulse_le,
             self._normalization_range_le,
-            self._fom_range_le
+            self._fom_range_le,
+            self._ma_window_le
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
@@ -442,6 +442,7 @@ class MainGUI(QtGui.QMainWindow):
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
         fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
+        ma_window_lb = QtGui.QLabel("M.A. window: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(energy_lb, 0, 0, 1, 1)
@@ -454,6 +455,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._normalization_range_le, 3, 1, 1, 1)
         layout.addWidget(fom_range_lb, 4, 0, 1, 1)
         layout.addWidget(self._fom_range_le, 4, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 5, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 5, 1, 1, 1)
 
         self._ep_setup_gp.setLayout(layout)
 
@@ -466,7 +469,7 @@ class MainGUI(QtGui.QMainWindow):
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
-        pulse_range_lb = QtGui.QLabel("Pulse No. range: ")
+        pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range0_le.setFixedHeight(28)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
@@ -520,16 +523,12 @@ class MainGUI(QtGui.QMainWindow):
     def _initFileServerUI(self):
         layout = QtGui.QGridLayout()
 
-        port_lb = QtGui.QLabel("Port: ")
-        self._file_server_port_le.setFixedHeight(28)
         self._select_btn.clicked.connect(self._set_data_folder)
         self._file_server_data_folder_le.setFixedHeight(28)
         self._select_btn.setToolTip("Select data folder")
 
         layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
         layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        layout.addWidget(port_lb, 0, 4, 1, 1)
-        layout.addWidget(self._file_server_port_le, 0, 5, 1, 1)
         layout.addWidget(self._select_btn, 1, 0, 1, 1)
         layout.addWidget(self._file_server_data_folder_le, 1, 1, 1, 5)
         self._file_server_widget.setLayout(layout)
@@ -544,8 +543,7 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            # data is a np.ma.MaskedArray object
-            self._data = self._daq_queue.pop()
+            self._data = self._daq_queue.popleft()
         except IndexError:
             return
 
@@ -559,8 +557,6 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
-        t0 = time.perf_counter()
-
         # update the plots in the main GUI
         self._lineplot_widget.update(self._data)
         self._image_widget.update(self._data)
@@ -570,9 +566,6 @@ class MainGUI(QtGui.QMainWindow):
             w.update(self._data)
 
         logger.info("Updated train with ID: {}".format(self._data.tid))
-
-        logger.debug("Time for updating the plots: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
 
     def _show_ip_window_dialog(self):
         """A dialog for individual pulse plot."""
@@ -647,13 +640,18 @@ class MainGUI(QtGui.QMainWindow):
         try:
             normalization_range = \
                 self._parse_boundary(self._normalization_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Normalization_range'!")
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
             return
         try:
             fom_range = self._parse_boundary(self._fom_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'FOM_range'!")
+        except ValueError as e:
+            logger.error("<FOM range>: " + str(e))
+            return
+
+        ma_window_width = int(self._ma_window_le.text())
+        if ma_window_width < 1:
+            logger.error("Moving average window width < 1!")
             return
 
         w = LaserOnOffWindow(
@@ -662,7 +660,9 @@ class MainGUI(QtGui.QMainWindow):
             off_pulse_ids,
             normalization_range,
             fom_range,
+            ma_window_width=ma_window_width,
             parent=self)
+
         self._opened_windows_count += 1
         self._opened_windows[window_id] = w
         logger.info("Open new window for on-pulse(s): {} and off-pulse(s): {}".
@@ -676,13 +676,13 @@ class MainGUI(QtGui.QMainWindow):
         try:
             normalization_range = \
                 self._parse_boundary(self._normalization_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Normalization_range'!")
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
             return
         try:
             fom_range = self._parse_boundary(self._fom_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'FOM_range'!")
+        except ValueError as e:
+            logger.error("<FOM range>: " + str(e))
             return
 
         w = SanityCheckWindow(window_id, normalization_range, fom_range,
@@ -704,7 +704,6 @@ class MainGUI(QtGui.QMainWindow):
     def on_exit_running(self):
         """Actions taken at the beginning of 'run' state."""
         self._is_running = False
-        logger.info("DAQ stopped!")
 
         self._daq_worker.terminate()
 
@@ -713,16 +712,11 @@ class MainGUI(QtGui.QMainWindow):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
 
+        logger.info("DAQ stopped!")
+
     def on_enter_running(self):
         """Actions taken at the end of 'run' state."""
         self._is_running = True
-
-        client_addr = "tcp://" \
-                      + self._hostname_le.text().strip() \
-                      + ":" \
-                      + self._port_le.text().strip()
-        self._client = Client(client_addr)
-        logger.info("Bind to {}".format(client_addr))
 
         if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
@@ -746,17 +740,25 @@ class MainGUI(QtGui.QMainWindow):
         try:
             integration_range = self._parse_boundary(
                 self._itgt_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Integration range'!")
+        except ValueError as e:
+            logger.error("<Integration range>: " + str(e))
             return
         try:
             mask_range = self._parse_boundary(self._mask_range_le.text())
-        except ValueError:
-            logger.error("Invalid input for 'Mask range'!")
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
             return
 
         integration_points = int(self._itgt_points_le.text().strip())
+
+        client_addr = "tcp://" \
+                      + self._hostname_le.text().strip() \
+                      + ":" \
+                      + self._port_le.text().strip()
+
         try:
+            self._client = Client(client_addr)
+
             self._daq_worker = DaqWorker(
                 self._client,
                 self._daq_queue,
@@ -817,7 +819,7 @@ class MainGUI(QtGui.QMainWindow):
     def _on_start_serve_file(self):
         """Actions taken at the beginning of file serving."""
         folder = self._file_server_data_folder_le.text().strip()
-        port = int(self._file_server_port_le.text().strip())
+        port = int(self._port_le.text().strip())
 
         self._file_server = FileServer(folder, port)
         try:
@@ -865,10 +867,14 @@ class MainGUI(QtGui.QMainWindow):
 
     @staticmethod
     def _parse_boundary(text):
-        lb, ub = [ast.literal_eval(x.strip()) for x in text.split(",")]
+        try:
+            lb, ub = [ast.literal_eval(x.strip()) for x in text.split(",")]
+        except Exception:
+            raise ValueError("Invalid input!")
 
         if lb > ub:
             raise ValueError("lower boundary > upper boundary!")
+
         return lb, ub
 
     @staticmethod

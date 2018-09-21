@@ -34,15 +34,27 @@ def integrate_curve(y, x, range_=None):
     return itgt if itgt else 1.0
 
 
+def array2image(x):
+    """Convert array data to image data."""
+    np.nan_to_num(x, False)
+    x /= cfg.DISPLAY_RANGE[1]
+    x *= 255.0
+    return x.astype(np.uint8)
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
     Attributes:
         tid (int): train ID.
         momentum (numpy.ndarray): x-axis of azimuthal integration result.
+            Shape = (momentum)
         intensity (numpy.ndarray): y-axis of azimuthal integration result.
+            Shape = (pulse_id, intensity)
         image (numpy.ndarray): assembled images for all the pulses.
-        image_avg (numpy.ndarray): average of the assembled images over pulses.
+            Shape = (pulse_id, y, x)
+        image_avg (2D numpy.ndarray): average of the assembled images over
+            pulses. Shape = (y, x)
     """
     def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
         """Initialization."""
@@ -54,12 +66,19 @@ class ProcessedData:
         self.momentum = momentum
         self.intensity = intensity
 
+        t0 = time.perf_counter()
+
         self.image = None
         self.image_avg = None
         # prefer data processing outside the GUI
         if assembled is not None:
-            self.image = self.array2image(assembled)
-            self.image_avg = self.array2image(np.mean(assembled, axis=0))
+            # Visualize the individual image is optional. Therefore, we should
+            # delay the array2image operation.
+            self.image = assembled
+            self.image_avg = array2image(np.nanmean(assembled, axis=0))
+
+        logger.debug("Time for pre-processing: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
     @property
     def tid(self):
@@ -71,13 +90,6 @@ class ProcessedData:
                 or self.image is None:
             return True
         return False
-
-    @staticmethod
-    def array2image(x):
-        """Convert array data to image data."""
-        img = x / cfg.DISPLAY_RANGE[1]
-        img *= 255.0
-        return np.ma.filled(np.clip(img, 0, 255).astype(np.uint8), 0)
 
 
 class DataProcessor(object):
@@ -107,7 +119,7 @@ class DataProcessor(object):
         self.integration_points = kwargs['integration_points']
 
         self.mask_range = kwargs['mask_range']
-        self.mask = kwargs['mask']
+        self.img_mask = kwargs['mask']
 
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
@@ -129,27 +141,35 @@ class DataProcessor(object):
                                        rot3=0,
                                        wavelength=self.wavelength)
 
-        # apply inf, NaN and range mask to the assembled image
-        # masked is a np.ma.MaskedArray object
-        masked = np.ma.masked_outside(np.ma.masked_invalid(assembled),
-                                      self.mask_range[0],
-                                      self.mask_range[1])
+        t0 = time.perf_counter()
+
+        mask = np.zeros_like(assembled, dtype=bool)
+        assembled[np.isnan(assembled)] = np.inf
+        mask[(assembled < self.mask_range[0]) |
+             (assembled > self.mask_range[1])] = True
+
+        if self.img_mask is not None:
+            for i in range(assembled.shape[0]):
+                if self.img_mask.shape != assembled[0].shape:
+                    raise ValueError(
+                        "Mask and image have different shapes! {} and {}".
+                        format(self.img_mask.shape, assembled[i].shape))
+                mask[i][self.img_mask == 255] = True
+
+        assembled[mask] = np.nan
+
+        logger.debug("Time for masking: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
+
+        t0 = time.perf_counter()
 
         momentum = None
         intensities = []
         for i in range(assembled.shape[0]):
-            if self.mask is not None:
-                if self.mask.shape != assembled[i].shape:
-                    raise ValueError(
-                        "Mask and image have different shapes! {} and {}".
-                        format(self.mask.shape, assembled[i].shape))
-                masked[i].mask[self.mask == 255] = True
-
-            # Here the assembled is still the original image data
-            res = ai.integrate1d(masked[i],
+            res = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
-                                 mask=masked[i].mask,
+                                 mask=mask[i],
                                  radial_range=self.integration_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
@@ -163,7 +183,7 @@ class DataProcessor(object):
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
-                             assembled=masked)
+                             assembled=assembled)
 
         return data
 
@@ -172,25 +192,22 @@ class DataProcessor(object):
         data, metadata = calibrated_data
 
         t0 = time.perf_counter()
+
         if from_file is False:
             if len(metadata.items()) > 1:
                 logger.warning("Found multiple data sources!")
 
-            # explicitly specify the source name to avoid potential bug
-            key = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
-
-            tid = metadata[key]["timestamp.tid"]
-            modules_data = data[key]["image.data"]
+            tid = metadata[cfg.SOURCE]["timestamp.tid"]
+            modules_data = data[cfg.SOURCE]["image.data"]
 
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
-            logger.debug("Time for manipulating stacked data: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
             modules_data = stack_detector_data(data, "image.data", only="LPD")
-            logger.debug("Time for stacking detector data: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
+
+        logger.debug("Time for moveaxis/stacking: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         if hasattr(modules_data, 'shape') is False \
                 or modules_data.shape[-3:] != (16, 256, 256):

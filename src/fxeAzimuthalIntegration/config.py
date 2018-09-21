@@ -10,6 +10,8 @@ class DataSource(IntEnum):
 
 
 class Config:
+    SOURCE = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
+
     # distance sample - detector plan (orthogonal distance, not along the
     # beam), in meter
     DIST = 0.2
@@ -48,7 +50,7 @@ class Config:
     DISPLAY_RANGE = (0, 2000)
 
     # *********************************************************************
-    MAX_QUEUE_SIZE = 10
+    MAX_QUEUE_SIZE = 2
 
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz
