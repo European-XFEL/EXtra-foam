@@ -84,9 +84,6 @@ class ProcessedData:
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        logger.debug("Time for pre-processing: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
     @property
     def tid(self):
         return self._tid
