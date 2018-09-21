@@ -27,6 +27,7 @@ from .plot_widgets import (
 )
 
 from .data_acquisition import DaqWorker
+from .data_processing import DataProcessor
 from .file_server import FileServer
 from .config import Config as cfg
 from .config import DataSource
@@ -142,8 +143,12 @@ class MainGUI(QtGui.QMainWindow):
         self.setCentralWidget(self._cw)
 
         self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
-        # a DAQ worker which process the data in another thread
+        self._proc_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+
+        # a DAQ worker which aquires the data in another thread
         self._daq_worker = None
+        # a data processing worker which process the data in another thread
+        self._proc_worker = None
 
         # *************************************************************
         # Tool bar
@@ -540,9 +545,9 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            self._data = self._daq_queue.get_nowait()
+            self._data = self._proc_queue.get_nowait()
         except Empty:
-            time.sleep(0)
+            time.sleep(0.001)
             return
 
         # clear the previous plots no matter what comes next
@@ -704,6 +709,15 @@ class MainGUI(QtGui.QMainWindow):
         self._is_running = False
 
         self._daq_worker.terminate()
+        self._proc_worker.terminate()
+
+        # TODO: self._daq_worker.join()
+        self._proc_worker.join()
+
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+        with self._proc_queue.mutex:
+            self._proc_queue.queue.clear()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
@@ -755,11 +769,9 @@ class MainGUI(QtGui.QMainWindow):
                       + self._port_le.text().strip()
 
         try:
-
-            self._daq_worker = DaqWorker(
-                client_addr,
-                self._daq_queue,
-                data_source,
+            self._proc_worker = DataProcessor(
+                self._daq_queue, self._proc_queue,
+                source=data_source,
                 pulse_range=pulse_range,
                 geom_file=geom_file,
                 quad_positions=quad_positions,
@@ -773,11 +785,21 @@ class MainGUI(QtGui.QMainWindow):
                 mask_range=mask_range,
                 mask=self._mask_image
             )
+
+            self._daq_worker = DaqWorker(client_addr, self._daq_queue)
         except Exception as e:
             logger.error(e)
             return
 
+        # remove when Client.next() has timeout option
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+
+        logger.debug("Size of in and out queues: {}, {}".
+                     format(self._daq_queue.qsize(), self._proc_queue.qsize()))
+
         self._daq_worker.start()
+        self._proc_worker.start()
 
         logger.info("DAQ started!")
         logger.info("Azimuthal integration parameters:\n"

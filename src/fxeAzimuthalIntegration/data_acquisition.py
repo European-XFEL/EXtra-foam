@@ -10,27 +10,25 @@ All rights reserved.
 """
 import time
 from threading import Thread
+from queue import Full
 
 from karabo_bridge import Client
 
-from .data_processing import DataProcessor
 from .logging import logger
-from .config import DataSource
 
 
 class DaqWorker(Thread):
-    def __init__(self, address, out_queue, source, **kwargs):
+    def __init__(self, address, out_queue):
         """Initialization."""
         super().__init__()
 
-        self._source = source
         self._address = address
         self._out_queue = out_queue
-        self._processor = DataProcessor(**kwargs)
         self._running = True
 
     def run(self):
         """Override."""
+        logger.debug("Start data acquisition...")
         with Client(self._address) as client:
             while self._running is True:
 
@@ -41,29 +39,10 @@ class DaqWorker(Thread):
                 logger.debug("Time for retrieving data from the server: {:.1f} ms"
                              .format(1000 * (time.perf_counter() - t0)))
 
-                t0 = time.perf_counter()
-
-                if self._source == DataSource.CALIBRATED_FILE:
-                    processed_data = self._processor.process_calibrated_data(
-                        data, from_file=True)
-                elif self._source == DataSource.CALIBRATED:
-                    processed_data = self._processor.process_calibrated_data(data)
-                elif self._source == DataSource.ASSEMBLED:
-                    processed_data = self._processor.process_assembled_data(data)
-                elif self._source == DataSource.PROCESSED:
-                    processed_data = data[0]
-                else:
-                    raise ValueError("Unknown data source!")
-
-                logger.debug("Time for data processing: {:.1f} ms in total!\n"
-                             .format(1000 * (time.perf_counter() - t0)))
-
-                logger.debug("Current queue size: {}".format(self._out_queue.qsize()))
-
-                self._out_queue.put(processed_data)
-
-        with self._out_queue.mutex:
-            self._out_queue.queue.clear()
+                try:
+                    self._out_queue.put(data, timeout=5)
+                except Full:
+                    continue
 
     def terminate(self):
         self._running = False

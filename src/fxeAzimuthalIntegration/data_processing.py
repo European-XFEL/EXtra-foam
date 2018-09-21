@@ -9,6 +9,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
+from threading import Thread
+from queue import Empty, Full
 
 import numpy as np
 from scipy import constants
@@ -18,6 +20,7 @@ from h5py import File
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
+from .config import DataSource
 from .config import Config as cfg
 from .logging import logger
 
@@ -92,14 +95,20 @@ class ProcessedData:
         return False
 
 
-class DataProcessor(object):
+class DataProcessor(Thread):
     """Class for data processing.
 
     Attributes:
         pulse_range (tuple): (min. pulse ID, max. pulse ID) to be processed.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, in_queue, out_queue, **kwargs):
         """Initialization."""
+        super().__init__()
+
+        self._in_queue = in_queue
+        self._out_queue = out_queue
+
+        self.source = kwargs['source']
         self.pulse_range = kwargs['pulse_range']
 
         self._geom = None
@@ -121,6 +130,44 @@ class DataProcessor(object):
         self.mask_range = kwargs['mask_range']
         self.img_mask = kwargs['mask']
 
+        self._running = False
+
+    def run(self):
+        logger.debug("Start data processing...")
+        self._running = True
+        while self._running:
+            try:
+                data = self._in_queue.get(timeout=0.01)
+            except Empty:
+                continue
+
+            t0 = time.perf_counter()
+
+            if self.source == DataSource.CALIBRATED_FILE:
+                processed_data = self.process_calibrated_data(data, from_file=True)
+            elif self.source == DataSource.CALIBRATED:
+                processed_data = self.process_calibrated_data(data)
+            elif self.source == DataSource.ASSEMBLED:
+                processed_data = self.process_assembled_data(data)
+            elif self.source == DataSource.PROCESSED:
+                processed_data = data[0]
+            else:
+                raise ValueError("Unknown data source!")
+
+            logger.debug("Time for data processing: {:.1f} ms in total!\n"
+                         .format(1000 * (time.perf_counter() - t0)))
+
+            try:
+                self._out_queue.put(processed_data)
+            except Full:
+                pass
+
+            logger.debug("Size of in and out queues: {}, {}".
+                         format(self._in_queue.qsize(), self._out_queue.qsize()))
+
+    def terminate(self):
+        self._running = False
+
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
 
@@ -129,8 +176,6 @@ class DataProcessor(object):
 
         :return ProcessedData: data after processing.
         """
-        t0 = time.perf_counter()
-
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
                                        poni1=self.cy,
                                        poni2=self.cx,
