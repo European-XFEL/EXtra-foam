@@ -10,9 +10,10 @@ All rights reserved.
 """
 import sys
 import os
+import time
 import logging
 import ast
-from collections import deque
+from queue import Queue, Empty
 
 import numpy as np
 from imageio import imread, imsave
@@ -142,8 +143,7 @@ class MainGUI(QtGui.QMainWindow):
         self._cw = QtGui.QWidget()  # the central widget
         self.setCentralWidget(self._cw)
 
-        # drop the oldest element when the queue is full
-        self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
+        self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
         # a DAQ worker which process the data in another thread
         self._daq_worker = None
         self._client = None
@@ -543,8 +543,9 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            self._data = self._daq_queue.popleft()
-        except IndexError:
+            self._data = self._daq_queue.get_nowait()
+        except Empty:
+            time.sleep(0)
             return
 
         # clear the previous plots no matter what comes next

@@ -30,7 +30,7 @@ class DaqWorker(Thread):
     def run(self):
         """Override."""
         while self._running is True:
-            # retrieve
+
             t0 = time.perf_counter()
 
             data = self._client.next()
@@ -55,9 +55,12 @@ class DaqWorker(Thread):
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
-            self._out_queue.append(processed_data)
+            logger.debug("Current queue size: {}".format(self._out_queue.qsize()))
 
-        self._out_queue.clear()
+            self._out_queue.put(processed_data)
+
+        with self._out_queue.mutex:
+            self._out_queue.queue.clear()
 
     def terminate(self):
         self._running = False
