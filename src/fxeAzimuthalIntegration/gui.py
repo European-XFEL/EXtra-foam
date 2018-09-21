@@ -19,8 +19,6 @@ import numpy as np
 from imageio import imread, imsave
 import zmq
 
-from karabo_bridge import Client
-
 from .pyqtgraph.Qt import QtCore, QtGui
 from .logging import GuiLogger, logger
 from .plot_widgets import (
@@ -146,7 +144,6 @@ class MainGUI(QtGui.QMainWindow):
         self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
         # a DAQ worker which process the data in another thread
         self._daq_worker = None
-        self._client = None
 
         # *************************************************************
         # Tool bar
@@ -758,10 +755,9 @@ class MainGUI(QtGui.QMainWindow):
                       + self._port_le.text().strip()
 
         try:
-            self._client = Client(client_addr)
 
             self._daq_worker = DaqWorker(
-                self._client,
+                client_addr,
                 self._daq_queue,
                 data_source,
                 pulse_range=pulse_range,
