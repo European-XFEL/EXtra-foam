@@ -10,6 +10,8 @@ class DataSource(IntEnum):
 
 
 class Config:
+    SOURCE = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
+
     # distance sample - detector plan (orthogonal distance, not along the
     # beam), in meter
     DIST = 0.2
@@ -34,13 +36,13 @@ class Config:
     # The following is valid-ish for the 20180318 geometry
     QUAD_POSITIONS = [(-13.0, -299.0), (11.0, -8.0), (-254.0, 16.0), (-278.0, -275.0)]
 
-    # DEFAULT_SERVER_SRC = DataSource.CALIBRATED
-    # DEFAULT_SERVER_ADDR = "10.253.0.53"
-    # DEFAULT_SERVER_PORT = "4501"
+    DEFAULT_SERVER_SRC = DataSource.CALIBRATED
+    DEFAULT_SERVER_ADDR = "10.253.0.53"
+    DEFAULT_SERVER_PORT = "4501"
 
-    DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
-    DEFAULT_SERVER_ADDR = "localhost"
-    DEFAULT_SERVER_PORT = "12345"
+    # DEFAULT_SERVER_SRC = DataSource.CALIBRATED_FILE
+    # DEFAULT_SERVER_ADDR = "localhost"
+    # DEFAULT_SERVER_PORT = "12345"
 
     DEFAULT_GEOMETRY_FILE = os.path.join(os.path.expanduser("~"),
                                          "fxe-data/lpd_mar_18.h5")
@@ -48,7 +50,7 @@ class Config:
     DISPLAY_RANGE = (0, 2000)
 
     # *********************************************************************
-    MAX_QUEUE_SIZE = 5
+    MAX_QUEUE_SIZE = 2
 
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz

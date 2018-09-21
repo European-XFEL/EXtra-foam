@@ -9,6 +9,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import abc
+from collections import deque
 
 import numpy as np
 
@@ -19,7 +20,7 @@ from .pyqtgraph import (
 )
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from .config import Config as cfg
-from .data_processing import integrate_curve, sub_array_with_range
+from .data_processing import array2image, integrate_curve, sub_array_with_range
 
 
 COLOR_MAP = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
@@ -57,7 +58,7 @@ class MainGuiLinePlotWidget(GraphicsLayoutWidget):
         for i, intensity in enumerate(data.intensity):
             self._plot.plot(momentum, intensity,
                             pen=mkPen(intColor(i, hues=9, values=5), width=2))
-        self._plot.setTitle("Train ID: {}, No. pulses: {}".
+        self._plot.setTitle("Train ID: {}, number of pulses: {}".
                             format(data.tid, len(data.intensity)))
 
 
@@ -168,7 +169,7 @@ class IndividualPulseWindow(PlotWindow):
             else:
                 line = self._gl_widget.addPlot()
 
-            line.setTitle("Pulse No. {:04d}".format(pulse_id))
+            line.setTitle("Pulse ID {:04d}".format(pulse_id))
             line.setLabel('left', "Scattering signal (arb. u.)")
             if pulse_id == self._pulse_ids[-1]:
                 # all plots share one x label
@@ -203,18 +204,21 @@ class IndividualPulseWindow(PlotWindow):
 
             if data is not None and self._show_image is True:
                 self._image_items[i].setImage(
-                    np.flip(data.image[pulse_id], axis=0), autoLevels=False)
+                    array2image(np.flip(data.image[pulse_id], axis=0)),
+                    autoLevels=False)
 
 
 class LaserOnOffWindow(PlotWindow):
     plot_w = 800
     plot_h = 450
+
     def __init__(self,
                  window_id,
                  on_pulse_ids,
                  off_pulse_ids,
                  normalization_range,
                  fom_range, *,
+                 ma_window_width=9999,
                  parent=None):
         """Initialization."""
         super().__init__(window_id, parent=parent)
@@ -227,6 +231,10 @@ class LaserOnOffWindow(PlotWindow):
         # The average data
         self._on_pulse = None
         self._off_pulse = None
+
+        self._on_pulse_hist = deque()
+        self._off_pulse_hist = deque()
+
         # The history of integrated difference between on and off pulses
         self._fom_hist = []
 
@@ -239,6 +247,8 @@ class LaserOnOffWindow(PlotWindow):
 
         self._normalization_range = normalization_range
         self._fom_range = fom_range
+
+        self._ma_window_width = ma_window_width
 
         pen1 = mkPen(QtGui.QColor(
             255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
@@ -271,7 +281,7 @@ class LaserOnOffWindow(PlotWindow):
         self._gl_widget.setFixedSize(self.plot_w, 2*self.plot_h)
 
         self._gl_widget.addLabel(
-            "On -pulse IDs: {}<br>Off-pulse IDs: {}".
+            "On-pulse IDs: {}<br>Off-pulse IDs: {}".
             format(', '.join(str(i) for i in self._on_pulse_ids),
                    ', '.join(str(i) for i in self._off_pulse_ids)))
 
@@ -288,7 +298,7 @@ class LaserOnOffWindow(PlotWindow):
         p2 = self._gl_widget.addPlot()
         self._plot_items.append(p2)
         p2.setLabel('left', "Integrated difference (arb.)")
-        p2.setLabel('bottom', "Trains No.")
+        p2.setLabel('bottom', "Train ID")
         p2.setTitle(' ')
 
     def initCtrlUI(self):
@@ -311,20 +321,29 @@ class LaserOnOffWindow(PlotWindow):
         self._count += 1
 
         momentum = data.momentum
+
+        this_on_pulse = data.intensity[self._on_pulse_ids].mean(axis=0)
+        this_off_pulse = data.intensity[self._off_pulse_ids].mean(axis=0)
+
+        self._on_pulse_hist.append(this_on_pulse)
+        self._off_pulse_hist.append(this_off_pulse)
+
         if self._count == 1:
             # the first data point
-            self._on_pulse = \
-                data.intensity[self._on_pulse_ids].mean(axis=0)
-            self._off_pulse = \
-                data.intensity[self._off_pulse_ids].mean(axis=0)
+            self._on_pulse = this_on_pulse
+            self._off_pulse = this_off_pulse
         else:
             # apply moving average
-            self._on_pulse += \
-                data.intensity[self._on_pulse_ids].mean(axis=0) \
-                / self._count - self._on_pulse / (self._count - 1)
-            self._off_pulse += \
-                data.intensity[self._off_pulse_ids].mean(axis=0) \
-                / self._count - self._off_pulse / (self._count - 1)
+            self._on_pulse += this_on_pulse /self._count \
+                              - self._on_pulse / (self._count - 1)
+            self._off_pulse += this_off_pulse / self._count \
+                               - self._off_pulse / (self._count - 1)
+
+            if len(self._on_pulse_hist) > self._ma_window_width:
+                self._on_pulse -= \
+                    self._on_pulse_hist.popleft() / self._ma_window_width
+                self._off_pulse -= \
+                    self._off_pulse_hist.popleft() / self._ma_window_width
 
         # normalize azimuthal integration curves
         normalized_on_pulse = self._on_pulse / integrate_curve(
@@ -383,6 +402,7 @@ class LaserOnOffWindow(PlotWindow):
 class SanityCheckWindow(PlotWindow):
     plot_w = 800
     plot_h = 450
+
     def __init__(self, window_id, normalization_range, fom_range, *,
                  parent=None):
         """Initialization."""
@@ -408,7 +428,7 @@ class SanityCheckWindow(PlotWindow):
         p = self._gl_widget.addPlot()
         self._plot_items.append(p)
         p.setLabel('left', "Integrated difference (arb.)")
-        p.setLabel('bottom', "Pulse No.")
+        p.setLabel('bottom', "Pulse ID")
         p.setTitle(' ')
 
     def update(self, data):

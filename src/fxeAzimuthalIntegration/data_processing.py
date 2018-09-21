@@ -9,6 +9,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
+from threading import Thread
+from queue import Empty, Full
 
 import numpy as np
 from scipy import constants
@@ -35,15 +37,27 @@ def integrate_curve(y, x, range_=None):
     return itgt if itgt else 1.0
 
 
+def array2image(x):
+    """Convert array data to image data."""
+    np.nan_to_num(x, False)
+    x /= cfg.DISPLAY_RANGE[1]
+    x *= 255.0
+    return x.astype(np.uint8)
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
     Attributes:
         tid (int): train ID.
         momentum (numpy.ndarray): x-axis of azimuthal integration result.
+            Shape = (momentum)
         intensity (numpy.ndarray): y-axis of azimuthal integration result.
+            Shape = (pulse_id, intensity)
         image (numpy.ndarray): assembled images for all the pulses.
-        image_avg (numpy.ndarray): average of the assembled images over pulses.
+            Shape = (pulse_id, y, x)
+        image_avg (2D numpy.ndarray): average of the assembled images over
+            pulses. Shape = (y, x)
     """
     def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
         """Initialization."""
@@ -61,8 +75,13 @@ class ProcessedData:
         self.image_avg = None
         # prefer data processing outside the GUI
         if assembled is not None:
-            self.image = self.array2image(assembled)
-            self.image_avg = self.array2image(np.mean(assembled, axis=0))
+            # Visualize the individual image is optional. Therefore, we should
+            # delay the array2image operation.
+            self.image = assembled
+            self.image_avg = array2image(np.nanmean(assembled, axis=0))
+
+        logger.debug("Time for pre-processing: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -78,22 +97,20 @@ class ProcessedData:
             return True
         return False
 
-    @staticmethod
-    def array2image(x):
-        """Convert array data to image data."""
-        img = x / cfg.DISPLAY_RANGE[1]
-        img *= 255.0
-        return np.ma.filled(np.clip(img, 0, 255).astype(np.uint8), 0)
 
-
-class DataProcessor(object):
+class DataProcessor(Thread):
     """Class for data processing.
 
     Attributes:
         pulse_range (tuple): (min. pulse ID, max. pulse ID) to be processed.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, in_queue, out_queue, **kwargs):
         """Initialization."""
+        super().__init__()
+
+        self._in_queue = in_queue
+        self._out_queue = out_queue
+
         self.source = kwargs['source']
         self.pulse_range = kwargs['pulse_range']
 
@@ -114,14 +131,18 @@ class DataProcessor(object):
         self.integration_points = kwargs['integration_points']
 
         self.mask_range = kwargs['mask_range']
-        self.mask = kwargs['mask']
+        self.img_mask = kwargs['mask']
 
         self._running = False
 
-    def run(self, in_queue, out_queue):
+    def run(self):
+        logger.debug("Start data processing...")
         self._running = True
         while self._running:
-            data = in_queue.get()
+            try:
+                data = self._in_queue.get(timeout=0.01)
+            except Empty:
+                continue
 
             t0 = time.perf_counter()
 
@@ -139,10 +160,13 @@ class DataProcessor(object):
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
-            out_queue.put(processed_data)
+            try:
+                self._out_queue.put(processed_data)
+            except Full:
+                pass
 
             logger.debug("Size of in and out queues: {}, {}".
-                         format(in_queue.qsize(), out_queue.qsize()))
+                         format(self._in_queue.qsize(), self._out_queue.qsize()))
 
     def terminate(self):
         self._running = False
@@ -167,11 +191,20 @@ class DataProcessor(object):
 
         t0 = time.perf_counter()
 
-        # apply inf, NaN and range mask to the assembled image
-        # masked is a np.ma.MaskedArray object
-        masked = np.ma.masked_outside(np.ma.masked_invalid(assembled),
-                                      self.mask_range[0],
-                                      self.mask_range[1])
+        mask = np.zeros_like(assembled, dtype=bool)
+        assembled[np.isnan(assembled)] = np.inf
+        mask[(assembled < self.mask_range[0]) |
+             (assembled > self.mask_range[1])] = True
+
+        if self.img_mask is not None:
+            for i in range(assembled.shape[0]):
+                if self.img_mask.shape != assembled[0].shape:
+                    raise ValueError(
+                        "Mask and image have different shapes! {} and {}".
+                        format(self.img_mask.shape, assembled[i].shape))
+                mask[i][self.img_mask == 255] = True
+
+        assembled[mask] = np.nan
 
         logger.debug("Time for masking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -181,18 +214,10 @@ class DataProcessor(object):
         momentum = None
         intensities = []
         for i in range(assembled.shape[0]):
-            if self.mask is not None:
-                if self.mask.shape != assembled[i].shape:
-                    raise ValueError(
-                        "Mask and image have different shapes! {} and {}".
-                        format(self.mask.shape, assembled[i].shape))
-                masked[i].mask[self.mask == 255] = True
-
-            # Here the assembled is still the original image data
-            res = ai.integrate1d(masked[i],
+            res = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
-                                 mask=masked[i].mask,
+                                 mask=mask[i],
                                  radial_range=self.integration_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
@@ -206,7 +231,7 @@ class DataProcessor(object):
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
-                             assembled=masked)
+                             assembled=assembled)
 
         return data
 
@@ -220,11 +245,8 @@ class DataProcessor(object):
             if len(metadata.items()) > 1:
                 logger.warning("Found multiple data sources!")
 
-            # explicitly specify the source name to avoid potential bug
-            key = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
-
-            tid = metadata[key]["timestamp.tid"]
-            modules_data = data[key]["image.data"]
+            tid = metadata[cfg.SOURCE]["timestamp.tid"]
+            modules_data = data[cfg.SOURCE]["image.data"]
 
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
