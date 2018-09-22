@@ -90,42 +90,6 @@ class InputDialogWithCheckBox(QtGui.QDialog):
             result == QtGui.QDialog.Accepted
 
 
-class InputDialogForMA(QtGui.QDialog):
-    """Input dialog for moving average on-off pulses."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    @classmethod
-    def getResult(cls, parent, *, on_pulse_ids=None, off_pulse_ids=None):
-        dialog = cls(parent)
-
-        dialog.setWindowTitle("Input dialog")
-
-        on_pulse_lb = QtGui.QLabel("On-pulse IDs")
-        on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
-        off_pulse_lb = QtGui.QLabel("Off-pulse IDs")
-        off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
-        buttons = QtGui.QDialogButtonBox(
-            QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel,
-            QtCore.Qt.Horizontal, dialog
-        )
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(on_pulse_lb)
-        layout.addWidget(on_pulse_le)
-        layout.addWidget(off_pulse_lb)
-        layout.addWidget(off_pulse_le)
-        layout.addWidget(buttons)
-        dialog.setLayout(layout)
-
-        result = dialog.exec_()
-
-        return (on_pulse_le.text(), off_pulse_le.text()), \
-            result == QtGui.QDialog.Accepted
-
-
 class MainGUI(QtGui.QMainWindow):
     """The main GUI for FXE azimuthal integration."""
     def __init__(self, screen_size=None):
@@ -186,7 +150,7 @@ class MainGUI(QtGui.QMainWindow):
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            self._show_laseronoff_window_dialog)
+            self._open_laseronoff_window)
         tool_bar.addAction(open_laseronoff_window_at)
 
         # open the in-train pulse comparison window
@@ -606,37 +570,7 @@ class MainGUI(QtGui.QMainWindow):
                     format(", ".join(str(i) for i in pulse_ids)))
         w.show()
 
-    def _show_laseronoff_window_dialog(self):
-        """A dialog for moving average on-off pulses plot."""
-        ret, ok = InputDialogForMA.getResult(
-            self,
-            on_pulse_ids=self._on_pulse_le.text(),
-            off_pulse_ids=self._off_pulse_le.text()
-        )
-
-        err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
-                  "and/or use the range operator ':'!"
-        try:
-            on_pulse_ids = self._parse_ids(ret[0])
-            off_pulse_ids = self._parse_ids(ret[1])
-        except ValueError:
-            logger.error(err_msg)
-            return
-
-        if not on_pulse_ids or not off_pulse_ids:
-            logger.error(err_msg)
-            return
-
-        common = set(on_pulse_ids).intersection(off_pulse_ids)
-        if common:
-            logger.error("Pulse IDs {} are found in both on- and off- pulses.".
-                         format(','.join([str(v) for v in common])))
-            return
-
-        if ok:
-            self._open_laseronoff_window(on_pulse_ids, off_pulse_ids)
-
-    def _open_laseronoff_window(self, on_pulse_ids, off_pulse_ids):
+    def _open_laseronoff_window(self):
         """Open moving average on-off pulses window."""
         window_id = "{:06d}".format(self._opened_windows_count)
 
@@ -652,9 +586,28 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<FOM range>: " + str(e))
             return
 
-        ma_window_width = int(self._ma_window_le.text())
-        if ma_window_width < 1:
+        ma_window_size = int(self._ma_window_le.text())
+        if ma_window_size < 1:
             logger.error("Moving average window width < 1!")
+            return
+
+        err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
+                  "and/or use the range operator ':'!"
+        try:
+            on_pulse_ids = self._parse_ids(self._on_pulse_le.text())
+            off_pulse_ids = self._parse_ids(self._off_pulse_le.text())
+        except ValueError:
+            logger.error(err_msg)
+            return
+
+        if not on_pulse_ids or not off_pulse_ids:
+            logger.error(err_msg)
+            return
+
+        common = set(on_pulse_ids).intersection(off_pulse_ids)
+        if common:
+            logger.error("Pulse IDs {} are found in both on- and off- pulses.".
+                         format(','.join([str(v) for v in common])))
             return
 
         w = LaserOnOffWindow(
@@ -663,7 +616,7 @@ class MainGUI(QtGui.QMainWindow):
             off_pulse_ids,
             normalization_range,
             fom_range,
-            ma_window_width=ma_window_width,
+            ma_window_size=ma_window_size,
             parent=self)
 
         self._opened_windows_count += 1
