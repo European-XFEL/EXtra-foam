@@ -159,7 +159,7 @@ class DataProcessor(Thread):
                          .format(1000 * (time.perf_counter() - t0)))
 
             try:
-                self._out_queue.put(processed_data)
+                self._out_queue.put(processed_data, timeout=5)
             except Full:
                 pass
 
