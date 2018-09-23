@@ -398,16 +398,16 @@ class LaserOnOffWindow(PlotWindow):
             self._off_pulses_ma = this_off_pulses
         else:
             # apply moving average
-            self._on_pulses_ma += this_on_pulses / self._count \
-                                  - self._on_pulses_ma / (self._count - 1)
-            self._off_pulses_ma += this_off_pulses / self._count \
-                                   - self._off_pulses_ma / (self._count - 1)
-
-            if len(self._on_pulses_hist) > ma_window_size:
-                self._on_pulses_ma -= \
-                    self._on_pulses_hist.popleft() / ma_window_size
-                self._off_pulses_ma -= \
-                    self._off_pulses_hist.popleft() / ma_window_size
+            if self._count > ma_window_size:
+                self._on_pulses_ma += \
+                    (this_on_pulses - self._on_pulses_hist.popleft()) / ma_window_size
+                self._off_pulses_ma += \
+                    (this_off_pulses - self._off_pulses_hist.popleft()) / ma_window_size
+            else:
+                self._on_pulses_ma += \
+                    (this_on_pulses - self._on_pulses_ma) / self._count
+                self._off_pulses_ma += \
+                    (this_off_pulses - self._off_pulses_ma) / self._count
 
         # normalize azimuthal integration curves
         normalized_on_pulse = self._on_pulses_ma / integrate_curve(
