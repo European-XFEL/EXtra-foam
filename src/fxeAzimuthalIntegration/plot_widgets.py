@@ -217,6 +217,10 @@ class LaserOnOffWindow(PlotWindow):
     plot_w = 800
     plot_h = 450
 
+    modes = ["Laser on/off in the same train",
+             "Laser on/off in even/odd train",
+             "Laser on/off in odd/even train"]
+
     def __init__(self,
                  window_id,
                  on_pulse_ids,
@@ -233,26 +237,25 @@ class LaserOnOffWindow(PlotWindow):
             {'name': 'Experimental setups', 'type': 'group',
              'children': [
                 {'name': 'Operation mode', 'type': 'list',
-                 'values': ["Laser on/off in the same train",
-                            "Laser on/off in even/odd train",
-                            "Laser on/off in odd/even train"],
-                 'value': "Laser on/off in the same train"},
-                {'name': 'On-pulse IDs', 'type': 'str',
+                 'values': self.modes,
+                 'value': self.modes[0]},
+                {'name': 'On-pulse IDs', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Off-pulse IDs', 'type': 'str',
+                {'name': 'Off-pulse IDs', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
             {'name': 'Data processing parameters', 'type': 'group',
              'children': [
-                 {'name': 'Normalization range', 'type': 'str',
+                 {'name': 'Normalization range', 'type': 'str', 'readonly': True,
                   'value': ', '.join([str(x) for x in normalization_range])},
-                 {'name': 'FOM range', 'type': 'str',
+                 {'name': 'FOM range', 'type': 'str', 'readonly': True,
                   'value': ', '.join([str(x) for x in fom_range])},
-                 {'name': 'MA window size', 'type': 'int', 'value': ma_window_size}]},
+                 {'name': 'MA window size', 'type': 'int', 'readonly': True,
+                  'value': ma_window_size}]},
             {'name': 'Visualization options', 'type': 'group',
              'children': [
-                 {'name': 'Difference scale', 'type': 'int', 'value': 50},
-                 {'name': 'Show normalization range', 'type': 'bool', 'value': True},
-                 {'name': 'Show FOM range', 'type': 'bool', 'value': True}]},
+                 {'name': 'Difference scale', 'type': 'int', 'value': 20},
+                 {'name': 'Show normalization range', 'type': 'bool', 'value': False},
+                 {'name': 'Show FOM range', 'type': 'bool', 'value': False}]},
             {'name': 'Actions', 'type': 'group',
              'children': [
                 {'name': 'Clear history', 'type': 'action'}]},
@@ -261,29 +264,42 @@ class LaserOnOffWindow(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
 
         self._exp_setups = p.param('Experimental setups')
+        self._exp_setups.param('Operation mode').sigValueChanged.connect(self._reset)
+
         self._vis_setups = p.param('Visualization options')
+
         self._proc_setups = p.param('Data processing parameters')
 
-        p.param('Actions', 'Clear history').sigActivated.connect(self._clear_hst)
+        p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
 
         self._count = 0  # The number of trains received
 
-        # The average data
-        self._on_pulse = None
-        self._off_pulse = None
+        # A flag which indicates a laser-on train has been received
+        # in the modes "Laser on/off in even/odd train" and
+        # "Laser on/off in odd/even train"
+        self._on_train_received = False
 
-        self._on_pulse_hist = deque()
-        self._off_pulse_hist = deque()
+        # The moving average of on/off pulses
+        self._on_pulses_ma = None
+        self._off_pulses_ma = None
 
-        # The history of integrated difference between on and off pulses
+        # The histories of on/off pulses by train, which are used in
+        # calculating moving average (MA)
+        self._on_pulses_hist = deque()
+        self._off_pulses_hist = deque()
+
+        # The history of integrated difference (FOM) between on and off pulses
+        self._fom_hist_train_id = []
         self._fom_hist = []
 
+        # an indicator of normalization range
         pen1 = mkPen(QtGui.QColor(
             255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
         brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
         self._normalization_range_lri = LinearRegionItem(
             normalization_range, pen=pen1, brush=brush1, movable=False)
 
+        # an indicator of FOM range
         pen2 = mkPen(QtGui.QColor(
             255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
         brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
@@ -301,8 +317,6 @@ class LaserOnOffWindow(PlotWindow):
         layout.addWidget(self._gl_widget)
         self._cw.setLayout(layout)
 
-        self.resize(self.plot_w + 450, self.plot_h)
-
     def initPlotUI(self):
         self._gl_widget.setFixedSize(self.plot_w, 2*self.plot_h)
 
@@ -311,9 +325,6 @@ class LaserOnOffWindow(PlotWindow):
         p1.setLabel('left', "Scattering signal (arb. u.)")
         p1.setLabel('bottom', "Momentum transfer (1/A)")
         p1.setTitle(' ')
-
-        p1.addItem(self._normalization_range_lri)
-        p1.addItem(self._fom_range_lri)
 
         self._gl_widget.nextRow()
 
@@ -325,6 +336,7 @@ class LaserOnOffWindow(PlotWindow):
 
     def initCtrlUI(self):
         control_widget = QtGui.QWidget()
+        control_widget.setMinimumWidth(450)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         control_widget.setLayout(layout)
@@ -333,6 +345,28 @@ class LaserOnOffWindow(PlotWindow):
 
     def update(self, data):
         # TODO: think it twice about how to deal with None data here
+        update_plots = False
+        mode = self._exp_setups.param('Operation mode').value()
+        if mode == self.modes[0]:
+            update_plots = True
+        else:
+            if mode == self.modes[1]:
+                flag = 0  # on-train has even train ID
+            else:
+                flag = 1  # on-train has odd train ID
+
+            # the evolution of FOM is updated if an on-train is
+            # followed by an off-train
+            if self._on_train_received is True and data.tid % 2 == 1 ^ flag:
+                update_plots = True
+
+            if data.tid % 2 == flag:
+                self._on_train_received = True
+            else:
+                self._on_train_received = False
+
+        # retrieve parameters
+
         on_pulse_ids = self._exp_setups.param('On-pulse IDs').value()
         on_pulse_ids = [int(s) for s in on_pulse_ids.split(',')]
         off_pulse_ids = self._exp_setups.param('Off-pulse IDs').value()
@@ -350,34 +384,36 @@ class LaserOnOffWindow(PlotWindow):
 
         momentum = data.momentum
 
-        this_on_pulse = data.intensity[on_pulse_ids].mean(axis=0)
-        this_off_pulse = data.intensity[off_pulse_ids].mean(axis=0)
+        # calculate average over on/off pulses respectively
+        this_on_pulses = data.intensity[on_pulse_ids].mean(axis=0)
+        this_off_pulses = data.intensity[off_pulse_ids].mean(axis=0)
 
-        self._on_pulse_hist.append(this_on_pulse)
-        self._off_pulse_hist.append(this_off_pulse)
+        # update history
+        self._on_pulses_hist.append(this_on_pulses)
+        self._off_pulses_hist.append(this_off_pulses)
 
         if self._count == 1:
             # the first data point
-            self._on_pulse = this_on_pulse
-            self._off_pulse = this_off_pulse
+            self._on_pulses_ma = this_on_pulses
+            self._off_pulses_ma = this_off_pulses
         else:
             # apply moving average
-            self._on_pulse += this_on_pulse /self._count \
-                              - self._on_pulse / (self._count - 1)
-            self._off_pulse += this_off_pulse / self._count \
-                               - self._off_pulse / (self._count - 1)
+            self._on_pulses_ma += this_on_pulses / self._count \
+                                  - self._on_pulses_ma / (self._count - 1)
+            self._off_pulses_ma += this_off_pulses / self._count \
+                                   - self._off_pulses_ma / (self._count - 1)
 
-            if len(self._on_pulse_hist) > ma_window_size:
-                self._on_pulse -= \
-                    self._on_pulse_hist.popleft() / ma_window_size
-                self._off_pulse -= \
-                    self._off_pulse_hist.popleft() / ma_window_size
+            if len(self._on_pulses_hist) > ma_window_size:
+                self._on_pulses_ma -= \
+                    self._on_pulses_hist.popleft() / ma_window_size
+                self._off_pulses_ma -= \
+                    self._off_pulses_hist.popleft() / ma_window_size
 
         # normalize azimuthal integration curves
-        normalized_on_pulse = self._on_pulse / integrate_curve(
-            self._on_pulse, momentum, normalization_range)
-        normalized_off_pulse = self._off_pulse / integrate_curve(
-            self._off_pulse, momentum, normalization_range)
+        normalized_on_pulse = self._on_pulses_ma / integrate_curve(
+            self._on_pulses_ma, momentum, normalization_range)
+        normalized_off_pulse = self._off_pulses_ma / integrate_curve(
+            self._off_pulses_ma, momentum, normalization_range)
 
         # then calculate the difference between on- and off pulse curves
         diff = normalized_on_pulse - normalized_off_pulse
@@ -386,34 +422,35 @@ class LaserOnOffWindow(PlotWindow):
         # update plots
         # ------------
 
-        # upper one
-        # plot curves of on-, off- pulses and their difference
+        # plot on/off pulses and their difference (upper plot)
         p = self._plot_items[0]
         p.addLegend(offset=(-60, 20))
         p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
         p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
         p.plot(momentum, diff_scale * diff, name="difference", pen=Pen.yellow)
 
-        if self._vis_setups.param("Show normalization range"):
+        # add normalization/FOM range if requested
+        if self._vis_setups.param("Show normalization range").value():
             p.addItem(self._normalization_range_lri)
-        if self._vis_setups.param("Show FOM range"):
+        if self._vis_setups.param("Show FOM range").value():
             p.addItem(self._fom_range_lri)
 
-        # calculate figure-of-merit (FOM) and update history
-        fom = sub_array_with_range(diff, momentum, fom_range)[0]
-        self._fom_hist.append(np.sum(np.abs(fom)))
+        # plot the evolution of fom (lower plot)
+        if update_plots:
+            # calculate figure-of-merit (FOM) and update history
+            fom = sub_array_with_range(diff, momentum, fom_range)[0]
+            self._fom_hist.append(np.sum(np.abs(fom)))
+            self._fom_hist_train_id.append(data.tid)
 
-        # lower one
-        # plot the evolution of fom
-        s = ScatterPlotItem(size=20, pen=mkPen(None),
-                            brush=mkBrush(120, 255, 255, 255))
-        s.addPoints([{'pos': (i, v), 'data': 1}
-                     for i, v in enumerate(self._fom_hist)])
+            s = ScatterPlotItem(size=20, pen=mkPen(None),
+                                brush=mkBrush(120, 255, 255, 255))
+            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                         zip(self._fom_hist_train_id, self._fom_hist)])
 
-        p = self._plot_items[1]
-        p.clear()
-        p.addItem(s)
-        p.plot(self._fom_hist, pen=Pen.yellow)
+            p = self._plot_items[1]
+            p.clear()
+            p.addItem(s)
+            p.plot(self._fom_hist_train_id, self._fom_hist, pen=Pen.yellow)
 
     def clear(self):
         """Overload.
@@ -425,16 +462,18 @@ class LaserOnOffWindow(PlotWindow):
     def mode_selected(self):
         pass
 
-    def _clear_hst(self):
+    def _reset(self):
         for p in self._plot_items:
             p.clear()
 
         self._count = 0
-        self._on_pulse = None
-        self._off_pulse = None
-        self._on_pulse_hist.clear()
-        self._off_pulse_hist.clear()
+        self._on_train_received = False
+        self._on_pulses_ma = None
+        self._off_pulses_ma = None
+        self._on_pulses_hist.clear()
+        self._off_pulses_hist.clear()
         self._fom_hist.clear()
+        self._fom_hist_train_id.clear()
 
 
 class SanityCheckWindow(PlotWindow):
