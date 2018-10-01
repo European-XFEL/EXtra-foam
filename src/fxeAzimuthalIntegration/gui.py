@@ -330,6 +330,7 @@ class MainGUI(QtGui.QMainWindow):
             self._geom_file_le,
             self._quad_positions_tb,
             self._energy_le,
+            self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
             self._normalization_range_le,
