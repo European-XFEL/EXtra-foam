@@ -235,9 +235,9 @@ class LaserOnOffWindow(PlotWindow):
              'children': [
                 {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
                  'value': cfg.LASER_MODES[laser_mode]},
-                {'name': 'Laser-on pulse IDs', 'type': 'str', 'readonly': True,
+                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Laser-off pulse IDs', 'type': 'str', 'readonly': True,
+                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
             {'name': 'Data processing parameters', 'type': 'group',
              'children': [

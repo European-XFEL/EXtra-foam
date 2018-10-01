@@ -599,7 +599,6 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("Moving average window width < 1!")
             return
 
-        laser_mode = self._laser_mode_cb.currentText()
         err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
                   "and/or use the range operator ':'!"
         try:
@@ -613,11 +612,15 @@ class MainGUI(QtGui.QMainWindow):
             logger.error(err_msg)
             return
 
-        common = set(on_pulse_ids).intersection(off_pulse_ids)
-        if common:
-            logger.error("Pulse IDs {} are found in both on- and off- pulses.".
-                         format(','.join([str(v) for v in common])))
-            return
+        laser_mode = self._laser_mode_cb.currentText()
+        # check pulse ID only when laser on/off pulses are in the same train
+        if laser_mode == list(cfg.LASER_MODES.keys())[0]:
+            common = set(on_pulse_ids).intersection(off_pulse_ids)
+            if common:
+                logger.error(
+                    "Pulse IDs {} are found in both on- and off- pulses.".
+                    format(','.join([str(v) for v in common])))
+                return
 
         w = LaserOnOffWindow(
             window_id,
