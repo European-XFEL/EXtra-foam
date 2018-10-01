@@ -280,6 +280,7 @@ class LaserOnOffWindow(PlotWindow):
         # in the modes "Laser on/off in even/odd train" and
         # "Laser on/off in odd/even train"
         self._on_train_received = False
+        self._off_train_received = False
 
         # The moving average of on/off pulses
         self._on_pulses_ma = None
@@ -347,10 +348,10 @@ class LaserOnOffWindow(PlotWindow):
 
     def update(self, data):
         # TODO: think it twice about how to deal with None data here
-        update_plots = False
         available_modes = list(cfg.LASER_MODES.keys())
         if self._laser_mode == available_modes[0]:
-            update_plots = True
+            self._on_train_received = True
+            self._off_train_received = True
         else:
             if self._laser_mode == available_modes[1]:
                 flag = 0  # on-train has even train ID
@@ -359,15 +360,16 @@ class LaserOnOffWindow(PlotWindow):
             else:
                 raise ValueError("Unknown laser mode")
 
-            # the evolution of FOM is updated if an on-train is
-            # followed by an off-train
+            # Off-train will only be acknowledged when an on-train
+            # was received! This ensures that in the visualization
+            # it always shows the on-train plot alone first, which
+            # is followed by a combined plots if the next train is
+            # an off-train pulse.
             if self._on_train_received is True and data.tid % 2 == 1 ^ flag:
-                update_plots = True
-
-            if data.tid % 2 == flag:
-                self._on_train_received = True
+                self._off_train_received = True
             else:
-                self._on_train_received = False
+                if data.tid % 2 == flag:
+                    self._on_train_received = True
 
         diff_scale = self._vis_setups.param('Difference scale').value()
 
@@ -418,9 +420,12 @@ class LaserOnOffWindow(PlotWindow):
         # plot on/off pulses and their difference (upper plot)
         p = self._plot_items[0]
         p.addLegend(offset=(-60, 20))
-        p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
-        p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
-        p.plot(momentum, diff_scale * diff, name="difference", pen=Pen.yellow)
+        if self._on_train_received:
+            p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
+        if self._off_train_received:
+            p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
+        if self._on_train_received and self._off_train_received:
+            p.plot(momentum, diff_scale * diff, name="difference", pen=Pen.yellow)
 
         # add normalization/FOM range if requested
         if self._vis_setups.param("Show normalization range").value():
@@ -429,7 +434,7 @@ class LaserOnOffWindow(PlotWindow):
             p.addItem(self._fom_range_lri)
 
         # plot the evolution of fom (lower plot)
-        if update_plots:
+        if self._on_train_received and self._off_train_received:
             # calculate figure-of-merit (FOM) and update history
             fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
@@ -444,6 +449,9 @@ class LaserOnOffWindow(PlotWindow):
             p.clear()
             p.addItem(s)
             p.plot(self._fom_hist_train_id, self._fom_hist, pen=Pen.yellow)
+
+            self._on_train_received = False
+            self._off_train_received = False
 
     def clear(self):
         """Overload.
