@@ -74,3 +74,5 @@ class Config:
     DEFAULT_FILE_SERVER_PORT = "12345"
     DEFAULT_FILE_SERVER_FOLDER = os.path.join(os.path.expanduser("~"),
                                               "fxe-data/r0078")
+
+    TIMEOUT = 5  # timeout in data pipeline

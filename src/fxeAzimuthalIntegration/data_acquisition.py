@@ -15,6 +15,7 @@ from queue import Full
 from karabo_bridge import Client
 
 from .logging import logger
+from .config import Config as cfg
 
 
 class DaqWorker(Thread):
@@ -36,11 +37,12 @@ class DaqWorker(Thread):
 
                 data = client.next()
 
-                logger.debug("Time for retrieving data from the server: {:.1f} ms"
-                             .format(1000 * (time.perf_counter() - t0)))
+                logger.debug(
+                    "Time for retrieving data from the server: {:.1f} ms"
+                    .format(1000 * (time.perf_counter() - t0)))
 
                 try:
-                    self._out_queue.put(data, timeout=5)
+                    self._out_queue.put(data, timeout=cfg.TIMEOUT)
                 except Full:
                     continue
 
