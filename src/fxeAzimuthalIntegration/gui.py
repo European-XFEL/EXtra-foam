@@ -228,8 +228,12 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
-        w = 90
+        w = 100
         self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
+        self._operation_mode_cb = QtGui.QComboBox()
+        self._operation_mode_cb.setFixedWidth(w)
+        for mode in cfg.OPERATION_MODES:
+            self._operation_mode_cb.addItem(mode)
         self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
         self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
@@ -404,6 +408,7 @@ class MainGUI(QtGui.QMainWindow):
         # Experiment setup panel
         # *************************************************************
         energy_lb = QtGui.QLabel("Photon energy (keV): ")
+        mode_lb = QtGui.QLabel("Laser on/off mode: ")
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
@@ -413,16 +418,18 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
         layout.addWidget(energy_lb, 0, 0, 1, 1)
         layout.addWidget(self._energy_le, 0, 1, 1, 1)
-        layout.addWidget(on_pulse_lb, 1, 0, 1, 1)
-        layout.addWidget(self._on_pulse_le, 1, 1, 1, 1)
-        layout.addWidget(off_pulse_lb, 2, 0, 1, 1)
-        layout.addWidget(self._off_pulse_le, 2, 1, 1, 1)
-        layout.addWidget(normalization_range_lb, 3, 0, 1, 1)
-        layout.addWidget(self._normalization_range_le, 3, 1, 1, 1)
-        layout.addWidget(fom_range_lb, 4, 0, 1, 1)
-        layout.addWidget(self._fom_range_le, 4, 1, 1, 1)
-        layout.addWidget(ma_window_lb, 5, 0, 1, 1)
-        layout.addWidget(self._ma_window_le, 5, 1, 1, 1)
+        layout.addWidget(mode_lb, 1, 0, 1, 1)
+        layout.addWidget(self._operation_mode_cb, 1, 1, 1, 1)
+        layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
+        layout.addWidget(self._on_pulse_le, 2, 1, 1, 1)
+        layout.addWidget(off_pulse_lb, 3, 0, 1, 1)
+        layout.addWidget(self._off_pulse_le, 3, 1, 1, 1)
+        layout.addWidget(normalization_range_lb, 4, 0, 1, 1)
+        layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
+        layout.addWidget(fom_range_lb, 5, 0, 1, 1)
+        layout.addWidget(self._fom_range_le, 5, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 6, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
 
         self._ep_setup_gp.setLayout(layout)
 
