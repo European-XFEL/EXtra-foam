@@ -243,9 +243,9 @@ class LaserOnOffWindow(PlotWindow):
              'children': [
                  {'name': 'Normalization range', 'type': 'str', 'readonly': True,
                   'value': ', '.join([str(x) for x in normalization_range])},
-                 {'name': 'FOM range', 'type': 'str', 'readonly': True,
+                 {'name': 'FOM range (1/A)', 'type': 'str', 'readonly': True,
                   'value': ', '.join([str(x) for x in fom_range])},
-                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
+                 {'name': 'M.A. window size (1/A)', 'type': 'int', 'readonly': True,
                   'value': ma_window_size}]},
             {'name': 'Visualization options', 'type': 'group',
              'children': [
