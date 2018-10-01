@@ -245,7 +245,7 @@ class LaserOnOffWindow(PlotWindow):
                   'value': ', '.join([str(x) for x in normalization_range])},
                  {'name': 'FOM range', 'type': 'str', 'readonly': True,
                   'value': ', '.join([str(x) for x in fom_range])},
-                 {'name': 'MA window size', 'type': 'int', 'readonly': True,
+                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
                   'value': ma_window_size}]},
             {'name': 'Visualization options', 'type': 'group',
              'children': [
@@ -268,6 +268,11 @@ class LaserOnOffWindow(PlotWindow):
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
 
         self._laser_mode = laser_mode
+        self._on_pulse_ids = on_pulse_ids
+        self._off_pulse_ids = off_pulse_ids
+        self._normalization_range = normalization_range
+        self._fom_range = fom_range
+        self._ma_window_size = ma_window_size
 
         self._count = 0  # The number of trains received
 
@@ -364,19 +369,6 @@ class LaserOnOffWindow(PlotWindow):
             else:
                 self._on_train_received = False
 
-        # retrieve parameters
-
-        on_pulse_ids = self._exp_setups.param('Laser-on pulse IDs').value()
-        on_pulse_ids = [int(s) for s in on_pulse_ids.split(',')]
-        off_pulse_ids = self._exp_setups.param('Laser-off pulse IDs').value()
-        off_pulse_ids = [int(s) for s in off_pulse_ids.split(',')]
-
-        normalization_range = self._proc_setups.param('Normalization range').value()
-        normalization_range = [float(s) for s in normalization_range.split(',')]
-        fom_range = self._proc_setups.param('FOM range').value()
-        fom_range = [float(s) for s in fom_range.split(',')]
-        ma_window_size = self._proc_setups.param('MA window size').value()
-
         diff_scale = self._vis_setups.param('Difference scale').value()
 
         self._count += 1
@@ -384,8 +376,8 @@ class LaserOnOffWindow(PlotWindow):
         momentum = data.momentum
 
         # calculate average over on/off pulses respectively
-        this_on_pulses = data.intensity[on_pulse_ids].mean(axis=0)
-        this_off_pulses = data.intensity[off_pulse_ids].mean(axis=0)
+        this_on_pulses = data.intensity[self._on_pulse_ids].mean(axis=0)
+        this_off_pulses = data.intensity[self._off_pulse_ids].mean(axis=0)
 
         # update history
         self._on_pulses_hist.append(this_on_pulses)
@@ -397,11 +389,13 @@ class LaserOnOffWindow(PlotWindow):
             self._off_pulses_ma = this_off_pulses
         else:
             # apply moving average
-            if self._count > ma_window_size:
+            if self._count > self._ma_window_size:
                 self._on_pulses_ma += \
-                    (this_on_pulses - self._on_pulses_hist.popleft()) / ma_window_size
+                    (this_on_pulses - self._on_pulses_hist.popleft()) \
+                    / self._ma_window_size
                 self._off_pulses_ma += \
-                    (this_off_pulses - self._off_pulses_hist.popleft()) / ma_window_size
+                    (this_off_pulses - self._off_pulses_hist.popleft()) \
+                    / self._ma_window_size
             else:
                 self._on_pulses_ma += \
                     (this_on_pulses - self._on_pulses_ma) / self._count
@@ -410,9 +404,9 @@ class LaserOnOffWindow(PlotWindow):
 
         # normalize azimuthal integration curves
         normalized_on_pulse = self._on_pulses_ma / integrate_curve(
-            self._on_pulses_ma, momentum, normalization_range)
+            self._on_pulses_ma, momentum, self._normalization_range)
         normalized_off_pulse = self._off_pulses_ma / integrate_curve(
-            self._off_pulses_ma, momentum, normalization_range)
+            self._off_pulses_ma, momentum, self._normalization_range)
 
         # then calculate the difference between on- and off pulse curves
         diff = normalized_on_pulse - normalized_off_pulse
@@ -437,7 +431,7 @@ class LaserOnOffWindow(PlotWindow):
         # plot the evolution of fom (lower plot)
         if update_plots:
             # calculate figure-of-merit (FOM) and update history
-            fom = sub_array_with_range(diff, momentum, fom_range)[0]
+            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             self._fom_hist_train_id.append(data.tid)
 

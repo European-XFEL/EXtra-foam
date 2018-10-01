@@ -414,7 +414,7 @@ class MainGUI(QtGui.QMainWindow):
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
         fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
-        ma_window_lb = QtGui.QLabel("M.A. window: ")
+        ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(energy_lb, 0, 0, 1, 1)
