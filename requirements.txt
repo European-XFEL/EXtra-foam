@@ -5,3 +5,4 @@ pyFAI>=0.15.0
 PyQt5>=5.11.0
 karabo-data>=0.1.0
 karabo-bridge>=0.2.0
+imageio>=2.1.0

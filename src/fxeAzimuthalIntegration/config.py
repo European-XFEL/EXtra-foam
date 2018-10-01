@@ -10,6 +10,8 @@ class DataSource(IntEnum):
 
 
 class Config:
+    SOURCE = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
+
     # distance sample - detector plan (orthogonal distance, not along the
     # beam), in meter
     DIST = 0.2
@@ -48,7 +50,7 @@ class Config:
     DISPLAY_RANGE = (0, 2000)
 
     # *********************************************************************
-    MAX_QUEUE_SIZE = 10
+    MAX_QUEUE_SIZE = 2
 
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz
@@ -59,13 +61,6 @@ class Config:
 
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
-
-    LINE_PLOT_WIDTH = 600
-    LINE_PLOT_HEIGHT = 260
-    LINE_PLOT_LEGEND_OFFSET = (-10, -50)
-
-    MA_PLOT_WIDTH = 800
-    MA_PLOT_HEIGHT = 900
 
     MASK_RANGE = (0, 10000)  # image pixels beyond this range will be masked
 

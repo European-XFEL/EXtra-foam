@@ -10,56 +10,39 @@ All rights reserved.
 """
 import time
 from threading import Thread
+from queue import Full
 
-from .data_processing import DataProcessor
+from karabo_bridge import Client
+
 from .logging import logger
-from .config import DataSource
 
 
 class DaqWorker(Thread):
-    def __init__(self, client, out_queue, source, **kwargs):
+    def __init__(self, address, out_queue):
         """Initialization."""
         super().__init__()
 
-        self._source = source
-        self._client = client
+        self._address = address
         self._out_queue = out_queue
-        self._processor = DataProcessor(**kwargs)
         self._running = True
 
     def run(self):
         """Override."""
-        while self._running is True:
-            # retrieve
-            t0 = time.perf_counter()
+        logger.debug("Start data acquisition...")
+        with Client(self._address) as client:
+            while self._running is True:
 
-            data = self._client.next()
+                t0 = time.perf_counter()
 
-            logger.debug("Time for retrieving data from the server: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
+                data = client.next()
 
-            t0 = time.perf_counter()
+                logger.debug("Time for retrieving data from the server: {:.1f} ms"
+                             .format(1000 * (time.perf_counter() - t0)))
 
-            if self._source == DataSource.CALIBRATED_FILE:
-                processed_data = self._processor.process_calibrated_data(
-                    data, from_file=True)
-            elif self._source == DataSource.CALIBRATED:
-                processed_data = self._processor.process_calibrated_data(data)
-            elif self._source == DataSource.ASSEMBLED:
-                processed_data = self._processor.process_assembled_data(data)
-            elif self._source == DataSource.PROCESSED:
-                processed_data = data[0]
-            else:
-                raise ValueError("Unknown data source!")
-
-            # this information will flood the GUI logger window and
-            # crash the GUI.
-            logger.debug("Total time for processing the data: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
-
-            self._out_queue.append(processed_data)
-
-        self._out_queue.clear()
+                try:
+                    self._out_queue.put(data, timeout=5)
+                except Full:
+                    continue
 
     def terminate(self):
         self._running = False

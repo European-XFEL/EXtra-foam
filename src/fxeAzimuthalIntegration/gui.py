@@ -9,26 +9,25 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import sys
-import logging
+import os
 import time
+import logging
 import ast
-from collections import deque
+from queue import Queue, Empty
 
 import numpy as np
 from imageio import imread, imsave
 import zmq
 
-from karabo_bridge import Client
-
 from .pyqtgraph.Qt import QtCore, QtGui
-from .pyqtgraph import intColor, mkPen
 from .logging import GuiLogger, logger
 from .plot_widgets import (
     IndividualPulseWindow, LaserOnOffWindow, MainGuiImageViewWidget,
-    MainGuiLinePlotWidget
+    MainGuiLinePlotWidget, SanityCheckWindow
 )
 
 from .data_acquisition import DaqWorker
+from .data_processing import DataProcessor
 from .file_server import FileServer
 from .config import Config as cfg
 from .config import DataSource
@@ -91,42 +90,6 @@ class InputDialogWithCheckBox(QtGui.QDialog):
             result == QtGui.QDialog.Accepted
 
 
-class InputDialogForMA(QtGui.QDialog):
-    """Input dialog for moving average on-off pulses."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    @classmethod
-    def getResult(cls, parent, *, on_pulse_ids=None, off_pulse_ids=None):
-        dialog = cls(parent)
-
-        dialog.setWindowTitle("Input dialog")
-
-        on_pulse_lb = QtGui.QLabel("On-pulse IDs")
-        on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
-        off_pulse_lb = QtGui.QLabel("Off-pulse IDs")
-        off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
-        buttons = QtGui.QDialogButtonBox(
-            QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel,
-            QtCore.Qt.Horizontal, dialog
-        )
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(on_pulse_lb)
-        layout.addWidget(on_pulse_le)
-        layout.addWidget(off_pulse_lb)
-        layout.addWidget(off_pulse_le)
-        layout.addWidget(buttons)
-        dialog.setLayout(layout)
-
-        result = dialog.exec_()
-
-        return (on_pulse_le.text(), off_pulse_le.text()), \
-            result == QtGui.QDialog.Accepted
-
-
 class MainGUI(QtGui.QMainWindow):
     """The main GUI for FXE azimuthal integration."""
     def __init__(self, screen_size=None):
@@ -143,27 +106,31 @@ class MainGUI(QtGui.QMainWindow):
         self._cw = QtGui.QWidget()  # the central widget
         self.setCentralWidget(self._cw)
 
-        # drop the oldest element when the queue is full
-        self._daq_queue = deque(maxlen=cfg.MAX_QUEUE_SIZE)
-        # a DAQ worker which process the data in another thread
+        self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+        self._proc_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+
+        # a DAQ worker which aquires the data in another thread
         self._daq_worker = None
-        self._client = None
+        # a data processing worker which process the data in another thread
+        self._proc_worker = None
 
         # *************************************************************
         # Tool bar
         # *************************************************************
         tool_bar = self.addToolBar("Control")
 
+        root_dir = os.path.dirname(os.path.abspath(__file__))
+
         self._start_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaPlay)),
-            "Start",
+            QtGui.QIcon(os.path.join(root_dir, "icons/start.png")),
+            "Start DAQ",
             self)
         tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.on_enter_running)
 
         self._stop_at = QtGui.QAction(
-            QtGui.QIcon(self.style().standardIcon(QtGui.QStyle.SP_MediaStop)),
-            "Stop",
+            QtGui.QIcon(os.path.join(root_dir, "icons/stop.png")),
+            "Stop DAQ",
             self)
         tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.on_exit_running)
@@ -171,27 +138,34 @@ class MainGUI(QtGui.QMainWindow):
 
         # open an input dialog for opening plots for individual pulses
         open_ip_window_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_FileDialogListView)),
-            "Plot individual pulse (compared with the average of all pulses)",
+            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
+            "Individual pulse",
             self)
         open_ip_window_at.triggered.connect(self._show_ip_window_dialog)
         tool_bar.addAction(open_ip_window_at)
 
         # open an input dialog for opening a moving average window
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_MediaSeekForward)),
-            "Plot moving average for 'on' and 'off' pulses",
+            QtGui.QIcon(os.path.join(root_dir, "icons/fom_evolution.png")),
+            "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            self._show_laseronoff_window_dialog)
+            self._open_laseronoff_window)
         tool_bar.addAction(open_laseronoff_window_at)
+
+        # open the in-train pulse comparison window
+        open_sanitycheck_window_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(root_dir, "icons/sanity_check.png")),
+            "In-train pulses comparison",
+            self)
+        open_sanitycheck_window_at.triggered.connect(
+            self._open_sanitycheck_window)
+        tool_bar.addAction(open_sanitycheck_window_at)
 
         self._open_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(
                 self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
-            "Specify geometry file",
+            "geometry file",
             self)
         self._open_geometry_file_at.triggered.connect(
             self._choose_geometry_file)
@@ -205,13 +179,12 @@ class MainGUI(QtGui.QMainWindow):
         self._save_image_at.triggered.connect(self._save_image)
         tool_bar.addAction(self._save_image_at)
 
-        self._load_image_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_DialogOpenButton)),
-            "Load image",
+        self._load_mask_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(root_dir, "icons/load_mask.png")),
+            "Load mask",
             self)
-        self._load_image_at.triggered.connect(self._choose_mask_image)
-        tool_bar.addAction(self._load_image_at)
+        self._load_mask_at.triggered.connect(self._choose_mask_image)
+        tool_bar.addAction(self._load_mask_at)
 
         # *************************************************************
         # Plots
@@ -263,6 +236,7 @@ class MainGUI(QtGui.QMainWindow):
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
         self._fom_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+        self._ma_window_le = FixedWidthLineEdit(w, "10")
 
         # *************************************************************
         # data source options
@@ -311,13 +285,10 @@ class MainGUI(QtGui.QMainWindow):
         self._server_terminate_btn.clicked.connect(
             self._on_terminate_serve_file)
         self._select_btn = QtGui.QPushButton("Select")
-        self._file_server_port_le = QtGui.QLineEdit(
-            cfg.DEFAULT_FILE_SERVER_PORT)
         self._file_server_data_folder_le = QtGui.QLineEdit(
             cfg.DEFAULT_FILE_SERVER_FOLDER)
 
         self._disabled_widgets_during_file_serving = [
-            self._file_server_port_le,
             self._file_server_data_folder_le,
             self._select_btn
         ]
@@ -340,6 +311,8 @@ class MainGUI(QtGui.QMainWindow):
 
         self._disabled_widgets_during_daq = [
             self._open_geometry_file_at,
+            self._save_image_at,
+            self._load_mask_at,
             self._hostname_le,
             self._port_le,
             self._pulse_range1_le,
@@ -356,7 +329,8 @@ class MainGUI(QtGui.QMainWindow):
             self._on_pulse_le,
             self._off_pulse_le,
             self._normalization_range_le,
-            self._fom_range_le
+            self._fom_range_le,
+            self._ma_window_le
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
@@ -364,7 +338,7 @@ class MainGUI(QtGui.QMainWindow):
         self._is_running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self._update)
-        self.timer.start(100)
+        self.timer.start(10)
 
         self.show()
 
@@ -434,6 +408,7 @@ class MainGUI(QtGui.QMainWindow):
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
         fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
+        ma_window_lb = QtGui.QLabel("M.A. window: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(energy_lb, 0, 0, 1, 1)
@@ -446,6 +421,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._normalization_range_le, 3, 1, 1, 1)
         layout.addWidget(fom_range_lb, 4, 0, 1, 1)
         layout.addWidget(self._fom_range_le, 4, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 5, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 5, 1, 1, 1)
 
         self._ep_setup_gp.setLayout(layout)
 
@@ -458,7 +435,7 @@ class MainGUI(QtGui.QMainWindow):
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
-        pulse_range_lb = QtGui.QLabel("Pulse range: ")
+        pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range0_le.setFixedHeight(28)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
@@ -512,16 +489,12 @@ class MainGUI(QtGui.QMainWindow):
     def _initFileServerUI(self):
         layout = QtGui.QGridLayout()
 
-        port_lb = QtGui.QLabel("Port: ")
-        self._file_server_port_le.setFixedHeight(28)
         self._select_btn.clicked.connect(self._set_data_folder)
         self._file_server_data_folder_le.setFixedHeight(28)
         self._select_btn.setToolTip("Select data folder")
 
         layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
         layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        layout.addWidget(port_lb, 0, 4, 1, 1)
-        layout.addWidget(self._file_server_port_le, 0, 5, 1, 1)
         layout.addWidget(self._select_btn, 1, 0, 1, 1)
         layout.addWidget(self._file_server_data_folder_le, 1, 1, 1, 5)
         self._file_server_widget.setLayout(layout)
@@ -536,9 +509,9 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            # data is a np.ma.MaskedArray object
-            self._data = self._daq_queue.pop()
-        except IndexError:
+            self._data = self._proc_queue.get_nowait()
+        except Empty:
+            time.sleep(0.001)
             return
 
         # clear the previous plots no matter what comes next
@@ -552,25 +525,14 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # update the plots in the main GUI
-        t0 = time.perf_counter()
-
-        for i, intensity in enumerate(self._data.intensity):
-            self._lineplot_widget.update(
-                self._data.momentum, intensity,
-                pen=mkPen(intColor(i, hues=9, values=5), width=2))
-        self._lineplot_widget.set_title("Train ID: {}, No. pulses: {}".
-                                        format(self._data.tid, i+1))
-
-        self._image_widget.update(self._data.image_avg)
+        self._lineplot_widget.update(self._data)
+        self._image_widget.update(self._data)
 
         # update the plots in child windows
         for w in self._opened_windows.values():
             w.update(self._data)
 
         logger.info("Updated train with ID: {}".format(self._data.tid))
-
-        logger.debug("Time for updating the plots: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
 
     def _show_ip_window_dialog(self):
         """A dialog for individual pulse plot."""
@@ -608,19 +570,32 @@ class MainGUI(QtGui.QMainWindow):
                     format(", ".join(str(i) for i in pulse_ids)))
         w.show()
 
-    def _show_laseronoff_window_dialog(self):
-        """A dialog for moving average on-off pulses plot."""
-        ret, ok = InputDialogForMA.getResult(
-            self,
-            on_pulse_ids=self._on_pulse_le.text(),
-            off_pulse_ids=self._off_pulse_le.text()
-        )
+    def _open_laseronoff_window(self):
+        """Open moving average on-off pulses window."""
+        window_id = "{:06d}".format(self._opened_windows_count)
+
+        try:
+            normalization_range = \
+                self._parse_boundary(self._normalization_range_le.text())
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return
+        try:
+            fom_range = self._parse_boundary(self._fom_range_le.text())
+        except ValueError as e:
+            logger.error("<FOM range>: " + str(e))
+            return
+
+        ma_window_size = int(self._ma_window_le.text())
+        if ma_window_size < 1:
+            logger.error("Moving average window width < 1!")
+            return
 
         err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
                   "and/or use the range operator ':'!"
         try:
-            on_pulse_ids = self._parse_ids(ret[0])
-            off_pulse_ids = self._parse_ids(ret[1])
+            on_pulse_ids = self._parse_ids(self._on_pulse_le.text())
+            off_pulse_ids = self._parse_ids(self._off_pulse_le.text())
         except ValueError:
             logger.error(err_msg)
             return
@@ -635,37 +610,44 @@ class MainGUI(QtGui.QMainWindow):
                          format(','.join([str(v) for v in common])))
             return
 
-        if ok:
-            self._open_laseronoff_window(on_pulse_ids, off_pulse_ids)
-
-    def _open_laseronoff_window(self, on_pulse_ids, off_pulse_ids):
-        """Open moving average on-off pulses window."""
-        window_id = "{:06d}".format(self._opened_windows_count)
-
-        try:
-            normalization_range = \
-                self._parse_boundary(self._normalization_range_le.text())
-        except ValueError as e:
-            logger.error("<Normalization_range>: " + str(e))
-            return
-        try:
-            fom_range = self._parse_boundary(self._fom_range_le.text())
-        except ValueError as e:
-            logger.error("<FOM range>: " + str(e))
-            return
-
         w = LaserOnOffWindow(
             window_id,
             on_pulse_ids,
             off_pulse_ids,
             normalization_range,
             fom_range,
+            ma_window_size=ma_window_size,
             parent=self)
+
         self._opened_windows_count += 1
         self._opened_windows[window_id] = w
         logger.info("Open new window for on-pulse(s): {} and off-pulse(s): {}".
                     format(", ".join(str(i) for i in on_pulse_ids),
                            ", ".join(str(i) for i in off_pulse_ids)))
+        w.show()
+
+    def _open_sanitycheck_window(self):
+        window_id = "{:06d}".format(self._opened_windows_count)
+
+        try:
+            normalization_range = \
+                self._parse_boundary(self._normalization_range_le.text())
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return
+
+        try:
+            fom_range = self._parse_boundary(self._fom_range_le.text())
+        except ValueError as e:
+            logger.error("<FOM range>: " + str(e))
+            return
+
+        w = SanityCheckWindow(window_id, normalization_range, fom_range,
+                              parent=self)
+
+        self._opened_windows_count += 1
+        self._opened_windows[window_id] = w
+        logger.info("Open new window for sanity check")
         w.show()
 
     def _choose_geometry_file(self):
@@ -679,14 +661,24 @@ class MainGUI(QtGui.QMainWindow):
     def on_exit_running(self):
         """Actions taken at the beginning of 'run' state."""
         self._is_running = False
-        logger.info("DAQ stopped!")
 
         self._daq_worker.terminate()
+        self._proc_worker.terminate()
+
+        # TODO: self._daq_worker.join()
+        self._proc_worker.join()
+
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+        with self._proc_queue.mutex:
+            self._proc_queue.queue.clear()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
+
+        logger.info("DAQ stopped!")
 
     def on_enter_running(self):
         """Actions taken at the end of 'run' state."""
@@ -724,17 +716,16 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         integration_points = int(self._itgt_points_le.text().strip())
-        try:
-            client_addr = "tcp://" \
-                          + self._hostname_le.text().strip() \
-                          + ":" \
-                          + self._port_le.text().strip()
-            self._client = Client(client_addr)
 
-            self._daq_worker = DaqWorker(
-                self._client,
-                self._daq_queue,
-                data_source,
+        client_addr = "tcp://" \
+                      + self._hostname_le.text().strip() \
+                      + ":" \
+                      + self._port_le.text().strip()
+
+        try:
+            self._proc_worker = DataProcessor(
+                self._daq_queue, self._proc_queue,
+                source=data_source,
                 pulse_range=pulse_range,
                 geom_file=geom_file,
                 quad_positions=quad_positions,
@@ -749,12 +740,20 @@ class MainGUI(QtGui.QMainWindow):
                 mask=self._mask_image
             )
 
-            logger.info("Bind to {}".format(client_addr))
+            self._daq_worker = DaqWorker(client_addr, self._daq_queue)
         except Exception as e:
             logger.error(e)
             return
 
+        # remove when Client.next() has timeout option
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+
+        logger.debug("Size of in and out queues: {}, {}".
+                     format(self._daq_queue.qsize(), self._proc_queue.qsize()))
+
         self._daq_worker.start()
+        self._proc_worker.start()
 
         logger.info("DAQ started!")
         logger.info("Azimuthal integration parameters:\n"
@@ -793,7 +792,7 @@ class MainGUI(QtGui.QMainWindow):
     def _on_start_serve_file(self):
         """Actions taken at the beginning of file serving."""
         folder = self._file_server_data_folder_le.text().strip()
-        port = int(self._file_server_port_le.text().strip())
+        port = int(self._port_le.text().strip())
 
         self._file_server = FileServer(folder, port)
         try:
