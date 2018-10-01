@@ -29,11 +29,11 @@ class Config:
     INTEGRATION_METHODS = ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                            'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl']
 
-    OPERATION_MODES = [
-        "normal",
-        "even/odd",
-        "odd/even"
-    ]
+    LASER_MODES = {
+        "normal": "Laser-on/off pulses in the same train",
+        "even/odd": "Laser-on/off pulses in even/odd train",
+        "odd/even": "Laser-on/off pulses in odd/even train"
+    }
 
     # the lower and upper range of the radial unit
     INTEGRATION_RANGE = (0.2, 5)

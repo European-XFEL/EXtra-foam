@@ -217,16 +217,13 @@ class LaserOnOffWindow(PlotWindow):
     plot_w = 800
     plot_h = 450
 
-    modes = ["Laser on/off in the same train",
-             "Laser on/off in even/odd train",
-             "Laser on/off in odd/even train"]
-
     def __init__(self,
                  window_id,
                  on_pulse_ids,
                  off_pulse_ids,
                  normalization_range,
-                 fom_range, *,
+                 fom_range,
+                 laser_mode, *,
                  ma_window_size=9999,
                  parent=None):
         """Initialization."""
@@ -236,12 +233,11 @@ class LaserOnOffWindow(PlotWindow):
         params = [
             {'name': 'Experimental setups', 'type': 'group',
              'children': [
-                {'name': 'Operation mode', 'type': 'list',
-                 'values': self.modes,
-                 'value': self.modes[0]},
-                {'name': 'On-pulse IDs', 'type': 'str', 'readonly': True,
+                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
+                 'value': cfg.LASER_MODES[laser_mode]},
+                {'name': 'Laser-on pulse IDs', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Off-pulse IDs', 'type': 'str', 'readonly': True,
+                {'name': 'Laser-off pulse IDs', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
             {'name': 'Data processing parameters', 'type': 'group',
              'children': [
@@ -264,13 +260,14 @@ class LaserOnOffWindow(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
 
         self._exp_setups = p.param('Experimental setups')
-        self._exp_setups.param('Operation mode').sigValueChanged.connect(self._reset)
 
         self._vis_setups = p.param('Visualization options')
 
         self._proc_setups = p.param('Data processing parameters')
 
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+
+        self._laser_mode = laser_mode
 
         self._count = 0  # The number of trains received
 
@@ -336,7 +333,7 @@ class LaserOnOffWindow(PlotWindow):
 
     def initCtrlUI(self):
         control_widget = QtGui.QWidget()
-        control_widget.setMinimumWidth(450)
+        control_widget.setMinimumWidth(500)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         control_widget.setLayout(layout)
@@ -346,14 +343,16 @@ class LaserOnOffWindow(PlotWindow):
     def update(self, data):
         # TODO: think it twice about how to deal with None data here
         update_plots = False
-        mode = self._exp_setups.param('Operation mode').value()
-        if mode == self.modes[0]:
+        available_modes = list(cfg.LASER_MODES.keys())
+        if self._laser_mode == available_modes[0]:
             update_plots = True
         else:
-            if mode == self.modes[1]:
+            if self._laser_mode == available_modes[1]:
                 flag = 0  # on-train has even train ID
-            else:
+            elif self._laser_mode == available_modes[2]:
                 flag = 1  # on-train has odd train ID
+            else:
+                raise ValueError("Unknown laser mode")
 
             # the evolution of FOM is updated if an on-train is
             # followed by an off-train
@@ -367,9 +366,9 @@ class LaserOnOffWindow(PlotWindow):
 
         # retrieve parameters
 
-        on_pulse_ids = self._exp_setups.param('On-pulse IDs').value()
+        on_pulse_ids = self._exp_setups.param('Laser-on pulse IDs').value()
         on_pulse_ids = [int(s) for s in on_pulse_ids.split(',')]
-        off_pulse_ids = self._exp_setups.param('Off-pulse IDs').value()
+        off_pulse_ids = self._exp_setups.param('Laser-off pulse IDs').value()
         off_pulse_ids = [int(s) for s in off_pulse_ids.split(',')]
 
         normalization_range = self._proc_setups.param('Normalization range').value()

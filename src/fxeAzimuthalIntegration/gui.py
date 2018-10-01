@@ -230,10 +230,10 @@ class MainGUI(QtGui.QMainWindow):
 
         w = 100
         self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
-        self._operation_mode_cb = QtGui.QComboBox()
-        self._operation_mode_cb.setFixedWidth(w)
-        for mode in cfg.OPERATION_MODES:
-            self._operation_mode_cb.addItem(mode)
+        self._laser_mode_cb = QtGui.QComboBox()
+        self._laser_mode_cb.setFixedWidth(w)
+        for mode in cfg.LASER_MODES.keys():
+            self._laser_mode_cb.addItem(mode)
         self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
         self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
@@ -408,7 +408,7 @@ class MainGUI(QtGui.QMainWindow):
         # Experiment setup panel
         # *************************************************************
         energy_lb = QtGui.QLabel("Photon energy (keV): ")
-        mode_lb = QtGui.QLabel("Laser on/off mode: ")
+        laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
@@ -418,8 +418,8 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
         layout.addWidget(energy_lb, 0, 0, 1, 1)
         layout.addWidget(self._energy_le, 0, 1, 1, 1)
-        layout.addWidget(mode_lb, 1, 0, 1, 1)
-        layout.addWidget(self._operation_mode_cb, 1, 1, 1, 1)
+        layout.addWidget(laser_mode_lb, 1, 0, 1, 1)
+        layout.addWidget(self._laser_mode_cb, 1, 1, 1, 1)
         layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
         layout.addWidget(self._on_pulse_le, 2, 1, 1, 1)
         layout.addWidget(off_pulse_lb, 3, 0, 1, 1)
@@ -598,6 +598,7 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("Moving average window width < 1!")
             return
 
+        laser_mode = self._laser_mode_cb.currentText()
         err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
                   "and/or use the range operator ':'!"
         try:
@@ -623,6 +624,7 @@ class MainGUI(QtGui.QMainWindow):
             off_pulse_ids,
             normalization_range,
             fom_range,
+            laser_mode,
             ma_window_size=ma_window_size,
             parent=self)
 
