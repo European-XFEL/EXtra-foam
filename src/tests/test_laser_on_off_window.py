@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 
-from src.fxeAzimuthalIntegration.pyqtgraph import mkQApp
-from src.fxeAzimuthalIntegration.data_processing import ProcessedData
-from src.fxeAzimuthalIntegration.plot_widgets import LaserOnOffWindow
-from src.fxeAzimuthalIntegration.config import Config as cfg
+from fxeAzimuthalIntegration.pyqtgraph import mkQApp
+from fxeAzimuthalIntegration.data_processing import ProcessedData
+from fxeAzimuthalIntegration.plot_widgets import LaserOnOffWindow
+from fxeAzimuthalIntegration.config import Config as cfg
 
 
 mkQApp()

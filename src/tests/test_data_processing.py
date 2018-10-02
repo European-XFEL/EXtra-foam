@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from src.fxeAzimuthalIntegration.data_processing import (
+from fxeAzimuthalIntegration.data_processing import (
     sub_array_with_range, integrate_curve
 )
 

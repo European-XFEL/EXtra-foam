@@ -1,6 +1,6 @@
 import unittest
 
-from src.fxeAzimuthalIntegration.gui import MainGUI
+from fxeAzimuthalIntegration.gui import MainGUI
 
 
 class TestGUI(unittest.TestCase):
