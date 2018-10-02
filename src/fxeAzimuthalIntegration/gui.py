@@ -532,6 +532,8 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.tid))
             return
 
+        t0 = time.perf_counter()
+
         # update the plots in the main GUI
         self._lineplot_widget.update(self._data)
         self._image_widget.update(self._data)
@@ -539,6 +541,9 @@ class MainGUI(QtGui.QMainWindow):
         # update the plots in child windows
         for w in self._opened_windows.values():
             w.update(self._data)
+
+        logger.debug("Time for updating the plots: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         logger.info("Updated train with ID: {}".format(self._data.tid))
 
