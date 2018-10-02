@@ -214,6 +214,16 @@ class IndividualPulseWindow(PlotWindow):
 
 
 class LaserOnOffWindow(PlotWindow):
+    """LaserOnOffWindow class.
+
+    A window which visualizes the moving average of the average of the
+    azimuthal integration of all laser-on and laser-off pulses, as well
+    as their difference, in the upper plot. It also visualize the
+    evolution of the figure of merit (FOM), which is integration of the
+    absolute difference between the moving average of the laser-on and
+    laser-off results, for each pair of laser-on and laser-off trains,
+    in the lower plot.
+    """
     plot_w = 800
     plot_h = 450
 
@@ -267,6 +277,23 @@ class LaserOnOffWindow(PlotWindow):
 
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
 
+        # for visualization of normalization range
+        pen1 = mkPen(QtGui.QColor(
+            255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
+        brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
+        self._normalization_range_lri = LinearRegionItem(
+            normalization_range, pen=pen1, brush=brush1, movable=False)
+
+        # for visualization of FOM range
+        pen2 = mkPen(QtGui.QColor(
+            255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
+        brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
+        self._fom_range_lri = LinearRegionItem(
+            fom_range, pen=pen2, brush=brush2, movable=False)
+
+        # -------------------------------------------------------------
+        # parameters from the control panel of the main GUI
+        # -------------------------------------------------------------
         self._laser_mode = laser_mode
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
@@ -274,18 +301,18 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_range = fom_range
         self._ma_window_size = ma_window_size
 
-        self._count = 0  # The number of trains received
-
-        # A flag which indicates a laser-on train has been received
-        # in the modes "Laser on/off in even/odd train" and
-        # "Laser on/off in odd/even train"
+        # -------------------------------------------------------------
+        # volatile parameters
+        # -------------------------------------------------------------
         self._on_train_received = False
         self._off_train_received = False
 
-        # The moving average of on/off pulses
+        # if an on-pulse is followed by an on-pulse, drop the previous one
+        self._drop_last_on_pulse = False
+
+        # moving average
         self._on_pulses_ma = None
         self._off_pulses_ma = None
-
         # The histories of on/off pulses by train, which are used in
         # calculating moving average (MA)
         self._on_pulses_hist = deque()
@@ -294,20 +321,6 @@ class LaserOnOffWindow(PlotWindow):
         # The history of integrated difference (FOM) between on and off pulses
         self._fom_hist_train_id = []
         self._fom_hist = []
-
-        # an indicator of normalization range
-        pen1 = mkPen(QtGui.QColor(
-            255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
-        brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
-        self._normalization_range_lri = LinearRegionItem(
-            normalization_range, pen=pen1, brush=brush1, movable=False)
-
-        # an indicator of FOM range
-        pen2 = mkPen(QtGui.QColor(
-            255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
-        brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
-        self._fom_range_lri = LinearRegionItem(
-            fom_range, pen=pen2, brush=brush2, movable=False)
 
         self.initUI()
 
@@ -346,129 +359,191 @@ class LaserOnOffWindow(PlotWindow):
 
         return control_widget
 
-    def update(self, data):
-        # TODO: think it twice about how to deal with None data here
+    def _update(self, data):
+        """Process incoming data and update history.
+
+        :param ProcessedData data: processed data.
+
+        :return: (normalized moving average for on-pulses,
+                  normalized moving average for off-pulses)
+        :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
+        """
         available_modes = list(cfg.LASER_MODES.keys())
         if self._laser_mode == available_modes[0]:
+            # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
+            # compare laser-on/off pulses in different trains
+
             if self._laser_mode == available_modes[1]:
                 flag = 0  # on-train has even train ID
             elif self._laser_mode == available_modes[2]:
                 flag = 1  # on-train has odd train ID
             else:
-                raise ValueError("Unknown laser mode")
+                raise ValueError("Unknown laser mode!")
 
             # Off-train will only be acknowledged when an on-train
             # was received! This ensures that in the visualization
             # it always shows the on-train plot alone first, which
             # is followed by a combined plots if the next train is
             # an off-train pulse.
-            if self._on_train_received is True and data.tid % 2 == 1 ^ flag:
-                self._off_train_received = True
+            if self._on_train_received:
+                if data.tid % 2 == 1 ^ flag:
+                    # an on-pulse is followed by an off-pulse
+                    self._off_train_received = True
+                else:
+                    # an on-pulse is followed by an on-pulse
+                    self._drop_last_on_pulse = True
             else:
+                # an off-pulse is followed by an on-pulse
                 if data.tid % 2 == flag:
                     self._on_train_received = True
 
-        diff_scale = self._vis_setups.param('Difference scale').value()
-
-        self._count += 1
+        # update and plot
 
         momentum = data.momentum
+        normalized_on_pulse = None
+        normalized_off_pulse = None
 
-        # calculate average over on/off pulses respectively
-        this_on_pulses = data.intensity[self._on_pulse_ids].mean(axis=0)
-        this_off_pulses = data.intensity[self._off_pulse_ids].mean(axis=0)
+        if self._on_train_received:
+            # update on-pulse
 
-        # update history
-        self._on_pulses_hist.append(this_on_pulses)
-        self._off_pulses_hist.append(this_off_pulses)
+            if self._laser_mode == available_modes[0] or \
+                    not self._off_train_received:
 
-        if self._count == 1:
-            # the first data point
-            self._on_pulses_ma = this_on_pulses
-            self._off_pulses_ma = this_off_pulses
-        else:
-            # apply moving average
-            if self._count > self._ma_window_size:
-                self._on_pulses_ma += \
-                    (this_on_pulses - self._on_pulses_hist.popleft()) \
-                    / self._ma_window_size
+                this_on_pulses = data.intensity[self._on_pulse_ids].mean(axis=0)
+                if self._drop_last_on_pulse:
+                    length = len(self._on_pulses_hist)
+                    self._on_pulses_ma += \
+                        (this_on_pulses - self._on_pulses_hist.pop()) / length
+                    self._drop_last_on_pulse = False
+                else:
+                    if self._on_pulses_ma is None:
+                        self._on_pulses_ma = np.copy(this_on_pulses)
+                    elif len(self._on_pulses_hist) < self._ma_window_size:
+                        self._on_pulses_ma += \
+                                (this_on_pulses - self._on_pulses_ma) \
+                                / (len(self._on_pulses_hist) + 1)
+                    elif len(self._on_pulses_hist) == self._ma_window_size:
+                        self._on_pulses_ma += \
+                            (this_on_pulses - self._on_pulses_hist.popleft()) \
+                            / self._ma_window_size
+                    else:
+                        raise ValueError  # should never reach here
+
+                self._on_pulses_hist.append(this_on_pulses)
+
+            normalized_on_pulse = self._on_pulses_ma / integrate_curve(
+                self._on_pulses_ma, momentum, self._normalization_range)
+
+        if self._off_train_received:
+            # update off-pulse
+
+            this_off_pulses = data.intensity[self._off_pulse_ids].mean(axis=0)
+            self._off_pulses_hist.append(this_off_pulses)
+
+            if self._off_pulses_ma is None:
+                self._off_pulses_ma = np.copy(this_off_pulses)
+            elif len(self._off_pulses_hist) <= self._ma_window_size:
+                self._off_pulses_ma += \
+                        (this_off_pulses - self._off_pulses_ma) \
+                        / len(self._off_pulses_hist)
+            elif len(self._off_pulses_hist) == self._ma_window_size + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
                     / self._ma_window_size
             else:
-                self._on_pulses_ma += \
-                    (this_on_pulses - self._on_pulses_ma) / self._count
-                self._off_pulses_ma += \
-                    (this_off_pulses - self._off_pulses_ma) / self._count
+                raise ValueError  # should never reach here
 
-        # normalize azimuthal integration curves
-        normalized_on_pulse = self._on_pulses_ma / integrate_curve(
-            self._on_pulses_ma, momentum, self._normalization_range)
-        normalized_off_pulse = self._off_pulses_ma / integrate_curve(
-            self._off_pulses_ma, momentum, self._normalization_range)
+            normalized_off_pulse = self._off_pulses_ma / integrate_curve(
+                self._off_pulses_ma, momentum, self._normalization_range)
 
-        # then calculate the difference between on- and off pulse curves
-        diff = normalized_on_pulse - normalized_off_pulse
+            diff = normalized_on_pulse - normalized_off_pulse
 
-        # ------------
-        # update plots
-        # ------------
+            # calculate figure-of-merit (FOM) and update history
+            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            self._fom_hist.append(np.sum(np.abs(fom)))
+            # always append the off-pulse id
+            self._fom_hist_train_id.append(data.tid)
 
-        # plot on/off pulses and their difference (upper plot)
+            # an extra check
+            if len(self._on_pulses_hist) != len(self._off_pulses_hist):
+                raise ValueError("Length of on-pulse history {} != length "
+                                 "of off-pulse history {}".
+                                 format(len(self._on_pulses_hist),
+                                        len(self._off_pulses_hist)))
+
+            # reset flags
+            self._on_train_received = False
+            self._off_train_received = False
+
+        return normalized_on_pulse, normalized_off_pulse
+
+    def update(self, data):
+        """Update plot.
+
+        :param ProcessedData data: processed data.
+        """
+        normalized_on_pulse, normalized_off_pulse = self._update(data)
+
+        momentum = data.momentum
+
+        # upper plot
         p = self._plot_items[0]
-        p.addLegend(offset=(-60, 20))
-        if self._on_train_received:
-            p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
-        if self._off_train_received:
-            p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
-        if self._on_train_received and self._off_train_received:
-            p.plot(momentum, diff_scale * diff, name="difference", pen=Pen.yellow)
 
-        # add normalization/FOM range if requested
+        # visualize normalization/FOM range if requested
         if self._vis_setups.param("Show normalization range").value():
             p.addItem(self._normalization_range_lri)
         if self._vis_setups.param("Show FOM range").value():
             p.addItem(self._fom_range_lri)
 
-        # plot the evolution of fom (lower plot)
-        if self._on_train_received and self._off_train_received:
-            # calculate figure-of-merit (FOM) and update history
-            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
-            self._fom_hist.append(np.sum(np.abs(fom)))
-            self._fom_hist_train_id.append(data.tid)
+        p.addLegend(offset=(-60, 20))
 
-            s = ScatterPlotItem(size=20, pen=mkPen(None),
-                                brush=mkBrush(120, 255, 255, 255))
-            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                         zip(self._fom_hist_train_id, self._fom_hist)])
+        if normalized_on_pulse is not None:
+            # plot on-pulse
+            p.plot(momentum, normalized_on_pulse, name="On", pen=Pen.purple)
 
-            p = self._plot_items[1]
-            p.clear()
-            p.addItem(s)
-            p.plot(self._fom_hist_train_id, self._fom_hist, pen=Pen.yellow)
+        if normalized_off_pulse is not None:
+            assert normalized_on_pulse is not None
 
-            self._on_train_received = False
-            self._off_train_received = False
+            # plot off-pulse
+            p.plot(momentum, normalized_off_pulse, name="Off", pen=Pen.green)
+
+            # plot difference between on-/off- pulses
+            diff_scale = self._vis_setups.param('Difference scale').value()
+            p.plot(momentum,
+                   diff_scale * (normalized_on_pulse - normalized_off_pulse),
+                   name="difference", pen=Pen.yellow)
+
+        # lower plot
+        p = self._plot_items[1]
+        p.clear()
+
+        s = ScatterPlotItem(size=20, pen=mkPen(None),
+                            brush=mkBrush(120, 255, 255, 255))
+        s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                     zip(self._fom_hist_train_id, self._fom_hist)])
+
+        p.addItem(s)
+        p.plot(self._fom_hist_train_id, self._fom_hist, pen=Pen.yellow)
 
     def clear(self):
         """Overload.
 
-        The history of FOM should be untouched when the new data is invalid.
+        The lower plot should be untouched when the new data cannot be
+        used to update the history of FOM.
         """
         self._plot_items[0].clear()
 
-    def mode_selected(self):
-        pass
-
     def _reset(self):
+        """Clear history and internal states."""
         for p in self._plot_items:
             p.clear()
 
-        self._count = 0
         self._on_train_received = False
+        self._off_train_received = False
+        self._drop_last_on_pulse = False
         self._on_pulses_ma = None
         self._off_pulses_ma = None
         self._on_pulses_hist.clear()
