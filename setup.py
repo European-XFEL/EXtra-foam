@@ -1,34 +1,27 @@
-#!/usr/bin/env python
-from os.path import dirname
 from setuptools import setup, find_packages
 
 
-def _get_version_string():
-    try:
-        from karabo.packaging.versioning import get_package_version
-    except ImportError:
-        # print("WARNING: Karabo framework not found! Version will be blank!")
-        return "0.1.0"
-
-    return get_package_version(dirname(__file__))
+REQUIREMENTS = open('requirements.txt', encoding='utf-8').readlines()
+REQUIREMENTS = [req.rstrip() for req in REQUIREMENTS]
 
 
 setup(
-    name='fxeAzimuthalIntegration',
-    version=_get_version_string(),
+    name='karaboFAI',
+    version="0.1.0",
     author='Jun Zhu',
     author_email='jun.zhu@xfel.eu',
-    description='LPD azimuthal integration',
-    long_description='Online and offline tool for LPD azimuthal integration '
-                     'at FXE instrument, EuXFEL',
+    description='Azimuthal integration tool',
+    long_description='Offline and online data analysis and visualization tool '
+                     'for azimuthal integration of different data acquired '
+                     'with various detectors at European XFEL.',
     url='',
-    package_dir={'': 'src'},
-    packages=find_packages('src'),
+    packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'fxe-gui=fxeAzimuthalIntegration.gui:fxe_ai',
+            'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
+            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui'
         ],
     },
     package_data={},
-    requires=[],
+    install_requires=REQUIREMENTS,
 )
