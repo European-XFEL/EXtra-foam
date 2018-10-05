@@ -14,7 +14,7 @@ import time
 import logging
 from queue import Queue, Empty
 
-from imageio import imread
+import fabio
 import zmq
 
 from .logger import GuiLogger, logger
@@ -640,12 +640,17 @@ class MainGUI(QtGui.QMainWindow):
 
     def _loadMaskImage(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
-
+        self._mask_image = None
         if filename:
-            self._mask_image = imread(filename)
-            logger.info("Load mask image at {}".format(filename))
+            try:
+                self._mask_image = fabio.open(filename).data
+                logger.info("Load mask image at {}".format(filename))
+            except IOError as e:
+                logger.error(e)
+            except Exception:
+                raise
         else:
-            self._mask_image = None
+            logger.error("Please specify the mask image file!")
 
     def _setDataFolder(self):
         folder = QtGui.QFileDialog.getExistingDirectory(

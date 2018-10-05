@@ -12,10 +12,6 @@ All rights reserved.
 import time
 from enum import IntEnum
 
-import numpy as np
-
-from ..logger import logger
-
 
 class DataSource(IntEnum):
     CALIBRATED_FILE = 0  # calibrated data from files
@@ -35,15 +31,21 @@ class ProcessedData:
             Shape = (pulse_id, intensity)
         intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
             integration result over pulses. Shape = (intensity,)
-        image (numpy.ndarray): assembled images for all the pulses.
+        image (numpy.ndarray): detector images for all the pulses.
             Shape = (pulse_id, y, x)
-        image_mean (numpy.ndarray): average of the assembled images over
+        image_mean (numpy.ndarray): average of the detector images over
             pulses. Shape = (y, x)
+        image_mask (numpy.ndarray): an image mask which is applied to all
+            the detector images, default = None. Shape = (y, x)
     """
-    def __init__(self, tid, *, momentum=None, intensity=None, assembled=None):
+    def __init__(self, tid, *,
+                 momentum=None,
+                 intensity=None,
+                 intensity_mean=None,
+                 image=None,
+                 image_mean=None,
+                 image_mask=None):
         """Initialization."""
-        t0 = time.perf_counter()
-
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
         # tid is not allowed to be modified once initialized.
@@ -51,26 +53,21 @@ class ProcessedData:
 
         self.momentum = momentum
         self.intensity = intensity
-        self.intensity_mean = None
-        if self.intensity is not None:
-            self.intensity_mean = np.mean(intensity, axis=0)
+        self.intensity_mean = intensity_mean
 
-        self.image = None
-        self.image_mean = None
-        if assembled is not None:
-            self.image = assembled
-            self.image_mean = np.nanmean(assembled, axis=0)
-
-        logger.debug("Time for pre-processing: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
+        self.image = image
+        self.image_mean = image_mean
+        self.image_mask = image_mask
 
     @property
     def tid(self):
         return self._tid
 
     def empty(self):
-        """Check the goodness of the data."""
-        if self.intensity is None or self.momentum is None \
-                or self.image is None:
+        """Check the goodness of the data.
+
+        TODO: improve
+        """
+        if self.intensity is None or self.image is None:
             return True
         return False

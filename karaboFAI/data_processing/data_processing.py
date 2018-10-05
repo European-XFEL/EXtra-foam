@@ -22,6 +22,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from .data_model import DataSource, ProcessedData
+from .proc_utils import array2image
 from ..config import Config as cfg
 from ..logger import logger
 
@@ -48,7 +49,7 @@ class DataProcessor(Thread):
         integration_points (int): number of points in the integration
             output pattern.
         mask_range (tuple):
-        img_mask (numpy.ndarray):
+        image_mask (numpy.ndarray):
     """
     def __init__(self, in_queue, out_queue, **kwargs):
         """Initialization.
@@ -81,7 +82,7 @@ class DataProcessor(Thread):
         self.integration_points = kwargs['integration_points']
 
         self.mask_range = kwargs['mask_range']
-        self.img_mask = kwargs['mask']
+        self.image_mask = kwargs['mask']
 
         self._running = False
 
@@ -141,43 +142,50 @@ class DataProcessor(Thread):
                                        rot3=0,
                                        wavelength=self.wavelength)
 
+        # preprocessing
+
         t0 = time.perf_counter()
 
-        mask = np.zeros_like(assembled, dtype=bool)
-        # apply either an image mask or a simple masking method
-        if self.img_mask is not None:
-            if self.img_mask.shape != assembled[0].shape:
-                raise ValueError(
-                    "Mask and image have different shapes! {} and {}".
-                    format(self.img_mask.shape, assembled[0].shape))
-            for i in range(assembled.shape[0]):
-                mask[i][self.img_mask == 255] = True
-        else:
-            assembled[np.isnan(assembled)] = np.inf
-            mask[(assembled < self.mask_range[0]) |
-                 (assembled > self.mask_range[1])] = True
+        # keep 'inf' in the array
+        assembled_mean = np.nanmean(assembled, axis=0)
+        # convert 'nan' to 0
+        assembled_mean[np.isnan(assembled_mean)] = 0
+        assembled[np.isnan(assembled)] = 0
 
-        # preprocess in order to apply 'nanmean()' later
-        assembled[mask] = np.nan
-
-        logger.debug("Time for masking: {:.1f} ms"
+        logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        # azimuthal integration
+
         t0 = time.perf_counter()
 
+        if self.image_mask is None:
+            base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
+        else:
+            if self.image_mask.shape != assembled[0].shape:
+                raise ValueError(
+                    "Mask and image have different shapes! {} and {}".
+                    format(self.image_mask.shape, assembled[0].shape))
+            base_mask = self.image_mask
+
         momentum = None
-        intensities = []
+        intensities = np.zeros([assembled.shape[0], self.integration_points])
         for i in range(assembled.shape[0]):
+            mask = np.copy(base_mask)
+            # apply threshold mask
+            mask[(assembled[i] < self.mask_range[0]) |
+                 (assembled[i] > self.mask_range[1])] = 1
             res = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
-                                 mask=mask[i],
+                                 mask=mask,
                                  radial_range=self.integration_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
-            momentum = res.radial
-            intensities.append(res.intensity)
+            if i == 0:
+                momentum = res.radial
+            intensities[i] = res.intensity
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -185,7 +193,10 @@ class DataProcessor(Thread):
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
-                             assembled=assembled)
+                             intensity_mean=np.mean(intensities, axis=0),
+                             image=assembled,
+                             image_mean=array2image(assembled_mean),
+                             image_mask=self.image_mask)
 
         return data
 

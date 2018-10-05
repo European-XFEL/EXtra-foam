@@ -660,8 +660,9 @@ class DrawMaskWindow(AbstractWindow):
 
         self._cw = MaskImageWidget()
         self._cw._MaskImageWidget__plot2D.setYAxisInverted(True)
+        # normalization options: LINEAR or LOGARITHM
         self._cw._MaskImageWidget__plot2D.setDefaultColormap(
-            SilxColormap('viridis', normalization=SilxColormap.LOGARITHM))
+            SilxColormap('viridis', normalization=SilxColormap.LINEAR))
         self.setCentralWidget(self._cw)
         self.updatePlots()
 

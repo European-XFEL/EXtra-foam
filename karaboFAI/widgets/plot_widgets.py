@@ -71,5 +71,5 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
     def updatePlots(self):
         data = self._data.get()
 
-        self._img.setImage(array2image(np.flip(data.image_mean, axis=0)))
+        self._img.setImage(np.flip(data.image_mean, axis=0))
         self._view.autoRange()
