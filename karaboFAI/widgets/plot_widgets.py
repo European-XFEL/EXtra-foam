@@ -15,7 +15,6 @@ from .pyqtgraph import (
     GraphicsLayoutWidget, ImageItem, intColor, mkPen
 )
 from ..config import Config as cfg
-from ..data_processing.proc_utils import array2image
 from .misc_widgets import ColorMapFactory
 
 

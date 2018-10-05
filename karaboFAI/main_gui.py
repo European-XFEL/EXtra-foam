@@ -136,7 +136,7 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(os.path.join(root_dir, "icons/draw_mask.png")),
             "Draw mask",
             self)
-        self._draw_mask_at.triggered.connect(self.openDrawMaskWindow)
+        self._draw_mask_at.triggered.connect(self._openDrawMaskWindow)
         tool_bar.addAction(self._draw_mask_at)
 
         #
@@ -625,7 +625,7 @@ class MainGUI(QtGui.QMainWindow):
         self._opened_windows[w] = 1
         w.show()
 
-    def openDrawMaskWindow(self):
+    def _openDrawMaskWindow(self):
         w = DrawMaskWindow(self._data, parent=self, title=self._title)
         self._opened_windows[w] = 1
         w.show()
