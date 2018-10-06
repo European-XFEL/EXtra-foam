@@ -51,12 +51,19 @@ class MainGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
+    _height = 1000  # window height, in pixel
+    _width = 1380  # window width, in pixel
+    _plot_height = 480  # height of the plot widgets, in pixel
+
+    _logger_fontsize = 12  # fontsize in logger window
+
     def __init__(self, title, screen_size=None):
         """Initialization."""
         super().__init__()
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setFixedSize(cfg.MAIN_WINDOW_WIDTH, cfg.MAIN_WINDOW_HEIGHT)
+        self.setFixedSize(self._width, self._height)
+
         self._title = title
         self.setWindowTitle(title)
 
@@ -163,7 +170,12 @@ class MainGUI(QtGui.QMainWindow):
         self._data = self.Data4Visualization()
 
         self._lineplot_widget = MainGuiLinePlotWidget(self._data)
+        self._lineplot_widget.setFixedSize(
+            self._width - self._plot_height - 25, self._plot_height)
+
         self._image_widget = MainGuiImageViewWidget(self._data)
+        self._image_widget.setFixedSize(self._plot_height, self._plot_height)
+
         # book-keeping opened widgets and windows
         self._opened_windows = dict()
         self._opened_windows[self._lineplot_widget] = 1
@@ -246,7 +258,7 @@ class MainGUI(QtGui.QMainWindow):
         self._log_window.setReadOnly(True)
         self._log_window.setMaximumBlockCount(cfg.MAX_LOGGING)
         logger_font = QtGui.QFont()
-        logger_font.setPointSize(cfg.LOGGER_FONT_SIZE)
+        logger_font.setPointSize(self._logger_fontsize)
         self._log_window.setFont(logger_font)
         self._logger = GuiLogger(self._log_window)
         logging.getLogger().addHandler(self._logger)
@@ -282,7 +294,7 @@ class MainGUI(QtGui.QMainWindow):
         if screen_size is None:
             self.move(0, 0)
         else:
-            self.move(screen_size.width()/2 - cfg.MAIN_WINDOW_WIDTH/2,
+            self.move(screen_size.width()/2 - self._width/2,
                       screen_size.height()/20)
 
         # TODO: implement
