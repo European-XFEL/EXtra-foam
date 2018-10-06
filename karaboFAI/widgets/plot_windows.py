@@ -23,9 +23,9 @@ from .pyqtgraph import parametertree as ptree
 from ..logger import logger
 from ..config import Config as cfg
 from ..data_processing.proc_utils import (
-    array2image, integrate_curve, sub_array_with_range
+    integrate_curve, sub_array_with_range
 )
-from .misc_widgets import PenFactory, ColorMapFactory
+from .misc_widgets import PenFactory, lookupTableFactory
 
 
 class SingletonWindow:
@@ -179,7 +179,7 @@ class IndividualPulseWindow(PlotWindow):
                 break
             if self._show_image is True:
                 img = ImageItem(border='w')
-                img.setLookupTable(ColorMapFactory.thermal.getLookupTable())
+                img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
                 self._image_items.append(img)
 
                 vb = self._gl_widget.addViewBox(lockAspect=True)
@@ -226,9 +226,13 @@ class IndividualPulseWindow(PlotWindow):
                        pen=PenFactory.yellow)
 
             if data is not None and self._show_image is True:
+                # in-place operation is faster
+                np.clip(data.image[pulse_id],
+                        cfg.MASK_RANGE[0],
+                        cfg.MASK_RANGE[1],
+                        data.image[pulse_id])
                 self._image_items[i].setImage(
-                    array2image(np.flip(data.image[pulse_id], axis=0)),
-                    autoLevels=False)
+                    np.flip(data.image[pulse_id], axis=0))
 
 
 class LaserOnOffWindow(PlotWindow):

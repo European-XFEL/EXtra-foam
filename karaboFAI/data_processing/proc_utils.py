@@ -11,8 +11,6 @@ All rights reserved.
 """
 import numpy as np
 
-from ..config import Config as cfg
-
 
 def sub_array_with_range(y, x, range_=None):
     if range_ is None:
@@ -24,15 +22,3 @@ def sub_array_with_range(y, x, range_=None):
 def integrate_curve(y, x, range_=None):
     itgt = np.trapz(*sub_array_with_range(y, x, range_))
     return itgt if itgt else 1.0
-
-
-def array2image(x, max_value=cfg.DISPLAY_RANGE[1]):
-    """Convert array data to image data."""
-    np.nan_to_num(x, False)
-    if max_value is None:
-        x /= x.max()
-    else:
-        x /= max_value
-    x *= 255.0
-
-    return x.astype(np.uint8)

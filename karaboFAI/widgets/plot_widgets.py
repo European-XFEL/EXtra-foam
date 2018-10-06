@@ -15,7 +15,7 @@ from .pyqtgraph import (
     GraphicsLayoutWidget, ImageItem, intColor, mkPen
 )
 from ..config import Config as cfg
-from .misc_widgets import ColorMapFactory
+from .misc_widgets import lookupTableFactory
 
 
 class MainGuiLinePlotWidget(GraphicsLayoutWidget):
@@ -59,7 +59,7 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         self.setFixedSize(cfg.MAIN_LINE_PLOT_HEIGHT, cfg.MAIN_LINE_PLOT_HEIGHT)
 
         self._img = ImageItem(border='w')
-        self._img.setLookupTable(ColorMapFactory.thermal.getLookupTable())
+        self._img.setLookupTable(lookupTableFactory["flame"])
 
         self._view = self.addViewBox(lockAspect=True)
         self._view.addItem(self._img)

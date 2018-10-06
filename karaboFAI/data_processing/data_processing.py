@@ -22,7 +22,6 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from .data_model import DataSource, ProcessedData
-from .proc_utils import array2image
 from ..config import Config as cfg
 from ..logger import logger
 
@@ -142,15 +141,20 @@ class DataProcessor(Thread):
                                        rot3=0,
                                        wavelength=self.wavelength)
 
-        # preprocessing
+        # pre-processing
 
         t0 = time.perf_counter()
 
-        # keep 'inf' in the array
+        # original data contains 'nan', 'inf' and '-inf' pixels
+
         assembled_mean = np.nanmean(assembled, axis=0)
-        # convert 'nan' to 0
-        assembled_mean[np.isnan(assembled_mean)] = 0
-        assembled[np.isnan(assembled)] = 0
+
+        # Convert 'nan' to '-inf' and it will later be converted to 0.
+        # We do not convert 'nan' to 0 because: if the lower range of
+        # mask is a negative value, 0 will be converted to a value
+        # between 0 and 255 later.
+        assembled_mean[np.isnan(assembled_mean)] = -np.inf
+        assembled[np.isnan(assembled)] = -np.inf
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -190,12 +194,22 @@ class DataProcessor(Thread):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        # clip the value in the array
+        np.clip(assembled_mean,
+                self.mask_range[0], self.mask_range[1], out=assembled_mean)
+        # now 'assembled_mean' contains only numerical values within
+        # the mask range
+
+        # Note: 'assembled' still contains 'inf' and '-inf', we only do
+        #       the clip later when necessary in order not to waste
+        #       computing power.
+
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
                              intensity_mean=np.mean(intensities, axis=0),
                              image=assembled,
-                             image_mean=array2image(assembled_mean),
+                             image_mean=assembled_mean,
                              image_mask=self.image_mask)
 
         return data

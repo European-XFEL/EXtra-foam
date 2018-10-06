@@ -29,8 +29,6 @@ class Config:
     INTEGRATION_RANGE = (0.2, 5)
     INTEGRATION_POINTS = 512  # number of points in the output pattern
 
-    DISPLAY_RANGE = (0, 2000)
-
     # *********************************************************************
     MAX_QUEUE_SIZE = 2
 
@@ -44,7 +42,9 @@ class Config:
     MAX_LOGGING = 1000
     LOGGER_FONT_SIZE = 12
 
-    MASK_RANGE = (0, 10000)  # image pixels beyond this range will be masked
+    MASK_RANGE = (0, 2500)  # image pixels beyond this range will be masked
+
+    COLOR_MAP = "flame"
 
     TIMEOUT = 5  # timeout in data pipeline
 

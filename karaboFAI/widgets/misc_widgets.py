@@ -24,9 +24,10 @@ class PenFactory:
     yellow = mkPen((255, 255, 0), width=_w)
 
 
-# TODO: improve
-class ColorMapFactory:
-    thermal = ColorMap(*zip(*Gradients["thermal"]["ticks"]))
+# Valid keys: thermal, flame, yellowy, bipolar, spectrum, cyclic, greyclip, grey
+lookupTableFactory = \
+    {name: ColorMap(*zip(*Gradients[name]["ticks"])).getLookupTable()
+     for name in Gradients.keys()}
 
 
 class FixedWidthLineEdit(QtGui.QLineEdit):
