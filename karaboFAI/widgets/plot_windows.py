@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import deque
+from collections import deque, OrderedDict
 import numpy as np
 
 from silx.gui.colors import Colormap as SilxColormap
@@ -246,6 +246,12 @@ class LaserOnOffWindow(PlotWindow):
     laser-off results, for each pair of laser-on and laser-off trains,
     in the lower plot.
     """
+    modes = OrderedDict({
+        "normal": "Laser-on/off pulses in the same train",
+        "even/odd": "Laser-on/off pulses in even/odd train",
+        "odd/even": "Laser-on/off pulses in odd/even train"
+    })
+
     plot_w = 800
     plot_h = 450
 
@@ -267,7 +273,7 @@ class LaserOnOffWindow(PlotWindow):
             {'name': 'Experimental setups', 'type': 'group',
              'children': [
                 {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
-                 'value': cfg.LASER_MODES[laser_mode]},
+                 'value': self.modes[laser_mode]},
                 {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in on_pulse_ids])},
                 {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
@@ -385,7 +391,7 @@ class LaserOnOffWindow(PlotWindow):
                   normalized moving average for off-pulses)
         :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
         """
-        available_modes = list(cfg.LASER_MODES.keys())
+        available_modes = list(self.modes.keys())
         if self._laser_mode == available_modes[0]:
             # compare laser-on/off pulses in the same train
             self._on_train_received = True

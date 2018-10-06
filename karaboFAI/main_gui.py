@@ -209,8 +209,7 @@ class MainGUI(QtGui.QMainWindow):
         self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
-        for mode in cfg.LASER_MODES.keys():
-            self._laser_mode_cb.addItem(mode)
+        self._laser_mode_cb.addItems(LaserOnOffWindow.modes.keys())
         self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
         self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
@@ -579,8 +578,9 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         laser_mode = self._laser_mode_cb.currentText()
-        # check pulse ID only when laser on/off pulses are in the same train
-        if laser_mode == list(cfg.LASER_MODES.keys())[0]:
+        # check pulse ID only when laser on/off pulses are in the same
+        # train (the "normal" mode)
+        if laser_mode == list(LaserOnOffWindow.modes.keys())[0]:
             common = set(on_pulse_ids).intersection(off_pulse_ids)
             if common:
                 logger.error(
