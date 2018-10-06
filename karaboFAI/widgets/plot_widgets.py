@@ -14,7 +14,6 @@ import numpy as np
 from .pyqtgraph import (
     GraphicsLayoutWidget, ImageItem, intColor, mkPen
 )
-from ..config import Config as cfg
 from .misc_widgets import lookupTableFactory
 
 
@@ -24,10 +23,6 @@ class MainGuiLinePlotWidget(GraphicsLayoutWidget):
         super().__init__(parent, **kwargs)
 
         self._data = data
-
-        w = cfg.MAIN_WINDOW_WIDTH - cfg.MAIN_LINE_PLOT_HEIGHT - 25
-        h = cfg.MAIN_LINE_PLOT_HEIGHT
-        self.setFixedSize(w, h)
 
         self._plot = self.addPlot()
         self._plot.setTitle("")
@@ -55,8 +50,6 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         super().__init__(parent, **kwargs)
 
         self._data = data
-
-        self.setFixedSize(cfg.MAIN_LINE_PLOT_HEIGHT, cfg.MAIN_LINE_PLOT_HEIGHT)
 
         self._img = ImageItem(border='w')
         self._img.setLookupTable(lookupTableFactory["flame"])

@@ -29,18 +29,15 @@ class Config:
     # *********************************************************************
     UPDATE_FREQUENCY = 10  # in Hz
 
-    MAIN_WINDOW_HEIGHT = 1000
-    MAIN_WINDOW_WIDTH = 1380
-    MAIN_LINE_PLOT_HEIGHT = 480
-
     MAX_LOGGING = 1000
-    LOGGER_FONT_SIZE = 12
 
     MASK_RANGE = (0, 2500)  # image pixels beyond this range will be masked
 
     COLOR_MAP = "flame"
 
     TIMEOUT = 5  # timeout in data pipeline
+
+    MAX_DATA_WORKER = 2  # number of processes used in data processing
 
     # FXE specific
 
