@@ -260,7 +260,7 @@ class DataProcessor(Thread):
             return ProcessedData(tid)
         # TODO: slice earlier to save computation time
         assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
-
+        print(assembled.shape)
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 

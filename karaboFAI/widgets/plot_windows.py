@@ -580,6 +580,186 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist.clear()
         self._fom_hist_train_id.clear()
 
+from scipy import ndimage
+from scipy.spatial import distance
+class BraggSpots(PlotWindow):
+  
+
+    # def __init__(self, data, on_pulse_ids,off_pulse_ids,*,parent=None, title=''):
+    #     """Initialization."""
+    #     super().__init__(data,parent=parent,title=title)
+
+    def __init__(self,
+                 data,
+                 on_pulse_ids,
+                 off_pulse_ids, *,
+                 parent=None,
+                 title=''):
+        """Initialization."""
+        super().__init__(data, parent=parent, title=title)
+        
+        self._com_analysis = False
+
+        self._rois = []
+        self._on_pulse_ids = on_pulse_ids
+        self._off_pulse_ids = off_pulse_ids
+        self._count = 0
+        self.initUI()
+        self.updatePlots()
+
+        logger.info("Open COM Analysis Window")
+        # print(on_pulse_ids)
+        # print(off_pulse_ids)
+
+    def initCtrlUI(self):
+        cntrl_widget = QtGui.QWidget()
+        layout = QtGui.QHBoxLayout()
+
+        checkbtn = QtGui.QCheckBox("COM Analysis")
+        checkbtn.stateChanged.connect(self._clickBox)
+        layout.addWidget(checkbtn)
+
+        cntrl_widget.setLayout(layout)
+        return cntrl_widget
+
+
+    def initPlotUI(self):
+        img = ImageItem(border='w')
+        img.setLookupTable(COLOR_MAP.getLookupTable())
+        self._image_items.append(img)
+        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2,lockAspect=True, enableMouse=False)
+        vb.addItem(img)
+
+
+        roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=Pen.green)
+        
+        self._rois.append(roi)
+        roi = RectROI([cfg.CENTER_X-100, cfg.CENTER_Y-100], [100, 100], pen=Pen.green)
+        self._rois.append(roi)
+
+        for roi in self._rois:
+            # roi.addScaleHandle([0.5, 1], [0.5, 0.5])
+            # roi.addScaleHandle([0, 0.5], [0.5, 0.5])
+            vb.addItem(roi)
+
+        vb1 = self._gl_widget.addViewBox(row=0, col= 1, rowspan=1, lockAspect=True,enableMouse=False)
+
+        img1 = ImageItem(border='w')
+        img1.setLookupTable(COLOR_MAP.getLookupTable())
+        vb1.addItem(img1)
+        self._image_items.append(img1)
+        # self._gl_widget.addLabel("Background",row = 1, col = 1)
+        vb2 = self._gl_widget.addViewBox(row=1, col=1, rowspan=1, lockAspect=True,enableMouse=False)
+        img2 = ImageItem(border='w')
+        img2.setLookupTable(COLOR_MAP.getLookupTable())
+        vb2.addItem(img2)
+        self._image_items.append(img2)
+
+        p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2,colspan=2,lockAspect=True)
+        self._plot_items.append(p1)
+        p1.setLabel('left', "COM position")
+        p1.setLabel('bottom', "Pulse ids")
+        p1.setTitle(' ')
+
+
+    # def initSidePlotUI(self):
+    #     # self._gl_widget.addLabel("Region of interest",row = 0, col = 1)
+    #     vb1 = self._gl_widget.addViewBox(row=0, col= 1, rowspan=1, lockAspect=True,enableMouse=False)
+
+    #     img1 = ImageItem(border='w')
+    #     img1.setLookupTable(COLOR_MAP.getLookupTable())
+    #     vb1.addItem(img1)
+    #     self._image_items.append(img1)
+    #     # self._gl_widget.addLabel("Background",row = 1, col = 1)
+    #     vb2 = self._gl_widget.addViewBox(row=1, col=1, rowspan=1, lockAspect=True,enableMouse=False)
+    #     img2 = ImageItem(border='w')
+    #     img2.setLookupTable(COLOR_MAP.getLookupTable())
+    #     vb2.addItem(img2)
+    #     self._image_items.append(img2)
+        
+    #     # for roi in self._rois:
+    #     #     roi.sigHoverEvent.connect(self._show_roi)
+
+    #     p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2,colspan=2,lockAspect=True)
+    #     self._plot_items.append(p1)
+    #     p1.setLabel('left', "COM position")
+    #     p1.setLabel('bottom', "Pulse ids")
+    #     p1.setTitle(' ')
+
+
+    # def initUI(self):
+    #     layout = QtGui.QGridLayout()
+    #     self.initPlotUI()
+    #     self.initSidePlotUI()
+    #     layout.addWidget(self._gl_widget, 0,0,3,1)
+
+    #     cntrl_widget = self.initCntrlUI()
+    #     layout.addWidget(cntrl_widget,3,0)
+    #     self._wid.setLayout(layout)
+
+    def _clickBox(self,state):
+        if state == QtCore.Qt.Checked:
+            self._com_analysis = True
+            self._gl_widget.setEnabled(False)
+        else:
+            self._com_analysis = False
+            self._gl_widget.setEnabled(True)
+
+    def _show_roi(self,roi):
+        index = self._rois.index(roi)
+        self._image_items[index+1].setImage(roi.getArrayRegion((self._data).image_mean, self._image_items[0]),levels=(0, (self._data).image_mean.max()))
+
+    def _update(self,data):
+        com_on = []
+        com_off = []
+        for pid in self._on_pulse_ids:
+            on_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
+            on_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
+            on_slice_brag_data[np.isnan(on_slice_brag_data)] = 0.0
+            mass = ndimage.measurements.center_of_mass(on_slice_brag_data) 
+            # print("...Pulse id {}".format(pid))
+            # print(mass)
+            r = np.sqrt(mass[0]**2 + mass[1]**2)
+            com_on.append(r)
+
+        for pid in self._off_pulse_ids:
+            off_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
+            off_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
+            off_slice_brag_data[np.isnan(off_slice_brag_data)] = 0.0
+            mass = ndimage.measurements.center_of_mass(off_slice_brag_data) 
+            # print("...Pulse id {}".format(pid))
+            # print(mass)
+            r = np.sqrt(mass[0]**2 + mass[1]**2)
+            com_off.append(r)
+
+        return com_on,com_off
+
+    def updatePlots(self):
+        data = self._data.get()
+        if data.empty():
+            return
+        self._image_items[0].setImage(data.image_mean,autoLevels=False)
+        self._image_items[1].setImage(self._rois[0].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
+
+        self._image_items[2].setImage(self._rois[1].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
+
+
+        ''' Center of Mass Analysis '''
+        if self._com_analysis:
+            p = self._plot_items[0]
+           
+            com_on,com_off = self._update(data)
+
+            p.plot(self._on_pulse_ids,com_on, name ='On', pen=Pen.green )
+            p.plot(self._off_pulse_ids,com_off, name = "Off Pulse", pen=Pen.purple)
+
+
+    # def clear(self):
+    #     for item in self._image_items:
+    #         item.clear()
+    #     for item in self._plot_items:
+    #         item.clear()
+
 
 @SingletonWindow
 class SampleDegradationMonitor(PlotWindow):
@@ -649,10 +829,10 @@ class SampleDegradationMonitor(PlotWindow):
         p.plot()
 
 
-class BraggSpotsWindow(PlotWindow):
-    """BraggSpotsWindow class."""
-    def updatePlots(self):
-        pass
+# class BraggSpotsWindow(PlotWindow):
+#     """BraggSpotsWindow class."""
+#     def updatePlots(self):
+#         pass
 
 
 @SingletonWindow

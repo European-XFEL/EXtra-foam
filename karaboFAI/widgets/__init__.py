@@ -6,7 +6,7 @@ from .misc_widgets import (
 )
 from .plot_widgets import MainGuiImageViewWidget, MainGuiLinePlotWidget
 from .plot_windows import (
-    BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow, LaserOnOffWindow,
+    BraggSpots, DrawMaskWindow, IndividualPulseWindow, LaserOnOffWindow,
     SampleDegradationMonitor
 )
 
@@ -17,7 +17,7 @@ __all__ = [
     "InputDialogWithCheckBox",
     "MainGuiLinePlotWidget",
     "MainGuiImageViewWidget",
-    "BraggSpotsWindow",
+    "BraggSpots",
     "DrawMaskWindow",
     "IndividualPulseWindow",
     "LaserOnOffWindow",

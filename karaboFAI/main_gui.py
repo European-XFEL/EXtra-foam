@@ -20,7 +20,7 @@ import zmq
 from .logger import GuiLogger, logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
+    BraggSpots, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
     IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
     MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
 )
@@ -614,7 +614,32 @@ class MainGUI(QtGui.QMainWindow):
         w.show()
 
     def _openBraggSpotsWindow(self):
-        w = BraggSpotsWindow(self._data, parent=self, title=self._title)
+
+        
+        err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
+                  "and/or use the range operator ':'!"
+        try:
+            on_pulse_ids = parse_ids(self._on_pulse_le.text())
+            off_pulse_ids = parse_ids(self._off_pulse_le.text())
+        except ValueError:
+            logger.error(err_msg)
+            return
+
+        if not on_pulse_ids or not off_pulse_ids:
+            logger.error(err_msg)
+            return
+        w = BraggSpots(
+            self._data,
+            on_pulse_ids,
+            off_pulse_ids,
+            parent=self,
+            title=self._title)
+        # w = BraggSpotsWindow(
+        #     self._data,
+        #     on_pulse_ids,
+        #     off_pulse_ids, 
+        #     parent=self, 
+        #     title=self._title)
         self._opened_windows[w] = 1
         w.show()
 
