@@ -252,6 +252,12 @@ class DataProcessor(Thread):
         t0 = time.perf_counter()
 
         assembled, centre = self._geom.position_all_modules(modules_data)
+        # This is a bug in old version of karabo_data. The above function
+        # could return a numpy.ndarray with shape (0, x, x)
+        if assembled.shape[0] == 0:
+            logger.debug("Bad shape {} in assembled image of train {}".
+                         format(assembled.shape, tid))
+            return ProcessedData(tid)
         # TODO: slice earlier to save computation time
         assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
 
