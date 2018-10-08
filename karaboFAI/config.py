@@ -37,7 +37,7 @@ class Config:
 
     TIMEOUT = 5  # timeout in data pipeline
 
-    MAX_DATA_WORKER = 2  # number of processes used in data processing
+    MAX_DATA_WORKER = 4  # number of processes used in data processing
 
     # True for down-sampling the average image by a factor of two
     DOWN_SAMPLE_IMAGE_MEAN = True
