@@ -62,7 +62,7 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         # update global configuration
-        config.update(default_config)
+        config.update_global(default_config)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
