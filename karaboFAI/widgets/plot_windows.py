@@ -16,7 +16,7 @@ from silx.gui.colors import Colormap as SilxColormap
 
 from .pyqtgraph import (
     BarGraphItem, GraphicsLayoutWidget, ImageItem,
-    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem
+    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem, RectROI
 )
 from .pyqtgraph import parametertree as ptree
 
@@ -581,7 +581,8 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist_train_id.clear()
 
 from scipy import ndimage
-from scipy.spatial import distance
+# from scipy.spatial import distance
+import itertools
 class BraggSpots(PlotWindow):
   
 
@@ -597,44 +598,46 @@ class BraggSpots(PlotWindow):
                  title=''):
         """Initialization."""
         super().__init__(data, parent=parent, title=title)
-        
+        self.setGeometry(100,100,1600,800)
+
         self._com_analysis = False
 
         self._rois = []
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._count = 0
+        self._fom_hist_train_id = []
+        self._fom_hist = []
         self.initUI()
         self.updatePlots()
 
         logger.info("Open COM Analysis Window")
-        # print(on_pulse_ids)
-        # print(off_pulse_ids)
+
 
     def initCtrlUI(self):
-        cntrl_widget = QtGui.QWidget()
+        self._ctrl_widget = QtGui.QWidget() 
         layout = QtGui.QHBoxLayout()
 
         checkbtn = QtGui.QCheckBox("COM Analysis")
         checkbtn.stateChanged.connect(self._clickBox)
         layout.addWidget(checkbtn)
 
-        cntrl_widget.setLayout(layout)
-        return cntrl_widget
+        self._ctrl_widget.setLayout(layout)
+        # return cntrl_widget
 
 
     def initPlotUI(self):
         img = ImageItem(border='w')
-        img.setLookupTable(COLOR_MAP.getLookupTable())
+        img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         self._image_items.append(img)
-        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2,lockAspect=True, enableMouse=False)
+        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
         vb.addItem(img)
 
 
-        roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=Pen.green)
+        roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=PenFactory.green)
         
         self._rois.append(roi)
-        roi = RectROI([cfg.CENTER_X-100, cfg.CENTER_Y-100], [100, 100], pen=Pen.green)
+        roi = RectROI([cfg.CENTER_X-100, cfg.CENTER_Y-100], [100, 100], pen=PenFactory.red)
         self._rois.append(roi)
 
         for roi in self._rois:
@@ -642,60 +645,34 @@ class BraggSpots(PlotWindow):
             # roi.addScaleHandle([0, 0.5], [0.5, 0.5])
             vb.addItem(roi)
 
-        vb1 = self._gl_widget.addViewBox(row=0, col= 1, rowspan=1, lockAspect=True,enableMouse=False)
+        vb1 = self._gl_widget.addViewBox(row=0, col= 2, rowspan=1, lockAspect=True,enableMouse=False)
 
         img1 = ImageItem(border='w')
-        img1.setLookupTable(COLOR_MAP.getLookupTable())
+        img1.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         vb1.addItem(img1)
         self._image_items.append(img1)
         # self._gl_widget.addLabel("Background",row = 1, col = 1)
-        vb2 = self._gl_widget.addViewBox(row=1, col=1, rowspan=1, lockAspect=True,enableMouse=False)
+        vb2 = self._gl_widget.addViewBox(row=1, col=2, rowspan=1, lockAspect=True,enableMouse=False)
         img2 = ImageItem(border='w')
-        img2.setLookupTable(COLOR_MAP.getLookupTable())
+        img2.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
-        p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2,colspan=2,lockAspect=True)
+        p1 = self._gl_widget.addPlot(row= 0, col = 3, rowspan = 2, colspan=2,lockAspect=True)
         self._plot_items.append(p1)
         p1.setLabel('left', "COM position")
         p1.setLabel('bottom', "Pulse ids")
-        p1.setTitle(' ')
-
-
-    # def initSidePlotUI(self):
-    #     # self._gl_widget.addLabel("Region of interest",row = 0, col = 1)
-    #     vb1 = self._gl_widget.addViewBox(row=0, col= 1, rowspan=1, lockAspect=True,enableMouse=False)
-
-    #     img1 = ImageItem(border='w')
-    #     img1.setLookupTable(COLOR_MAP.getLookupTable())
-    #     vb1.addItem(img1)
-    #     self._image_items.append(img1)
-    #     # self._gl_widget.addLabel("Background",row = 1, col = 1)
-    #     vb2 = self._gl_widget.addViewBox(row=1, col=1, rowspan=1, lockAspect=True,enableMouse=False)
-    #     img2 = ImageItem(border='w')
-    #     img2.setLookupTable(COLOR_MAP.getLookupTable())
-    #     vb2.addItem(img2)
-    #     self._image_items.append(img2)
         
-    #     # for roi in self._rois:
-    #     #     roi.sigHoverEvent.connect(self._show_roi)
 
-    #     p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2,colspan=2,lockAspect=True)
-    #     self._plot_items.append(p1)
-    #     p1.setLabel('left', "COM position")
-    #     p1.setLabel('bottom', "Pulse ids")
-    #     p1.setTitle(' ')
+        
+        p2 = self._gl_widget.addPlot(row = 2, col = 0, rowspan=2, colspan=5)
+        self._plot_items.append(p2)
+        p2.setLabel('left', "Integrated difference (arb.)")
+        p2.setLabel('bottom', "Train ID")
+        p2.setTitle(' ')
 
 
-    # def initUI(self):
-    #     layout = QtGui.QGridLayout()
-    #     self.initPlotUI()
-    #     self.initSidePlotUI()
-    #     layout.addWidget(self._gl_widget, 0,0,3,1)
 
-    #     cntrl_widget = self.initCntrlUI()
-    #     layout.addWidget(cntrl_widget,3,0)
-    #     self._wid.setLayout(layout)
 
     def _clickBox(self,state):
         if state == QtCore.Qt.Checked:
@@ -715,50 +692,83 @@ class BraggSpots(PlotWindow):
         for pid in self._on_pulse_ids:
             on_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
             on_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
-            on_slice_brag_data[np.isnan(on_slice_brag_data)] = 0.0
-            mass = ndimage.measurements.center_of_mass(on_slice_brag_data) 
-            # print("...Pulse id {}".format(pid))
-            # print(mass)
+           
+
+            on_slice_brag_data[np.isnan(on_slice_brag_data) ] = -np.inf
+            np.clip(on_slice_brag_data,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_brag_data)
+            
+            # on_slice_brag_data[np.isinf(on_slice_brag_data)  ] = 0.0
+
+            # on_slice_background[np.isnan(on_slice_background) ] = 0.0
+            # on_slice_background[np.isinf(on_slice_background) ] = 0.0
+            on_slice_background[np.isnan(on_slice_background) ] = -np.inf
+            np.clip(on_slice_background,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_background)
+
+            mass = ndimage.measurements.center_of_mass(on_slice_brag_data-on_slice_background) 
+
             r = np.sqrt(mass[0]**2 + mass[1]**2)
             com_on.append(r)
 
         for pid in self._off_pulse_ids:
             off_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
             off_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
-            off_slice_brag_data[np.isnan(off_slice_brag_data)] = 0.0
-            mass = ndimage.measurements.center_of_mass(off_slice_brag_data) 
-            # print("...Pulse id {}".format(pid))
-            # print(mass)
+
+            off_slice_brag_data[np.isnan(off_slice_brag_data) ] = -np.inf
+            np.clip(off_slice_brag_data,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=off_slice_brag_data)
+
+            off_slice_background[np.isnan(off_slice_background) ] = -np.inf
+            np.clip(off_slice_background,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=off_slice_background)
+
+            mass = ndimage.measurements.center_of_mass(off_slice_brag_data-off_slice_background) 
+
             r = np.sqrt(mass[0]**2 + mass[1]**2)
             com_off.append(r)
 
-        return com_on,com_off
+        return com_on,com_off, np.mean(np.array(com_on)), np.mean(np.array(com_off))
 
     def updatePlots(self):
         data = self._data.get()
         if data.empty():
             return
-        self._image_items[0].setImage(data.image_mean,autoLevels=False)
-        self._image_items[1].setImage(self._rois[0].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
+        
+        # print("....check box ...", self._com_analysis)
+        self._image_items[0].setImage(data.image_mean,autoLevels=False,levels=(0, data.image_mean.max()))
 
+        size_brag = (self._rois[0]).size()
+        self._rois[1].setSize(size_brag)
+        self._image_items[1].setImage(self._rois[0].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
+        
         self._image_items[2].setImage(self._rois[1].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
 
-
-        ''' Center of Mass Analysis '''
         if self._com_analysis:
             p = self._plot_items[0]
            
-            com_on,com_off = self._update(data)
+            com_on,com_off, com_on_mean, com_off_mean = self._update(data)
+            
+            com_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(com_on,com_off)) ]
+            pulse_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(self._on_pulse_ids,self._off_pulse_ids)) ]
 
-            p.plot(self._on_pulse_ids,com_on, name ='On', pen=Pen.green )
-            p.plot(self._off_pulse_ids,com_off, name = "Off Pulse", pen=Pen.purple)
+            com_all = [x for _,x in sorted(zip(pulse_all,com_all))]
+
+            p.addLegend()
+            p.setTitle(' TrainId :: {}'.format(data.tid))
+            # p.plot(self._on_pulse_ids,com_on, name ='On', pen=PenFactory.green )
+            # p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple)
+            p.plot(sorted(pulse_all),com_all, name="all", pen= PenFactory.cyan, symbol='o')
 
 
-    # def clear(self):
-    #     for item in self._image_items:
-    #         item.clear()
-    #     for item in self._plot_items:
-    #         item.clear()
+
+    def clearPlots(self):
+        """Override."""
+        
+        for item in self._image_items:
+            item.clear()
+
+        (self._plot_items[0]).clear()
 
 
 @SingletonWindow
