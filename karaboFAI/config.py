@@ -39,6 +39,9 @@ class Config:
 
     MAX_DATA_WORKER = 2  # number of processes used in data processing
 
+    # True for down-sampling the average image by a factor of two
+    DOWN_SAMPLE_IMAGE_MEAN = True
+
     # FXE specific
 
     SOURCE = "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"
