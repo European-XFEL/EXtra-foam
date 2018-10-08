@@ -27,7 +27,7 @@ from .widgets import (
 from .data_acquisition import DaqWorker
 from .data_processing import DataSource, DataProcessor, ProcessedData
 from .file_server import FileServer
-from .config import Config as cfg
+from .config import config
 from .helpers import parse_ids, parse_boundary, parse_quadrant_table
 
 
@@ -57,21 +57,23 @@ class MainGUI(QtGui.QMainWindow):
 
     _logger_fontsize = 12  # fontsize in logger window
 
-    def __init__(self, title, screen_size=None):
+    def __init__(self, default_config=None, screen_size=None):
         """Initialization."""
         super().__init__()
+
+        # update global configuration
+        config.update(default_config)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
 
-        self._title = title
-        self.setWindowTitle(title)
+        self.setWindowTitle(config["TITLE"])
 
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
 
-        self._daq_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
-        self._proc_queue = Queue(maxsize=cfg.MAX_QUEUE_SIZE)
+        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = None
@@ -191,26 +193,26 @@ class MainGUI(QtGui.QMainWindow):
         self._ai_setup_gp = CustomGroupBox("Azimuthal integration setup")
 
         w = 100
-        self._sample_dist_le = FixedWidthLineEdit(w, str(cfg.DIST))
-        self._cx_le = FixedWidthLineEdit(w, str(cfg.CENTER_X))
-        self._cy_le = FixedWidthLineEdit(w, str(cfg.CENTER_Y))
+        self._sample_dist_le = FixedWidthLineEdit(w, str(config["DISTANCE"]))
+        self._cx_le = FixedWidthLineEdit(w, str(config["CENTER_X"]))
+        self._cy_le = FixedWidthLineEdit(w, str(config["CENTER_Y"]))
         self._itgt_method_cb = QtGui.QComboBox()
         self._itgt_method_cb.setFixedWidth(w)
-        for method in cfg.INTEGRATION_METHODS:
+        for method in config["INTEGRATION_METHODS"]:
             self._itgt_method_cb.addItem(method)
         self._itgt_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._itgt_points_le = FixedWidthLineEdit(
-            w, str(cfg.INTEGRATION_POINTS))
+            w, str(config["INTEGRATION_POINTS"]))
         self._mask_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in cfg.MASK_RANGE]))
+            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         # *************************************************************
         # Geometry setup
         # *************************************************************
         self._gmt_setup_gp = CustomGroupBox("Geometry setup")
         self._quad_positions_tb = QtGui.QTableWidget()
-        self._geom_file_le = FixedWidthLineEdit(285, cfg.DEFAULT_GEOMETRY_FILE)
+        self._geom_file_le = FixedWidthLineEdit(285, config["GEOMETRY_FILE"])
 
         # *************************************************************
         # Experiment setup
@@ -218,16 +220,16 @@ class MainGUI(QtGui.QMainWindow):
         self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
         w = 100
-        self._energy_le = FixedWidthLineEdit(w, str(cfg.PHOTON_ENERGY))
+        self._energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
         self._laser_mode_cb.addItems(LaserOnOffWindow.modes.keys())
         self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
         self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._fom_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in cfg.INTEGRATION_RANGE]))
+            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "10")
 
         # *************************************************************
@@ -235,8 +237,8 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._data_src_gp = CustomGroupBox("Data source")
 
-        self._hostname_le = FixedWidthLineEdit(130, cfg.DEFAULT_SERVER_ADDR)
-        self._port_le = FixedWidthLineEdit(60, cfg.DEFAULT_SERVER_PORT)
+        self._hostname_le = FixedWidthLineEdit(130, config["SERVER_ADDR"])
+        self._port_le = FixedWidthLineEdit(60, str(config["SERVER_PORT"]))
         self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
         self._pulse_range1_le = FixedWidthLineEdit(60, str(2999))
 
@@ -256,7 +258,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._log_window = QtGui.QPlainTextEdit()
         self._log_window.setReadOnly(True)
-        self._log_window.setMaximumBlockCount(cfg.MAX_LOGGING)
+        self._log_window.setMaximumBlockCount(config["MAX_LOGGING"])
         logger_font = QtGui.QFont()
         logger_font.setPointSize(self._logger_fontsize)
         self._log_window.setFont(logger_font)
@@ -277,7 +279,7 @@ class MainGUI(QtGui.QMainWindow):
             self._onStopServeFile)
         self._select_btn = QtGui.QPushButton("Select")
         self._file_server_data_folder_le = QtGui.QLineEdit(
-            cfg.DEFAULT_FILE_SERVER_FOLDER)
+            config["FILE_SERVER_FOLDER"])
 
         self._disabled_widgets_during_file_serving = [
             self._file_server_data_folder_le,
@@ -471,7 +473,7 @@ class MainGUI(QtGui.QMainWindow):
         for i in range(n_row):
             for j in range(n_col):
                 widget.setItem(i, j, QtGui.QTableWidgetItem(
-                    str(cfg.QUAD_POSITIONS[i][j])))
+                    str(config["QUAD_POSITIONS"][i][j])))
 
         widget.move(0, 0)
         widget.setHorizontalHeaderLabels(['x', 'y'])
@@ -553,7 +555,6 @@ class MainGUI(QtGui.QMainWindow):
         w = IndividualPulseWindow(self._data,
                                   pulse_ids,
                                   parent=self,
-                                  title=self._title,
                                   show_image=show_image)
         self._opened_windows[w] = 1
         w.show()
@@ -608,13 +609,12 @@ class MainGUI(QtGui.QMainWindow):
             fom_range,
             laser_mode,
             parent=self,
-            title=self._title,
             ma_window_size=ma_window_size)
         self._opened_windows[w] = 1
         w.show()
 
     def _openBraggSpotsWindow(self):
-        w = BraggSpotsWindow(self._data, parent=self, title=self._title)
+        w = BraggSpotsWindow(self._data, parent=self)
         self._opened_windows[w] = 1
         w.show()
 
@@ -633,12 +633,12 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         w = SampleDegradationMonitor(self._data, normalization_range, fom_range,
-                                     parent=self, title=self._title)
+                                     parent=self)
         self._opened_windows[w] = 1
         w.show()
 
     def _openDrawMaskWindow(self):
-        w = DrawMaskWindow(self._data, parent=self, title=self._title)
+        w = DrawMaskWindow(self._data, parent=self)
         self._opened_windows[w] = 1
         w.show()
 
@@ -693,8 +693,7 @@ class MainGUI(QtGui.QMainWindow):
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
         try:
-            integration_range = parse_boundary(
-                self._itgt_range_le.text())
+            integration_range = parse_boundary(self._itgt_range_le.text())
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
             return

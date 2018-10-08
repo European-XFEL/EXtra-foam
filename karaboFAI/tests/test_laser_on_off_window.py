@@ -5,7 +5,6 @@ import numpy as np
 from karaboFAI.widgets.pyqtgraph import mkQApp
 from karaboFAI.widgets import LaserOnOffWindow
 from karaboFAI.data_processing import ProcessedData
-from karaboFAI.config import Config as cfg
 from karaboFAI.main_gui import MainGUI
 
 
@@ -29,7 +28,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self._normalization_range = (1, 5)
         self._fom_range = (1, 5)
 
-        self._available_modes = list(cfg.LASER_MODES.keys())
+        self._available_modes = list(LaserOnOffWindow.modes.keys())
 
     def testNormalMode(self):
         win = LaserOnOffWindow(MainGUI.Data4Visualization(),
