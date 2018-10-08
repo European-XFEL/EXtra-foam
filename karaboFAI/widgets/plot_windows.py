@@ -598,7 +598,7 @@ class BraggSpots(PlotWindow):
                  title=''):
         """Initialization."""
         super().__init__(data, parent=parent, title=title)
-        self.setGeometry(100,100,1600,800)
+        self.setGeometry(100,100,1200,600)
 
         self._com_analysis = False
 
@@ -606,8 +606,10 @@ class BraggSpots(PlotWindow):
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._count = 0
-        self._fom_hist_train_id = []
-        self._fom_hist = []
+        self._hist_train_id = []
+        self._hist_com_on = []
+        self._hist_com_off = []
+
         self.initUI()
         self.updatePlots()
 
@@ -630,7 +632,7 @@ class BraggSpots(PlotWindow):
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         self._image_items.append(img)
-        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
+        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False,border=mkPen((255, 255, 255), width=2))
         vb.addItem(img)
 
 
@@ -681,6 +683,9 @@ class BraggSpots(PlotWindow):
         else:
             self._com_analysis = False
             self._gl_widget.setEnabled(True)
+            self._hist_com_on.clear()
+            self._hist_com_off.clear()
+            self._hist_train_id.clear()
 
     def _show_roi(self,roi):
         index = self._rois.index(roi)
@@ -728,7 +733,11 @@ class BraggSpots(PlotWindow):
             r = np.sqrt(mass[0]**2 + mass[1]**2)
             com_off.append(r)
 
-        return com_on,com_off, np.mean(np.array(com_on)), np.mean(np.array(com_off))
+
+        self._hist_train_id.append(data.tid)
+        self._hist_com_off.append(np.mean(np.array(com_off)))
+        self._hist_com_on.append(np.mean(np.array(com_on)))
+        return com_on,com_off
 
     def updatePlots(self):
         data = self._data.get()
@@ -747,8 +756,8 @@ class BraggSpots(PlotWindow):
         if self._com_analysis:
             p = self._plot_items[0]
            
-            com_on,com_off, com_on_mean, com_off_mean = self._update(data)
-            
+            com_on,com_off = self._update(data)
+
             com_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(com_on,com_off)) ]
             pulse_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(self._on_pulse_ids,self._off_pulse_ids)) ]
 
@@ -760,6 +769,29 @@ class BraggSpots(PlotWindow):
             # p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple)
             p.plot(sorted(pulse_all),com_all, name="all", pen= PenFactory.cyan, symbol='o')
 
+            p = self._plot_items[1]
+            p.clear()
+
+            s = ScatterPlotItem(size=10,
+                            pen=mkPen(None),
+                            brush=mkBrush(120, 255, 255, 255))
+            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                     zip(self._hist_train_id, self._hist_com_off)])
+
+            p.addItem(s)
+            s = ScatterPlotItem(size=10,
+                            pen=mkPen(None),
+                            brush=mkBrush(240, 255, 255, 255))
+            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                     zip(self._hist_train_id, self._hist_com_on)])
+
+            p.addItem(s)
+            p.plot(self._hist_train_id, self._hist_com_off,
+               pen=PenFactory.red, name='Off')
+            p.plot(self._hist_train_id, self._hist_com_on,
+               pen=PenFactory.green, name='On')
+            p.addLegend()
+
 
 
     def clearPlots(self):
@@ -769,6 +801,9 @@ class BraggSpots(PlotWindow):
             item.clear()
 
         (self._plot_items[0]).clear()
+        if not self._com_analysis:
+            (self._plot_items[1]).clear()
+
 
 
 @SingletonWindow
