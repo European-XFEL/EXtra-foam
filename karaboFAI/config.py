@@ -153,9 +153,11 @@ class Config(dict):
         """Generate the 'settings.ini' file if it does not exist."""
         if not os.path.isfile(self._filename):
             cfg = UpperCaseConfigParser()
+
             cfg["DEFAULT"] = {k: "" for k in self._default_config.keys()}
             for topic in self._default_topic_configs.keys():
-                cfg[topic] = {}
+                cfg[topic] = dict()
+
             with open(self._filename, 'w') as fp:
                 cfg.write(fp)
 
@@ -169,8 +171,8 @@ class Config(dict):
         cfg = self._default_topic_configs[topic].copy()
         for key in self._default_topic_configs[topic]:
             if key not in self._default_config:
-                sys.stderr.write("'{}' in default topic {} config is not found "
-                                 "in default config!\n".format(key, topic))
+                sys.stderr.write("'{}' in default topic {} config is not found"
+                                 " in default config!\n".format(key, topic))
                 del cfg[key]
 
         self.update(cfg)
