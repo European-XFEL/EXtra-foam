@@ -154,6 +154,8 @@ class Config(dict):
         if not os.path.isfile(self._filename):
             cfg = UpperCaseConfigParser()
             cfg["DEFAULT"] = {k: "" for k in self._default_config.keys()}
+            for topic in self._default_topic_configs.keys():
+                cfg[topic] = {}
             with open(self._filename, 'w') as fp:
                 cfg.write(fp)
 
@@ -172,9 +174,9 @@ class Config(dict):
                 del cfg[key]
 
         self.update(cfg)
-        self.from_file()
+        self.from_file(topic)
 
-    def from_file(self):
+    def from_file(self, topic):
         """Update the config dictionary from the settings.ini file.
 
         keys with empty entries or not found in '_default_config' will be
@@ -186,6 +188,12 @@ class Config(dict):
         for key in cfg["DEFAULT"]:
             if key in self._default_config and cfg["DEFAULT"][key]:
                 self.__setitem__(key, cfg["DEFAULT"][key])
+
+        # overwrite with the topic config if any
+        if topic in cfg:
+            for key in cfg[topic]:
+                if key in self._default_config and cfg[topic][key]:
+                    self.__setitem__(key, cfg[topic][key])
 
 
 config = Config()  # global configuration
