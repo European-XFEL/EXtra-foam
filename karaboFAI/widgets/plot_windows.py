@@ -612,7 +612,10 @@ class BraggSpots(PlotWindow):
 
         self.initUI()
         self.updatePlots()
+        # print(self._on_pulse_ids)
 
+        # print(self._off_pulse_ids)
+        
         logger.info("Open COM Analysis Window")
 
 
@@ -713,7 +716,7 @@ class BraggSpots(PlotWindow):
 
             mass = ndimage.measurements.center_of_mass(on_slice_brag_data-on_slice_background) 
 
-            r = np.sqrt(mass[0]**2 + mass[1]**2)
+            r = np.linalg.norm(mass)
             com_on.append(r)
 
         for pid in self._off_pulse_ids:
@@ -730,7 +733,7 @@ class BraggSpots(PlotWindow):
 
             mass = ndimage.measurements.center_of_mass(off_slice_brag_data-off_slice_background) 
 
-            r = np.sqrt(mass[0]**2 + mass[1]**2)
+            r = np.linalg.norm(mass)
             com_off.append(r)
 
 
@@ -744,7 +747,6 @@ class BraggSpots(PlotWindow):
         if data.empty():
             return
         
-        # print("....check box ...", self._com_analysis)
         self._image_items[0].setImage(data.image_mean,autoLevels=False,levels=(0, data.image_mean.max()))
 
         size_brag = (self._rois[0]).size()
@@ -755,13 +757,18 @@ class BraggSpots(PlotWindow):
 
         if self._com_analysis:
             p = self._plot_items[0]
-           
+
             com_on,com_off = self._update(data)
 
-            com_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(com_on,com_off)) ]
-            pulse_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(self._on_pulse_ids,self._off_pulse_ids)) ]
+            # com_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(com_on,com_off)) ]
+            # pulse_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(self._on_pulse_ids,self._off_pulse_ids)) ]
 
-            com_all = [x for _,x in sorted(zip(pulse_all,com_all))]
+            com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
+            com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
+
+            com_all = [x for _,x in sorted(com_on_pulse_on + com_off_pulse_off) ]
+            pulse_all = [x for x,_ in sorted(com_on_pulse_on + com_off_pulse_off) ]
+            # com_all = [x for _,x in sorted(zip(pulse_all,com_all))]
 
             p.addLegend()
             p.setTitle(' TrainId :: {}'.format(data.tid))
