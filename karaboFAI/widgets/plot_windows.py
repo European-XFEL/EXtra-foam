@@ -581,8 +581,6 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist_train_id.clear()
 
 from scipy import ndimage
-# from scipy.spatial import distance
-import itertools
 class BraggSpots(PlotWindow):
   
 
@@ -598,7 +596,7 @@ class BraggSpots(PlotWindow):
                  title=''):
         """Initialization."""
         super().__init__(data, parent=parent, title=title)
-        self.setGeometry(100,100,1200,600)
+        self.setGeometry(100,100,1400,800)
 
         self._com_analysis = False
 
@@ -612,12 +610,8 @@ class BraggSpots(PlotWindow):
 
         self.initUI()
         self.updatePlots()
-        # print(self._on_pulse_ids)
 
-        # print(self._off_pulse_ids)
-        
         logger.info("Open COM Analysis Window")
-
 
     def initCtrlUI(self):
         self._ctrl_widget = QtGui.QWidget() 
@@ -628,16 +622,14 @@ class BraggSpots(PlotWindow):
         layout.addWidget(checkbtn)
 
         self._ctrl_widget.setLayout(layout)
-        # return cntrl_widget
-
 
     def initPlotUI(self):
+        
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         self._image_items.append(img)
-        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False,border=mkPen((255, 255, 255), width=2))
+        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
         vb.addItem(img)
-
 
         roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=PenFactory.green)
         
@@ -650,36 +642,31 @@ class BraggSpots(PlotWindow):
             # roi.addScaleHandle([0, 0.5], [0.5, 0.5])
             vb.addItem(roi)
 
-        vb1 = self._gl_widget.addViewBox(row=0, col= 2, rowspan=1, lockAspect=True,enableMouse=False)
-
-        img1 = ImageItem(border='w')
+        vb1 = self._gl_widget.addViewBox(row=2, col= 0, rowspan=1, colspan=1,  lockAspect=True,enableMouse=False)
+        img1 = ImageItem()
         img1.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         vb1.addItem(img1)
         self._image_items.append(img1)
-        # self._gl_widget.addLabel("Background",row = 1, col = 1)
-        vb2 = self._gl_widget.addViewBox(row=1, col=2, rowspan=1, lockAspect=True,enableMouse=False)
+        
+        vb2 = self._gl_widget.addViewBox(row=2, col=1, rowspan=1,colspan=1,  lockAspect=True,enableMouse=False)
         img2 = ImageItem(border='w')
         img2.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
-        p1 = self._gl_widget.addPlot(row= 0, col = 3, rowspan = 2, colspan=2,lockAspect=True)
+        p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2, colspan=2,lockAspect=True)
         self._plot_items.append(p1)
         p1.setLabel('left', "COM position")
         p1.setLabel('bottom', "Pulse ids")
         
-
-        
-        p2 = self._gl_widget.addPlot(row = 2, col = 0, rowspan=2, colspan=5)
+        p2 = self._gl_widget.addPlot(row = 2, col = 2, rowspan=1, colspan=1)
         self._plot_items.append(p2)
-        p2.setLabel('left', "Integrated difference (arb.)")
+        p2.setLabel('left', "Average COM")
         p2.setLabel('bottom', "Train ID")
         p2.setTitle(' ')
 
-
-
-
     def _clickBox(self,state):
+        
         if state == QtCore.Qt.Checked:
             self._com_analysis = True
             self._gl_widget.setEnabled(False)
@@ -705,16 +692,18 @@ class BraggSpots(PlotWindow):
             on_slice_brag_data[np.isnan(on_slice_brag_data) ] = -np.inf
             np.clip(on_slice_brag_data,
                 cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_brag_data)
-            
-            # on_slice_brag_data[np.isinf(on_slice_brag_data)  ] = 0.0
 
-            # on_slice_background[np.isnan(on_slice_background) ] = 0.0
-            # on_slice_background[np.isinf(on_slice_background) ] = 0.0
             on_slice_background[np.isnan(on_slice_background) ] = -np.inf
             np.clip(on_slice_background,
                 cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_background)
 
-            mass = ndimage.measurements.center_of_mass(on_slice_brag_data-on_slice_background) 
+            mass_from_data = on_slice_brag_data - on_slice_background
+
+            np.clip(mass_from_data,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
+
+            # mass = ndimage.measurements.center_of_mass(on_slice_brag_data-on_slice_background) 
+            mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
             r = np.linalg.norm(mass)
             com_on.append(r)
@@ -731,11 +720,13 @@ class BraggSpots(PlotWindow):
             np.clip(off_slice_background,
                 cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=off_slice_background)
 
-            mass = ndimage.measurements.center_of_mass(off_slice_brag_data-off_slice_background) 
+            mass_from_data = off_slice_brag_data - off_slice_background
+            np.clip(mass_from_data,
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
+            mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
             r = np.linalg.norm(mass)
             com_off.append(r)
-
 
         self._hist_train_id.append(data.tid)
         self._hist_com_off.append(np.mean(np.array(com_off)))
@@ -760,21 +751,17 @@ class BraggSpots(PlotWindow):
 
             com_on,com_off = self._update(data)
 
-            # com_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(com_on,com_off)) ]
-            # pulse_all = [x for x in itertools.chain.from_iterable(itertools.zip_longest(self._on_pulse_ids,self._off_pulse_ids)) ]
-
             com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
             com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
 
             com_all = [x for _,x in sorted(com_on_pulse_on + com_off_pulse_off) ]
             pulse_all = [x for x,_ in sorted(com_on_pulse_on + com_off_pulse_off) ]
-            # com_all = [x for _,x in sorted(zip(pulse_all,com_all))]
 
             p.addLegend()
             p.setTitle(' TrainId :: {}'.format(data.tid))
             # p.plot(self._on_pulse_ids,com_on, name ='On', pen=PenFactory.green )
             # p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple)
-            p.plot(sorted(pulse_all),com_all, name="all", pen= PenFactory.cyan, symbol='o')
+            p.plot(pulse_all,com_all, name="all", pen= PenFactory.cyan, symbol='o')
 
             p = self._plot_items[1]
             p.clear()
@@ -799,18 +786,14 @@ class BraggSpots(PlotWindow):
                pen=PenFactory.green, name='On')
             p.addLegend()
 
-
-
     def clearPlots(self):
         """Override."""
-        
         for item in self._image_items:
             item.clear()
 
-        (self._plot_items[0]).clear()
+        self._plot_items[0].clear()
         if not self._com_analysis:
-            (self._plot_items[1]).clear()
-
+            self._plot_items[1].clear()
 
 
 @SingletonWindow
