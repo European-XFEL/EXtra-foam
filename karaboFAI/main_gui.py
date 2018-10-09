@@ -57,12 +57,15 @@ class MainGUI(QtGui.QMainWindow):
 
     _logger_fontsize = 12  # fontsize in logger window
 
-    def __init__(self, default_config=None, screen_size=None):
-        """Initialization."""
+    def __init__(self, topic, screen_size=None):
+        """Initialization.
+
+        :param str topic: detector topic, allowed options "SPB", "FXE"
+        """
         super().__init__()
 
         # update global configuration
-        config.update_global(default_config)
+        config.load(topic)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
@@ -230,7 +233,7 @@ class MainGUI(QtGui.QMainWindow):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._fom_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._ma_window_le = FixedWidthLineEdit(w, "10")
+        self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
         # *************************************************************
         # data source options
@@ -240,7 +243,7 @@ class MainGUI(QtGui.QMainWindow):
         self._hostname_le = FixedWidthLineEdit(130, config["SERVER_ADDR"])
         self._port_le = FixedWidthLineEdit(60, str(config["SERVER_PORT"]))
         self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
-        self._pulse_range1_le = FixedWidthLineEdit(60, str(2999))
+        self._pulse_range1_le = FixedWidthLineEdit(60, str(2699))
 
         self._data_src_rbts = []
         self._data_src_rbts.append(
@@ -470,10 +473,13 @@ class MainGUI(QtGui.QMainWindow):
         widget = self._quad_positions_tb
         widget.setRowCount(n_row)
         widget.setColumnCount(n_col)
-        for i in range(n_row):
-            for j in range(n_col):
-                widget.setItem(i, j, QtGui.QTableWidgetItem(
-                    str(config["QUAD_POSITIONS"][i][j])))
+        try:
+            for i in range(n_row):
+                for j in range(n_col):
+                    widget.setItem(i, j, QtGui.QTableWidgetItem(
+                        str(config["QUAD_POSITIONS"][i][j])))
+        except IndexError:
+            pass
 
         widget.move(0, 0)
         widget.setHorizontalHeaderLabels(['x', 'y'])
