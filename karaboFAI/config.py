@@ -11,7 +11,6 @@ All rights reserved.
 """
 import os
 import configparser
-import logging
 
 
 # root path for storing config and log files
@@ -232,7 +231,7 @@ class Config(dict):
                 msg = "The following invalid keys were found in '{}':\n".\
                     format(self._filename)
                 msg += ", ".join(invalid_keys)
-                logging.warning(msg)
+                print(msg)
 
 
 config = Config()  # global configuration
