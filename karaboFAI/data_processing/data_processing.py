@@ -260,12 +260,17 @@ class DataProcessor(Thread):
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
+
             try:
-                # This is a bug when using the recent karabo_data on the
-                # old data set.
-                modules_data = stack_detector_data(data, "image.data",
-                                                   only="LPD")
+                if config["TOPIC"] == "FXE":
+                    dev = 'LPD'
+                else:
+                    dev = ''
+
+                modules_data = stack_detector_data(data, "image.data", only=dev)
             except KeyError:
+                # To handle a bug when using the recent karabo_data on the
+                # old data set.
                 return ProcessedData(tid)
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"

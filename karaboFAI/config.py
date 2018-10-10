@@ -85,6 +85,7 @@ class Config(dict):
 
     # system config should not appear in the topic config
     _default_sys_config = {
+        "TOPIC": '',  # topic name, leave it empty
         "MAX_LOGGING": 1000,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 5,
@@ -189,6 +190,7 @@ class Config(dict):
 
         :param str topic: detector topic, allowed options "SPB", "FXE".
         """
+        self.__setitem__("TOPIC", topic)
         self.update(self._default_topic_configs[topic])
         self.from_file(topic)
 
