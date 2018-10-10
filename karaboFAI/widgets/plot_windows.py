@@ -633,7 +633,7 @@ class BraggSpots(PlotWindow):
     def initCtrlUI(self):
 
         self._ctrl_widget = QtGui.QWidget()
-        # self._ctrl_widget.setMaximumWidth(600)
+        self._ctrl_widget.setMaximumWidth(500)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
