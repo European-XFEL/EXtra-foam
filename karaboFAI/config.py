@@ -137,7 +137,7 @@ class Config(dict):
         "SERVER_PORT": 4501,
         "SOURCE_NAME": "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",
         "SOURCE_TYPE": 1,
-        "GEOMETRY_FILE": '',
+        "GEOMETRY_FILE": os.path.join(os.path.expanduser("~"), "lpd_mar_18.h5"),
         "QUAD_POSITIONS": ((-13.0, -299.0),
                            (11.0, -8.0),
                            (-254.0, 16.0),
