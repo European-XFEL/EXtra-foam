@@ -23,7 +23,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from .data_model import DataSource, ProcessedData
-from ..config import Config as cfg
+from ..config import config
 from ..logger import logger
 
 
@@ -75,8 +75,8 @@ class DataProcessor(Thread):
             / kwargs['photon_energy']
 
         self.sample_dist = kwargs['sample_dist']
-        self.cx = kwargs['cx'] * cfg.PIXEL_SIZE
-        self.cy = kwargs['cy'] * cfg.PIXEL_SIZE
+        self.cx = kwargs['cx'] * config["PIXEL_SIZE"]
+        self.cy = kwargs['cy'] * config["PIXEL_SIZE"]
         self.integration_method = kwargs['integration_method']
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
@@ -113,7 +113,7 @@ class DataProcessor(Thread):
                          .format(1000 * (time.perf_counter() - t0)))
 
             try:
-                self._out_queue.put(processed_data, timeout=cfg.TIMEOUT)
+                self._out_queue.put(processed_data, timeout=config["TIMEOUT"])
             except Full:
                 pass
 
@@ -135,8 +135,8 @@ class DataProcessor(Thread):
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
                                        poni1=self.cy,
                                        poni2=self.cx,
-                                       pixel1=cfg.PIXEL_SIZE,
-                                       pixel2=cfg.PIXEL_SIZE,
+                                       pixel1=config["PIXEL_SIZE"],
+                                       pixel2=config["PIXEL_SIZE"],
                                        rot1=0,
                                        rot2=0,
                                        rot3=0,
@@ -148,7 +148,7 @@ class DataProcessor(Thread):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        if cfg.DOWN_SAMPLE_IMAGE_MEAN:
+        if config["DOWN_SAMPLE_IMAGE_MEAN"]:
             # Down-sampling the average image by a factor of two will
             # reduce the data processing time considerably, while the
             # azimuthal integration will not be affected.
@@ -202,7 +202,7 @@ class DataProcessor(Thread):
 
             return ret.radial, ret.intensity
 
-        with ProcessPoolExecutor(max_workers=cfg.MAX_DATA_WORKER) as executor:
+        with ProcessPoolExecutor(max_workers=config["WORKERS"]) as executor:
             rets = executor.map(_integrate1d_para, range(assembled.shape[0]))
 
         momentums, intensities = zip(*rets)
@@ -249,8 +249,8 @@ class DataProcessor(Thread):
             if len(metadata.items()) > 1:
                 logger.warning("Found multiple data sources!")
 
-            tid = metadata[cfg.SOURCE]["timestamp.tid"]
-            modules_data = data[cfg.SOURCE]["image.data"]
+            tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
+            modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
@@ -269,6 +269,12 @@ class DataProcessor(Thread):
         t0 = time.perf_counter()
 
         assembled, centre = self._geom.position_all_modules(modules_data)
+        # This is a bug in old version of karabo_data. The above function
+        # could return a numpy.ndarray with shape (0, x, x)
+        if assembled.shape[0] == 0:
+            logger.debug("Bad shape {} in assembled image of train {}".
+                         format(assembled.shape, tid))
+            return ProcessedData(tid)
         # TODO: slice earlier to save computation time
         assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
 

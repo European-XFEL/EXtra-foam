@@ -13,6 +13,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
+from .config import ROOT_PATH
 
 # disable DEBUG information from imported module pyFAI
 logging.getLogger("pyFAI").setLevel(logging.CRITICAL)
@@ -24,10 +25,7 @@ def create_logger():
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 
-    log_file_dir = os.path.join(os.path.expanduser('~'), '.karaboFAI')
-    if not os.path.isdir(log_file_dir):
-        os.mkdir(log_file_dir)
-    log_file = os.path.join(log_file_dir, name + ".log")
+    log_file = os.path.join(ROOT_PATH, name + ".log")
     fh = TimedRotatingFileHandler(log_file, when='midnight')
 
     fh.suffix = "%Y%m%d"

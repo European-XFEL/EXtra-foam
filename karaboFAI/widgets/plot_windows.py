@@ -21,7 +21,7 @@ from .pyqtgraph import (
 from .pyqtgraph import parametertree as ptree
 
 from ..logger import logger
-from ..config import Config as cfg
+from ..config import config
 from ..data_processing.proc_utils import (
     integrate_curve, sub_array_with_range
 )
@@ -50,7 +50,7 @@ class AbstractWindow(QtGui.QMainWindow):
     All the stand-alone windows should follow the interface defined
     in this abstract class.
     """
-    def __init__(self, data, *, parent=None, title=''):
+    def __init__(self, data, *, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -58,7 +58,11 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         super().__init__(parent=parent)
         self._data = data
-        self.setWindowTitle(title)
+        try:
+            self.setWindowTitle(parent.title)
+        except AttributeError:
+            # for unit test where parent is None
+            self.setWindowTitle("")
 
     def initUI(self):
         """Initialization of UI.
@@ -148,10 +152,9 @@ class IndividualPulseWindow(PlotWindow):
     plot_h = 280
     max_plots = 4
 
-    def __init__(self, data, pulse_ids, *,
-                 parent=None, title='', show_image=False):
+    def __init__(self, data, pulse_ids, *, parent=None, show_image=False):
         """Initialization."""
-        super().__init__(data, parent=parent, title=title)
+        super().__init__(data, parent=parent)
 
         self._pulse_ids = pulse_ids
         self._show_image = show_image
@@ -179,7 +182,7 @@ class IndividualPulseWindow(PlotWindow):
                 break
             if self._show_image is True:
                 img = ImageItem(border='w')
-                img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
+                img.setLookupTable(lookupTableFactory[config["COLOR_MAP"]])
                 self._image_items.append(img)
 
                 vb = self._gl_widget.addViewBox(lockAspect=True)
@@ -228,8 +231,8 @@ class IndividualPulseWindow(PlotWindow):
             if data is not None and self._show_image is True:
                 # in-place operation is faster
                 np.clip(data.image[pulse_id],
-                        cfg.MASK_RANGE[0],
-                        cfg.MASK_RANGE[1],
+                        config["MASK_RANGE"][0],
+                        config["MASK_RANGE"][1],
                         data.image[pulse_id])
                 self._image_items[i].setImage(
                     np.flip(data.image[pulse_id], axis=0))
@@ -263,10 +266,9 @@ class LaserOnOffWindow(PlotWindow):
                  fom_range,
                  laser_mode, *,
                  parent=None,
-                 title='',
                  ma_window_size=9999):
         """Initialization."""
-        super().__init__(data, parent=parent, title=title)
+        super().__init__(data, parent=parent)
 
         self._ptree = ptree.ParameterTree(showHeader=True)
         params = [
@@ -591,10 +593,9 @@ class SampleDegradationMonitor(PlotWindow):
     plot_w = 800
     plot_h = 450
 
-    def __init__(self, data, normalization_range, fom_range, *,
-                 parent=None, title=''):
+    def __init__(self, data, normalization_range, fom_range, *, parent=None):
         """Initialization."""
-        super().__init__(data, parent=parent, title=title)
+        super().__init__(data, parent=parent)
 
         self._normalization_range = normalization_range
         self._fom_range = fom_range
@@ -663,8 +664,8 @@ class DrawMaskWindow(AbstractWindow):
     detector image and draw a mask for further azimuthal integration.
     The mask must be saved and then loaded in the main GUI manually.
     """
-    def __init__(self, data, *, parent=None, title=''):
-        super().__init__(data, parent=parent, title=title)
+    def __init__(self, data, *, parent=None):
+        super().__init__(data, parent=parent)
 
         from pyFAI.app.drawmask import MaskImageWidget
 
