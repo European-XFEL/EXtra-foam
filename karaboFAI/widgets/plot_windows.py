@@ -58,7 +58,11 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         super().__init__(parent=parent)
         self._data = data
-        self.setWindowTitle(config["TITLE"])
+        try:
+            self.setWindowTitle(parent.title)
+        except AttributeError:
+            # for unit test where parent is None
+            self.setWindowTitle("")
 
     def initUI(self):
         """Initialization of UI.

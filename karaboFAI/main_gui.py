@@ -31,9 +31,6 @@ from .config import config
 from .helpers import parse_ids, parse_boundary, parse_quadrant_table
 
 
-DEFAULT_DATA_SOURCE = DataSource.CALIBRATED
-
-
 class MainGUI(QtGui.QMainWindow):
     """The main GUI for azimuthal integration."""
 
@@ -70,7 +67,8 @@ class MainGUI(QtGui.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
 
-        self.setWindowTitle(config["TITLE"])
+        self.title = topic + " Azimuthal Integration"
+        self.setWindowTitle(self.title)
 
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
@@ -240,8 +238,9 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._data_src_gp = CustomGroupBox("Data source")
 
-        self._hostname_le = FixedWidthLineEdit(130, config["SERVER_ADDR"])
-        self._port_le = FixedWidthLineEdit(60, str(config["SERVER_PORT"]))
+        self._hostname_le = FixedWidthLineEdit(165, config["SERVER_ADDR"])
+        self._port_le = FixedWidthLineEdit(70, str(config["SERVER_PORT"]))
+        self._source_name_le = FixedWidthLineEdit(280, config["SOURCE_NAME"])
         self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
         self._pulse_range1_le = FixedWidthLineEdit(60, str(2699))
 
@@ -254,7 +253,7 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QRadioButton("Assembled data@ZMQ bridge"))
         self._data_src_rbts.append(
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
-        self._data_src_rbts[int(DEFAULT_DATA_SOURCE)].setChecked(True)
+        self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
 
         # *************************************************************
         # log window
@@ -280,13 +279,9 @@ class MainGUI(QtGui.QMainWindow):
         self._server_terminate_btn.setEnabled(False)
         self._server_terminate_btn.clicked.connect(
             self._onStopServeFile)
-        self._select_btn = QtGui.QPushButton("Select")
-        self._file_server_data_folder_le = QtGui.QLineEdit(
-            config["FILE_SERVER_FOLDER"])
 
         self._disabled_widgets_during_file_serving = [
-            self._file_server_data_folder_le,
-            self._select_btn
+            self._source_name_le,
         ]
 
         # *************************************************************
@@ -434,6 +429,9 @@ class MainGUI(QtGui.QMainWindow):
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         self._port_le.setFixedHeight(28)
+        source_name_lb = QtGui.QLabel("Source: ")
+        self._source_name_le.setAlignment(QtCore.Qt.AlignCenter)
+        self._source_name_le.setFixedHeight(28)
         pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range0_le.setFixedHeight(28)
@@ -452,7 +450,11 @@ class MainGUI(QtGui.QMainWindow):
         sub_layout2.addWidget(QtGui.QLabel(" to "))
         sub_layout2.addWidget(self._pulse_range1_le)
         sub_layout2.addStretch(2)
+        sub_layout3 = QtGui.QHBoxLayout()
+        sub_layout3.addWidget(source_name_lb)
+        sub_layout3.addWidget(self._source_name_le)
         layout.addLayout(sub_layout1)
+        layout.addLayout(sub_layout3)
         for btn in self._data_src_rbts:
             layout.addWidget(btn)
         layout.addLayout(sub_layout2)
@@ -490,14 +492,9 @@ class MainGUI(QtGui.QMainWindow):
     def _initFileServerUI(self):
         layout = QtGui.QGridLayout()
 
-        self._select_btn.clicked.connect(self._setDataFolder)
-        self._file_server_data_folder_le.setFixedHeight(28)
-        self._select_btn.setToolTip("Select data folder")
-
         layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
         layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        layout.addWidget(self._select_btn, 1, 0, 1, 1)
-        layout.addWidget(self._file_server_data_folder_le, 1, 1, 1, 5)
+
         self._file_server_widget.setLayout(layout)
 
     def _updateAll(self):
@@ -670,11 +667,6 @@ class MainGUI(QtGui.QMainWindow):
         else:
             logger.error("Please specify the mask image file!")
 
-    def _setDataFolder(self):
-        folder = QtGui.QFileDialog.getExistingDirectory(
-            self, 'Select directory', '/home')
-        self._file_server_data_folder_le.setText(folder)
-
     def _onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
         self._is_running = True
@@ -802,7 +794,7 @@ class MainGUI(QtGui.QMainWindow):
 
     def _onStartServeFile(self):
         """Actions taken before the start of file serving."""
-        folder = self._file_server_data_folder_le.text().strip()
+        folder = self._source_name_le.text().strip()
         port = int(self._port_le.text().strip())
 
         self._file_server = FileServer(folder, port)
