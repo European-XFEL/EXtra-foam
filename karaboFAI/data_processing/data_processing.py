@@ -149,13 +149,16 @@ class DataProcessor(Thread):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        if config["DOWN_SAMPLE_IMAGE_MEAN"]:
-            # Down-sampling the average image by a factor of two will
-            # reduce the data processing time considerably, while the
-            # azimuthal integration will not be affected.
-            assembled_mean = np.nanmean(assembled[:, ::2, ::2], axis=0)
-        else:
-            assembled_mean = np.nanmean(assembled, axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            if config["DOWN_SAMPLE_IMAGE_MEAN"]:
+                # Down-sampling the average image by a factor of two will
+                # reduce the data processing time considerably, while the
+                # azimuthal integration will not be affected.
+                assembled_mean = np.nanmean(assembled[:, ::2, ::2], axis=0)
+            else:
+                assembled_mean = np.nanmean(assembled, axis=0)
 
         # Convert 'nan' to '-inf' and it will later be converted to 0.
         # We do not convert 'nan' to 0 because: if the lower range of
