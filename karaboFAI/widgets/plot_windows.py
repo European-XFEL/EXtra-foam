@@ -16,7 +16,8 @@ from silx.gui.colors import Colormap as SilxColormap
 
 from .pyqtgraph import (
     BarGraphItem, GraphicsLayoutWidget, ImageItem,
-    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem, RectROI
+    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem, RectROI,
+    HistogramLUTItem
 )
 from .pyqtgraph import parametertree as ptree
 
@@ -628,7 +629,7 @@ class BraggSpots(PlotWindow):
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
         self._image_items.append(img)
-        vb = self._gl_widget.addViewBox(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
+        vb = self._gl_widget.addPlot(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
         vb.addItem(img)
 
         roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=PenFactory.green)
@@ -641,6 +642,11 @@ class BraggSpots(PlotWindow):
             # roi.addScaleHandle([0.5, 1], [0.5, 0.5])
             # roi.addScaleHandle([0, 0.5], [0.5, 0.5])
             vb.addItem(roi)
+
+        # hist = HistogramLUTItem()
+        # hist.setImageItem(img)
+        # self._gl_widget.addItem(hist)
+
 
         vb1 = self._gl_widget.addViewBox(row=2, col= 0, rowspan=1, colspan=1,  lockAspect=True,enableMouse=False)
         img1 = ImageItem()
@@ -677,52 +683,48 @@ class BraggSpots(PlotWindow):
             self._hist_com_off.clear()
             self._hist_train_id.clear()
 
-    def _show_roi(self,roi):
-        index = self._rois.index(roi)
-        self._image_items[index+1].setImage(roi.getArrayRegion((self._data).image_mean, self._image_items[0]),levels=(0, (self._data).image_mean.max()))
+    # def _show_roi(self,roi):
+    #     index = self._rois.index(roi)
+    #     self._image_items[index+1].setImage(roi.getArrayRegion((self._data).image_mean, self._image_items[0]),levels=(0, (self._data).image_mean.max()))
 
     def _update(self,data):
         com_on = []
         com_off = []
+        keys = ['brag_data','background_data']
+        slices = dict.fromkeys(keys)
         for pid in self._on_pulse_ids:
-            on_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
-            on_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
-           
 
-            on_slice_brag_data[np.isnan(on_slice_brag_data) ] = -np.inf
-            np.clip(on_slice_brag_data,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_brag_data)
+            index = 0
+            for key in slices.keys():
+                slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+                index +=1
+                (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                np.clip(slices[key],
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=slices[key])
 
-            on_slice_background[np.isnan(on_slice_background) ] = -np.inf
-            np.clip(on_slice_background,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=on_slice_background)
-
-            mass_from_data = on_slice_brag_data - on_slice_background
-
+            mass_from_data = slices['brag_data'] - slices['background_data']
             np.clip(mass_from_data,
                 cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
 
-            # mass = ndimage.measurements.center_of_mass(on_slice_brag_data-on_slice_background) 
             mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
             r = np.linalg.norm(mass)
             com_on.append(r)
 
         for pid in self._off_pulse_ids:
-            off_slice_brag_data = self._rois[0].getArrayRegion(data.image[pid], self._image_items[0])
-            off_slice_background = self._rois[1].getArrayRegion(data.image[pid], self._image_items[0])
 
-            off_slice_brag_data[np.isnan(off_slice_brag_data) ] = -np.inf
-            np.clip(off_slice_brag_data,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=off_slice_brag_data)
+            index = 0
+            for key in slices.keys():
+                slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+                index +=1
+                (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                np.clip(slices[key],
+                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=slices[key])
 
-            off_slice_background[np.isnan(off_slice_background) ] = -np.inf
-            np.clip(off_slice_background,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=off_slice_background)
-
-            mass_from_data = off_slice_brag_data - off_slice_background
+            mass_from_data = slices['brag_data'] - slices['background_data']
             np.clip(mass_from_data,
                 cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
+            
             mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
             r = np.linalg.norm(mass)
@@ -742,9 +744,11 @@ class BraggSpots(PlotWindow):
 
         size_brag = (self._rois[0]).size()
         self._rois[1].setSize(size_brag)
-        self._image_items[1].setImage(self._rois[0].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
+
+        for roi in self._rois:
+            index = self._rois.index(roi)
+            self._image_items[index+1].setImage(roi.getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
         
-        self._image_items[2].setImage(self._rois[1].getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
 
         if self._com_analysis:
             p = self._plot_items[0]
