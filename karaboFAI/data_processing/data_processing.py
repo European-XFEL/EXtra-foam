@@ -13,6 +13,7 @@ import time
 from threading import Thread
 from concurrent.futures import ProcessPoolExecutor
 from queue import Empty, Full
+import warnings
 
 import numpy as np
 from scipy import constants
