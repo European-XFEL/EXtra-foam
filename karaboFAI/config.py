@@ -50,6 +50,9 @@ class Config(dict):
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
     #                     queues in data pipeline
     # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
+    # WORKERS int: number of processes used in data processing
+    # DOWN_SAMPLE_IMAGE_MEAN bool: True for down-sampling the average image by
+    #                              a factor of two
     #
     # networking
     # ----------
@@ -85,7 +88,9 @@ class Config(dict):
     _default_sys_config = {
         "MAX_LOGGING": 1000,
         "MAX_QUEUE_SIZE": 2,
-        "TIMEOUT": 5
+        "TIMEOUT": 5,
+        "WORKERS": 4,
+        "DOWN_SAMPLE_IMAGE_MEAN": True
     }
 
     # this is to guard again the topic config defined in the file modifying

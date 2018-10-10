@@ -11,6 +11,7 @@ All rights reserved.
 """
 import time
 from threading import Thread
+from concurrent.futures import ProcessPoolExecutor
 from queue import Empty, Full
 import warnings
 
@@ -148,8 +149,12 @@ class DataProcessor(Thread):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
+        if config["DOWN_SAMPLE_IMAGE_MEAN"]:
+            # Down-sampling the average image by a factor of two will
+            # reduce the data processing time considerably, while the
+            # azimuthal integration will not be affected.
+            assembled_mean = np.nanmean(assembled[:, ::2, ::2], axis=0)
+        else:
             assembled_mean = np.nanmean(assembled, axis=0)
 
         # Convert 'nan' to '-inf' and it will later be converted to 0.
@@ -157,7 +162,6 @@ class DataProcessor(Thread):
         # mask is a negative value, 0 will be converted to a value
         # between 0 and 255 later.
         assembled_mean[np.isnan(assembled_mean)] = -np.inf
-        assembled[np.isnan(assembled)] = -np.inf
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -175,14 +179,20 @@ class DataProcessor(Thread):
                     format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
-        momentum = None
-        intensities = np.zeros([assembled.shape[0], self.integration_points])
-        for i in range(assembled.shape[0]):
+        global _integrate1d_para
+
+        def _integrate1d_para(i):
+            """Use for multiprocessing."""
+            # convert 'nan' to '-inf', as explained above
+            assembled[i][np.isnan(assembled[i])] = -np.inf
+
+            # add threshold mask
             mask = np.copy(base_mask)
-            # apply threshold mask
             mask[(assembled[i] < self.mask_range[0]) |
                  (assembled[i] > self.mask_range[1])] = 1
-            res = ai.integrate1d(assembled[i],
+
+            # do integration
+            ret = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
                                  mask=mask,
@@ -190,9 +200,14 @@ class DataProcessor(Thread):
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
-            if i == 0:
-                momentum = res.radial
-            intensities[i] = res.intensity
+
+            return ret.radial, ret.intensity
+
+        with ProcessPoolExecutor(max_workers=config["WORKERS"]) as executor:
+            rets = executor.map(_integrate1d_para, range(assembled.shape[0]))
+
+        momentums, intensities = zip(*rets)
+        momentum = momentums[0]
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
