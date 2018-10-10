@@ -260,7 +260,13 @@ class DataProcessor(Thread):
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
-            modules_data = stack_detector_data(data, "image.data", only="LPD")
+            try:
+                # This is a bug when using the recent karabo_data on the
+                # old data set.
+                modules_data = stack_detector_data(data, "image.data",
+                                                   only="LPD")
+            except KeyError:
+                return ProcessedData(tid)
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
