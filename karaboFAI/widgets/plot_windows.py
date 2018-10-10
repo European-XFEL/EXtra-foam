@@ -17,7 +17,6 @@ from silx.gui.colors import Colormap as SilxColormap
 from .pyqtgraph import (
     BarGraphItem, GraphicsLayoutWidget, ImageItem,
     LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem, RectROI,
-    HistogramLUTItem
 )
 from .pyqtgraph import parametertree as ptree
 
@@ -585,10 +584,6 @@ from scipy import ndimage
 class BraggSpots(PlotWindow):
   
 
-    # def __init__(self, data, on_pulse_ids,off_pulse_ids,*,parent=None, title=''):
-    #     """Initialization."""
-    #     super().__init__(data,parent=parent,title=title)
-
     def __init__(self,
                  data,
                  on_pulse_ids,
@@ -597,6 +592,27 @@ class BraggSpots(PlotWindow):
                  title=''):
         """Initialization."""
         super().__init__(data, parent=parent, title=title)
+        
+        self._ptree = ptree.ParameterTree(showHeader=True)
+        params = [
+            {'name': 'Experimental setups', 'type': 'group',
+             'children': [
+                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
+                 'value': ', '.join([str(x) for x in on_pulse_ids])},
+                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
+                 'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
+
+            {'name': 'Analysis options', 'type': 'group',
+             'children': [
+                 {'name': 'COM Analysis', 'type': 'bool', 'value': False}]},
+            {'name': 'Actions', 'type': 'group',
+             'children': [
+                {'name': 'Clear history', 'type': 'action'}]},
+        ]
+        p = ptree.Parameter.create(name='params', type='group', children=params)
+        self._ptree.setParameters(p, showTop=False)
+        self._vis_setups = p.param('Analysis options')
+        p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
         self.setGeometry(100,100,1400,800)
 
         self._com_analysis = False
@@ -615,13 +631,11 @@ class BraggSpots(PlotWindow):
         logger.info("Open COM Analysis Window")
 
     def initCtrlUI(self):
-        self._ctrl_widget = QtGui.QWidget() 
-        layout = QtGui.QHBoxLayout()
 
-        checkbtn = QtGui.QCheckBox("COM Analysis")
-        checkbtn.stateChanged.connect(self._clickBox)
-        layout.addWidget(checkbtn)
-
+        self._ctrl_widget = QtGui.QWidget()
+        # self._ctrl_widget.setMaximumWidth(600)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
 
     def initPlotUI(self):
@@ -647,7 +661,6 @@ class BraggSpots(PlotWindow):
         # hist.setImageItem(img)
         # self._gl_widget.addItem(hist)
 
-
         vb1 = self._gl_widget.addViewBox(row=2, col= 0, rowspan=1, colspan=1,  lockAspect=True,enableMouse=False)
         img1 = ImageItem()
         img1.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
@@ -670,18 +683,6 @@ class BraggSpots(PlotWindow):
         p2.setLabel('left', "Average COM")
         p2.setLabel('bottom', "Train ID")
         p2.setTitle(' ')
-
-    def _clickBox(self,state):
-        
-        if state == QtCore.Qt.Checked:
-            self._com_analysis = True
-            self._gl_widget.setEnabled(False)
-        else:
-            self._com_analysis = False
-            self._gl_widget.setEnabled(True)
-            self._hist_com_on.clear()
-            self._hist_com_off.clear()
-            self._hist_train_id.clear()
 
     # def _show_roi(self,roi):
     #     index = self._rois.index(roi)
@@ -739,7 +740,7 @@ class BraggSpots(PlotWindow):
         data = self._data.get()
         if data.empty():
             return
-        
+ 
         self._image_items[0].setImage(data.image_mean,autoLevels=False,levels=(0, data.image_mean.max()))
 
         size_brag = (self._rois[0]).size()
@@ -749,8 +750,8 @@ class BraggSpots(PlotWindow):
             index = self._rois.index(roi)
             self._image_items[index+1].setImage(roi.getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
         
-
-        if self._com_analysis:
+        if self._vis_setups.param("COM Analysis").value():
+            self._gl_widget.setEnabled(False)
             p = self._plot_items[0]
 
             com_on,com_off = self._update(data)
@@ -790,14 +791,25 @@ class BraggSpots(PlotWindow):
                pen=PenFactory.green, name='On')
             p.addLegend()
 
+        else:
+            self._gl_widget.setEnabled(True)
+
+
+
     def clearPlots(self):
         """Override."""
         for item in self._image_items:
             item.clear()
 
         self._plot_items[0].clear()
-        if not self._com_analysis:
-            self._plot_items[1].clear()
+        # if not self._com_analysis:
+        #     self._plot_items[1].clear()
+
+    def _reset(self):
+        self._plot_items[1].clear()
+        self._hist_com_on.clear()
+        self._hist_com_off.clear()
+        self._hist_train_id.clear()
 
 
 @SingletonWindow
