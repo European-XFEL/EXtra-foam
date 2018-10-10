@@ -12,6 +12,7 @@ All rights reserved.
 import time
 from threading import Thread
 from queue import Empty, Full
+import warnings
 
 import numpy as np
 from scipy import constants
@@ -147,7 +148,9 @@ class DataProcessor(Thread):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        assembled_mean = np.nanmean(assembled, axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            assembled_mean = np.nanmean(assembled, axis=0)
 
         # Convert 'nan' to '-inf' and it will later be converted to 0.
         # We do not convert 'nan' to 0 because: if the lower range of
