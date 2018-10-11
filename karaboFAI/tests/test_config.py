@@ -34,6 +34,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self.assertEqual(self._expected_keys, set(config.keys()))
 
         # test values
+        self.assertEqual(config["TOPIC"], topic)
         self.assertEqual(config["SOURCE_NAME"],
                          Config._default_topic_configs["SPB"]["SOURCE_NAME"])
         self.assertEqual(config["SOURCE_TYPE"],
@@ -55,6 +56,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self.assertEqual(self._expected_keys, set(config.keys()))
 
         # test values which should be overwritten by new values in the file
+        self.assertEqual(config["TOPIC"], topic)
         self.assertEqual(config["SOURCE_NAME"], "changed")
         self.assertEqual(config["SOURCE_TYPE"], "also changed")
 
