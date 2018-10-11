@@ -586,10 +586,18 @@ from scipy import ndimage
 class BraggSpots(PlotWindow):
   
 
+    modes = OrderedDict({
+        "normal": "Laser-on/off pulses in the same train",
+        "even/odd": "Laser-on/off pulses in even/odd train",
+        "odd/even": "Laser-on/off pulses in odd/even train"
+        })
     def __init__(self,
                  data,
                  on_pulse_ids,
-                 off_pulse_ids, *,
+                 off_pulse_ids,
+                 laser_mode, 
+                 mask_range,
+                 *,
                  parent=None
                  ):
         """Initialization."""
@@ -599,6 +607,8 @@ class BraggSpots(PlotWindow):
         params = [
             {'name': 'Experimental setups', 'type': 'group',
              'children': [
+                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
+                 'value': self.modes[laser_mode]},
                 {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
                  'value': ', '.join([str(x) for x in on_pulse_ids])},
                 {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
@@ -615,17 +625,42 @@ class BraggSpots(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
         self._vis_setups = p.param('Analysis options')
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+       
         self.setGeometry(100,100,1400,800)
-
-        self._com_analysis = False
 
         self._rois = []
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
+        self._laser_mode = laser_mode
+        self._mask_range = mask_range
         self._count = 0
-        self._hist_train_id = []
+        self._hist_train_on_id = []
+        self._hist_train_off_id = []
         self._hist_com_on = []
         self._hist_com_off = []
+
+
+
+
+
+        # -------------------------------------------------------------
+        # volatile parameters
+        # -------------------------------------------------------------
+        self._on_train_received = False
+        self._off_train_received = False
+
+        # if an on-pulse is followed by an on-pulse, drop the previous one
+        self._drop_last_on_pulse = False
+
+        # moving average
+        self._on_pulses_ma = None
+        self._off_pulses_ma = None
+        # The histories of on/off pulses by train, which are used in
+        # calculating moving average (MA)
+        self._on_pulses_hist = deque()
+        self._off_pulses_hist = deque()
+
+
 
         self.initUI()
         self.updatePlots()
@@ -648,10 +683,10 @@ class BraggSpots(PlotWindow):
         vb = self._gl_widget.addPlot(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
         vb.addItem(img)
 
-        roi = RectROI([config['CENTER_X'], config['CENTER_Y'] ], [100, 100], pen=PenFactory.green)
+        roi = RectROI([config['CENTER_X'], config['CENTER_Y'] ], [100, 100], pen=mkPen((0, 255, 0), width=4))
         
         self._rois.append(roi)
-        roi = RectROI([ config['CENTER_X'] -100, config['CENTER_Y'] -100], [100, 100], pen=PenFactory.red)
+        roi = RectROI([ config['CENTER_X'] -100, config['CENTER_Y'] -100], [100, 100], pen=mkPen((255, 0, 0), width=4))
         self._rois.append(roi)
 
         for roi in self._rois:
@@ -686,57 +721,200 @@ class BraggSpots(PlotWindow):
         p2.setLabel('bottom', "Train ID")
         p2.setTitle(' ')
 
-    # def _show_roi(self,roi):
-    #     index = self._rois.index(roi)
-    #     self._image_items[index+1].setImage(roi.getArrayRegion((self._data).image_mean, self._image_items[0]),levels=(0, (self._data).image_mean.max()))
-
     def _update(self,data):
-        com_on = []
-        com_off = []
+
+        available_modes = list(self.modes.keys())
+        if self._laser_mode == available_modes[0]:
+            # compare laser-on/off pulses in the same train
+            self._on_train_received = True
+            self._off_train_received = True
+        else:
+            # compare laser-on/off pulses in different trains
+
+            if self._laser_mode == available_modes[1]:
+                flag = 0  # on-train has even train ID
+            elif self._laser_mode == available_modes[2]:
+                flag = 1  # on-train has odd train ID
+            else:
+                raise ValueError("Unknown laser mode!")
+
+            # Off-train will only be acknowledged when an on-train
+            # was received! This ensures that in the visualization
+            # it always shows the on-train plot alone first, which
+            # is followed by a combined plots if the next train is
+            # an off-train pulse.
+            if self._on_train_received:
+                if data.tid % 2 == 1 ^ flag:
+                    # an on-pulse is followed by an off-pulse
+                    self._off_train_received = True
+                else:
+                    # an on-pulse is followed by an on-pulse
+                    self._drop_last_on_pulse = True
+            else:
+                # an off-pulse is followed by an on-pulse
+                if data.tid % 2 == flag:
+                    self._on_train_received = True
+
+
+
+        print("Train id {} : self._on_train_received {} : self._off_train_received {}  : drop last on pulse {}".format(data.tid,self._on_train_received,self._off_train_received, self._drop_last_on_pulse) )
+
         keys = ['brag_data','background_data']
         slices = dict.fromkeys(keys)
-        for pid in self._on_pulse_ids:
 
-            index = 0
-            for key in slices.keys():
-                slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-                index +=1
-                (slices[key])[np.isnan(slices[key]) ] = -np.inf
-                np.clip(slices[key],
-                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=slices[key])
+        normalized_on_pulse = None
+        normalized_off_pulse = None
 
-            mass_from_data = slices['brag_data'] - slices['background_data']
-            np.clip(mass_from_data,
-                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=mass_from_data)
+        if self._on_train_received:
+            # update on-pulse
 
-            mass = ndimage.measurements.center_of_mass(mass_from_data) 
+            if self._laser_mode == available_modes[0] or \
+                    not self._off_train_received:
 
-            r = np.linalg.norm(mass)
-            com_on.append(r)
+                this_on_pulses = []
 
-        for pid in self._off_pulse_ids:
+                for pid in self._on_pulse_ids:
 
-            index = 0
-            for key in slices.keys():
-                slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-                index +=1
-                (slices[key])[np.isnan(slices[key]) ] = -np.inf
-                np.clip(slices[key],
-                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=slices[key])
+                    index = 0
+                    for key in slices.keys():
+                        slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+                        index +=1
+                        (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                        np.clip(slices[key],
+                       self._mask_range[0],self._mask_range[1], out=slices[key])
 
-            mass_from_data = slices['brag_data'] - slices['background_data']
-            np.clip(mass_from_data,
-                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=mass_from_data)
+                    mass_from_data = slices['brag_data'] - slices['background_data']
+                    np.clip(mass_from_data,
+                       self._mask_range[0],self._mask_range[1], out=mass_from_data)
+
+                    mass = ndimage.measurements.center_of_mass(mass_from_data) 
+
+                    r = np.linalg.norm(mass)
+                    this_on_pulses.append(r)
+
+
+                if self._drop_last_on_pulse:
+                    length = len(self._on_pulses_hist)
+                    self._on_pulses_ma += \
+                        (this_on_pulses - self._on_pulses_hist.pop()) / length
+                    self._drop_last_on_pulse = False
+                else:
+                    if self._on_pulses_ma is None:
+                        self._on_pulses_ma = np.copy(this_on_pulses)
+                    elif len(self._on_pulses_hist) < 9999:
+                        self._on_pulses_ma += \
+                                (this_on_pulses - self._on_pulses_ma) \
+                                / (len(self._on_pulses_hist) + 1)
+                    elif len(self._on_pulses_hist) == 9999:
+                        self._on_pulses_ma += \
+                            (this_on_pulses - self._on_pulses_hist.popleft()) \
+                            / 9999
+                    else:
+                        raise ValueError  # should never reach here
+
+                self._on_pulses_hist.append(this_on_pulses)
+
+            normalized_on_pulse = self._on_pulses_ma
+
+            self._hist_train_on_id.append(data.tid)
+            self._hist_com_on.append(np.mean(np.array(normalized_on_pulse)))
+
+        if self._off_train_received:
+            # update off-pulse
+
+            this_off_pulses = []
+            for pid in self._off_pulse_ids:
+
+                index = 0
+                for key in slices.keys():
+                    slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+                    index +=1
+                    (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                    np.clip(slices[key],
+                   self._mask_range[0],self._mask_range[1], out=slices[key])
+
+                mass_from_data = slices['brag_data'] - slices['background_data']
+                np.clip(mass_from_data,
+                   self._mask_range[0],self._mask_range[1], out=mass_from_data)
+                
+                mass = ndimage.measurements.center_of_mass(mass_from_data) 
+
+                r = np.linalg.norm(mass)
+                this_off_pulses.append(r)
+
+            self._off_pulses_hist.append(this_off_pulses)
+
+            if self._off_pulses_ma is None:
+                self._off_pulses_ma = np.copy(this_off_pulses)
+            elif len(self._off_pulses_hist) <= 9999:
+                self._off_pulses_ma += \
+                        (this_off_pulses - self._off_pulses_ma) \
+                        / len(self._off_pulses_hist)
+            elif len(self._off_pulses_hist) == 9999 + 1:
+                self._off_pulses_ma += \
+                    (this_off_pulses - self._off_pulses_hist.popleft()) \
+                    / 9999
+            else:
+                raise ValueError  # should never reach here
+
+            normalized_off_pulse = self._off_pulses_ma
+
+            self._hist_train_off_id.append(data.tid)
+            self._hist_com_off.append(np.mean(np.array(normalized_off_pulse)))
             
-            mass = ndimage.measurements.center_of_mass(mass_from_data) 
+            # reset flags
+            self._on_train_received = False
+            self._off_train_received = False
 
-            r = np.linalg.norm(mass)
-            com_off.append(r)
+        
+        # com_on = []
+        # com_off = []
+        # keys = ['brag_data','background_data']
+        # slices = dict.fromkeys(keys)
+        # for pid in self._on_pulse_ids:
 
-        self._hist_train_id.append(data.tid)
-        self._hist_com_off.append(np.mean(np.array(com_off)))
-        self._hist_com_on.append(np.mean(np.array(com_on)))
-        return com_on,com_off
+        #     index = 0
+        #     for key in slices.keys():
+        #         slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+        #         index +=1
+        #         (slices[key])[np.isnan(slices[key]) ] = -np.inf
+        #         np.clip(slices[key],
+        #        self._mask_range[0],self._mask_range[1], out=slices[key])
+
+        #     mass_from_data = slices['brag_data'] - slices['background_data']
+        #     np.clip(mass_from_data,
+        #        self._mask_range[0],self._mask_range[1], out=mass_from_data)
+
+        #     mass = ndimage.measurements.center_of_mass(mass_from_data) 
+
+        #     r = np.linalg.norm(mass)
+        #     com_on.append(r)
+
+        # for pid in self._off_pulse_ids:
+
+        #     index = 0
+        #     for key in slices.keys():
+        #         slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
+        #         index +=1
+        #         (slices[key])[np.isnan(slices[key]) ] = -np.inf
+        #         np.clip(slices[key],
+        #        self._mask_range[0],self._mask_range[1], out=slices[key])
+
+        #     mass_from_data = slices['brag_data'] - slices['background_data']
+        #     np.clip(mass_from_data,
+        #        self._mask_range[0],self._mask_range[1], out=mass_from_data)
+            
+        #     mass = ndimage.measurements.center_of_mass(mass_from_data) 
+
+        #     r = np.linalg.norm(mass)
+        #     com_off.append(r)
+
+        # self._hist_train_id.append(data.tid)
+        # self._hist_com_off.append(np.mean(np.array(com_off)))
+        # self._hist_com_on.append(np.mean(np.array(com_on)))
+        # return com_on,com_off
+
+        return normalized_on_pulse, normalized_off_pulse
 
     def updatePlots(self):
         data = self._data.get()
@@ -758,17 +936,19 @@ class BraggSpots(PlotWindow):
 
             com_on,com_off = self._update(data)
 
-            com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
-            com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
+            # com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
+            # com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
 
-            com_all = [x for _,x in sorted(com_on_pulse_on + com_off_pulse_off) ]
-            pulse_all = [x for x,_ in sorted(com_on_pulse_on + com_off_pulse_off) ]
+            # com_all = [x for _,x in sorted(com_on_pulse_on + com_off_pulse_off) ]
+            # pulse_all = [x for x,_ in sorted(com_on_pulse_on + com_off_pulse_off) ]
 
             p.addLegend()
             p.setTitle(' TrainId :: {}'.format(data.tid))
-            # p.plot(self._on_pulse_ids,com_on, name ='On', pen=PenFactory.green )
-            # p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple)
-            p.plot(pulse_all,com_all, name="all", pen= PenFactory.cyan, symbol='o')
+            if com_on is not None:
+                p.plot(self._on_pulse_ids,com_on, name ='On', pen=PenFactory.green, symbol='o' )
+            if com_off is not None:
+                p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple, symbol='o')
+            # p.plot(pulse_all,com_all, name="all", pen= PenFactory.cyan, symbol='o')
 
             p = self._plot_items[1]
             p.clear()
@@ -777,26 +957,24 @@ class BraggSpots(PlotWindow):
                             pen=mkPen(None),
                             brush=mkBrush(120, 255, 255, 255))
             s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_id, self._hist_com_off)])
+                     zip(self._hist_train_off_id, self._hist_com_off)])
 
             p.addItem(s)
             s = ScatterPlotItem(size=10,
                             pen=mkPen(None),
                             brush=mkBrush(240, 255, 255, 255))
             s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_id, self._hist_com_on)])
+                     zip(self._hist_train_on_id, self._hist_com_on)])
 
             p.addItem(s)
-            p.plot(self._hist_train_id, self._hist_com_off,
+            p.plot(self._hist_train_off_id, self._hist_com_off,
                pen=PenFactory.red, name='Off')
-            p.plot(self._hist_train_id, self._hist_com_on,
+            p.plot(self._hist_train_on_id, self._hist_com_on,
                pen=PenFactory.green, name='On')
             p.addLegend()
 
         else:
             self._gl_widget.setEnabled(True)
-
-
 
     def clearPlots(self):
         """Override."""
@@ -804,14 +982,14 @@ class BraggSpots(PlotWindow):
             item.clear()
 
         self._plot_items[0].clear()
-        # if not self._com_analysis:
-        #     self._plot_items[1].clear()
 
     def _reset(self):
         self._plot_items[1].clear()
         self._hist_com_on.clear()
         self._hist_com_off.clear()
-        self._hist_train_id.clear()
+        self._hist_train_on_id.clear()
+        self._hist_train_off_id.clear()
+
 
 
 @SingletonWindow

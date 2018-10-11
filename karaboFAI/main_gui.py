@@ -627,13 +627,33 @@ class MainGUI(QtGui.QMainWindow):
             logger.error(err_msg)
             return
 
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
+            return
+
         if not on_pulse_ids or not off_pulse_ids:
             logger.error(err_msg)
             return
+
+        laser_mode = self._laser_mode_cb.currentText()
+        # check pulse ID only when laser on/off pulses are in the same
+        # train (the "normal" mode)
+        if laser_mode == list(BraggSpots.modes.keys())[0]:
+            common = set(on_pulse_ids).intersection(off_pulse_ids)
+            if common:
+                logger.error(
+                    "Pulse IDs {} are found in both on- and off- pulses.".
+                    format(','.join([str(v) for v in common])))
+                return
+
         w = BraggSpots(
             self._data,
             on_pulse_ids,
             off_pulse_ids,
+            laser_mode,
+            mask_range,
             parent=self
             )
 
