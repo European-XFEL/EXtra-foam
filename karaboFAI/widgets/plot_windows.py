@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import deque, OrderedDict
-from asyncio import Event
 
 import numpy as np
 
@@ -706,12 +705,12 @@ class DrawMaskWindow(AbstractWindow):
 
         update_image_btn = QtGui.QPushButton("Update image")
         update_image_btn.clicked.connect(self._updateImage)
-        update_image_btn.setMinimumHeight(40)
+        update_image_btn.setMinimumHeight(60)
 
         ctrl_widget = QtGui.QVBoxLayout()
         ctrl_widget.addWidget(self._mask_panel)
-        ctrl_widget.setStretch(0, 1)
         ctrl_widget.addWidget(update_image_btn)
+        ctrl_widget.addStretch(1)
 
         return ctrl_widget
 
