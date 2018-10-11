@@ -634,12 +634,7 @@ class MainGUI(QtGui.QMainWindow):
             off_pulse_ids,
             parent=self,
             title=self._title)
-        # w = BraggSpotsWindow(
-        #     self._data,
-        #     on_pulse_ids,
-        #     off_pulse_ids, 
-        #     parent=self, 
-        #     title=self._title)
+
         self._opened_windows[w] = 1
         w.show()
 
