@@ -16,6 +16,8 @@ from .pyqtgraph import (
 )
 from .misc_widgets import lookupTableFactory
 
+from ..config import config
+
 
 class MainGuiLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, data, parent=None, **kwargs):
@@ -52,7 +54,7 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
         self._data = data
 
         self._img = ImageItem(border='w')
-        self._img.setLookupTable(lookupTableFactory["flame"])
+        self._img.setLookupTable(lookupTableFactory[config["COLOR_MAP"]])
 
         self._view = self.addViewBox(lockAspect=True)
         self._view.addItem(self._img)

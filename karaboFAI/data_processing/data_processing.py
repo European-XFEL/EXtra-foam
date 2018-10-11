@@ -11,7 +11,9 @@ All rights reserved.
 """
 import time
 from threading import Thread
+from concurrent.futures import ProcessPoolExecutor
 from queue import Empty, Full
+import warnings
 
 import numpy as np
 from scipy import constants
@@ -22,7 +24,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from .data_model import DataSource, ProcessedData
-from ..config import Config as cfg
+from ..config import config
 from ..logger import logger
 
 
@@ -74,8 +76,8 @@ class DataProcessor(Thread):
             / kwargs['photon_energy']
 
         self.sample_dist = kwargs['sample_dist']
-        self.cx = kwargs['cx'] * cfg.PIXEL_SIZE
-        self.cy = kwargs['cy'] * cfg.PIXEL_SIZE
+        self.cx = kwargs['cx'] * config["PIXEL_SIZE"]
+        self.cy = kwargs['cy'] * config["PIXEL_SIZE"]
         self.integration_method = kwargs['integration_method']
         self.integration_range = kwargs['integration_range']
         self.integration_points = kwargs['integration_points']
@@ -112,7 +114,7 @@ class DataProcessor(Thread):
                          .format(1000 * (time.perf_counter() - t0)))
 
             try:
-                self._out_queue.put(processed_data, timeout=cfg.TIMEOUT)
+                self._out_queue.put(processed_data, timeout=config["TIMEOUT"])
             except Full:
                 pass
 
@@ -134,8 +136,8 @@ class DataProcessor(Thread):
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
                                        poni1=self.cy,
                                        poni2=self.cx,
-                                       pixel1=cfg.PIXEL_SIZE,
-                                       pixel2=cfg.PIXEL_SIZE,
+                                       pixel1=config["PIXEL_SIZE"],
+                                       pixel2=config["PIXEL_SIZE"],
                                        rot1=0,
                                        rot2=0,
                                        rot3=0,
@@ -147,14 +149,19 @@ class DataProcessor(Thread):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        assembled_mean = np.nanmean(assembled, axis=0)
+        if config["DOWN_SAMPLE_IMAGE_MEAN"]:
+            # Down-sampling the average image by a factor of two will
+            # reduce the data processing time considerably, while the
+            # azimuthal integration will not be affected.
+            assembled_mean = np.nanmean(assembled[:, ::2, ::2], axis=0)
+        else:
+            assembled_mean = np.nanmean(assembled, axis=0)
 
         # Convert 'nan' to '-inf' and it will later be converted to 0.
         # We do not convert 'nan' to 0 because: if the lower range of
         # mask is a negative value, 0 will be converted to a value
         # between 0 and 255 later.
         assembled_mean[np.isnan(assembled_mean)] = -np.inf
-        assembled[np.isnan(assembled)] = -np.inf
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -172,14 +179,20 @@ class DataProcessor(Thread):
                     format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
-        momentum = None
-        intensities = np.zeros([assembled.shape[0], self.integration_points])
-        for i in range(assembled.shape[0]):
+        global _integrate1d_para
+
+        def _integrate1d_para(i):
+            """Use for multiprocessing."""
+            # convert 'nan' to '-inf', as explained above
+            assembled[i][np.isnan(assembled[i])] = -np.inf
+
+            # add threshold mask
             mask = np.copy(base_mask)
-            # apply threshold mask
             mask[(assembled[i] < self.mask_range[0]) |
                  (assembled[i] > self.mask_range[1])] = 1
-            res = ai.integrate1d(assembled[i],
+
+            # do integration
+            ret = ai.integrate1d(assembled[i],
                                  self.integration_points,
                                  method=self.integration_method,
                                  mask=mask,
@@ -187,9 +200,14 @@ class DataProcessor(Thread):
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
-            if i == 0:
-                momentum = res.radial
-            intensities[i] = res.intensity
+
+            return ret.radial, ret.intensity
+
+        with ProcessPoolExecutor(max_workers=config["WORKERS"]) as executor:
+            rets = executor.map(_integrate1d_para, range(assembled.shape[0]))
+
+        momentums, intensities = zip(*rets)
+        momentum = momentums[0]
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -232,8 +250,8 @@ class DataProcessor(Thread):
             if len(metadata.items()) > 1:
                 logger.warning("Found multiple data sources!")
 
-            tid = metadata[cfg.SOURCE]["timestamp.tid"]
-            modules_data = data[cfg.SOURCE]["image.data"]
+            tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
+            modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)

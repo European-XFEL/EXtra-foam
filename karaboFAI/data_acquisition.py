@@ -16,7 +16,7 @@ from queue import Full
 from karabo_bridge import Client
 
 from .logger import logger
-from .config import Config as cfg
+from .config import config
 
 
 class DaqWorker(Thread):
@@ -43,7 +43,7 @@ class DaqWorker(Thread):
                     .format(1000 * (time.perf_counter() - t0)))
 
                 try:
-                    self._out_queue.put(data, timeout=cfg.TIMEOUT)
+                    self._out_queue.put(data, timeout=config["TIMEOUT"])
                 except Full:
                     continue
 
