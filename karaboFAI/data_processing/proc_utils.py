@@ -75,6 +75,17 @@ def up_sample(x, shape):
                   [0, 0, 1, 1, 0, 0],
                   [0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0]])
+
+    up_sample(x, (5, 5)) will return
+
+        np.array([[0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0],
+                  [0, 0, 1, 1, 0],
+                  [0, 0, 1, 1, 0],
+                  [0, 0, 0, 0, 0]])
+
+    For other target shapes, ValueError will be raised. This implementation
+    makes the down-sampling and up-sampling self-consistent.
     """
     # up-sample rate
     rate = 2
