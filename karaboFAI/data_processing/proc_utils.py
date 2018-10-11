@@ -32,7 +32,7 @@ def down_sample(x):
     :return numpy.ndarray: down-sampled data.
     """
     # down-sample rate. the rate is fixed at 2 due to the complexity of
-    # upsampling
+    # up-sampling
     rate = 2
 
     if not isinstance(x, np.ndarray):
@@ -96,38 +96,36 @@ def up_sample(x, shape):
     if not isinstance(shape, tuple):
         raise TypeError("shape must be a tuple!")
 
-    msg = 'Array with shape {} cannot be upsampled to another array with ' \
+    msg = 'Array with shape {} cannot be up-sampled to another array with ' \
           'shape {}'.format(x.shape, shape)
 
     if len(x.shape) == 1:
-        if len(shape) != len(x.shape) or np.ceil(shape[0]/2) != x.shape[0]:
+        if len(shape) != len(x.shape) or np.ceil(shape[0]/rate) != x.shape[0]:
             raise ValueError(msg)
 
-        ret = np.zeros(x.shape[0]*2)
-        ret[:2*x.shape[0]] = x.repeat(rate)
+        ret = np.zeros(x.shape[0]*rate)
+        ret[:] = x.repeat(rate)
         return ret[:shape[0]]
 
     elif len(x.shape) == 2:
         if len(shape) != len(x.shape) or \
-                np.ceil(shape[0] / 2) != x.shape[0] or \
-                np.ceil(shape[1] / 2) != x.shape[1]:
+                np.ceil(shape[0] / rate) != x.shape[0] or \
+                np.ceil(shape[1] / rate) != x.shape[1]:
             raise ValueError(msg)
 
-        ret = np.zeros((x.shape[0]*2, x.shape[1]*2))
-        ret[:2*x.shape[0], :2*x.shape[1]] = \
-            x.repeat(rate, axis=0).repeat(rate, axis=1)
+        ret = np.zeros((x.shape[0]*rate, x.shape[1]*rate))
+        ret[:, :] = x.repeat(rate, axis=0).repeat(rate, axis=1)
         return ret[:shape[0], :shape[1]]
 
     elif len(x.shape) == 3:
         # the first dimension is the data ID, which will not be up-sampled
         if len(shape) != len(x.shape) or \
-                np.ceil(shape[1] / 2) != x.shape[1] or \
-                np.ceil(shape[2] / 2) != x.shape[2]:
+                np.ceil(shape[1] / rate) != x.shape[1] or \
+                np.ceil(shape[2] / rate) != x.shape[2]:
             raise ValueError(msg)
 
-        ret = np.zeros((x.shape[0], x.shape[1]*2, x.shape[2]*2))
-        ret[:, :2*x.shape[1], :2*x.shape[2]] = \
-            x.repeat(rate, axis=1).repeat(rate, axis=2)
+        ret = np.zeros((x.shape[0], x.shape[1]*rate, x.shape[2]*rate))
+        ret[:, :, :] = x.repeat(rate, axis=1).repeat(rate, axis=2)
         return ret[:, :shape[1], :shape[2]]
 
     raise ValueError("Array dimension > 3!")
