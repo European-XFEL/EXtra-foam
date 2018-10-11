@@ -26,6 +26,7 @@ from karabo_data.geometry import LPDGeometry
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
+from .proc_utils import down_sample, up_sample
 
 
 class DataProcessor(Thread):
@@ -84,6 +85,7 @@ class DataProcessor(Thread):
 
         self.mask_range = kwargs['mask_range']
         self.image_mask = kwargs['mask']
+        self.image_mask_initialized = False
 
         self._running = False
 
@@ -156,7 +158,7 @@ class DataProcessor(Thread):
                 # Down-sampling the average image by a factor of two will
                 # reduce the data processing time considerably, while the
                 # azimuthal integration will not be affected.
-                assembled_mean = np.nanmean(assembled[:, ::2, ::2], axis=0)
+                assembled_mean = np.nanmean(down_sample(assembled), axis=0)
             else:
                 assembled_mean = np.nanmean(assembled, axis=0)
 
@@ -177,9 +179,21 @@ class DataProcessor(Thread):
             base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
         else:
             if self.image_mask.shape != assembled[0].shape:
-                raise ValueError(
-                    "Mask and image have different shapes! {} and {}".
-                    format(self.image_mask.shape, assembled[0].shape))
+                try:
+                    # do up-sample only once
+                    if not self.image_mask_initialized:
+                        old_shape = self.image_mask.shape
+                        self.image_mask = up_sample(
+                            self.image_mask, assembled[0].shape)
+                        self.image_mask_initialized = True
+                        logger.info("Up-sample mask with shape {} to {}".
+                                    format(old_shape, self.image_mask.shape))
+                    else:
+                        raise ValueError
+                except (TypeError, ValueError):
+                    raise ValueError(
+                        "Invalid mask shape {} for image with shape {}".
+                        format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
         global _integrate1d_para
