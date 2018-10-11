@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import deque, OrderedDict
-from asyncio import Event
 
 import numpy as np
 
