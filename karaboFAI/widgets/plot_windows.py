@@ -643,15 +643,15 @@ class BraggSpots(PlotWindow):
     def initPlotUI(self):
         
         img = ImageItem(border='w')
-        img.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
+        img.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         self._image_items.append(img)
         vb = self._gl_widget.addPlot(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
         vb.addItem(img)
 
-        roi = RectROI([cfg.CENTER_X, cfg.CENTER_Y], [100, 100], pen=PenFactory.green)
+        roi = RectROI([config['CENTER_X'], config['CENTER_Y'] ], [100, 100], pen=PenFactory.green)
         
         self._rois.append(roi)
-        roi = RectROI([cfg.CENTER_X-100, cfg.CENTER_Y-100], [100, 100], pen=PenFactory.red)
+        roi = RectROI([ config['CENTER_X'] -100, config['CENTER_Y'] -100], [100, 100], pen=PenFactory.red)
         self._rois.append(roi)
 
         for roi in self._rois:
@@ -665,13 +665,13 @@ class BraggSpots(PlotWindow):
 
         vb1 = self._gl_widget.addViewBox(row=2, col= 0, rowspan=1, colspan=1,  lockAspect=True,enableMouse=False)
         img1 = ImageItem()
-        img1.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
+        img1.setLookupTable(lookupTableFactory[config['COLOR_MAP'] ])
         vb1.addItem(img1)
         self._image_items.append(img1)
         
         vb2 = self._gl_widget.addViewBox(row=2, col=1, rowspan=1,colspan=1,  lockAspect=True,enableMouse=False)
         img2 = ImageItem(border='w')
-        img2.setLookupTable(lookupTableFactory[cfg.COLOR_MAP])
+        img2.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
@@ -703,11 +703,11 @@ class BraggSpots(PlotWindow):
                 index +=1
                 (slices[key])[np.isnan(slices[key]) ] = -np.inf
                 np.clip(slices[key],
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=slices[key])
+                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=slices[key])
 
             mass_from_data = slices['brag_data'] - slices['background_data']
             np.clip(mass_from_data,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
+                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=mass_from_data)
 
             mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
@@ -722,11 +722,11 @@ class BraggSpots(PlotWindow):
                 index +=1
                 (slices[key])[np.isnan(slices[key]) ] = -np.inf
                 np.clip(slices[key],
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=slices[key])
+                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=slices[key])
 
             mass_from_data = slices['brag_data'] - slices['background_data']
             np.clip(mass_from_data,
-                cfg.MASK_RANGE[0], cfg.MASK_RANGE[1], out=mass_from_data)
+                config['MASK_RANGE'][0], config['MASK_RANGE'][1], out=mass_from_data)
             
             mass = ndimage.measurements.center_of_mass(mass_from_data) 
 
