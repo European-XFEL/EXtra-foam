@@ -633,34 +633,21 @@ class BraggSpots(PlotWindow):
         self._off_pulse_ids = off_pulse_ids
         self._laser_mode = laser_mode
         self._mask_range = mask_range
-        self._count = 0
         self._hist_train_on_id = []
         self._hist_train_off_id = []
         self._hist_com_on = []
         self._hist_com_off = []
 
-
-
-
-
-        # -------------------------------------------------------------
-        # volatile parameters
-        # -------------------------------------------------------------
         self._on_train_received = False
         self._off_train_received = False
 
-        # if an on-pulse is followed by an on-pulse, drop the previous one
         self._drop_last_on_pulse = False
 
-        # moving average
         self._on_pulses_ma = None
         self._off_pulses_ma = None
-        # The histories of on/off pulses by train, which are used in
-        # calculating moving average (MA)
+
         self._on_pulses_hist = deque()
         self._off_pulses_hist = deque()
-
-
 
         self.initUI()
         self.updatePlots()
@@ -725,48 +712,33 @@ class BraggSpots(PlotWindow):
 
         available_modes = list(self.modes.keys())
         if self._laser_mode == available_modes[0]:
-            # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
-            # compare laser-on/off pulses in different trains
 
             if self._laser_mode == available_modes[1]:
-                flag = 0  # on-train has even train ID
+                flag = 0  
             elif self._laser_mode == available_modes[2]:
-                flag = 1  # on-train has odd train ID
+                flag = 1  
             else:
                 raise ValueError("Unknown laser mode!")
 
-            # Off-train will only be acknowledged when an on-train
-            # was received! This ensures that in the visualization
-            # it always shows the on-train plot alone first, which
-            # is followed by a combined plots if the next train is
-            # an off-train pulse.
             if self._on_train_received:
                 if data.tid % 2 == 1 ^ flag:
-                    # an on-pulse is followed by an off-pulse
                     self._off_train_received = True
                 else:
-                    # an on-pulse is followed by an on-pulse
                     self._drop_last_on_pulse = True
             else:
-                # an off-pulse is followed by an on-pulse
                 if data.tid % 2 == flag:
                     self._on_train_received = True
-
-
-
-        print("Train id {} : self._on_train_received {} : self._off_train_received {}  : drop last on pulse {}".format(data.tid,self._on_train_received,self._off_train_received, self._drop_last_on_pulse) )
 
         keys = ['brag_data','background_data']
         slices = dict.fromkeys(keys)
 
-        normalized_on_pulse = None
-        normalized_off_pulse = None
-
+        com_on = None
+        com_off = None
+        max_count = 9999 #ma_windowsize to be included later from cntrl panel
         if self._on_train_received:
-            # update on-pulse
 
             if self._laser_mode == available_modes[0] or \
                     not self._off_train_received:
@@ -801,26 +773,25 @@ class BraggSpots(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < 9999:
+                    elif len(self._on_pulses_hist) < max_count:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == 9999:
+                    elif len(self._on_pulses_hist) == max_count + 1:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / 9999
+                            / max_count
                     else:
-                        raise ValueError  # should never reach here
+                        raise ValueError 
 
                 self._on_pulses_hist.append(this_on_pulses)
 
-            normalized_on_pulse = self._on_pulses_ma
+            com_on = self._on_pulses_ma
 
             self._hist_train_on_id.append(data.tid)
-            self._hist_com_on.append(np.mean(np.array(normalized_on_pulse)))
+            self._hist_com_on.append(np.mean(np.array(com_on)))
 
         if self._off_train_received:
-            # update off-pulse
 
             this_off_pulses = []
             for pid in self._off_pulse_ids:
@@ -846,75 +817,30 @@ class BraggSpots(PlotWindow):
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= 9999:
+            elif len(self._off_pulses_hist) <= max_count:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == 9999 + 1:
+            elif len(self._off_pulses_hist) == max_count + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / 9999
+                    / max_count
             else:
-                raise ValueError  # should never reach here
+                raise ValueError 
 
-            normalized_off_pulse = self._off_pulses_ma
+            com_off = self._off_pulses_ma
 
             self._hist_train_off_id.append(data.tid)
-            self._hist_com_off.append(np.mean(np.array(normalized_off_pulse)))
+            self._hist_com_off.append(np.mean(np.array(com_off)))
             
-            # reset flags
             self._on_train_received = False
             self._off_train_received = False
-
-        
-        # com_on = []
-        # com_off = []
-        # keys = ['brag_data','background_data']
-        # slices = dict.fromkeys(keys)
-        # for pid in self._on_pulse_ids:
-
-        #     index = 0
-        #     for key in slices.keys():
-        #         slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-        #         index +=1
-        #         (slices[key])[np.isnan(slices[key]) ] = -np.inf
-        #         np.clip(slices[key],
-        #        self._mask_range[0],self._mask_range[1], out=slices[key])
-
-        #     mass_from_data = slices['brag_data'] - slices['background_data']
-        #     np.clip(mass_from_data,
-        #        self._mask_range[0],self._mask_range[1], out=mass_from_data)
-
-        #     mass = ndimage.measurements.center_of_mass(mass_from_data) 
-
-        #     r = np.linalg.norm(mass)
-        #     com_on.append(r)
-
-        # for pid in self._off_pulse_ids:
-
-        #     index = 0
-        #     for key in slices.keys():
-        #         slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-        #         index +=1
-        #         (slices[key])[np.isnan(slices[key]) ] = -np.inf
-        #         np.clip(slices[key],
-        #        self._mask_range[0],self._mask_range[1], out=slices[key])
-
-        #     mass_from_data = slices['brag_data'] - slices['background_data']
-        #     np.clip(mass_from_data,
-        #        self._mask_range[0],self._mask_range[1], out=mass_from_data)
-            
-        #     mass = ndimage.measurements.center_of_mass(mass_from_data) 
-
-        #     r = np.linalg.norm(mass)
-        #     com_off.append(r)
 
         # self._hist_train_id.append(data.tid)
         # self._hist_com_off.append(np.mean(np.array(com_off)))
         # self._hist_com_on.append(np.mean(np.array(com_on)))
-        # return com_on,com_off
+        return com_on,com_off
 
-        return normalized_on_pulse, normalized_off_pulse
 
     def updatePlots(self):
         data = self._data.get()
@@ -936,6 +862,7 @@ class BraggSpots(PlotWindow):
 
             com_on,com_off = self._update(data)
 
+            # Keep it for the moment
             # com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
             # com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
 
