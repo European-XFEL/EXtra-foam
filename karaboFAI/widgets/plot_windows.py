@@ -11,6 +11,7 @@ All rights reserved.
 """
 from collections import deque, OrderedDict
 import numpy as np
+from scipy import ndimage
 
 from silx.gui.colors import Colormap as SilxColormap
 
@@ -582,53 +583,54 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist.clear()
         self._fom_hist_train_id.clear()
 
-from scipy import ndimage
+
 class BraggSpots(PlotWindow):
-  
 
     modes = OrderedDict({
         "normal": "Laser-on/off pulses in the same train",
         "even/odd": "Laser-on/off pulses in even/odd train",
         "odd/even": "Laser-on/off pulses in odd/even train"
-        })
+    })
+
     def __init__(self,
                  data,
                  on_pulse_ids,
                  off_pulse_ids,
-                 laser_mode, 
+                 laser_mode,
                  mask_range,
                  *,
                  parent=None
                  ):
         """Initialization."""
         super().__init__(data, parent=parent)
-        
+
         self._ptree = ptree.ParameterTree(showHeader=True)
         params = [
             {'name': 'Experimental setups', 'type': 'group',
              'children': [
-                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
-                 'value': self.modes[laser_mode]},
-                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
+                 {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
+                  'value': self.modes[laser_mode]},
+                 {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
+                     'value': ', '.join([str(x) for x in on_pulse_ids])},
+                 {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
+                     'value': ', '.join([str(x) for x in off_pulse_ids])}]},
 
             {'name': 'Analysis options', 'type': 'group',
              'children': [
                  {'name': 'COM Analysis', 'type': 'bool', 'value': False}]},
             {'name': 'Actions', 'type': 'group',
              'children': [
-                {'name': 'Clear history', 'type': 'action'}]},
+                 {'name': 'Clear history', 'type': 'action'}]},
         ]
-        p = ptree.Parameter.create(name='params', type='group', children=params)
+        p = ptree.Parameter.create(
+            name='params', type='group', children=params)
         self._ptree.setParameters(p, showTop=False)
         self._vis_setups = p.param('Analysis options')
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
-       
-        self.setGeometry(100,100,1400,800)
 
-        self._rois = []
+        self.setGeometry(100, 100, 1400, 800)
+
+        self._rois = [] # bookeeping Region of interests.
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._laser_mode = laser_mode
@@ -663,53 +665,58 @@ class BraggSpots(PlotWindow):
         self._ctrl_widget.setLayout(layout)
 
     def initPlotUI(self):
-        
+
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         self._image_items.append(img)
-        vb = self._gl_widget.addPlot(row=0,col=0, rowspan=2, colspan=2,lockAspect=True, enableMouse=False)
+        vb = self._gl_widget.addPlot(
+            row=0, col=0, rowspan=2, colspan=2, lockAspect=True, enableMouse=False)
         vb.addItem(img)
 
-        roi = RectROI([config['CENTER_X'], config['CENTER_Y'] ], [100, 100], pen=mkPen((0, 255, 0), width=4))
-        
+        # Define First Region of interests.Around Brag Data
+        roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [
+                      100, 100], pen=mkPen((0, 255, 0), width=4))
+
         self._rois.append(roi)
-        roi = RectROI([ config['CENTER_X'] -100, config['CENTER_Y'] -100], [100, 100], pen=mkPen((255, 0, 0), width=4))
+        # Define Second Region of interests.Around Background
+        roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
+                       100], [100, 100], pen=mkPen((255, 0, 0), width=4))
         self._rois.append(roi)
 
         for roi in self._rois:
-            # roi.addScaleHandle([0.5, 1], [0.5, 0.5])
-            # roi.addScaleHandle([0, 0.5], [0.5, 0.5])
             vb.addItem(roi)
 
-        # hist = HistogramLUTItem()
-        # hist.setImageItem(img)
-        # self._gl_widget.addItem(hist)
-
-        vb1 = self._gl_widget.addViewBox(row=2, col= 0, rowspan=1, colspan=1,  lockAspect=True,enableMouse=False)
+        # View Boxes vb1 and vb2 in lower left panels for images in selected ROIs
+        vb1 = self._gl_widget.addViewBox(
+            row=2, col=0, rowspan=1, colspan=1,  lockAspect=True, enableMouse=False)
         img1 = ImageItem()
-        img1.setLookupTable(lookupTableFactory[config['COLOR_MAP'] ])
+        img1.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb1.addItem(img1)
         self._image_items.append(img1)
-        
-        vb2 = self._gl_widget.addViewBox(row=2, col=1, rowspan=1,colspan=1,  lockAspect=True,enableMouse=False)
+
+        vb2 = self._gl_widget.addViewBox(
+            row=2, col=1, rowspan=1, colspan=1,  lockAspect=True, enableMouse=False)
         img2 = ImageItem(border='w')
         img2.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
-        p1 = self._gl_widget.addPlot(row= 0, col = 2, rowspan = 2, colspan=2,lockAspect=True)
+        # Plot regions for COM moving averages and history over different trains
+        p1 = self._gl_widget.addPlot(
+            row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
         self._plot_items.append(p1)
         p1.setLabel('left', "COM position")
         p1.setLabel('bottom', "Pulse ids")
-        
-        p2 = self._gl_widget.addPlot(row = 2, col = 2, rowspan=1, colspan=1)
+
+        p2 = self._gl_widget.addPlot(row=2, col=2, rowspan=1, colspan=1)
         self._plot_items.append(p2)
         p2.setLabel('left', "Average COM")
         p2.setLabel('bottom', "Train ID")
         p2.setTitle(' ')
 
-    def _update(self,data):
+    def _update(self, data):
 
+        # Same logic as LaserOnOffWindow.
         available_modes = list(self.modes.keys())
         if self._laser_mode == available_modes[0]:
             self._on_train_received = True
@@ -717,9 +724,9 @@ class BraggSpots(PlotWindow):
         else:
 
             if self._laser_mode == available_modes[1]:
-                flag = 0  
+                flag = 0
             elif self._laser_mode == available_modes[2]:
-                flag = 1  
+                flag = 1
             else:
                 raise ValueError("Unknown laser mode!")
 
@@ -732,39 +739,53 @@ class BraggSpots(PlotWindow):
                 if data.tid % 2 == flag:
                     self._on_train_received = True
 
-        keys = ['brag_data','background_data']
+        # slices dictionary is used to store array region selected by two ROIs around
+        # brag data and background
+        keys = ['brag_data', 'background_data']
         slices = dict.fromkeys(keys)
 
         com_on = None
         com_off = None
-        max_count = 9999 #ma_windowsize to be included later from cntrl panel
+        max_count = 9999  # ma_windowsize to be included later from cntrl panel
         if self._on_train_received:
 
             if self._laser_mode == available_modes[0] or \
                     not self._off_train_received:
 
                 this_on_pulses = []
-
+                # Collects centre of mass for each pulse in this_on_pulses list
                 for pid in self._on_pulse_ids:
 
                     index = 0
                     for key in slices.keys():
-                        slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-                        index +=1
-                        (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                        # slices of regions selected by two ROIs.
+                        # One around brag spot and one around background
+                        # key : brag_data stores array region around brag spot ROI
+                        # key : background_data stores array region around background ROI
+
+                        slices[key] = self._rois[index].getArrayRegion(
+                            data.image[pid], self._image_items[0])
+                        index += 1
+                        (slices[key])[np.isnan(slices[key])] = - \
+                            np.inf  # convert nan to -inf
                         np.clip(slices[key],
-                       self._mask_range[0],self._mask_range[1], out=slices[key])
+                                self._mask_range[0], self._mask_range[1], out=slices[key])
+                        # clip to restrict between mask values 0-2500
 
-                    mass_from_data = slices['brag_data'] - slices['background_data']
+                    # background subtraction from Brag_data. Resulting image to be used for
+                    # COM evaluation.
+                    mass_from_data = slices['brag_data'] - \
+                        slices['background_data']
                     np.clip(mass_from_data,
-                       self._mask_range[0],self._mask_range[1], out=mass_from_data)
+                            self._mask_range[0], self._mask_range[1], out=mass_from_data)
 
-                    mass = ndimage.measurements.center_of_mass(mass_from_data) 
-
+                    mass = ndimage.measurements.center_of_mass(mass_from_data)
+                    # centre of mass (x,y) converted to distance wrt some origin (0,0)
+                    # r = sqrt(x**2+y**2)
                     r = np.linalg.norm(mass)
                     this_on_pulses.append(r)
 
-
+                # Same logic as LaserOnOffWindow. Running averages over trains
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
                     self._on_pulses_ma += \
@@ -775,19 +796,22 @@ class BraggSpots(PlotWindow):
                         self._on_pulses_ma = np.copy(this_on_pulses)
                     elif len(self._on_pulses_hist) < max_count:
                         self._on_pulses_ma += \
-                                (this_on_pulses - self._on_pulses_ma) \
-                                / (len(self._on_pulses_hist) + 1)
+                            (this_on_pulses - self._on_pulses_ma) \
+                            / (len(self._on_pulses_hist) + 1)
                     elif len(self._on_pulses_hist) == max_count + 1:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
                             / max_count
                     else:
-                        raise ValueError 
+                        raise ValueError
 
                 self._on_pulses_hist.append(this_on_pulses)
 
             com_on = self._on_pulses_ma
 
+            # This part at the moment makes no physical sense. Atleast to me.
+            # To be discussed with Dmitry. I added it here for some kind of
+            # history book keeping
             self._hist_train_on_id.append(data.tid)
             self._hist_com_on.append(np.mean(np.array(com_on)))
 
@@ -798,106 +822,116 @@ class BraggSpots(PlotWindow):
 
                 index = 0
                 for key in slices.keys():
-                    slices[key] = self._rois[index].getArrayRegion(data.image[pid], self._image_items[0])
-                    index +=1
-                    (slices[key])[np.isnan(slices[key]) ] = -np.inf
+                    # slices of regions selected by two ROIs.
+                    # One around brag spot and one around background
+                    # key : brag_data stores array region around brag spot ROI
+                    # key : background stores array region around background ROI
+                    slices[key] = self._rois[index].getArrayRegion(
+                        data.image[pid], self._image_items[0])
+                    index += 1
+                    (slices[key])[np.isnan(slices[key])] = - \
+                        np.inf  # convert nan to -inf
                     np.clip(slices[key],
-                   self._mask_range[0],self._mask_range[1], out=slices[key])
+                            self._mask_range[0], self._mask_range[1], out=slices[key])
+                    # clip to restrict between mask values 0-2500
 
-                mass_from_data = slices['brag_data'] - slices['background_data']
+                # background subtraction from Brag_data. Resulting image to be used for
+                # COM evaluation.
+                mass_from_data = slices['brag_data'] - \
+                    slices['background_data']
+
                 np.clip(mass_from_data,
-                   self._mask_range[0],self._mask_range[1], out=mass_from_data)
-                
-                mass = ndimage.measurements.center_of_mass(mass_from_data) 
+                        self._mask_range[0], self._mask_range[1], out=mass_from_data)
 
+                mass = ndimage.measurements.center_of_mass(mass_from_data)
+                # centre of mass (x,y) converted to distance wrt some origin (0,0)
+                # r = sqrt(x**2+y**2)
                 r = np.linalg.norm(mass)
                 this_off_pulses.append(r)
 
             self._off_pulses_hist.append(this_off_pulses)
-
+            # Same logic as LaserOnOffWindow. Running averages over trains
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
             elif len(self._off_pulses_hist) <= max_count:
                 self._off_pulses_ma += \
-                        (this_off_pulses - self._off_pulses_ma) \
-                        / len(self._off_pulses_hist)
+                    (this_off_pulses - self._off_pulses_ma) \
+                    / len(self._off_pulses_hist)
             elif len(self._off_pulses_hist) == max_count + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
                     / max_count
             else:
-                raise ValueError 
+                raise ValueError
 
             com_off = self._off_pulses_ma
 
+            # This part at the moment makes no physical sense. Atleast to me.
+            # To be discussed with Dmitry. I added it here for some kind of
+            # history book keeping
             self._hist_train_off_id.append(data.tid)
             self._hist_com_off.append(np.mean(np.array(com_off)))
-            
+
             self._on_train_received = False
             self._off_train_received = False
 
-        # self._hist_train_id.append(data.tid)
-        # self._hist_com_off.append(np.mean(np.array(com_off)))
-        # self._hist_com_on.append(np.mean(np.array(com_on)))
-        return com_on,com_off
-
+        return com_on, com_off
 
     def updatePlots(self):
         data = self._data.get()
         if data.empty():
             return
- 
-        self._image_items[0].setImage(data.image_mean,autoLevels=False,levels=(0, data.image_mean.max()))
 
+        self._image_items[0].setImage(
+            data.image_mean, autoLevels=False, levels=(0, data.image_mean.max()))
+        # Size of two region of interests should stay same. 
+        # Important when Backgorund has to be subtracted from Brag data 
         size_brag = (self._rois[0]).size()
         self._rois[1].setSize(size_brag)
 
+        # Plot average image around two region of interests.
+        # Selected Brag region and Background
         for roi in self._rois:
             index = self._rois.index(roi)
-            self._image_items[index+1].setImage(roi.getArrayRegion(data.image_mean, self._image_items[0]),levels=(0, data.image_mean.max()))
-        
+            self._image_items[index+1].setImage(roi.getArrayRegion(
+                data.image_mean, self._image_items[0]), levels=(0, data.image_mean.max()))
+
         if self._vis_setups.param("COM Analysis").value():
             self._gl_widget.setEnabled(False)
             p = self._plot_items[0]
 
-            com_on,com_off = self._update(data)
-
-            # Keep it for the moment
-            # com_on_pulse_on = list(zip(self._on_pulse_ids, com_on))
-            # com_off_pulse_off = list(zip(self._off_pulse_ids, com_off))
-
-            # com_all = [x for _,x in sorted(com_on_pulse_on + com_off_pulse_off) ]
-            # pulse_all = [x for x,_ in sorted(com_on_pulse_on + com_off_pulse_off) ]
+            com_on, com_off = self._update(data)
 
             p.addLegend()
             p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
-                p.plot(self._on_pulse_ids,com_on, name ='On', pen=PenFactory.green, symbol='o' )
+                p.plot(self._on_pulse_ids, com_on, name='On',
+                       pen=PenFactory.green, symbol='o')
             if com_off is not None:
-                p.plot(self._off_pulse_ids,com_off, name = "Off", pen=PenFactory.purple, symbol='o')
-            # p.plot(pulse_all,com_all, name="all", pen= PenFactory.cyan, symbol='o')
+                p.plot(self._off_pulse_ids, com_off, name="Off",
+                       pen=PenFactory.purple, symbol='o')
 
             p = self._plot_items[1]
             p.clear()
 
             s = ScatterPlotItem(size=10,
-                            pen=mkPen(None),
-                            brush=mkBrush(120, 255, 255, 255))
+                                pen=mkPen(None),
+                                brush=mkBrush(120, 255, 255, 255))
             s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_off_id, self._hist_com_off)])
+                         zip(self._hist_train_off_id, self._hist_com_off)])
 
             p.addItem(s)
             s = ScatterPlotItem(size=10,
-                            pen=mkPen(None),
-                            brush=mkBrush(240, 255, 255, 255))
+                                pen=mkPen(None),
+                                brush=mkBrush(240, 255, 255, 255))
             s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_on_id, self._hist_com_on)])
+                         zip(self._hist_train_on_id, self._hist_com_on)])
 
             p.addItem(s)
             p.plot(self._hist_train_off_id, self._hist_com_off,
-               pen=PenFactory.red, name='Off')
+                   pen=PenFactory.red, name='Off')
             p.plot(self._hist_train_on_id, self._hist_com_on,
-               pen=PenFactory.green, name='On')
+                   pen=PenFactory.green, name='On')
             p.addLegend()
 
         else:
@@ -916,7 +950,6 @@ class BraggSpots(PlotWindow):
         self._hist_com_off.clear()
         self._hist_train_on_id.clear()
         self._hist_train_off_id.clear()
-
 
 
 @SingletonWindow
