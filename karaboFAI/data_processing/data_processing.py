@@ -22,7 +22,7 @@ from h5py import File
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
-
+from karabo_data.geometry2 import AGIPD_1MGeometry
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
@@ -68,10 +68,14 @@ class DataProcessor(Thread):
         self.pulse_range = kwargs['pulse_range']
 
         self._geom = None
-        with File(kwargs['geom_file'], 'r') as f:
-            self._geom = LPDGeometry.from_h5_file_and_quad_positions(
-                f, kwargs['quad_positions'])
-            logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
+        if config['TOPIC'] == 'FXE':
+            with File(kwargs['geom_file'], 'r') as f:
+                self._geom = LPDGeometry.from_h5_file_and_quad_positions(
+                    f, kwargs['quad_positions'])
+        elif config['TOPIC'] == 'SPB':
+            self._geom = AGIPD_1MGeometry.from_crystfel_geom(kwargs['geom_file']).snap()
+
+        logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
 
         self.wavelength = 1e-3 * constants.c * constants.h / constants.e\
             / kwargs['photon_energy']
@@ -278,6 +282,8 @@ class DataProcessor(Thread):
             try:
                 if config["TOPIC"] == "FXE":
                     dev = 'LPD'
+                elif config['TOPIC'] == 'SPB':
+                    dev = 'AGIPD'
                 else:
                     dev = ''
 
