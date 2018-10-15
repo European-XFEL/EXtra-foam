@@ -17,7 +17,8 @@ from silx.gui.colors import Colormap as SilxColormap
 
 from .pyqtgraph import (
     BarGraphItem, GraphicsLayoutWidget, ImageItem,
-    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem, RectROI,
+    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem,
+    RectROI,LineROI, LineSegmentROI
 )
 from .pyqtgraph import parametertree as ptree
 
@@ -584,7 +585,7 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist_train_id.clear()
 
 
-class BraggSpots(PlotWindow):
+class BraggSpotsWindow(PlotWindow):
 
     modes = OrderedDict({
         "normal": "Laser-on/off pulses in the same train",
@@ -617,7 +618,10 @@ class BraggSpots(PlotWindow):
 
             {'name': 'Analysis options', 'type': 'group',
              'children': [
-                 {'name': 'COM Analysis', 'type': 'bool', 'value': False}]},
+                 # {'name': 'COM Analysis', 'type': 'bool', 'value': True},
+                 {'name': 'Profile Analysis', 'type': 'bool', 'value': False}
+
+             ]},
             {'name': 'Actions', 'type': 'group',
              'children': [
                  {'name': 'Clear history', 'type': 'action'}]},
@@ -627,10 +631,12 @@ class BraggSpots(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
         self._vis_setups = p.param('Analysis options')
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+        # p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
+            # self._profile)
 
         self.setGeometry(100, 100, 1400, 800)
 
-        self._rois = [] # bookeeping Region of interests.
+        self._rois = []  # bookeeping Region of interests.
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._laser_mode = laser_mode
@@ -657,9 +663,9 @@ class BraggSpots(PlotWindow):
         logger.info("Open COM Analysis Window")
 
     def initCtrlUI(self):
-
+        """Override"""
         self._ctrl_widget = QtGui.QWidget()
-        self._ctrl_widget.setMaximumWidth(500)
+        self._ctrl_widget.setMaximumWidth(400)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
@@ -669,38 +675,39 @@ class BraggSpots(PlotWindow):
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         self._image_items.append(img)
-        vb = self._gl_widget.addPlot(
+        self._main_vb = self._gl_widget.addPlot(
             row=0, col=0, rowspan=2, colspan=2, lockAspect=True, enableMouse=False)
-        vb.addItem(img)
+        self._main_vb.addItem(img)
 
         # Define First Region of interests.Around Brag Data
         roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [
-                      100, 100], pen=mkPen((0, 255, 0), width=4))
+                      100, 100], pen=mkPen((0, 255, 0), width=3))
 
         self._rois.append(roi)
         # Define Second Region of interests.Around Background
         roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
-                       100], [100, 100], pen=mkPen((255, 0, 0), width=4))
+                       100], [100, 100], pen=mkPen((255, 0, 0), width=3))
         self._rois.append(roi)
 
         for roi in self._rois:
-            vb.addItem(roi)
+            self._main_vb.addItem(roi)
 
         # View Boxes vb1 and vb2 in lower left panels for images in selected ROIs
         vb1 = self._gl_widget.addViewBox(
-            row=2, col=0, rowspan=1, colspan=1,  lockAspect=True, enableMouse=False)
+            row=2, col=0, rowspan=2, colspan=1,  lockAspect=True, enableMouse=False)
         img1 = ImageItem()
         img1.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb1.addItem(img1)
         self._image_items.append(img1)
 
         vb2 = self._gl_widget.addViewBox(
-            row=2, col=1, rowspan=1, colspan=1,  lockAspect=True, enableMouse=False)
+            row=2, col=1, rowspan=2, colspan=1,  lockAspect=True, enableMouse=False)
         img2 = ImageItem(border='w')
         img2.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
+        self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
         # Plot regions for COM moving averages and history over different trains
         p1 = self._gl_widget.addPlot(
             row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
@@ -708,7 +715,7 @@ class BraggSpots(PlotWindow):
         p1.setLabel('left', "COM position")
         p1.setLabel('bottom', "Pulse ids")
 
-        p2 = self._gl_widget.addPlot(row=2, col=2, rowspan=1, colspan=1)
+        p2 = self._gl_widget.addPlot(row=2, col=2, rowspan=2, colspan=2)
         self._plot_items.append(p2)
         p2.setLabel('left', "Average COM")
         p2.setLabel('bottom', "Train ID")
@@ -881,76 +888,84 @@ class BraggSpots(PlotWindow):
         data = self._data.get()
         if data.empty():
             return
-
+        self._main_vb.setMouseEnabled(x=False,y=False)
         self._image_items[0].setImage(
-            data.image_mean, autoLevels=False, levels=(0, data.image_mean.max()))
-        # Size of two region of interests should stay same. 
-        # Important when Backgorund has to be subtracted from Brag data 
+            np.flip(data.image_mean, axis=0), autoLevels=False, levels=(0, data.image_mean.max()))
+        # Size of two region of interests should stay same.
+        # Important when Backgorund has to be subtracted from Brag data
+        # TOFIX: Size of ROI should not be independent
         size_brag = (self._rois[0]).size()
         self._rois[1].setSize(size_brag)
+
+        # Profile analysis (Histogram) along a line
+        # To ADD Here
 
         # Plot average image around two region of interests.
         # Selected Brag region and Background
         for roi in self._rois:
             index = self._rois.index(roi)
             self._image_items[index+1].setImage(roi.getArrayRegion(
-                data.image_mean, self._image_items[0]), levels=(0, data.image_mean.max()))
+                np.flip(data.image_mean, axis=0), self._image_items[0]), levels=(0, data.image_mean.max()))
 
-        if self._vis_setups.param("COM Analysis").value():
-            self._gl_widget.setEnabled(False)
-            p = self._plot_items[0]
+        p = self._plot_items[0]
 
-            com_on, com_off = self._update(data)
+        com_on, com_off = self._update(data)
 
-            p.addLegend()
-            p.setTitle(' TrainId :: {}'.format(data.tid))
-            if com_on is not None:
-                p.plot(self._on_pulse_ids, com_on, name='On',
-                       pen=PenFactory.green, symbol='o')
-            if com_off is not None:
-                p.plot(self._off_pulse_ids, com_off, name="Off",
-                       pen=PenFactory.purple, symbol='o')
+        p.addLegend()
+        p.setTitle(' TrainId :: {}'.format(data.tid))
+        if com_on is not None:
+            p.plot(self._on_pulse_ids, com_on, name='On',
+                   pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
+        if com_off is not None:
+            p.plot(self._off_pulse_ids, com_off, name="Off",
+                   pen=PenFactory.purple, symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
 
-            p = self._plot_items[1]
-            p.clear()
+        p = self._plot_items[1]
+        p.clear()
 
-            s = ScatterPlotItem(size=10,
-                                pen=mkPen(None),
-                                brush=mkBrush(120, 255, 255, 255))
-            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                         zip(self._hist_train_off_id, self._hist_com_off)])
+        s = ScatterPlotItem(size=10,
+                            pen=mkPen(None),
+                            brush=mkBrush(120, 255, 255, 255))
+        s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                     zip(self._hist_train_off_id, self._hist_com_off)])
 
-            p.addItem(s)
-            s = ScatterPlotItem(size=10,
-                                pen=mkPen(None),
-                                brush=mkBrush(240, 255, 255, 255))
-            s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                         zip(self._hist_train_on_id, self._hist_com_on)])
+        p.addItem(s)
+        s = ScatterPlotItem(size=10,
+                            pen=mkPen(None),
+                            brush=mkBrush(240, 255, 255, 255))
+        s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                     zip(self._hist_train_on_id, self._hist_com_on)])
 
-            p.addItem(s)
-            p.plot(self._hist_train_off_id, self._hist_com_off,
-                   pen=PenFactory.red, name='Off')
-            p.plot(self._hist_train_on_id, self._hist_com_on,
-                   pen=PenFactory.green, name='On')
-            p.addLegend()
-
-        else:
-            self._gl_widget.setEnabled(True)
+        p.addItem(s)
+        p.plot(self._hist_train_off_id, self._hist_com_off,
+               pen=PenFactory.red, name='Off')
+        p.plot(self._hist_train_on_id, self._hist_com_on,
+               pen=PenFactory.green, name='On')
+        p.addLegend()
 
     def clearPlots(self):
         """Override."""
         for item in self._image_items:
             item.clear()
-
         self._plot_items[0].clear()
+        if hasattr(self, "_profile_plot"):
+            self._profile_plot.clear()
 
     def _reset(self):
         self._plot_items[1].clear()
+
+        self._on_train_received = False
+        self._off_train_received = False
+        self._drop_last_on_pulse = False
+        self._on_pulses_ma = None
+        self._off_pulses_ma = None
+        self._on_pulses_hist.clear()
+        self._off_pulses_hist.clear()
+        # TODO: Fix hostory
         self._hist_com_on.clear()
         self._hist_com_off.clear()
         self._hist_train_on_id.clear()
         self._hist_train_off_id.clear()
-
 
 @SingletonWindow
 class SampleDegradationMonitor(PlotWindow):
@@ -1017,13 +1032,6 @@ class SampleDegradationMonitor(PlotWindow):
         p.addItem(bar)
         p.setTitle("Train ID: {}".format(data.tid))
         p.plot()
-
-
-# class BraggSpotsWindow(PlotWindow):
-#     """BraggSpotsWindow class."""
-#     def updatePlots(self):
-#         pass
-
 
 @SingletonWindow
 class DrawMaskWindow(AbstractWindow):

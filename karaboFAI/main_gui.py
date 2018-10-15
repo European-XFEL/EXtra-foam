@@ -20,7 +20,7 @@ import zmq
 from .logger import GuiLogger, logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    BraggSpots, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
+    BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
     IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
     MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
 )
@@ -640,7 +640,7 @@ class MainGUI(QtGui.QMainWindow):
         laser_mode = self._laser_mode_cb.currentText()
         # check pulse ID only when laser on/off pulses are in the same
         # train (the "normal" mode)
-        if laser_mode == list(BraggSpots.modes.keys())[0]:
+        if laser_mode == list(BraggSpotsWindow.modes.keys())[0]:
             common = set(on_pulse_ids).intersection(off_pulse_ids)
             if common:
                 logger.error(
@@ -648,7 +648,7 @@ class MainGUI(QtGui.QMainWindow):
                     format(','.join([str(v) for v in common])))
                 return
 
-        w = BraggSpots(
+        w = BraggSpotsWindow(
             self._data,
             on_pulse_ids,
             off_pulse_ids,
