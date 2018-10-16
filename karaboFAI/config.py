@@ -89,7 +89,7 @@ class Config(dict):
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 5,
         "WORKERS": 4,
-        "DOWN_SAMPLE_IMAGE_MEAN": True
+        "DOWN_SAMPLE_IMAGE_MEAN": False
     }
 
     # this is to guard again the topic config defined in the file modifying

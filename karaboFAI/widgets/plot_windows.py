@@ -631,6 +631,8 @@ class BraggSpotsWindow(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
         self._vis_setups = p.param('Analysis options')
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+        # Profile check button needed to avoid clash while moving
+        # brad and background region of interests. Click based.
         p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
             self._profile)
 
@@ -891,7 +893,7 @@ class BraggSpotsWindow(PlotWindow):
         data = self._data.get()
         if data.empty():
             return
-        self._main_vb.setMouseEnabled(x=False,y=False)
+        self._main_vb.setMouseEnabled(x=False, y=False)
         self._image_items[0].setImage(
             np.flip(data.image_mean, axis=0), autoLevels=False, levels=(0, data.image_mean.max()))
         # Size of two region of interests should stay same.
@@ -901,7 +903,8 @@ class BraggSpotsWindow(PlotWindow):
         self._rois[1].setSize(size_brag)
 
         # Profile analysis (Histogram) along a line
-        # To ADD Here
+        # Horizontal and vertical line region of interests
+        # Histograms along these lines plotted in the bottom panel
         if self._vis_setups.param('Profile Analysis').value():
 
             if len(self._profile_line_rois) > 0:
@@ -958,15 +961,17 @@ class BraggSpotsWindow(PlotWindow):
                pen=PenFactory.green, name='On')
         p.addLegend()
 
+    # Profile state change triggers this function
+    # If profile is checked, adds bottom panels to plot histograms.
     def _profile(self):
         if self._vis_setups.param('Profile Analysis').value():
             self._gl_widget.ci.layout.setRowStretchFactor(0, 2)
             profile_plot = self._gl_widget.addPlot(
-            row=4, col=0, rowspan=3, colspan=2)
+                row=4, col=0, rowspan=3, colspan=2)
 
             self._profile_plot_items.append(profile_plot)
             profile_plot = self._gl_widget.addPlot(
-            row=4, col=2, rowspan=3, colspan=2)
+                row=4, col=2, rowspan=3, colspan=2)
 
             self._profile_plot_items.append(profile_plot)
 
@@ -983,8 +988,9 @@ class BraggSpotsWindow(PlotWindow):
                     self._main_vb.removeItem(line)
                 self._profile_line_rois.clear()
 
-
-    def _click(self,event):
+    # Mouse click on image in top left panel creates two line
+    # region of interests. One horizontal and one vertical.
+    def _click(self, event):
         data = self._data.get()
         if data.empty():
             return
@@ -994,18 +1000,19 @@ class BraggSpotsWindow(PlotWindow):
         pos = event.pos()
         x = int(pos.x())
         y = int(pos.y())
-        x_pos,y_pos = data.image_mean.shape
+        x_pos, y_pos = data.image_mean.shape
 
         if len(self._profile_line_rois) > 0:
             for line in self._profile_line_rois:
                 self._main_vb.removeItem(line)
             self._profile_line_rois.clear()
 
-
-        line_roi = LineSegmentROI([[0, y], [y_pos,y]], pen=mkPen((255, 255, 255), width=3))
+        line_roi = LineSegmentROI(
+            [[0, y], [y_pos, y]], pen=mkPen((255, 255, 255), width=3))
         self._profile_line_rois.append(line_roi)
 
-        line_roi = LineSegmentROI([[x, 0], [x,x_pos]], pen=mkPen((255, 255, 255), width=3))
+        line_roi = LineSegmentROI(
+            [[x, 0], [x, x_pos]], pen=mkPen((255, 255, 255), width=3))
         self._profile_line_rois.append(line_roi)
         for line in self._profile_line_rois:
             self._main_vb.addItem(line)
@@ -1034,6 +1041,7 @@ class BraggSpotsWindow(PlotWindow):
         self._hist_com_off.clear()
         self._hist_train_on_id.clear()
         self._hist_train_off_id.clear()
+
 
 @SingletonWindow
 class SampleDegradationMonitor(PlotWindow):
