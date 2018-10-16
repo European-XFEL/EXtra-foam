@@ -631,8 +631,8 @@ class BraggSpotsWindow(PlotWindow):
         self._ptree.setParameters(p, showTop=False)
         self._vis_setups = p.param('Analysis options')
         p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
-        # p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
-            # self._profile)
+        p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
+            self._profile)
 
         self.setGeometry(100, 100, 1400, 800)
 
@@ -645,6 +645,9 @@ class BraggSpotsWindow(PlotWindow):
         self._hist_train_off_id = []
         self._hist_com_on = []
         self._hist_com_off = []
+
+        self._profile_plot_items = []
+        self._profile_line_rois = []
 
         self._on_train_received = False
         self._off_train_received = False
@@ -899,6 +902,18 @@ class BraggSpotsWindow(PlotWindow):
 
         # Profile analysis (Histogram) along a line
         # To ADD Here
+        if self._vis_setups.param('Profile Analysis').value():
+
+            if len(self._profile_line_rois) > 0:
+                for line in self._profile_line_rois:
+                    index = self._profile_line_rois.index(line)
+
+                    slice_hist = line.getArrayRegion(
+                        data.image_mean, self._image_items[0])
+                    y, x = np.histogram(slice_hist, bins=np.linspace(
+                        slice_hist.min(), slice_hist.max(), 50))
+                    self._profile_plot_items[index].plot(
+                        x, y, stepMode=True, fillLevel=0, brush=(255, 0, 255, 150))
 
         # Plot average image around two region of interests.
         # Selected Brag region and Background
@@ -943,13 +958,66 @@ class BraggSpotsWindow(PlotWindow):
                pen=PenFactory.green, name='On')
         p.addLegend()
 
+    def _profile(self):
+        if self._vis_setups.param('Profile Analysis').value():
+            self._gl_widget.ci.layout.setRowStretchFactor(0, 2)
+            profile_plot = self._gl_widget.addPlot(
+            row=4, col=0, rowspan=3, colspan=2)
+
+            self._profile_plot_items.append(profile_plot)
+            profile_plot = self._gl_widget.addPlot(
+            row=4, col=2, rowspan=3, colspan=2)
+
+            self._profile_plot_items.append(profile_plot)
+
+            self._image_items[0].mouseClickEvent = self._click
+
+        else:
+            self._gl_widget.ci.layout.setRowStretchFactor(0, 1)
+            if len(self._profile_plot_items) > 0:
+                for item in self._profile_plot_items:
+                    self._gl_widget.removeItem(item)
+                self._profile_plot_items.clear()
+            if len(self._profile_line_rois) > 0:
+                for line in self._profile_line_rois:
+                    self._main_vb.removeItem(line)
+                self._profile_line_rois.clear()
+
+
+    def _click(self,event):
+        data = self._data.get()
+        if data.empty():
+            return
+
+        event.accept()
+
+        pos = event.pos()
+        x = int(pos.x())
+        y = int(pos.y())
+        x_pos,y_pos = data.image_mean.shape
+
+        if len(self._profile_line_rois) > 0:
+            for line in self._profile_line_rois:
+                self._main_vb.removeItem(line)
+            self._profile_line_rois.clear()
+
+
+        line_roi = LineSegmentROI([[0, y], [y_pos,y]], pen=mkPen((255, 255, 255), width=3))
+        self._profile_line_rois.append(line_roi)
+
+        line_roi = LineSegmentROI([[x, 0], [x,x_pos]], pen=mkPen((255, 255, 255), width=3))
+        self._profile_line_rois.append(line_roi)
+        for line in self._profile_line_rois:
+            self._main_vb.addItem(line)
+
     def clearPlots(self):
         """Override."""
         for item in self._image_items:
             item.clear()
         self._plot_items[0].clear()
-        if hasattr(self, "_profile_plot"):
-            self._profile_plot.clear()
+        if len(self._profile_plot_items) > 0:
+            for plot in self._profile_plot_items:
+                plot.clear()
 
     def _reset(self):
         self._plot_items[1].clear()
