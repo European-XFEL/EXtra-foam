@@ -618,7 +618,6 @@ class BraggSpotsWindow(PlotWindow):
 
             {'name': 'Analysis options', 'type': 'group',
              'children': [
-                 # {'name': 'COM Analysis', 'type': 'bool', 'value': True},
                  {'name': 'Profile Analysis', 'type': 'bool', 'value': False}
 
              ]},
@@ -684,15 +683,28 @@ class BraggSpotsWindow(PlotWindow):
             row=0, col=0, rowspan=2, colspan=2, lockAspect=True, enableMouse=False)
         self._main_vb.addItem(img)
 
-        # Define First Region of interests.Around Brag Data
-        roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [
-                      100, 100], pen=mkPen((0, 255, 0), width=3))
-
-        self._rois.append(roi)
-        # Define Second Region of interests.Around Background
-        roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
-                       100], [100, 100], pen=mkPen((255, 0, 0), width=3))
-        self._rois.append(roi)
+        data = self._data.get()
+        if data.empty():
+            # Define First Region of interests.Around Brag Data
+            roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [
+                          100, 100], pen=mkPen((0, 255, 0), width=3))
+            self._rois.append(roi)
+            # Define Second Region of interests.Around Background
+            roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
+                           100], [100, 100], pen=mkPen((255, 0, 0), width=3))
+            self._rois.append(roi)
+        else:
+            centre_x, centre_y = data.image_mean.shape
+            # Define First Region of interests.Around Brag Data
+            # Max Bounds for region of interest defined
+            roi = RectROI([int(centre_x/2), int(centre_y/2)], [100, 100], maxBounds=QtCore.QRectF(
+                0, 0, centre_y, centre_x), pen=mkPen((0, 255, 0), width=3))
+            self._rois.append(roi)
+            # Define Second Region of interests.Around Background
+            roi = RectROI([int(centre_x/2) - 100, int(centre_y/2) -
+                           100], [100, 100], maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x), 
+                           pen=mkPen((255, 0, 0), width=3))
+            self._rois.append(roi)
 
         for roi in self._rois:
             self._main_vb.addItem(roi)
