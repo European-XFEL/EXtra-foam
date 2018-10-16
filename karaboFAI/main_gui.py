@@ -648,13 +648,19 @@ class MainGUI(QtGui.QMainWindow):
                     format(','.join([str(v) for v in common])))
                 return
 
+        ma_window_size = int(self._ma_window_le.text())
+        if ma_window_size < 1:
+            logger.error("Moving average window width < 1!")
+            return
+
         w = BraggSpotsWindow(
             self._data,
             on_pulse_ids,
             off_pulse_ids,
             laser_mode,
             mask_range,
-            parent=self
+            parent=self,
+            ma_window_size=ma_window_size
             )
 
         self._opened_windows[w] = 1

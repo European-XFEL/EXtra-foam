@@ -600,7 +600,8 @@ class BraggSpotsWindow(PlotWindow):
                  laser_mode,
                  mask_range,
                  *,
-                 parent=None
+                 parent=None,
+                 ma_window_size=9999
                  ):
         """Initialization."""
         super().__init__(data, parent=parent)
@@ -615,6 +616,10 @@ class BraggSpotsWindow(PlotWindow):
                      'value': ', '.join([str(x) for x in on_pulse_ids])},
                  {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
                      'value': ', '.join([str(x) for x in off_pulse_ids])}]},
+            {'name': 'Data processing parameters', 'type': 'group',
+             'children': [
+                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
+                  'value': ma_window_size}]},
 
             {'name': 'Analysis options', 'type': 'group',
              'children': [
@@ -637,11 +642,13 @@ class BraggSpotsWindow(PlotWindow):
 
         self.setGeometry(100, 100, 1400, 800)
 
-        self._rois = []  # bookeeping Region of interests.
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._laser_mode = laser_mode
         self._mask_range = mask_range
+        self._ma_window_size = ma_window_size
+        
+        self._rois = []  # bookeeping Region of interests.
         self._hist_train_on_id = []
         self._hist_train_off_id = []
         self._hist_com_on = []
@@ -770,7 +777,6 @@ class BraggSpotsWindow(PlotWindow):
 
         com_on = None
         com_off = None
-        max_count = 9999  # ma_windowsize to be included later from cntrl panel
         if self._on_train_received:
 
             if self._laser_mode == available_modes[0] or \
@@ -818,14 +824,14 @@ class BraggSpotsWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < max_count:
+                    elif len(self._on_pulses_hist) < self._ma_window_size:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_ma) \
                             / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == max_count + 1:
+                    elif len(self._on_pulses_hist) == self._ma_window_size:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / max_count
+                            / self._ma_window_size
                     else:
                         raise ValueError
 
@@ -877,14 +883,14 @@ class BraggSpotsWindow(PlotWindow):
             # Same logic as LaserOnOffWindow. Running averages over trains
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= max_count:
+            elif len(self._off_pulses_hist) <= self._ma_window_size:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_ma) \
                     / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == max_count + 1:
+            elif len(self._off_pulses_hist) == self._ma_window_size + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / max_count
+                    / self._ma_window_size
             else:
                 raise ValueError
 
