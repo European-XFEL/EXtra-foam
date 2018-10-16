@@ -274,8 +274,9 @@ class DataProcessor(Thread):
             tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
             modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
-            # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
-            modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
+            if config["TOPIC"] == "FXE":
+                # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
+                modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
@@ -296,8 +297,15 @@ class DataProcessor(Thread):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        if config["TOPIC"] == "FXE":
+            expected_shape = (16, 256, 256) 
+        elif config['TOPIC'] == 'SPB':
+            expected_shape = (16, 512, 128)
+        else:
+            pass
+
         if hasattr(modules_data, 'shape') is False \
-                or modules_data.shape[-3:] != (16, 256, 256):
+                or modules_data.shape[-3:] != expected_shape:
             logger.debug("Error in modules data of train {}".format(tid))
             return ProcessedData(tid)
 
