@@ -27,12 +27,6 @@ def slice_curve(y, x, x_min=None, x_max=None):
 
     :raise: ValueError
     """
-    if not isinstance(y, np.ndarray) or len(y.shape) > 1:
-        raise ValueError("'y' must be a 1D numpy.ndarray!")
-
-    if not isinstance(x, np.ndarray) or len(x.shape) > 1:
-        raise ValueError("'x' must be a 1D numpy.ndarray!")
-
     if x_min is None:
         x_min = x.min()
 

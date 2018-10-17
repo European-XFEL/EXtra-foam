@@ -9,13 +9,6 @@ from karaboFAI.data_processing import (
 
 class TestDataProcessor(unittest.TestCase):
     def test_slicecurve(self):
-
-        with self.assertRaises(ValueError):
-            slice_curve([1, 2, 3], [0, 1, 2])
-
-        with self.assertRaises(ValueError):
-            slice_curve(np.arange(4).reshape(2, 2), np.arange(4))
-
         y = np.array([6, 5, 4, 3, 2, 1])
         x = np.array([0, 1, 2, 3, 4, 5])
 
