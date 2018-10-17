@@ -57,7 +57,7 @@ def normalize_curve(y, x, x_min=None, x_max=None):
     """
     # if y contains only 0
     if not np.count_nonzero(y):
-        return y
+        return np.copy(y)
 
     # get the integration
     itgt = np.trapz(*slice_curve(y, x, x_min, x_max))
