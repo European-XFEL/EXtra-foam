@@ -12,16 +12,60 @@ All rights reserved.
 import numpy as np
 
 
-def sub_array_with_range(y, x, range_=None):
-    if range_ is None:
-        return y, x
-    indices = np.where(np.logical_and(x <= range_[1], x >= range_[0]))
+def slice_curve(y, x, x_min=None, x_max=None):
+    """Slice an x-y plot based on the range of x values.
+
+    x is assumed to be monotonically increasing.
+
+    :param numpy.ndarray y: 1D array.
+    :param numpy.ndarray x: 1D array.
+    :param None/float x_min: minimum x value.
+    :param None/float x_max: maximum x value.
+
+    :return: (the sliced x and y)
+    :rtype: (numpy.ndarray, numpy.ndarray)
+
+    :raise: ValueError
+    """
+    if not isinstance(y, np.ndarray) or len(y.shape) > 1:
+        raise ValueError("'y' must be a 1D numpy.ndarray!")
+
+    if not isinstance(x, np.ndarray) or len(x.shape) > 1:
+        raise ValueError("'x' must be a 1D numpy.ndarray!")
+
+    if x_min is None:
+        x_min = x.min()
+
+    if x_max is None:
+        x_max = x.max()
+
+    indices = np.where(np.logical_and(x <= x_max, x >= x_min))
     return y[indices], x[indices]
 
 
-def integrate_curve(y, x, range_=None):
-    itgt = np.trapz(*sub_array_with_range(y, x, range_))
-    return itgt if itgt else 1.0
+def normalize_curve(y, x, x_min=None, x_max=None):
+    """Normalize y by the integration of y within a given range of x.
+
+    :param numpy.ndarray y: 1D array.
+    :param numpy.ndarray x: 1D array.
+    :param None/float x_min: minimum x value.
+    :param None/float x_max: maximum x value.
+
+    :return numpy.ndarray: the normalized y.
+
+    :raise ValueError
+    """
+    # if y contains only 0
+    if not np.count_nonzero(y):
+        return y
+
+    # get the integration
+    itgt = np.trapz(*slice_curve(y, x, x_min, x_max))
+
+    if itgt == 0:
+        raise ValueError("Normalized by 0!")
+
+    return y / itgt
 
 
 def down_sample(x):

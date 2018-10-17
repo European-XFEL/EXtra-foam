@@ -26,7 +26,7 @@ from .pyqtgraph import parametertree as ptree
 from ..logger import logger
 from ..config import config
 from ..data_processing.proc_utils import (
-    integrate_curve, sub_array_with_range
+    normalize_curve, slice_curve
 )
 from .misc_widgets import PenFactory, lookupTableFactory
 
@@ -462,8 +462,8 @@ class LaserOnOffWindow(PlotWindow):
 
                 self._on_pulses_hist.append(this_on_pulses)
 
-            normalized_on_pulse = self._on_pulses_ma / integrate_curve(
-                self._on_pulses_ma, momentum, self._normalization_range)
+            normalized_on_pulse = normalize_curve(
+                self._on_pulses_ma, momentum, *self._normalization_range)
 
         if self._off_train_received:
             # update off-pulse
@@ -484,13 +484,13 @@ class LaserOnOffWindow(PlotWindow):
             else:
                 raise ValueError  # should never reach here
 
-            normalized_off_pulse = self._off_pulses_ma / integrate_curve(
-                self._off_pulses_ma, momentum, self._normalization_range)
+            normalized_off_pulse = normalize_curve(
+                self._off_pulses_ma, momentum, *self._normalization_range)
 
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit (FOM) and update history
-            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            fom = slice_curve(diff, momentum, *self._fom_range)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)
@@ -631,7 +631,7 @@ class SampleDegradationMonitor(PlotWindow):
         # normalize azimuthal integration curves for each pulse
         normalized_pulse_intensities = []
         for pulse_intensity in data.intensity:
-            normalized = pulse_intensity / integrate_curve(
+            normalized = normalize_curve(
                 pulse_intensity, momentum, self._normalization_range)
             normalized_pulse_intensities.append(normalized)
 
@@ -642,7 +642,7 @@ class SampleDegradationMonitor(PlotWindow):
         # calculate the FOM for each pulse
         foms = []
         for diff in diffs:
-            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            fom = slice_curve(diff, momentum, *self._fom_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')
