@@ -8,3 +8,4 @@ PyQt5>=5.11.0
 karabo-data>=0.1.0
 karabo-bridge>=0.2.0
 toolz
+silx>=0.8.0
