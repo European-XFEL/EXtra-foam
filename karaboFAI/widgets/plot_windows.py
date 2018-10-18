@@ -623,8 +623,9 @@ class BraggSpotsWindow(PlotWindow):
 
             {'name': 'Analysis options', 'type': 'group',
              'children': [
-                 {'name': 'Profile Analysis', 'type': 'bool', 'value': False}
-
+                 {'name': 'Profile Analysis', 'type': 'bool', 'value': False},
+                 {'name': 'Normalized Intensity Plot',
+                     'type': 'bool', 'value': False}
              ]},
             {'name': 'Actions', 'type': 'group',
              'children': [
@@ -639,15 +640,17 @@ class BraggSpotsWindow(PlotWindow):
         # brad and background region of interests. Click based.
         p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
             self._profile)
+        p.param('Analysis options', 'Normalized Intensity Plot').sigStateChanged.connect(
+            self._intensity)
 
-        self.setGeometry(100, 100, 1400, 800)
+        self.setGeometry(100, 100, 1600, 1000)
 
         self._on_pulse_ids = on_pulse_ids
         self._off_pulse_ids = off_pulse_ids
         self._laser_mode = laser_mode
         self._mask_range = mask_range
         self._ma_window_size = ma_window_size
-        
+
         self._rois = []  # bookeeping Region of interests.
         self._hist_train_on_id = []
         self._hist_train_off_id = []
@@ -694,23 +697,23 @@ class BraggSpotsWindow(PlotWindow):
         if data.empty():
             # Define First Region of interests.Around Brag Data
             roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [
-                          100, 100], pen=mkPen((0, 255, 0), width=3))
+                          50, 50], pen=mkPen((0, 255, 0), width=2))
             self._rois.append(roi)
             # Define Second Region of interests.Around Background
             roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
-                           100], [100, 100], pen=mkPen((255, 0, 0), width=3))
+                           100], [50, 50], pen=mkPen((255, 0, 0), width=2))
             self._rois.append(roi)
         else:
             centre_x, centre_y = data.image_mean.shape
             # Define First Region of interests.Around Brag Data
             # Max Bounds for region of interest defined
-            roi = RectROI([int(centre_x/2), int(centre_y/2)], [100, 100], maxBounds=QtCore.QRectF(
-                0, 0, centre_y, centre_x), pen=mkPen((0, 255, 0), width=3))
+            roi = RectROI([int(centre_x/2), int(centre_y/2)], [50, 50], maxBounds=QtCore.QRectF(
+                0, 0, centre_y, centre_x), pen=mkPen((0, 255, 0), width=2))
             self._rois.append(roi)
             # Define Second Region of interests.Around Background
             roi = RectROI([int(centre_x/2) - 100, int(centre_y/2) -
-                           100], [100, 100], maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x), 
-                           pen=mkPen((255, 0, 0), width=3))
+                           100], [50, 50], maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x),
+                          pen=mkPen((255, 0, 0), width=2))
             self._rois.append(roi)
 
         for roi in self._rois:
@@ -818,13 +821,16 @@ class BraggSpotsWindow(PlotWindow):
                         slices['background_data']
                     np.clip(mass_from_data,
                             self._mask_range[0], self._mask_range[1], out=mass_from_data)
-
+                    # normalization = \sum ROI_background
+                    # Ńormalized intensity \sum (ROI_brag - ROI_background)/ normalization
+                    intensity = np.sum(
+                        mass_from_data/np.sum(slices['background_data']))
+                    # Centre of mass
                     mass = ndimage.measurements.center_of_mass(mass_from_data)
-                    # centre of mass (x,y) converted to distance wrt some origin (0,0)
-                    # r = sqrt(x**2+y**2)
-                    # r = np.linalg.norm(mass)
-                    this_on_pulses.append(mass)
 
+                    this_on_pulses.append(np.append(np.array(mass), intensity))
+
+                this_on_pulses = np.array(this_on_pulses)
                 # Same logic as LaserOnOffWindow. Running averages over trains
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
@@ -882,13 +888,16 @@ class BraggSpotsWindow(PlotWindow):
 
                 np.clip(mass_from_data,
                         self._mask_range[0], self._mask_range[1], out=mass_from_data)
-
+                # normalization = \sum ROI_background
+                # Ńormalized intensity \sum (ROI_brag - ROI_background)/ normalization
+                intensity = np.sum(
+                    mass_from_data/np.sum(slices['background_data']))
+                # Centre of mass
                 mass = ndimage.measurements.center_of_mass(mass_from_data)
-                # centre of mass (x,y) converted to distance wrt some origin (0,0)
-                # r = sqrt(x**2+y**2)
-                # r = np.linalg.norm(mass)
-                this_off_pulses.append(mass)
 
+                this_off_pulses.append(np.append(np.array(mass), intensity))
+
+            this_off_pulses = np.array(this_off_pulses)
             self._off_pulses_hist.append(this_off_pulses)
             # Same logic as LaserOnOffWindow. Running averages over trains
             if self._off_pulses_ma is None:
@@ -910,7 +919,7 @@ class BraggSpotsWindow(PlotWindow):
             # To be discussed with Dmitry. I added it here for some kind of
             # history book keeping
             self._hist_train_off_id.append(data.tid)
-            self._hist_com_off.append(np.mean(np.array(com_off),axis=0))
+            self._hist_com_off.append(np.mean(np.array(com_off), axis=0))
 
             self._on_train_received = False
             self._off_train_received = False
@@ -952,43 +961,56 @@ class BraggSpotsWindow(PlotWindow):
             index = self._rois.index(roi)
             self._image_items[index+1].setImage(roi.getArrayRegion(
                 np.flip(data.image_mean, axis=0), self._image_items[0]), levels=(0, data.image_mean.max()))
-
+        # com_on and com_off are of shape (num_pulses,3)
+        # contains (pulse_index, com_x, com_y, normalized intensity)
         com_on, com_off = self._update(data)
-
-        for p in self._plot_items[:2]:
-            index = self._plot_items.index(p)
-            p.addLegend()
-            if index == 0:
-                p.setTitle(' TrainId :: {}'.format(data.tid))
+        # If Normalized intensity plot Checkbox is not checked then 
+        # just plot COM X and Y as a function of pulseIds
+        if not self._vis_setups.param('Normalized Intensity Plot').value():
+            for p in self._plot_items[:-2]:
+                index = self._plot_items.index(p)
+                p.addLegend()
+                if index == 0:
+                    p.setTitle(' TrainId :: {}'.format(data.tid))
+                if com_on is not None:
+                    p.plot(self._on_pulse_ids, com_on[:, index], name='On',
+                           pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
+                if com_off is not None:
+                    p.plot(self._off_pulse_ids, com_off[:, index], name="Off",
+                           pen=PenFactory.purple, symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
+        # Else plot Normalized intensity.
+        else:
+            p = self._plot_items[0]
             if com_on is not None:
-                p.plot(self._on_pulse_ids, com_on[:,index], name='On',
+                p.plot(self._on_pulse_ids, com_on[:, -1], name='On',
                        pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
-                p.plot(self._off_pulse_ids, com_off[:,index], name="Off",
+                p.plot(self._off_pulse_ids, com_off[:, -1], name="Off",
                        pen=PenFactory.purple, symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
+
         idx = 0
-        for p in self._plot_items[2:]:
+        for p in self._plot_items[-2:]:
             p.clear()
             if self._hist_com_off:
                 s = ScatterPlotItem(size=10,
                                     pen=mkPen(None),
                                     brush=mkBrush(120, 255, 255, 255))
                 s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                             zip(self._hist_train_off_id, np.array(self._hist_com_off)[:,idx] )])
+                             zip(self._hist_train_off_id, np.array(self._hist_com_off)[:, idx])])
 
                 p.addItem(s)
-                p.plot(self._hist_train_off_id, np.array(self._hist_com_off)[:,idx],
-                   pen=PenFactory.red, name='Off')
+                p.plot(self._hist_train_off_id, np.array(self._hist_com_off)[:, idx],
+                       pen=PenFactory.purple, name='Off')
             if self._hist_com_on:
                 s = ScatterPlotItem(size=10,
                                     pen=mkPen(None),
                                     brush=mkBrush(240, 255, 255, 255))
                 s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                             zip(self._hist_train_on_id, np.array(self._hist_com_on)[:,idx] )])
+                             zip(self._hist_train_on_id, np.array(self._hist_com_on)[:, idx])])
 
                 p.addItem(s)
-                
-                p.plot(self._hist_train_on_id, np.array(self._hist_com_on)[:,idx],
+
+                p.plot(self._hist_train_on_id, np.array(self._hist_com_on)[:, idx],
                        pen=PenFactory.green, name='On')
                 p.addLegend()
             idx += 1
@@ -997,13 +1019,16 @@ class BraggSpotsWindow(PlotWindow):
     # If profile is checked, adds bottom panels to plot histograms.
     def _profile(self):
         if self._vis_setups.param('Profile Analysis').value():
+
             self._gl_widget.ci.layout.setRowStretchFactor(0, 2)
+            self._gl_widget.ci.layout.setRowStretchFactor(1, 2)
             profile_plot = self._gl_widget.addPlot(
                 row=4, col=0, rowspan=3, colspan=2)
 
             self._profile_plot_items.append(profile_plot)
             profile_plot = self._gl_widget.addPlot(
                 row=4, col=2, rowspan=3, colspan=2)
+            self._gl_widget.ci.layout.setRowStretchFactor(4, 2)
 
             self._profile_plot_items.append(profile_plot)
 
@@ -1011,6 +1036,8 @@ class BraggSpotsWindow(PlotWindow):
 
         else:
             self._gl_widget.ci.layout.setRowStretchFactor(0, 1)
+            self._gl_widget.ci.layout.setRowStretchFactor(1, 1)
+
             if len(self._profile_plot_items) > 0:
                 for item in self._profile_plot_items:
                     self._gl_widget.removeItem(item)
@@ -1048,20 +1075,49 @@ class BraggSpotsWindow(PlotWindow):
         self._profile_line_rois.append(line_roi)
         for line in self._profile_line_rois:
             self._main_vb.addItem(line)
+    # Normalized intensity plot. When state changes in the checkbox
+    # it removes Centre of Mass X and Y plots and replace it with
+    # intensity plot.
+    def _intensity(self):
+        if self._vis_setups.param('Normalized Intensity Plot').value():
+            for plot in self._plot_items[:-2]:
+                self._gl_widget.removeItem(plot)
+                self._plot_items.remove(plot)
+
+            p = self._gl_widget.addPlot(
+                row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
+            self._plot_items.insert(0, p)
+            p.setLabel('left', "Intensity")
+            p.setLabel('bottom', "Pulse ids")
+        else:
+            for plot in self._plot_items[:-2]:
+                self._gl_widget.removeItem(plot)
+                self._plot_items.remove(plot)
+
+            p = self._gl_widget.addPlot(
+                row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
+            self._plot_items.insert(0, p)
+            p.setLabel('left', "COM - X")
+
+            p = self._gl_widget.addPlot(
+                row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
+            self._plot_items.insert(1, p)
+            p.setLabel('left', "COM - Y")
+            p.setLabel('bottom', "Pulse ids")
 
     def clearPlots(self):
         """Override."""
         for item in self._image_items:
             item.clear()
-        self._plot_items[0].clear()
-        self._plot_items[1].clear()
+        for plot in self._plot_items[:-2]:
+            plot.clear()
         if len(self._profile_plot_items) > 0:
             for plot in self._profile_plot_items:
                 plot.clear()
 
     def _reset(self):
-        self._plot_items[2].clear()
-        self._plot_items[3].clear()
+        for plot in self._plot_items[-2:]:
+            plot.clear()
 
         self._on_train_received = False
         self._off_train_received = False
@@ -1075,7 +1131,6 @@ class BraggSpotsWindow(PlotWindow):
         self._hist_com_off.clear()
         self._hist_train_on_id.clear()
         self._hist_train_off_id.clear()
-
 
 @SingletonWindow
 class SampleDegradationMonitor(PlotWindow):
