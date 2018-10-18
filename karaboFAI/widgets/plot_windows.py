@@ -733,17 +733,29 @@ class BraggSpotsWindow(PlotWindow):
 
         self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
         # Plot regions for COM moving averages and history over different trains
-        p1 = self._gl_widget.addPlot(
-            row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
-        self._plot_items.append(p1)
-        p1.setLabel('left', "COM position")
-        p1.setLabel('bottom', "Pulse ids")
+        p = self._gl_widget.addPlot(
+            row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
+        self._plot_items.append(p)
+        p.setLabel('left', "COM X")
+        p.setLabel('bottom', "Pulse ids")
 
-        p2 = self._gl_widget.addPlot(row=2, col=2, rowspan=2, colspan=2)
-        self._plot_items.append(p2)
-        p2.setLabel('left', "Average COM")
-        p2.setLabel('bottom', "Train ID")
-        p2.setTitle(' ')
+        p = self._gl_widget.addPlot(
+            row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
+        self._plot_items.append(p)
+        p.setLabel('left', "COM Y")
+        p.setLabel('bottom', "Pulse ids")
+
+        p = self._gl_widget.addPlot(row=2, col=2, rowspan=1, colspan=2)
+        self._plot_items.append(p)
+        p.setLabel('left', "Pulse average COM - X")
+        p.setLabel('bottom', "Train ID")
+        p.setTitle(' ')
+
+        p = self._gl_widget.addPlot(row=3, col=2, rowspan=1, colspan=2)
+        self._plot_items.append(p)
+        p.setLabel('left', "Pulse average COM - X")
+        p.setLabel('bottom', "Train ID")
+        p.setTitle(' ')
 
     def _update(self, data):
 
@@ -812,8 +824,8 @@ class BraggSpotsWindow(PlotWindow):
                     mass = ndimage.measurements.center_of_mass(mass_from_data)
                     # centre of mass (x,y) converted to distance wrt some origin (0,0)
                     # r = sqrt(x**2+y**2)
-                    r = np.linalg.norm(mass)
-                    this_on_pulses.append(r)
+                    # r = np.linalg.norm(mass)
+                    this_on_pulses.append(mass)
 
                 # Same logic as LaserOnOffWindow. Running averages over trains
                 if self._drop_last_on_pulse:
@@ -843,7 +855,7 @@ class BraggSpotsWindow(PlotWindow):
             # To be discussed with Dmitry. I added it here for some kind of
             # history book keeping
             self._hist_train_on_id.append(data.tid)
-            self._hist_com_on.append(np.mean(np.array(com_on)))
+            self._hist_com_on.append(np.mean(np.array(com_on), axis=0))
 
         if self._off_train_received:
 
@@ -876,8 +888,8 @@ class BraggSpotsWindow(PlotWindow):
                 mass = ndimage.measurements.center_of_mass(mass_from_data)
                 # centre of mass (x,y) converted to distance wrt some origin (0,0)
                 # r = sqrt(x**2+y**2)
-                r = np.linalg.norm(mass)
-                this_off_pulses.append(r)
+                # r = np.linalg.norm(mass)
+                this_off_pulses.append(mass)
 
             self._off_pulses_hist.append(this_off_pulses)
             # Same logic as LaserOnOffWindow. Running averages over trains
@@ -900,7 +912,7 @@ class BraggSpotsWindow(PlotWindow):
             # To be discussed with Dmitry. I added it here for some kind of
             # history book keeping
             self._hist_train_off_id.append(data.tid)
-            self._hist_com_off.append(np.mean(np.array(com_off)))
+            self._hist_com_off.append(np.mean(np.array(com_off),axis=0))
 
             self._on_train_received = False
             self._off_train_received = False
@@ -943,41 +955,45 @@ class BraggSpotsWindow(PlotWindow):
             self._image_items[index+1].setImage(roi.getArrayRegion(
                 np.flip(data.image_mean, axis=0), self._image_items[0]), levels=(0, data.image_mean.max()))
 
-        p = self._plot_items[0]
-
         com_on, com_off = self._update(data)
 
-        p.addLegend()
-        p.setTitle(' TrainId :: {}'.format(data.tid))
-        if com_on is not None:
-            p.plot(self._on_pulse_ids, com_on, name='On',
-                   pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
-        if com_off is not None:
-            p.plot(self._off_pulse_ids, com_off, name="Off",
-                   pen=PenFactory.purple, symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
+        for p in self._plot_items[:2]:
+            index = self._plot_items.index(p)
+            p.addLegend()
+            if index == 0:
+                p.setTitle(' TrainId :: {}'.format(data.tid))
+            if com_on is not None:
+                p.plot(self._on_pulse_ids, com_on[:,index], name='On',
+                       pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
+            if com_off is not None:
+                p.plot(self._off_pulse_ids, com_off[:,index], name="Off",
+                       pen=PenFactory.purple, symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
+        idx = 0
+        for p in self._plot_items[2:]:
+            p.clear()
+            if self._hist_com_off:
+                s = ScatterPlotItem(size=10,
+                                    pen=mkPen(None),
+                                    brush=mkBrush(120, 255, 255, 255))
+                s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                             zip(self._hist_train_off_id, np.array(self._hist_com_off)[:,idx] )])
 
-        p = self._plot_items[1]
-        p.clear()
+                p.addItem(s)
+                p.plot(self._hist_train_off_id, np.array(self._hist_com_off)[:,idx],
+                   pen=PenFactory.red, name='Off')
+            if self._hist_com_on:
+                s = ScatterPlotItem(size=10,
+                                    pen=mkPen(None),
+                                    brush=mkBrush(240, 255, 255, 255))
+                s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
+                             zip(self._hist_train_on_id, np.array(self._hist_com_on)[:,idx] )])
 
-        s = ScatterPlotItem(size=10,
-                            pen=mkPen(None),
-                            brush=mkBrush(120, 255, 255, 255))
-        s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_off_id, self._hist_com_off)])
-
-        p.addItem(s)
-        s = ScatterPlotItem(size=10,
-                            pen=mkPen(None),
-                            brush=mkBrush(240, 255, 255, 255))
-        s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
-                     zip(self._hist_train_on_id, self._hist_com_on)])
-
-        p.addItem(s)
-        p.plot(self._hist_train_off_id, self._hist_com_off,
-               pen=PenFactory.red, name='Off')
-        p.plot(self._hist_train_on_id, self._hist_com_on,
-               pen=PenFactory.green, name='On')
-        p.addLegend()
+                p.addItem(s)
+                
+                p.plot(self._hist_train_on_id, np.array(self._hist_com_on)[:,idx],
+                       pen=PenFactory.green, name='On')
+                p.addLegend()
+            idx += 1
 
     # Profile state change triggers this function
     # If profile is checked, adds bottom panels to plot histograms.
@@ -1040,12 +1056,14 @@ class BraggSpotsWindow(PlotWindow):
         for item in self._image_items:
             item.clear()
         self._plot_items[0].clear()
+        self._plot_items[1].clear()
         if len(self._profile_plot_items) > 0:
             for plot in self._profile_plot_items:
                 plot.clear()
 
     def _reset(self):
-        self._plot_items[1].clear()
+        self._plot_items[2].clear()
+        self._plot_items[3].clear()
 
         self._on_train_received = False
         self._off_train_received = False
