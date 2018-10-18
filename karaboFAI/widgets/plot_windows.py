@@ -701,7 +701,7 @@ class BraggSpotsWindow(PlotWindow):
             self._rois.append(roi)
             # Define Second Region of interests.Around Background
             roi = RectROI([config['CENTER_X'] - 100, config['CENTER_Y'] -
-                           100], [50, 50], pen=mkPen((255, 0, 0), width=2))
+                           100], [50, 50], pen=mkPen((255, 255, 255), width=2))
             self._rois.append(roi)
         else:
             centre_x, centre_y = data.image_mean.shape
@@ -713,7 +713,7 @@ class BraggSpotsWindow(PlotWindow):
             # Define Second Region of interests.Around Background
             roi = RectROI([int(centre_x/2) - 100, int(centre_y/2) -
                            100], [50, 50], maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x),
-                          pen=mkPen((255, 0, 0), width=2))
+                          pen=mkPen((255, 255, 255), width=2))
             self._rois.append(roi)
 
         for roi in self._rois:
@@ -981,6 +981,7 @@ class BraggSpotsWindow(PlotWindow):
         # Else plot Normalized intensity.
         else:
             p = self._plot_items[0]
+            p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
                 p.plot(self._on_pulse_ids, com_on[:, -1], name='On',
                        pen=PenFactory.green, symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
