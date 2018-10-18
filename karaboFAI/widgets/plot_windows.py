@@ -120,8 +120,26 @@ class PlotWindow(AbstractWindow):
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
 
+        self._ptree = ptree.ParameterTree(showHeader=True)
+        self._params = None  # ptree.Parameter object
+
         self._plot_items = []  # bookkeeping PlotItem objects
         self._image_items = []  # bookkeeping ImageItem objects
+
+        self._fom_range = None
+        self._normalization_range = None
+        self._laser_mode = None
+        self._on_pulse_ids = None
+        self._off_pulse_ids = None
+        self._ma_window_size = None
+
+        self.parent().fom_range.connect(self.onFomRangeChanged)
+        self.parent().normalization_range.connect(self.onNormalizationRangeChanged)
+        self.parent().on_off_pulse_ids.connect(self.onOffPulseIdChanged)
+        self.parent().ma_window_size.connect(self.onMAWindowSizeChanged)
+
+        # tell MainGUI to emit signals
+        self.parent().updateSharedParameters()
 
     def initUI(self):
         """Override."""
@@ -140,6 +158,24 @@ class PlotWindow(AbstractWindow):
             item.clear()
         for item in self._image_items:
             item.clear()
+
+    @QtCore.pyqtSlot(float, float)
+    def onFomRangeChanged(self, lb, ub):
+        self._fom_range = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float)
+    def onNormalizationRangeChanged(self, lb, ub):
+        self._normalization_range = (lb, ub)
+
+    @QtCore.pyqtSlot(str, list, list)
+    def onOffPulseIdChanged(self, mode, on_pulse_ids, off_pulse_ids):
+        self._laser_mode = mode
+        self._on_pulse_ids = on_pulse_ids
+        self._off_pulse_ids = off_pulse_ids
+
+    @QtCore.pyqtSlot(int)
+    def onMAWindowSizeChanged(self, value):
+        self._ma_window_size = value
 
 
 class IndividualPulseWindow(PlotWindow):
@@ -261,79 +297,25 @@ class LaserOnOffWindow(PlotWindow):
     plot_w = 800
     plot_h = 450
 
-    def __init__(self,
-                 data,
-                 on_pulse_ids,
-                 off_pulse_ids,
-                 normalization_range,
-                 fom_range,
-                 laser_mode, *,
-                 parent=None,
-                 ma_window_size=9999):
+    def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
 
-        self._ptree = ptree.ParameterTree(showHeader=True)
-        params = [
-            {'name': 'Experimental setups', 'type': 'group',
-             'children': [
-                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
-                 'value': self.modes[laser_mode]},
-                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
-            {'name': 'Data processing parameters', 'type': 'group',
-             'children': [
-                 {'name': 'Normalization range', 'type': 'str', 'readonly': True,
-                  'value': ', '.join([str(x) for x in normalization_range])},
-                 {'name': 'FOM range (1/A)', 'type': 'str', 'readonly': True,
-                  'value': ', '.join([str(x) for x in fom_range])},
-                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
-                  'value': ma_window_size}]},
-            {'name': 'Visualization options', 'type': 'group',
-             'children': [
-                 {'name': 'Difference scale', 'type': 'int', 'value': 20},
-                 {'name': 'Show normalization range', 'type': 'bool', 'value': False},
-                 {'name': 'Show FOM range', 'type': 'bool', 'value': False}]},
-            {'name': 'Actions', 'type': 'group',
-             'children': [
-                {'name': 'Clear history', 'type': 'action'}]},
-        ]
-        p = ptree.Parameter.create(name='params', type='group', children=params)
-        self._ptree.setParameters(p, showTop=False)
-
-        self._exp_setups = p.param('Experimental setups')
-
-        self._vis_setups = p.param('Visualization options')
-
-        self._proc_setups = p.param('Data processing parameters')
-
-        p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+        self.updateParameterTree()
 
         # for visualization of normalization range
         pen1 = mkPen(QtGui.QColor(
             255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
         brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
         self._normalization_range_lri = LinearRegionItem(
-            normalization_range, pen=pen1, brush=brush1, movable=False)
+            (0, 0), pen=pen1, brush=brush1, movable=False)
 
         # for visualization of FOM range
         pen2 = mkPen(QtGui.QColor(
             255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
         brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
         self._fom_range_lri = LinearRegionItem(
-            fom_range, pen=pen2, brush=brush2, movable=False)
-
-        # -------------------------------------------------------------
-        # parameters from the control panel of the main GUI
-        # -------------------------------------------------------------
-        self._laser_mode = laser_mode
-        self._on_pulse_ids = on_pulse_ids
-        self._off_pulse_ids = off_pulse_ids
-        self._normalization_range = normalization_range
-        self._fom_range = fom_range
-        self._ma_window_size = ma_window_size
+            (0, 0), pen=pen2, brush=brush2, movable=False)
 
         # -------------------------------------------------------------
         # volatile parameters
@@ -359,9 +341,7 @@ class LaserOnOffWindow(PlotWindow):
         self.initUI()
         self.updatePlots()
 
-        logger.info("Open LaserOnOffWindow (on-pulse(s): {}, off-pulse(s): {})".
-                    format(", ".join(str(i) for i in on_pulse_ids),
-                           ", ".join(str(i) for i in off_pulse_ids)))
+        logger.info("Open LaserOnOffWindow")
 
     def initPlotUI(self):
         """Override."""
@@ -388,6 +368,40 @@ class LaserOnOffWindow(PlotWindow):
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
+
+    def updateParameterTree(self):
+        """Override."""
+        params = [
+            {'name': 'Experimental setups', 'type': 'group',
+             'children': [
+                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
+                 'value': self.modes[self._laser_mode]},
+                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
+                 'value': ', '.join([str(x) for x in self._on_pulse_ids])},
+                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
+                 'value': ', '.join([str(x) for x in self._off_pulse_ids])}]},
+            {'name': 'Data processing parameters', 'type': 'group',
+             'children': [
+                 {'name': 'Normalization range', 'type': 'str', 'readonly': True,
+                  'value': ', '.join([str(x) for x in self._normalization_range])},
+                 {'name': 'FOM range (1/A)', 'type': 'str', 'readonly': True,
+                  'value': ', '.join([str(x) for x in self._fom_range])},
+                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
+                  'value': self._ma_window_size}]},
+            {'name': 'Visualization options', 'type': 'group',
+             'children': [
+                 {'name': 'Difference scale', 'type': 'int', 'value': 20},
+                 {'name': 'Show normalization range', 'type': 'bool', 'value': False},
+                 {'name': 'Show FOM range', 'type': 'bool', 'value': False}]},
+            {'name': 'Actions', 'type': 'group',
+             'children': [
+                {'name': 'Clear history', 'type': 'action'}]},
+        ]
+
+        self._params = ptree.Parameter(name='params', type='group', children=params)
+        self._params.param('Actions', 'Clear history').sigActivated.connect(self._reset)
+
+        self._ptree.setParameters(self._params, showTop=False)
 
     def _update(self, data):
         """Process incoming data and update history.
@@ -518,13 +532,15 @@ class LaserOnOffWindow(PlotWindow):
 
         momentum = data.momentum
 
+        vis_setups = self._params.param('Visualization options')
+
         # upper plot
         p = self._plot_items[0]
 
         # visualize normalization/FOM range if requested
-        if self._vis_setups.param("Show normalization range").value():
+        if vis_setups.param("Show normalization range").value():
             p.addItem(self._normalization_range_lri)
-        if self._vis_setups.param("Show FOM range").value():
+        if vis_setups.param("Show FOM range").value():
             p.addItem(self._fom_range_lri)
 
         p.addLegend(offset=(-60, 20))
@@ -543,7 +559,7 @@ class LaserOnOffWindow(PlotWindow):
                    name="Off", pen=PenFactory.green)
 
             # plot difference between on-/off- pulses
-            diff_scale = self._vis_setups.param('Difference scale').value()
+            diff_scale = vis_setups.param('Difference scale').value()
             p.plot(momentum,
                    diff_scale * (normalized_on_pulse - normalized_off_pulse),
                    name="difference", pen=PenFactory.yellow)
@@ -596,12 +612,9 @@ class SampleDegradationMonitor(PlotWindow):
     plot_w = 800
     plot_h = 450
 
-    def __init__(self, data, normalization_range, fom_range, *, parent=None):
+    def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
-
-        self._normalization_range = normalization_range
-        self._fom_range = fom_range
 
         self.initUI()
         self.updatePlots()
