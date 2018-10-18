@@ -690,6 +690,7 @@ class MainGUI(QtGui.QMainWindow):
         center_x = float(self._cx_le.text().strip())
         center_y = float(self._cy_le.text().strip())
         integration_method = self._itgt_method_cb.currentText()
+
         try:
             integration_range = parse_boundary(self._itgt_range_le.text())
         except ValueError as e:
