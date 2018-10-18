@@ -736,19 +736,17 @@ class BraggSpotsWindow(PlotWindow):
         p = self._gl_widget.addPlot(
             row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "COM X")
-        p.setLabel('bottom', "Pulse ids")
+        p.setLabel('left', "COM - X")
 
         p = self._gl_widget.addPlot(
             row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "COM Y")
+        p.setLabel('left', "COM - Y")
         p.setLabel('bottom', "Pulse ids")
 
         p = self._gl_widget.addPlot(row=2, col=2, rowspan=1, colspan=2)
         self._plot_items.append(p)
         p.setLabel('left', "Pulse average COM - X")
-        p.setLabel('bottom', "Train ID")
         p.setTitle(' ')
 
         p = self._gl_widget.addPlot(row=3, col=2, rowspan=1, colspan=2)
