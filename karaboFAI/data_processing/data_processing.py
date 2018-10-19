@@ -71,7 +71,6 @@ class DataProcessor(Thread):
         with File(kwargs['geom_file'], 'r') as f:
             self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                 f, kwargs['quad_positions'])
-            logger.info("Loaded geometry file: {}".format(kwargs['geom_file']))
 
         self.wavelength = 1e-3 * constants.c * constants.h / constants.e\
             / kwargs['photon_energy']
@@ -186,7 +185,7 @@ class DataProcessor(Thread):
                         self.image_mask = up_sample(
                             self.image_mask, assembled[0].shape)
                         self.image_mask_initialized = True
-                        logger.info("Up-sample mask with shape {} to {}".
+                        logger.debug("Up-sample mask with shape {} to {}".
                                     format(old_shape, self.image_mask.shape))
                     else:
                         raise ValueError
@@ -265,7 +264,7 @@ class DataProcessor(Thread):
 
         if from_file is False:
             if len(metadata.items()) > 1:
-                logger.warning("Found multiple data sources!")
+                logger.debug("Found multiple data sources!")
 
             tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
             modules_data = data[config["SOURCE_NAME"]]["image.data"]

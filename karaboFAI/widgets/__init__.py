@@ -2,7 +2,7 @@ from .pyqtgraph import setConfigOption
 setConfigOption("imageAxisOrder", "row-major")
 
 from .misc_widgets import (
-    CustomGroupBox, FixedWidthLineEdit, InputDialogWithCheckBox
+    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 from .plot_widgets import MainGuiImageViewWidget, MainGuiLinePlotWidget
 from .plot_windows import (
@@ -14,6 +14,7 @@ from .plot_windows import (
 __all__ = [
     "CustomGroupBox",
     "FixedWidthLineEdit",
+    "GuiLogger",
     "InputDialogWithCheckBox",
     "MainGuiLinePlotWidget",
     "MainGuiImageViewWidget",

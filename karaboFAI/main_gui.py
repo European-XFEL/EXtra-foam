@@ -17,11 +17,11 @@ from queue import Queue, Empty
 import fabio
 import zmq
 
-from .logger import GuiLogger, logger
+from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
     BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
-    IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
+    GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
     MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
 )
 from .data_acquisition import DaqWorker
@@ -60,8 +60,6 @@ class MainGUI(QtGui.QMainWindow):
     _height = 1000  # window height, in pixel
     _width = 1380  # window width, in pixel
     _plot_height = 480  # height of the plot widgets, in pixel
-
-    _logger_fontsize = 12  # fontsize in logger window
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -267,13 +265,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # log window
         # *************************************************************
-        self._log_window = QtGui.QPlainTextEdit()
-        self._log_window.setReadOnly(True)
-        self._log_window.setMaximumBlockCount(config["MAX_LOGGING"])
-        logger_font = QtGui.QFont()
-        logger_font.setPointSize(self._logger_fontsize)
-        self._log_window.setFont(logger_font)
-        self._logger = GuiLogger(self._log_window)
+        self._logger = GuiLogger(self) 
         logging.getLogger().addHandler(self._logger)
 
         # *************************************************************
@@ -348,7 +340,7 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
         layout.addWidget(self._image_widget, 4, 0, 5, 1)
         layout.addWidget(self._lineplot_widget, 4, 1, 5, 5)
-        layout.addWidget(self._log_window, 9, 0, 2, 4)
+        layout.addWidget(self._logger.widget, 9, 0, 2, 4)
         layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
 
         self._cw.setLayout(layout)
@@ -673,7 +665,9 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         logger.info("--- Other parameters ---")
+        logger.info("<Data source>: {}".format(data_source))
         logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
+        logger.info("<Geometry file>: {}".format(geom_file))
         logger.info("<Photon energy (keV)>: {}".format(photon_energy))
         logger.info("<Sample distance (m)>: {}".format(sample_distance))
         logger.info("<Cx (pixel)>: {:d}".format(center_x))

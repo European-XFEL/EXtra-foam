@@ -39,7 +39,6 @@ class Config(dict):
     # COLOR_MAP str: color map in contour plots, valid options are:
     #                thermal, flame, yellowy, bipolar, spectrum, cyclic,
     #                greyclip, grey
-    # MAX_LOGGING int: maximum number of lines in the logging window of GUI
     #
     # data pipeline setup
     # -------------------
@@ -85,7 +84,6 @@ class Config(dict):
     # system config should not appear in the topic config
     _default_sys_config = {
         "TOPIC": '',  # topic name, leave it empty
-        "MAX_LOGGING": 1000,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 5,
         "WORKERS": 4,
