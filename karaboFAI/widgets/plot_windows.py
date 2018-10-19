@@ -592,6 +592,14 @@ class BraggSpotsWindow(PlotWindow):
         "even/odd": "Laser-on/off pulses in even/odd train",
         "odd/even": "Laser-on/off pulses in odd/even train"
     })
+    instructions = \
+        ("Green ROI: Place it around Bragg peak.\n\n" 
+         "White ROI: Place it around Background.\n\n"
+         "Scale the Green ROI using handle on top right corner.\n\n"
+         "Move the ROIs by holding left click and dragging.\n\n"
+         "To analyse the profile of image check the Profile "
+         "analysis box and the click on the image on top-left corner "
+        )
 
     def __init__(self,
                  data,
@@ -630,6 +638,12 @@ class BraggSpotsWindow(PlotWindow):
             {'name': 'Actions', 'type': 'group',
              'children': [
                  {'name': 'Clear history', 'type': 'action'}]},
+
+            {'name': 'General', 'type': 'group',
+             'children': [
+                 {'name': 'Instructions', 'type': 'text', 'readonly': True,
+                  'value': self.instructions}]
+             },
         ]
         p = ptree.Parameter.create(
             name='params', type='group', children=params)
@@ -719,6 +733,8 @@ class BraggSpotsWindow(PlotWindow):
         for roi in self._rois:
             self._main_vb.addItem(roi)
 
+        [self._rois[1].removeHandle(handle) for handle in self._rois[1].getHandles()]
+
         # View Boxes vb1 and vb2 in lower left panels for images in selected ROIs
         vb1 = self._gl_widget.addViewBox(
             row=2, col=0, rowspan=2, colspan=1,  lockAspect=True, enableMouse=False)
@@ -747,12 +763,14 @@ class BraggSpotsWindow(PlotWindow):
         p.setLabel('left', "COM - Y")
         p.setLabel('bottom', "Pulse ids")
 
-        p = self._gl_widget.addPlot(row=2, col=2, rowspan=1, colspan=2)
+        p = self._gl_widget.addPlot(
+            row=2, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left', "Pulse average COM - X")
         p.setTitle(' ')
 
-        p = self._gl_widget.addPlot(row=3, col=2, rowspan=1, colspan=2)
+        p = self._gl_widget.addPlot(
+            row=3, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left', "Pulse average COM - X")
         p.setLabel('bottom', "Train ID")
@@ -964,7 +982,7 @@ class BraggSpotsWindow(PlotWindow):
         # com_on and com_off are of shape (num_pulses,3)
         # contains (pulse_index, com_x, com_y, normalized intensity)
         com_on, com_off = self._update(data)
-        # If Normalized intensity plot Checkbox is not checked then 
+        # If Normalized intensity plot Checkbox is not checked then
         # just plot COM X and Y as a function of pulseIds
         if not self._vis_setups.param('Normalized Intensity Plot').value():
             for p in self._plot_items[:-2]:
@@ -1068,17 +1086,31 @@ class BraggSpotsWindow(PlotWindow):
             self._profile_line_rois.clear()
 
         line_roi = LineSegmentROI(
-            [[0, y], [y_pos, y]], pen=mkPen((255, 255, 255), width=3))
+            [[0, y], [y_pos, y]], pen=mkPen((255, 255, 255), width=3), movable=False)
         self._profile_line_rois.append(line_roi)
 
         line_roi = LineSegmentROI(
-            [[x, 0], [x, x_pos]], pen=mkPen((255, 255, 255), width=3))
+            [[x, 0], [x, x_pos]], pen=mkPen((255, 255, 255), width=3), movable=False)
         self._profile_line_rois.append(line_roi)
         for line in self._profile_line_rois:
             self._main_vb.addItem(line)
+
+        if self._vis_setups.param('Profile Analysis').value():
+            for line in self._profile_line_rois:
+                index = self._profile_line_rois.index(line)
+                self._profile_plot_items[index].clear()
+
+                slice_hist = line.getArrayRegion(
+                    data.image_mean, self._image_items[0])
+                y, x = np.histogram(slice_hist, bins=np.linspace(
+                    slice_hist.min(), slice_hist.max(), 50))
+                self._profile_plot_items[index].plot(
+                    x, y, stepMode=True, fillLevel=0, brush=(255, 0, 255, 150))
+
     # Normalized intensity plot. When state changes in the checkbox
     # it removes Centre of Mass X and Y plots and replace it with
     # intensity plot.
+
     def _intensity(self):
         if self._vis_setups.param('Normalized Intensity Plot').value():
             for plot in self._plot_items[:-2]:
