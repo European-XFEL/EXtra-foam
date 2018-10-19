@@ -10,9 +10,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from threading import Thread
 from concurrent.futures import ProcessPoolExecutor
-from queue import Empty, Full
+from queue import Empty
 import warnings
 
 import numpy as np
@@ -23,13 +22,14 @@ from h5py import File
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
+from ..widgets.pyqtgraph import QtCore
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
 from .proc_utils import down_sample, up_sample
 
 
-class DataProcessor(Thread):
+class DataProcessor(QtCore.QThread):
     """Class for data processing.
 
     Attributes:

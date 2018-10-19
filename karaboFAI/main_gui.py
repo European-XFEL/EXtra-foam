@@ -732,9 +732,6 @@ class MainGUI(QtGui.QMainWindow):
         self._daq_worker.terminate()
         self._proc_worker.terminate()
 
-        # TODO: self._daq_worker.join()
-        self._proc_worker.join()
-
         with self._daq_queue.mutex:
             self._daq_queue.queue.clear()
         with self._proc_queue.mutex:

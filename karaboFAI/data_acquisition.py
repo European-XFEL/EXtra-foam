@@ -10,16 +10,16 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from threading import Thread
 from queue import Full
 
 from karabo_bridge import Client
 
+from .widgets.pyqtgraph import QtCore
 from .logger import logger
 from .config import config
 
 
-class DaqWorker(Thread):
+class DaqWorker(QtCore.QThread):
     def __init__(self, address, out_queue):
         """Initialization."""
         super().__init__()
