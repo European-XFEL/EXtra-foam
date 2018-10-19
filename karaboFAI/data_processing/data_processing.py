@@ -95,7 +95,7 @@ class DataProcessor(Thread):
         self._running = True
         while self._running:
             try:
-                data = self._in_queue.get(timeout=0.01)
+                data = self._in_queue.get(timeout=0.1)
             except Empty:
                 continue
 
@@ -115,13 +115,13 @@ class DataProcessor(Thread):
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
-            try:
-                self._out_queue.put(processed_data, timeout=config["TIMEOUT"])
-            except Full:
-                pass
+            # Adding the processed data into the queue should always happen
+            # immediately since the visualization takes much less time than
+            # processing!
+            self._out_queue.put(processed_data)
 
-            logger.debug("Size of in and out queues: {}, {}".
-                         format(self._in_queue.qsize(), self._out_queue.qsize()))
+            logger.debug("Size of in and out queues: {}, {}".format(
+                self._in_queue.qsize(), self._out_queue.qsize()))
 
     def terminate(self):
         """Terminate the data processor."""
@@ -281,10 +281,21 @@ class DataProcessor(Thread):
                 else:
                     dev = ''
 
-                modules_data = stack_detector_data(data, "image.data", only=dev)
-            except KeyError:
-                # To handle a bug when using the recent karabo_data on the
-                # old data set.
+                modules_data = stack_detector_data(
+                    data, "image.data", only=dev)
+            # To handle a bug when using the recent karabo_data on the
+            # old data set:
+            # 1. Missing "image.data" will raise KeyError!
+            # 2. Different modules could have different shapes, e.g.
+            #    a train with 32 pulses could has a module with shape
+            #    (4, 256, 256), which means the data for some pulses
+            #    were lost. It will raise ValueError!
+            #
+            # Note: we log the information in 'debug' since otherwise it
+            #       will go to the log window and cause problems like
+            #       segmentation fault.
+            except (KeyError, ValueError) as e:
+                logger.debug("Error in stacking detector data: " + str(e))
                 return ProcessedData(tid)
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"

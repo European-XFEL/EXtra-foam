@@ -45,7 +45,8 @@ class DaqWorker(Thread):
                 try:
                     self._out_queue.put(data, timeout=config["TIMEOUT"])
                 except Full:
-                    continue
+                    logger.info(
+                        "Data dropped due to the slow processing pipeline!")
 
     def terminate(self):
         self._running = False
