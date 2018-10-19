@@ -598,9 +598,8 @@ class BraggSpotsWindow(PlotWindow):
         ("Green ROI: Place it around Bragg peak.\n\n"
          "White ROI: Place it around Background.\n\n"
          "Scale the Green ROI using handle on top right corner.\n\n"
-         "Move the ROIs by holding left click and dragging.\n\n"
          "To analyse the profile of image check the Profile "
-         "analysis box and the click on the image on top-left corner "
+         "analysis box and then click on the image on top-left corner."
          )
 
     def __init__(self,
@@ -755,27 +754,32 @@ class BraggSpotsWindow(PlotWindow):
 
         self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
         # Plot regions for COM moving averages and history over different trains
+        labelsize = {'font-size':'100pt'}
         p = self._gl_widget.addPlot(
             row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "COM - X")
+        p.setLabel('left',  "<span style='text-decoration: overline'>R</span>\
+            <sub>x</sub>")
 
         p = self._gl_widget.addPlot(
             row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "COM - Y")
+        p.setLabel('left', "<span style='text-decoration: overline'>R</span>\
+            <sub>y</sub>")
         p.setLabel('bottom', "Pulse ids")
 
         p = self._gl_widget.addPlot(
             row=2, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "Pulse average COM - X")
+        p.setLabel('left', '&lt;<span style="text-decoration:\
+            overline">R</span><sub>x</sub>&gt;<sub>pulse-avg</sub>')
         p.setTitle(' ')
 
         p = self._gl_widget.addPlot(
             row=3, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
-        p.setLabel('left', "Pulse average COM - X")
+        p.setLabel('left',  "&lt;<span style='text-decoration:\
+            overline'>R</span><sub>y</sub>&gt;<sub>pulse-avg</sub>")
         p.setLabel('bottom', "Train ID")
         p.setTitle(' ')
 
@@ -1138,12 +1142,14 @@ class BraggSpotsWindow(PlotWindow):
             p = self._gl_widget.addPlot(
                 row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
             self._plot_items.insert(0, p)
-            p.setLabel('left', "COM - X")
+            p.setLabel('left',"<span style='text-decoration: overline'>R</span>\
+            <sub>x</sub>")
 
             p = self._gl_widget.addPlot(
                 row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
             self._plot_items.insert(1, p)
-            p.setLabel('left', "COM - Y")
+            p.setLabel('left',"<span style='text-decoration: overline'>R</span>\
+            <sub>x</sub>")
             p.setLabel('bottom', "Pulse ids")
 
     def clearPlots(self):
