@@ -151,24 +151,24 @@ class PlotWindow(AbstractWindow):
         # -------------------------------------------------------------
 
         # shared parameters which are updated by signal-slot
-        # Note: shared parameters should start with 'sp_'
-        self.sp_mask_range = None
-        self.sp_fom_range = None
-        self.sp_normalization_range = None
-        self.sp_laser_mode = None
-        self.sp_on_pulse_ids = None
-        self.sp_off_pulse_ids = None
-        self.sp_ma_window_size = None
+        # Note: shared parameters should end with '_sp'
+        self.mask_range_sp = None
+        self.fom_range_sp = None
+        self.normalization_range_sp = None
+        self.ma_window_size_sp = None
+        self.laser_mode_sp = None
+        self.on_pulse_ids_sp = None
+        self.off_pulse_ids_sp = None
 
         # -------------------------------------------------------------
         # define slots' behaviors
         # -------------------------------------------------------------
 
-        self.parent().mask_range.connect(self.onMaskRangeChanged)
-        self.parent().on_off_pulse_ids.connect(self.onOffPulseIdChanged)
-        self.parent().fom_range.connect(self.onFomRangeChanged)
-        self.parent().normalization_range.connect(self.onNormalizationRangeChanged)
-        self.parent().ma_window_size.connect(self.onMAWindowSizeChanged)
+        self.parent().mask_range_sp.connect(self.onMaskRangeChanged)
+        self.parent().on_off_pulse_ids_sp.connect(self.onOffPulseIdChanged)
+        self.parent().fom_range_sp.connect(self.onFomRangeChanged)
+        self.parent().normalization_range_sp.connect(self.onNormalizationRangeChanged)
+        self.parent().ma_window_size_sp.connect(self.onMAWindowSizeChanged)
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)
@@ -226,9 +226,9 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(str, list, list)
     def onOffPulseIdChanged(self, mode, on_pulse_ids, off_pulse_ids):
-        self.sp_laser_mode = mode
-        self.sp_on_pulse_ids = on_pulse_ids
-        self.sp_off_pulse_ids = off_pulse_ids
+        self.laser_mode_sp = mode
+        self.on_pulse_ids_sp = on_pulse_ids
+        self.off_pulse_ids_sp = off_pulse_ids
         # then update the parameter tree
         try:
             self._exp_params.child('Optical laser mode').setValue(
@@ -242,7 +242,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
-        self.sp_mask_range = (lb, ub)
+        self.mask_range_sp = (lb, ub)
         # then update the parameter tree
         try:
             self._pro_params.child('Mask range').setValue(
@@ -252,7 +252,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChanged(self, lb, ub):
-        self.sp_normalization_range = (lb, ub)
+        self.normalization_range_sp = (lb, ub)
         # then update the parameter tree
         try:
             self._pro_params.child('Normalization range').setValue(
@@ -262,7 +262,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onFomRangeChanged(self, lb, ub):
-        self.sp_fom_range = (lb, ub)
+        self.fom_range_sp = (lb, ub)
         # then update the parameter tree
         try:
             self._pro_params.child('FOM range').setValue(
@@ -272,7 +272,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
-        self.sp_ma_window_size = value
+        self.ma_window_size_sp = value
         # then update the parameter tree
         try:
             self._pro_params.child('M.A. window size').setValue(str(value))
@@ -399,8 +399,8 @@ class IndividualPulseWindow(PlotWindow):
             if data is not None and self._show_image is True:
                 # in-place operation is faster
                 np.clip(data.image[pulse_id],
-                        self.sp_mask_range[0],
-                        self.sp_mask_range[1],
+                        self.mask_range_sp[0],
+                        self.mask_range_sp[1],
                         data.image[pulse_id])
                 self._image_items[i].setImage(
                     np.flip(data.image[pulse_id], axis=0))
@@ -514,16 +514,16 @@ class LaserOnOffWindow(PlotWindow):
         :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
         """
         available_modes = list(self.available_modes.keys())
-        if self.sp_laser_mode == available_modes[0]:
+        if self.laser_mode_sp == available_modes[0]:
             # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
 
-            if self.sp_laser_mode == available_modes[1]:
+            if self.laser_mode_sp == available_modes[1]:
                 flag = 0  # on-train has even train ID
-            elif self.sp_laser_mode == available_modes[2]:
+            elif self.laser_mode_sp == available_modes[2]:
                 flag = 1  # on-train has odd train ID
             else:
                 raise ValueError("Unknown laser mode!")
@@ -554,10 +554,10 @@ class LaserOnOffWindow(PlotWindow):
         if self._on_train_received:
             # update on-pulse
 
-            if self.sp_laser_mode == available_modes[0] or \
+            if self.laser_mode_sp == available_modes[0] or \
                     not self._off_train_received:
 
-                this_on_pulses = data.intensity[self.sp_on_pulse_ids].mean(axis=0)
+                this_on_pulses = data.intensity[self.on_pulse_ids_sp].mean(axis=0)
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
                     self._on_pulses_ma += \
@@ -566,48 +566,48 @@ class LaserOnOffWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.sp_ma_window_size:
+                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.sp_ma_window_size:
+                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.sp_ma_window_size
+                            / self.ma_window_size_sp
                     else:
                         raise ValueError  # should never reach here
 
                 self._on_pulses_hist.append(this_on_pulses)
 
             normalized_on_pulse = normalize_curve(
-                self._on_pulses_ma, momentum, *self.sp_normalization_range)
+                self._on_pulses_ma, momentum, *self.normalization_range_sp)
 
         if self._off_train_received:
             # update off-pulse
 
-            this_off_pulses = data.intensity[self.sp_off_pulse_ids].mean(axis=0)
+            this_off_pulses = data.intensity[self.off_pulse_ids_sp].mean(axis=0)
             self._off_pulses_hist.append(this_off_pulses)
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.sp_ma_window_size:
+            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.sp_ma_window_size + 1:
+            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.sp_ma_window_size
+                    / self.ma_window_size_sp
             else:
                 raise ValueError  # should never reach here
 
             normalized_off_pulse = normalize_curve(
-                self._off_pulses_ma, momentum, *self.sp_normalization_range)
+                self._off_pulses_ma, momentum, *self.normalization_range_sp)
 
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit (FOM) and update history
-            fom = slice_curve(diff, momentum, *self.sp_fom_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)
@@ -748,7 +748,7 @@ class SampleDegradationMonitor(PlotWindow):
         normalized_pulse_intensities = []
         for pulse_intensity in data.intensity:
             normalized = normalize_curve(
-                pulse_intensity, momentum, *self.sp_normalization_range)
+                pulse_intensity, momentum, *self.normalization_range_sp)
             normalized_pulse_intensities.append(normalized)
 
         # calculate the different between each pulse and the first one
@@ -758,7 +758,7 @@ class SampleDegradationMonitor(PlotWindow):
         # calculate the FOM for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.sp_fom_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')

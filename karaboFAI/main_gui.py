@@ -48,12 +48,14 @@ class MainGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
-    mask_range = QtCore.pyqtSignal(float, float)
-    fom_range = QtCore.pyqtSignal(float, float)
-    normalization_range = QtCore.pyqtSignal(float, float)
-    ma_window_size = QtCore.pyqtSignal(int)
+    # Shared parameters are pyqtSignals
+    # Note: shared parameters should end with '_sp'
+    mask_range_sp = QtCore.pyqtSignal(float, float)
+    fom_range_sp = QtCore.pyqtSignal(float, float)
+    normalization_range_sp = QtCore.pyqtSignal(float, float)
+    ma_window_size_sp = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids = QtCore.pyqtSignal(str, list, list)
+    on_off_pulse_ids_sp = QtCore.pyqtSignal(str, list, list)
 
     _height = 1000  # window height, in pixel
     _width = 1380  # window width, in pixel
@@ -794,7 +796,7 @@ class MainGUI(QtGui.QMainWindow):
         """
         try:
             lb, ub = parse_boundary(self._mask_range_le.text())
-            self.mask_range.emit(lb, ub)
+            self.mask_range_sp.emit(lb, ub)
             if log:
                 logger.info("<Mask range>: ({}, {})".format(lb, ub))
         except ValueError as e:
@@ -803,7 +805,7 @@ class MainGUI(QtGui.QMainWindow):
 
         try:
             lb, ub = parse_boundary(self._normalization_range_le.text())
-            self.normalization_range.emit(lb, ub)
+            self.normalization_range_sp.emit(lb, ub)
             if log:
                 logger.info("<Normalization range>: ({}, {})".format(lb, ub))
         except ValueError as e:
@@ -812,7 +814,7 @@ class MainGUI(QtGui.QMainWindow):
 
         try:
             lb, ub = parse_boundary(self._fom_range_le.text())
-            self.fom_range.emit(lb, ub)
+            self.fom_range_sp.emit(lb, ub)
             if log:
                 logger.info("<FOM range>: ({}, {})".format(lb, ub))
         except ValueError as e:
@@ -833,7 +835,7 @@ class MainGUI(QtGui.QMainWindow):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.on_off_pulse_ids.emit(mode, on_pulse_ids, off_pulse_ids)
+            self.on_off_pulse_ids_sp.emit(mode, on_pulse_ids, off_pulse_ids)
             if log:
                 logger.info("<Optical laser mode>: {}".format(mode))
                 logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
@@ -848,7 +850,7 @@ class MainGUI(QtGui.QMainWindow):
             if window_size < 1:
                 logger.error("Moving average window width < 1!")
                 return False
-            self.ma_window_size.emit(window_size)
+            self.ma_window_size_sp.emit(window_size)
             if log:
                 logger.info("<Moving average window size>: {}".
                             format(window_size))
