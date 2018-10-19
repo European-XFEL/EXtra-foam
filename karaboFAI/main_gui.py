@@ -648,7 +648,7 @@ class MainGUI(QtGui.QMainWindow):
 
         integration_points = int(self._itgt_points_le.text().strip())
 
-        if not self.updateSharedParameters():
+        if not self.updateSharedParameters(True):
             return
 
         client_addr = "tcp://" \
@@ -783,8 +783,11 @@ class MainGUI(QtGui.QMainWindow):
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
 
-    def updateSharedParameters(self):
+    def updateSharedParameters(self, log=False):
         """Update shared parameters for all child windows.
+
+        :params bool log: True for logging shared parameters and False
+            for not.
 
         Returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
@@ -792,7 +795,8 @@ class MainGUI(QtGui.QMainWindow):
         try:
             lb, ub = parse_boundary(self._mask_range_le.text())
             self.mask_range.emit(lb, ub)
-            logger.info("<Mask range>: ({}, {})".format(lb, ub))
+            if log:
+                logger.info("<Mask range>: ({}, {})".format(lb, ub))
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
             return False
@@ -800,7 +804,8 @@ class MainGUI(QtGui.QMainWindow):
         try:
             lb, ub = parse_boundary(self._normalization_range_le.text())
             self.normalization_range.emit(lb, ub)
-            logger.info("<Normalization range>: ({}, {})".format(lb, ub))
+            if log:
+                logger.info("<Normalization range>: ({}, {})".format(lb, ub))
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
             return False
@@ -808,7 +813,8 @@ class MainGUI(QtGui.QMainWindow):
         try:
             lb, ub = parse_boundary(self._fom_range_le.text())
             self.fom_range.emit(lb, ub)
-            logger.info("<FOM range>: ({}, {})".format(lb, ub))
+            if log:
+                logger.info("<FOM range>: ({}, {})".format(lb, ub))
         except ValueError as e:
             logger.error("<FOM range>: " + str(e))
             return False
@@ -828,9 +834,10 @@ class MainGUI(QtGui.QMainWindow):
                     return False
 
             self.on_off_pulse_ids.emit(mode, on_pulse_ids, off_pulse_ids)
-            logger.info("<Optical laser mode>: {}".format(mode))
-            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
-            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
+            if log:
+                logger.info("<Optical laser mode>: {}".format(mode))
+                logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
+                logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
@@ -842,7 +849,9 @@ class MainGUI(QtGui.QMainWindow):
                 logger.error("Moving average window width < 1!")
                 return False
             self.ma_window_size.emit(window_size)
-            logger.info("<Moving average window size>: {}".format(window_size))
+            if log:
+                logger.info("<Moving average window size>: {}".
+                            format(window_size))
         except ValueError as e:
             logger.error("<Moving average window size>: " + str(e))
             return False
