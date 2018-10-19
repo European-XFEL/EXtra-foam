@@ -48,6 +48,7 @@ class MainGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
+    mask_range = QtCore.pyqtSignal(float, float)
     fom_range = QtCore.pyqtSignal(float, float)
     normalization_range = QtCore.pyqtSignal(float, float)
     ma_window_size = QtCore.pyqtSignal(int)
@@ -230,7 +231,7 @@ class MainGUI(QtGui.QMainWindow):
         self._energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
-        self._laser_mode_cb.addItems(LaserOnOffWindow.modes.keys())
+        self._laser_mode_cb.addItems(LaserOnOffWindow.available_modes.keys())
         self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
         self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
         self._normalization_range_le = FixedWidthLineEdit(
@@ -789,6 +790,14 @@ class MainGUI(QtGui.QMainWindow):
             and emitted, otherwise False.
         """
         try:
+            lb, ub = parse_boundary(self._mask_range_le.text())
+            self.mask_range.emit(lb, ub)
+            logger.info("<Mask range>: ({}, {})".format(lb, ub))
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
+            return False
+
+        try:
             lb, ub = parse_boundary(self._normalization_range_le.text())
             self.normalization_range.emit(lb, ub)
             logger.info("<Normalization range>: ({}, {})".format(lb, ub))
@@ -810,7 +819,7 @@ class MainGUI(QtGui.QMainWindow):
             mode = self._laser_mode_cb.currentText()
             on_pulse_ids = parse_ids(self._on_pulse_le.text())
             off_pulse_ids = parse_ids(self._off_pulse_le.text())
-            if mode == list(LaserOnOffWindow.modes.keys())[0]:
+            if mode == list(LaserOnOffWindow.available_modes.keys())[0]:
                 common = set(on_pulse_ids).intersection(off_pulse_ids)
                 if common:
                     logger.error(
