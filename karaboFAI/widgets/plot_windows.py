@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import time
+
 from collections import deque, OrderedDict
 import numpy as np
 from scipy import ndimage
@@ -593,13 +595,13 @@ class BraggSpotsWindow(PlotWindow):
         "odd/even": "Laser-on/off pulses in odd/even train"
     })
     instructions = \
-        ("Green ROI: Place it around Bragg peak.\n\n" 
+        ("Green ROI: Place it around Bragg peak.\n\n"
          "White ROI: Place it around Background.\n\n"
          "Scale the Green ROI using handle on top right corner.\n\n"
          "Move the ROIs by holding left click and dragging.\n\n"
          "To analyse the profile of image check the Profile "
          "analysis box and the click on the image on top-left corner "
-        )
+         )
 
     def __init__(self,
                  data,
@@ -733,7 +735,8 @@ class BraggSpotsWindow(PlotWindow):
         for roi in self._rois:
             self._main_vb.addItem(roi)
 
-        [self._rois[1].removeHandle(handle) for handle in self._rois[1].getHandles()]
+        [self._rois[1].removeHandle(handle)
+         for handle in self._rois[1].getHandles()]
 
         # View Boxes vb1 and vb2 in lower left panels for images in selected ROIs
         vb1 = self._gl_widget.addViewBox(
@@ -981,7 +984,12 @@ class BraggSpotsWindow(PlotWindow):
                 np.flip(data.image_mean, axis=0), self._image_items[0]), levels=(0, data.image_mean.max()))
         # com_on and com_off are of shape (num_pulses,3)
         # contains (pulse_index, com_x, com_y, normalized intensity)
+        t0 = time.perf_counter()
+        
         com_on, com_off = self._update(data)
+
+        logger.debug("Time for centre of mass evaluation: {:.1f} ms\n"
+                     .format(1000 * (time.perf_counter() - t0)))
         # If Normalized intensity plot Checkbox is not checked then
         # just plot COM X and Y as a function of pulseIds
         if not self._vis_setups.param('Normalized Intensity Plot').value():
@@ -1164,6 +1172,7 @@ class BraggSpotsWindow(PlotWindow):
         self._hist_com_off.clear()
         self._hist_train_on_id.clear()
         self._hist_train_off_id.clear()
+
 
 @SingletonWindow
 class SampleDegradationMonitor(PlotWindow):
