@@ -230,7 +230,7 @@ class MainGUI(QtGui.QMainWindow):
         self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
         w = 100
-        self._energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
         self._laser_mode_cb.addItems(LaserOnOffWindow.available_modes.keys())
@@ -324,7 +324,7 @@ class MainGUI(QtGui.QMainWindow):
             self._mask_range_le,
             self._geom_file_le,
             self._quad_positions_tb,
-            self._energy_le,
+            self._photon_energy_le,
             self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
@@ -403,7 +403,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Experiment setup panel
         # *************************************************************
-        energy_lb = QtGui.QLabel("Photon energy (keV): ")
+        photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
         laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
@@ -412,8 +412,8 @@ class MainGUI(QtGui.QMainWindow):
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(energy_lb, 0, 0, 1, 1)
-        layout.addWidget(self._energy_le, 0, 1, 1, 1)
+        layout.addWidget(photon_energy_lb, 0, 0, 1, 1)
+        layout.addWidget(self._photon_energy_le, 0, 1, 1, 1)
         layout.addWidget(laser_mode_lb, 1, 0, 1, 1)
         layout.addWidget(self._laser_mode_cb, 1, 1, 1, 1)
         layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
@@ -626,16 +626,35 @@ class MainGUI(QtGui.QMainWindow):
         else:
             data_source = DataSource.PROCESSED
 
+        # -------------------------------------------------------------
+        # parse the parameters
+        # -------------------------------------------------------------
+
         pulse_range = (int(self._pulse_range0_le.text()),
                        int(self._pulse_range1_le.text()))
 
         geom_file = self._geom_file_le.text()
         quad_positions = parse_quadrant_table(self._quad_positions_tb)
-        energy = float(self._energy_le.text().strip())
+
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return
+
         sample_distance = float(self._sample_dist_le.text().strip())
-        center_x = float(self._cx_le.text().strip())
-        center_y = float(self._cy_le.text().strip())
+        if sample_distance <= 0:
+            logger.error("<Sample distance>: Invalid input! Must be positive!")
+            return
+
+        center_x = int(self._cx_le.text().strip())
+        center_y = int(self._cy_le.text().strip())
+
         integration_method = self._itgt_method_cb.currentText()
+
+        integration_points = int(self._itgt_points_le.text().strip())
+        if integration_points <= 0:
+            logger.error("<Integration points>: Invalid input! Must be positive!")
+            return
 
         try:
             integration_range = parse_boundary(self._itgt_range_le.text())
@@ -648,10 +667,24 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<Mask range>: " + str(e))
             return
 
-        integration_points = int(self._itgt_points_le.text().strip())
-
+        # The method is called here to ensure that: if any parameter is invalid,
+        # nothing will be logged!
         if not self.updateSharedParameters(True):
             return
+
+        logger.info("--- Other parameters ---")
+        logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
+        logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+        logger.info("<Sample distance (m)>: {}".format(sample_distance))
+        logger.info("<Cx (pixel)>: {:d}".format(center_x))
+        logger.info("<Cy (pixel)>: {:d}".format(center_y))
+        logger.info("<Integration method>: '{}'".format(integration_method))
+        logger.info("<Integration range (1/A)>: ({}, {})".
+                    format(*integration_range))
+        logger.info("<Number of integration points>: {}".
+                    format(integration_points))
+        logger.info("<Quadrant positions>: ({})".format(
+            ", ".join(["({}, {})".format(p[0], p[1]) for p in quad_positions])))
 
         client_addr = "tcp://" \
                       + self._hostname_le.text().strip() \
@@ -665,14 +698,14 @@ class MainGUI(QtGui.QMainWindow):
                 pulse_range=pulse_range,
                 geom_file=geom_file,
                 quad_positions=quad_positions,
-                photon_energy=energy,
+                photon_energy=photon_energy,
                 sample_dist=sample_distance,
                 cx=center_x,
                 cy=center_y,
                 integration_method=integration_method,
-                integration_range=self._getIntegrationRange(),
+                integration_range=integration_range,
                 integration_points=integration_points,
-                mask_range=self._getMaskRange(),
+                mask_range=mask_range,
                 mask=self._mask_image
             )
 
@@ -692,28 +725,6 @@ class MainGUI(QtGui.QMainWindow):
         self._proc_worker.start()
 
         logger.info("DAQ started!")
-        # logger.info("Azimuthal integration parameters:\n"
-        #             " - pulse range: {}\n"
-        #             " - photon energy (keV): {}\n"
-        #             " - sample distance (m): {}\n"
-        #             " - cx (pixel): {}\n"
-        #             " - cy (pixel): {}\n"
-        #             " - integration method: '{}'\n"
-        #             " - integration range (1/A): ({}, {})\n"
-        #             " - number of integration points: {}\n"
-        #             " - mask range: ({:d}, {:d})\n"
-        #             " - quadrant positions: {}".
-        #             format(pulse_range,
-        #                    energy,
-        #                    sample_distance,
-        #                    center_x, center_y,
-        #                    integration_method,
-        #                    integration_range[0], integration_range[1],
-        #                    integration_points,
-        #                    mask_range[0], mask_range[1],
-        #                    ", ".join(["({}, {})".format(p[0], p[1])
-        #                               for p in quad_positions]))
-        #             )
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
@@ -773,18 +784,6 @@ class MainGUI(QtGui.QMainWindow):
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(True)
 
-    def _getIntegrationRange(self):
-        try:
-            return parse_boundary(self._itgt_range_le.text())
-        except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
-
-    def _getMaskRange(self):
-        try:
-            return parse_boundary(self._mask_range_le.text())
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-
     def updateSharedParameters(self, log=False):
         """Update shared parameters for all child windows.
 
@@ -795,28 +794,23 @@ class MainGUI(QtGui.QMainWindow):
             and emitted, otherwise False.
         """
         try:
-            lb, ub = parse_boundary(self._mask_range_le.text())
-            self.mask_range_sp.emit(lb, ub)
-            if log:
-                logger.info("<Mask range>: ({}, {})".format(lb, ub))
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.mask_range_sp.emit(*mask_range)
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
             return False
 
         try:
-            lb, ub = parse_boundary(self._normalization_range_le.text())
-            self.normalization_range_sp.emit(lb, ub)
-            if log:
-                logger.info("<Normalization range>: ({}, {})".format(lb, ub))
+            normalization_range = parse_boundary(
+                self._normalization_range_le.text())
+            self.normalization_range_sp.emit(*normalization_range)
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
             return False
 
         try:
-            lb, ub = parse_boundary(self._fom_range_le.text())
-            self.fom_range_sp.emit(lb, ub)
-            if log:
-                logger.info("<FOM range>: ({}, {})".format(lb, ub))
+            fom_range = parse_boundary(self._fom_range_le.text())
+            self.fom_range_sp.emit(*fom_range)
         except ValueError as e:
             logger.error("<FOM range>: " + str(e))
             return False
@@ -836,10 +830,6 @@ class MainGUI(QtGui.QMainWindow):
                     return False
 
             self.on_off_pulse_ids_sp.emit(mode, on_pulse_ids, off_pulse_ids)
-            if log:
-                logger.info("<Optical laser mode>: {}".format(mode))
-                logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
-                logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
@@ -851,11 +841,20 @@ class MainGUI(QtGui.QMainWindow):
                 logger.error("Moving average window width < 1!")
                 return False
             self.ma_window_size_sp.emit(window_size)
-            if log:
-                logger.info("<Moving average window size>: {}".
-                            format(window_size))
         except ValueError as e:
             logger.error("<Moving average window size>: " + str(e))
             return False
+
+        if log:
+            logger.info("--- Shared parameters ---")
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
+            logger.info("<Normalization range>: ({}, {})".
+                        format(*normalization_range))
+            logger.info("<FOM range>: ({}, {})".format(*fom_range))
+            logger.info("<Optical laser mode>: {}".format(mode))
+            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
+            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
+            logger.info("<Moving average window size>: {}".
+                        format(window_size))
 
         return True
