@@ -103,4 +103,3 @@ class GuiLogger(logging.Handler):
 
     def emit(self, record):
         self.widget.appendPlainText(self.format(record))
-

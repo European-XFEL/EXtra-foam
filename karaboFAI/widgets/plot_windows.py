@@ -378,6 +378,11 @@ class IndividualPulseWindow(PlotWindow):
             return
 
         for i, pulse_id in enumerate(self._pulse_ids):
+            if pulse_id >= data.intensity.shape[0]:
+                logger.error("Pulse ID {} out of range (0 - {})!".
+                             format(pulse_id, data.intensity.shape[0] - 1))
+                continue
+
             p = self._plot_items[i]
             if i == 0:
                 p.addLegend(offset=(-40, 20))
@@ -629,6 +634,18 @@ class LaserOnOffWindow(PlotWindow):
         """Override."""
         data = self._data.get()
         if data.empty():
+            return
+
+        if max(self.on_pulse_ids_sp) > data.intensity.shape[0]:
+            logger.error("On-pulse ID {} out of range (0 - {})".
+                         format(max(self.on_pulse_ids_sp),
+                                data.intensity.shape[0] - 1))
+            return
+
+        if max(self.off_pulse_ids_sp) > data.intensity.shape[0]:
+            logger.error("Off-pulse ID {} out of range (0 - {})".
+                         format(max(self.off_pulse_ids_sp),
+                                data.intensity.shape[0] - 1))
             return
 
         normalized_on_pulse, normalized_off_pulse = self._update(data)
