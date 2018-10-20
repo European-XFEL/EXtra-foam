@@ -220,7 +220,9 @@ class DataProcessor(QtCore.QThread):
             return ret.radial, ret.intensity
 
         with ProcessPoolExecutor(max_workers=config["WORKERS"]) as executor:
-            rets = executor.map(_integrate1d_para, range(assembled.shape[0]))
+            chunksize = int(np.ceil(assembled.shape[0] / config["WORKERS"]))
+            rets = executor.map(_integrate1d_para, range(assembled.shape[0]),
+                                chunksize=chunksize)
 
         momentums, intensities = zip(*rets)
         momentum = momentums[0]
