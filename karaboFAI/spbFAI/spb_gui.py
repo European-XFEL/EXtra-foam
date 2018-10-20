@@ -30,7 +30,7 @@ def spb_gui(argv=None):
         pass
     elif args.np <= 1:
         config["WORKERS"] = 1
-    elif args.np >= 1:
+    elif args.np > 1:
         config["WORKERS"] = args.np
 
     app = QtGui.QApplication(sys.argv)
