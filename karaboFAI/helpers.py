@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
 
 
 def parse_boundary(text):
@@ -118,10 +117,29 @@ def parse_ids(text):
     return list(ret)
 
 
-def parse_quadrant_table(widget):
+def parse_table_widget(widget):
+    """Parse a table widget to a list of list.
+
+    The inner list represents a row of the table.
+
+    :param QTableWidget widget: a table widget.
+
+    :return list: a list of table elements.
+
+    Examples:
+
+    For the following table,
+
+         col1 col2
+    row1   1   2
+    row2   3   4
+    row3   5   6
+
+    The return value is [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]].
+    """
     n_row, n_col = widget.rowCount(), widget.columnCount()
-    ret = np.zeros((n_row, n_col))
+    ret = []
     for i in range(n_row):
-        for j in range(n_col):
-            ret[i, j] = float(widget.item(i, j).text())
+        ret.append([float(widget.item(i, 0).text()),
+                    float(widget.item(i, 1).text())])
     return ret

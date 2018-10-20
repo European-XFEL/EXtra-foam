@@ -14,7 +14,6 @@ import time
 import logging
 from queue import Queue, Empty
 
-import fabio
 import zmq
 
 from .logger import logger
@@ -28,7 +27,7 @@ from .data_acquisition import DaqWorker
 from .data_processing import DataSource, DataProcessor, ProcessedData
 from .file_server import FileServer
 from .config import config
-from .helpers import parse_ids, parse_boundary, parse_quadrant_table
+from .helpers import parse_ids, parse_boundary, parse_table_widget
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -50,12 +49,32 @@ class MainGUI(QtGui.QMainWindow):
 
     # Shared parameters are pyqtSignals
     # Note: shared parameters should end with '_sp'
+
+    server_tcp_sp = QtCore.pyqtSignal(str, str)
+    data_source_sp = QtCore.pyqtSignal(object)
+
+    # (geometry file, quadrant positions)
+    geometry_sp = QtCore.pyqtSignal(str, list)
+
+    sample_distance_sp = QtCore.pyqtSignal(float)
+    center_coordinate_sp = QtCore.pyqtSignal(int, int)  # (cx, cy)
+    integration_method_sp = QtCore.pyqtSignal(str)
+    integration_range_sp = QtCore.pyqtSignal(float, float)
+    integration_points_sp = QtCore.pyqtSignal(int)
+
     mask_range_sp = QtCore.pyqtSignal(float, float)
     fom_range_sp = QtCore.pyqtSignal(float, float)
     normalization_range_sp = QtCore.pyqtSignal(float, float)
     ma_window_size_sp = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sp = QtCore.pyqtSignal(str, list, list)
+    photon_energy_sp = QtCore.pyqtSignal(float)
+
+    pulse_range_sp = QtCore.pyqtSignal(int, int)
+
+    # the following pyqtSignals are not belong to shared parameters
+    # non-shared parameters will not be updated by self.updateSharedParameters
+    image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
     _height = 1000  # window height, in pixel
     _width = 1380  # window width, in pixel
@@ -79,14 +98,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
-
-        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-
-        # a DAQ worker which acquires the data in another thread
-        self._daq_worker = None
-        # a data processing worker which processes the data in another thread
-        self._proc_worker = None
 
         # *************************************************************
         # Tool bar
@@ -326,11 +337,22 @@ class MainGUI(QtGui.QMainWindow):
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
+        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+
+        # a DAQ worker which acquires the data in another thread
+        self._daq_worker = None
+        # a data processing worker which processes the data in another thread
+        self._proc_worker = DataProcessor(
+            self, self._daq_queue, self._proc_queue)
+        # this thread keeps running until the app is closed
+        self._proc_worker.start()
+
         # For real time plot
-        self._is_running = False
+        self._running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self._updateAll)
-        self.timer.start(10)
+        self.timer.start(config["TIMER_INTERVAL"])
 
         self.show()
 
@@ -500,7 +522,7 @@ class MainGUI(QtGui.QMainWindow):
 
     def _updateAll(self):
         """Update all the plots in the main and child windows."""
-        if self._is_running is False:
+        if not self._running:
             return
 
         # TODO: improve plot updating
@@ -593,132 +615,19 @@ class MainGUI(QtGui.QMainWindow):
 
     def _loadMaskImage(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
-        self._mask_image = None
-        if filename:
-            try:
-                self._mask_image = fabio.open(filename).data
-                logger.info("Load mask image at {}".format(filename))
-            except IOError as e:
-                logger.error(e)
-            except Exception:
-                raise
-        else:
-            logger.error("Please specify the mask image file!")
+        if not filename:
+            logger.error("Please specify the image mask file!")
+        self.image_mask_sgn.emit(filename)
 
     def _onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
-        self._is_running = True
+        self._clearQueues()
+        self._running = True  # starting to update plots
 
-        if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
-            data_source = DataSource.CALIBRATED_FILE
-        elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
-            data_source = DataSource.CALIBRATED
-        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
-            data_source = DataSource.ASSEMBLED
-        else:
-            data_source = DataSource.PROCESSED
-
-        # -------------------------------------------------------------
-        # parse the parameters
-        # -------------------------------------------------------------
-
-        pulse_range = (int(self._pulse_range0_le.text()),
-                       int(self._pulse_range1_le.text()))
-
-        geom_file = self._geom_file_le.text()
-        quad_positions = parse_quadrant_table(self._quad_positions_tb)
-
-        photon_energy = float(self._photon_energy_le.text().strip())
-        if photon_energy <= 0:
-            logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return
-
-        sample_distance = float(self._sample_dist_le.text().strip())
-        if sample_distance <= 0:
-            logger.error("<Sample distance>: Invalid input! Must be positive!")
-            return
-
-        center_x = int(self._cx_le.text().strip())
-        center_y = int(self._cy_le.text().strip())
-
-        integration_method = self._itgt_method_cb.currentText()
-
-        integration_points = int(self._itgt_points_le.text().strip())
-        if integration_points <= 0:
-            logger.error("<Integration points>: Invalid input! Must be positive!")
-            return
-
-        try:
-            integration_range = parse_boundary(self._itgt_range_le.text())
-        except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
-            return
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-            return
-
-        # The method is called here to ensure that: if any parameter is invalid,
-        # nothing will be logged!
+        self._daq_worker = DaqWorker(self, self._daq_queue)
         if not self.updateSharedParameters(True):
             return
-
-        logger.info("--- Other parameters ---")
-        logger.info("<Data source>: {}".format(data_source))
-        logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
-        logger.info("<Geometry file>: {}".format(geom_file))
-        logger.info("<Photon energy (keV)>: {}".format(photon_energy))
-        logger.info("<Sample distance (m)>: {}".format(sample_distance))
-        logger.info("<Cx (pixel)>: {:d}".format(center_x))
-        logger.info("<Cy (pixel)>: {:d}".format(center_y))
-        logger.info("<Integration method>: '{}'".format(integration_method))
-        logger.info("<Integration range (1/A)>: ({}, {})".
-                    format(*integration_range))
-        logger.info("<Number of integration points>: {}".
-                    format(integration_points))
-        logger.info("<Quadrant positions>: ({})".format(
-            ", ".join(["({}, {})".format(p[0], p[1]) for p in quad_positions])))
-
-        client_addr = "tcp://" \
-                      + self._hostname_le.text().strip() \
-                      + ":" \
-                      + self._port_le.text().strip()
-
-        try:
-            self._proc_worker = DataProcessor(
-                self._daq_queue, self._proc_queue,
-                source=data_source,
-                pulse_range=pulse_range,
-                geom_file=geom_file,
-                quad_positions=quad_positions,
-                photon_energy=photon_energy,
-                sample_dist=sample_distance,
-                cx=center_x,
-                cy=center_y,
-                integration_method=integration_method,
-                integration_range=integration_range,
-                integration_points=integration_points,
-                mask_range=mask_range,
-                mask=self._mask_image
-            )
-
-            self._daq_worker = DaqWorker(client_addr, self._daq_queue)
-        except Exception as e:
-            logger.error(e)
-            return
-
-        # remove when Client.next() has timeout option
-        with self._daq_queue.mutex:
-            self._daq_queue.queue.clear()
-
-        logger.debug("Size of in and out queues: {}, {}".
-                     format(self._daq_queue.qsize(), self._proc_queue.qsize()))
-
         self._daq_worker.start()
-        self._proc_worker.start()
-
-        logger.info("DAQ started!")
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
@@ -727,15 +636,9 @@ class MainGUI(QtGui.QMainWindow):
 
     def _onStopDAQ(self):
         """Actions taken before the end of a 'run'."""
-        self._is_running = False
-
+        self._running = False
         self._daq_worker.terminate()
-        self._proc_worker.terminate()
-
-        with self._daq_queue.mutex:
-            self._daq_queue.queue.clear()
-        with self._proc_queue.mutex:
-            self._proc_queue.queue.clear()
+        self._clearQueues()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
@@ -743,6 +646,12 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(True)
 
         logger.info("DAQ stopped!")
+
+    def _clearQueues(self):
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+        with self._proc_queue.mutex:
+            self._proc_queue.queue.clear()
 
     def _onStartServeFile(self):
         """Actions taken before the start of file serving."""
@@ -784,6 +693,53 @@ class MainGUI(QtGui.QMainWindow):
         Returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
+        if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
+            data_source = DataSource.CALIBRATED_FILE
+        elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
+            data_source = DataSource.CALIBRATED
+        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
+            data_source = DataSource.ASSEMBLED
+        else:
+            data_source = DataSource.PROCESSED
+        self.data_source_sp.emit(data_source)
+
+        try:
+            geom_file = self._geom_file_le.text()
+            quad_positions = parse_table_widget(self._quad_positions_tb)
+            self.geometry_sp.emit(geom_file, quad_positions)
+        except ValueError as e:
+            logger.error("<Quadrant positions>: " + str(e))
+            return False
+
+        sample_distance = float(self._sample_dist_le.text().strip())
+        if sample_distance <= 0:
+            logger.error("<Sample distance>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.sample_distance_sp.emit(sample_distance)
+
+        center_x = int(self._cx_le.text().strip())
+        center_y = int(self._cy_le.text().strip())
+        self.center_coordinate_sp.emit(center_x, center_y)
+
+        integration_method = self._itgt_method_cb.currentText()
+        self.integration_method_sp.emit(integration_method)
+
+        integration_points = int(self._itgt_points_le.text().strip())
+        if integration_points <= 0:
+            logger.error(
+                "<Integration points>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.integration_points_sp.emit(integration_points)
+
+        try:
+            integration_range = parse_boundary(self._itgt_range_le.text())
+            self.integration_range_sp.emit(*integration_range)
+        except ValueError as e:
+            logger.error("<Integration range>: " + str(e))
+            return False
+
         try:
             mask_range = parse_boundary(self._mask_range_le.text())
             self.mask_range_sp.emit(*mask_range)
@@ -836,8 +792,43 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<Moving average window size>: " + str(e))
             return False
 
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.photon_energy_sp.emit(photon_energy)
+
+        pulse_range = (int(self._pulse_range0_le.text()),
+                       int(self._pulse_range1_le.text()))
+        if pulse_range[1] <= 0:
+            logger.error("<Pulse range>: Invalid input!")
+            return False
+        else:
+            self.pulse_range_sp.emit(*pulse_range)
+
+        server_hostname = self._hostname_le.text().strip()
+        server_port = self._port_le.text().strip()
+        self.server_tcp_sp.emit(server_hostname, server_port)
+
         if log:
             logger.info("--- Shared parameters ---")
+            logger.info("<Host name>, <Port>: {}, {}".
+                        format(server_hostname, server_port))
+            logger.info("<Data source>: {}".format(data_source))
+            logger.info("<Geometry file>: {}".format(geom_file))
+            logger.info("<Quadrant positions>: [{}]".format(
+                ", ".join(["[{}, {}]".format(p[0], p[1])
+                           for p in quad_positions])))
+            logger.info("<Sample distance (m)>: {}".format(sample_distance))
+            logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
+                        format(center_x, center_y))
+            logger.info("<Cy (pixel)>: {:d}".format(center_y))
+            logger.info("<Integration method>: '{}'".format(integration_method))
+            logger.info("<Integration range (1/A)>: ({}, {})".
+                        format(*integration_range))
+            logger.info("<Number of integration points>: {}".
+                        format(integration_points))
             logger.info("<Mask range>: ({}, {})".format(*mask_range))
             logger.info("<Normalization range>: ({}, {})".
                         format(*normalization_range))
@@ -847,5 +838,11 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
             logger.info("<Moving average window size>: {}".
                         format(window_size))
+            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+            logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
 
         return True
+
+    @QtCore.pyqtSlot(str)
+    def onMessageReceived(self, msg):
+        logger.info(msg)

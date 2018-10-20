@@ -44,6 +44,7 @@ class Config(dict):
     # -------------------
     # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
     #                   will be masked
+    # TIMER_INTERVAL int: QTimer interval in milliseconds.
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
     #                     queues in data pipeline
     # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
@@ -84,6 +85,7 @@ class Config(dict):
     # system config should not appear in the topic config
     _default_sys_config = {
         "TOPIC": '',  # topic name, leave it empty
+        "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 5,
         "WORKERS": 1,

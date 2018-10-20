@@ -18,6 +18,7 @@ import numpy as np
 from scipy import constants
 import pyFAI
 from h5py import File
+import fabio
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
@@ -38,7 +39,7 @@ class DataProcessor(QtCore.QThread):
             (int, int)
         _geom (LPDGeometry): geometry.
         wavelength (float): photon wavelength in meter.
-        sample_dist (float): distance from the sample to the detector
+        sample_distance (float): distance from the sample to the detector
             plan (orthogonal distance, not along the beam), in meter.
         cx (int): coordinate of the point of normal incidence along the
             detector's first dimension, in pixels.
@@ -53,46 +54,117 @@ class DataProcessor(QtCore.QThread):
         mask_range (tuple):
         image_mask (numpy.ndarray):
     """
-    def __init__(self, in_queue, out_queue, **kwargs):
+
+    # post message in the main GUI
+    messager = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent, in_queue, out_queue):
         """Initialization.
 
         :param Queue in_queue: a queue of data from the ZMQ bridge.
         :param Queue out_queue: a queue of processed data
         """
-        super().__init__()
+        super().__init__(parent=parent)
+
+        self.messager.connect(parent.onMessageReceived)
+        self.messager.emit("Data processor started!")
 
         self._in_queue = in_queue
         self._out_queue = out_queue
 
-        self.source = kwargs['source']
-        self.pulse_range = kwargs['pulse_range']
-
-        self._geom = None
-        with File(kwargs['geom_file'], 'r') as f:
-            self._geom = LPDGeometry.from_h5_file_and_quad_positions(
-                f, kwargs['quad_positions'])
-
-        self.wavelength = 1e-3 * constants.c * constants.h / constants.e\
-            / kwargs['photon_energy']
-
-        self.sample_dist = kwargs['sample_dist']
-        self.cx = kwargs['cx'] * config["PIXEL_SIZE"]
-        self.cy = kwargs['cy'] * config["PIXEL_SIZE"]
-        self.integration_method = kwargs['integration_method']
-        self.integration_range = kwargs['integration_range']
-        self.integration_points = kwargs['integration_points']
-
-        self.mask_range = kwargs['mask_range']
-        self.image_mask = kwargs['mask']
+        self.image_mask = None
         self.image_mask_initialized = False
 
-        self._running = False
+        # -------------------------------------------------------------
+        # define shared parameters
+        # -------------------------------------------------------------
+
+        self.source_sp = None
+        self.geom_sp = None
+        self.sample_distance_sp = None
+        self.center_coordinate_sp = None
+        self.integration_method_sp = None
+        self.integration_range_sp = None
+        self.integration_points_sp = None
+        self.mask_range_sp = None
+        self.wavelength_sp = None
+        self.pulse_range_sp = None
+
+        # -------------------------------------------------------------
+        # define slots' behaviors
+        # -------------------------------------------------------------
+
+        parent.data_source_sp.connect(self.onSourceChanged)
+        parent.geometry_sp.connect(self.onGeometryChanged)
+        parent.sample_distance_sp.connect(self.onSampleDistanceChanged)
+        parent.center_coordinate_sp.connect(self.onCenterCoordinateChanged)
+        parent.integration_method_sp.connect(self.onIntegrationMethodChanged)
+        parent.integration_range_sp.connect(self.onIntegrationRangeChanged)
+        parent.integration_points_sp.connect(self.onIntegrationPointsChanged)
+        parent.mask_range_sp.connect(self.onMaskRangeChanged)
+        parent.photon_energy_sp.connect(self.onPhotonEnergyChanged)
+        parent.pulse_range_sp.connect(self.onPulseRangeChanged)
+
+        parent.image_mask_sgn.connect(self.onImageMaskChanged)
+
+    @QtCore.pyqtSlot(str)
+    def onImageMaskChanged(self, filename):
+        try:
+            self.image_mask = fabio.open(filename).data
+            msg = "Image mask {} loaded!".format(filename)
+        except (IOError, OSError) as e:
+            msg = str(e)
+        finally:
+            self.messager.emit(msg)
+
+    @QtCore.pyqtSlot(object)
+    def onSourceChanged(self, value):
+        self.source_sp = value
+
+    @QtCore.pyqtSlot(str, list)
+    def onGeometryChanged(self, filename, quad_positions):
+        with File(filename, 'r') as f:
+            self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
+                f, quad_positions)
+
+    @QtCore.pyqtSlot(float)
+    def onSampleDistanceChanged(self, value):
+        self.sample_distance_sp = value
+
+    @QtCore.pyqtSlot(int, int)
+    def onCenterCoordinateChanged(self, cx, cy):
+        self.center_coordinate_sp = (cx * config["PIXEL_SIZE"],
+                                     cy * config["PIXEL_SIZE"])
+
+    @QtCore.pyqtSlot(str)
+    def onIntegrationMethodChanged(self, value):
+        self.integration_method_sp = value
+
+    @QtCore.pyqtSlot(float, float)
+    def onIntegrationRangeChanged(self, lb, ub):
+        self.integration_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(int)
+    def onIntegrationPointsChanged(self, value):
+        self.integration_points_sp = value
+
+    @QtCore.pyqtSlot(float, float)
+    def onMaskRangeChanged(self, lb, ub):
+        self.mask_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(float)
+    def onPhotonEnergyChanged(self, value):
+        constant = 1e-3 * constants.c * constants.h / constants.e
+        self.wavelength_sp = constant / value
+
+    @QtCore.pyqtSlot(int, int)
+    def onPulseRangeChanged(self, lb, ub):
+        self.pulse_range_sp = (lb, ub)
 
     def run(self):
         """Run the data processor."""
         logger.debug("Start data processing...")
-        self._running = True
-        while self._running:
+        while True:
             try:
                 data = self._in_queue.get(timeout=0.1)
             except Empty:
@@ -100,13 +172,13 @@ class DataProcessor(QtCore.QThread):
 
             t0 = time.perf_counter()
 
-            if self.source == DataSource.CALIBRATED_FILE:
+            if self.source_sp == DataSource.CALIBRATED_FILE:
                 processed_data = self.process_calibrated_data(data, from_file=True)
-            elif self.source == DataSource.CALIBRATED:
+            elif self.source_sp == DataSource.CALIBRATED:
                 processed_data = self.process_calibrated_data(data)
-            elif self.source == DataSource.ASSEMBLED:
+            elif self.source_sp == DataSource.ASSEMBLED:
                 processed_data = self.process_assembled_data(data)
-            elif self.source == DataSource.PROCESSED:
+            elif self.source_sp == DataSource.PROCESSED:
                 processed_data = data[0]
             else:
                 raise ValueError("Unknown data source!")
@@ -122,10 +194,6 @@ class DataProcessor(QtCore.QThread):
             logger.debug("Size of in and out queues: {}, {}".format(
                 self._in_queue.qsize(), self._out_queue.qsize()))
 
-    def terminate(self):
-        """Terminate the data processor."""
-        self._running = False
-
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
 
@@ -134,15 +202,15 @@ class DataProcessor(QtCore.QThread):
 
         :return ProcessedData: processed data.
         """
-        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_dist,
-                                       poni1=self.cy,
-                                       poni2=self.cx,
+        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
+                                       poni1=self.center_coordinate_sp[1],
+                                       poni2=self.center_coordinate_sp[0],
                                        pixel1=config["PIXEL_SIZE"],
                                        pixel2=config["PIXEL_SIZE"],
                                        rot1=0,
                                        rot2=0,
                                        rot3=0,
-                                       wavelength=self.wavelength)
+                                       wavelength=self.wavelength_sp)
 
         # pre-processing
 
@@ -186,7 +254,7 @@ class DataProcessor(QtCore.QThread):
                             self.image_mask, assembled[0].shape)
                         self.image_mask_initialized = True
                         logger.debug("Up-sample mask with shape {} to {}".
-                                    format(old_shape, self.image_mask.shape))
+                                     format(old_shape, self.image_mask.shape))
                     else:
                         raise ValueError
                 except (TypeError, ValueError):
@@ -204,15 +272,15 @@ class DataProcessor(QtCore.QThread):
 
             # add threshold mask
             mask = np.copy(base_mask)
-            mask[(assembled[i] < self.mask_range[0]) |
-                 (assembled[i] > self.mask_range[1])] = 1
+            mask[(assembled[i] < self.mask_range_sp[0]) |
+                 (assembled[i] > self.mask_range_sp[1])] = 1
 
             # do integration
             ret = ai.integrate1d(assembled[i],
-                                 self.integration_points,
-                                 method=self.integration_method,
+                                 self.integration_points_sp,
+                                 method=self.integration_method_sp,
                                  mask=mask,
-                                 radial_range=self.integration_range,
+                                 radial_range=self.integration_range_sp,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
@@ -241,7 +309,7 @@ class DataProcessor(QtCore.QThread):
 
         # clip the value in the array
         np.clip(assembled_mean,
-                self.mask_range[0], self.mask_range[1], out=assembled_mean)
+                self.mask_range_sp[0], self.mask_range_sp[1], out=assembled_mean)
         # now 'assembled_mean' contains only numerical values within
         # the mask range
 
@@ -318,7 +386,7 @@ class DataProcessor(QtCore.QThread):
 
         t0 = time.perf_counter()
 
-        assembled, centre = self._geom.position_all_modules(modules_data)
+        assembled, centre = self.geom_sp.position_all_modules(modules_data)
         # This is a bug in old version of karabo_data. The above function
         # could return a numpy.ndarray with shape (0, x, x)
         if assembled.shape[0] == 0:
@@ -326,7 +394,7 @@ class DataProcessor(QtCore.QThread):
                          format(assembled.shape, tid))
             return ProcessedData(tid)
         # TODO: slice earlier to save computation time
-        assembled = assembled[self.pulse_range[0]:self.pulse_range[1] + 1]
+        assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

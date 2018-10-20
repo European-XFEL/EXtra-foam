@@ -20,18 +20,31 @@ from .config import config
 
 
 class DaqWorker(QtCore.QThread):
-    def __init__(self, address, out_queue):
-        """Initialization."""
-        super().__init__()
 
-        self._address = address
+    # post message in the main GUI
+    messager = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent, out_queue):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.messager.connect(parent.onMessageReceived)
+
+        self.server_tcp_sp = None
+
+        self.parent().server_tcp_sp.connect(self.onServerTcpChanged)
+
         self._out_queue = out_queue
         self._running = True
 
+    @QtCore.pyqtSlot(str, str)
+    def onServerTcpChanged(self, address, port):
+        self.server_tcp_sp = "tcp://" + address + ":" + port
+
     def run(self):
         """Override."""
-        logger.debug("Start data acquisition...")
-        with Client(self._address) as client:
+        with Client(self.server_tcp_sp) as client:
+            self.messager.emit("Bind to server {}".format(self.server_tcp_sp))
             while self._running is True:
 
                 t0 = time.perf_counter()
@@ -44,6 +57,8 @@ class DaqWorker(QtCore.QThread):
 
                 try:
                     self._out_queue.put(data, timeout=config["TIMEOUT"])
+                    if not self._running:
+                        self._out_queue.get()
                 except Full:
                     logger.debug(
                         "Data dropped due to the slow processing pipeline!")
