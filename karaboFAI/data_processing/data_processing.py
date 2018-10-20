@@ -195,9 +195,9 @@ class DataProcessor(QtCore.QThread):
                         format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
-        global _integrate1d_para
+        global _integrate1d_imp
 
-        def _integrate1d_para(i):
+        def _integrate1d_imp(i):
             """Use for multiprocessing."""
             # convert 'nan' to '-inf', as explained above
             assembled[i][np.isnan(assembled[i])] = -np.inf
@@ -219,12 +219,21 @@ class DataProcessor(QtCore.QThread):
 
             return ret.radial, ret.intensity
 
-        with ProcessPoolExecutor(max_workers=config["WORKERS"]) as executor:
-            chunksize = int(np.ceil(assembled.shape[0] / config["WORKERS"]))
-            rets = executor.map(_integrate1d_para, range(assembled.shape[0]),
-                                chunksize=chunksize)
+        workers = config["WORKERS"]
+        if workers > 1:
+            with ProcessPoolExecutor(max_workers=workers) as executor:
+                chunksize = int(np.ceil(assembled.shape[0] / workers))
+                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]),
+                                    chunksize=chunksize)
+            momentums, intensities = zip(*rets)
+        else:
+            momentums = []
+            intensities = []
+            for i in range(assembled.shape[0]):
+                momentum, intensity = _integrate1d_imp(i)
+                momentums.append(momentum)
+                intensities.append(intensity)
 
-        momentums, intensities = zip(*rets)
         momentum = momentums[0]
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
