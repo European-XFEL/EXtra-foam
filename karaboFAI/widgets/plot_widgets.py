@@ -22,7 +22,8 @@ from ..config import config
 class MainGuiLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, data, parent=None, **kwargs):
         """Initialization."""
-        super().__init__(parent, **kwargs)
+        super().__init__(parent=parent, **kwargs)
+        self.parent().registerPlotWidget(self)
 
         self._data = data
 
@@ -49,7 +50,8 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
 
     def __init__(self, data, parent=None, **kwargs):
         """Initialization."""
-        super().__init__(parent, **kwargs)
+        super().__init__(parent=parent, **kwargs)
+        self.parent().registerPlotWidget(self)
 
         self._data = data
 

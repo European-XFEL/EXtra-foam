@@ -11,7 +11,7 @@ All rights reserved.
 """
 import time
 from concurrent.futures import ProcessPoolExecutor
-from queue import Empty
+import queue
 import warnings
 
 import numpy as np
@@ -107,6 +107,8 @@ class DataProcessor(QtCore.QThread):
 
         parent.image_mask_sgn.connect(self.onImageMaskChanged)
 
+        self._running = False
+
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
         try:
@@ -163,17 +165,19 @@ class DataProcessor(QtCore.QThread):
 
     def run(self):
         """Run the data processor."""
+        self._running = True
         logger.debug("Start data processing...")
-        while True:
+        while self._running:
             try:
-                data = self._in_queue.get(timeout=0.1)
-            except Empty:
+                data = self._in_queue.get(timeout=config['TIMEOUT'])
+            except queue.Empty:
                 continue
 
             t0 = time.perf_counter()
 
             if self.source_sp == DataSource.CALIBRATED_FILE:
-                processed_data = self.process_calibrated_data(data, from_file=True)
+                processed_data = self.process_calibrated_data(
+                    data, from_file=True)
             elif self.source_sp == DataSource.CALIBRATED:
                 processed_data = self.process_calibrated_data(data)
             elif self.source_sp == DataSource.ASSEMBLED:
@@ -186,13 +190,19 @@ class DataProcessor(QtCore.QThread):
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
-            # Adding the processed data into the queue should always happen
-            # immediately since the visualization takes much less time than
-            # processing!
-            self._out_queue.put(processed_data)
+            while self._running:
+                try:
+                    self._out_queue.put(processed_data,
+                                        timeout=config['TIMEOUT'])
+                    break
+                except queue.Full:
+                    continue
 
             logger.debug("Size of in and out queues: {}, {}".format(
                 self._in_queue.qsize(), self._out_queue.qsize()))
+
+    def terminate(self):
+        self._running = False
 
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.

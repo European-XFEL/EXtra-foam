@@ -13,6 +13,7 @@ import os
 import time
 import logging
 from queue import Queue, Empty
+from weakref import WeakKeyDictionary
 
 import zmq
 
@@ -138,7 +139,7 @@ class MainGUI(QtGui.QMainWindow):
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            self._openLaserOnOffWindow)
+            lambda: LaserOnOffWindow(self._data, parent=self))
         tool_bar.addAction(open_laseronoff_window_at)
 
         #
@@ -147,7 +148,7 @@ class MainGUI(QtGui.QMainWindow):
             "Bragg spots",
             self)
         open_bragg_spots_window_at.triggered.connect(
-            self._openBraggSpotsWindow)
+            lambda: BraggSpotsWindow(self._data, parent=self))
         tool_bar.addAction(open_bragg_spots_window_at)
 
         #
@@ -156,7 +157,7 @@ class MainGUI(QtGui.QMainWindow):
             "Sample degradation monitor",
             self)
         open_sample_degradation_monitor_at.triggered.connect(
-            self._openSampleDegradationMonitor)
+            lambda: SampleDegradationMonitor(self._data, parent=self))
         tool_bar.addAction(open_sample_degradation_monitor_at)
 
         #
@@ -164,7 +165,8 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(os.path.join(root_dir, "icons/draw_mask.png")),
             "Draw mask",
             self)
-        self._draw_mask_at.triggered.connect(self._openDrawMaskWindow)
+        self._draw_mask_at.triggered.connect(
+            lambda: DrawMaskWindow(self._data, parent=self))
         tool_bar.addAction(self._draw_mask_at)
 
         #
@@ -190,17 +192,15 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._data = self.Data4Visualization()
 
-        self._lineplot_widget = MainGuiLinePlotWidget(self._data)
+        # book-keeping opened widgets and windows
+        self._plot_widgets = WeakKeyDictionary()
+
+        self._lineplot_widget = MainGuiLinePlotWidget(self._data, parent=self)
         self._lineplot_widget.setFixedSize(
             self._width - self._plot_height - 25, self._plot_height)
 
-        self._image_widget = MainGuiImageViewWidget(self._data)
+        self._image_widget = MainGuiImageViewWidget(self._data, parent=self)
         self._image_widget.setFixedSize(self._plot_height, self._plot_height)
-
-        # book-keeping opened widgets and windows
-        self._opened_windows = dict()
-        self._opened_windows[self._lineplot_widget] = 1
-        self._opened_windows[self._image_widget] = 1
 
         self._mask_image = None
 
@@ -341,12 +341,10 @@ class MainGUI(QtGui.QMainWindow):
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
         # a DAQ worker which acquires the data in another thread
-        self._daq_worker = None
+        self._daq_worker = DaqWorker(self, self._daq_queue)
         # a data processing worker which processes the data in another thread
         self._proc_worker = DataProcessor(
             self, self._daq_queue, self._proc_queue)
-        # this thread keeps running until the app is closed
-        self._proc_worker.start()
 
         # For real time plot
         self._running = False
@@ -535,7 +533,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        for w in self._opened_windows.keys():
+        for w in self._plot_widgets.keys():
             w.clearPlots()
 
         if self._data.get().empty():
@@ -545,7 +543,7 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         # update the all the plots
-        for w in self._opened_windows.keys():
+        for w in self._plot_widgets.keys():
             w.updatePlots()
 
         logger.debug("Time for updating the plots: {:.1f} ms"
@@ -575,38 +573,16 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         if ok:
-            self._openIndividualPulseWindow(pulse_ids, ret[1])
-
-    def _openIndividualPulseWindow(self, pulse_ids, show_image):
-        w = IndividualPulseWindow(self._data,
+            IndividualPulseWindow(self._data,
                                   pulse_ids,
                                   parent=self,
-                                  show_image=show_image)
-        self._opened_windows[w] = 1
-        w.show()
+                                  show_image=ret[1])
 
-    def _openLaserOnOffWindow(self):
-        w = LaserOnOffWindow(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
+    def registerPlotWidget(self, instance):
+        self._plot_widgets[instance] = 1
 
-    def _openBraggSpotsWindow(self):
-        w = BraggSpotsWindow(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def _openSampleDegradationMonitor(self):
-        w = SampleDegradationMonitor(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def _openDrawMaskWindow(self):
-        w = DrawMaskWindow(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def removeWindow(self, instance):
-        del self._opened_windows[instance]
+    def unregisterPlotWidget(self, instance):
+        del self._plot_widgets[instance]
 
     def _loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
@@ -624,9 +600,9 @@ class MainGUI(QtGui.QMainWindow):
         self._clearQueues()
         self._running = True  # starting to update plots
 
-        self._daq_worker = DaqWorker(self, self._daq_queue)
         if not self.updateSharedParameters(True):
             return
+        self._proc_worker.start()
         self._daq_worker.start()
 
         self._start_at.setEnabled(False)
@@ -637,7 +613,8 @@ class MainGUI(QtGui.QMainWindow):
     def _onStopDAQ(self):
         """Actions taken before the end of a 'run'."""
         self._running = False
-        self._daq_worker.terminate()
+
+        self._clearWorkers()
         self._clearQueues()
 
         self._start_at.setEnabled(True)
@@ -646,6 +623,12 @@ class MainGUI(QtGui.QMainWindow):
             widget.setEnabled(True)
 
         logger.info("DAQ stopped!")
+
+    def _clearWorkers(self):
+        self._proc_worker.terminate()
+        self._daq_worker.terminate()
+        self._proc_worker.wait()
+        self._daq_worker.wait()
 
     def _clearQueues(self):
         with self._daq_queue.mutex:
@@ -658,6 +641,7 @@ class MainGUI(QtGui.QMainWindow):
         folder = self._source_name_le.text().strip()
         port = int(self._port_le.text().strip())
 
+        # process can only be start once
         self._file_server = FileServer(folder, port)
         try:
             # TODO: signal the end of file serving
@@ -846,3 +830,11 @@ class MainGUI(QtGui.QMainWindow):
     @QtCore.pyqtSlot(str)
     def onMessageReceived(self, msg):
         logger.info(msg)
+
+    def closeEvent(self, QCloseEvent):
+        super().closeEvent(QCloseEvent)
+
+        self._clearWorkers()
+
+        if self._file_server is not None and self._file_server.is_alive():
+            self._file_server.terminate()

@@ -42,6 +42,7 @@ class SingletonWindow:
         else:
             try:
                 self.instance.updatePlots()
+                self.instance.show()
             except AttributeError:
                 pass
         return self.instance
@@ -70,6 +71,8 @@ class AbstractWindow(QtGui.QMainWindow):
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
 
+        self.show()
+
     def initUI(self):
         """Initialization of UI.
 
@@ -91,25 +94,6 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
-    def updatePlots(self):
-        """Update plots.
-
-        This method is called by the main GUI.
-        """
-        raise NotImplementedError
-
-    def clearPlots(self):
-        """Clear plots.
-
-        This method is called by the main GUI.
-        """
-        raise NotImplementedError
-
-    def closeEvent(self, QCloseEvent):
-        """Update the book-keeping in the main GUI."""
-        super().closeEvent(QCloseEvent)
-        self.parent().removeWindow(self)
-
 
 class PlotWindow(AbstractWindow):
     """Base class for stand-alone windows."""
@@ -123,6 +107,7 @@ class PlotWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
+        self.parent().registerPlotWidget(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
@@ -217,8 +202,18 @@ class PlotWindow(AbstractWindow):
         layout.addWidget(self._gl_widget)
         self._cw.setLayout(layout)
 
+    def updatePlots(self):
+        """Update plots.
+
+        This method is called by the main GUI.
+        """
+        raise NotImplementedError
+
     def clearPlots(self):
-        """Override."""
+        """Clear plots.
+
+        This method is called by the main GUI.
+        """
         for item in self._plot_items:
             item.clear()
         for item in self._image_items:
@@ -305,6 +300,10 @@ class PlotWindow(AbstractWindow):
     def _reset(self):
         """Reset all internal states/histories."""
         pass
+
+    def closeEvent(self, QCloseEvent):
+        super().closeEvent(QCloseEvent)
+        self.parent().unregisterPlotWidget(self)
 
 
 class IndividualPulseWindow(PlotWindow):
@@ -869,11 +868,3 @@ class DrawMaskWindow(AbstractWindow):
         # self._mask_panel.getSelectionMask()
 
         self._image.addImage(data.image_mean)
-
-    def updatePlots(self):
-        """Override."""
-        pass
-
-    def clearPlots(self):
-        """Override"""
-        pass

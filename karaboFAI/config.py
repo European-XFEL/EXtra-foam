@@ -87,7 +87,7 @@ class Config(dict):
         "TOPIC": '',  # topic name, leave it empty
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
-        "TIMEOUT": 5,
+        "TIMEOUT": 0.1,
         "WORKERS": 1,
         "DOWN_SAMPLE_IMAGE_MEAN": True
     }
