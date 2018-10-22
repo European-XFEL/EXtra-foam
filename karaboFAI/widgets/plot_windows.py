@@ -132,10 +132,10 @@ class PlotWindow(AbstractWindow):
             name='Actions', type='group')
 
         # -------------------------------------------------------------
-        # define shared parameters
+        # define slots' behaviors
         # -------------------------------------------------------------
 
-        # shared parameters which are updated by signal-slot
+        # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
         self.mask_range_sp = None
         self.fom_range_sp = None
@@ -145,15 +145,12 @@ class PlotWindow(AbstractWindow):
         self.on_pulse_ids_sp = None
         self.off_pulse_ids_sp = None
 
-        # -------------------------------------------------------------
-        # define slots' behaviors
-        # -------------------------------------------------------------
-
-        self.parent().mask_range_sp.connect(self.onMaskRangeChanged)
-        self.parent().on_off_pulse_ids_sp.connect(self.onOffPulseIdChanged)
-        self.parent().fom_range_sp.connect(self.onFomRangeChanged)
-        self.parent().normalization_range_sp.connect(self.onNormalizationRangeChanged)
-        self.parent().ma_window_size_sp.connect(self.onMAWindowSizeChanged)
+        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
+        self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
+        self.parent().fom_range_sgn.connect(self.onFomRangeChanged)
+        self.parent().normalization_range_sgn.connect(
+            self.onNormalizationRangeChanged)
+        self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)

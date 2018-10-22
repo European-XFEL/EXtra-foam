@@ -69,9 +69,8 @@ class DataProcessor(Worker):
         self.image_mask = None
         self.image_mask_initialized = False
 
-        # -------------------------------------------------------------
-        # define shared parameters
-        # -------------------------------------------------------------
+        # shared parameters are updated by signal-slot
+        # Note: shared parameters should end with '_sp'
 
         self.source_sp = None
         self.geom_sp = None

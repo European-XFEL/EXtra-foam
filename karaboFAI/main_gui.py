@@ -48,33 +48,36 @@ class MainGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
-    # Shared parameters are pyqtSignals
-    # Note: shared parameters should end with '_sp'
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
 
-    server_tcp_sp = QtCore.pyqtSignal(str, str)
-    data_source_sp = QtCore.pyqtSignal(object)
+    server_tcp_sgn = QtCore.pyqtSignal(str, str)
+    data_source_sgn = QtCore.pyqtSignal(object)
 
     # (geometry file, quadrant positions)
-    geometry_sp = QtCore.pyqtSignal(str, list)
+    geometry_sgn = QtCore.pyqtSignal(str, list)
 
-    sample_distance_sp = QtCore.pyqtSignal(float)
-    center_coordinate_sp = QtCore.pyqtSignal(int, int)  # (cx, cy)
-    integration_method_sp = QtCore.pyqtSignal(str)
-    integration_range_sp = QtCore.pyqtSignal(float, float)
-    integration_points_sp = QtCore.pyqtSignal(int)
+    sample_distance_sgn = QtCore.pyqtSignal(float)
+    center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
+    integration_method_sgn = QtCore.pyqtSignal(str)
+    integration_range_sgn = QtCore.pyqtSignal(float, float)
+    integration_points_sgn = QtCore.pyqtSignal(int)
 
-    mask_range_sp = QtCore.pyqtSignal(float, float)
-    fom_range_sp = QtCore.pyqtSignal(float, float)
-    normalization_range_sp = QtCore.pyqtSignal(float, float)
-    ma_window_size_sp = QtCore.pyqtSignal(int)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
+    fom_range_sgn = QtCore.pyqtSignal(float, float)
+    normalization_range_sgn = QtCore.pyqtSignal(float, float)
+    ma_window_size_sgn = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sp = QtCore.pyqtSignal(str, list, list)
-    photon_energy_sp = QtCore.pyqtSignal(float)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
+    photon_energy_sgn = QtCore.pyqtSignal(float)
 
-    pulse_range_sp = QtCore.pyqtSignal(int, int)
+    pulse_range_sgn = QtCore.pyqtSignal(int, int)
 
-    # the following pyqtSignals are not belong to shared parameters
-    # non-shared parameters will not be updated by self.updateSharedParameters
+    # *************************************************************
+    # other signals
+    # *************************************************************
+
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
     _height = 1000  # window height, in pixel
@@ -363,7 +366,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self.server_tcp_sp.connect(self._daq_worker.onServerTcpChanged)
+        self.server_tcp_sgn.connect(self._daq_worker.onServerTcpChanged)
 
         # *************************************************************
         # DataProcessor
@@ -371,21 +374,21 @@ class MainGUI(QtGui.QMainWindow):
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
-        self.data_source_sp.connect(self._proc_worker.onSourceChanged)
-        self.geometry_sp.connect(self._proc_worker.onGeometryChanged)
-        self.sample_distance_sp.connect(
+        self.data_source_sgn.connect(self._proc_worker.onSourceChanged)
+        self.geometry_sgn.connect(self._proc_worker.onGeometryChanged)
+        self.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
-        self.center_coordinate_sp.connect(
+        self.center_coordinate_sgn.connect(
             self._proc_worker.onCenterCoordinateChanged)
-        self.integration_method_sp.connect(
+        self.integration_method_sgn.connect(
             self._proc_worker.onIntegrationMethodChanged)
-        self.integration_range_sp.connect(
+        self.integration_range_sgn.connect(
             self._proc_worker.onIntegrationRangeChanged)
-        self.integration_points_sp.connect(
+        self.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
-        self.mask_range_sp.connect(self._proc_worker.onMaskRangeChanged)
-        self.photon_energy_sp.connect(self._proc_worker.onPhotonEnergyChanged)
-        self.pulse_range_sp.connect(self._proc_worker.onPulseRangeChanged)
+        self.mask_range_sgn.connect(self._proc_worker.onMaskRangeChanged)
+        self.photon_energy_sgn.connect(self._proc_worker.onPhotonEnergyChanged)
+        self.pulse_range_sgn.connect(self._proc_worker.onPulseRangeChanged)
 
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
@@ -718,12 +721,12 @@ class MainGUI(QtGui.QMainWindow):
             data_source = DataSource.ASSEMBLED
         else:
             data_source = DataSource.PROCESSED
-        self.data_source_sp.emit(data_source)
+        self.data_source_sgn.emit(data_source)
 
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self.geometry_sp.emit(geom_file, quad_positions)
+            self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + str(e))
             return False
@@ -733,14 +736,14 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<Sample distance>: Invalid input! Must be positive!")
             return False
         else:
-            self.sample_distance_sp.emit(sample_distance)
+            self.sample_distance_sgn.emit(sample_distance)
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
-        self.center_coordinate_sp.emit(center_x, center_y)
+        self.center_coordinate_sgn.emit(center_x, center_y)
 
         integration_method = self._itgt_method_cb.currentText()
-        self.integration_method_sp.emit(integration_method)
+        self.integration_method_sgn.emit(integration_method)
 
         integration_points = int(self._itgt_points_le.text().strip())
         if integration_points <= 0:
@@ -748,18 +751,18 @@ class MainGUI(QtGui.QMainWindow):
                 "<Integration points>: Invalid input! Must be positive!")
             return False
         else:
-            self.integration_points_sp.emit(integration_points)
+            self.integration_points_sgn.emit(integration_points)
 
         try:
             integration_range = parse_boundary(self._itgt_range_le.text())
-            self.integration_range_sp.emit(*integration_range)
+            self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
             return False
 
         try:
             mask_range = parse_boundary(self._mask_range_le.text())
-            self.mask_range_sp.emit(*mask_range)
+            self.mask_range_sgn.emit(*mask_range)
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
             return False
@@ -767,14 +770,14 @@ class MainGUI(QtGui.QMainWindow):
         try:
             normalization_range = parse_boundary(
                 self._normalization_range_le.text())
-            self.normalization_range_sp.emit(*normalization_range)
+            self.normalization_range_sgn.emit(*normalization_range)
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
             return False
 
         try:
             fom_range = parse_boundary(self._fom_range_le.text())
-            self.fom_range_sp.emit(*fom_range)
+            self.fom_range_sgn.emit(*fom_range)
         except ValueError as e:
             logger.error("<FOM range>: " + str(e))
             return False
@@ -793,7 +796,7 @@ class MainGUI(QtGui.QMainWindow):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.on_off_pulse_ids_sp.emit(mode, on_pulse_ids, off_pulse_ids)
+            self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
@@ -804,7 +807,7 @@ class MainGUI(QtGui.QMainWindow):
             if window_size < 1:
                 logger.error("Moving average window width < 1!")
                 return False
-            self.ma_window_size_sp.emit(window_size)
+            self.ma_window_size_sgn.emit(window_size)
         except ValueError as e:
             logger.error("<Moving average window size>: " + str(e))
             return False
@@ -814,7 +817,7 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<Photon energy>: Invalid input! Must be positive!")
             return False
         else:
-            self.photon_energy_sp.emit(photon_energy)
+            self.photon_energy_sgn.emit(photon_energy)
 
         pulse_range = (int(self._pulse_range0_le.text()),
                        int(self._pulse_range1_le.text()))
@@ -822,11 +825,11 @@ class MainGUI(QtGui.QMainWindow):
             logger.error("<Pulse range>: Invalid input!")
             return False
         else:
-            self.pulse_range_sp.emit(*pulse_range)
+            self.pulse_range_sgn.emit(*pulse_range)
 
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
-        self.server_tcp_sp.emit(server_hostname, server_port)
+        self.server_tcp_sgn.emit(server_hostname, server_port)
 
         if log:
             logger.info("--- Shared parameters ---")
