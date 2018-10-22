@@ -31,13 +31,11 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self._available_modes = list(LaserOnOffWindow.modes.keys())
 
     def testNormalMode(self):
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               self._on_pulses_ids,
-                               self._off_pulses_ids,
-                               self._normalization_range,
-                               self._fom_range,
-                               self._available_modes[0],
-                               ma_window_size=4)
+        win = LaserOnOffWindow(MainGUI.Data4Visualization())
+        win._on_pulse_ids = self._on_pulses_ids
+        win._off_pulse_ids = self._off_pulses_ids
+        win._normalization_range = self._normalization_range
+        win._fom_range = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
@@ -111,13 +109,11 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               self._on_pulses_ids,
-                               self._off_pulses_ids,
-                               self._normalization_range,
-                               self._fom_range,
-                               self._available_modes[1],
-                               ma_window_size=9999)
+        win = LaserOnOffWindow(MainGUI.Data4Visualization())
+        win._on_pulse_ids = self._on_pulses_ids
+        win._off_pulse_ids = self._off_pulses_ids
+        win._normalization_range = self._normalization_range
+        win._fom_range = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
@@ -243,13 +239,11 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               self._on_pulses_ids,
-                               self._off_pulses_ids,
-                               self._normalization_range,
-                               self._fom_range,
-                               self._available_modes[2],
-                               ma_window_size=9999)
+        win = LaserOnOffWindow(MainGUI.Data4Visualization())
+        win._on_pulse_ids = self._on_pulses_ids
+        win._off_pulse_ids = self._off_pulses_ids
+        win._normalization_range = self._normalization_range
+        win._fom_range = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])

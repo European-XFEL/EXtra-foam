@@ -12,9 +12,12 @@ All rights reserved.
 import time
 
 from collections import deque, OrderedDict
+
 import numpy as np
 from scipy import ndimage
 
+import silx
+from silx.gui.plot.MaskToolsWidget import MaskToolsWidget
 from silx.gui.colors import Colormap as SilxColormap
 
 from .pyqtgraph import (
@@ -27,7 +30,7 @@ from .pyqtgraph import parametertree as ptree
 from ..logger import logger
 from ..config import config
 from ..data_processing.proc_utils import (
-    integrate_curve, sub_array_with_range
+    normalize_curve, slice_curve
 )
 from .misc_widgets import PenFactory, lookupTableFactory
 
@@ -43,6 +46,7 @@ class SingletonWindow:
         else:
             try:
                 self.instance.updatePlots()
+                self.instance.show()
             except AttributeError:
                 pass
         return self.instance
@@ -68,6 +72,11 @@ class AbstractWindow(QtGui.QMainWindow):
             # for unit test where parent is None
             self.setWindowTitle("")
 
+        self._cw = QtGui.QWidget()
+        self.setCentralWidget(self._cw)
+
+        self.show()
+
     def initUI(self):
         """Initialization of UI.
 
@@ -89,40 +98,103 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
-    def updatePlots(self):
-        """Update plots.
-
-        This method is called by the main GUI.
-        """
-        raise NotImplementedError
-
-    def clearPlots(self):
-        """Clear plots.
-
-        This method is called by the main GUI.
-        """
-        raise NotImplementedError
-
-    def closeEvent(self, QCloseEvent):
-        """Update the book-keeping in the main GUI."""
-        super().closeEvent(QCloseEvent)
-        self.parent().removeWindow(self)
-
 
 class PlotWindow(AbstractWindow):
     """Base class for stand-alone windows."""
+
+    available_modes = OrderedDict({
+        "normal": "Laser-on/off pulses in the same train",
+        "even/odd": "Laser-on/off pulses in even/odd train",
+        "odd/even": "Laser-on/off pulses in odd/even train"
+    })
+
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-
-        self._cw = QtGui.QWidget()
-        self.setCentralWidget(self._cw)
+        self.parent().registerPlotWidget(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
 
         self._plot_items = []  # bookkeeping PlotItem objects
         self._image_items = []  # bookkeeping ImageItem objects
+
+        # -------------------------------------------------------------
+        # define parameter tree
+        # -------------------------------------------------------------
+
+        self._ptree = ptree.ParameterTree(showHeader=True)
+
+        # parameters are grouped into 4 groups
+        self._exp_params = ptree.Parameter.create(
+            name='Experimental setups', type='group')
+        self._pro_params = ptree.Parameter.create(
+            name='Data processing parameters', type='group')
+        self._vis_params = ptree.Parameter.create(
+            name='Visualization options', type='group')
+        self._act_params = ptree.Parameter.create(
+            name='Actions', type='group')
+        self._ana_params = ptree.Parameter.create(
+            name='Analysis options', type='group')
+        self._ins_params = ptree.Parameter.create(
+            name='General', type='group')
+
+        # -------------------------------------------------------------
+        # define slots' behaviors
+        # -------------------------------------------------------------
+
+        # shared parameters are updated by signal-slot
+        # Note: shared parameters should end with '_sp'
+        self.mask_range_sp = None
+        self.fom_range_sp = None
+        self.normalization_range_sp = None
+        self.ma_window_size_sp = None
+        self.laser_mode_sp = None
+        self.on_pulse_ids_sp = None
+        self.off_pulse_ids_sp = None
+
+        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
+        self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
+        self.parent().fom_range_sgn.connect(self.onFomRangeChanged)
+        self.parent().normalization_range_sgn.connect(
+            self.onNormalizationRangeChanged)
+        self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
+
+        # -------------------------------------------------------------
+        # available Parameters (shared parameters and actions)
+        # -------------------------------------------------------------
+
+        self.mask_range_param = ptree.Parameter.create(
+            name='Mask range', type='str', readonly=True
+        )
+        self.optical_laser_mode_param = ptree.Parameter.create(
+            name='Optical laser mode', type='str', readonly=True
+        )
+        self.laser_on_pulse_ids_param = ptree.Parameter.create(
+            name='Laser-on pulse ID(s)', type='str', readonly=True
+        )
+        self.laser_off_pulse_ids_param = ptree.Parameter.create(
+            name='Laser-off pulse ID(s)', type='str', readonly=True
+        )
+        self.normalization_range_param = ptree.Parameter.create(
+            name="Normalization range", type='str', readonly=True
+        )
+        self.fom_range_param = ptree.Parameter.create(
+            name="FOM range", type='str', readonly=True
+        )
+        self.ma_window_size_param = ptree.Parameter.create(
+            name='M.A. window size', type='int', readonly=True
+        )
+        self.reset_action_param = ptree.Parameter.create(
+            name='Clear history', type='action'
+        )
+        self.reset_action_param.sigActivated.connect(self._reset)
+
+        # this method inject parameters into the parameter tree
+        self.updateParameterTree()
+
+        # tell MainGUI to emit signals in order to update shared parameters
+        self.parent().updateSharedParameters()
 
     def initUI(self):
         """Override."""
@@ -135,12 +207,108 @@ class PlotWindow(AbstractWindow):
         layout.addWidget(self._gl_widget)
         self._cw.setLayout(layout)
 
+    def updatePlots(self):
+        """Update plots.
+
+        This method is called by the main GUI.
+        """
+        raise NotImplementedError
+
     def clearPlots(self):
-        """Override."""
+        """Clear plots.
+
+        This method is called by the main GUI.
+        """
         for item in self._plot_items:
             item.clear()
         for item in self._image_items:
             item.clear()
+
+    @QtCore.pyqtSlot(str, list, list)
+    def onOffPulseIdChanged(self, mode, on_pulse_ids, off_pulse_ids):
+        self.laser_mode_sp = mode
+        self.on_pulse_ids_sp = on_pulse_ids
+        self.off_pulse_ids_sp = off_pulse_ids
+        # then update the parameter tree
+        try:
+            self._exp_params.child('Optical laser mode').setValue(
+                self.available_modes[mode])
+            self._exp_params.child('Laser-on pulse ID(s)').setValue(
+                ', '.join([str(x) for x in on_pulse_ids]))
+            self._exp_params.child('Laser-off pulse ID(s)').setValue(
+                ', '.join([str(x) for x in off_pulse_ids]))
+        except KeyError:
+            pass
+
+    @QtCore.pyqtSlot(float, float)
+    def onMaskRangeChanged(self, lb, ub):
+        self.mask_range_sp = (lb, ub)
+        # then update the parameter tree
+        try:
+            self._pro_params.child('Mask range').setValue(
+                '{}, {}'.format(lb, ub))
+        except KeyError:
+            pass
+
+    @QtCore.pyqtSlot(float, float)
+    def onNormalizationRangeChanged(self, lb, ub):
+        self.normalization_range_sp = (lb, ub)
+        # then update the parameter tree
+        try:
+            self._pro_params.child('Normalization range').setValue(
+                '{}, {}'.format(lb, ub))
+        except KeyError:
+            pass
+
+    @QtCore.pyqtSlot(float, float)
+    def onFomRangeChanged(self, lb, ub):
+        self.fom_range_sp = (lb, ub)
+        # then update the parameter tree
+        try:
+            self._pro_params.child('FOM range').setValue(
+                '{}, {}'.format(lb, ub))
+        except KeyError:
+            pass
+
+    @QtCore.pyqtSlot(int)
+    def onMAWindowSizeChanged(self, value):
+        self.ma_window_size_sp = value
+        # then update the parameter tree
+        try:
+            self._pro_params.child('M.A. window size').setValue(str(value))
+        except KeyError:
+            pass
+
+    def updateParameterTree(self):
+        """Update the parameter tree.
+
+        In this method, one should and only should have codes like
+
+        self._exp_params.addChildren(...)
+        self._pro_params.addChildren(...)
+        self._vis_params.addChildren(...)
+        self._act_params.addChildren(...)
+
+        params = ptree.Parameter.create(name='params', type='group',
+                                        children=[self._exp_params,
+                                                  self._pro_params,
+                                                  self._vis_params,
+                                                  self._act_params])
+
+        self._ptree.setParameters(params, showTop=False)
+
+        Here '...' is a list of Parameter instances or dictionaries which
+        can be used to instantiate Parameter instances.
+        """
+        pass
+
+    def _reset(self):
+        """Reset all internal states/histories."""
+        pass
+
+    def closeEvent(self, QCloseEvent):
+        super().closeEvent(QCloseEvent)
+        self.parent().unregisterPlotWidget(self)
 
 
 class IndividualPulseWindow(PlotWindow):
@@ -214,6 +382,11 @@ class IndividualPulseWindow(PlotWindow):
             return
 
         for i, pulse_id in enumerate(self._pulse_ids):
+            if pulse_id >= data.intensity.shape[0]:
+                logger.error("Pulse ID {} out of range (0 - {})!".
+                             format(pulse_id, data.intensity.shape[0] - 1))
+                continue
+
             p = self._plot_items[i]
             if i == 0:
                 p.addLegend(offset=(-40, 20))
@@ -235,8 +408,8 @@ class IndividualPulseWindow(PlotWindow):
             if data is not None and self._show_image is True:
                 # in-place operation is faster
                 np.clip(data.image[pulse_id],
-                        config["MASK_RANGE"][0],
-                        config["MASK_RANGE"][1],
+                        self.mask_range_sp[0],
+                        self.mask_range_sp[1],
                         data.image[pulse_id])
                 self._image_items[i].setImage(
                     np.flip(data.image[pulse_id], axis=0))
@@ -253,88 +426,12 @@ class LaserOnOffWindow(PlotWindow):
     laser-off results, for each pair of laser-on and laser-off trains,
     in the lower plot.
     """
-    modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
-    })
-
     plot_w = 800
     plot_h = 450
 
-    def __init__(self,
-                 data,
-                 on_pulse_ids,
-                 off_pulse_ids,
-                 normalization_range,
-                 fom_range,
-                 laser_mode, *,
-                 parent=None,
-                 ma_window_size=9999):
+    def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
-
-        self._ptree = ptree.ParameterTree(showHeader=True)
-        params = [
-            {'name': 'Experimental setups', 'type': 'group',
-             'children': [
-                {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
-                 'value': self.modes[laser_mode]},
-                {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in on_pulse_ids])},
-                {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
-                 'value': ', '.join([str(x) for x in  off_pulse_ids])}]},
-            {'name': 'Data processing parameters', 'type': 'group',
-             'children': [
-                 {'name': 'Normalization range', 'type': 'str', 'readonly': True,
-                  'value': ', '.join([str(x) for x in normalization_range])},
-                 {'name': 'FOM range (1/A)', 'type': 'str', 'readonly': True,
-                  'value': ', '.join([str(x) for x in fom_range])},
-                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
-                  'value': ma_window_size}]},
-            {'name': 'Visualization options', 'type': 'group',
-             'children': [
-                 {'name': 'Difference scale', 'type': 'int', 'value': 20},
-                 {'name': 'Show normalization range', 'type': 'bool', 'value': False},
-                 {'name': 'Show FOM range', 'type': 'bool', 'value': False}]},
-            {'name': 'Actions', 'type': 'group',
-             'children': [
-                {'name': 'Clear history', 'type': 'action'}]},
-        ]
-        p = ptree.Parameter.create(name='params', type='group', children=params)
-        self._ptree.setParameters(p, showTop=False)
-
-        self._exp_setups = p.param('Experimental setups')
-
-        self._vis_setups = p.param('Visualization options')
-
-        self._proc_setups = p.param('Data processing parameters')
-
-        p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
-
-        # for visualization of normalization range
-        pen1 = mkPen(QtGui.QColor(
-            255, 255, 255, 255), width=1, style=QtCore.Qt.DashLine)
-        brush1 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
-        self._normalization_range_lri = LinearRegionItem(
-            normalization_range, pen=pen1, brush=brush1, movable=False)
-
-        # for visualization of FOM range
-        pen2 = mkPen(QtGui.QColor(
-            255, 0, 0, 255), width=1, style=QtCore.Qt.DashLine)
-        brush2 = QtGui.QBrush(QtGui.QColor(0, 0, 255, 30))
-        self._fom_range_lri = LinearRegionItem(
-            fom_range, pen=pen2, brush=brush2, movable=False)
-
-        # -------------------------------------------------------------
-        # parameters from the control panel of the main GUI
-        # -------------------------------------------------------------
-        self._laser_mode = laser_mode
-        self._on_pulse_ids = on_pulse_ids
-        self._off_pulse_ids = off_pulse_ids
-        self._normalization_range = normalization_range
-        self._fom_range = fom_range
-        self._ma_window_size = ma_window_size
 
         # -------------------------------------------------------------
         # volatile parameters
@@ -360,9 +457,7 @@ class LaserOnOffWindow(PlotWindow):
         self.initUI()
         self.updatePlots()
 
-        logger.info("Open LaserOnOffWindow (on-pulse(s): {}, off-pulse(s): {})".
-                    format(", ".join(str(i) for i in on_pulse_ids),
-                           ", ".join(str(i) for i in off_pulse_ids)))
+        logger.info("Open LaserOnOffWindow")
 
     def initPlotUI(self):
         """Override."""
@@ -390,6 +485,36 @@ class LaserOnOffWindow(PlotWindow):
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
 
+    def updateParameterTree(self):
+        """Override."""
+        self._exp_params.addChildren([
+            self.optical_laser_mode_param,
+            self.laser_on_pulse_ids_param,
+            self.laser_off_pulse_ids_param
+        ])
+
+        self._pro_params.addChildren([
+            self.normalization_range_param,
+            self.fom_range_param,
+            self.ma_window_size_param
+        ])
+
+        self._vis_params.addChildren([
+            {'name': 'Difference scale', 'type': 'int', 'value': 20}
+        ])
+
+        self._act_params.addChildren([
+            self.reset_action_param
+        ])
+
+        params = ptree.Parameter.create(name='params', type='group',
+                                        children=[self._exp_params,
+                                                  self._pro_params,
+                                                  self._vis_params,
+                                                  self._act_params])
+
+        self._ptree.setParameters(params, showTop=False)
+
     def _update(self, data):
         """Process incoming data and update history.
 
@@ -397,17 +522,17 @@ class LaserOnOffWindow(PlotWindow):
                   normalized moving average for off-pulses)
         :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
         """
-        available_modes = list(self.modes.keys())
-        if self._laser_mode == available_modes[0]:
+        available_modes = list(self.available_modes.keys())
+        if self.laser_mode_sp == available_modes[0]:
             # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
 
-            if self._laser_mode == available_modes[1]:
+            if self.laser_mode_sp == available_modes[1]:
                 flag = 0  # on-train has even train ID
-            elif self._laser_mode == available_modes[2]:
+            elif self.laser_mode_sp == available_modes[2]:
                 flag = 1  # on-train has odd train ID
             else:
                 raise ValueError("Unknown laser mode!")
@@ -438,10 +563,10 @@ class LaserOnOffWindow(PlotWindow):
         if self._on_train_received:
             # update on-pulse
 
-            if self._laser_mode == available_modes[0] or \
+            if self.laser_mode_sp == available_modes[0] or \
                     not self._off_train_received:
 
-                this_on_pulses = data.intensity[self._on_pulse_ids].mean(axis=0)
+                this_on_pulses = data.intensity[self.on_pulse_ids_sp].mean(axis=0)
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
                     self._on_pulses_ma += \
@@ -450,48 +575,48 @@ class LaserOnOffWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self._ma_window_size:
+                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self._ma_window_size:
+                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self._ma_window_size
+                            / self.ma_window_size_sp
                     else:
                         raise ValueError  # should never reach here
 
                 self._on_pulses_hist.append(this_on_pulses)
 
-            normalized_on_pulse = self._on_pulses_ma / integrate_curve(
-                self._on_pulses_ma, momentum, self._normalization_range)
+            normalized_on_pulse = normalize_curve(
+                self._on_pulses_ma, momentum, *self.normalization_range_sp)
 
         if self._off_train_received:
             # update off-pulse
 
-            this_off_pulses = data.intensity[self._off_pulse_ids].mean(axis=0)
+            this_off_pulses = data.intensity[self.off_pulse_ids_sp].mean(axis=0)
             self._off_pulses_hist.append(this_off_pulses)
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self._ma_window_size:
+            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self._ma_window_size + 1:
+            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self._ma_window_size
+                    / self.ma_window_size_sp
             else:
                 raise ValueError  # should never reach here
 
-            normalized_off_pulse = self._off_pulses_ma / integrate_curve(
-                self._off_pulses_ma, momentum, self._normalization_range)
+            normalized_off_pulse = normalize_curve(
+                self._off_pulses_ma, momentum, *self.normalization_range_sp)
 
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit (FOM) and update history
-            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)
@@ -515,18 +640,24 @@ class LaserOnOffWindow(PlotWindow):
         if data.empty():
             return
 
+        if max(self.on_pulse_ids_sp) > data.intensity.shape[0]:
+            logger.error("On-pulse ID {} out of range (0 - {})".
+                         format(max(self.on_pulse_ids_sp),
+                                data.intensity.shape[0] - 1))
+            return
+
+        if max(self.off_pulse_ids_sp) > data.intensity.shape[0]:
+            logger.error("Off-pulse ID {} out of range (0 - {})".
+                         format(max(self.off_pulse_ids_sp),
+                                data.intensity.shape[0] - 1))
+            return
+
         normalized_on_pulse, normalized_off_pulse = self._update(data)
 
         momentum = data.momentum
 
         # upper plot
         p = self._plot_items[0]
-
-        # visualize normalization/FOM range if requested
-        if self._vis_setups.param("Show normalization range").value():
-            p.addItem(self._normalization_range_lri)
-        if self._vis_setups.param("Show FOM range").value():
-            p.addItem(self._fom_range_lri)
 
         p.addLegend(offset=(-60, 20))
 
@@ -544,7 +675,7 @@ class LaserOnOffWindow(PlotWindow):
                    name="Off", pen=PenFactory.green)
 
             # plot difference between on-/off- pulses
-            diff_scale = self._vis_setups.param('Difference scale').value()
+            diff_scale = self._vis_params.child('Difference scale').value()
             p.plot(momentum,
                    diff_scale * (normalized_on_pulse - normalized_off_pulse),
                    name="difference", pen=PenFactory.yellow)
@@ -572,7 +703,7 @@ class LaserOnOffWindow(PlotWindow):
         self._plot_items[0].clear()
 
     def _reset(self):
-        """Clear history and internal states."""
+        """Override."""
         for p in self._plot_items:
             p.clear()
 
@@ -589,11 +720,6 @@ class LaserOnOffWindow(PlotWindow):
 
 class BraggSpotsWindow(PlotWindow):
 
-    modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
-    })
     instructions = \
         ("Green ROI: Place it around Bragg peak.\n\n"
          "White ROI: Place it around Background.\n\n"
@@ -602,69 +728,11 @@ class BraggSpotsWindow(PlotWindow):
          "analysis box and then click on the image on top-left corner."
          )
 
-    def __init__(self,
-                 data,
-                 on_pulse_ids,
-                 off_pulse_ids,
-                 laser_mode,
-                 mask_range,
-                 *,
-                 parent=None,
-                 ma_window_size=9999
-                 ):
+    def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
 
-        self._ptree = ptree.ParameterTree(showHeader=True)
-        params = [
-            {'name': 'Experimental setups', 'type': 'group',
-             'children': [
-                 {'name': 'Optical laser mode', 'type': 'str', 'readonly': True,
-                  'value': self.modes[laser_mode]},
-                 {'name': 'Laser-on pulse ID(s)', 'type': 'str', 'readonly': True,
-                     'value': ', '.join([str(x) for x in on_pulse_ids])},
-                 {'name': 'Laser-off pulse ID(s)', 'type': 'str', 'readonly': True,
-                     'value': ', '.join([str(x) for x in off_pulse_ids])}]},
-            {'name': 'Data processing parameters', 'type': 'group',
-             'children': [
-                 {'name': 'M.A. window size', 'type': 'int', 'readonly': True,
-                  'value': ma_window_size}]},
-
-            {'name': 'Analysis options', 'type': 'group',
-             'children': [
-                 {'name': 'Profile Analysis', 'type': 'bool', 'value': False},
-                 {'name': 'Normalized Intensity Plot',
-                     'type': 'bool', 'value': False}
-             ]},
-            {'name': 'Actions', 'type': 'group',
-             'children': [
-                 {'name': 'Clear history', 'type': 'action'}]},
-
-            {'name': 'General', 'type': 'group',
-             'children': [
-                 {'name': 'Instructions', 'type': 'text', 'readonly': True,
-                  'value': self.instructions}]
-             },
-        ]
-        p = ptree.Parameter.create(
-            name='params', type='group', children=params)
-        self._ptree.setParameters(p, showTop=False)
-        self._vis_setups = p.param('Analysis options')
-        p.param('Actions', 'Clear history').sigActivated.connect(self._reset)
-        # Profile check button needed to avoid clash while moving
-        # brad and background region of interests. Click based.
-        p.param('Analysis options', 'Profile Analysis').sigStateChanged.connect(
-            self._profile)
-        p.param('Analysis options', 
-                'Normalized Intensity Plot').sigStateChanged.connect(self._intensity)
-
         self.setGeometry(100, 100, 1600, 1000)
-
-        self._on_pulse_ids = on_pulse_ids
-        self._off_pulse_ids = off_pulse_ids
-        self._laser_mode = laser_mode
-        self._mask_range = mask_range
-        self._ma_window_size = ma_window_size
 
         self._rois = []  # bookeeping Region of interests.
         self._hist_train_on_id = []
@@ -690,6 +758,49 @@ class BraggSpotsWindow(PlotWindow):
         self.updatePlots()
 
         logger.info("Open COM Analysis Window")
+
+    def updateParameterTree(self):
+        """Override."""
+        self._exp_params.addChildren([
+            self.optical_laser_mode_param,
+            self.laser_on_pulse_ids_param,
+            self.laser_off_pulse_ids_param
+        ])
+
+        self._pro_params.addChildren([
+            self.ma_window_size_param
+        ])
+
+        self._ana_params.addChildren([
+           {'name': 'Profile Analysis', 'type': 'bool', 'value': False},
+           {'name': 'Normalized Intensity Plot',
+                     'type': 'bool', 'value': False}
+
+        ])
+
+        self._act_params.addChildren([
+            self.reset_action_param
+        ])
+
+        self._ins_params.addChildren([
+           {'name': 'Instructions', 'type': 'text', 'readonly': True,
+                  'value': self.instructions}
+        ])
+
+        params = ptree.Parameter.create(name='params', type='group',
+                                        children=[self._exp_params,
+                                                  self._pro_params,
+                                                  self._ana_params,
+                                                  self._act_params,
+                                                  self._ins_params])
+        # Profile check button needed to avoid clash while moving
+        # brad and background region of interests. Click based.
+        self._ana_params.child('Profile Analysis').sigStateChanged.connect(
+            self._profile)
+        self._ana_params.child('Normalized Intensity Plot').\
+            sigStateChanged.connect(self._intensity)
+
+        self._ptree.setParameters(params, showTop=False)
 
     def initCtrlUI(self):
         """Override"""
@@ -788,15 +899,15 @@ class BraggSpotsWindow(PlotWindow):
     def _update(self, data):
 
         # Same logic as LaserOnOffWindow.
-        available_modes = list(self.modes.keys())
-        if self._laser_mode == available_modes[0]:
+        available_modes = list(self.available_modes.keys())
+        if self.laser_mode_sp == available_modes[0]:
             self._on_train_received = True
             self._off_train_received = True
         else:
 
-            if self._laser_mode == available_modes[1]:
+            if self.laser_mode_sp == available_modes[1]:
                 flag = 0
-            elif self._laser_mode == available_modes[2]:
+            elif self.laser_mode_sp == available_modes[2]:
                 flag = 1
             else:
                 raise ValueError("Unknown laser mode!")
@@ -819,13 +930,13 @@ class BraggSpotsWindow(PlotWindow):
         com_off = None
         if self._on_train_received:
 
-            if self._laser_mode == available_modes[0] or \
+            if self.laser_mode_sp == available_modes[0] or \
                     not self._off_train_received:
 
                 this_on_pulses = []
                 # Collects centre of mass for each pulse in 
                 # this_on_pulses list
-                for pid in self._on_pulse_ids:
+                for pid in self.on_pulse_ids_sp:
 
                     index = 0
                     for key in slices.keys():
@@ -841,16 +952,16 @@ class BraggSpotsWindow(PlotWindow):
                         index += 1
                         (slices[key])[np.isnan(slices[key])] = - \
                             np.inf  # convert nan to -inf
-                        np.clip(slices[key],self._mask_range[0], 
-                                self._mask_range[1], out=slices[key])
+                        np.clip(slices[key],self.mask_range_sp[0], 
+                                self.mask_range_sp[1], out=slices[key])
                         # clip to restrict between mask values 0-2500
 
                     # background subtraction from Brag_data. 
                     # Resulting image to be used for COM evaluation.
                     mass_from_data = slices['brag_data'] - \
                         slices['background_data']
-                    np.clip(mass_from_data, self._mask_range[0], 
-                            self._mask_range[1], out=mass_from_data)
+                    np.clip(mass_from_data, self.mask_range_sp[0], 
+                            self.mask_range_sp[1], out=mass_from_data)
                     # normalization = \sum ROI_background
                     # Ńormalized intensity: 
                     # \sum (ROI_brag - ROI_background)/ normalization
@@ -872,14 +983,14 @@ class BraggSpotsWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self._ma_window_size:
+                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_ma) \
                             / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self._ma_window_size:
+                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self._ma_window_size
+                            / self.ma_window_size_sp
                     else:
                         raise ValueError
 
@@ -896,7 +1007,7 @@ class BraggSpotsWindow(PlotWindow):
         if self._off_train_received:
 
             this_off_pulses = []
-            for pid in self._off_pulse_ids:
+            for pid in self.off_pulse_ids_sp:
 
                 index = 0
                 for key in slices.keys():
@@ -911,8 +1022,8 @@ class BraggSpotsWindow(PlotWindow):
                     index += 1
                     (slices[key])[np.isnan(slices[key])] = - \
                         np.inf  # convert nan to -inf
-                    np.clip(slices[key], self._mask_range[0], 
-                            self._mask_range[1], out=slices[key])
+                    np.clip(slices[key], self.mask_range_sp[0], 
+                            self.mask_range_sp[1], out=slices[key])
                     # clip to restrict between mask values 0-2500
 
                 # background subtraction from Brag_data. Resulting image
@@ -920,8 +1031,8 @@ class BraggSpotsWindow(PlotWindow):
                 mass_from_data = slices['brag_data'] - \
                     slices['background_data']
 
-                np.clip(mass_from_data, self._mask_range[0],
-                        self._mask_range[1], out=mass_from_data)
+                np.clip(mass_from_data, self.mask_range_sp[0],
+                        self.mask_range_sp[1], out=mass_from_data)
                 # normalization = \sum ROI_background
                 # Ńormalized intensity:
                 # \sum (ROI_brag - ROI_background)/ normalization
@@ -938,14 +1049,14 @@ class BraggSpotsWindow(PlotWindow):
             # trains.
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self._ma_window_size:
+            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_ma) \
                     / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self._ma_window_size + 1:
+            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self._ma_window_size
+                    / self.ma_window_size_sp
             else:
                 raise ValueError
 
@@ -979,7 +1090,7 @@ class BraggSpotsWindow(PlotWindow):
         # Profile analysis (Histogram) along a line
         # Horizontal and vertical line region of interests
         # Histograms along these lines plotted in the bottom panel
-        if self._vis_setups.param('Profile Analysis').value():
+        if self._ana_params.child('Profile Analysis').value():
 
             if len(self._profile_line_rois) > 0:
                 for line in self._profile_line_rois:
@@ -1010,18 +1121,18 @@ class BraggSpotsWindow(PlotWindow):
                      .format(1000 * (time.perf_counter() - t0)))
         # If Normalized intensity plot Checkbox is not checked then
         # just plot COM X and Y as a function of pulseIds
-        if not self._vis_setups.param('Normalized Intensity Plot').value():
+        if not self._ana_params.child('Normalized Intensity Plot').value():
             for p in self._plot_items[:-2]:
                 index = self._plot_items.index(p)
                 p.addLegend()
                 if index == 0:
                     p.setTitle(' TrainId :: {}'.format(data.tid))
                 if com_on is not None:
-                    p.plot(self._on_pulse_ids, com_on[:, index], name='On',
+                    p.plot(self.on_pulse_ids_sp, com_on[:, index], name='On',
                            pen=PenFactory.green, symbol='o', 
                            symbolBrush=mkBrush(0, 255, 0, 255))
                 if com_off is not None:
-                    p.plot(self._off_pulse_ids, com_off[:, index], name="Off",
+                    p.plot(self.off_pulse_ids_sp, com_off[:, index], name="Off",
                            pen=PenFactory.purple, symbol='o', 
                            symbolBrush=mkBrush(255, 0, 255, 255))
         # Else plot Normalized intensity.
@@ -1029,11 +1140,11 @@ class BraggSpotsWindow(PlotWindow):
             p = self._plot_items[0]
             p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
-                p.plot(self._on_pulse_ids, com_on[:, -1], name='On',
+                p.plot(self.on_pulse_ids_sp, com_on[:, -1], name='On',
                        pen=PenFactory.green, symbol='o', 
                        symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
-                p.plot(self._off_pulse_ids, com_off[:, -1], name="Off",
+                p.plot(self.off_pulse_ids_sp, com_off[:, -1], name="Off",
                        pen=PenFactory.purple, symbol='o', 
                        symbolBrush=mkBrush(255, 0, 255, 255))
 
@@ -1071,7 +1182,7 @@ class BraggSpotsWindow(PlotWindow):
     # Profile state change triggers this function
     # If profile is checked, adds bottom panels to plot histograms.
     def _profile(self):
-        if self._vis_setups.param('Profile Analysis').value():
+        if self._ana_params.child('Profile Analysis').value():
 
             self._gl_widget.ci.layout.setRowStretchFactor(0, 2)
             self._gl_widget.ci.layout.setRowStretchFactor(1, 2)
@@ -1131,7 +1242,7 @@ class BraggSpotsWindow(PlotWindow):
         for line in self._profile_line_rois:
             self._main_vb.addItem(line)
 
-        if self._vis_setups.param('Profile Analysis').value():
+        if self._ana_params.child('Profile Analysis').value():
             for line in self._profile_line_rois:
                 index = self._profile_line_rois.index(line)
                 self._profile_plot_items[index].clear()
@@ -1149,7 +1260,7 @@ class BraggSpotsWindow(PlotWindow):
     # intensity plot.
 
     def _intensity(self):
-        if self._vis_setups.param('Normalized Intensity Plot').value():
+        if self._ana_params.child('Normalized Intensity Plot').value():
             for plot in self._plot_items[:-2]:
                 self._gl_widget.removeItem(plot)
                 self._plot_items.remove(plot)
@@ -1215,12 +1326,9 @@ class SampleDegradationMonitor(PlotWindow):
     plot_w = 800
     plot_h = 450
 
-    def __init__(self, data, normalization_range, fom_range, *, parent=None):
+    def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
-
-        self._normalization_range = normalization_range
-        self._fom_range = fom_range
 
         self.initUI()
         self.updatePlots()
@@ -1239,6 +1347,14 @@ class SampleDegradationMonitor(PlotWindow):
         p.setLabel('bottom', "Pulse ID")
         p.setTitle(' ')
 
+    def initCtrlUI(self):
+        """Override."""
+        self._ctrl_widget = QtGui.QWidget()
+        self._ctrl_widget.setMinimumWidth(250)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self._ptree)
+        self._ctrl_widget.setLayout(layout)
+
     def updatePlots(self):
         """Override."""
         data = self._data.get()
@@ -1250,8 +1366,8 @@ class SampleDegradationMonitor(PlotWindow):
         # normalize azimuthal integration curves for each pulse
         normalized_pulse_intensities = []
         for pulse_intensity in data.intensity:
-            normalized = pulse_intensity / integrate_curve(
-                pulse_intensity, momentum, self._normalization_range)
+            normalized = normalize_curve(
+                pulse_intensity, momentum, *self.normalization_range_sp)
             normalized_pulse_intensities.append(normalized)
 
         # calculate the different between each pulse and the first one
@@ -1261,7 +1377,7 @@ class SampleDegradationMonitor(PlotWindow):
         # calculate the FOM for each pulse
         foms = []
         for diff in diffs:
-            fom = sub_array_with_range(diff, momentum, self._fom_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')
@@ -1270,6 +1386,19 @@ class SampleDegradationMonitor(PlotWindow):
         p.addItem(bar)
         p.setTitle("Train ID: {}".format(data.tid))
         p.plot()
+
+    def updateParameterTree(self):
+        """Override."""
+        self._pro_params.addChildren([
+            self.normalization_range_param,
+            self.fom_range_param,
+        ])
+
+        params = ptree.Parameter.create(name='params', type='group',
+                                        children=[self._pro_params])
+
+        self._ptree.setParameters(params, showTop=False)
+
 
 @SingletonWindow
 class DrawMaskWindow(AbstractWindow):
@@ -1282,26 +1411,57 @@ class DrawMaskWindow(AbstractWindow):
     def __init__(self, data, *, parent=None):
         super().__init__(data, parent=parent)
 
-        from pyFAI.app.drawmask import MaskImageWidget
+        self._image = silx.gui.plot.Plot2D()
+        self._mask_panel = MaskToolsWidget(plot=self._image)
 
-        self._cw = MaskImageWidget()
-        self._cw._MaskImageWidget__plot2D.setYAxisInverted(True)
-        # normalization options: LINEAR or LOGARITHM
-        self._cw._MaskImageWidget__plot2D.setDefaultColormap(
-            SilxColormap('viridis', normalization=SilxColormap.LINEAR))
-        self.setCentralWidget(self._cw)
-        self.updatePlots()
+        self.initUI()
+        self._updateImage()
 
         logger.info("Open DrawMaskWindow")
 
-    def updatePlots(self):
+    def initUI(self):
         """Override."""
+        self.initPlotUI()
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._image)
+        layout.setStretch(0, 1)
+        layout.addLayout(self.initCtrlUI())
+        self._cw.setLayout(layout)
+
+    def initPlotUI(self):
+        """Override."""
+        self._image.setKeepDataAspectRatio(True)
+        self._image.setYAxisInverted(True)
+        # normalization options: LINEAR or LOGARITHM
+        self._image.setDefaultColormap(
+            SilxColormap('viridis', normalization=SilxColormap.LINEAR))
+
+    def initCtrlUI(self):
+        """Override."""
+        self._image.getMaskAction().setVisible(False)
+
+        self._mask_panel.setDirection(QtGui.QBoxLayout.TopToBottom)
+        self._mask_panel.setMultipleMasks("single")
+
+        update_image_btn = QtGui.QPushButton("Update image")
+        update_image_btn.clicked.connect(self._updateImage)
+        update_image_btn.setMinimumHeight(60)
+
+        ctrl_widget = QtGui.QVBoxLayout()
+        ctrl_widget.addWidget(self._mask_panel)
+        ctrl_widget.addWidget(update_image_btn)
+        ctrl_widget.addStretch(1)
+
+        return ctrl_widget
+
+    def _updateImage(self):
+        """For updating image manually."""
         data = self._data.get()
         if data.empty():
             return
 
-        self._cw.setImageData(data.image_mean)
+        # TODO: apply the mask to data processing on the fly!
+        # self._mask_panel.getSelectionMask()
 
-    def clearPlots(self):
-        """Override"""
-        pass
+        self._image.addImage(data.image_mean)

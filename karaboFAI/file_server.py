@@ -13,8 +13,6 @@ from multiprocessing import Process
 
 from karabo_data import serve_files
 
-from .logger import logger
-
 
 class FileServer(Process):
     """Stream the file data in another process."""
@@ -33,4 +31,3 @@ class FileServer(Process):
     def terminate(self):
         """Override."""
         super().terminate()
-        logger.info("File serving was terminated!")

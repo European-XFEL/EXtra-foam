@@ -39,12 +39,12 @@ class Config(dict):
     # COLOR_MAP str: color map in contour plots, valid options are:
     #                thermal, flame, yellowy, bipolar, spectrum, cyclic,
     #                greyclip, grey
-    # MAX_LOGGING int: maximum number of lines in the logging window of GUI
     #
     # data pipeline setup
     # -------------------
     # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
     #                   will be masked
+    # TIMER_INTERVAL int: QTimer interval in milliseconds.
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
     #                     queues in data pipeline
     # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
@@ -85,11 +85,11 @@ class Config(dict):
     # system config should not appear in the topic config
     _default_sys_config = {
         "TOPIC": '',  # topic name, leave it empty
-        "MAX_LOGGING": 1000,
+        "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
-        "TIMEOUT": 5,
-        "WORKERS": 4,
-        "DOWN_SAMPLE_IMAGE_MEAN": True
+        "TIMEOUT": 0.1,
+        "WORKERS": 1,
+        "DOWN_SAMPLE_IMAGE_MEAN": False
     }
 
     # this is to guard again the topic config defined in the file modifying
