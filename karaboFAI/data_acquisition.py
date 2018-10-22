@@ -18,6 +18,7 @@ import zmq
 from .widgets.pyqtgraph import QtCore
 from .logger import logger
 from .config import config
+from .worker import Worker
 
 
 class TimeoutClient(Client):
@@ -43,20 +44,12 @@ class TimeoutClient(Client):
         return self._deserialize(msg)
 
 
-class DaqWorker(QtCore.QThread):
-
-    # post message in the main GUI
-    messager = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent, out_queue):
+class DataAcquisition(Worker):
+    def __init__(self, out_queue):
         """Initialization."""
-        super().__init__(parent=parent)
-
-        self.messager.connect(parent.onMessageReceived)
+        super().__init__()
 
         self.server_tcp_sp = None
-
-        self.parent().server_tcp_sp.connect(self.onServerTcpChanged)
 
         self._out_queue = out_queue
         self._running = True
@@ -69,7 +62,7 @@ class DaqWorker(QtCore.QThread):
         """Override."""
         self._running = True
         with TimeoutClient(self.server_tcp_sp, timeout=1) as client:
-            self.messager.emit("Bind to server {}".format(self.server_tcp_sp))
+            self.log("Bind to server {}!".format(self.server_tcp_sp))
             while self._running:
                 t0 = time.perf_counter()
 
@@ -95,6 +88,8 @@ class DaqWorker(QtCore.QThread):
                         break
                     except queue.Full:
                         continue
+
+        self.log("DAQ stopped!")
 
     def terminate(self):
         self._running = False

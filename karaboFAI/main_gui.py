@@ -24,7 +24,7 @@ from .widgets import (
     GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
     MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
 )
-from .data_acquisition import DaqWorker
+from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
 from .file_server import FileServer
 from .config import config
@@ -341,10 +341,11 @@ class MainGUI(QtGui.QMainWindow):
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
         # a DAQ worker which acquires the data in another thread
-        self._daq_worker = DaqWorker(self, self._daq_queue)
+        self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._proc_worker = DataProcessor(
-            self, self._daq_queue, self._proc_queue)
+        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+
+        self._initPipeline()
 
         # For real time plot
         self._running = False
@@ -353,6 +354,40 @@ class MainGUI(QtGui.QMainWindow):
         self.timer.start(config["TIMER_INTERVAL"])
 
         self.show()
+
+    def _initPipeline(self):
+        """Set up all signal and slot connections for pipeline."""
+        # *************************************************************
+        # DataProcessor
+        # *************************************************************
+
+        self._daq_worker.message.connect(self.onMessageReceived)
+
+        self.server_tcp_sp.connect(self._daq_worker.onServerTcpChanged)
+
+        # *************************************************************
+        # DataProcessor
+        # *************************************************************
+
+        self._proc_worker.message.connect(self.onMessageReceived)
+
+        self.data_source_sp.connect(self._proc_worker.onSourceChanged)
+        self.geometry_sp.connect(self._proc_worker.onGeometryChanged)
+        self.sample_distance_sp.connect(
+            self._proc_worker.onSampleDistanceChanged)
+        self.center_coordinate_sp.connect(
+            self._proc_worker.onCenterCoordinateChanged)
+        self.integration_method_sp.connect(
+            self._proc_worker.onIntegrationMethodChanged)
+        self.integration_range_sp.connect(
+            self._proc_worker.onIntegrationRangeChanged)
+        self.integration_points_sp.connect(
+            self._proc_worker.onIntegrationPointsChanged)
+        self.mask_range_sp.connect(self._proc_worker.onMaskRangeChanged)
+        self.photon_energy_sp.connect(self._proc_worker.onPhotonEnergyChanged)
+        self.pulse_range_sp.connect(self._proc_worker.onPulseRangeChanged)
+
+        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
     def _initUI(self):
         layout = QtGui.QGridLayout()
@@ -621,8 +656,6 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.setEnabled(False)
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
-
-        logger.info("DAQ stopped!")
 
     def _clearWorkers(self):
         self._proc_worker.terminate()

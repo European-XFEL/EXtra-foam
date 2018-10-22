@@ -28,9 +28,10 @@ from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
 from .proc_utils import down_sample, up_sample
+from ..worker import Worker
 
 
-class DataProcessor(QtCore.QThread):
+class DataProcessor(Worker):
     """Class for data processing.
 
     Attributes:
@@ -54,20 +55,13 @@ class DataProcessor(QtCore.QThread):
         mask_range (tuple):
         image_mask (numpy.ndarray):
     """
-
-    # post message in the main GUI
-    messager = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent, in_queue, out_queue):
+    def __init__(self, in_queue, out_queue):
         """Initialization.
 
         :param Queue in_queue: a queue of data from the ZMQ bridge.
         :param Queue out_queue: a queue of processed data
         """
-        super().__init__(parent=parent)
-
-        self.messager.connect(parent.onMessageReceived)
-        self.messager.emit("Data processor started!")
+        super().__init__()
 
         self._in_queue = in_queue
         self._out_queue = out_queue
@@ -90,23 +84,6 @@ class DataProcessor(QtCore.QThread):
         self.wavelength_sp = None
         self.pulse_range_sp = None
 
-        # -------------------------------------------------------------
-        # define slots' behaviors
-        # -------------------------------------------------------------
-
-        parent.data_source_sp.connect(self.onSourceChanged)
-        parent.geometry_sp.connect(self.onGeometryChanged)
-        parent.sample_distance_sp.connect(self.onSampleDistanceChanged)
-        parent.center_coordinate_sp.connect(self.onCenterCoordinateChanged)
-        parent.integration_method_sp.connect(self.onIntegrationMethodChanged)
-        parent.integration_range_sp.connect(self.onIntegrationRangeChanged)
-        parent.integration_points_sp.connect(self.onIntegrationPointsChanged)
-        parent.mask_range_sp.connect(self.onMaskRangeChanged)
-        parent.photon_energy_sp.connect(self.onPhotonEnergyChanged)
-        parent.pulse_range_sp.connect(self.onPulseRangeChanged)
-
-        parent.image_mask_sgn.connect(self.onImageMaskChanged)
-
         self._running = False
 
     @QtCore.pyqtSlot(str)
@@ -117,7 +94,7 @@ class DataProcessor(QtCore.QThread):
         except (IOError, OSError) as e:
             msg = str(e)
         finally:
-            self.messager.emit(msg)
+            self.log(msg)
 
     @QtCore.pyqtSlot(object)
     def onSourceChanged(self, value):
@@ -166,7 +143,7 @@ class DataProcessor(QtCore.QThread):
     def run(self):
         """Run the data processor."""
         self._running = True
-        logger.debug("Start data processing...")
+        self.log("Data processor started!")
         while self._running:
             try:
                 data = self._in_queue.get(timeout=config['TIMEOUT'])
@@ -200,6 +177,8 @@ class DataProcessor(QtCore.QThread):
 
             logger.debug("Size of in and out queues: {}, {}".format(
                 self._in_queue.qsize(), self._out_queue.qsize()))
+
+        self.log("Data processor stopped!")
 
     def terminate(self):
         self._running = False
