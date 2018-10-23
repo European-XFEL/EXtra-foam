@@ -35,25 +35,28 @@ class DataProcessor(Worker):
     """Class for data processing.
 
     Attributes:
-        source (DataSource): data source.
-        pulse_range (tuple): the min. and max. pulse ID to be processed.
+        source_sp (DataSource): data source.
+        pulse_range_sp (tuple): (min, max) pulse ID to be processed.
             (int, int)
-        _geom (LPDGeometry): geometry.
-        wavelength (float): photon wavelength in meter.
-        sample_distance (float): distance from the sample to the detector
-            plan (orthogonal distance, not along the beam), in meter.
-        cx (int): coordinate of the point of normal incidence along the
-            detector's first dimension, in pixels.
-        cy (int): coordinate of the point of normal incidence along the
-            detector's second dimension, in pixels
-        integration_method (string): the azimuthal integration method
-            supported by pyFAI.
-        integration_range (tuple): the lower and upper range of
+        geom_sp (LPDGeometry): geometry.
+        wavelength_sp (float): photon wavelength in meter.
+        sample_distance_sp (float): distance from the sample to the
+            detector plan (orthogonal distance, not along the beam),
+            in meter.
+        center_coordinate_sp (tuple): (Cx, Cy), where Cx is the
+            coordinate of the point of normal incidence along the
+            detector's second dimension, in pixels, and Cy is the
+            coordinate of the point of normal incidence along the
+            detector's first dimension, in pixels. (int, int)
+        integration_method_sp (string): the azimuthal integration
+            method supported by pyFAI.
+        integration_range_sp (tuple): the lower and upper range of
             the integration radial unit. (float, float)
-        integration_points (int): number of points in the integration
-            output pattern.
-        mask_range (tuple):
-        image_mask (numpy.ndarray):
+        integration_points_sp (int): number of points in the
+            integration output pattern.
+        mask_range_sp (tuple): (min, max), the pixel value outside
+            the range will be clipped to the corresponding edge.
+        image_mask (numpy.ndarray): a 2D mask.
     """
     def __init__(self, in_queue, out_queue):
         """Initialization.
@@ -73,15 +76,15 @@ class DataProcessor(Worker):
         # Note: shared parameters should end with '_sp'
 
         self.source_sp = None
+        self.pulse_range_sp = None
         self.geom_sp = None
+        self.wavelength_sp = None
         self.sample_distance_sp = None
         self.center_coordinate_sp = None
         self.integration_method_sp = None
         self.integration_range_sp = None
         self.integration_points_sp = None
         self.mask_range_sp = None
-        self.wavelength_sp = None
-        self.pulse_range_sp = None
 
         self._running = False
 
