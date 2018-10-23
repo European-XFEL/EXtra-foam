@@ -52,7 +52,6 @@ class DataAcquisition(Worker):
         self.server_tcp_sp = None
 
         self._out_queue = out_queue
-        self._running = True
 
     @QtCore.pyqtSlot(str, str)
     def onServerTcpChanged(self, address, port):
@@ -90,6 +89,3 @@ class DataAcquisition(Worker):
                         continue
 
         self.log("DAQ stopped!")
-
-    def terminate(self):
-        self._running = False

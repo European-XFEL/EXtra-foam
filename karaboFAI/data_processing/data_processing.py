@@ -86,8 +86,6 @@ class DataProcessor(Worker):
         self.integration_points_sp = None
         self.mask_range_sp = None
 
-        self._running = False
-
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
         try:
@@ -181,9 +179,6 @@ class DataProcessor(Worker):
                 self._in_queue.qsize(), self._out_queue.qsize()))
 
         self.log("Data processor stopped!")
-
-    def terminate(self):
-        self._running = False
 
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
