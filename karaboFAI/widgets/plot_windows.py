@@ -937,7 +937,10 @@ class BraggSpotsWindow(PlotWindow):
                 # Collects centre of mass for each pulse in 
                 # this_on_pulses list
                 for pid in self.on_pulse_ids_sp:
-
+                    if pid >= data.image.shape[0]:
+                        logger.error("Pulse ID {} out of range (0 - {})!".
+                             format(pid, data.image.shape[0] - 1))
+                        continue
                     index = 0
                     for key in slices.keys():
                         # slices of regions selected by two ROIs.
@@ -1008,7 +1011,10 @@ class BraggSpotsWindow(PlotWindow):
 
             this_off_pulses = []
             for pid in self.off_pulse_ids_sp:
-
+                if pid > data.image.shape[0]-1:
+                    logger.error("Pulse ID {} out of range (0 - {})!".
+                             format(pid, data.image.shape[0] - 1))
+                    continue
                 index = 0
                 for key in slices.keys():
                     # slices of regions selected by two ROIs.
@@ -1070,7 +1076,6 @@ class BraggSpotsWindow(PlotWindow):
 
             self._on_train_received = False
             self._off_train_received = False
-
         return com_on, com_off
 
     def updatePlots(self):
@@ -1128,25 +1133,25 @@ class BraggSpotsWindow(PlotWindow):
                 if index == 0:
                     p.setTitle(' TrainId :: {}'.format(data.tid))
                 if com_on is not None:
-                    p.plot(self.on_pulse_ids_sp, com_on[:, index], name='On',
-                           pen=PenFactory.green, symbol='o', 
-                           symbolBrush=mkBrush(0, 255, 0, 255))
+                    p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]], 
+                           com_on[:, index], name='On',pen=PenFactory.green, 
+                           symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
                 if com_off is not None:
-                    p.plot(self.off_pulse_ids_sp, com_off[:, index], name="Off",
-                           pen=PenFactory.purple, symbol='o', 
-                           symbolBrush=mkBrush(255, 0, 255, 255))
+                    p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]], 
+                           com_off[:, index], name="Off",pen=PenFactory.purple, 
+                           symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
         # Else plot Normalized intensity.
         else:
             p = self._plot_items[0]
             p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
-                p.plot(self.on_pulse_ids_sp, com_on[:, -1], name='On',
-                       pen=PenFactory.green, symbol='o', 
-                       symbolBrush=mkBrush(0, 255, 0, 255))
+                p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]], 
+                       com_on[:, -1], name='On', pen=PenFactory.green, 
+                       symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
-                p.plot(self.off_pulse_ids_sp, com_off[:, -1], name="Off",
-                       pen=PenFactory.purple, symbol='o', 
-                       symbolBrush=mkBrush(255, 0, 255, 255))
+                p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]], 
+                       com_off[:, -1], name="Off", pen=PenFactory.purple, 
+                       symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
 
         idx = 0
         for p in self._plot_items[-2:]:
