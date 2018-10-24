@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import queue
 import warnings
 
@@ -249,8 +249,6 @@ class DataProcessor(Worker):
                         format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
-        global _integrate1d_imp
-
         def _integrate1d_imp(i):
             """Use for multiprocessing."""
             # convert 'nan' to '-inf', as explained above
@@ -275,10 +273,8 @@ class DataProcessor(Worker):
 
         workers = config["WORKERS"]
         if workers > 1:
-            with ProcessPoolExecutor(max_workers=workers) as executor:
-                chunksize = int(np.ceil(assembled.shape[0] / workers))
-                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]),
-                                    chunksize=chunksize)
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
             momentums, intensities = zip(*rets)
         else:
             momentums = []

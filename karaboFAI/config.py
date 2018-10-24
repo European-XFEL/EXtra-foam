@@ -88,7 +88,7 @@ class Config(dict):
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
-        "WORKERS": 1,
+        "WORKERS": 4,
         "DOWN_SAMPLE_IMAGE_MEAN": True
     }
 
