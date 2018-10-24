@@ -100,9 +100,19 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
-        with File(filename, 'r') as f:
-            self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
-                f, quad_positions)
+        if config['TOPIC'] == 'FXE':
+            with File(filename, 'r') as f:
+                self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
+                    f, quad_positions)
+        elif config['TOPIC'] == 'SPB':
+            try:
+                from karabo_data.geometry2 import AGIPD_1MGeometry
+            except (ImportError, ModuleNotFoundError):
+                logger.debug(
+                    "You are not in the correct branch for SPB experiment!")
+                raise
+
+            self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename).snap()
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChanged(self, value):
@@ -309,14 +319,17 @@ class DataProcessor(Worker):
             tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
             modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
-            # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
-            modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
+            if config["TOPIC"] == "FXE":
+                # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
+                modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
                 if config["TOPIC"] == "FXE":
                     dev = 'LPD'
+                elif config['TOPIC'] == 'SPB':
+                    dev = 'AGIPD'
                 else:
                     dev = ''
 
@@ -340,8 +353,15 @@ class DataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        if config["TOPIC"] == "FXE":
+            expected_shape = (16, 256, 256) 
+        elif config['TOPIC'] == 'SPB':
+            expected_shape = (16, 512, 128)
+        else:
+            pass
+
         if hasattr(modules_data, 'shape') is False \
-                or modules_data.shape[-3:] != (16, 256, 256):
+                or modules_data.shape[-3:] != expected_shape:
             logger.debug("Error in modules data of train {}".format(tid))
             return ProcessedData(tid)
 
