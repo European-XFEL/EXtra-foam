@@ -22,9 +22,9 @@ from silx.gui.colors import Colormap as SilxColormap
 
 from .pyqtgraph import (
     BarGraphItem, GraphicsLayoutWidget, ImageItem,
-    LinearRegionItem, mkBrush, mkPen, QtCore, QtGui, ScatterPlotItem,
-    RectROI,LineROI, LineSegmentROI
-)
+    LineSegmentROI, mkBrush, mkPen, QtCore, QtGui, RectROI,
+    ScatterPlotItem
+    )
 from .pyqtgraph import parametertree as ptree
 
 from ..logger import logger
@@ -719,13 +719,42 @@ class LaserOnOffWindow(PlotWindow):
 
 
 class BraggSpotsWindow(PlotWindow):
+    ''' BraggSpotsClass:
+    
+    This window is used to visualize the moving average of the position
+    of the centre of mass for the user selected region of interest. 
+    User can drag the scalable ROI around the Bragg spot in the image
+    on top left corner of the window. A second ROI is also provided for
+    background subtraction. Two plots on top right corner shows the X 
+    and Y coordinates of the centre of mass for the selected region as
+    a function of On and Off pulseIds provided by the users from 
+    control panel in the main window. Botton left images are the zoomed-
+    in images of the selcted regions. Bottom right plot analyse the 
+    pulsed averaged X and Y coordinates of centre of mass with trainIds.
 
+    There is also an option for profile analysis of the image. 
+    By checking in the option of "Profile Analysis", user 
+    can click anywhere in the image and two histograms will appear in 
+    the bottom that provides profile of image along the horizontal and 
+    vertical line segments passing through the position where mouse 
+    click event happened.
+
+    Another option "Normalized Intensity Plot" when checked in, replaces
+    the Moving average plot on top right corner with the normalized 
+    intensity plot of the region of interest.
+        I = \\sum (ROI_bragg - ROI_background)/(\\sum ROI_background)     
+
+    Author : Ebad Kamil
+    Email  : ebad.kamil@xfel.eu
+    '''
     instructions = \
         ("Green ROI: Place it around Bragg peak.\n\n"
          "White ROI: Place it around Background.\n\n"
          "Scale the Green ROI using handle on top right corner.\n\n"
          "To analyse the profile of image check the Profile "
-         "analysis box and then click on the image on top-left corner."
+         "analysis box and then click on the image on top-left corner.\n\n"
+         "Always Clear History when ROIs positions are changed or parameters " 
+         "in the control panel in the main-gui are modified."
          )
 
     def __init__(self, data, *, parent=None):
@@ -734,7 +763,7 @@ class BraggSpotsWindow(PlotWindow):
 
         self.setGeometry(100, 100, 1600, 1000)
 
-        self._rois = []  # bookeeping Region of interests.
+        self._rois = []  # bookkeeping Region of interests.
         self._hist_train_on_id = []
         self._hist_train_off_id = []
         self._hist_com_on = []
@@ -847,10 +876,11 @@ class BraggSpotsWindow(PlotWindow):
         for roi in self._rois:
             self._main_vb.addItem(roi)
 
-        [self._rois[1].removeHandle(handle)
-         for handle in self._rois[1].getHandles()]
+        for handle in self._rois[1].getHandles():
+            self._rois[1].removeHandle(handle)
 
-        # View Boxes vb1 and vb2 in lower left panels for images in selected ROIs
+        # View Boxes vb1 and vb2 in lower left panels for images in 
+        # selected ROIs
         vb1 = self._gl_widget.addViewBox(row=2, col=0, rowspan=2, colspan=1,  
                                          lockAspect=True, enableMouse=False)
         img1 = ImageItem()
@@ -866,8 +896,9 @@ class BraggSpotsWindow(PlotWindow):
         self._image_items.append(img2)
 
         self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
-        # Plot regions for COM moving averages and history over different trains
-        labelsize = {'font-size':'100pt'}
+        
+        # Plot regions for COM moving averages and history over 
+        # different trains
         p = self._gl_widget.addPlot(
             row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
         self._plot_items.append(p)
@@ -939,7 +970,7 @@ class BraggSpotsWindow(PlotWindow):
                 for pid in self.on_pulse_ids_sp:
                     if pid >= data.image.shape[0]:
                         logger.error("Pulse ID {} out of range (0 - {})!".
-                             format(pid, data.image.shape[0] - 1))
+                                     format(pid, data.image.shape[0] - 1))
                         continue
                     index = 0
                     for key in slices.keys():
@@ -1001,9 +1032,9 @@ class BraggSpotsWindow(PlotWindow):
 
             com_on = self._on_pulses_ma
 
-            # This part at the moment makes no physical sense. Atleast to me.
-            # To be discussed with Dmitry. I added it here for some kind of
-            # history book keeping
+            # This part at the moment makes no physical sense. 
+            # Atleast to me. To be discussed with Dmitry. I added it 
+            # here for some kind of history book keeping
             self._hist_train_on_id.append(data.tid)
             self._hist_com_on.append(np.mean(np.array(com_on), axis=0))
 
@@ -1013,7 +1044,7 @@ class BraggSpotsWindow(PlotWindow):
             for pid in self.off_pulse_ids_sp:
                 if pid > data.image.shape[0]-1:
                     logger.error("Pulse ID {} out of range (0 - {})!".
-                             format(pid, data.image.shape[0] - 1))
+                                 format(pid, data.image.shape[0] - 1))
                     continue
                 index = 0
                 for key in slices.keys():
@@ -1088,7 +1119,7 @@ class BraggSpotsWindow(PlotWindow):
                                       levels=(0, data.image_mean.max()))
         # Size of two region of interests should stay same.
         # Important when Backgorund has to be subtracted from Brag data
-        # TOFIX: Size of ROI should not be independent
+        # TODO: Size of ROI should not be independent
         size_brag = (self._rois[0]).size()
         self._rois[1].setSize(size_brag)
 
@@ -1105,9 +1136,10 @@ class BraggSpotsWindow(PlotWindow):
                         data.image_mean, self._image_items[0])
                     y, x = np.histogram(slice_hist, bins=np.linspace(
                         slice_hist.min(), slice_hist.max(), 50))
-                    self._profile_plot_items[index].plot(x, y, stepMode=True, 
-                                                         fillLevel=0, 
-                                                         brush=(255, 0, 255, 150))
+                    self._profile_plot_items[index].plot(
+                        x, y, stepMode=True, fillLevel=0, 
+                        brush=(255, 0, 255, 150))
+
 
         # Plot average image around two region of interests.
         # Selected Brag region and Background
