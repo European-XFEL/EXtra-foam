@@ -1417,7 +1417,8 @@ class SampleDegradationMonitor(PlotWindow):
             fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        bar = BarGraphItem(x=range(len(foms)), height=foms, width=0.6, brush='b')
+        bar = BarGraphItem(
+            x=range(len(foms)), height=foms, width=0.6, brush='b')
 
         p = self._plot_items[0]
         p.addItem(bar)

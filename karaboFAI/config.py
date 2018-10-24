@@ -48,9 +48,6 @@ class Config(dict):
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
     #                     queues in data pipeline
     # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
-    # WORKERS int: number of processes used in data processing
-    # DOWN_SAMPLE_IMAGE_MEAN bool: True for down-sampling the average image by
-    #                              a factor of two
     #
     # networking
     # ----------
@@ -88,8 +85,6 @@ class Config(dict):
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
-        "WORKERS": 1,
-        "DOWN_SAMPLE_IMAGE_MEAN": False
     }
 
     # this is to guard again the topic config defined in the file modifying

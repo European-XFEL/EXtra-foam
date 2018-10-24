@@ -13,7 +13,6 @@ import logging
 
 from .pyqtgraph import ColorMap, mkPen, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-from ..config import config
 
 
 # TODO: improve

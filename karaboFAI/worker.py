@@ -19,9 +19,14 @@ class Worker(QtCore.QThread):
     def __init__(self):
         super().__init__()
 
+        self._running = False
+
     def log(self, msg):
         """Log information in the main GUI.
 
         :param str msg: message string.
         """
         self.message.emit(msg)
+
+    def terminate(self):
+        self._running = False

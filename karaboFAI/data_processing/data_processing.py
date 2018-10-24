@@ -10,9 +10,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 import queue
-import warnings
 
 import numpy as np
 from scipy import constants
@@ -27,7 +26,7 @@ from ..widgets.pyqtgraph import QtCore
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
-from .proc_utils import down_sample, up_sample
+from .proc_utils import nanmean_para_imp
 from ..worker import Worker
 
 
@@ -35,25 +34,28 @@ class DataProcessor(Worker):
     """Class for data processing.
 
     Attributes:
-        source (DataSource): data source.
-        pulse_range (tuple): the min. and max. pulse ID to be processed.
+        source_sp (DataSource): data source.
+        pulse_range_sp (tuple): (min, max) pulse ID to be processed.
             (int, int)
-        _geom (LPDGeometry): geometry.
-        wavelength (float): photon wavelength in meter.
-        sample_distance (float): distance from the sample to the detector
-            plan (orthogonal distance, not along the beam), in meter.
-        cx (int): coordinate of the point of normal incidence along the
-            detector's first dimension, in pixels.
-        cy (int): coordinate of the point of normal incidence along the
-            detector's second dimension, in pixels
-        integration_method (string): the azimuthal integration method
-            supported by pyFAI.
-        integration_range (tuple): the lower and upper range of
+        geom_sp (LPDGeometry): geometry.
+        wavelength_sp (float): photon wavelength in meter.
+        sample_distance_sp (float): distance from the sample to the
+            detector plan (orthogonal distance, not along the beam),
+            in meter.
+        center_coordinate_sp (tuple): (Cx, Cy), where Cx is the
+            coordinate of the point of normal incidence along the
+            detector's second dimension, in pixels, and Cy is the
+            coordinate of the point of normal incidence along the
+            detector's first dimension, in pixels. (int, int)
+        integration_method_sp (string): the azimuthal integration
+            method supported by pyFAI.
+        integration_range_sp (tuple): the lower and upper range of
             the integration radial unit. (float, float)
-        integration_points (int): number of points in the integration
-            output pattern.
-        mask_range (tuple):
-        image_mask (numpy.ndarray):
+        integration_points_sp (int): number of points in the
+            integration output pattern.
+        mask_range_sp (tuple): (min, max), the pixel value outside
+            the range will be clipped to the corresponding edge.
+        image_mask (numpy.ndarray): a 2D mask.
     """
     def __init__(self, in_queue, out_queue):
         """Initialization.
@@ -67,23 +69,20 @@ class DataProcessor(Worker):
         self._out_queue = out_queue
 
         self.image_mask = None
-        self.image_mask_initialized = False
 
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
 
         self.source_sp = None
+        self.pulse_range_sp = None
         self.geom_sp = None
+        self.wavelength_sp = None
         self.sample_distance_sp = None
         self.center_coordinate_sp = None
         self.integration_method_sp = None
         self.integration_range_sp = None
         self.integration_points_sp = None
         self.mask_range_sp = None
-        self.wavelength_sp = None
-        self.pulse_range_sp = None
-
-        self._running = False
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -179,9 +178,6 @@ class DataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def terminate(self):
-        self._running = False
-
     def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
 
@@ -206,18 +202,19 @@ class DataProcessor(Worker):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
+        assembled_mean = np.zeros_like(assembled[0, ...])
 
-            if config["DOWN_SAMPLE_IMAGE_MEAN"]:
-                # Down-sampling the average image by a factor of two will
-                # reduce the data processing time considerably, while the
-                # azimuthal integration will not be affected.
-                assembled_mean = np.nanmean(down_sample(assembled), axis=0)
-            else:
-                assembled_mean = np.nanmean(assembled, axis=0)
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            start = 0
+            chunk_size = 20
+            while start < assembled.shape[1]:
+                executor.submit(
+                    nanmean_para_imp, assembled_mean, assembled,
+                    start, min(start + chunk_size, assembled.shape[1]))
+                start += chunk_size
 
-        # Convert 'nan' to '-inf' and it will later be converted to 0.
+        # Convert 'nan' to '-inf' and it will later be converted to the
+        # lower range of mask, which is usually 0.
         # We do not convert 'nan' to 0 because: if the lower range of
         # mask is a negative value, 0 will be converted to a value
         # between 0 and 255 later.
@@ -234,24 +231,10 @@ class DataProcessor(Worker):
             base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
         else:
             if self.image_mask.shape != assembled[0].shape:
-                try:
-                    # do up-sample only once
-                    if not self.image_mask_initialized:
-                        old_shape = self.image_mask.shape
-                        self.image_mask = up_sample(
-                            self.image_mask, assembled[0].shape)
-                        self.image_mask_initialized = True
-                        logger.debug("Up-sample mask with shape {} to {}".
-                                     format(old_shape, self.image_mask.shape))
-                    else:
-                        raise ValueError
-                except (TypeError, ValueError):
-                    raise ValueError(
-                        "Invalid mask shape {} for image with shape {}".
-                        format(self.image_mask.shape, assembled[0].shape))
+                raise ValueError(
+                    "Invalid mask shape {} for image with shape {}".
+                    format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
-
-        global _integrate1d_imp
 
         def _integrate1d_imp(i):
             """Use for multiprocessing."""
@@ -275,29 +258,19 @@ class DataProcessor(Worker):
 
             return ret.radial, ret.intensity
 
-        workers = config["WORKERS"]
-        if workers > 1:
-            with ProcessPoolExecutor(max_workers=workers) as executor:
-                chunksize = int(np.ceil(assembled.shape[0] / workers))
-                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]),
-                                    chunksize=chunksize)
-            momentums, intensities = zip(*rets)
-        else:
-            momentums = []
-            intensities = []
-            for i in range(assembled.shape[0]):
-                momentum, intensity = _integrate1d_imp(i)
-                momentums.append(momentum)
-                intensities.append(intensity)
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            rets = executor.map(_integrate1d_imp,
+                                range(assembled.shape[0]))
 
+        momentums, intensities = zip(*rets)
         momentum = momentums[0]
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         # clip the value in the array
-        np.clip(assembled_mean,
-                self.mask_range_sp[0], self.mask_range_sp[1], out=assembled_mean)
+        np.clip(assembled_mean, self.mask_range_sp[0], self.mask_range_sp[1],
+                out=assembled_mean)
         # now 'assembled_mean' contains only numerical values within
         # the mask range
 
@@ -381,9 +354,9 @@ class DataProcessor(Worker):
             logger.debug("Bad shape {} in assembled image of train {}".
                          format(assembled.shape, tid))
             return ProcessedData(tid)
-        # TODO: slice earlier to save computation time
 
-        assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
+        assembled = assembled[
+            self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

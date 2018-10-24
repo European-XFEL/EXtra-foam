@@ -22,10 +22,7 @@ from .worker import Worker
 
 
 class TimeoutClient(Client):
-    """To test next with timeout option.
-
-    TODO: move into karabo_bridge
-    """
+    """A karabo-bridge client with timeout."""
     def __init__(self, *args, timeout=None, **kwargs):
         super().__init__(*args, **kwargs)
         # timeout setting
@@ -52,7 +49,6 @@ class DataAcquisition(Worker):
         self.server_tcp_sp = None
 
         self._out_queue = out_queue
-        self._running = True
 
     @QtCore.pyqtSlot(str, str)
     def onServerTcpChanged(self, address, port):
@@ -90,6 +86,3 @@ class DataAcquisition(Worker):
                         continue
 
         self.log("DAQ stopped!")
-
-    def terminate(self):
-        self._running = False

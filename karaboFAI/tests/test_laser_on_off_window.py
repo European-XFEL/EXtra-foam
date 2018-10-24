@@ -7,7 +7,6 @@ from karaboFAI.widgets import LaserOnOffWindow
 from karaboFAI.data_processing import ProcessedData
 from karaboFAI.main_gui import MainGUI
 
-
 mkQApp()
 
 
@@ -23,19 +22,21 @@ class TestLaserOnOffWindow(unittest.TestCase):
                                             momentum=np.linspace(1, 5, 5),
                                             intensity=(i+1)*intensity))
 
+        self._parent = MainGUI("FXE")
         self._on_pulses_ids = [0, 2]
         self._off_pulses_ids = [1, 3]
         self._normalization_range = (1, 5)
         self._fom_range = (1, 5)
 
-        self._available_modes = list(LaserOnOffWindow.modes.keys())
+        self._available_modes = list(LaserOnOffWindow.available_modes.keys())
 
     def testNormalMode(self):
-        win = LaserOnOffWindow(MainGUI.Data4Visualization())
-        win._on_pulse_ids = self._on_pulses_ids
-        win._off_pulse_ids = self._off_pulses_ids
-        win._normalization_range = self._normalization_range
-        win._fom_range = self._fom_range
+        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
+                               parent=self._parent)
+        win.on_pulse_ids_sp = self._on_pulses_ids
+        win.off_pulse_ids_sp = self._off_pulses_ids
+        win.normalization_range_sp = self._normalization_range
+        win.fom_range_sp = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
@@ -109,11 +110,12 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization())
-        win._on_pulse_ids = self._on_pulses_ids
-        win._off_pulse_ids = self._off_pulses_ids
-        win._normalization_range = self._normalization_range
-        win._fom_range = self._fom_range
+        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
+                               parent=self._parent)
+        win.on_pulse_ids_sp = self._on_pulses_ids
+        win.off_pulse_ids_sp = self._off_pulses_ids
+        win.normalization_range_sp = self._normalization_range
+        win.fom_range_sp = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
@@ -239,11 +241,12 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization())
-        win._on_pulse_ids = self._on_pulses_ids
-        win._off_pulse_ids = self._off_pulses_ids
-        win._normalization_range = self._normalization_range
-        win._fom_range = self._fom_range
+        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
+                               parent=self._parent)
+        win.on_pulse_ids_sp = self._on_pulses_ids
+        win.off_pulse_ids_sp = self._off_pulses_ids
+        win.normalization_range_sp = self._normalization_range
+        win.fom_range_sp = self._fom_range
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])

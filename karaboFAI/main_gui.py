@@ -21,8 +21,9 @@ from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
     BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
-    GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
-    MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
+    GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox,
+    LaserOnOffWindow, MainGuiImageViewWidget, MainGuiLinePlotWidget,
+    SampleDegradationMonitor
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -246,8 +247,8 @@ class MainGUI(QtGui.QMainWindow):
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
         self._laser_mode_cb.addItems(LaserOnOffWindow.available_modes.keys())
-        self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
-        self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
+        self._on_pulse_le = FixedWidthLineEdit(w, "0:8:2")
+        self._off_pulse_le = FixedWidthLineEdit(w, "1:8:2")
         self._normalization_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._fom_range_le = FixedWidthLineEdit(
@@ -484,18 +485,13 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._hostname_le.setFixedHeight(28)
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._port_le.setFixedHeight(28)
         source_name_lb = QtGui.QLabel("Source: ")
         self._source_name_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._source_name_le.setFixedHeight(28)
         pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._pulse_range0_le.setFixedHeight(28)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._pulse_range1_le.setFixedHeight(28)
 
         layout = QtGui.QVBoxLayout()
         sub_layout1 = QtGui.QHBoxLayout()
