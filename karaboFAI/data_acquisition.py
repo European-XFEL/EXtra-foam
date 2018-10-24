@@ -22,10 +22,7 @@ from .worker import Worker
 
 
 class TimeoutClient(Client):
-    """To test next with timeout option.
-
-    TODO: move into karabo_bridge
-    """
+    """A karabo-bridge client with timeout."""
     def __init__(self, *args, timeout=None, **kwargs):
         super().__init__(*args, **kwargs)
         # timeout setting
