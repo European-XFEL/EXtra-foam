@@ -167,3 +167,17 @@ def up_sample(x, shape):
         return ret[:, :shape[1], :shape[2]]
 
     raise ValueError("Array dimension > 3!")
+
+
+def nanmean_para_imp(ret, data, start, end):
+    """Implementation of parallelized nanmean.
+
+    :param numpy.ndarray ret: result 2D array. (x, y)
+    :param numpy.ndarray data: 3D data array. (pulse ID, x, y)
+    :param int start: start index
+    :param int end: end index (not included)
+    """
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings('ignore', category=RuntimeWarning)
+
+        ret[start:end, :] = np.nanmean(data[:, start:end, :], axis=0)

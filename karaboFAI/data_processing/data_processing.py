@@ -12,7 +12,6 @@ All rights reserved.
 import time
 from concurrent.futures import ThreadPoolExecutor
 import queue
-import warnings
 
 import numpy as np
 from scipy import constants
@@ -27,7 +26,7 @@ from ..widgets.pyqtgraph import QtCore
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
-from .proc_utils import down_sample, up_sample
+from .proc_utils import nanmean_para_imp
 from ..worker import Worker
 
 
@@ -70,7 +69,6 @@ class DataProcessor(Worker):
         self._out_queue = out_queue
 
         self.image_mask = None
-        self.image_mask_initialized = False
 
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
@@ -204,18 +202,19 @@ class DataProcessor(Worker):
 
         # original data contains 'nan', 'inf' and '-inf' pixels
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
+        assembled_mean = np.zeros_like(assembled[0, ...])
 
-            if config["DOWN_SAMPLE_IMAGE_MEAN"]:
-                # Down-sampling the average image by a factor of two will
-                # reduce the data processing time considerably, while the
-                # azimuthal integration will not be affected.
-                assembled_mean = np.nanmean(down_sample(assembled), axis=0)
-            else:
-                assembled_mean = np.nanmean(assembled, axis=0)
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            start = 0
+            chunk_size = 20
+            while start < assembled.shape[1]:
+                executor.submit(
+                    nanmean_para_imp, assembled_mean, assembled,
+                    start, min(start + chunk_size, assembled.shape[1]))
+                start += chunk_size
 
-        # Convert 'nan' to '-inf' and it will later be converted to 0.
+        # Convert 'nan' to '-inf' and it will later be converted to the
+        # lower range of mask, which is usually 0.
         # We do not convert 'nan' to 0 because: if the lower range of
         # mask is a negative value, 0 will be converted to a value
         # between 0 and 255 later.
@@ -232,21 +231,9 @@ class DataProcessor(Worker):
             base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
         else:
             if self.image_mask.shape != assembled[0].shape:
-                try:
-                    # do up-sample only once
-                    if not self.image_mask_initialized:
-                        old_shape = self.image_mask.shape
-                        self.image_mask = up_sample(
-                            self.image_mask, assembled[0].shape)
-                        self.image_mask_initialized = True
-                        logger.debug("Up-sample mask with shape {} to {}".
-                                     format(old_shape, self.image_mask.shape))
-                    else:
-                        raise ValueError
-                except (TypeError, ValueError):
-                    raise ValueError(
-                        "Invalid mask shape {} for image with shape {}".
-                        format(self.image_mask.shape, assembled[0].shape))
+                raise ValueError(
+                    "Invalid mask shape {} for image with shape {}".
+                    format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
         def _integrate1d_imp(i):
@@ -271,20 +258,11 @@ class DataProcessor(Worker):
 
             return ret.radial, ret.intensity
 
-        workers = config["WORKERS"]
-        if workers > 1:
-            with ThreadPoolExecutor(max_workers=workers) as executor:
-                rets = executor.map(_integrate1d_imp,
-                                    range(assembled.shape[0]))
-            momentums, intensities = zip(*rets)
-        else:
-            momentums = []
-            intensities = []
-            for i in range(assembled.shape[0]):
-                momentum, intensity = _integrate1d_imp(i)
-                momentums.append(momentum)
-                intensities.append(intensity)
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            rets = executor.map(_integrate1d_imp,
+                                range(assembled.shape[0]))
 
+        momentums, intensities = zip(*rets)
         momentum = momentums[0]
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
