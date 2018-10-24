@@ -274,7 +274,8 @@ class DataProcessor(Worker):
         workers = config["WORKERS"]
         if workers > 1:
             with ThreadPoolExecutor(max_workers=workers) as executor:
-                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
+                rets = executor.map(_integrate1d_imp,
+                                    range(assembled.shape[0]))
             momentums, intensities = zip(*rets)
         else:
             momentums = []
@@ -290,8 +291,8 @@ class DataProcessor(Worker):
                      .format(1000 * (time.perf_counter() - t0)))
 
         # clip the value in the array
-        np.clip(assembled_mean,
-                self.mask_range_sp[0], self.mask_range_sp[1], out=assembled_mean)
+        np.clip(assembled_mean, self.mask_range_sp[0], self.mask_range_sp[1],
+                out=assembled_mean)
         # now 'assembled_mean' contains only numerical values within
         # the mask range
 
@@ -375,8 +376,9 @@ class DataProcessor(Worker):
             logger.debug("Bad shape {} in assembled image of train {}".
                          format(assembled.shape, tid))
             return ProcessedData(tid)
-        # TODO: slice earlier to save computation time
-        assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
+
+        assembled = assembled[
+            self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
