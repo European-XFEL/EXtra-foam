@@ -26,7 +26,7 @@ from ..widgets.pyqtgraph import QtCore
 from .data_model import DataSource, ProcessedData
 from ..config import config
 from ..logger import logger
-from .proc_utils import nanmean_para_imp
+from .proc_utils import nanmean_axis0_para
 from ..worker import Worker
 
 
@@ -211,17 +211,8 @@ class DataProcessor(Worker):
         t0 = time.perf_counter()
 
         # original data contains 'nan', 'inf' and '-inf' pixels
-
-        assembled_mean = np.zeros_like(assembled[0, ...])
-
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            start = 0
-            chunk_size = 20
-            while start < assembled.shape[1]:
-                executor.submit(
-                    nanmean_para_imp, assembled_mean, assembled,
-                    start, min(start + chunk_size, assembled.shape[1]))
-                start += chunk_size
+        assembled_mean = nanmean_axis0_para(assembled,
+                                            max_workers=8, chunk_size=20)
 
         # Convert 'nan' to '-inf' and it will later be converted to the
         # lower range of mask, which is usually 0.

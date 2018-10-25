@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from karaboFAI.data_processing import (
-    down_sample, nanmean_para_imp, normalize_curve, slice_curve, up_sample
+    down_sample, nanmean_axis0_para, normalize_curve, slice_curve, up_sample
 )
 
 
@@ -135,17 +135,17 @@ class TestDataProcessor(unittest.TestCase):
             up_sample(np.arange(16).reshape(2, 2, 2, 2), (2, 4, 4, 4))
 
     def test_nanmeanparaimp(self):
-        ret = np.zeros([4, 2])
         data = np.ones([2, 4, 2])
         data[0, 0, 1] = np.nan
         data[1, 0, 1] = np.nan
         data[1, 2, 0] = np.nan
 
-        from concurrent.futures import ThreadPoolExecutor
+        ret = nanmean_axis0_para(data, chunk_size=2, max_workers=2)
 
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            executor.submit(nanmean_para_imp, ret, data, 0, 2)
-            executor.submit(nanmean_para_imp, ret, data, 2, 4)
+        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., 1.]])
+        np.testing.assert_array_almost_equal(expected, ret)
+
+        ret = nanmean_axis0_para(data, chunk_size=1, max_workers=1)
 
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., 1.]])
         np.testing.assert_array_almost_equal(expected, ret)
