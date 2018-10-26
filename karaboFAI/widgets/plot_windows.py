@@ -42,9 +42,10 @@ class SingletonWindow:
         else:
             try:
                 self.instance.updatePlots()
-                self.instance.show()
             except AttributeError:
                 pass
+
+        self.instance.show()
         return self.instance
 
 
