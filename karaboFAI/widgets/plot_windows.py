@@ -138,7 +138,7 @@ class PlotWindow(AbstractWindow):
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
         self.mask_range_sp = None
-        self.fom_range_sp = None
+        self.diff_integration_range_sp = None
         self.normalization_range_sp = None
         self.ma_window_size_sp = None
         self.laser_mode_sp = None
@@ -147,7 +147,8 @@ class PlotWindow(AbstractWindow):
 
         self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
         self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
-        self.parent().fom_range_sgn.connect(self.onFomRangeChanged)
+        self.parent().diff_integration_range_sgn.connect(
+            self.onDiffIntegrationRangeChanged)
         self.parent().normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
         self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
@@ -171,8 +172,8 @@ class PlotWindow(AbstractWindow):
         self.normalization_range_param = ptree.Parameter.create(
             name="Normalization range", type='str', readonly=True
         )
-        self.fom_range_param = ptree.Parameter.create(
-            name="FOM range", type='str', readonly=True
+        self.diff_integration_range_param = ptree.Parameter.create(
+            name="Diff integration range", type='str', readonly=True
         )
         self.ma_window_size_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
@@ -253,11 +254,11 @@ class PlotWindow(AbstractWindow):
             pass
 
     @QtCore.pyqtSlot(float, float)
-    def onFomRangeChanged(self, lb, ub):
-        self.fom_range_sp = (lb, ub)
+    def onDiffIntegrationRangeChanged(self, lb, ub):
+        self.diff_integration_range_sp = (lb, ub)
         # then update the parameter tree
         try:
-            self._pro_params.child('FOM range').setValue(
+            self._pro_params.child("Diff integration range").setValue(
                 '{}, {}'.format(lb, ub))
         except KeyError:
             pass
@@ -419,7 +420,7 @@ class LaserOnOffWindow(PlotWindow):
     in the lower plot.
     """
     plot_w = 800
-    plot_h = 450
+    plot_h = 320
 
     def __init__(self, data, *, parent=None):
         """Initialization."""
@@ -453,8 +454,9 @@ class LaserOnOffWindow(PlotWindow):
 
     def initPlotUI(self):
         """Override."""
-        self._gl_widget.setFixedSize(self.plot_w, 2*self.plot_h)
+        self._gl_widget.setFixedSize(self.plot_w, 3*self.plot_h)
 
+        # on- and off- pulses
         p1 = self._gl_widget.addPlot()
         self._plot_items.append(p1)
         p1.setLabel('left', "Scattering signal (arb. u.)")
@@ -463,11 +465,21 @@ class LaserOnOffWindow(PlotWindow):
 
         self._gl_widget.nextRow()
 
+        # difference curve
         p2 = self._gl_widget.addPlot()
         self._plot_items.append(p2)
-        p2.setLabel('left', "Integrated difference (arb.)")
-        p2.setLabel('bottom', "Train ID")
-        p2.setTitle(' ')
+        p2.setLabel('left', "Scattering signal (arb. u.)")
+        p2.setLabel('bottom', "Momentum transfer (1/A)")
+        p2.setTitle("'On - Off'")
+
+        self._gl_widget.nextRow()
+
+        # history of integrated absolute difference
+        p3 = self._gl_widget.addPlot()
+        self._plot_items.append(p3)
+        p3.setLabel('left', "Integrated abs. difference (arb.)")
+        p3.setLabel('bottom', "Train ID")
+        p3.setTitle("History of integrated absolute 'On - Off'")
 
     def initCtrlUI(self):
         """Override."""
@@ -487,12 +499,8 @@ class LaserOnOffWindow(PlotWindow):
 
         self._pro_params.addChildren([
             self.normalization_range_param,
-            self.fom_range_param,
+            self.diff_integration_range_param,
             self.ma_window_size_param
-        ])
-
-        self._vis_params.addChildren([
-            {'name': 'Difference scale', 'type': 'int', 'value': 20}
         ])
 
         self._act_params.addChildren([
@@ -502,7 +510,6 @@ class LaserOnOffWindow(PlotWindow):
         params = ptree.Parameter.create(name='params', type='group',
                                         children=[self._exp_params,
                                                   self._pro_params,
-                                                  self._vis_params,
                                                   self._act_params])
 
         self._ptree.setParameters(params, showTop=False)
@@ -607,8 +614,8 @@ class LaserOnOffWindow(PlotWindow):
 
             diff = normalized_on_pulse - normalized_off_pulse
 
-            # calculate figure-of-merit (FOM) and update history
-            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
+            # calculate figure-of-merit and update history
+            fom = slice_curve(diff, momentum, *self.diff_integration_range_sp)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)
@@ -649,32 +656,33 @@ class LaserOnOffWindow(PlotWindow):
         momentum = data.momentum
 
         # upper plot
-        p = self._plot_items[0]
+        p1 = self._plot_items[0]
 
-        p.addLegend(offset=(-60, 20))
+        p1.addLegend(offset=(-60, 20))
 
-        p.setTitle("Train ID: {}".format(data.tid))
+        p1.setTitle("Train ID: {}".format(data.tid))
         if normalized_on_pulse is not None:
             # plot on-pulse
-            p.plot(momentum, normalized_on_pulse,
-                   name="On", pen=PenFactory.purple)
+            p1.plot(momentum, normalized_on_pulse,
+                    name="On", pen=PenFactory.purple)
 
         if normalized_off_pulse is not None:
             assert normalized_on_pulse is not None
 
             # plot off-pulse
-            p.plot(momentum, normalized_off_pulse,
-                   name="Off", pen=PenFactory.green)
+            p1.plot(momentum, normalized_off_pulse,
+                    name="Off", pen=PenFactory.green)
 
             # plot difference between on-/off- pulses
-            diff_scale = self._vis_params.child('Difference scale').value()
-            p.plot(momentum,
-                   diff_scale * (normalized_on_pulse - normalized_off_pulse),
-                   name="difference", pen=PenFactory.yellow)
+            p2 = self._plot_items[1]
+            p2.clear()
+            p2.plot(momentum,
+                    (normalized_on_pulse - normalized_off_pulse),
+                    name="on - off", pen=PenFactory.yellow)
 
         # lower plot
-        p = self._plot_items[1]
-        p.clear()
+        p3 = self._plot_items[2]
+        p3.clear()
 
         s = ScatterPlotItem(size=20,
                             pen=mkPen(None),
@@ -682,15 +690,15 @@ class LaserOnOffWindow(PlotWindow):
         s.addPoints([{'pos': (i, v), 'data': 1} for i, v in
                      zip(self._fom_hist_train_id, self._fom_hist)])
 
-        p.addItem(s)
-        p.plot(self._fom_hist_train_id, self._fom_hist,
-               pen=PenFactory.yellow)
+        p3.addItem(s)
+        p3.plot(self._fom_hist_train_id, self._fom_hist,
+                pen=PenFactory.yellow)
 
     def clearPlots(self):
         """Override.
 
-        The lower plot should be untouched when the new data cannot be
-        used to update the history of FOM.
+        The second and third plot should stay there if no valid data
+        is received.
         """
         self._plot_items[0].clear()
 
@@ -744,7 +752,7 @@ class SampleDegradationMonitor(PlotWindow):
     def initCtrlUI(self):
         """Override."""
         self._ctrl_widget = QtGui.QWidget()
-        self._ctrl_widget.setMinimumWidth(250)
+        self._ctrl_widget.setMinimumWidth(300)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
@@ -768,10 +776,10 @@ class SampleDegradationMonitor(PlotWindow):
         diffs = [p - normalized_pulse_intensities[0]
                  for p in normalized_pulse_intensities]
 
-        # calculate the FOM for each pulse
+        # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.fom_range_sp)[0]
+            fom = slice_curve(diff, momentum, *self.diff_integration_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(
@@ -786,7 +794,7 @@ class SampleDegradationMonitor(PlotWindow):
         """Override."""
         self._pro_params.addChildren([
             self.normalization_range_param,
-            self.fom_range_param,
+            self.diff_integration_range_param,
         ])
 
         params = ptree.Parameter.create(name='params', type='group',

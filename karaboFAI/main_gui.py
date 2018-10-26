@@ -66,7 +66,7 @@ class MainGUI(QtGui.QMainWindow):
     integration_points_sgn = QtCore.pyqtSignal(int)
 
     mask_range_sgn = QtCore.pyqtSignal(float, float)
-    fom_range_sgn = QtCore.pyqtSignal(float, float)
+    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
     normalization_range_sgn = QtCore.pyqtSignal(float, float)
     ma_window_size_sgn = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
@@ -139,7 +139,7 @@ class MainGUI(QtGui.QMainWindow):
 
         #
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/fom_evolution.png")),
+            QtGui.QIcon(os.path.join(root_dir, "icons/on_off_pulses.png")),
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
@@ -243,7 +243,8 @@ class MainGUI(QtGui.QMainWindow):
         self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
         w = 100
-        self._photon_energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le = FixedWidthLineEdit(
+            w, str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
         self._laser_mode_cb.addItems(LaserOnOffWindow.available_modes.keys())
@@ -251,7 +252,7 @@ class MainGUI(QtGui.QMainWindow):
         self._off_pulse_le = FixedWidthLineEdit(w, "1:8:2")
         self._normalization_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._fom_range_le = FixedWidthLineEdit(
+        self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
@@ -336,7 +337,7 @@ class MainGUI(QtGui.QMainWindow):
             self._on_pulse_le,
             self._off_pulse_le,
             self._normalization_range_le,
-            self._fom_range_le,
+            self._diff_integration_range_le,
             self._ma_window_le
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
@@ -459,7 +460,8 @@ class MainGUI(QtGui.QMainWindow):
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
-        fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
+        diff_integration_range_lb = QtGui.QLabel(
+            "Diff integration range (1/A): ")
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
@@ -473,8 +475,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._off_pulse_le, 3, 1, 1, 1)
         layout.addWidget(normalization_range_lb, 4, 0, 1, 1)
         layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
-        layout.addWidget(fom_range_lb, 5, 0, 1, 1)
-        layout.addWidget(self._fom_range_le, 5, 1, 1, 1)
+        layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
+        layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
         layout.addWidget(ma_window_lb, 6, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
 
@@ -772,10 +774,11 @@ class MainGUI(QtGui.QMainWindow):
             return False
 
         try:
-            fom_range = parse_boundary(self._fom_range_le.text())
-            self.fom_range_sgn.emit(*fom_range)
+            diff_integration_range = parse_boundary(
+                self._diff_integration_range_le.text())
+            self.diff_integration_range_sgn.emit(*diff_integration_range)
         except ValueError as e:
-            logger.error("<FOM range>: " + str(e))
+            logger.error("<Diff integration range>: " + str(e))
             return False
 
         try:
@@ -848,7 +851,8 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("<Mask range>: ({}, {})".format(*mask_range))
             logger.info("<Normalization range>: ({}, {})".
                         format(*normalization_range))
-            logger.info("<FOM range>: ({}, {})".format(*fom_range))
+            logger.info("<Diff integration range>: ({}, {})".
+                        format(*diff_integration_range))
             logger.info("<Optical laser mode>: {}".format(mode))
             logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
             logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
