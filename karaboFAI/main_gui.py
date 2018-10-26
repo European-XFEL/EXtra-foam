@@ -98,7 +98,7 @@ class MainGUI(QtGui.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
 
-        self.title = topic + " Azimuthal Integration"
+        self.title = topic + " Azimuthal Integration - main GUI"
         self.setWindowTitle(self.title)
 
         self._cw = QtGui.QWidget()

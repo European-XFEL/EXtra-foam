@@ -54,6 +54,8 @@ class AbstractWindow(QtGui.QMainWindow):
     All the stand-alone windows should follow the interface defined
     in this abstract class.
     """
+    title = ""
+
     def __init__(self, data, *, parent=None):
         """Initialization.
 
@@ -62,11 +64,17 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         super().__init__(parent=parent)
         self._data = data
+
         try:
-            self.setWindowTitle(parent.title)
+            if self.title:
+                title = parent.title + " - " + self.title
+            else:
+                title = parent.title
+
+            self.setWindowTitle(title)
         except AttributeError:
             # for unit test where parent is None
-            self.setWindowTitle("")
+            self.setWindowTitle(self.title)
 
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
@@ -317,6 +325,8 @@ class IndividualPulseWindow(PlotWindow):
     plot_h = 280
     max_plots = 4
 
+    title = "individual pulses"
+
     def __init__(self, data, pulse_ids, *, parent=None, show_image=False):
         """Initialization."""
         super().__init__(data, parent=parent)
@@ -386,7 +396,7 @@ class IndividualPulseWindow(PlotWindow):
 
             if data is not None:
                 p.plot(data.momentum, data.intensity[pulse_id],
-                       name="origin",
+                       name="this pulse",
                        pen=PenFactory.purple)
 
                 p.plot(data.momentum, data.intensity_mean,
@@ -421,6 +431,8 @@ class LaserOnOffWindow(PlotWindow):
     """
     plot_w = 800
     plot_h = 320
+
+    title = "optical laser on/off"
 
     def __init__(self, data, *, parent=None):
         """Initialization."""
@@ -461,7 +473,7 @@ class LaserOnOffWindow(PlotWindow):
         self._plot_items.append(p1)
         p1.setLabel('left', "Scattering signal (arb. u.)")
         p1.setLabel('bottom', "Momentum transfer (1/A)")
-        p1.setTitle(' ')
+        p1.setTitle('Moving average of on- and off- pulses')
 
         self._gl_widget.nextRow()
 
@@ -660,7 +672,6 @@ class LaserOnOffWindow(PlotWindow):
 
         p1.addLegend(offset=(-60, 20))
 
-        p1.setTitle("Train ID: {}".format(data.tid))
         if normalized_on_pulse is not None:
             # plot on-pulse
             p1.plot(momentum, normalized_on_pulse,
@@ -728,6 +739,8 @@ class SampleDegradationMonitor(PlotWindow):
     plot_w = 800
     plot_h = 450
 
+    title = "sample degradation monitor"
+
     def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
@@ -747,7 +760,8 @@ class SampleDegradationMonitor(PlotWindow):
         self._plot_items.append(p)
         p.setLabel('left', "Integrated difference (arb.)")
         p.setLabel('bottom', "Pulse ID")
-        p.setTitle(' ')
+        p.setTitle('Integrated absolute difference with respect to '
+                   'the first pulse')
 
     def initCtrlUI(self):
         """Override."""
@@ -787,7 +801,6 @@ class SampleDegradationMonitor(PlotWindow):
 
         p = self._plot_items[0]
         p.addItem(bar)
-        p.setTitle("Train ID: {}".format(data.tid))
         p.plot()
 
     def updateParameterTree(self):
@@ -817,6 +830,8 @@ class DrawMaskWindow(AbstractWindow):
     detector image and draw a mask for further azimuthal integration.
     The mask must be saved and then loaded in the main GUI manually.
     """
+    title = "draw mask"
+
     def __init__(self, data, *, parent=None):
         super().__init__(data, parent=parent)
 
