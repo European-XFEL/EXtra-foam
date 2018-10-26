@@ -32,6 +32,7 @@ from .misc_widgets import PenFactory, lookupTableFactory
 
 
 class SingletonWindow:
+    """A decorator which allows only one instance."""
     def __init__(self, instance_type):
         self.instance = None
         self.instance_type = instance_type
@@ -40,10 +41,9 @@ class SingletonWindow:
         if self.instance is None:
             self.instance = self.instance_type(*args, **kwargs)
         else:
-            try:
+            if isinstance(self.instance, PlotWindow):
+                self.instance.parent().registerPlotWidget(self.instance)
                 self.instance.updatePlots()
-            except AttributeError:
-                pass
 
         self.instance.show()
         return self.instance
