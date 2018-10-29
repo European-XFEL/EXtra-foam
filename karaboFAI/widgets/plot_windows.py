@@ -32,7 +32,10 @@ from .misc_widgets import PenFactory, lookupTableFactory
 
 
 class SingletonWindow:
-    """A decorator which allows only one instance."""
+    """SingletonWindow decorator.
+
+    A singleton window is only allowed to have one instance.
+    """
     def __init__(self, instance_type):
         self.instance = None
         self.instance_type = instance_type
