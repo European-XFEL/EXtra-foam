@@ -114,7 +114,7 @@ def parse_ids(text):
         else:
             ret.update(item)
 
-    return list(ret)
+    return sorted(ret)
 
 
 def parse_table_widget(widget):
