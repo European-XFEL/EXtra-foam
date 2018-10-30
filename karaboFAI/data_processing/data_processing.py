@@ -140,9 +140,11 @@ class DataProcessor(Worker):
         self.mask_range_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float)
-    def onPhotonEnergyChanged(self, value):
-        constant = 1e-3 * constants.c * constants.h / constants.e
-        self.wavelength_sp = constant / value
+    def onPhotonEnergyChanged(self, photon_energy):
+        """Compute photon wavelength (m) from photon energy (keV)."""
+        # Plank-einstein relation (E=hv)
+        HC_E = 1e-3 * constants.c * constants.h / constants.e
+        self.wavelength_sp = HC_E / photon_energy
 
     @QtCore.pyqtSlot(int, int)
     def onPulseRangeChanged(self, lb, ub):
