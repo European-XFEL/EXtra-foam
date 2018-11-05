@@ -29,15 +29,16 @@ class TimeoutClient(Client):
         if timeout is not None:
             self._socket.RCVTIMEO = 1000 * timeout
 
+        self._recv_ready = False
+
     def next(self):
         """Override."""
-        if self._pattern == zmq.REQ:
+        if self._pattern == zmq.REQ and not self._recv_ready:
             self._socket.send(b'next')
-        return self.recv()
+            self._recv_ready = True
 
-    def recv(self):
-        """Override."""
         msg = self._socket.recv_multipart(copy=False)
+        self._recv_ready = False
         return self._deserialize(msg)
 
 
@@ -65,14 +66,7 @@ class DataAcquisition(Worker):
                 try:
                     data = client.next()
                 except zmq.error.Again:
-                    while self._running:
-                        try:
-                            data = client.recv()
-                            break
-                        except zmq.error.Again:
-                            continue
-                    else:
-                        break
+                    continue
 
                 logger.debug(
                     "Time for retrieving data from the server: {:.1f} ms"
