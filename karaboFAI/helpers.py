@@ -136,10 +136,11 @@ def parse_table_widget(widget):
     row3   5   6
 
     The return value is [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]].
+
+    TODO: add test
     """
     n_row, n_col = widget.rowCount(), widget.columnCount()
     ret = []
     for i in range(n_row):
-        ret.append([float(widget.item(i, 0).text()),
-                    float(widget.item(i, 1).text())])
+        ret.append([float(widget.item(i, j).text()) for j in range(n_col)])
     return ret
