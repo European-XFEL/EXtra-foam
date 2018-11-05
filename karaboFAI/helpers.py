@@ -27,7 +27,7 @@ def parse_boundary(text):
         if "," not in text:
             raise ValueError(msg)
 
-        ret = [float(x.strip()) for x in text.split(",")]
+        ret = [float(x) for x in text.split(",")]
 
         if len(ret) != 2:
             raise ValueError(msg)
