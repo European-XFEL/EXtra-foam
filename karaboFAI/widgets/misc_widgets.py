@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import logging
+
 from .pyqtgraph import ColorMap, mkPen, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
@@ -84,3 +86,19 @@ class InputDialogWithCheckBox(QtGui.QDialog):
 
         return (text_le.text(), ok_cb.isChecked()), \
             result == QtGui.QDialog.Accepted
+
+
+class GuiLogger(logging.Handler):
+    def __init__(self, parent):
+        super().__init__(level=logging.INFO)
+        self.widget = QtGui.QPlainTextEdit(parent)
+
+        logger_font = QtGui.QFont()
+        logger_font.setPointSize(12)
+        self.widget.setFont(logger_font)
+
+        self.widget.setReadOnly(True)
+        self.widget.setMaximumBlockCount(500)
+
+    def emit(self, record):
+        self.widget.appendPlainText(self.format(record))

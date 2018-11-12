@@ -13,22 +13,23 @@ import os
 import time
 import logging
 from queue import Queue, Empty
+from weakref import WeakKeyDictionary
 
-import fabio
 import zmq
 
-from .logger import GuiLogger, logger
+from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
     BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
-    IndividualPulseWindow, InputDialogWithCheckBox, LaserOnOffWindow,
-    MainGuiImageViewWidget, MainGuiLinePlotWidget, SampleDegradationMonitor
+    GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox,
+    LaserOnOffWindow, MainGuiImageViewWidget, MainGuiLinePlotWidget,
+    SampleDegradationMonitor
 )
-from .data_acquisition import DaqWorker
+from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
 from .file_server import FileServer
 from .config import config
-from .helpers import parse_ids, parse_boundary, parse_quadrant_table
+from .helpers import parse_ids, parse_boundary, parse_table_widget
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -48,11 +49,41 @@ class MainGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
+
+    server_tcp_sgn = QtCore.pyqtSignal(str, str)
+    data_source_sgn = QtCore.pyqtSignal(object)
+
+    # (geometry file, quadrant positions)
+    geometry_sgn = QtCore.pyqtSignal(str, list)
+
+    sample_distance_sgn = QtCore.pyqtSignal(float)
+    center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
+    integration_method_sgn = QtCore.pyqtSignal(str)
+    integration_range_sgn = QtCore.pyqtSignal(float, float)
+    integration_points_sgn = QtCore.pyqtSignal(int)
+
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
+    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
+    normalization_range_sgn = QtCore.pyqtSignal(float, float)
+    ma_window_size_sgn = QtCore.pyqtSignal(int)
+    # (mode, on-pulse ids, off-pulse ids)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
+    photon_energy_sgn = QtCore.pyqtSignal(float)
+
+    pulse_range_sgn = QtCore.pyqtSignal(int, int)
+
+    # *************************************************************
+    # other signals
+    # *************************************************************
+
+    image_mask_sgn = QtCore.pyqtSignal(str)  # filename
+
     _height = 1000  # window height, in pixel
     _width = 1380  # window width, in pixel
     _plot_height = 480  # height of the plot widgets, in pixel
-
-    _logger_fontsize = 12  # fontsize in logger window
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -68,18 +99,10 @@ class MainGUI(QtGui.QMainWindow):
         self.setFixedSize(self._width, self._height)
 
         self.title = topic + " Azimuthal Integration"
-        self.setWindowTitle(self.title)
+        self.setWindowTitle(self.title + " - main GUI")
 
         self._cw = QtGui.QWidget()
         self.setCentralWidget(self._cw)
-
-        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-
-        # a DAQ worker which acquires the data in another thread
-        self._daq_worker = None
-        # a data processing worker which processes the data in another thread
-        self._proc_worker = None
 
         # *************************************************************
         # Tool bar
@@ -116,11 +139,11 @@ class MainGUI(QtGui.QMainWindow):
 
         #
         open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/fom_evolution.png")),
+            QtGui.QIcon(os.path.join(root_dir, "icons/on_off_pulses.png")),
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            self._openLaserOnOffWindow)
+            lambda: LaserOnOffWindow(self._data, parent=self))
         tool_bar.addAction(open_laseronoff_window_at)
 
         #
@@ -129,7 +152,7 @@ class MainGUI(QtGui.QMainWindow):
             "Bragg spots",
             self)
         open_bragg_spots_window_at.triggered.connect(
-            self._openBraggSpotsWindow)
+            lambda: BraggSpotsWindow(self._data, parent=self))
         tool_bar.addAction(open_bragg_spots_window_at)
 
         #
@@ -138,7 +161,7 @@ class MainGUI(QtGui.QMainWindow):
             "Sample degradation monitor",
             self)
         open_sample_degradation_monitor_at.triggered.connect(
-            self._openSampleDegradationMonitor)
+            lambda: SampleDegradationMonitor(self._data, parent=self))
         tool_bar.addAction(open_sample_degradation_monitor_at)
 
         #
@@ -146,7 +169,8 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(os.path.join(root_dir, "icons/draw_mask.png")),
             "Draw mask",
             self)
-        self._draw_mask_at.triggered.connect(self._openDrawMaskWindow)
+        self._draw_mask_at.triggered.connect(
+            lambda: DrawMaskWindow(self._data, parent=self))
         tool_bar.addAction(self._draw_mask_at)
 
         #
@@ -172,17 +196,15 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._data = self.Data4Visualization()
 
-        self._lineplot_widget = MainGuiLinePlotWidget(self._data)
+        # book-keeping opened widgets and windows
+        self._plot_widgets = WeakKeyDictionary()
+
+        self._lineplot_widget = MainGuiLinePlotWidget(self._data, parent=self)
         self._lineplot_widget.setFixedSize(
             self._width - self._plot_height - 25, self._plot_height)
 
-        self._image_widget = MainGuiImageViewWidget(self._data)
+        self._image_widget = MainGuiImageViewWidget(self._data, parent=self)
         self._image_widget.setFixedSize(self._plot_height, self._plot_height)
-
-        # book-keeping opened widgets and windows
-        self._opened_windows = dict()
-        self._opened_windows[self._lineplot_widget] = 1
-        self._opened_windows[self._image_widget] = 1
 
         self._mask_image = None
 
@@ -221,15 +243,16 @@ class MainGUI(QtGui.QMainWindow):
         self._ep_setup_gp = CustomGroupBox("Experiment setup")
 
         w = 100
-        self._energy_le = FixedWidthLineEdit(w, str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le = FixedWidthLineEdit(
+            w, str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
         self._laser_mode_cb.setFixedWidth(w)
-        self._laser_mode_cb.addItems(LaserOnOffWindow.modes.keys())
-        self._on_pulse_le = FixedWidthLineEdit(w, "0, 3:16:2")
-        self._off_pulse_le = FixedWidthLineEdit(w, "1, 2:16:2")
+        self._laser_mode_cb.addItems(LaserOnOffWindow.available_modes.keys())
+        self._on_pulse_le = FixedWidthLineEdit(w, "0:8:2")
+        self._off_pulse_le = FixedWidthLineEdit(w, "1:8:2")
         self._normalization_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._fom_range_le = FixedWidthLineEdit(
+        self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
@@ -258,13 +281,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # log window
         # *************************************************************
-        self._log_window = QtGui.QPlainTextEdit()
-        self._log_window.setReadOnly(True)
-        self._log_window.setMaximumBlockCount(config["MAX_LOGGING"])
-        logger_font = QtGui.QFont()
-        logger_font.setPointSize(self._logger_fontsize)
-        self._log_window.setFont(logger_font)
-        self._logger = GuiLogger(self._log_window)
+        self._logger = GuiLogger(self) 
         logging.getLogger().addHandler(self._logger)
 
         # *************************************************************
@@ -315,23 +332,67 @@ class MainGUI(QtGui.QMainWindow):
             self._mask_range_le,
             self._geom_file_le,
             self._quad_positions_tb,
-            self._energy_le,
+            self._photon_energy_le,
             self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
             self._normalization_range_le,
-            self._fom_range_le,
+            self._diff_integration_range_le,
             self._ma_window_le
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
+        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+
+        # a DAQ worker which acquires the data in another thread
+        self._daq_worker = DataAcquisition(self._daq_queue)
+        # a data processing worker which processes the data in another thread
+        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+
+        self._initPipeline()
+
         # For real time plot
-        self._is_running = False
+        self._running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self._updateAll)
-        self.timer.start(10)
+        self.timer.start(config["TIMER_INTERVAL"])
 
         self.show()
+
+    def _initPipeline(self):
+        """Set up all signal and slot connections for pipeline."""
+        # *************************************************************
+        # DataProcessor
+        # *************************************************************
+
+        self._daq_worker.message.connect(self.onMessageReceived)
+
+        self.server_tcp_sgn.connect(self._daq_worker.onServerTcpChanged)
+
+        # *************************************************************
+        # DataProcessor
+        # *************************************************************
+
+        self._proc_worker.message.connect(self.onMessageReceived)
+
+        self.data_source_sgn.connect(self._proc_worker.onSourceChanged)
+        self.geometry_sgn.connect(self._proc_worker.onGeometryChanged)
+        self.sample_distance_sgn.connect(
+            self._proc_worker.onSampleDistanceChanged)
+        self.center_coordinate_sgn.connect(
+            self._proc_worker.onCenterCoordinateChanged)
+        self.integration_method_sgn.connect(
+            self._proc_worker.onIntegrationMethodChanged)
+        self.integration_range_sgn.connect(
+            self._proc_worker.onIntegrationRangeChanged)
+        self.integration_points_sgn.connect(
+            self._proc_worker.onIntegrationPointsChanged)
+        self.mask_range_sgn.connect(self._proc_worker.onMaskRangeChanged)
+        self.photon_energy_sgn.connect(self._proc_worker.onPhotonEnergyChanged)
+        self.pulse_range_sgn.connect(self._proc_worker.onPulseRangeChanged)
+
+        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
     def _initUI(self):
         layout = QtGui.QGridLayout()
@@ -339,7 +400,7 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
         layout.addWidget(self._image_widget, 4, 0, 5, 1)
         layout.addWidget(self._lineplot_widget, 4, 1, 5, 5)
-        layout.addWidget(self._log_window, 9, 0, 2, 4)
+        layout.addWidget(self._logger.widget, 9, 0, 2, 4)
         layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
 
         self._cw.setLayout(layout)
@@ -394,17 +455,18 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Experiment setup panel
         # *************************************************************
-        energy_lb = QtGui.QLabel("Photon energy (keV): ")
+        photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
         laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
         off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
-        fom_range_lb = QtGui.QLabel("FOM range (1/A): ")
+        diff_integration_range_lb = QtGui.QLabel(
+            "Diff integration range (1/A): ")
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(energy_lb, 0, 0, 1, 1)
-        layout.addWidget(self._energy_le, 0, 1, 1, 1)
+        layout.addWidget(photon_energy_lb, 0, 0, 1, 1)
+        layout.addWidget(self._photon_energy_le, 0, 1, 1, 1)
         layout.addWidget(laser_mode_lb, 1, 0, 1, 1)
         layout.addWidget(self._laser_mode_cb, 1, 1, 1, 1)
         layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
@@ -413,8 +475,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addWidget(self._off_pulse_le, 3, 1, 1, 1)
         layout.addWidget(normalization_range_lb, 4, 0, 1, 1)
         layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
-        layout.addWidget(fom_range_lb, 5, 0, 1, 1)
-        layout.addWidget(self._fom_range_le, 5, 1, 1, 1)
+        layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
+        layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
         layout.addWidget(ma_window_lb, 6, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
 
@@ -425,18 +487,13 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._hostname_le.setFixedHeight(28)
         port_lb = QtGui.QLabel("Port: ")
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._port_le.setFixedHeight(28)
         source_name_lb = QtGui.QLabel("Source: ")
         self._source_name_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._source_name_le.setFixedHeight(28)
         pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._pulse_range0_le.setFixedHeight(28)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._pulse_range1_le.setFixedHeight(28)
 
         layout = QtGui.QVBoxLayout()
         sub_layout1 = QtGui.QHBoxLayout()
@@ -499,7 +556,7 @@ class MainGUI(QtGui.QMainWindow):
 
     def _updateAll(self):
         """Update all the plots in the main and child windows."""
-        if self._is_running is False:
+        if not self._running:
             return
 
         # TODO: improve plot updating
@@ -512,7 +569,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        for w in self._opened_windows.keys():
+        for w in self._plot_widgets.keys():
             w.clearPlots()
 
         if self._data.get().empty():
@@ -522,7 +579,7 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         # update the all the plots
-        for w in self._opened_windows.keys():
+        for w in self._plot_widgets.keys():
             w.updatePlots()
 
         logger.debug("Time for updating the plots: {:.1f} ms"
@@ -552,101 +609,16 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         if ok:
-            self._openIndividualPulseWindow(pulse_ids, ret[1])
-
-    def _openIndividualPulseWindow(self, pulse_ids, show_image):
-        w = IndividualPulseWindow(self._data,
+            IndividualPulseWindow(self._data,
                                   pulse_ids,
                                   parent=self,
-                                  show_image=show_image)
-        self._opened_windows[w] = 1
-        w.show()
+                                  show_image=ret[1])
 
-    def _openLaserOnOffWindow(self):
-        try:
-            normalization_range = \
-                parse_boundary(self._normalization_range_le.text())
-        except ValueError as e:
-            logger.error("<Normalization range>: " + str(e))
-            return
-        try:
-            fom_range = parse_boundary(self._fom_range_le.text())
-        except ValueError as e:
-            logger.error("<FOM range>: " + str(e))
-            return
+    def registerPlotWidget(self, instance):
+        self._plot_widgets[instance] = 1
 
-        ma_window_size = int(self._ma_window_le.text())
-        if ma_window_size < 1:
-            logger.error("Moving average window width < 1!")
-            return
-
-        err_msg = "Invalid input! Enter on/off pulse IDs separated by ',' " \
-                  "and/or use the range operator ':'!"
-        try:
-            on_pulse_ids = parse_ids(self._on_pulse_le.text())
-            off_pulse_ids = parse_ids(self._off_pulse_le.text())
-        except ValueError:
-            logger.error(err_msg)
-            return
-
-        if not on_pulse_ids or not off_pulse_ids:
-            logger.error(err_msg)
-            return
-
-        laser_mode = self._laser_mode_cb.currentText()
-        # check pulse ID only when laser on/off pulses are in the same
-        # train (the "normal" mode)
-        if laser_mode == list(LaserOnOffWindow.modes.keys())[0]:
-            common = set(on_pulse_ids).intersection(off_pulse_ids)
-            if common:
-                logger.error(
-                    "Pulse IDs {} are found in both on- and off- pulses.".
-                    format(','.join([str(v) for v in common])))
-                return
-
-        w = LaserOnOffWindow(
-            self._data,
-            on_pulse_ids,
-            off_pulse_ids,
-            normalization_range,
-            fom_range,
-            laser_mode,
-            parent=self,
-            ma_window_size=ma_window_size)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def _openBraggSpotsWindow(self):
-        w = BraggSpotsWindow(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def _openSampleDegradationMonitor(self):
-        try:
-            normalization_range = \
-                parse_boundary(self._normalization_range_le.text())
-        except ValueError as e:
-            logger.error("<Normalization range>: " + str(e))
-            return
-
-        try:
-            fom_range = parse_boundary(self._fom_range_le.text())
-        except ValueError as e:
-            logger.error("<FOM range>: " + str(e))
-            return
-
-        w = SampleDegradationMonitor(self._data, normalization_range, fom_range,
-                                     parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def _openDrawMaskWindow(self):
-        w = DrawMaskWindow(self._data, parent=self)
-        self._opened_windows[w] = 1
-        w.show()
-
-    def removeWindow(self, instance):
-        del self._opened_windows[instance]
+    def unregisterPlotWidget(self, instance):
+        del self._plot_widgets[instance]
 
     def _loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
@@ -655,115 +627,19 @@ class MainGUI(QtGui.QMainWindow):
 
     def _loadMaskImage(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
-        self._mask_image = None
-        if filename:
-            try:
-                self._mask_image = fabio.open(filename).data
-                logger.info("Load mask image at {}".format(filename))
-            except IOError as e:
-                logger.error(e)
-            except Exception:
-                raise
-        else:
-            logger.error("Please specify the mask image file!")
+        if not filename:
+            logger.error("Please specify the image mask file!")
+        self.image_mask_sgn.emit(filename)
 
     def _onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
-        self._is_running = True
+        self._clearQueues()
+        self._running = True  # starting to update plots
 
-        if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
-            data_source = DataSource.CALIBRATED_FILE
-        elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
-            data_source = DataSource.CALIBRATED
-        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
-            data_source = DataSource.ASSEMBLED
-        else:
-            data_source = DataSource.PROCESSED
-
-        pulse_range = (int(self._pulse_range0_le.text()),
-                       int(self._pulse_range1_le.text()))
-
-        geom_file = self._geom_file_le.text()
-        quad_positions = parse_quadrant_table(self._quad_positions_tb)
-        energy = float(self._energy_le.text().strip())
-        sample_distance = float(self._sample_dist_le.text().strip())
-        center_x = float(self._cx_le.text().strip())
-        center_y = float(self._cy_le.text().strip())
-        integration_method = self._itgt_method_cb.currentText()
-        try:
-            integration_range = parse_boundary(self._itgt_range_le.text())
-        except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
+        if not self.updateSharedParameters(True):
             return
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-            return
-
-        integration_points = int(self._itgt_points_le.text().strip())
-
-        client_addr = "tcp://" \
-                      + self._hostname_le.text().strip() \
-                      + ":" \
-                      + self._port_le.text().strip()
-
-        try:
-            self._proc_worker = DataProcessor(
-                self._daq_queue, self._proc_queue,
-                source=data_source,
-                pulse_range=pulse_range,
-                geom_file=geom_file,
-                quad_positions=quad_positions,
-                photon_energy=energy,
-                sample_dist=sample_distance,
-                cx=center_x,
-                cy=center_y,
-                integration_method=integration_method,
-                integration_range=integration_range,
-                integration_points=integration_points,
-                mask_range=mask_range,
-                mask=self._mask_image
-            )
-
-            self._daq_worker = DaqWorker(client_addr, self._daq_queue)
-        except Exception as e:
-            logger.error(e)
-            return
-
-        # remove when Client.next() has timeout option
-        with self._daq_queue.mutex:
-            self._daq_queue.queue.clear()
-
-        logger.debug("Size of in and out queues: {}, {}".
-                     format(self._daq_queue.qsize(), self._proc_queue.qsize()))
-
-        self._daq_worker.start()
         self._proc_worker.start()
-
-        logger.info("DAQ started!")
-        logger.info("Azimuthal integration parameters:\n"
-                    " - pulse range: {}\n"
-                    " - photon energy (keV): {}\n"
-                    " - sample distance (m): {}\n"
-                    " - cx (pixel): {}\n"
-                    " - cy (pixel): {}\n"
-                    " - integration method: '{}'\n"
-                    " - integration range (1/A): ({}, {})\n"
-                    " - number of integration points: {}\n"
-                    " - mask range: ({:d}, {:d})\n"
-                    " - quadrant positions: {}".
-                    format(pulse_range,
-                           energy,
-                           sample_distance,
-                           center_x, center_y,
-                           integration_method,
-                           integration_range[0], integration_range[1],
-                           integration_points,
-                           mask_range[0], mask_range[1],
-                           ", ".join(["({}, {})".format(p[0], p[1])
-                                      for p in quad_positions]))
-                    )
+        self._daq_worker.start()
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
@@ -772,31 +648,34 @@ class MainGUI(QtGui.QMainWindow):
 
     def _onStopDAQ(self):
         """Actions taken before the end of a 'run'."""
-        self._is_running = False
+        self._running = False
 
-        self._daq_worker.terminate()
-        self._proc_worker.terminate()
-
-        # TODO: self._daq_worker.join()
-        self._proc_worker.join()
-
-        with self._daq_queue.mutex:
-            self._daq_queue.queue.clear()
-        with self._proc_queue.mutex:
-            self._proc_queue.queue.clear()
+        self._clearWorkers()
+        self._clearQueues()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
 
-        logger.info("DAQ stopped!")
+    def _clearWorkers(self):
+        self._proc_worker.terminate()
+        self._daq_worker.terminate()
+        self._proc_worker.wait()
+        self._daq_worker.wait()
+
+    def _clearQueues(self):
+        with self._daq_queue.mutex:
+            self._daq_queue.queue.clear()
+        with self._proc_queue.mutex:
+            self._proc_queue.queue.clear()
 
     def _onStartServeFile(self):
         """Actions taken before the start of file serving."""
         folder = self._source_name_le.text().strip()
         port = int(self._port_le.text().strip())
 
+        # process can only be start once
         self._file_server = FileServer(folder, port)
         try:
             # TODO: signal the end of file serving
@@ -822,3 +701,176 @@ class MainGUI(QtGui.QMainWindow):
         self._server_start_btn.setEnabled(True)
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(True)
+
+    def updateSharedParameters(self, log=False):
+        """Update shared parameters for all child windows.
+
+        :params bool log: True for logging shared parameters and False
+            for not.
+
+        Returns bool: True if all shared parameters successfully parsed
+            and emitted, otherwise False.
+        """
+        if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
+            data_source = DataSource.CALIBRATED_FILE
+        elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
+            data_source = DataSource.CALIBRATED
+        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
+            data_source = DataSource.ASSEMBLED
+        else:
+            data_source = DataSource.PROCESSED
+        self.data_source_sgn.emit(data_source)
+
+        try:
+            geom_file = self._geom_file_le.text()
+            quad_positions = parse_table_widget(self._quad_positions_tb)
+            self.geometry_sgn.emit(geom_file, quad_positions)
+        except ValueError as e:
+            logger.error("<Quadrant positions>: " + str(e))
+            return False
+
+        sample_distance = float(self._sample_dist_le.text().strip())
+        if sample_distance <= 0:
+            logger.error("<Sample distance>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.sample_distance_sgn.emit(sample_distance)
+
+        center_x = int(self._cx_le.text().strip())
+        center_y = int(self._cy_le.text().strip())
+        self.center_coordinate_sgn.emit(center_x, center_y)
+
+        integration_method = self._itgt_method_cb.currentText()
+        self.integration_method_sgn.emit(integration_method)
+
+        integration_points = int(self._itgt_points_le.text().strip())
+        if integration_points <= 0:
+            logger.error(
+                "<Integration points>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.integration_points_sgn.emit(integration_points)
+
+        try:
+            integration_range = parse_boundary(self._itgt_range_le.text())
+            self.integration_range_sgn.emit(*integration_range)
+        except ValueError as e:
+            logger.error("<Integration range>: " + str(e))
+            return False
+
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.mask_range_sgn.emit(*mask_range)
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
+            return False
+
+        try:
+            normalization_range = parse_boundary(
+                self._normalization_range_le.text())
+            self.normalization_range_sgn.emit(*normalization_range)
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return False
+
+        try:
+            diff_integration_range = parse_boundary(
+                self._diff_integration_range_le.text())
+            self.diff_integration_range_sgn.emit(*diff_integration_range)
+        except ValueError as e:
+            logger.error("<Diff integration range>: " + str(e))
+            return False
+
+        try:
+            # check pulse ID only when laser on/off pulses are in the same
+            # train (the "normal" mode)
+            mode = self._laser_mode_cb.currentText()
+            on_pulse_ids = parse_ids(self._on_pulse_le.text())
+            off_pulse_ids = parse_ids(self._off_pulse_le.text())
+            if mode == list(LaserOnOffWindow.available_modes.keys())[0]:
+                common = set(on_pulse_ids).intersection(off_pulse_ids)
+                if common:
+                    logger.error(
+                        "Pulse IDs {} are found in both on- and off- pulses.".
+                        format(','.join([str(v) for v in common])))
+                    return False
+
+            self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
+        except ValueError:
+            logger.error("Invalid input! Enter on/off pulse IDs separated "
+                         "by ',' and/or use the range operator ':'!")
+            return False
+
+        try:
+            window_size = int(self._ma_window_le.text())
+            if window_size < 1:
+                logger.error("Moving average window width < 1!")
+                return False
+            self.ma_window_size_sgn.emit(window_size)
+        except ValueError as e:
+            logger.error("<Moving average window size>: " + str(e))
+            return False
+
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.photon_energy_sgn.emit(photon_energy)
+
+        pulse_range = (int(self._pulse_range0_le.text()),
+                       int(self._pulse_range1_le.text()))
+        if pulse_range[1] <= 0:
+            logger.error("<Pulse range>: Invalid input!")
+            return False
+        else:
+            self.pulse_range_sgn.emit(*pulse_range)
+
+        server_hostname = self._hostname_le.text().strip()
+        server_port = self._port_le.text().strip()
+        self.server_tcp_sgn.emit(server_hostname, server_port)
+
+        if log:
+            logger.info("--- Shared parameters ---")
+            logger.info("<Host name>, <Port>: {}, {}".
+                        format(server_hostname, server_port))
+            logger.info("<Data source>: {}".format(data_source))
+            logger.info("<Geometry file>: {}".format(geom_file))
+            logger.info("<Quadrant positions>: [{}]".format(
+                ", ".join(["[{}, {}]".format(p[0], p[1])
+                           for p in quad_positions])))
+            logger.info("<Sample distance (m)>: {}".format(sample_distance))
+            logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
+                        format(center_x, center_y))
+            logger.info("<Cy (pixel)>: {:d}".format(center_y))
+            logger.info("<Integration method>: '{}'".format(integration_method))
+            logger.info("<Integration range (1/A)>: ({}, {})".
+                        format(*integration_range))
+            logger.info("<Number of integration points>: {}".
+                        format(integration_points))
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
+            logger.info("<Normalization range>: ({}, {})".
+                        format(*normalization_range))
+            logger.info("<Diff integration range>: ({}, {})".
+                        format(*diff_integration_range))
+            logger.info("<Optical laser mode>: {}".format(mode))
+            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
+            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
+            logger.info("<Moving average window size>: {}".
+                        format(window_size))
+            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+            logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
+
+        return True
+
+    @QtCore.pyqtSlot(str)
+    def onMessageReceived(self, msg):
+        logger.info(msg)
+
+    def closeEvent(self, QCloseEvent):
+        super().closeEvent(QCloseEvent)
+
+        self._clearWorkers()
+
+        if self._file_server is not None and self._file_server.is_alive():
+            self._file_server.terminate()

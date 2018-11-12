@@ -39,18 +39,15 @@ class Config(dict):
     # COLOR_MAP str: color map in contour plots, valid options are:
     #                thermal, flame, yellowy, bipolar, spectrum, cyclic,
     #                greyclip, grey
-    # MAX_LOGGING int: maximum number of lines in the logging window of GUI
     #
     # data pipeline setup
     # -------------------
     # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
     #                   will be masked
+    # TIMER_INTERVAL int: QTimer interval in milliseconds.
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
     #                     queues in data pipeline
     # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
-    # WORKERS int: number of processes used in data processing
-    # DOWN_SAMPLE_IMAGE_MEAN bool: True for down-sampling the average image by
-    #                              a factor of two
     #
     # networking
     # ----------
@@ -85,11 +82,9 @@ class Config(dict):
     # system config should not appear in the topic config
     _default_sys_config = {
         "TOPIC": '',  # topic name, leave it empty
-        "MAX_LOGGING": 1000,
+        "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
-        "TIMEOUT": 5,
-        "WORKERS": 4,
-        "DOWN_SAMPLE_IMAGE_MEAN": True
+        "TIMEOUT": 0.1,
     }
 
     # this is to guard again the topic config defined in the file modifying
@@ -117,21 +112,24 @@ class Config(dict):
     # all the keys in '_allowed_topic_config_keys'.
 
     _default_spb_config = {
-        "SERVER_ADDR": '',
-        "SERVER_PORT": '',
-        "SOURCE_NAME": '',
+        "SERVER_ADDR": '10.253.0.51',
+        "SERVER_PORT": 45012,
+        "SOURCE_NAME": 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
         "SOURCE_TYPE": 1,
-        "GEOMETRY_FILE": '',
-        "QUAD_POSITIONS": '',
+        "GEOMETRY_FILE": '/home/spbonc/xfel_geom_AgBehenate_20181012.geom',
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
-        "INTEGRATION_RANGE": (0.2, 5),
+        "INTEGRATION_RANGE": (1e-3, 0.1),
         "INTEGRATION_POINTS": 512,
         "PHOTON_ENERGY": 9.3,
-        "DISTANCE": 0.2,
-        "CENTER_Y": 620,
-        "CENTER_X": 580,
-        "PIXEL_SIZE": 0.5e-3,
+        "DISTANCE": 5.5,
+        "CENTER_Y": 490,
+        "CENTER_X": 590,
+        "PIXEL_SIZE": 0.2e-3,
         "COLOR_MAP": 'flame',
         "MASK_RANGE": (0, 2500)
     }

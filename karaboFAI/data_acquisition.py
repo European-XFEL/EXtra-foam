@@ -10,42 +10,73 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from threading import Thread
-from queue import Full
+import queue
 
 from karabo_bridge import Client
+import zmq
 
+from .widgets.pyqtgraph import QtCore
 from .logger import logger
 from .config import config
+from .worker import Worker
 
 
-class DaqWorker(Thread):
-    def __init__(self, address, out_queue):
+class TimeoutClient(Client):
+    """A karabo-bridge client with timeout."""
+    def __init__(self, *args, timeout=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # timeout setting
+        if timeout is not None:
+            self._socket.RCVTIMEO = 1000 * timeout
+
+        self._recv_ready = False
+
+    def next(self):
+        """Override."""
+        if self._pattern == zmq.REQ and not self._recv_ready:
+            self._socket.send(b'next')
+            self._recv_ready = True
+
+        msg = self._socket.recv_multipart(copy=False)
+        self._recv_ready = False
+        return self._deserialize(msg)
+
+
+class DataAcquisition(Worker):
+    def __init__(self, out_queue):
         """Initialization."""
         super().__init__()
 
-        self._address = address
+        self.server_tcp_sp = None
+
         self._out_queue = out_queue
-        self._running = True
+
+    @QtCore.pyqtSlot(str, str)
+    def onServerTcpChanged(self, address, port):
+        self.server_tcp_sp = "tcp://" + address + ":" + port
 
     def run(self):
         """Override."""
-        logger.debug("Start data acquisition...")
-        with Client(self._address) as client:
-            while self._running is True:
-
+        self._running = True
+        with TimeoutClient(self.server_tcp_sp, timeout=1) as client:
+            self.log("Bind to server {}!".format(self.server_tcp_sp))
+            while self._running:
                 t0 = time.perf_counter()
 
-                data = client.next()
+                try:
+                    data = client.next()
+                except zmq.error.Again:
+                    continue
 
                 logger.debug(
                     "Time for retrieving data from the server: {:.1f} ms"
                     .format(1000 * (time.perf_counter() - t0)))
 
-                try:
-                    self._out_queue.put(data, timeout=config["TIMEOUT"])
-                except Full:
-                    continue
+                while self._running:
+                    try:
+                        self._out_queue.put(data, timeout=config['TIMEOUT'])
+                        break
+                    except queue.Full:
+                        continue
 
-    def terminate(self):
-        self._running = False
+        self.log("DAQ stopped!")

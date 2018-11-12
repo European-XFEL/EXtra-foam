@@ -51,11 +51,3 @@ def create_logger():
 
 logger = create_logger()
 
-
-class GuiLogger(logging.Handler):
-    def __init__(self, edit):
-        super().__init__(level=logging.INFO)
-        self._edit = edit
-
-    def emit(self, record):
-        self._edit.appendPlainText(self.format(record))
