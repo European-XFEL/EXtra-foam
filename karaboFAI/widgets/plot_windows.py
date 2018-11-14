@@ -9,9 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
-
 from collections import deque, OrderedDict
+import time
 
 import numpy as np
 from scipy import ndimage
@@ -719,7 +718,7 @@ class LaserOnOffWindow(PlotWindow):
 
 
 class BraggSpotsWindow(PlotWindow):
-    ''' BraggSpotsClass:
+    """ BraggSpotsClass:
     
     This window is used to visualize the moving average of the position
     of the centre of mass for the user selected region of interest. 
@@ -746,9 +745,9 @@ class BraggSpotsWindow(PlotWindow):
 
     Author : Ebad Kamil
     Email  : ebad.kamil@xfel.eu
-    '''
-    instructions = \
-        ("Green ROI: Place it around Bragg peak.\n\n"
+    """
+    instructions = (
+         "Green ROI: Place it around Bragg peak.\n\n"
          "White ROI: Place it around Background.\n\n"
          "Scale the Green ROI using handle on top right corner.\n\n"
          "To analyse the profile of image check the Profile "
@@ -860,16 +859,16 @@ class BraggSpotsWindow(PlotWindow):
                           [50, 50], pen=mkPen((255, 255, 255), width=2))
             self._rois.append(roi)
         else:
-            centre_x, centre_y = data.image_mean.shape
+            img_width, img_height = data.image_mean.shape
             # Define First Region of interests.Around Brag Data
             # Max Bounds for region of interest defined
-            roi = RectROI([int(centre_x/2), int(centre_y/2)], [50, 50], 
-                           maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x), 
+            roi = RectROI([int(img_width/2), int(img_height/2)], [50, 50], 
+                           maxBounds=QtCore.QRectF(0, 0, img_height, img_width), 
                            pen=mkPen((0, 255, 0), width=2))
             self._rois.append(roi)
             # Define Second Region of interests.Around Background
-            roi = RectROI([int(centre_x/2)-100, int(centre_y/2)-100],[50, 50], 
-                          maxBounds=QtCore.QRectF(0, 0, centre_y, centre_x),
+            roi = RectROI([int(img_width/2)-100, int(img_height/2)-100],[50, 50], 
+                          maxBounds=QtCore.QRectF(0, 0, img_height, img_width),
                           pen=mkPen((255, 255, 255), width=2))
             self._rois.append(roi)
 
@@ -954,8 +953,7 @@ class BraggSpotsWindow(PlotWindow):
 
         # slices dictionary is used to store array region selected by 
         # two ROIs around brag data and background
-        keys = ['brag_data', 'background_data']
-        slices = dict.fromkeys(keys)
+        slices = OrderedDict({'brag_data':None, 'background_data':None})
 
         com_on = None
         com_off = None
@@ -972,8 +970,8 @@ class BraggSpotsWindow(PlotWindow):
                         logger.error("Pulse ID {} out of range (0 - {})!".
                                      format(pid, data.image.shape[0] - 1))
                         continue
-                    index = 0
-                    for key in slices.keys():
+
+                    for index, key in enumerate(slices):
                         # slices of regions selected by two ROIs.
                         # One around brag spot and one around background
                         # key : brag_data stores array region around 
@@ -983,9 +981,9 @@ class BraggSpotsWindow(PlotWindow):
 
                         slices[key] = self._rois[index].getArrayRegion(
                             data.image[pid], self._image_items[0])
-                        index += 1
-                        (slices[key])[np.isnan(slices[key])] = - \
-                            np.inf  # convert nan to -inf
+                        # convert nan to -inf
+                        (slices[key])[np.isnan(slices[key])] = - np.inf
+                        
                         np.clip(slices[key],self.mask_range_sp[0], 
                                 self.mask_range_sp[1], out=slices[key])
                         # clip to restrict between mask values 0-2500
@@ -999,8 +997,8 @@ class BraggSpotsWindow(PlotWindow):
                     # normalization = \sum ROI_background
                     # Ńormalized intensity: 
                     # \sum (ROI_brag - ROI_background)/ normalization
-                    intensity = np.sum(
-                        mass_from_data/np.sum(slices['background_data']))
+                    normalization = np.sum(slices['background_data'])
+                    intensity = np.sum(mass_from_data)/normalization
                     # Centre of mass
                     mass = ndimage.measurements.center_of_mass(mass_from_data)
 
@@ -1046,8 +1044,8 @@ class BraggSpotsWindow(PlotWindow):
                     logger.error("Pulse ID {} out of range (0 - {})!".
                                  format(pid, data.image.shape[0] - 1))
                     continue
-                index = 0
-                for key in slices.keys():
+                
+                for index, key in enumerate(slices):
                     # slices of regions selected by two ROIs.
                     # One around brag spot and one around background
                     # key : brag_data stores array region around brag 
@@ -1056,9 +1054,9 @@ class BraggSpotsWindow(PlotWindow):
                     #       background ROI
                     slices[key] = self._rois[index].getArrayRegion(
                         data.image[pid], self._image_items[0])
-                    index += 1
-                    (slices[key])[np.isnan(slices[key])] = - \
-                        np.inf  # convert nan to -inf
+                    # convert nan to -inf
+                    (slices[key])[np.isnan(slices[key])] = - np.inf
+                          
                     np.clip(slices[key], self.mask_range_sp[0], 
                             self.mask_range_sp[1], out=slices[key])
                     # clip to restrict between mask values 0-2500
@@ -1073,8 +1071,9 @@ class BraggSpotsWindow(PlotWindow):
                 # normalization = \sum ROI_background
                 # Ńormalized intensity:
                 # \sum (ROI_brag - ROI_background)/ normalization
-                intensity = np.sum(
-                    mass_from_data/np.sum(slices['background_data']))
+                normalization = np.sum(slices['background_data'])
+                intensity = np.sum(mass_from_data)/normalization
+
                 # Centre of mass
                 mass = ndimage.measurements.center_of_mass(mass_from_data)
 
@@ -1143,8 +1142,7 @@ class BraggSpotsWindow(PlotWindow):
 
         # Plot average image around two region of interests.
         # Selected Brag region and Background
-        for roi in self._rois:
-            index = self._rois.index(roi)
+        for index, roi in enumerate(self._rois):
             self._image_items[index+1].setImage(roi.getArrayRegion(
                 np.flip(data.image_mean, axis=0), 
                 self._image_items[0]), levels=(0, data.image_mean.max()))
@@ -1159,8 +1157,8 @@ class BraggSpotsWindow(PlotWindow):
         # If Normalized intensity plot Checkbox is not checked then
         # just plot COM X and Y as a function of pulseIds
         if not self._ana_params.child('Normalized Intensity Plot').value():
-            for p in self._plot_items[:-2]:
-                index = self._plot_items.index(p)
+            for index, p in enumerate(self._plot_items[:-2]):
+                #index = self._plot_items.index(p)
                 p.addLegend()
                 if index == 0:
                     p.setTitle(' TrainId :: {}'.format(data.tid))
@@ -1185,8 +1183,7 @@ class BraggSpotsWindow(PlotWindow):
                        com_off[:, -1], name="Off", pen=PenFactory.purple, 
                        symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
 
-        idx = 0
-        for p in self._plot_items[-2:]:
+        for idx, p in enumerate(self._plot_items[-2:]):
             p.clear()
             if self._hist_com_off:
                 s = ScatterPlotItem(size=10,
@@ -1214,7 +1211,6 @@ class BraggSpotsWindow(PlotWindow):
                        np.array(self._hist_com_on)[:, idx],
                        pen=PenFactory.green, name='On')
                 p.addLegend()
-            idx += 1
 
     # Profile state change triggers this function
     # If profile is checked, adds bottom panels to plot histograms.
