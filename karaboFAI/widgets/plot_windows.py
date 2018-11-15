@@ -994,9 +994,7 @@ class BraggSpotsWindow(PlotWindow):
                     # background subtraction from Bragg_data.
                     # Resulting image to be used for COM evaluation.
                     mass_from_data = (
-                                      slices['bragg_data'] -
-                                      slices['background_data']
-                                     )
+                        slices['bragg_data'] - slices['background_data'])
                     np.clip(mass_from_data, self.mask_range_sp[0],
                             self.mask_range_sp[1], out=mass_from_data)
                     # normalization = \sum ROI_background
@@ -1072,9 +1070,7 @@ class BraggSpotsWindow(PlotWindow):
                 # background subtraction from Bragg_data. Resulting image
                 # to be used for COM evaluation.
                 mass_from_data = (
-                                  slices['bragg_data'] -
-                                  slices['background_data']
-                                 )
+                    slices['bragg_data'] - slices['background_data'])
 
                 np.clip(mass_from_data, self.mask_range_sp[0],
                         self.mask_range_sp[1], out=mass_from_data)
