@@ -157,9 +157,33 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
+    _default_jfrau_config = {
+        "SERVER_ADDR": "",
+        "SERVER_PORT": 2583,
+        "SOURCE_NAME": "",
+        "SOURCE_TYPE": 1,
+        "GEOMETRY_FILE": "",
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
+        "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
+                                'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
+        "INTEGRATION_RANGE": (0.2, 5),
+        "INTEGRATION_POINTS": 512,
+        "PHOTON_ENERGY": 9.3,
+        "DISTANCE": 0.2,
+        "CENTER_Y": 620,
+        "CENTER_X": 580,
+        "PIXEL_SIZE": 0.5e-3,
+        "COLOR_MAP": 'thermal',
+        "MASK_RANGE": (0, 2500)
+    }
+
     _default_topic_configs = {
         "SPB": _default_spb_config,
-        "FXE": _default_fxe_config
+        "FXE": _default_fxe_config,
+        "JFRAU": _default_jfrau_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")

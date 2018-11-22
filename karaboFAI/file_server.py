@@ -11,7 +11,8 @@ All rights reserved.
 """
 from multiprocessing import Process
 
-from karabo_data import serve_files
+from karabo_data import ZMQStreamer, RunDirectory, stack_detector_data
+from .config import config
 
 
 class FileServer(Process):
@@ -26,7 +27,25 @@ class FileServer(Process):
 
     def run(self):
         """Override."""
-        serve_files(self._folder, self._port)
+        self._stream()
+
+    def _stream(self):
+        streamer = ZMQStreamer(self._port)
+        streamer.start()
+
+        run = RunDirectory(self._folder)
+        # TOPIC to be later replaced by Detector type LPD, AGIPD, JFRAU
+        if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
+            devices = [("*DET/*CH0:xtdf", "image.data")]
+        elif config["TOPIC"] == "JFRAU":
+            devices = [("*/DET/*:daqOutput", "data.adc")]
+        else:
+            devices = None
+
+        for tid, data in run.trains(devices=devices, require_all=True):
+            if data:
+                streamer.feed(data)
+        streamer.stop()
 
     def terminate(self):
         """Override."""
