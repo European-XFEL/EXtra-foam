@@ -190,7 +190,7 @@ class DataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def process_assembled_data(self, assembled1, tid):
+    def process_assembled_data(self, assembled, tid):
         """Process assembled image data.
 
         :param numpy.ndarray assembled: assembled image data.
@@ -200,7 +200,9 @@ class DataProcessor(Worker):
         """
         # This needs to be checked. Sometimes throws an error readonly
         # when trying to convert nan to -inf. Dirty hack -> to copy
-        assembled = np.copy(assembled1)
+        if config["TOPIC"] == 'JungFrau':
+            assembled = np.copy(assembled)
+
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
                                        poni1=self.center_coordinate_sp[1],
                                        poni2=self.center_coordinate_sp[0],
@@ -325,24 +327,21 @@ class DataProcessor(Worker):
 
             try:
                 if config["TOPIC"] == "FXE":
-                    dev = 'LPD'
                     modules_data = stack_detector_data(
-                        data, "image.data", only=dev)
+                        data, "image.data", only='LPD')
                 elif config['TOPIC'] == 'SPB':
-                    dev = 'AGIPD'
                     modules_data = stack_detector_data(
-                        data, "image.data", only=dev)
-                elif config["TOPIC"] == 'JFRAU':
+                        data, "image.data", only='AGIPD')
+                elif config["TOPIC"] == 'JungFrau':
                     source = next(iter(metadata.values()))["source"]
                     # stack_detector data at the moment doesn't support
                     # JungFrau detector because of different naming
                     # convention for source types.
-                    modules_data = data[source]['data.adc']
+                    modules_data = data[source]['data.adc'][:,np.newaxis,:,:]
                     # Add new axis which mimics module_number which at
                     # the moment is only 1. Once we will have stack
                     # detector data for JungFrau we will have
                     # required shape anyway (num_pulses, modules, y,x)
-                    modules_data = modules_data[:,np.newaxis,:,:]
 
             # To handle a bug when using the recent karabo_data on the
             # old data set:
@@ -366,7 +365,7 @@ class DataProcessor(Worker):
             expected_shape = (16, 256, 256)
         elif config['TOPIC'] == 'SPB':
             expected_shape = (16, 512, 128)
-        elif config['TOPIC'] == 'JFRAU':
+        elif config['TOPIC'] == 'JungFrau':
             expected_shape = (1, 512, 1024)
 
         if hasattr(modules_data, 'shape') is False \
@@ -377,7 +376,7 @@ class DataProcessor(Worker):
         t0 = time.perf_counter()
         if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-        elif config["TOPIC"] == "JFRAU":
+        elif config["TOPIC"] == "JungFrau":
             # Just for the time-being to be consistent with other
             # detector types.
             # Will have some kind of assembly/stacking in case of 2 modules
@@ -392,7 +391,6 @@ class DataProcessor(Worker):
 
         assembled = assembled[
             self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
-        #print(".. shape of assembled", assembled[0])
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

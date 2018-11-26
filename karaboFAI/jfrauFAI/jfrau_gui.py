@@ -22,5 +22,5 @@ def jfrau_gui(argv=None):
 
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
-    ex = MainGUI("JFRAU", screen_size=screen_size)
+    ex = MainGUI("JungFrau", screen_size=screen_size)
     app.exec_()

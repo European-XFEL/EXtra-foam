@@ -183,7 +183,7 @@ class Config(dict):
     _default_topic_configs = {
         "SPB": _default_spb_config,
         "FXE": _default_fxe_config,
-        "JFRAU": _default_jfrau_config
+        "JungFrau": _default_jfrau_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")

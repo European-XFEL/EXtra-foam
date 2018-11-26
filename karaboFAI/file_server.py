@@ -37,7 +37,7 @@ class FileServer(Process):
         # TOPIC to be later replaced by Detector type LPD, AGIPD, JFRAU
         if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
             devices = [("*DET/*CH0:xtdf", "image.data")]
-        elif config["TOPIC"] == "JFRAU":
+        elif config["TOPIC"] == "JungFrau":
             devices = [("*/DET/*:daqOutput", "data.adc")]
         else:
             devices = None
