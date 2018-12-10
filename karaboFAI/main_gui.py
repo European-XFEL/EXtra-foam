@@ -20,10 +20,12 @@ import zmq
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    BraggSpotsWindow, CustomGroupBox, DrawMaskWindow, FixedWidthLineEdit,
-    GuiLogger, IndividualPulseWindow, InputDialogWithCheckBox,
-    LaserOnOffWindow, MainGuiImageViewWidget, MainGuiLinePlotWidget,
-    SampleDegradationMonitor
+    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox,
+    MainGuiImageViewWidget, MainGuiLinePlotWidget,
+)
+from .windows import (
+    BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
+    LaserOnOffWindow, SampleDegradationWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -161,7 +163,7 @@ class MainGUI(QtGui.QMainWindow):
             "Sample degradation monitor",
             self)
         open_sample_degradation_monitor_at.triggered.connect(
-            lambda: SampleDegradationMonitor(self._data, parent=self))
+            lambda: SampleDegradationWindow(self._data, parent=self))
         tool_bar.addAction(open_sample_degradation_monitor_at)
 
         #
