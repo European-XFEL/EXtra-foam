@@ -1,10 +1,7 @@
-.. karaboFAI documentation master file, created by
-   sphinx-quickstart on Tue Dec  4 10:57:15 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 Welcome to karaboFAI's documentation!
 =====================================
+
+**karaboFai** is a tool that provides on-line (near real-time) and off-line data analysis and visualization for experiments at European XFEL that require azimuthal integration of diffraction data acquired with 2D detectors.
 
 .. toctree::
    :maxdepth: 2
