@@ -12,3 +12,5 @@ with an optical laser. It monitors:
   laser-off trains.
 
 
+.. image:: images/optical_laser_pattern_window.png
+   :width: 800
