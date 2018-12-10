@@ -5,3 +5,7 @@ Introduction
 off-line data analysis and visualization for experiments at European
 XFEL that require azimuthal integration of diffraction data acquired
 with 2D detectors.
+
+
+.. image:: Screenshot_from_2018-12-10.png
+   :width: 800
