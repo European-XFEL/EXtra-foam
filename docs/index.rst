@@ -10,6 +10,7 @@ Contents:
    installation
    detectors
    tutorial
+   developer
 
 
 Indices and tables
