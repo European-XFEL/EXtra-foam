@@ -5,5 +5,7 @@ Tutorial
    :maxdepth: 2
    :caption: Contents:
 
-   tutorial/optical-laser-pattern
    tutorial/bragg-spot
+   tutorial/calibration
+   tutorial/optical-laser-pattern
+   tutorial/mask
