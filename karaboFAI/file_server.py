@@ -11,9 +11,41 @@ All rights reserved.
 """
 from multiprocessing import Process
 
-from karabo_data import ZMQStreamer, RunDirectory, stack_detector_data
 from .config import config
 
+# Temporary re-implementation of serve_files from karabo_data.
+from karabo_data import H5File, RunDirectory, ZMQStreamer
+import os.path as osp
+
+def serve_files(path, port, devices=None, require_all=False, **kwargs):
+    """Stream data from files through a TCP socket.
+
+    Parameters
+    ----------
+    path: str
+        Path to the HDF5 file or file folder.
+    port: int
+        Local TCP port to bind socket to.
+    devices: list, dict
+        3 possible ways to select data. See :meth:`select`
+    require_all: bool
+        Default False
+    """
+    if osp.isdir(path):
+        data = RunDirectory(path)
+    else:
+        data = H5File(path)
+
+    streamer = ZMQStreamer(port, **kwargs)
+    streamer.start()
+    for tid, train_data in data.trains(devices=devices,
+                                       require_all=require_all):
+        if train_data:
+            streamer.feed(train_data)
+    streamer.stop()
+
+# Once MR is accepted in karabo_data
+# from karabo_data import serve_files
 
 class FileServer(Process):
     """Stream the file data in another process."""
@@ -27,14 +59,6 @@ class FileServer(Process):
 
     def run(self):
         """Override."""
-        self._stream()
-
-    def _stream(self):
-        streamer = ZMQStreamer(self._port)
-        streamer.start()
-
-        run = RunDirectory(self._folder)
-        # TOPIC to be later replaced by Detector type LPD, AGIPD, JFRAU
         if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
             devices = [("*DET/*CH0:xtdf", "image.data")]
         elif config["TOPIC"] == "JungFrau":
@@ -42,10 +66,7 @@ class FileServer(Process):
         else:
             devices = None
 
-        for tid, data in run.trains(devices=devices, require_all=True):
-            if data:
-                streamer.feed(data)
-        streamer.stop()
+        serve_files(self._folder, self._port, devices=devices, require_all=True)
 
     def terminate(self):
         """Override."""
