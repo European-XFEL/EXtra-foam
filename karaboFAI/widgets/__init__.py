@@ -4,7 +4,7 @@ setConfigOption("imageAxisOrder", "row-major")
 from .misc_widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
-from .plot_widgets import MainGuiImageViewWidget, MainGuiLinePlotWidget
+from .plot_widgets import AiImageViewWidget, AiMultiLinePlotWidget
 
 
 __all__ = [
@@ -12,6 +12,6 @@ __all__ = [
     "FixedWidthLineEdit",
     "GuiLogger",
     "InputDialogWithCheckBox",
-    "MainGuiLinePlotWidget",
-    "MainGuiImageViewWidget"
+    "AiMultiLinePlotWidget",
+    "AiImageViewWidget"
 ]

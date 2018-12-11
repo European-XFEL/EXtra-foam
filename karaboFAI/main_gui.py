@@ -21,7 +21,7 @@ from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox,
-    MainGuiImageViewWidget, MainGuiLinePlotWidget,
+    AiImageViewWidget, AiMultiLinePlotWidget,
 )
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
@@ -201,11 +201,11 @@ class MainGUI(QtGui.QMainWindow):
         # book-keeping opened widgets and windows
         self._plot_widgets = WeakKeyDictionary()
 
-        self._lineplot_widget = MainGuiLinePlotWidget(self._data, parent=self)
+        self._lineplot_widget = AiMultiLinePlotWidget(self._data, parent=self)
         self._lineplot_widget.setFixedSize(
             self._width - self._plot_height - 25, self._plot_height)
 
-        self._image_widget = MainGuiImageViewWidget(self._data, parent=self)
+        self._image_widget = AiImageViewWidget(self._data, parent=self)
         self._image_widget.setFixedSize(self._plot_height, self._plot_height)
 
         self._mask_image = None

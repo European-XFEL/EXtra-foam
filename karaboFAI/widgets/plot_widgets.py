@@ -12,14 +12,14 @@ All rights reserved.
 import numpy as np
 
 from .pyqtgraph import (
-    GraphicsLayoutWidget, ImageItem, intColor, mkPen
+    GraphicsLayoutWidget, ImageView, intColor, mkPen
 )
-from .misc_widgets import lookupTableFactory
+from .misc_widgets import colorMapFactory
 
 from ..config import config
 
 
-class MainGuiLinePlotWidget(GraphicsLayoutWidget):
+class AiMultiLinePlotWidget(GraphicsLayoutWidget):
     def __init__(self, data, parent=None, **kwargs):
         """Initialization."""
         super().__init__(parent=parent, **kwargs)
@@ -46,7 +46,7 @@ class MainGuiLinePlotWidget(GraphicsLayoutWidget):
                             format(data.tid, len(data.intensity)))
 
 
-class MainGuiImageViewWidget(GraphicsLayoutWidget):
+class AiImageViewWidget(ImageView):
 
     def __init__(self, data, parent=None, **kwargs):
         """Initialization."""
@@ -55,17 +55,12 @@ class MainGuiImageViewWidget(GraphicsLayoutWidget):
 
         self._data = data
 
-        self._img = ImageItem(border='w')
-        self._img.setLookupTable(lookupTableFactory[config["COLOR_MAP"]])
-
-        self._view = self.addViewBox(lockAspect=True)
-        self._view.addItem(self._img)
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def clearPlots(self):
-        self._img.clear()
+        self.clear()
 
     def updatePlots(self):
         data = self._data.get()
 
-        self._img.setImage(np.flip(data.image_mean, axis=0))
-        self._view.autoRange()
+        self.setImage(np.flip(data.image_mean, axis=0), autoRange=False)

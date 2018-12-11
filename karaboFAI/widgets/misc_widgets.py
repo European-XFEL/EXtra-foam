@@ -27,9 +27,13 @@ class PenFactory:
 
 
 # Valid keys: thermal, flame, yellowy, bipolar, spectrum, cyclic, greyclip, grey
-lookupTableFactory = \
-    {name: ColorMap(*zip(*Gradients[name]["ticks"])).getLookupTable()
+colorMapFactory = \
+    {name: ColorMap(*zip(*Gradients[name]["ticks"]))
      for name in Gradients.keys()}
+
+
+lookupTableFactory = {name: cmap.getLookupTable()
+                      for name, cmap in colorMapFactory.items()}
 
 
 class FixedWidthLineEdit(QtGui.QLineEdit):
