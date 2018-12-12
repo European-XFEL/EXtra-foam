@@ -130,7 +130,7 @@ class MainGUI(QtGui.QMainWindow):
 
         #
         open_overview_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
+            QtGui.QIcon(os.path.join(root_dir, "icons/overview.png")),
             "Overview",
             self)
         open_overview_window_at.triggered.connect(
