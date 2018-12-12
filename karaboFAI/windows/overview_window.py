@@ -9,8 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
 from ..widgets.pyqtgraph import (
     PlotWidget, ImageView, intColor, mkPen, QtGui
@@ -83,14 +81,13 @@ class OverviewWindow(AbstractWindow):
         if data.empty():
             return
 
-        self._assembled.setImage(np.flip(data.image_mean, axis=0),
-                                 autoRange=False,
-                                 autoLevels=False)
+        self._assembled.setImage(data.image_mean,
+                                 autoRange=False, autoLevels=False)
 
         momentum = data.momentum
         line = self._multiline
         for i, intensity in enumerate(data.intensity):
             line.plot(momentum, intensity,
-                   pen=mkPen(intColor(i, hues=9, values=5), width=2))
+                      pen=mkPen(intColor(i, hues=9, values=5), width=2))
             line.setTitle("Train ID: {}, number of pulses: {}".
                           format(data.tid, len(data.intensity)))
