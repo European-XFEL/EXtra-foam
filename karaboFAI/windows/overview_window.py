@@ -35,6 +35,7 @@ class OverviewWindow(AbstractWindow):
         self._multiline = PlotWidget()
 
         self.initUI()
+        self._is_initialized = False
         self.updatePlots()
 
         self.resize(1500, 600)
@@ -81,8 +82,10 @@ class OverviewWindow(AbstractWindow):
         if data.empty():
             return
 
-        self._assembled.setImage(data.image_mean,
-                                 autoRange=False, autoLevels=False)
+        self._assembled.setImage(data.image_mean, autoRange=False,
+                                 autoLevels=(not self._is_initialized))
+        if not self._is_initialized:
+            self._is_initialized = True
 
         momentum = data.momentum
         line = self._multiline
