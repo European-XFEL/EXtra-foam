@@ -13,7 +13,7 @@ import numpy as np
 
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
 from ..widgets.pyqtgraph import (
-    PlotWidget, ImageView, intColor, mkPen
+    PlotWidget, ImageView, intColor, mkPen, QtGui
 )
 
 from .base_window import AbstractWindow
@@ -32,6 +32,7 @@ class OverviewWindow(AbstractWindow):
         super().__init__(data, parent=parent)
         self.parent().registerPlotWidget(self)
 
+        self._docker_area = DockArea()
         self._assembled = ImageView()
         self._multiline = PlotWidget()
 
@@ -44,20 +45,21 @@ class OverviewWindow(AbstractWindow):
     def initUI(self):
         """Override."""
         self.initPlotUI()
-
-        area = DockArea()
-        self.setCentralWidget(area)
-
-        assembled_dock = Dock("Assembled Detector Image", size=(600, 600))
-        area.addDock(assembled_dock, 'left')
-        assembled_dock.addWidget(self._assembled)
-
-        imageview_dock = Dock("Azimuthal Integration", size=(900, 600))
-        area.addDock(imageview_dock, 'right')
-        imageview_dock.addWidget(self._multiline)
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._docker_area)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._cw.setLayout(layout)
 
     def initPlotUI(self):
         """Override."""
+        assembled_dock = Dock("Assembled Detector Image", size=(600, 600))
+        self._docker_area.addDock(assembled_dock, 'left')
+        assembled_dock.addWidget(self._assembled)
+
+        imageview_dock = Dock("Azimuthal Integration", size=(900, 600))
+        self._docker_area.addDock(imageview_dock, 'right')
+        imageview_dock.addWidget(self._multiline)
+
         self._assembled.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
         self._multiline.setTitle("")

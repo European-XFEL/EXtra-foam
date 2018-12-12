@@ -109,7 +109,7 @@ class PlotWindow(AbstractWindow):
         self._ctrl_widget = None
 
         self._plot_items = []  # bookkeeping PlotItem objects
-        self._image_items = []  # bookkeeping ImageItem/ImageView objects
+        self._image_items = []  # bookkeeping ImageItem objects
 
         # -------------------------------------------------------------
         # define parameter tree
