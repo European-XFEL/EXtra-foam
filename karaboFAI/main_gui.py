@@ -20,12 +20,11 @@ import zmq
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox,
-    AiImageViewWidget, AiMultiLinePlotWidget,
+    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
-    LaserOnOffWindow, SampleDegradationWindow
+    LaserOnOffWindow, OverviewWindow, SampleDegradationWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -83,9 +82,8 @@ class MainGUI(QtGui.QMainWindow):
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    _height = 1000  # window height, in pixel
+    _height = 600  # window height, in pixel
     _width = 1380  # window width, in pixel
-    _plot_height = 480  # height of the plot widgets, in pixel
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -129,6 +127,15 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self._onStopDAQ)
         self._stop_at.setEnabled(False)
+
+        #
+        open_overview_window_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
+            "Overview",
+            self)
+        open_overview_window_at.triggered.connect(
+            lambda: OverviewWindow(self._data, parent=self))
+        tool_bar.addAction(open_overview_window_at)
 
         #
         open_individual_pulse_at = QtGui.QAction(
@@ -194,22 +201,14 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._load_geometry_file_at)
 
         # *************************************************************
-        # Plots
+        # Miscellaneous
         # *************************************************************
         self._data = self.Data4Visualization()
 
         # book-keeping opened widgets and windows
         self._plot_widgets = WeakKeyDictionary()
 
-        self._lineplot_widget = AiMultiLinePlotWidget(self._data, parent=self)
-        self._lineplot_widget.setFixedSize(
-            self._width - self._plot_height - 25, self._plot_height)
-
-        self._image_widget = AiImageViewWidget(self._data, parent=self)
-        self._image_widget.setFixedSize(self._plot_height, self._plot_height)
-
         self._mask_image = None
-
         self._ctrl_pannel = QtGui.QWidget()
 
         # *************************************************************
@@ -400,10 +399,8 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
-        layout.addWidget(self._image_widget, 4, 0, 5, 1)
-        layout.addWidget(self._lineplot_widget, 4, 1, 5, 5)
-        layout.addWidget(self._logger.widget, 9, 0, 2, 4)
-        layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
+        layout.addWidget(self._logger.widget, 4, 0, 2, 4)
+        layout.addWidget(self._file_server_widget, 4, 4, 2, 2)
 
         self._cw.setLayout(layout)
 
