@@ -11,13 +11,13 @@ All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
 from ..widgets.pyqtgraph import (
-    PlotWidget, ImageView, intColor, mkPen, QtGui
+    ImageView, intColor, mkPen, PlotWidget, QtGui
 )
 
 from .base_window import AbstractWindow
+from ..config import config
 from ..logger import logger
 from ..widgets.misc_widgets import colorMapFactory
-from ..config import config
 
 
 class OverviewWindow(AbstractWindow):
