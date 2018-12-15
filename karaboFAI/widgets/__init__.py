@@ -1,11 +1,16 @@
 from .misc_widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
+    colorMapFactory, CustomGroupBox, FixedWidthLineEdit, GuiLogger,
+    InputDialogWithCheckBox
 )
+
+from .sample_degradation_widget import SampleDegradationWidget
 
 
 __all__ = [
+    "colorMapFactory",
     "CustomGroupBox",
     "FixedWidthLineEdit",
     "GuiLogger",
-    "InputDialogWithCheckBox"
+    "InputDialogWithCheckBox",
+    "SampleDegradationWidget"
 ]

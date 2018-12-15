@@ -24,7 +24,7 @@ from .widgets import (
 )
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
-    LaserOnOffWindow, OverviewWindow, SampleDegradationWindow
+    LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -163,15 +163,6 @@ class MainGUI(QtGui.QMainWindow):
         open_bragg_spots_window_at.triggered.connect(
             lambda: BraggSpotsWindow(self._data, parent=self))
         tool_bar.addAction(open_bragg_spots_window_at)
-
-        #
-        open_sample_degradation_monitor_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/sample_degradation.png")),
-            "Sample degradation monitor",
-            self)
-        open_sample_degradation_monitor_at.triggered.connect(
-            lambda: SampleDegradationWindow(self._data, parent=self))
-        tool_bar.addAction(open_sample_degradation_monitor_at)
 
         #
         self._draw_mask_at = QtGui.QAction(

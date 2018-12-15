@@ -11,13 +11,14 @@ All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
 from ..widgets.pyqtgraph import (
-    ImageView, intColor, mkPen, PlotWidget, QtGui
+    ImageView, intColor, mkPen, PlotWidget, QtCore, QtGui
 )
+
 
 from .base_window import AbstractWindow
 from ..config import config
 from ..logger import logger
-from ..widgets.misc_widgets import colorMapFactory
+from ..widgets import colorMapFactory, SampleDegradationWidget
 
 
 class OverviewWindow(AbstractWindow):
@@ -30,16 +31,29 @@ class OverviewWindow(AbstractWindow):
         super().__init__(data, parent=parent)
         self.parent().registerPlotWidget(self)
 
+        self.normalization_range_sp = None
+        self.diff_integration_range_sp = None
+        self.parent().normalization_range_sgn.connect(
+            self.onNormalizationRangeChanged)
+        self.parent().diff_integration_range_sgn.connect(
+            self.onDiffIntegrationRangeChanged)
+
         self._docker_area = DockArea()
         self._assembled = ImageView()
         self._multiline = PlotWidget()
+        self._sample_degradation = SampleDegradationWidget()
 
         self.initUI()
         self._is_initialized = False
         self.updatePlots()
 
-        self.resize(1500, 600)
+        self.resize(1500, 1000)
         logger.info("Open {}".format(self.__class__.__name__))
+
+        # tell MainGUI to emit signals in order to update shared parameters
+        self.parent().updateSharedParameters()
+
+        print(self.normalization_range_sp)
 
     def initUI(self):
         """Override."""
@@ -59,6 +73,11 @@ class OverviewWindow(AbstractWindow):
         self._docker_area.addDock(imageview_dock, 'right')
         imageview_dock.addWidget(self._multiline)
 
+        sample_degradation_dock = Dock("Sample Degradation", size=(600, 400))
+        self._docker_area.addDock(
+            sample_degradation_dock, 'bottom', "Assembled Detector Image")
+        sample_degradation_dock.addWidget(self._sample_degradation)
+
         self._assembled.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
         self._multiline.setTitle("")
@@ -72,6 +91,7 @@ class OverviewWindow(AbstractWindow):
         """
         self._multiline.clear()
         self._assembled.clear()
+        self._sample_degradation.clear()
 
     def updatePlots(self):
         """Update plots.
@@ -94,3 +114,26 @@ class OverviewWindow(AbstractWindow):
                       pen=mkPen(intColor(i, hues=9, values=5), width=2))
             line.setTitle("Train ID: {}, number of pulses: {}".
                           format(data.tid, len(data.intensity)))
+
+        self._sample_degradation.updatePlots(
+            data, self.normalization_range_sp, self.diff_integration_range_sp)
+
+    @QtCore.pyqtSlot(float, float)
+    def onNormalizationRangeChanged(self, lb, ub):
+        self.normalization_range_sp = (lb, ub)
+        # then update the parameter tree
+        try:
+            self._pro_params.child('Normalization range').setValue(
+                '{}, {}'.format(lb, ub))
+        except KeyError:
+            pass
+
+    @QtCore.pyqtSlot(float, float)
+    def onDiffIntegrationRangeChanged(self, lb, ub):
+        self.diff_integration_range_sp = (lb, ub)
+        # then update the parameter tree
+        try:
+            self._pro_params.child("Diff integration range").setValue(
+                '{}, {}'.format(lb, ub))
+        except KeyError:
+            pass
