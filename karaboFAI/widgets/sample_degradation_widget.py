@@ -31,7 +31,7 @@ class SampleDegradationWidget(PlotWidget):
         self.setLabel('bottom', "Pulse ID")
         self.setTitle('FOM with respect to the first pulse')
 
-    def updatePlots(self, data, normalization_range, diff_integration_range):
+    def update(self, data, normalization_range, diff_integration_range):
         """Override."""
         momentum = data.momentum
 

@@ -4,6 +4,9 @@ from .misc_widgets import (
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
+from .image_analysis_widget import ImageAnalysisWidget
+from .single_pulse_ai_widget import SinglePulseAiWidget
+from .multi_pulse_ai_widget import MultiPulseAiWidget
 
 
 __all__ = [
@@ -11,6 +14,9 @@ __all__ = [
     "CustomGroupBox",
     "FixedWidthLineEdit",
     "GuiLogger",
+    "ImageAnalysisWidget",
+    "MultiPulseAiWidget",
+    "SinglePulseAiWidget",
     "InputDialogWithCheckBox",
     "SampleDegradationWidget"
 ]

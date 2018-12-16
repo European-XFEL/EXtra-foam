@@ -23,8 +23,7 @@ from .widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 from .windows import (
-    BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
-    LaserOnOffWindow, OverviewWindow
+    BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -136,15 +135,6 @@ class MainGUI(QtGui.QMainWindow):
         open_overview_window_at.triggered.connect(
             lambda: OverviewWindow(self._data, parent=self))
         tool_bar.addAction(open_overview_window_at)
-
-        #
-        open_individual_pulse_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
-            "Individual pulse",
-            self)
-        open_individual_pulse_at.triggered.connect(
-            self._openIndividualPulseWindowDialog)
-        tool_bar.addAction(open_individual_pulse_at)
 
         #
         open_laseronoff_window_at = QtGui.QAction(
@@ -576,33 +566,6 @@ class MainGUI(QtGui.QMainWindow):
                      .format(1000 * (time.perf_counter() - t0)))
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
-
-    def _openIndividualPulseWindowDialog(self):
-        """A dialog for opening an IndividualPulseWindow."""
-        ret, ok = InputDialogWithCheckBox.getResult(
-            self,
-            'Input Dialog',
-            'Enter pulse IDs (separated by comma):',
-            "Include detector image")
-
-        err_msg = "Invalid input! " \
-                  "Enter pulse IDs within the pulse range separated by ','!"
-
-        try:
-            pulse_ids = parse_ids(ret[0])
-        except ValueError:
-            logger.error(err_msg)
-            return
-
-        if not pulse_ids:
-            logger.error(err_msg)
-            return
-
-        if ok:
-            IndividualPulseWindow(self._data,
-                                  pulse_ids,
-                                  parent=self,
-                                  show_image=ret[1])
 
     def registerPlotWidget(self, instance):
         self._plot_widgets[instance] = 1

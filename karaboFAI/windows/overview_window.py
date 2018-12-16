@@ -10,15 +10,14 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
-from ..widgets.pyqtgraph import (
-    ImageView, intColor, mkPen, PlotWidget, QtCore, QtGui
-)
-
+from ..widgets.pyqtgraph import QtCore, QtGui
 
 from .base_window import AbstractWindow
-from ..config import config
 from ..logger import logger
-from ..widgets import colorMapFactory, SampleDegradationWidget
+from ..widgets import (
+    ImageAnalysisWidget, SinglePulseAiWidget, MultiPulseAiWidget,
+    SampleDegradationWidget
+)
 
 
 class OverviewWindow(AbstractWindow):
@@ -39,12 +38,14 @@ class OverviewWindow(AbstractWindow):
             self.onDiffIntegrationRangeChanged)
 
         self._docker_area = DockArea()
-        self._assembled = ImageView()
-        self._multiline = PlotWidget()
-        self._sample_degradation = SampleDegradationWidget()
+
+        self._assembled_image = ImageAnalysisWidget(parent=self)
+        self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
+        self._sample_degradation = SampleDegradationWidget(parent=self)
+        self._single_pulse_ai1 = SinglePulseAiWidget(parent=self)
+        self._single_pulse_ai2 = SinglePulseAiWidget(parent=self)
 
         self.initUI()
-        self._is_initialized = False
         self.updatePlots()
 
         self.resize(1500, 1000)
@@ -52,8 +53,6 @@ class OverviewWindow(AbstractWindow):
 
         # tell MainGUI to emit signals in order to update shared parameters
         self.parent().updateSharedParameters()
-
-        print(self.normalization_range_sp)
 
     def initUI(self):
         """Override."""
@@ -65,33 +64,40 @@ class OverviewWindow(AbstractWindow):
 
     def initPlotUI(self):
         """Override."""
-        assembled_dock = Dock("Assembled Detector Image", size=(600, 600))
-        self._docker_area.addDock(assembled_dock, 'left')
-        assembled_dock.addWidget(self._assembled)
+        assembled_image_dock = Dock("Assembled Image", size=(600, 600))
+        self._docker_area.addDock(assembled_image_dock, 'left')
+        assembled_image_dock.addWidget(self._assembled_image)
 
-        imageview_dock = Dock("Azimuthal Integration", size=(900, 600))
-        self._docker_area.addDock(imageview_dock, 'right')
-        imageview_dock.addWidget(self._multiline)
+        multi_pulse_ai_dock = Dock("Multi-pulse Azimuthal Integration",
+                                   size=(900, 600))
+        self._docker_area.addDock(multi_pulse_ai_dock, 'right')
+        multi_pulse_ai_dock.addWidget(self._multi_pulse_ai)
 
-        sample_degradation_dock = Dock("Sample Degradation", size=(600, 400))
-        self._docker_area.addDock(
-            sample_degradation_dock, 'bottom', "Assembled Detector Image")
+        sample_degradation_dock = Dock("Sample Degradation", size=(900, 400))
+        self._docker_area.addDock(sample_degradation_dock, 'bottom',
+                                  "Multi-pulse Azimuthal Integration")
         sample_degradation_dock.addWidget(self._sample_degradation)
 
-        self._assembled.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        individual_pulse2_dock = Dock("Individual pulse", size=(600, 200))
+        self._docker_area.addDock(individual_pulse2_dock, 'bottom',
+                                  "Assembled Image")
+        individual_pulse2_dock.addWidget(self._single_pulse_ai2)
 
-        self._multiline.setTitle("")
-        self._multiline.setLabel('bottom', "Momentum transfer (1/A)")
-        self._multiline.setLabel('left', "Scattering signal (arb. u.)")
+        individual_pulse1_dock = Dock("Individual pulse", size=(600, 200))
+        self._docker_area.addDock(individual_pulse1_dock, 'bottom',
+                                  "Assembled Image")
+        individual_pulse1_dock.addWidget(self._single_pulse_ai1)
 
     def clearPlots(self):
         """Clear plots.
 
         This method is called by the main GUI.
         """
-        self._multiline.clear()
-        self._assembled.clear()
+        self._assembled_image.clear()
+        self._multi_pulse_ai.clear()
         self._sample_degradation.clear()
+        self._single_pulse_ai1.clear()
+        self._single_pulse_ai2.clear()
 
     def updatePlots(self):
         """Update plots.
@@ -102,38 +108,20 @@ class OverviewWindow(AbstractWindow):
         if data.empty():
             return
 
-        self._assembled.setImage(data.image_mean, autoRange=False,
-                                 autoLevels=(not self._is_initialized))
-        if not self._is_initialized:
-            self._is_initialized = True
+        self._assembled_image.update(data)
 
-        momentum = data.momentum
-        line = self._multiline
-        for i, intensity in enumerate(data.intensity):
-            line.plot(momentum, intensity,
-                      pen=mkPen(intColor(i, hues=9, values=5), width=2))
-            line.setTitle("Train ID: {}, number of pulses: {}".
-                          format(data.tid, len(data.intensity)))
+        self._multi_pulse_ai.update(data)
 
-        self._sample_degradation.updatePlots(
+        self._sample_degradation.update(
             data, self.normalization_range_sp, self.diff_integration_range_sp)
+
+        self._single_pulse_ai1.update(data, 0)
+        self._single_pulse_ai2.update(data, 1)
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChanged(self, lb, ub):
         self.normalization_range_sp = (lb, ub)
-        # then update the parameter tree
-        try:
-            self._pro_params.child('Normalization range').setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
         self.diff_integration_range_sp = (lb, ub)
-        # then update the parameter tree
-        try:
-            self._pro_params.child("Diff integration range").setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
