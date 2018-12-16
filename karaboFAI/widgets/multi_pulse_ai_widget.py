@@ -22,7 +22,6 @@ class MultiPulseAiWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setTitle("")
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
 
@@ -32,6 +31,3 @@ class MultiPulseAiWidget(PlotWidget):
             # TODO: use setData, but take of pulse number changes
             self.plot(momentum, intensity,
                       pen=mkPen(intColor(i, hues=9, values=5), width=2))
-
-        self.setTitle("Train ID: {}, number of pulses: {}".
-                      format(data.tid, len(data.intensity)))

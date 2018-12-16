@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
-from ..widgets.pyqtgraph import QtCore, QtGui
+from ..widgets.pyqtgraph import LayoutWidget, QtCore, QtGui
 
 from .base_window import AbstractWindow
 from ..logger import logger
@@ -37,8 +37,11 @@ class OverviewWindow(AbstractWindow):
         self.parent().diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
 
+        self._title_lb = QtGui.QLabel("")
+
         self._docker_area = DockArea()
 
+        self._title_widget = LayoutWidget(parent=self)
         self._assembled_image = ImageAnalysisWidget(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
         self._sample_degradation = SampleDegradationWidget(parent=self)
@@ -56,6 +59,9 @@ class OverviewWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
+        self._title_lb.setFont(QtGui.QFont("Times", 20, QtGui.QFont.Bold))
+        self._title_widget.addWidget(self._title_lb)
+
         self.initPlotUI()
         layout = QtGui.QHBoxLayout()
         layout.addWidget(self._docker_area)
@@ -69,9 +75,15 @@ class OverviewWindow(AbstractWindow):
         assembled_image_dock.addWidget(self._assembled_image)
 
         multi_pulse_ai_dock = Dock("Multi-pulse Azimuthal Integration",
-                                   size=(900, 600))
+                                   size=(900, 480))
         self._docker_area.addDock(multi_pulse_ai_dock, 'right')
         multi_pulse_ai_dock.addWidget(self._multi_pulse_ai)
+
+        title_docker = Dock("Title", size=(900, 20))
+        self._docker_area.addDock(title_docker, 'top',
+                                  "Multi-pulse Azimuthal Integration")
+        title_docker.addWidget(self._title_widget)
+        title_docker.hideTitleBar()
 
         sample_degradation_dock = Dock("Sample Degradation", size=(900, 400))
         self._docker_area.addDock(sample_degradation_dock, 'bottom',
@@ -107,6 +119,9 @@ class OverviewWindow(AbstractWindow):
         data = self._data.get()
         if data.empty():
             return
+
+        self._title_lb.setText("Train ID: {}{}Number of pulses per train: {}".
+                               format(data.tid, ' '*8, len(data.intensity)))
 
         self._assembled_image.update(data)
 
