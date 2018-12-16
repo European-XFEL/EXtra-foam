@@ -12,7 +12,7 @@ All rights reserved.
 from ..widgets.pyqtgraph.dockarea import Dock, DockArea
 from ..widgets.pyqtgraph import LayoutWidget, QtCore, QtGui
 
-from .base_window import AbstractWindow
+from .base_window import AbstractWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
     ImageAnalysisWidget, SinglePulseAiWidget, MultiPulseAiWidget,
@@ -20,6 +20,7 @@ from ..widgets import (
 )
 
 
+@SingletonWindow
 class OverviewWindow(AbstractWindow):
     """OverviewWindow class."""
 
@@ -41,6 +42,9 @@ class OverviewWindow(AbstractWindow):
         self.parent().diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
 
+        # tell MainGUI to emit signals in order to update shared parameters
+        self.parent().updateSharedParameters()
+
         self._title_lb = QtGui.QLabel("")
 
         self._docker_area = DockArea()
@@ -59,9 +63,6 @@ class OverviewWindow(AbstractWindow):
 
         self.resize(1500, 1000)
         logger.info("Open {}".format(self.__class__.__name__))
-
-        # tell MainGUI to emit signals in order to update shared parameters
-        self.parent().updateSharedParameters()
 
     def initUI(self):
         """Override."""
