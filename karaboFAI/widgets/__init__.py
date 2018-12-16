@@ -4,7 +4,7 @@ from .misc_widgets import (
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
-from .image_analysis_widget import ImageAnalysisWidget
+from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
 
@@ -18,5 +18,6 @@ __all__ = [
     "MultiPulseAiWidget",
     "SinglePulseAiWidget",
     "InputDialogWithCheckBox",
-    "SampleDegradationWidget"
+    "SampleDegradationWidget",
+    "SinglePulseImageWidget"
 ]

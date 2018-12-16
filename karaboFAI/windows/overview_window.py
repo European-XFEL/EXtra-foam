@@ -16,7 +16,7 @@ from .base_window import AbstractWindow
 from ..logger import logger
 from ..widgets import (
     ImageAnalysisWidget, SinglePulseAiWidget, MultiPulseAiWidget,
-    SampleDegradationWidget
+    SampleDegradationWidget, SinglePulseImageWidget
 )
 
 
@@ -30,10 +30,14 @@ class OverviewWindow(AbstractWindow):
         super().__init__(data, parent=parent)
         self.parent().registerPlotWidget(self)
 
+        self.mask_range_sp = None
+        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
+
         self.normalization_range_sp = None
-        self.diff_integration_range_sp = None
         self.parent().normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
+
+        self.diff_integration_range_sp = None
         self.parent().diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
 
@@ -47,6 +51,8 @@ class OverviewWindow(AbstractWindow):
         self._sample_degradation = SampleDegradationWidget(parent=self)
         self._single_pulse_ai1 = SinglePulseAiWidget(parent=self)
         self._single_pulse_ai2 = SinglePulseAiWidget(parent=self)
+        self._single_pulse_img1 = SinglePulseImageWidget(parent=self)
+        self._single_pulse_img2 = SinglePulseImageWidget(parent=self)
 
         self.initUI()
         self.updatePlots()
@@ -70,12 +76,12 @@ class OverviewWindow(AbstractWindow):
 
     def initPlotUI(self):
         """Override."""
-        assembled_image_dock = Dock("Assembled Image", size=(600, 600))
+        assembled_image_dock = Dock("Mean Assembled Image", size=(600, 500))
         self._docker_area.addDock(assembled_image_dock, 'left')
         assembled_image_dock.addWidget(self._assembled_image)
 
         multi_pulse_ai_dock = Dock("Multi-pulse Azimuthal Integration",
-                                   size=(900, 480))
+                                   size=(900, 580))
         self._docker_area.addDock(multi_pulse_ai_dock, 'right')
         multi_pulse_ai_dock.addWidget(self._multi_pulse_ai)
 
@@ -85,20 +91,30 @@ class OverviewWindow(AbstractWindow):
         title_docker.addWidget(self._title_widget)
         title_docker.hideTitleBar()
 
-        sample_degradation_dock = Dock("Sample Degradation", size=(900, 400))
+        sample_degradation_dock = Dock("Sample Degradation", size=(900, 500))
         self._docker_area.addDock(sample_degradation_dock, 'bottom',
                                   "Multi-pulse Azimuthal Integration")
         sample_degradation_dock.addWidget(self._sample_degradation)
 
-        individual_pulse2_dock = Dock("Individual pulse", size=(600, 200))
-        self._docker_area.addDock(individual_pulse2_dock, 'bottom',
-                                  "Assembled Image")
-        individual_pulse2_dock.addWidget(self._single_pulse_ai2)
+        single_pulse_ai2_dock = Dock("Single pulse AI 2", size=(600, 250))
+        self._docker_area.addDock(single_pulse_ai2_dock, 'bottom',
+                                  "Mean Assembled Image")
+        single_pulse_ai2_dock.addWidget(self._single_pulse_ai2)
 
-        individual_pulse1_dock = Dock("Individual pulse", size=(600, 200))
-        self._docker_area.addDock(individual_pulse1_dock, 'bottom',
-                                  "Assembled Image")
-        individual_pulse1_dock.addWidget(self._single_pulse_ai1)
+        single_pulse_ai1_dock = Dock("Single pulse AI 1", size=(600, 250))
+        self._docker_area.addDock(single_pulse_ai1_dock, 'bottom',
+                                  "Mean Assembled Image")
+        single_pulse_ai1_dock.addWidget(self._single_pulse_ai1)
+
+        single_pulse_img2_dock = Dock("Single pulse image 2", size=(600, 250))
+        self._docker_area.addDock(single_pulse_img2_dock, 'above',
+                                  "Single pulse AI 2")
+        single_pulse_img2_dock.addWidget(self._single_pulse_img2)
+
+        single_pulse_img1_dock = Dock("Single pulse image 1", size=(600, 250))
+        self._docker_area.addDock(single_pulse_img1_dock, 'above',
+                                  "Single pulse AI 1")
+        single_pulse_img1_dock.addWidget(self._single_pulse_img1)
 
     def clearPlots(self):
         """Clear plots.
@@ -110,6 +126,8 @@ class OverviewWindow(AbstractWindow):
         self._sample_degradation.clear()
         self._single_pulse_ai1.clear()
         self._single_pulse_ai2.clear()
+        self._single_pulse_img1.clear()
+        self._single_pulse_img2.clear()
 
     def updatePlots(self):
         """Update plots.
@@ -133,6 +151,9 @@ class OverviewWindow(AbstractWindow):
         self._single_pulse_ai1.update(data, 0)
         self._single_pulse_ai2.update(data, 1)
 
+        self._single_pulse_img1.update(data, 0, self.mask_range_sp)
+        self._single_pulse_img2.update(data, 1, self.mask_range_sp)
+
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChanged(self, lb, ub):
         self.normalization_range_sp = (lb, ub)
@@ -140,3 +161,7 @@ class OverviewWindow(AbstractWindow):
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
         self.diff_integration_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float)
+    def onMaskRangeChanged(self, lb, ub):
+        self.mask_range_sp = (lb, ub)
