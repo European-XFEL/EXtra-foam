@@ -29,7 +29,9 @@ def serve_files(path, port, devices=None, require_all=False, **kwargs):
     devices: list, dict
         3 possible ways to select data. See :meth:`select`
     require_all: bool
-        Default False
+        If set to True, will stream only trainIDs that has data
+        corresponding to keys specified in devices.
+        Default: False
     """
     if osp.isdir(path):
         data = RunDirectory(path)
