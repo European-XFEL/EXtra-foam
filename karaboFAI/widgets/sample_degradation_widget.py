@@ -33,6 +33,8 @@ class SampleDegradationWidget(PlotWidget):
 
     def update(self, data, normalization_range, diff_integration_range):
         """Override."""
+        # TODO: since this becomes a mandatory widget, we can consider to
+        # TODO: move the calculation outside of the update method.
         momentum = data.momentum
 
         # normalize azimuthal integration curves for each pulse
