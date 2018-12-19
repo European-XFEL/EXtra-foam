@@ -26,6 +26,9 @@ class SinglePulseAiWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
+        self._pulse_plot = self.plot(pen=PenFactory.yellow)
+        self._mean_plot = self.plot(pen=PenFactory.cyan)
+
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.addLegend(offset=(-40, 20))
@@ -36,9 +39,7 @@ class SinglePulseAiWidget(PlotWidget):
                          format(pulse_id, data.intensity.shape[0] - 1))
             return
 
-        self.plot(data.momentum, data.intensity[pulse_id],
-                  name="Pulse {}".format(pulse_id),
-                  pen=PenFactory.yellow)
-        self.plot(data.momentum, data.intensity_mean,
-                  name="mean",
-                  pen=PenFactory.cyan)
+        self.setData(data.momentum, data.intensity[pulse_id],
+                     name="Pulse {}".format(pulse_id))
+        self.setData(data.momentum, data.intensity_mean,
+                     name="mean")
