@@ -29,21 +29,21 @@ class OverviewWindow(AbstractWindow):
     def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
-        self.parent().registerPlotWidget(self)
+        parent.registerPlotWidget(self)
 
         self.mask_range_sp = None
-        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
+        parent.mask_range_sgn.connect(self.onMaskRangeChanged)
 
         self.normalization_range_sp = None
-        self.parent().normalization_range_sgn.connect(
+        parent.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
 
         self.diff_integration_range_sp = None
-        self.parent().diff_integration_range_sgn.connect(
+        parent.diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters
-        self.parent().updateSharedParameters()
+        parent.updateSharedParameters()
 
         self._title_lb = QtGui.QLabel("")
 
