@@ -11,9 +11,10 @@ All rights reserved.
 """
 import numpy as np
 
-from .pyqtgraph import BarGraphItem, PlotWidget
+from .pyqtgraph import BarGraphItem, QtCore
 
 from ..data_processing.proc_utils import normalize_curve, slice_curve
+from .plot_widget import PlotWidget
 
 
 class SampleDegradationWidget(PlotWidget):
@@ -26,12 +27,19 @@ class SampleDegradationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._p = self.plot()
+        self._normalization_range_sp = None
+        parent.parent().normalization_range_sgn.connect(
+            self.onNormalizationRangeChanged)
+
+        self._diff_integration_range_sp = None
+        parent.parent().diff_integration_range_sgn.connect(
+            self.onDiffIntegrationRangeChanged)
+
         self.setLabel('left', "Integrated difference (arb.)")
         self.setLabel('bottom', "Pulse ID")
         self.setTitle('FOM with respect to the first pulse')
 
-    def update(self, data, normalization_range, diff_integration_range):
+    def update(self, data):
         """Override."""
         # TODO: since this becomes a mandatory widget, we can consider to
         # TODO: move the calculation outside of the update method.
@@ -41,7 +49,7 @@ class SampleDegradationWidget(PlotWidget):
         normalized_pulse_intensities = []
         for pulse_intensity in data.intensity:
             normalized = normalize_curve(
-                pulse_intensity, momentum, *normalization_range)
+                pulse_intensity, momentum, *self._normalization_range_sp)
             normalized_pulse_intensities.append(normalized)
 
         # calculate the different between each pulse and the first one
@@ -51,10 +59,16 @@ class SampleDegradationWidget(PlotWidget):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *diff_integration_range)[0]
+            fom = slice_curve(diff, momentum, *self._diff_integration_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        bar = BarGraphItem(
-            x=range(len(foms)), height=foms, width=0.6, brush='b')
+        self.addItem(BarGraphItem(
+            x=range(len(foms)), height=foms, width=0.6, brush='b'))
 
-        self.addItem(bar)
+    @QtCore.pyqtSlot(float, float)
+    def onNormalizationRangeChanged(self, lb, ub):
+        self._normalization_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float)
+    def onDiffIntegrationRangeChanged(self, lb, ub):
+        self._diff_integration_range_sp = (lb, ub)

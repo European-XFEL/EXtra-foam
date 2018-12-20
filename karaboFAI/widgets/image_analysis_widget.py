@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from ..widgets.pyqtgraph import ImageView
+from ..widgets.pyqtgraph import ImageView, QtCore
 
 from .misc_widgets import  colorMapFactory
 from ..config import config
@@ -26,6 +26,7 @@ class ImageAnalysisWidget(ImageView):
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
+        parent.registerPlotWidget(self)
 
         self._is_initialized = False
         # TODO: logarithmic level
@@ -38,6 +39,10 @@ class ImageAnalysisWidget(ImageView):
         if not self._is_initialized:
             self._is_initialized = True
 
+    def close(self):
+        self.parent().unregisterPlotWidget(self)
+        super().close()
+
 
 class SinglePulseImageWidget(ImageView):
     """SinglePulseImageWidget class.
@@ -47,11 +52,25 @@ class SinglePulseImageWidget(ImageView):
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
+        parent.registerPlotWidget(self)
+
+        self._mask_range_sp = None
+        parent.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
-    def update(self, data, pulse_id, mask_range):
-        np.clip(data.image[pulse_id], mask_range[0], mask_range[1],
-                data.image[pulse_id])
+    def update(self, data):
+        pulse_id = 0  # TODO: make pulse_id an input
 
-        self.setImage(data.image[pulse_id], autoRange=True, autoLevels=True)
+        image = data.image
+        np.clip(image[pulse_id], *self._mask_range_sp, image[pulse_id])
+
+        self.setImage(image[pulse_id], autoRange=True, autoLevels=True)
+
+    def close(self):
+        self.parent().unregisterPlotWidget(self)
+        super().close()
+
+    @QtCore.pyqtSlot(float, float)
+    def onMaskRangeChanged(self, lb, ub):
+        self._mask_range_sp = (lb, ub)

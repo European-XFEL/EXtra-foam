@@ -9,7 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import intColor, mkPen, PlotWidget
+from ..widgets.pyqtgraph import intColor, mkPen
+from .plot_widget import PlotWidget
 
 
 class MultiPulseAiWidget(PlotWidget):
@@ -22,12 +23,34 @@ class MultiPulseAiWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
+        self._n_pulses = 0
+
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
 
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        for item in self.plotItem.items:
+            item.setData([], [])
+        self._n_pulses = 0
+
     def update(self, data):
+        """Override."""
         momentum = data.momentum
-        for i, intensity in enumerate(data.intensity):
-            # TODO: use setData, but take of pulse number changes
-            self.plot(momentum, intensity,
-                      pen=mkPen(intColor(i, hues=9, values=5), width=2))
+        intensities = data.intensity
+
+        n_pulses = len(intensities)
+        if n_pulses != self._n_pulses:
+            self._n_pulses = n_pulses
+            # re-plot if number of pulses change
+            self.clear()
+            for i, intensity in enumerate(intensities):
+                self.plot(momentum, intensity,
+                          pen=mkPen(intColor(i, hues=9, values=5), width=2))
+        else:
+            for item, intensity in zip(self.plotItem.items, intensities):
+                item.setData(momentum, intensity)

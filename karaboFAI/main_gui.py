@@ -186,8 +186,8 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._data = self.Data4Visualization()
 
-        # book-keeping opened widgets and windows
-        self._plot_widgets = WeakKeyDictionary()
+        # book-keeping opened windows
+        self._plot_windows = WeakKeyDictionary()
 
         self._mask_image = None
         self._ctrl_pannel = QtGui.QWidget()
@@ -549,8 +549,8 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        for w in self._plot_widgets.keys():
-            w.clearPlots()
+        for w in self._plot_windows.keys():
+            w.clear()
 
         if self._data.get().empty():
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
@@ -559,19 +559,19 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         # update the all the plots
-        for w in self._plot_widgets.keys():
-            w.updatePlots()
+        for w in self._plot_windows.keys():
+            w.update()
 
         logger.debug("Time for updating the plots: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
 
-    def registerPlotWidget(self, instance):
-        self._plot_widgets[instance] = 1
+    def registerPlotWindow(self, instance):
+        self._plot_windows[instance] = 1
 
-    def unregisterPlotWidget(self, instance):
-        del self._plot_widgets[instance]
+    def unregisterPlotWindow(self, instance):
+        del self._plot_windows[instance]
 
     def _loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]

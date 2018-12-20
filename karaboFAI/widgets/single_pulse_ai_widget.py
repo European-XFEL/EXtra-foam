@@ -9,8 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import PlotWidget
-
+from .plot_widget import PlotWidget
 from ..logger import logger
 from ..widgets.misc_widgets import PenFactory
 
@@ -26,20 +25,29 @@ class SinglePulseAiWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._pulse_plot = self.plot(pen=PenFactory.yellow)
-        self._mean_plot = self.plot(pen=PenFactory.cyan)
-
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.addLegend(offset=(-40, 20))
 
-    def update(self, data, pulse_id):
+        self._pulse_plot = self.plot(name="pulse_plot", pen=PenFactory.yellow)
+        self._mean_plot = self.plot(name="mean", pen=PenFactory.cyan)
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._pulse_plot.setData([], [])
+        self._mean_plot.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        pulse_id = 0  # TODO: make pulse_id an input
         if pulse_id >= data.intensity.shape[0]:
             logger.error("Pulse ID {} out of range (0 - {})!".
                          format(pulse_id, data.intensity.shape[0] - 1))
             return
 
-        self.setData(data.momentum, data.intensity[pulse_id],
-                     name="Pulse {}".format(pulse_id))
-        self.setData(data.momentum, data.intensity_mean,
-                     name="mean")
+        self._pulse_plot.setData(data.momentum, data.intensity[pulse_id])
+        self._mean_plot.setData(data.momentum, data.intensity_mean)

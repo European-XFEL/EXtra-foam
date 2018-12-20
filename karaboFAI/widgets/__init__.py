@@ -7,9 +7,11 @@ from .sample_degradation_widget import SampleDegradationWidget
 from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
+from .bulletin_widget import BulletinWidget
 
 
 __all__ = [
+    "BulletinWidget",
     "colorMapFactory",
     "CustomGroupBox",
     "FixedWidthLineEdit",

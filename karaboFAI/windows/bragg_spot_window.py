@@ -93,7 +93,7 @@ class BraggSpotsWindow(PlotWindow):
         self._off_pulses_hist = deque()
 
         self.initUI()
-        self.updatePlots()
+        self.update()
 
         logger.info("Open COM Analysis Window")
 
@@ -424,7 +424,7 @@ class BraggSpotsWindow(PlotWindow):
             self._off_train_received = False
         return com_on, com_off
 
-    def updatePlots(self):
+    def update(self):
         data = self._data.get()
         if data.empty():
             return
