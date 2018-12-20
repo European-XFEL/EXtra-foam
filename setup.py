@@ -19,7 +19,8 @@ setup(
     entry_points={
         'console_scripts': [
             'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
-            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui'
+            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui',
+            'jfrau-gui=karaboFAI.jfrauFAI.jfrau_gui:jfrau_gui'
         ],
     },
     package_data={},
