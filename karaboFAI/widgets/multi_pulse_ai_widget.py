@@ -36,7 +36,6 @@ class MultiPulseAiWidget(PlotWidget):
         """Override."""
         for item in self.plotItem.items:
             item.setData([], [])
-        self._n_pulses = 0
 
     def update(self, data):
         """Override."""
