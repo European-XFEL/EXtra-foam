@@ -20,7 +20,8 @@ setup(
         'console_scripts': [
             'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
             'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui',
-            'jfrau-gui=karaboFAI.jfrauFAI.jfrau_gui:jfrau_gui'
+            'jfrau-gui=karaboFAI.jfrauFAI.jfrau_gui:jfrau_gui',
+            'bragg-gui=karaboFAI.Bragg.bragg_gui:bragg_gui'
         ],
     },
     package_data={},

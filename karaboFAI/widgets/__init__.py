@@ -1,6 +1,9 @@
 from .pyqtgraph import setConfigOption
 setConfigOption("imageAxisOrder", "row-major")
 
+from .control_widgets import (
+    AiSetUpWidget, GmtSetUpWidget, ExpSetUpWidget, DataSrcWidget
+)
 from .misc_widgets import (
     colorMapFactory, CustomGroupBox, FixedWidthLineEdit, GuiLogger,
     InputDialogWithCheckBox
@@ -24,5 +27,9 @@ __all__ = [
     "MultiPulseAiWidget",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
-    "SinglePulseImageWidget"
+    "SinglePulseImageWidget",
+    "AiSetUpWidget",
+    "GmtSetUpWidget",
+    "ExpSetUpWidget",
+    "DataSrcWidget",
 ]
