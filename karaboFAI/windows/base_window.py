@@ -30,8 +30,9 @@ class SingletonWindow:
         if self.instance is None:
             self.instance = self.instance_type(*args, **kwargs)
         else:
-            if isinstance(self.instance, PlotWindow):
-                self.instance.parent().registerPlotWidget(self.instance)
+            if isinstance(self.instance, PlotWindow) \
+                    or isinstance(self.instance, DockerWindow):
+                self.instance.parent().registerPlotWindow(self.instance)
                 self.instance.update()
 
         self.instance.show()
