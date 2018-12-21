@@ -12,9 +12,6 @@ All rights reserved.
 import os
 import configparser
 
-from .widgets.pyqtgraph import setConfigOption
-setConfigOption("imageAxisOrder", "row-major")
-
 
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")

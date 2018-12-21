@@ -1,3 +1,6 @@
+from .pyqtgraph import setConfigOption
+setConfigOption("imageAxisOrder", "row-major")
+
 from .misc_widgets import (
     colorMapFactory, CustomGroupBox, FixedWidthLineEdit, GuiLogger,
     InputDialogWithCheckBox

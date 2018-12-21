@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from karaboFAI.widgets.pyqtgraph import mkQApp, QtGui, QtCore
-from karaboFAI.widgets import LaserOnOffWindow
+from karaboFAI.windows import LaserOnOffWindow
 from karaboFAI.data_processing import ProcessedData, DataSource
 from karaboFAI.main_gui import MainGUI
 
@@ -18,7 +18,7 @@ class Dummy(QtGui.QMainWindow):
     mask_range_sgn = QtCore.pyqtSignal(float, float)
     ma_window_size_sgn = QtCore.pyqtSignal(int)
 
-    def registerPlotWidget(self, instance):
+    def registerPlotWindow(self, instance):
         pass
 
     def updateSharedParameters(self):
