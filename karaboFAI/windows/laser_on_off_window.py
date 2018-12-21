@@ -65,7 +65,7 @@ class LaserOnOffWindow(PlotWindow):
         self._fom_hist = []
 
         self.initUI()
-        self.updatePlots()
+        self.update()
 
         logger.info("Open LaserOnOffWindow")
 
@@ -250,7 +250,7 @@ class LaserOnOffWindow(PlotWindow):
 
         return normalized_on_pulse, normalized_off_pulse
 
-    def updatePlots(self):
+    def update(self):
         """Override."""
         data = self._data.get()
         if data.empty():

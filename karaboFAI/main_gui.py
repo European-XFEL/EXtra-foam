@@ -20,12 +20,10 @@ import zmq
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox,
-    MainGuiImageViewWidget, MainGuiLinePlotWidget,
+    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 from .windows import (
-    BraggSpotsWindow, DrawMaskWindow, IndividualPulseWindow,
-    LaserOnOffWindow, SampleDegradationWindow
+    BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -83,9 +81,8 @@ class MainGUI(QtGui.QMainWindow):
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    _height = 1000  # window height, in pixel
+    _height = 600  # window height, in pixel
     _width = 1380  # window width, in pixel
-    _plot_height = 480  # height of the plot widgets, in pixel
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -131,13 +128,13 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.setEnabled(False)
 
         #
-        open_individual_pulse_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/individual_pulse.png")),
-            "Individual pulse",
+        open_overview_window_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(root_dir, "icons/overview.png")),
+            "Overview",
             self)
-        open_individual_pulse_at.triggered.connect(
-            self._openIndividualPulseWindowDialog)
-        tool_bar.addAction(open_individual_pulse_at)
+        open_overview_window_at.triggered.connect(
+            lambda: OverviewWindow(self._data, parent=self))
+        tool_bar.addAction(open_overview_window_at)
 
         #
         open_laseronoff_window_at = QtGui.QAction(
@@ -156,15 +153,6 @@ class MainGUI(QtGui.QMainWindow):
         open_bragg_spots_window_at.triggered.connect(
             lambda: BraggSpotsWindow(self._data, parent=self))
         tool_bar.addAction(open_bragg_spots_window_at)
-
-        #
-        open_sample_degradation_monitor_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/sample_degradation.png")),
-            "Sample degradation monitor",
-            self)
-        open_sample_degradation_monitor_at.triggered.connect(
-            lambda: SampleDegradationWindow(self._data, parent=self))
-        tool_bar.addAction(open_sample_degradation_monitor_at)
 
         #
         self._draw_mask_at = QtGui.QAction(
@@ -194,22 +182,14 @@ class MainGUI(QtGui.QMainWindow):
         tool_bar.addAction(self._load_geometry_file_at)
 
         # *************************************************************
-        # Plots
+        # Miscellaneous
         # *************************************************************
         self._data = self.Data4Visualization()
 
-        # book-keeping opened widgets and windows
-        self._plot_widgets = WeakKeyDictionary()
-
-        self._lineplot_widget = MainGuiLinePlotWidget(self._data, parent=self)
-        self._lineplot_widget.setFixedSize(
-            self._width - self._plot_height - 25, self._plot_height)
-
-        self._image_widget = MainGuiImageViewWidget(self._data, parent=self)
-        self._image_widget.setFixedSize(self._plot_height, self._plot_height)
+        # book-keeping opened windows
+        self._plot_windows = WeakKeyDictionary()
 
         self._mask_image = None
-
         self._ctrl_pannel = QtGui.QWidget()
 
         # *************************************************************
@@ -400,10 +380,8 @@ class MainGUI(QtGui.QMainWindow):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
-        layout.addWidget(self._image_widget, 4, 0, 5, 1)
-        layout.addWidget(self._lineplot_widget, 4, 1, 5, 5)
-        layout.addWidget(self._logger.widget, 9, 0, 2, 4)
-        layout.addWidget(self._file_server_widget, 9, 4, 2, 2)
+        layout.addWidget(self._logger.widget, 4, 0, 2, 4)
+        layout.addWidget(self._file_server_widget, 4, 4, 2, 2)
 
         self._cw.setLayout(layout)
 
@@ -571,8 +549,8 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        for w in self._plot_widgets.keys():
-            w.clearPlots()
+        for w in self._plot_windows.keys():
+            w.clear()
 
         if self._data.get().empty():
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
@@ -581,46 +559,19 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         # update the all the plots
-        for w in self._plot_widgets.keys():
-            w.updatePlots()
+        for w in self._plot_windows.keys():
+            w.update()
 
         logger.debug("Time for updating the plots: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
 
-    def _openIndividualPulseWindowDialog(self):
-        """A dialog for opening an IndividualPulseWindow."""
-        ret, ok = InputDialogWithCheckBox.getResult(
-            self,
-            'Input Dialog',
-            'Enter pulse IDs (separated by comma):',
-            "Include detector image")
+    def registerPlotWindow(self, instance):
+        self._plot_windows[instance] = 1
 
-        err_msg = "Invalid input! " \
-                  "Enter pulse IDs within the pulse range separated by ','!"
-
-        try:
-            pulse_ids = parse_ids(ret[0])
-        except ValueError:
-            logger.error(err_msg)
-            return
-
-        if not pulse_ids:
-            logger.error(err_msg)
-            return
-
-        if ok:
-            IndividualPulseWindow(self._data,
-                                  pulse_ids,
-                                  parent=self,
-                                  show_image=ret[1])
-
-    def registerPlotWidget(self, instance):
-        self._plot_widgets[instance] = 1
-
-    def unregisterPlotWidget(self, instance):
-        del self._plot_widgets[instance]
+    def unregisterPlotWindow(self, instance):
+        del self._plot_windows[instance]
 
     def _loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]

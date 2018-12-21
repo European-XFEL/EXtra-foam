@@ -10,9 +10,11 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import OrderedDict
+from weakref import WeakKeyDictionary
 
 from ..widgets.pyqtgraph import GraphicsLayoutWidget, QtCore, QtGui
 from ..widgets.pyqtgraph import parametertree as ptree
+from ..widgets.pyqtgraph.dockarea import DockArea
 
 
 class SingletonWindow:
@@ -28,9 +30,10 @@ class SingletonWindow:
         if self.instance is None:
             self.instance = self.instance_type(*args, **kwargs)
         else:
-            if isinstance(self.instance, PlotWindow):
-                self.instance.parent().registerPlotWidget(self.instance)
-                self.instance.updatePlots()
+            if isinstance(self.instance, PlotWindow) \
+                    or isinstance(self.instance, DockerWindow):
+                self.instance.parent().registerPlotWindow(self.instance)
+                self.instance.update()
 
         self.instance.show()
         return self.instance
@@ -91,8 +94,58 @@ class AbstractWindow(QtGui.QMainWindow):
         pass
 
 
+class DockerWindow(AbstractWindow):
+    """QMainWindow displaying a single DockArea."""
+    def __init__(self, *args, **kwargs):
+        """Initialization."""
+        super().__init__(*args, **kwargs)
+        self.parent().registerPlotWindow(self)
+
+        self._plot_widgets = WeakKeyDictionary()  # book-keeping opened windows
+
+        self._docker_area = DockArea()
+
+    def initUI(self):
+        """Override."""
+        self.initPlotUI()
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._docker_area)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._cw.setLayout(layout)
+
+    def update(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        data = self._data.get()
+        if data.empty():
+            return
+
+        for widget in self._plot_widgets:
+            widget.update(data)
+
+    def clear(self):
+        """Clear widgets.
+
+        This method is called by the main GUI.
+        """
+        for widget in self._plot_widgets:
+            widget.clear()
+
+    def registerPlotWidget(self, instance):
+        self._plot_widgets[instance] = 1
+
+    def unregisterPlotWidget(self, instance):
+        del self._plot_widgets[instance]
+
+    def closeEvent(self, QCloseEvent):
+        super().closeEvent(QCloseEvent)
+        self.parent().unregisterPlotWindow(self)
+
+
 class PlotWindow(AbstractWindow):
-    """Base class for stand-alone windows."""
+    """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree."""
 
     available_modes = OrderedDict({
         "normal": "Laser-on/off pulses in the same train",
@@ -103,7 +156,7 @@ class PlotWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        self.parent().registerPlotWidget(self)
+        self.parent().registerPlotWindow(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
@@ -200,14 +253,14 @@ class PlotWindow(AbstractWindow):
         layout.addWidget(self._gl_widget)
         self._cw.setLayout(layout)
 
-    def updatePlots(self):
+    def update(self):
         """Update plots.
 
         This method is called by the main GUI.
         """
         raise NotImplementedError
 
-    def clearPlots(self):
+    def clear(self):
         """Clear plots.
 
         This method is called by the main GUI.
@@ -301,4 +354,4 @@ class PlotWindow(AbstractWindow):
 
     def closeEvent(self, QCloseEvent):
         super().closeEvent(QCloseEvent)
-        self.parent().unregisterPlotWidget(self)
+        self.parent().unregisterPlotWindow(self)

@@ -24,3 +24,7 @@ def fxe_gui(argv=None):
     screen_size = app.primaryScreen().size()
     ex = MainGUI("FXE", screen_size=screen_size)
     app.exec_()
+
+
+if __name__ == '__main__':
+    fxe_gui()
