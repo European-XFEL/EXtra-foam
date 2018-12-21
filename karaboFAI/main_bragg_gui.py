@@ -402,8 +402,6 @@ class MainBraggGUI(QtGui.QMainWindow):
             if not widget.updateSharedParameters(True):
                 return
 
-        # if not self.updateSharedParameters(True):
-        #     return
         self._proc_worker.start()
         self._daq_worker.start()
 
