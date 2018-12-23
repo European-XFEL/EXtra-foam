@@ -37,7 +37,8 @@ class PlotWidget(GraphicsView):
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
-        parent.registerPlotWidget(self)
+        if parent is not None:
+            parent.registerPlotWidget(self)
 
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
@@ -87,5 +88,7 @@ class PlotWidget(GraphicsView):
         return self.plotItem.restoreState(state)
 
     def closeEvent(self, QCloseEvent):
-        self.parent().unregisterPlotWidget(self)
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWidget(self)
         super().closeEvent(QCloseEvent)
