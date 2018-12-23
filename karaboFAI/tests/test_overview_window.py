@@ -33,7 +33,6 @@ class TestOverviewWindow(unittest.TestCase):
         self._win = OverviewWindow(MainGUI.Data4Visualization(), parent=Dummy())
 
     def testInstantiateOverviewWindow(self):
-
         self.assertEqual(len(self._win._plot_widgets), 8)
         counter = Counter()
         for key in self._win._plot_widgets:

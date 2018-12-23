@@ -10,9 +10,6 @@ class TestMainGui(unittest.TestCase):
     gui = MainGUI('FXE')
     actions = gui._tool_bar.actions()
 
-    def testInstantiateOverviewWindow(self):
-        pass
-
     def testOpenCloseWindows(self):
         count = 0
         for idx in (2, 3, 4):
