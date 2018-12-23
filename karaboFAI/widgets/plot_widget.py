@@ -49,11 +49,13 @@ class PlotWidget(GraphicsView):
         self.plotItem.sigRangeChanged.connect(self.viewRangeChanged)
 
     def clear(self):
+        """Remove all the items in the PlotItem object."""
         plot_item = self.plotItem
         for i in plot_item.items[:]:
             plot_item.removeItem(i)
 
     def reset(self):
+        """Clear the data of all the items in the PlotItem object."""
         pass
 
     def update(self, data):
