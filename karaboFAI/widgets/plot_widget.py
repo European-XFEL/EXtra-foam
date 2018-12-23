@@ -87,5 +87,5 @@ class PlotWidget(GraphicsView):
         return self.plotItem.restoreState(state)
 
     def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
         self.parent().unregisterPlotWidget(self)
+        super().closeEvent(QCloseEvent)

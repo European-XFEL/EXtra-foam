@@ -140,8 +140,8 @@ class DockerWindow(AbstractWindow):
         del self._plot_widgets[instance]
 
     def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
         self.parent().unregisterPlotWindow(self)
+        super().closeEvent(QCloseEvent)
 
 
 class PlotWindow(AbstractWindow):
@@ -353,5 +353,5 @@ class PlotWindow(AbstractWindow):
         pass
 
     def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
         self.parent().unregisterPlotWindow(self)
+        super().closeEvent(QCloseEvent)
