@@ -105,6 +105,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # *************************************************************
         # Tool bar
+        # Note: the order of 'addAction` affect the unittest!!!
         # *************************************************************
         tool_bar = self.addToolBar("Control")
 
@@ -180,6 +181,8 @@ class MainGUI(QtGui.QMainWindow):
         self._load_geometry_file_at.triggered.connect(
             self._loadGeometryFile)
         tool_bar.addAction(self._load_geometry_file_at)
+
+        self._tool_bar = tool_bar
 
         # *************************************************************
         # Miscellaneous
