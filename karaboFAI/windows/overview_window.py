@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock
-from ..widgets.pyqtgraph import LayoutWidget, QtGui
 
 from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger

@@ -19,9 +19,7 @@ import zmq
 
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
-from .widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
-)
+from .widgets import CustomGroupBox, FixedWidthLineEdit, GuiLogger
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )

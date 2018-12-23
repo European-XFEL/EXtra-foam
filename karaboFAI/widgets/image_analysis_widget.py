@@ -13,7 +13,7 @@ import numpy as np
 
 from ..widgets.pyqtgraph import ImageView, QtCore
 
-from .misc_widgets import  colorMapFactory
+from .misc_widgets import colorMapFactory
 from ..config import config
 
 
