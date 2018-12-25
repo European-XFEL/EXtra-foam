@@ -8,7 +8,8 @@ from collections import namedtuple, OrderedDict
 from ..logger import logger
 from ..helpers import parse_ids, parse_boundary, parse_table_widget
 from ..data_processing import DataSource
-
+from ..file_server import FileServer
+import zmq
 
 class AiSetUpWidget(QtGui.QWidget):
     """Azimuthal integration set up class
@@ -441,11 +442,28 @@ class DataSrcWidget(QtGui.QWidget):
         self._data_src_rbts.append(
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
+        
+        # *************************************************************
+        # file server
+        # *************************************************************
+        self._file_server = None
+        self._file_server_widget = CustomGroupBox("Data stream server")
+        self._server_start_btn = QtGui.QPushButton("Serve")
+        self._server_start_btn.clicked.connect(self._onStartServeFile)
+        self._server_terminate_btn = QtGui.QPushButton("Terminate")
+        self._server_terminate_btn.setEnabled(False)
+        self._server_terminate_btn.clicked.connect(
+           self._onStopServeFile)
 
-        self._initUI()
+        self._disabled_widgets_during_file_serving = [
+            self._source_name_le,
+        ]
+        self._initDataSrcUI()
+        self._initFileServerUI()
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._data_src_gp)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self._data_src_gp,2)
+        layout.addWidget(self._file_server_widget,1)
         self.setLayout(layout)
 
     @property
@@ -466,7 +484,7 @@ class DataSrcWidget(QtGui.QWidget):
 
         return Children._make(var)
 
-    def _initUI(self):
+    def _initDataSrcUI(self):
         # *************************************************************
         # data source panel
         # *************************************************************
@@ -501,6 +519,43 @@ class DataSrcWidget(QtGui.QWidget):
             layout.addWidget(btn)
         layout.addLayout(sub_layout2)
         self._data_src_gp.setLayout(layout)
+
+    def _initFileServerUI(self):
+        layout = QtGui.QGridLayout()
+        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
+        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
+        self._file_server_widget.setLayout(layout)#
+
+    def _onStartServeFile(self):
+        """Actions taken before the start of file serving."""
+        folder = self._source_name_le.text().strip()
+        port = int(self._port_le.text().strip())
+        # process can only be start once
+        self._file_server = FileServer(folder, port)
+        try:
+            # TODO: signal the end of file serving
+            self._file_server.start()
+            logger.info("Start serving file in the folder {} through port {}"
+                        .format(folder, port))
+        except FileNotFoundError:
+            logger.info("{} does not exist!".format(folder))
+            return
+        except zmq.error.ZMQError:
+            logger.info("Port {} is already in use!".format(port))
+            return
+
+        self._server_terminate_btn.setEnabled(True)
+        self._server_start_btn.setEnabled(False)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(False)
+
+    def _onStopServeFile(self):
+        """Actions taken before the end of file serving."""
+        self._file_server.terminate()
+        self._server_terminate_btn.setEnabled(False)
+        self._server_start_btn.setEnabled(True)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(True)
 
     def updateSharedParameters(self, log=False):
         """Update shared parameters for data source setup widget.

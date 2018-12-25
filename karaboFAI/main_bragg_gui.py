@@ -15,22 +15,18 @@ import logging
 from queue import Queue, Empty
 from weakref import WeakKeyDictionary
 
-import zmq
-
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox,
-    AiSetUpWidget, GmtSetUpWidget, ExpSetUpWidget, DataSrcWidget
+    AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget,
+    GuiLogger
 )
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
-from .data_processing import DataSource, DataProcessor, ProcessedData
-from .file_server import FileServer
+from .data_processing import  DataProcessor, ProcessedData
 from .config import config
-from .helpers import parse_ids, parse_boundary, parse_table_widget
 
 
 class MainBraggGUI(QtGui.QMainWindow):
@@ -212,24 +208,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._logger = GuiLogger(self)
         logging.getLogger().addHandler(self._logger)
 
-        # *************************************************************
-        # file server
-        # *************************************************************
-        self._file_server = None
-
-        self._file_server_widget = CustomGroupBox("Data stream server")
-        self._server_start_btn = QtGui.QPushButton("Serve")
-        self._server_start_btn.clicked.connect(self._onStartServeFile)
-        self._server_terminate_btn = QtGui.QPushButton("Terminate")
-        self._server_terminate_btn.setEnabled(False)
-        self._server_terminate_btn.clicked.connect(
-            self._onStopServeFile)
-
-        self._disabled_widgets_during_file_serving = [
-            self._datasrc_children.source_name_le,
-        ]
-
-        self._initFileServerUI()
         self._initUI()
 
         if screen_size is None:
@@ -323,9 +301,8 @@ class MainBraggGUI(QtGui.QMainWindow):
         layout.addWidget(self._ai_setup_gp, 0, 0, 4, 1)
         layout.addWidget(self._gmt_setup_gp, 0, 1, 4, 1)
         layout.addWidget(self._exp_setup_gp, 0, 2, 4, 1)
-        layout.addWidget(self._data_src_gp, 0, 3, 4, 1)
+        layout.addWidget(self._data_src_gp, 0, 3, 6, 1)
         layout.addWidget(self._logger.widget, 4, 0, 2, 3)
-        layout.addWidget(self._file_server_widget, 4, 3, 2, 1)
         self._cw.setLayout(layout)
 
     def registerControlWidget(self, instance):
@@ -333,15 +310,6 @@ class MainBraggGUI(QtGui.QMainWindow):
 
     def unregisterControlWidget(self, instance):
         del self._control_widgets[instance]
-
-    def _initFileServerUI(self):
-        layout = QtGui.QGridLayout()
-
-        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
-        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-
-        self._file_server_widget.setLayout(layout)
-
 
     def _updateAll(self):
         """Update all the plots in the main and child windows."""
@@ -397,10 +365,8 @@ class MainBraggGUI(QtGui.QMainWindow):
         """Actions taken before the start of a 'run'."""
         self._clearQueues()
         self._running = True  # starting to update plots
-
-        for widget in self._control_widgets:
-            if not widget.updateSharedParameters(True):
-                return
+        if not self.updateSharedParameters(True):
+            return 
 
         self._proc_worker.start()
         self._daq_worker.start()
@@ -434,38 +400,19 @@ class MainBraggGUI(QtGui.QMainWindow):
         with self._proc_queue.mutex:
             self._proc_queue.queue.clear()
 
-    def _onStartServeFile(self):
-        """Actions taken before the start of file serving."""
-        folder = self._datasrc_children.source_name_le.text().strip()
-        port = int(self._datasrc_children.port_le.text().strip())
+    def updateSharedParameters(self, log=False):
+        """Update shared parameters for all child windows.
 
-        # process can only be start once
-        self._file_server = FileServer(folder, port)
-        try:
-            # TODO: signal the end of file serving
-            self._file_server.start()
-            logger.info("Start serving file in the folder {} through port {}"
-                        .format(folder, port))
-        except FileNotFoundError:
-            logger.info("{} does not exist!".format(folder))
-            return
-        except zmq.error.ZMQError:
-            logger.info("Port {} is already in use!".format(port))
-            return
+        :params bool log: True for logging shared parameters and False
+            for not.
 
-        self._server_terminate_btn.setEnabled(True)
-        self._server_start_btn.setEnabled(False)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(False)
-
-    def _onStopServeFile(self):
-        """Actions taken before the end of file serving."""
-        self._file_server.terminate()
-        self._server_terminate_btn.setEnabled(False)
-        self._server_start_btn.setEnabled(True)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(True)
-
+        Returns bool: True if all shared parameters successfully parsed
+            and emitted, otherwise False.
+        """
+        for widget in self._control_widgets:
+            if not widget.updateSharedParameters(log=log):
+                return False
+        return True
 
     @QtCore.pyqtSlot(str)
     def onMessageReceived(self, msg):
@@ -476,6 +423,6 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self._clearWorkers()
 
-        if self._file_server is not None and self._file_server.is_alive():
-            self._file_server.terminate()
+        if self._data_src_gp._file_server is not None and self._data_src_gp._file_server.is_alive():
+            self._data_src_gp._file_server.terminate()
 
