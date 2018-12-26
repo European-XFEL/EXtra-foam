@@ -5,7 +5,6 @@ European XFEL.
 
 Main Bragg GUI.
 
-Author: Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
@@ -18,7 +17,7 @@ from weakref import WeakKeyDictionary
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget,
+    AiSetUpWidget, DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
     GuiLogger
 )
 from .windows import (
@@ -191,15 +190,14 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self._mask_image = None
 
-        self._ai_setup_gp = AiSetUpWidget(parent=self)
-        self._gmt_setup_gp = GmtSetUpWidget(parent=self)
-        self._exp_setup_gp = ExpSetUpWidget(parent=self)
-        self._data_src_gp = DataSrcWidget(parent=self)
-
-        self._ai_children = self._ai_setup_gp.children
-        self._gmt_children = self._gmt_setup_gp.children
-        self._exp_children = self._exp_setup_gp.children
-        self._datasrc_children = self._data_src_gp.children
+        self._disabled_widgets_during_daq = [
+             self._load_mask_at,
+             self._load_geometry_file_at,
+        ]
+        self._ai_setup_widget = AiSetUpWidget(parent=self)
+        self._gmt_setup_widget = GmtSetUpWidget(parent=self)
+        self._exp_setup_widget = ExpSetUpWidget(parent=self)
+        self._data_src_file_server_widget = DataSrcFileServerWidget(parent=self)
 
         # *************************************************************
         # log window
@@ -216,35 +214,7 @@ class MainBraggGUI(QtGui.QMainWindow):
             self.move(screen_size.width()/2 - self._width/2,
                       screen_size.height()/20)
 
-        # TODO: implement
-        self._datasrc_children.pulse_range0_le.setEnabled(False)
-
-        self._disabled_widgets_during_daq = [
-            self._load_mask_at,
-            self._load_geometry_file_at,
-            self._datasrc_children.hostname_le,
-            self._datasrc_children.port_le,
-            self._datasrc_children.pulse_range1_le,
-            self._ai_children.sample_dist_le,
-            self._ai_children.cx_le,
-            self._ai_children.cy_le,
-            self._ai_children.itgt_method_cb,
-            self._ai_children.itgt_range_le,
-            self._ai_children.itgt_points_le,
-            self._ai_children.mask_range_le,
-            self._gmt_children.geom_file_le,
-            self._gmt_children.quad_positions_tb,
-            self._exp_children.photon_energy_le,
-            self._exp_children.laser_mode_cb,
-            self._exp_children.on_pulse_le,
-            self._exp_children.off_pulse_le,
-            self._exp_children.normalization_range_le,
-            self._exp_children.diff_integration_range_le,
-            self._exp_children.ma_window_le
-        ]
-
-        self._disabled_widgets_during_daq.extend(self._datasrc_children.data_src_rbts)
-
+        
         self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -298,10 +268,10 @@ class MainBraggGUI(QtGui.QMainWindow):
     def _initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self._ai_setup_gp, 0, 0, 4, 1)
-        layout.addWidget(self._gmt_setup_gp, 0, 1, 4, 1)
-        layout.addWidget(self._exp_setup_gp, 0, 2, 4, 1)
-        layout.addWidget(self._data_src_gp, 0, 3, 6, 1)
+        layout.addWidget(self._ai_setup_widget, 0, 0, 4, 1)
+        layout.addWidget(self._gmt_setup_widget, 0, 1, 4, 1)
+        layout.addWidget(self._exp_setup_widget, 0, 2, 4, 1)
+        layout.addWidget(self._data_src_file_server_widget, 0, 3, 6, 1)
         layout.addWidget(self._logger.widget, 4, 0, 2, 3)
         self._cw.setLayout(layout)
 
@@ -365,7 +335,7 @@ class MainBraggGUI(QtGui.QMainWindow):
         """Actions taken before the start of a 'run'."""
         self._clearQueues()
         self._running = True  # starting to update plots
-        if not self.updateSharedParameters(True):
+        if not self.updateSharedParameters(log=True):
             return 
 
         self._proc_worker.start()
@@ -423,6 +393,8 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self._clearWorkers()
 
-        if self._data_src_gp._file_server is not None and self._data_src_gp._file_server.is_alive():
-            self._data_src_gp._file_server.terminate()
+        if self._data_src_file_server_widget._file_server is not None \
+            and self._data_src_file_server_widget._file_server.is_alive():
+            
+            self._data_src_file_server_widget._file_server.terminate()
 

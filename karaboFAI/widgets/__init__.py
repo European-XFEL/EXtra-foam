@@ -2,7 +2,7 @@ from .pyqtgraph import setConfigOption
 setConfigOption("imageAxisOrder", "row-major")
 
 from .control_widgets import (
-    AiSetUpWidget, GmtSetUpWidget, ExpSetUpWidget, DataSrcWidget
+    AiSetUpWidget, GmtSetUpWidget, ExpSetUpWidget, DataSrcFileServerWidget
 )
 from .misc_widgets import (
     colorMapFactory, CustomGroupBox, FixedWidthLineEdit, GuiLogger,
@@ -31,5 +31,5 @@ __all__ = [
     "AiSetUpWidget",
     "GmtSetUpWidget",
     "ExpSetUpWidget",
-    "DataSrcWidget",
+    "DataSrcFileServerWidget",
 ]

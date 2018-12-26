@@ -2,7 +2,6 @@ from ..widgets.pyqtgraph import QtCore, QtGui
 from ..widgets.misc_widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
-#from ..windows import LaserOnOffWindow
 from ..config import config
 from collections import namedtuple, OrderedDict
 from ..logger import logger
@@ -40,6 +39,17 @@ class AiSetUpWidget(QtGui.QWidget):
             w, str(config["INTEGRATION_POINTS"]))
         self._mask_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
+
+        local_widgets_to_disable_during_daq = [
+            self._sample_dist_le,
+            self._cx_le,
+            self._cy_le,
+            self._itgt_method_cb,
+            self._itgt_range_le,
+            self._itgt_points_le,
+            self._mask_range_le
+        ]
+        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
 
         self._initUI()
         layout = QtGui.QHBoxLayout()
@@ -171,6 +181,13 @@ class GmtSetUpWidget(QtGui.QWidget):
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = FixedWidthLineEdit(285, config["GEOMETRY_FILE"])
 
+        local_widgets_to_disable_during_daq = [
+            self._gmt_setup_gp,
+            self._quad_positions_tb,
+            self._geom_file_le,
+        ]
+        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+
         self._initUI()
 
         layout = QtGui.QHBoxLayout()
@@ -278,6 +295,17 @@ class ExpSetUpWidget(QtGui.QWidget):
         self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
+
+        local_widgets_to_disable_during_daq = [
+            self._photon_energy_le,
+            self._laser_mode_cb,
+            self._on_pulse_le,
+            self._off_pulse_le,
+            self._normalization_range_le,
+            self._diff_integration_range_le,
+            self._ma_window_le,
+        ]
+        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
 
         self._initUI()
 
@@ -411,7 +439,7 @@ class ExpSetUpWidget(QtGui.QWidget):
 
         return True
 
-class DataSrcWidget(QtGui.QWidget):
+class DataSrcFileServerWidget(QtGui.QWidget):
     """Data source set up class
 
     creates a widget for the data source details.
@@ -454,10 +482,22 @@ class DataSrcWidget(QtGui.QWidget):
         self._server_terminate_btn.setEnabled(False)
         self._server_terminate_btn.clicked.connect(
            self._onStopServeFile)
+        
+        self._pulse_range0_le.setEnabled(False)
 
         self._disabled_widgets_during_file_serving = [
             self._source_name_le,
         ]
+
+        local_widgets_to_disable_during_daq = [
+            self._hostname_le,
+            self._port_le,
+            self._source_name_le,
+            self._pulse_range1_le,
+        ]
+        local_widgets_to_disable_during_daq.extend(self._data_src_rbts)
+        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+
         self._initDataSrcUI()
         self._initFileServerUI()
 
