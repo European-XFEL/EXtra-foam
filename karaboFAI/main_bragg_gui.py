@@ -16,6 +16,7 @@ from weakref import WeakKeyDictionary
 
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
+from .widgets.pyqtgraph.widgets import MatplotlibWidget
 from .widgets import (
     AiSetUpWidget, DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
     GuiLogger
@@ -24,7 +25,7 @@ from .windows import (
     BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
-from .data_processing import  DataProcessor, ProcessedData
+from .data_processing import DataProcessor, ProcessedData
 from .config import config
 
 
@@ -36,6 +37,7 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         The internal data is only modified in MainGUI.updateAll()
         """
+
         def __init__(self):
             self.__value = ProcessedData(-1)
 
@@ -124,24 +126,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._stop_at.setEnabled(False)
 
         #
-        open_overview_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/overview.png")),
-            "Overview",
-            self)
-        open_overview_window_at.triggered.connect(
-            lambda: OverviewWindow(self._data, parent=self))
-        tool_bar.addAction(open_overview_window_at)
-
-        #
-        open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/on_off_pulses.png")),
-            "On- and off- pulses",
-            self)
-        open_laseronoff_window_at.triggered.connect(
-            lambda: LaserOnOffWindow(self._data, parent=self))
-        tool_bar.addAction(open_laseronoff_window_at)
-
-        #
         open_bragg_spots_window_at = QtGui.QAction(
             QtGui.QIcon(os.path.join(root_dir, "icons/bragg_spots.png")),
             "Bragg spots",
@@ -191,13 +175,14 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._mask_image = None
 
         self._disabled_widgets_during_daq = [
-             self._load_mask_at,
-             self._load_geometry_file_at,
+            self._load_mask_at,
+            self._load_geometry_file_at,
         ]
         self._ai_setup_widget = AiSetUpWidget(parent=self)
         self._gmt_setup_widget = GmtSetUpWidget(parent=self)
         self._exp_setup_widget = ExpSetUpWidget(parent=self)
-        self._data_src_file_server_widget = DataSrcFileServerWidget(parent=self)
+        self._data_src_file_server_widget = DataSrcFileServerWidget(
+            parent=self)
 
         # *************************************************************
         # log window
@@ -214,7 +199,6 @@ class MainBraggGUI(QtGui.QMainWindow):
             self.move(screen_size.width()/2 - self._width/2,
                       screen_size.height()/20)
 
-        
         self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -271,15 +255,12 @@ class MainBraggGUI(QtGui.QMainWindow):
         layout.addWidget(self._ai_setup_widget, 0, 0, 4, 1)
         layout.addWidget(self._gmt_setup_widget, 0, 1, 4, 1)
         layout.addWidget(self._exp_setup_widget, 0, 2, 4, 1)
-        layout.addWidget(self._data_src_file_server_widget, 0, 3, 6, 1)
-        layout.addWidget(self._logger.widget, 4, 0, 2, 3)
+        layout.addWidget(self._data_src_file_server_widget, 0, 3, 7, 1)
+        layout.addWidget(self._logger.widget, 4, 0, 3, 3)
         self._cw.setLayout(layout)
 
     def registerControlWidget(self, instance):
         self._control_widgets[instance] = 1
-
-    def unregisterControlWidget(self, instance):
-        del self._control_widgets[instance]
 
     def _updateAll(self):
         """Update all the plots in the main and child windows."""
@@ -336,7 +317,7 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._clearQueues()
         self._running = True  # starting to update plots
         if not self.updateSharedParameters(log=True):
-            return 
+            return
 
         self._proc_worker.start()
         self._daq_worker.start()
@@ -394,7 +375,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._clearWorkers()
 
         if self._data_src_file_server_widget._file_server is not None \
-            and self._data_src_file_server_widget._file_server.is_alive():
-            
-            self._data_src_file_server_widget._file_server.terminate()
+                and self._data_src_file_server_widget._file_server.is_alive():
 
+            self._data_src_file_server_widget._file_server.terminate()

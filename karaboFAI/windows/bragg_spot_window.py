@@ -16,10 +16,11 @@ import numpy as np
 from scipy import ndimage
 
 from ..widgets.pyqtgraph import (
-    ImageItem, LineSegmentROI, mkBrush, mkPen, QtCore, QtGui, RectROI,
-    ScatterPlotItem
+    GraphicsLayoutWidget ,ImageItem, LineSegmentROI, mkBrush, mkPen, QtCore,
+    QtGui, RectROI, ScatterPlotItem
 )
 from ..widgets.pyqtgraph import parametertree as ptree
+from ..widgets.pyqtgraph.dockarea import DockArea, Dock
 
 from .base_window import PlotWindow
 from ..logger import logger
@@ -71,6 +72,11 @@ class BraggSpotsWindow(PlotWindow):
         super().__init__(data, parent=parent)
 
         self.setGeometry(100, 100, 1600, 1000)
+        self._docker_area = DockArea()
+        self._image_gl_widget = GraphicsLayoutWidget()
+        self._comxy_gl_widget = GraphicsLayoutWidget()
+        self._history_gl_widget = GraphicsLayoutWidget()
+        self._intensity_gl_widget = GraphicsLayoutWidget()
 
         self._rois = []  # bookkeeping Region of interests.
         self._hist_train_on_id = []
@@ -94,7 +100,6 @@ class BraggSpotsWindow(PlotWindow):
 
         self.initUI()
         self.update()
-
         logger.info("Open COM Analysis Window")
 
     def updateParameterTree(self):
@@ -111,9 +116,6 @@ class BraggSpotsWindow(PlotWindow):
 
         self._ana_params.addChildren([
            {'name': 'Profile Analysis', 'type': 'bool', 'value': False},
-           {'name': 'Normalized Intensity Plot',
-                    'type': 'bool', 'value': False}
-
         ])
 
         self._act_params.addChildren([
@@ -135,25 +137,49 @@ class BraggSpotsWindow(PlotWindow):
         # brad and background region of interests. Click based.
         self._ana_params.child('Profile Analysis').sigStateChanged.connect(
             self._profile)
-        self._ana_params.child('Normalized Intensity Plot').\
-            sigStateChanged.connect(self._intensity)
 
         self._ptree.setParameters(params, showTop=False)
+
+    def initUI(self):
+        """Override"""
+        self.initCtrlUI()
+        self.initPlotUI()
+        ptree_dock = Dock("Experimental parameters")
+        self._docker_area.addDock(ptree_dock, 'left')
+        ptree_dock.addWidget(self._ctrl_widget)
+
+        image_dock = Dock("")
+        self._docker_area.addDock(image_dock, 'right')
+        image_dock.addWidget(self._image_gl_widget)
+
+        intensity_dock = Dock("Normalized Intensity")
+        self._docker_area.addDock(intensity_dock, 'right', image_dock)
+        intensity_dock.addWidget(self._intensity_gl_widget)
+
+        comxy_dock = Dock("Moving average of centre of Mass")
+        self._docker_area.addDock(comxy_dock, 'above', intensity_dock)
+        comxy_dock.addWidget(self._comxy_gl_widget)
+
+        history_dock = Dock("Pulse averaged centre of mass")
+        self._docker_area.addDock(history_dock, 'bottom', comxy_dock)
+        history_dock.addWidget(self._history_gl_widget)
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self._docker_area)
+        self._cw.setLayout(layout)
 
     def initCtrlUI(self):
         """Override"""
         self._ctrl_widget = QtGui.QWidget()
-        self._ctrl_widget.setMaximumWidth(400)
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._ptree)
         self._ctrl_widget.setLayout(layout)
 
     def initPlotUI(self):
-
         img = ImageItem(border='w')
         img.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         self._image_items.append(img)
-        self._main_vb = self._gl_widget.addPlot(
+        self._main_vb = self._image_gl_widget.addPlot(
             row=0, col=0, rowspan=2, colspan=2,
             lockAspect=True, enableMouse=False)
         self._main_vb.addItem(img)
@@ -191,46 +217,53 @@ class BraggSpotsWindow(PlotWindow):
 
         # View Boxes vb1 and vb2 in lower left panels for images in
         # selected ROIs
-        vb1 = self._gl_widget.addViewBox(row=2, col=0, rowspan=2, colspan=1,
+        vb1 = self._image_gl_widget.addViewBox(row=2, col=0, rowspan=2, colspan=1,
                                          lockAspect=True, enableMouse=False)
         img1 = ImageItem()
         img1.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb1.addItem(img1)
         self._image_items.append(img1)
 
-        vb2 = self._gl_widget.addViewBox(row=2, col=1, rowspan=2, colspan=1,
+        vb2 = self._image_gl_widget.addViewBox(row=2, col=1, rowspan=2, colspan=1,
                                          lockAspect=True, enableMouse=False)
         img2 = ImageItem(border='w')
         img2.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb2.addItem(img2)
         self._image_items.append(img2)
 
-        self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
+        # self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
 
         # Plot regions for COM moving averages and history over
         # different trains
-        p = self._gl_widget.addPlot(
-            row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
+        p = self._comxy_gl_widget.addPlot(
+            row=0, col=0, rowspan=1, colspan=1, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left',  "<span style='text-decoration: overline'>R</span>\
             <sub>x</sub>")
 
-        p = self._gl_widget.addPlot(
-            row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
+        p = self._comxy_gl_widget.addPlot(
+            row=1, col=0, rowspan=1, colspan=1, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left', "<span style='text-decoration: overline'>R</span>\
             <sub>y</sub>")
         p.setLabel('bottom', "Pulse ids")
 
-        p = self._gl_widget.addPlot(
-            row=2, col=2, rowspan=1, colspan=2, lockAspect=True)
+        p = self._intensity_gl_widget.addPlot(
+                row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
+        self._plot_items.append(p)
+        p.setLabel('left', "Intensity")
+        p.setLabel('bottom', "Pulse ids")
+
+
+        p = self._history_gl_widget.addPlot(
+            row=0, col=0, rowspan=1, colspan=1, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left', '&lt;<span style="text-decoration:\
             overline">R</span><sub>x</sub>&gt;<sub>pulse-avg</sub>')
         p.setTitle(' ')
 
-        p = self._gl_widget.addPlot(
-            row=3, col=2, rowspan=1, colspan=2, lockAspect=True)
+        p = self._history_gl_widget.addPlot(
+            row=1, col=0, rowspan=1, colspan=1, lockAspect=True)
         self._plot_items.append(p)
         p.setLabel('left',  "&lt;<span style='text-decoration:\
             overline'>R</span><sub>y</sub>&gt;<sub>pulse-avg</sub>")
@@ -469,34 +502,23 @@ class BraggSpotsWindow(PlotWindow):
 
         logger.debug("Time for centre of mass evaluation: {:.1f} ms\n"
                      .format(1000 * (time.perf_counter() - t0)))
-        # If Normalized intensity plot Checkbox is not checked then
-        # just plot COM X and Y as a function of pulseIds
-        if not self._ana_params.child('Normalized Intensity Plot').value():
-            for index, p in enumerate(self._plot_items[:-2]):
-                p.addLegend()
-                if index == 0:
-                    p.setTitle(' TrainId :: {}'.format(data.tid))
-                if com_on is not None:
-                    p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]],
-                           com_on[:, index], name='On', pen=PenFactory.green,
-                           symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
-                if com_off is not None:
-                    p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]],
-                           com_off[:, index], name="Off",
-                           pen=PenFactory.purple, symbol='o',
-                           symbolBrush=mkBrush(255, 0, 255, 255))
-        # Else plot Normalized intensity.
-        else:
-            p = self._plot_items[0]
-            p.setTitle(' TrainId :: {}'.format(data.tid))
+
+        # plot COM X, COM Y and normalised intensity as a function of
+        # pulseIds
+
+        for index, p in enumerate(self._plot_items[:-2]):
+            p.addLegend()
+            if index == 0 or index == 2:
+                p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
                 p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]],
-                       com_on[:, -1], name='On', pen=PenFactory.green,
+                       com_on[:, index], name='On', pen=PenFactory.green,
                        symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
                 p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]],
-                       com_off[:, -1], name="Off", pen=PenFactory.purple,
-                       symbol='o', symbolBrush=mkBrush(255, 0, 255, 255))
+                       com_off[:, index], name="Off",
+                       pen=PenFactory.purple, symbol='o',
+                       symbolBrush=mkBrush(255, 0, 255, 255))
 
         for idx, p in enumerate(self._plot_items[-2:]):
             p.clear()
@@ -527,32 +549,33 @@ class BraggSpotsWindow(PlotWindow):
                        pen=PenFactory.green, name='On')
                 p.addLegend()
 
+
     # Profile state change triggers this function
     # If profile is checked, adds bottom panels to plot histograms.
     def _profile(self):
         if self._ana_params.child('Profile Analysis').value():
 
-            self._gl_widget.ci.layout.setRowStretchFactor(0, 2)
-            self._gl_widget.ci.layout.setRowStretchFactor(1, 2)
-            profile_plot = self._gl_widget.addPlot(
-                row=4, col=0, rowspan=3, colspan=2)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(0, 2)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(1, 2)
+            profile_plot = self._image_gl_widget.addPlot(
+                row=4, col=0, rowspan=3, colspan=1)
 
             self._profile_plot_items.append(profile_plot)
-            profile_plot = self._gl_widget.addPlot(
-                row=4, col=2, rowspan=3, colspan=2)
-            self._gl_widget.ci.layout.setRowStretchFactor(4, 2)
+            profile_plot = self._image_gl_widget.addPlot(
+                row=4, col=1, rowspan=3, colspan=1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(4, 2)
 
             self._profile_plot_items.append(profile_plot)
 
             self._image_items[0].mouseClickEvent = self._click
 
         else:
-            self._gl_widget.ci.layout.setRowStretchFactor(0, 1)
-            self._gl_widget.ci.layout.setRowStretchFactor(1, 1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(0, 1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(1, 1)
 
             if len(self._profile_plot_items) > 0:
                 for item in self._profile_plot_items:
-                    self._gl_widget.removeItem(item)
+                    self._image_gl_widget.removeItem(item)
                 self._profile_plot_items.clear()
             if len(self._profile_line_rois) > 0:
                 for line in self._profile_line_rois:
@@ -603,42 +626,7 @@ class BraggSpotsWindow(PlotWindow):
                     x, y, stepMode=True, fillLevel=0,
                     brush=(255, 0, 255, 150))
 
-    # Normalized intensity plot. When state changes in the checkbox
-    # it removes Centre of Mass X and Y plots and replace it with
-    # intensity plot.
-
-    def _intensity(self):
-        if self._ana_params.child('Normalized Intensity Plot').value():
-            for plot in self._plot_items[:-2]:
-                self._gl_widget.removeItem(plot)
-                self._plot_items.remove(plot)
-
-            p = self._gl_widget.addPlot(
-                row=0, col=2, rowspan=2, colspan=2, lockAspect=True)
-            self._plot_items.insert(0, p)
-            p.setLabel('left', "Intensity")
-            p.setLabel('bottom', "Pulse ids")
-        else:
-            for plot in self._plot_items[:-2]:
-                self._gl_widget.removeItem(plot)
-                self._plot_items.remove(plot)
-
-            p = self._gl_widget.addPlot(
-                row=0, col=2, rowspan=1, colspan=2, lockAspect=True)
-            self._plot_items.insert(0, p)
-            p.setLabel('left',
-                       "<span style='text-decoration: overline'>R</span>\
-                       <sub>x</sub>")
-
-            p = self._gl_widget.addPlot(
-                row=1, col=2, rowspan=1, colspan=2, lockAspect=True)
-            self._plot_items.insert(1, p)
-            p.setLabel('left',
-                       "<span style='text-decoration: overline'>R</span>\
-                       <sub>x</sub>")
-            p.setLabel('bottom', "Pulse ids")
-
-    def clearPlots(self):
+    def clear(self):
         """Override."""
         for item in self._image_items:
             item.clear()

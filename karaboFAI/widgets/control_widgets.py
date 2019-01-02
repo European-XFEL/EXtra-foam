@@ -1,20 +1,23 @@
+from collections import namedtuple, OrderedDict
+import zmq
+
+from ..config import config
+from ..data_processing import DataSource
+from ..file_server import FileServer
+from ..helpers import parse_ids, parse_boundary, parse_table_widget
+from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
 from ..widgets.misc_widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
-from ..config import config
-from collections import namedtuple, OrderedDict
-from ..logger import logger
-from ..helpers import parse_ids, parse_boundary, parse_table_widget
-from ..data_processing import DataSource
-from ..file_server import FileServer
-import zmq
+
 
 class AiSetUpWidget(QtGui.QWidget):
     """Azimuthal integration set up class
 
     creates a widget for azimjuthal integration parameters.
     """
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         parent.registerControlWidget(self)
@@ -49,9 +52,11 @@ class AiSetUpWidget(QtGui.QWidget):
             self._itgt_points_le,
             self._mask_range_le
         ]
-        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+        parent._disabled_widgets_during_daq.extend(
+            local_widgets_to_disable_during_daq)
 
         self._initUI()
+
         layout = QtGui.QHBoxLayout()
         layout.addWidget(self._ai_setup_gp)
         self.setLayout(layout)
@@ -60,7 +65,7 @@ class AiSetUpWidget(QtGui.QWidget):
     def children(self):
         Children = namedtuple("Children",
                               ['sample_dist_le',
-                               'cx_le','cy_le',
+                               'cx_le', 'cy_le',
                                'itgt_method_cb',
                                'itgt_range_le',
                                'itgt_points_le',
@@ -71,7 +76,7 @@ class AiSetUpWidget(QtGui.QWidget):
                self._itgt_method_cb,
                self._itgt_range_le,
                self._itgt_points_le,
-               self._mask_range_le ]
+               self._mask_range_le]
         return Children._make(var)
 
     def _initUI(self):
@@ -153,7 +158,8 @@ class AiSetUpWidget(QtGui.QWidget):
             logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
                         format(center_x, center_y))
             logger.info("<Cy (pixel)>: {:d}".format(center_y))
-            logger.info("<Integration method>: '{}'".format(integration_method))
+            logger.info("<Integration method>: '{}'".format(
+                integration_method))
             logger.info("<Integration range (1/A)>: ({}, {})".
                         format(*integration_range))
             logger.info("<Number of integration points>: {}".
@@ -186,7 +192,8 @@ class GmtSetUpWidget(QtGui.QWidget):
             self._quad_positions_tb,
             self._geom_file_le,
         ]
-        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+        parent._disabled_widgets_during_daq.extend(
+            local_widgets_to_disable_during_daq)
 
         self._initUI()
 
@@ -196,7 +203,8 @@ class GmtSetUpWidget(QtGui.QWidget):
 
     @property
     def children(self):
-        Children = namedtuple("Children", ['quad_positions_tb', 'geom_file_le'])
+        Children = namedtuple(
+            "Children", ['quad_positions_tb', 'geom_file_le'])
 
         var = [self._quad_positions_tb, self._geom_file_le]
         return Children._make(var)
@@ -262,6 +270,7 @@ class GmtSetUpWidget(QtGui.QWidget):
 
         return True
 
+
 class ExpSetUpWidget(QtGui.QWidget):
     """Experiment set up class
 
@@ -305,7 +314,8 @@ class ExpSetUpWidget(QtGui.QWidget):
             self._diff_integration_range_le,
             self._ma_window_le,
         ]
-        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+        parent._disabled_widgets_during_daq.extend(
+            local_widgets_to_disable_during_daq)
 
         self._initUI()
 
@@ -401,7 +411,8 @@ class ExpSetUpWidget(QtGui.QWidget):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.parent().parent().on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
+            self.parent().parent().on_off_pulse_ids_sgn.emit(
+                mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
@@ -439,10 +450,11 @@ class ExpSetUpWidget(QtGui.QWidget):
 
         return True
 
-class DataSrcFileServerWidget(QtGui.QWidget):
-    """Data source set up class
 
-    creates a widget for the data source details.
+class DataSrcFileServerWidget(QtGui.QWidget):
+    """Data source and file server set up class
+
+    creates a widget for the data source details and file server buttons.
     """
 
     def __init__(self, parent=None):
@@ -470,7 +482,7 @@ class DataSrcFileServerWidget(QtGui.QWidget):
         self._data_src_rbts.append(
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
-        
+
         # *************************************************************
         # file server
         # *************************************************************
@@ -481,8 +493,8 @@ class DataSrcFileServerWidget(QtGui.QWidget):
         self._server_terminate_btn = QtGui.QPushButton("Terminate")
         self._server_terminate_btn.setEnabled(False)
         self._server_terminate_btn.clicked.connect(
-           self._onStopServeFile)
-        
+            self._onStopServeFile)
+
         self._pulse_range0_le.setEnabled(False)
 
         self._disabled_widgets_during_file_serving = [
@@ -496,14 +508,15 @@ class DataSrcFileServerWidget(QtGui.QWidget):
             self._pulse_range1_le,
         ]
         local_widgets_to_disable_during_daq.extend(self._data_src_rbts)
-        parent._disabled_widgets_during_daq.extend(local_widgets_to_disable_during_daq)
+        parent._disabled_widgets_during_daq.extend(
+            local_widgets_to_disable_during_daq)
 
         self._initDataSrcUI()
         self._initFileServerUI()
 
         layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._data_src_gp,2)
-        layout.addWidget(self._file_server_widget,1)
+        layout.addWidget(self._data_src_gp, 2)
+        layout.addWidget(self._file_server_widget, 1)
         self.setLayout(layout)
 
     @property
@@ -564,7 +577,7 @@ class DataSrcFileServerWidget(QtGui.QWidget):
         layout = QtGui.QGridLayout()
         layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
         layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        self._file_server_widget.setLayout(layout)#
+        self._file_server_widget.setLayout(layout)
 
     def _onStartServeFile(self):
         """Actions taken before the start of file serving."""
