@@ -40,8 +40,6 @@ class AiSetUpWidget(QtGui.QWidget):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(config["INTEGRATION_POINTS"]))
-        self._mask_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         local_widgets_to_disable_during_daq = [
             self._sample_dist_le,
@@ -50,7 +48,6 @@ class AiSetUpWidget(QtGui.QWidget):
             self._itgt_method_cb,
             self._itgt_range_le,
             self._itgt_points_le,
-            self._mask_range_le
         ]
         parent._disabled_widgets_during_daq.extend(
             local_widgets_to_disable_during_daq)
@@ -87,7 +84,6 @@ class AiSetUpWidget(QtGui.QWidget):
         itgt_method_lb = QtGui.QLabel("Integration method: ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
-        mask_range_lb = QtGui.QLabel("Mask range: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
@@ -102,8 +98,6 @@ class AiSetUpWidget(QtGui.QWidget):
         layout.addWidget(self._itgt_points_le, 5, 1, 1, 1)
         layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
         layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
-        layout.addWidget(mask_range_lb, 7, 0, 1, 1)
-        layout.addWidget(self._mask_range_le, 7, 1, 1, 1)
 
         self._ai_setup_gp.setLayout(layout)
 
@@ -145,13 +139,6 @@ class AiSetUpWidget(QtGui.QWidget):
             logger.error("<Integration range>: " + str(e))
             return False
 
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-            self.parent().parent().mask_range_sgn.emit(*mask_range)
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-            return False
-
         if log:
             logger.info("--- Shared parameters ---")
             logger.info("<Sample distance (m)>: {}".format(sample_distance))
@@ -164,7 +151,6 @@ class AiSetUpWidget(QtGui.QWidget):
                         format(*integration_range))
             logger.info("<Number of integration points>: {}".
                         format(integration_points))
-            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 
@@ -303,6 +289,8 @@ class ExpSetUpWidget(QtGui.QWidget):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._mask_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
         local_widgets_to_disable_during_daq = [
@@ -312,6 +300,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             self._off_pulse_le,
             self._normalization_range_le,
             self._diff_integration_range_le,
+            self._mask_range_le,
             self._ma_window_le,
         ]
         parent._disabled_widgets_during_daq.extend(
@@ -352,6 +341,7 @@ class ExpSetUpWidget(QtGui.QWidget):
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
         diff_integration_range_lb = QtGui.QLabel(
             "Diff integration range (1/A): ")
+        mask_range_lb = QtGui.QLabel("Mask range: ")
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
@@ -367,8 +357,10 @@ class ExpSetUpWidget(QtGui.QWidget):
         layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
         layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
         layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
-        layout.addWidget(ma_window_lb, 6, 0, 1, 1)
-        layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
+        layout.addWidget(mask_range_lb, 6, 0, 1, 1)
+        layout.addWidget(self._mask_range_le, 6, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 7, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 7, 1, 1, 1)
 
         self._exp_setup_gp.setLayout(layout)
 
@@ -381,6 +373,7 @@ class ExpSetUpWidget(QtGui.QWidget):
         Returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
+
         try:
             normalization_range = parse_boundary(
                 self._normalization_range_le.text())
@@ -395,6 +388,12 @@ class ExpSetUpWidget(QtGui.QWidget):
             self.parent().parent().diff_integration_range_sgn.emit(*diff_integration_range)
         except ValueError as e:
             logger.error("<Diff integration range>: " + str(e))
+            return False
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.parent().parent().mask_range_sgn.emit(*mask_range)
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
             return False
 
         try:
@@ -437,16 +436,17 @@ class ExpSetUpWidget(QtGui.QWidget):
 
         if log:
             logger.info("--- Shared parameters ---")
+            logger.info("<Optical laser mode>: {}".format(mode))
+            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
+            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
             logger.info("<Normalization range>: ({}, {})".
                         format(*normalization_range))
             logger.info("<Diff integration range>: ({}, {})".
                         format(*diff_integration_range))
-            logger.info("<Optical laser mode>: {}".format(mode))
-            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
-            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
             logger.info("<Moving average window size>: {}".
                         format(window_size))
             logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 

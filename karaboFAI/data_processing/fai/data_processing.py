@@ -22,12 +22,12 @@ import fabio
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
-from ..widgets.pyqtgraph import QtCore
-from .data_model import DataSource, ProcessedData
-from ..config import config
-from ..logger import logger
-from .proc_utils import nanmean_axis0_para
-from ..worker import Worker
+from ...widgets.pyqtgraph import QtCore
+from ..data_model import DataSource, ProcessedData
+from ...config import config
+from ...logger import logger
+from ..proc_utils import nanmean_axis0_para
+from ...worker import Worker
 
 
 class DataProcessor(Worker):

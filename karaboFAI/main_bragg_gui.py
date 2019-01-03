@@ -18,14 +18,12 @@ from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets.pyqtgraph.widgets import MatplotlibWidget
 from .widgets import (
-    AiSetUpWidget, DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
+    DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
     GuiLogger
 )
-from .windows import (
-    BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
-)
+from .windows import BraggSpotsWindow, DrawMaskWindow
 from .data_acquisition import DataAcquisition
-from .data_processing import DataProcessor, ProcessedData
+from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
 from .config import config
 
 
@@ -57,15 +55,9 @@ class MainBraggGUI(QtGui.QMainWindow):
     # (geometry file, quadrant positions)
     geometry_sgn = QtCore.pyqtSignal(str, list)
 
-    sample_distance_sgn = QtCore.pyqtSignal(float)
-    center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
-    integration_method_sgn = QtCore.pyqtSignal(str)
-    integration_range_sgn = QtCore.pyqtSignal(float, float)
-    integration_points_sgn = QtCore.pyqtSignal(int)
-
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
     diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
     normalization_range_sgn = QtCore.pyqtSignal(float, float)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
     ma_window_size_sgn = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
@@ -80,7 +72,7 @@ class MainBraggGUI(QtGui.QMainWindow):
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
     _height = 600  # window height, in pixel
-    _width = 1380  # window width, in pixel
+    _width = 1200  # window width, in pixel
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -178,7 +170,6 @@ class MainBraggGUI(QtGui.QMainWindow):
             self._load_mask_at,
             self._load_geometry_file_at,
         ]
-        self._ai_setup_widget = AiSetUpWidget(parent=self)
         self._gmt_setup_widget = GmtSetUpWidget(parent=self)
         self._exp_setup_widget = ExpSetUpWidget(parent=self)
         self._data_src_file_server_widget = DataSrcFileServerWidget(
@@ -233,16 +224,6 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self.data_source_sgn.connect(self._proc_worker.onSourceChanged)
         self.geometry_sgn.connect(self._proc_worker.onGeometryChanged)
-        self.sample_distance_sgn.connect(
-            self._proc_worker.onSampleDistanceChanged)
-        self.center_coordinate_sgn.connect(
-            self._proc_worker.onCenterCoordinateChanged)
-        self.integration_method_sgn.connect(
-            self._proc_worker.onIntegrationMethodChanged)
-        self.integration_range_sgn.connect(
-            self._proc_worker.onIntegrationRangeChanged)
-        self.integration_points_sgn.connect(
-            self._proc_worker.onIntegrationPointsChanged)
         self.mask_range_sgn.connect(self._proc_worker.onMaskRangeChanged)
         self.photon_energy_sgn.connect(self._proc_worker.onPhotonEnergyChanged)
         self.pulse_range_sgn.connect(self._proc_worker.onPulseRangeChanged)
@@ -252,11 +233,10 @@ class MainBraggGUI(QtGui.QMainWindow):
     def _initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self._ai_setup_widget, 0, 0, 4, 1)
-        layout.addWidget(self._gmt_setup_widget, 0, 1, 4, 1)
-        layout.addWidget(self._exp_setup_widget, 0, 2, 4, 1)
-        layout.addWidget(self._data_src_file_server_widget, 0, 3, 7, 1)
-        layout.addWidget(self._logger.widget, 4, 0, 3, 3)
+        layout.addWidget(self._gmt_setup_widget, 0, 0, 4, 1)
+        layout.addWidget(self._exp_setup_widget, 0, 1, 4, 1)
+        layout.addWidget(self._data_src_file_server_widget, 0, 2, 7, 1)
+        layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)
 
     def registerControlWidget(self, instance):
@@ -280,7 +260,7 @@ class MainBraggGUI(QtGui.QMainWindow):
         for w in self._plot_windows.keys():
             w.clear()
 
-        if self._data.get().empty():
+        if self._data.get().empty_image():
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
             return
 

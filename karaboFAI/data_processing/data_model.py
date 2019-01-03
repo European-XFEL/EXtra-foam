@@ -70,3 +70,13 @@ class ProcessedData:
         if self.intensity is None or self.image is None:
             return True
         return False
+
+    def empty_image(self):
+        """ Check the goodness of the data.
+
+        TODO: Better way to check whether data is empty for COM analysis
+              and Azimuthal integration
+        """
+        if self.image is None:
+            return True
+        return False

@@ -185,7 +185,7 @@ class BraggSpotsWindow(PlotWindow):
         self._main_vb.addItem(img)
 
         data = self._data.get()
-        if data.empty():
+        if data.empty_image():
             # Define First Region of interests.Around Bragg Data
             roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [50, 50],
                           pen=mkPen((0, 255, 0), width=2))
@@ -230,8 +230,6 @@ class BraggSpotsWindow(PlotWindow):
         img2.setLookupTable(lookupTableFactory[config['COLOR_MAP']])
         vb2.addItem(img2)
         self._image_items.append(img2)
-
-        # self._gl_widget.ci.layout.setColumnStretchFactor(2, 2)
 
         # Plot regions for COM moving averages and history over
         # different trains
@@ -459,7 +457,7 @@ class BraggSpotsWindow(PlotWindow):
 
     def update(self):
         data = self._data.get()
-        if data.empty():
+        if data.empty_image():
             return
         self._main_vb.setMouseEnabled(x=False, y=False)
         self._image_items[0].setImage(np.flip(data.image_mean, axis=0),
@@ -557,6 +555,8 @@ class BraggSpotsWindow(PlotWindow):
 
             self._image_gl_widget.ci.layout.setRowStretchFactor(0, 2)
             self._image_gl_widget.ci.layout.setRowStretchFactor(1, 2)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(2, 2)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(3, 2)
             profile_plot = self._image_gl_widget.addPlot(
                 row=4, col=0, rowspan=3, colspan=1)
 
@@ -570,8 +570,6 @@ class BraggSpotsWindow(PlotWindow):
             self._image_items[0].mouseClickEvent = self._click
 
         else:
-            self._image_gl_widget.ci.layout.setRowStretchFactor(0, 1)
-            self._image_gl_widget.ci.layout.setRowStretchFactor(1, 1)
 
             if len(self._profile_plot_items) > 0:
                 for item in self._profile_plot_items:
@@ -582,11 +580,17 @@ class BraggSpotsWindow(PlotWindow):
                     self._main_vb.removeItem(line)
                 self._profile_line_rois.clear()
 
+            self._image_gl_widget.ci.layout.setRowStretchFactor(0, 1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(1, 1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(2, 1)
+            self._image_gl_widget.ci.layout.setRowStretchFactor(3, 1)
+
+
     # Mouse click on image in top left panel creates two line
     # region of interests. One horizontal and one vertical.
     def _click(self, event):
         data = self._data.get()
-        if data.empty():
+        if data.empty_image():
             return
 
         event.accept()
