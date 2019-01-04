@@ -115,14 +115,14 @@ class AiSetUpWidget(QtGui.QWidget):
             logger.error("<Sample distance>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent().parent().sample_distance_sgn.emit(sample_distance)
+            self.parent.sample_distance_sgn.emit(sample_distance)
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
-        self.parent().parent().center_coordinate_sgn.emit(center_x, center_y)
+        self.parent.center_coordinate_sgn.emit(center_x, center_y)
 
         integration_method = self._itgt_method_cb.currentText()
-        self.parent().parent().integration_method_sgn.emit(integration_method)
+        self.parent.integration_method_sgn.emit(integration_method)
 
         integration_points = int(self._itgt_points_le.text().strip())
         if integration_points <= 0:
@@ -130,11 +130,11 @@ class AiSetUpWidget(QtGui.QWidget):
                 "<Integration points>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent().parent().integration_points_sgn.emit(integration_points)
+            self.parent.integration_points_sgn.emit(integration_points)
 
         try:
             integration_range = parse_boundary(self._itgt_range_le.text())
-            self.parent().parent().integration_range_sgn.emit(*integration_range)
+            self.parent.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
             return False
@@ -164,6 +164,7 @@ class GmtSetUpWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         parent.registerControlWidget(self)
+        self.parent = parent
 
         # *************************************************************
         # Geometry setup
@@ -242,7 +243,7 @@ class GmtSetUpWidget(QtGui.QWidget):
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self.parent().parent().geometry_sgn.emit(geom_file, quad_positions)
+            self.parent.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + str(e))
             return False
@@ -271,6 +272,7 @@ class ExpSetUpWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         parent.registerControlWidget(self)
+        self.parent = parent
 
         # *************************************************************
         # Experiment setup
@@ -377,7 +379,7 @@ class ExpSetUpWidget(QtGui.QWidget):
         try:
             normalization_range = parse_boundary(
                 self._normalization_range_le.text())
-            self.parent().parent().normalization_range_sgn.emit(*normalization_range)
+            self.parent.normalization_range_sgn.emit(*normalization_range)
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
             return False
@@ -385,13 +387,13 @@ class ExpSetUpWidget(QtGui.QWidget):
         try:
             diff_integration_range = parse_boundary(
                 self._diff_integration_range_le.text())
-            self.parent().parent().diff_integration_range_sgn.emit(*diff_integration_range)
+            self.parent.diff_integration_range_sgn.emit(*diff_integration_range)
         except ValueError as e:
             logger.error("<Diff integration range>: " + str(e))
             return False
         try:
             mask_range = parse_boundary(self._mask_range_le.text())
-            self.parent().parent().mask_range_sgn.emit(*mask_range)
+            self.parent.mask_range_sgn.emit(*mask_range)
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
             return False
@@ -410,7 +412,7 @@ class ExpSetUpWidget(QtGui.QWidget):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.parent().parent().on_off_pulse_ids_sgn.emit(
+            self.parent.on_off_pulse_ids_sgn.emit(
                 mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
@@ -422,7 +424,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             if window_size < 1:
                 logger.error("Moving average window width < 1!")
                 return False
-            self.parent().parent().ma_window_size_sgn.emit(window_size)
+            self.parent.ma_window_size_sgn.emit(window_size)
         except ValueError as e:
             logger.error("<Moving average window size>: " + str(e))
             return False
@@ -432,7 +434,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             logger.error("<Photon energy>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent().parent().photon_energy_sgn.emit(photon_energy)
+            self.parent.photon_energy_sgn.emit(photon_energy)
 
         if log:
             logger.info("--- Shared parameters ---")
@@ -460,6 +462,7 @@ class DataSrcFileServerWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         parent.registerControlWidget(self)
+        self.parent = parent
 
         # *************************************************************
         # data source options
@@ -628,7 +631,7 @@ class DataSrcFileServerWidget(QtGui.QWidget):
         else:
             data_source = DataSource.PROCESSED
 
-        self.parent().parent().data_source_sgn.emit(data_source)
+        self.parent.data_source_sgn.emit(data_source)
 
         pulse_range = (int(self._pulse_range0_le.text()),
                        int(self._pulse_range1_le.text()))
@@ -636,11 +639,11 @@ class DataSrcFileServerWidget(QtGui.QWidget):
             logger.error("<Pulse range>: Invalid input!")
             return False
         else:
-            self.parent().parent().pulse_range_sgn.emit(*pulse_range)
+            self.parent.pulse_range_sgn.emit(*pulse_range)
 
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
-        self.parent().parent().server_tcp_sgn.emit(server_hostname, server_port)
+        self.parent.server_tcp_sgn.emit(server_hostname, server_port)
 
         if log:
             logger.info("--- Shared parameters ---")

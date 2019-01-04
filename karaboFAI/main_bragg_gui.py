@@ -14,6 +14,10 @@ import logging
 from queue import Queue, Empty
 from weakref import WeakKeyDictionary
 
+from .config import config
+from .data_acquisition import DataAcquisition
+from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
+from .inspect.geometry import GeometryLayout
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets.pyqtgraph.widgets import MatplotlibWidget
@@ -22,9 +26,6 @@ from .widgets import (
     GuiLogger
 )
 from .windows import BraggSpotsWindow, DrawMaskWindow
-from .data_acquisition import DataAcquisition
-from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
-from .config import config
 
 
 class MainBraggGUI(QtGui.QMainWindow):
@@ -71,7 +72,7 @@ class MainBraggGUI(QtGui.QMainWindow):
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    _height = 600  # window height, in pixel
+    _height = 1000  # window height, in pixel
     _width = 1200  # window width, in pixel
 
     def __init__(self, topic, screen_size=None):
