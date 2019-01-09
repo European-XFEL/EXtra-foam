@@ -17,10 +17,8 @@ from weakref import WeakKeyDictionary
 from .config import config
 from .data_acquisition import DataAcquisition
 from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
-from .inspect.geometry import GeometryLayout
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
-from .widgets.pyqtgraph.widgets import MatplotlibWidget
 from .widgets import (
     DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
     GuiLogger
@@ -47,32 +45,12 @@ class MainBraggGUI(QtGui.QMainWindow):
             self.__value = value
 
     # *************************************************************
-    # signals related to shared parameters
-    # *************************************************************
-
-    server_tcp_sgn = QtCore.pyqtSignal(str, str)
-    data_source_sgn = QtCore.pyqtSignal(object)
-
-    # (geometry file, quadrant positions)
-    geometry_sgn = QtCore.pyqtSignal(str, list)
-
-    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
-    normalization_range_sgn = QtCore.pyqtSignal(float, float)
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
-    ma_window_size_sgn = QtCore.pyqtSignal(int)
-    # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
-    photon_energy_sgn = QtCore.pyqtSignal(float)
-
-    pulse_range_sgn = QtCore.pyqtSignal(int, int)
-
-    # *************************************************************
     # other signals
     # *************************************************************
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    _height = 1000  # window height, in pixel
+    _height = 600  # window height, in pixel
     _width = 1200  # window width, in pixel
 
     def __init__(self, topic, screen_size=None):
@@ -171,9 +149,9 @@ class MainBraggGUI(QtGui.QMainWindow):
             self._load_mask_at,
             self._load_geometry_file_at,
         ]
-        self._gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self._exp_setup_widget = ExpSetUpWidget(parent=self)
-        self._data_src_file_server_widget = DataSrcFileServerWidget(
+        self.gmt_setup_widget = GmtSetUpWidget(parent=self)
+        self.exp_setup_widget = ExpSetUpWidget(parent=self)
+        self.data_src_file_server_widget = DataSrcFileServerWidget(
             parent=self)
 
         # *************************************************************
@@ -210,12 +188,13 @@ class MainBraggGUI(QtGui.QMainWindow):
     def _initPipeline(self):
         """Set up all signal and slot connections for pipeline."""
         # *************************************************************
-        # DataProcessor
+        # DataAcquisition
         # *************************************************************
 
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self.server_tcp_sgn.connect(self._daq_worker.onServerTcpChanged)
+        self.data_src_file_server_widget.server_tcp_sgn.connect(
+            self._daq_worker.onServerTcpChanged)
 
         # *************************************************************
         # DataProcessor
@@ -223,20 +202,25 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
-        self.data_source_sgn.connect(self._proc_worker.onSourceChanged)
-        self.geometry_sgn.connect(self._proc_worker.onGeometryChanged)
-        self.mask_range_sgn.connect(self._proc_worker.onMaskRangeChanged)
-        self.photon_energy_sgn.connect(self._proc_worker.onPhotonEnergyChanged)
-        self.pulse_range_sgn.connect(self._proc_worker.onPulseRangeChanged)
+        self.data_src_file_server_widget.data_source_sgn.connect(
+            self._proc_worker.onSourceChanged)
+        self.gmt_setup_widget.geometry_sgn.connect(
+            self._proc_worker.onGeometryChanged)
+        self.exp_setup_widget.mask_range_sgn.connect(
+            self._proc_worker.onMaskRangeChanged)
+        self.exp_setup_widget.photon_energy_sgn.connect(
+            self._proc_worker.onPhotonEnergyChanged)
+        self.data_src_file_server_widget.pulse_range_sgn.connect(
+            self._proc_worker.onPulseRangeChanged)
 
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
     def _initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self._gmt_setup_widget, 0, 0, 4, 1)
-        layout.addWidget(self._exp_setup_widget, 0, 1, 4, 1)
-        layout.addWidget(self._data_src_file_server_widget, 0, 2, 7, 1)
+        layout.addWidget(self.gmt_setup_widget, 0, 0, 4, 1)
+        layout.addWidget(self.exp_setup_widget, 0, 1, 4, 1)
+        layout.addWidget(self.data_src_file_server_widget, 0, 2, 7, 1)
         layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)
 
@@ -355,7 +339,7 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self._clearWorkers()
 
-        if self._data_src_file_server_widget._file_server is not None \
-                and self._data_src_file_server_widget._file_server.is_alive():
+        if self.data_src_file_server_widget.file_server is not None \
+                and self.data_src_file_server_widget.file_server.is_alive():
 
-            self._data_src_file_server_widget._file_server.terminate()
+            self.data_src_file_server_widget.file_server.terminate()

@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 import zmq
 
 from ..config import config
@@ -12,21 +12,59 @@ from ..widgets.misc_widgets import (
 )
 
 
-class AiSetUpWidget(QtGui.QWidget):
-    """Azimuthal integration set up class
+class ControlWidget(QtGui.QWidget):
+    """Base class for the control widgets
 
-    creates a widget for azimjuthal integration parameters.
     """
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
-        parent.registerControlWidget(self)
+        self.parent().registerControlWidget(self)
+
+        self._ctrl_widget = None
+        self._local_widgets_to_disable_during_daq = []
+
+    def initUI(self):
+
+        self.parent()._disabled_widgets_during_daq.extend(
+            self._local_widgets_to_disable_during_daq)
+
+        layout = QtGui.QHBoxLayout()
+
+        if self._ctrl_widget is not None:
+            layout.addWidget(self._ctrl_widget)
+        self.setLayout(layout)
+
+    def updateSharedParameters(self, log=False):
+
+        if log:
+            logger.info("--- No Shared parameters ---")
+        return True
+
+
+class AiSetUpWidget(ControlWidget):
+    """Azimuthal integration set up class
+
+    creates a widget for azimuthal integration parameters.
+    """
+
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
+    sample_distance_sgn = QtCore.pyqtSignal(float)
+    center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
+    integration_method_sgn = QtCore.pyqtSignal(str)
+    integration_range_sgn = QtCore.pyqtSignal(float, float)
+    integration_points_sgn = QtCore.pyqtSignal(int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # *************************************************************
         # Azimuthal integration setup
         # *************************************************************
 
-        self._ai_setup_gp = CustomGroupBox("Azimuthal integration setup")
+        self._ctrl_widget = CustomGroupBox("Azimuthal integration setup")
 
         w = 100
         self._sample_dist_le = FixedWidthLineEdit(w, str(config["DISTANCE"]))
@@ -41,7 +79,7 @@ class AiSetUpWidget(QtGui.QWidget):
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(config["INTEGRATION_POINTS"]))
 
-        local_widgets_to_disable_during_daq = [
+        self._local_widgets_to_disable_during_daq = [
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
@@ -49,34 +87,11 @@ class AiSetUpWidget(QtGui.QWidget):
             self._itgt_range_le,
             self._itgt_points_le,
         ]
-        parent._disabled_widgets_during_daq.extend(
-            local_widgets_to_disable_during_daq)
 
-        self._initUI()
+        self._initCtrlUI()
+        self.initUI()
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._ai_setup_gp)
-        self.setLayout(layout)
-
-    @property
-    def children(self):
-        Children = namedtuple("Children",
-                              ['sample_dist_le',
-                               'cx_le', 'cy_le',
-                               'itgt_method_cb',
-                               'itgt_range_le',
-                               'itgt_points_le',
-                               'mask_range_le'])
-        var = [self._sample_dist_le,
-               self._cx_le,
-               self._cy_le,
-               self._itgt_method_cb,
-               self._itgt_range_le,
-               self._itgt_points_le,
-               self._mask_range_le]
-        return Children._make(var)
-
-    def _initUI(self):
+    def _initCtrlUI(self):
 
         sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
         cx = QtGui.QLabel("Cx (pixel): ")
@@ -99,7 +114,7 @@ class AiSetUpWidget(QtGui.QWidget):
         layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
         layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
 
-        self._ai_setup_gp.setLayout(layout)
+        self._ctrl_widget.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Update shared parameters for azimuthal setup widget.
@@ -115,14 +130,14 @@ class AiSetUpWidget(QtGui.QWidget):
             logger.error("<Sample distance>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent.sample_distance_sgn.emit(sample_distance)
+            self.sample_distance_sgn.emit(sample_distance)
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
-        self.parent.center_coordinate_sgn.emit(center_x, center_y)
+        self.center_coordinate_sgn.emit(center_x, center_y)
 
         integration_method = self._itgt_method_cb.currentText()
-        self.parent.integration_method_sgn.emit(integration_method)
+        self.integration_method_sgn.emit(integration_method)
 
         integration_points = int(self._itgt_points_le.text().strip())
         if integration_points <= 0:
@@ -130,11 +145,11 @@ class AiSetUpWidget(QtGui.QWidget):
                 "<Integration points>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent.integration_points_sgn.emit(integration_points)
+            self.integration_points_sgn.emit(integration_points)
 
         try:
             integration_range = parse_boundary(self._itgt_range_le.text())
-            self.parent.integration_range_sgn.emit(*integration_range)
+            self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
             return False
@@ -155,48 +170,37 @@ class AiSetUpWidget(QtGui.QWidget):
         return True
 
 
-class GmtSetUpWidget(QtGui.QWidget):
+class GmtSetUpWidget(ControlWidget):
     """Geometry set up class
 
     creates a widget for Geometry parameters.
     """
 
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        parent.registerControlWidget(self)
-        self.parent = parent
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
+    geometry_sgn = QtCore.pyqtSignal(str, list)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # *************************************************************
         # Geometry setup
         # *************************************************************
 
-        self._gmt_setup_gp = CustomGroupBox("Geometry setup")
+        self._ctrl_widget = CustomGroupBox("Geometry setup")
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = FixedWidthLineEdit(285, config["GEOMETRY_FILE"])
 
-        local_widgets_to_disable_during_daq = [
-            self._gmt_setup_gp,
+        self._local_widgets_to_disable_during_daq = [
             self._quad_positions_tb,
             self._geom_file_le,
         ]
-        parent._disabled_widgets_during_daq.extend(
-            local_widgets_to_disable_during_daq)
 
-        self._initUI()
+        self._initCtrlUI()
+        self.initUI()
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._gmt_setup_gp)
-        self.setLayout(layout)
-
-    @property
-    def children(self):
-        Children = namedtuple(
-            "Children", ['quad_positions_tb', 'geom_file_le'])
-
-        var = [self._quad_positions_tb, self._geom_file_le]
-        return Children._make(var)
-
-    def _initUI(self):
+    def _initCtrlUI(self):
 
         geom_file_lb = QtGui.QLabel("Geometry file:")
         quad_positions_lb = QtGui.QLabel("Quadrant positions:")
@@ -209,7 +213,7 @@ class GmtSetUpWidget(QtGui.QWidget):
         layout.addWidget(quad_positions_lb, 2, 0, 1, 2)
         layout.addWidget(self._quad_positions_tb, 3, 0, 1, 2)
 
-        self._gmt_setup_gp.setLayout(layout)
+        self._ctrl_widget.setLayout(layout)
 
     def _initQuadTable(self):
         n_row = 4
@@ -243,7 +247,7 @@ class GmtSetUpWidget(QtGui.QWidget):
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self.parent.geometry_sgn.emit(geom_file, quad_positions)
+            self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + str(e))
             return False
@@ -258,26 +262,36 @@ class GmtSetUpWidget(QtGui.QWidget):
         return True
 
 
-class ExpSetUpWidget(QtGui.QWidget):
+class ExpSetUpWidget(ControlWidget):
     """Experiment set up class
 
     creates a widget for the Expreriment details.
     """
+
     available_modes = OrderedDict({
         "normal": "Laser-on/off pulses in the same train",
         "even/odd": "Laser-on/off pulses in even/odd train",
         "odd/even": "Laser-on/off pulses in odd/even train"
     })
 
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        parent.registerControlWidget(self)
-        self.parent = parent
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
+    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
+    normalization_range_sgn = QtCore.pyqtSignal(float, float)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
+    ma_window_size_sgn = QtCore.pyqtSignal(int)
+    # (mode, on-pulse ids, off-pulse ids)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
+    photon_energy_sgn = QtCore.pyqtSignal(float)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # *************************************************************
         # Experiment setup
         # *************************************************************
-        self._exp_setup_gp = CustomGroupBox("Experiment setup")
+        self._ctrl_widget = CustomGroupBox("Experiment setup")
 
         w = 100
         self._photon_energy_le = FixedWidthLineEdit(
@@ -295,7 +309,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
-        local_widgets_to_disable_during_daq = [
+        self._local_widgets_to_disable_during_daq = [
             self._photon_energy_le,
             self._laser_mode_cb,
             self._on_pulse_le,
@@ -305,36 +319,11 @@ class ExpSetUpWidget(QtGui.QWidget):
             self._mask_range_le,
             self._ma_window_le,
         ]
-        parent._disabled_widgets_during_daq.extend(
-            local_widgets_to_disable_during_daq)
 
-        self._initUI()
+        self._initCtrlUI()
+        self.initUI()
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._exp_setup_gp)
-        self.setLayout(layout)
-
-    @property
-    def children(self):
-        Children = namedtuple("Children",
-                              ['photon_energy_le',
-                               'laser_mode_cb',
-                               'on_pulse_le',
-                               'off_pulse_le',
-                               'normalization_range_le',
-                               'diff_integration_range_le',
-                               'ma_window_le'])
-        var = [self._photon_energy_le,
-               self._laser_mode_cb,
-               self._on_pulse_le,
-               self._off_pulse_le,
-               self._normalization_range_le,
-               self._diff_integration_range_le,
-               self._ma_window_le]
-
-        return Children._make(var)
-
-    def _initUI(self):
+    def _initCtrlUI(self):
 
         photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
         laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
@@ -364,7 +353,7 @@ class ExpSetUpWidget(QtGui.QWidget):
         layout.addWidget(ma_window_lb, 7, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 7, 1, 1, 1)
 
-        self._exp_setup_gp.setLayout(layout)
+        self._ctrl_widget.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Update shared parameters for experimental setup widget.
@@ -379,7 +368,7 @@ class ExpSetUpWidget(QtGui.QWidget):
         try:
             normalization_range = parse_boundary(
                 self._normalization_range_le.text())
-            self.parent.normalization_range_sgn.emit(*normalization_range)
+            self.normalization_range_sgn.emit(*normalization_range)
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
             return False
@@ -387,13 +376,13 @@ class ExpSetUpWidget(QtGui.QWidget):
         try:
             diff_integration_range = parse_boundary(
                 self._diff_integration_range_le.text())
-            self.parent.diff_integration_range_sgn.emit(*diff_integration_range)
+            self.diff_integration_range_sgn.emit(*diff_integration_range)
         except ValueError as e:
             logger.error("<Diff integration range>: " + str(e))
             return False
         try:
             mask_range = parse_boundary(self._mask_range_le.text())
-            self.parent.mask_range_sgn.emit(*mask_range)
+            self.mask_range_sgn.emit(*mask_range)
         except ValueError as e:
             logger.error("<Mask range>: " + str(e))
             return False
@@ -412,7 +401,7 @@ class ExpSetUpWidget(QtGui.QWidget):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.parent.on_off_pulse_ids_sgn.emit(
+            self.on_off_pulse_ids_sgn.emit(
                 mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
@@ -424,7 +413,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             if window_size < 1:
                 logger.error("Moving average window width < 1!")
                 return False
-            self.parent.ma_window_size_sgn.emit(window_size)
+            self.ma_window_size_sgn.emit(window_size)
         except ValueError as e:
             logger.error("<Moving average window size>: " + str(e))
             return False
@@ -434,7 +423,7 @@ class ExpSetUpWidget(QtGui.QWidget):
             logger.error("<Photon energy>: Invalid input! Must be positive!")
             return False
         else:
-            self.parent.photon_energy_sgn.emit(photon_energy)
+            self.photon_energy_sgn.emit(photon_energy)
 
         if log:
             logger.info("--- Shared parameters ---")
@@ -453,16 +442,22 @@ class ExpSetUpWidget(QtGui.QWidget):
         return True
 
 
-class DataSrcFileServerWidget(QtGui.QWidget):
+class DataSrcFileServerWidget(ControlWidget):
     """Data source and file server set up class
 
     creates a widget for the data source details and file server buttons.
     """
 
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        parent.registerControlWidget(self)
-        self.parent = parent
+    # *************************************************************
+    # signals related to shared parameters
+    # *************************************************************
+
+    server_tcp_sgn = QtCore.pyqtSignal(str, str)
+    data_source_sgn = QtCore.pyqtSignal(object)
+    pulse_range_sgn = QtCore.pyqtSignal(int, int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # *************************************************************
         # data source options
@@ -504,41 +499,30 @@ class DataSrcFileServerWidget(QtGui.QWidget):
             self._source_name_le,
         ]
 
-        local_widgets_to_disable_during_daq = [
+        self._local_widgets_to_disable_during_daq = [
             self._hostname_le,
             self._port_le,
             self._source_name_le,
             self._pulse_range1_le,
         ]
-        local_widgets_to_disable_during_daq.extend(self._data_src_rbts)
-        parent._disabled_widgets_during_daq.extend(
-            local_widgets_to_disable_during_daq)
+        self._local_widgets_to_disable_during_daq.extend(self._data_src_rbts)
 
+        self._initCtrlUI()
+        self.initUI()
+
+    @property
+    def file_server(self):
+        return self._file_server
+
+    def _initCtrlUI(self):
         self._initDataSrcUI()
         self._initFileServerUI()
 
+        self._ctrl_widget = QtGui.QWidget()
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self._data_src_gp, 2)
         layout.addWidget(self._file_server_widget, 1)
-        self.setLayout(layout)
-
-    @property
-    def children(self):
-        Children = namedtuple("Children",
-                              ['hostname_le',
-                               'port_le',
-                               'source_name_le',
-                               'pulse_range0_le',
-                               'pulse_range1_le',
-                               'data_src_rbts'])
-        var = [self._hostname_le,
-               self._port_le,
-               self._source_name_le,
-               self._pulse_range0_le,
-               self._pulse_range1_le,
-               self._data_src_rbts]
-
-        return Children._make(var)
+        self._ctrl_widget.setLayout(layout)
 
     def _initDataSrcUI(self):
         # *************************************************************
@@ -631,7 +615,7 @@ class DataSrcFileServerWidget(QtGui.QWidget):
         else:
             data_source = DataSource.PROCESSED
 
-        self.parent.data_source_sgn.emit(data_source)
+        self.data_source_sgn.emit(data_source)
 
         pulse_range = (int(self._pulse_range0_le.text()),
                        int(self._pulse_range1_le.text()))
@@ -639,11 +623,11 @@ class DataSrcFileServerWidget(QtGui.QWidget):
             logger.error("<Pulse range>: Invalid input!")
             return False
         else:
-            self.parent.pulse_range_sgn.emit(*pulse_range)
+            self.pulse_range_sgn.emit(*pulse_range)
 
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
-        self.parent.server_tcp_sgn.emit(server_hostname, server_port)
+        self.server_tcp_sgn.emit(server_hostname, server_port)
 
         if log:
             logger.info("--- Shared parameters ---")

@@ -198,13 +198,16 @@ class PlotWindow(AbstractWindow):
         self.on_pulse_ids_sp = None
         self.off_pulse_ids_sp = None
 
-        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
-        self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
-        self.parent().diff_integration_range_sgn.connect(
+        self.parent().exp_setup_widget.mask_range_sgn.connect(
+            self.onMaskRangeChanged)
+        self.parent().exp_setup_widget.on_off_pulse_ids_sgn.connect(
+            self.onOffPulseIdChanged)
+        self.parent().exp_setup_widget.diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
-        self.parent().normalization_range_sgn.connect(
+        self.parent().exp_setup_widget.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
-        self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
+        self.parent().exp_setup_widget.ma_window_size_sgn.connect(
+            self.onMAWindowSizeChanged)
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)

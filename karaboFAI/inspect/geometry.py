@@ -3,7 +3,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
 from karabo_data.geometry import LPDGeometry
-from karabo_data.geometry2 import AGIPD_1MGeometry
+# from karabo_data.geometry2 import AGIPD_1MGeometry
 
 from ..config import config
 from ..widgets.pyqtgraph import QtGui, QtCore
