@@ -279,7 +279,7 @@ class MainBraggGUI(QtGui.QMainWindow):
 
     def onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
-        self._clearQueues()
+        self.clearQueues()
         self._running = True  # starting to update plots
         if not self.updateSharedParameters(log=True):
             return
@@ -296,8 +296,8 @@ class MainBraggGUI(QtGui.QMainWindow):
         """Actions taken before the end of a 'run'."""
         self._running = False
 
-        self._clearWorkers()
-        self._clearQueues()
+        self.clearWorkers()
+        self.clearQueues()
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
@@ -337,7 +337,7 @@ class MainBraggGUI(QtGui.QMainWindow):
     def closeEvent(self, QCloseEvent):
         super().closeEvent(QCloseEvent)
 
-        self._clearWorkers()
+        self.clearWorkers()
 
         if self.data_src_file_server_widget.file_server is not None \
                 and self.data_src_file_server_widget.file_server.is_alive():
