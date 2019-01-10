@@ -23,7 +23,7 @@ from .widgets import (
     CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 from .windows import (
-    BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
+    DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
 from .data_processing import DataSource, DataProcessor, ProcessedData
@@ -144,15 +144,6 @@ class MainGUI(QtGui.QMainWindow):
         open_laseronoff_window_at.triggered.connect(
             lambda: LaserOnOffWindow(self._data, parent=self))
         tool_bar.addAction(open_laseronoff_window_at)
-
-        #
-        open_bragg_spots_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/bragg_spots.png")),
-            "Bragg spots",
-            self)
-        open_bragg_spots_window_at.triggered.connect(
-            lambda: BraggSpotsWindow(self._data, parent=self))
-        tool_bar.addAction(open_bragg_spots_window_at)
 
         #
         self._draw_mask_at = QtGui.QAction(
