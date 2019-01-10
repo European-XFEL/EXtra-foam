@@ -167,8 +167,6 @@ class DataProcessor(Worker):
                     data, from_file=True)
             elif self.source_sp == DataSource.CALIBRATED:
                 processed_data = self.process_calibrated_data(data)
-            elif self.source_sp == DataSource.ASSEMBLED:
-                processed_data = self.process_assembled_data(data)
             elif self.source_sp == DataSource.PROCESSED:
                 processed_data = data[0]
             else:

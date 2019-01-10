@@ -15,8 +15,7 @@ from enum import IntEnum
 class DataSource(IntEnum):
     CALIBRATED_FILE = 0  # calibrated data from files
     CALIBRATED = 1  # calibrated data from Karabo-bridge
-    ASSEMBLED = 2  # assembled data from Karabo-bridge
-    PROCESSED = 3  # processed data from the Middle-layer device
+    PROCESSED = 2  # processed data from the Middle-layer device
 
 
 class ProcessedData:

@@ -468,8 +468,6 @@ class DataSrcFileServerWidget(ControlWidget):
         self._data_src_rbts.append(
             QtGui.QRadioButton("Calibrated data@ZMQ bridge"))
         self._data_src_rbts.append(
-            QtGui.QRadioButton("Assembled data@ZMQ bridge"))
-        self._data_src_rbts.append(
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
 
@@ -596,8 +594,6 @@ class DataSrcFileServerWidget(ControlWidget):
             data_source = DataSource.CALIBRATED_FILE
         elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
             data_source = DataSource.CALIBRATED
-        elif self._data_src_rbts[DataSource.ASSEMBLED].isChecked() is True:
-            data_source = DataSource.ASSEMBLED
         else:
             data_source = DataSource.PROCESSED
 
