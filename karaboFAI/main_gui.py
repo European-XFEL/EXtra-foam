@@ -116,7 +116,7 @@ class MainGUI(QtGui.QMainWindow):
             "Start DAQ",
             self)
         tool_bar.addAction(self._start_at)
-        self._start_at.triggered.connect(self._onStartDAQ)
+        self._start_at.triggered.connect(self.onStartDAQ)
 
         #
         self._stop_at = QtGui.QAction(
@@ -124,7 +124,7 @@ class MainGUI(QtGui.QMainWindow):
             "Stop DAQ",
             self)
         tool_bar.addAction(self._stop_at)
-        self._stop_at.triggered.connect(self._onStopDAQ)
+        self._stop_at.triggered.connect(self.onStopDAQ)
         self._stop_at.setEnabled(False)
 
         #
@@ -159,7 +159,7 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(os.path.join(root_dir, "icons/load_mask.png")),
             "Load mask",
             self)
-        self._load_mask_at.triggered.connect(self._loadMaskImage)
+        self._load_mask_at.triggered.connect(self.loadMaskImage)
         tool_bar.addAction(self._load_mask_at)
 
         #
@@ -169,7 +169,7 @@ class MainGUI(QtGui.QMainWindow):
             "geometry file",
             self)
         self._load_geometry_file_at.triggered.connect(
-            self._loadGeometryFile)
+            self.loadGeometryFile)
         tool_bar.addAction(self._load_geometry_file_at)
 
         # *************************************************************
@@ -264,11 +264,11 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server_widget = CustomGroupBox("Data stream server")
         self._server_start_btn = QtGui.QPushButton("Serve")
-        self._server_start_btn.clicked.connect(self._onStartServeFile)
+        self._server_start_btn.clicked.connect(self.onStartServeFile)
         self._server_terminate_btn = QtGui.QPushButton("Terminate")
         self._server_terminate_btn.setEnabled(False)
         self._server_terminate_btn.clicked.connect(
-            self._onStopServeFile)
+            self.onStopServeFile)
 
         self._disabled_widgets_during_file_serving = [
             self._source_name_le,
@@ -277,9 +277,9 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Initialize UI
         # *************************************************************
-        self._initCtrlUI()
-        self._initFileServerUI()
-        self._initUI()
+        self.initCtrlUI()
+        self.initFileServerUI()
+        self.initUI()
 
         if screen_size is None:
             self.move(0, 0)
@@ -323,17 +323,17 @@ class MainGUI(QtGui.QMainWindow):
         # a data processing worker which processes the data in another thread
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
-        self._initPipeline()
+        self.initPipeline()
 
         # For real time plot
         self._running = False
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self._updateAll)
+        self.timer.timeout.connect(self.updateAll)
         self.timer.start(config["TIMER_INTERVAL"])
 
         self.show()
 
-    def _initPipeline(self):
+    def initPipeline(self):
         """Set up all signal and slot connections for pipeline."""
         # *************************************************************
         # DataProcessor
@@ -367,7 +367,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
-    def _initUI(self):
+    def initUI(self):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._ctrl_pannel, 0, 0, 4, 6)
@@ -376,7 +376,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._cw.setLayout(layout)
 
-    def _initCtrlUI(self):
+    def initCtrlUI(self):
         # *************************************************************
         # Azimuthal integration setup panel
         # *************************************************************
@@ -388,7 +388,7 @@ class MainGUI(QtGui.QMainWindow):
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
         mask_range_lb = QtGui.QLabel("Mask range: ")
 
-        self._initQuadTable()
+        self.initQuadTable()
 
         # first column
         layout = QtGui.QGridLayout()
@@ -497,7 +497,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._ctrl_pannel.setLayout(layout)
 
-    def _initQuadTable(self):
+    def initQuadTable(self):
         n_row = 4
         n_col = 2
         widget = self._quad_positions_tb
@@ -517,7 +517,7 @@ class MainGUI(QtGui.QMainWindow):
         widget.setColumnWidth(0, 80)
         widget.setColumnWidth(1, 80)
 
-    def _initFileServerUI(self):
+    def initFileServerUI(self):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
@@ -525,7 +525,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server_widget.setLayout(layout)
 
-    def _updateAll(self):
+    def updateAll(self):
         """Update all the plots in the main and child windows."""
         if not self._running:
             return
@@ -564,18 +564,18 @@ class MainGUI(QtGui.QMainWindow):
     def unregisterPlotWindow(self, instance):
         del self._plot_windows[instance]
 
-    def _loadGeometryFile(self):
+    def loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
         if filename:
             self._geom_file_le.setText(filename)
 
-    def _loadMaskImage(self):
+    def loadMaskImage(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
         if not filename:
             logger.error("Please specify the image mask file!")
         self.image_mask_sgn.emit(filename)
 
-    def _onStartDAQ(self):
+    def onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
         self._clearQueues()
         self._running = True  # starting to update plots
@@ -590,7 +590,7 @@ class MainGUI(QtGui.QMainWindow):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(False)
 
-    def _onStopDAQ(self):
+    def onStopDAQ(self):
         """Actions taken before the end of a 'run'."""
         self._running = False
 
@@ -602,19 +602,19 @@ class MainGUI(QtGui.QMainWindow):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
 
-    def _clearWorkers(self):
+    def clearWorkers(self):
         self._proc_worker.terminate()
         self._daq_worker.terminate()
         self._proc_worker.wait()
         self._daq_worker.wait()
 
-    def _clearQueues(self):
+    def clearQueues(self):
         with self._daq_queue.mutex:
             self._daq_queue.queue.clear()
         with self._proc_queue.mutex:
             self._proc_queue.queue.clear()
 
-    def _onStartServeFile(self):
+    def onStartServeFile(self):
         """Actions taken before the start of file serving."""
         folder = self._source_name_le.text().strip()
         port = int(self._port_le.text().strip())
@@ -638,7 +638,7 @@ class MainGUI(QtGui.QMainWindow):
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(False)
 
-    def _onStopServeFile(self):
+    def onStopServeFile(self):
         """Actions taken before the end of file serving."""
         self._file_server.terminate()
         self._server_terminate_btn.setEnabled(False)
