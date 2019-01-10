@@ -36,6 +36,17 @@ class ControlWidget(QtGui.QWidget):
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
+        """Update shared parameters for control widget.
+
+        :params bool log: True for logging shared parameters and False
+            for not.
+
+        Returns bool: True if all shared parameters successfully parsed
+            and emitted, otherwise False.
+
+        Return True: If method not implemented in the inherited widget
+                     class
+        """
 
         if log:
             logger.info("--- No Shared parameters ---")
@@ -117,14 +128,8 @@ class AiSetUpWidget(ControlWidget):
         self._ctrl_widget.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
-        """Update shared parameters for azimuthal setup widget.
+        """Override"""
 
-        :params bool log: True for logging shared parameters and False
-            for not.
-
-        Returns bool: True if all shared parameters successfully parsed
-            and emitted, otherwise False.
-        """
         sample_distance = float(self._sample_dist_le.text().strip())
         if sample_distance <= 0:
             logger.error("<Sample distance>: Invalid input! Must be positive!")
@@ -236,14 +241,8 @@ class GmtSetUpWidget(ControlWidget):
         widget.setColumnWidth(1, 80)
 
     def updateSharedParameters(self, log=False):
-        """Update shared parameters for geometry setup widget.
+        """Override"""
 
-        :params bool log: True for logging shared parameters and False
-            for not.
-
-        Returns bool: True if all shared parameters successfully parsed
-            and emitted, otherwise False.
-        """
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
@@ -356,14 +355,7 @@ class ExpSetUpWidget(ControlWidget):
         self._ctrl_widget.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
-        """Update shared parameters for experimental setup widget.
-
-        :params bool log: True for logging shared parameters and False
-            for not.
-
-        Returns bool: True if all shared parameters successfully parsed
-            and emitted, otherwise False.
-        """
+        """Override"""
 
         try:
             normalization_range = parse_boundary(
@@ -598,14 +590,8 @@ class DataSrcFileServerWidget(ControlWidget):
             widget.setEnabled(True)
 
     def updateSharedParameters(self, log=False):
-        """Update shared parameters for data source setup widget.
+        """Override"""
 
-        :params bool log: True for logging shared parameters and False
-            for not.
-
-        Returns bool: True if all shared parameters successfully parsed
-            and emitted, otherwise False.
-        """
         if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
         elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
