@@ -7,7 +7,7 @@ REQUIREMENTS = [req.rstrip() for req in REQUIREMENTS]
 
 setup(
     name='karaboFAI',
-    version="0.1.0",
+    version="0.2.0",
     author='Jun Zhu',
     author_email='jun.zhu@xfel.eu',
     description='Azimuthal integration tool',
