@@ -46,8 +46,6 @@ class LaserOnOffWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().analysis_ctrl_widget.mask_range_sgn.connect(
-            self.onMaskRangeChanged)
         self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
         self.parent().analysis_ctrl_widget.diff_integration_range_sgn.connect(

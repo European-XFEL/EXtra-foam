@@ -188,7 +188,10 @@ class PlotWindow(AbstractWindow):
         # available Parameters (shared parameters and actions)
         #
         # shared parameters are updated by signal-slot
-        # Note: shared parameters should end with '_sp'
+        # Note:
+        # 1. shared parameters should end with '_sp'
+        # 2. we have all the slots and shared parameters here while only
+        #    connect the signal to slot in the concrete class.
         # -------------------------------------------------------------
 
         self.mask_range_sp = None
@@ -267,55 +270,45 @@ class PlotWindow(AbstractWindow):
         self.laser_mode_sp = mode
         self.on_pulse_ids_sp = on_pulse_ids
         self.off_pulse_ids_sp = off_pulse_ids
+
         # then update the parameter tree
-        try:
-            self._exp_params.child('Optical laser mode').setValue(
-                self.available_modes[mode])
-            self._exp_params.child('Laser-on pulse ID(s)').setValue(
-                ', '.join([str(x) for x in on_pulse_ids]))
-            self._exp_params.child('Laser-off pulse ID(s)').setValue(
-                ', '.join([str(x) for x in off_pulse_ids]))
-        except KeyError:
-            pass
+        self._exp_params.child('Optical laser mode').setValue(
+            self.available_modes[mode])
+        self._exp_params.child('Laser-on pulse ID(s)').setValue(
+            ', '.join([str(x) for x in on_pulse_ids]))
+        self._exp_params.child('Laser-off pulse ID(s)').setValue(
+            ', '.join([str(x) for x in off_pulse_ids]))
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
         self.mask_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('Mask range').setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child('Mask range').setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChanged(self, lb, ub):
         self.normalization_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('Normalization range').setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child('Normalization range').setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
         self.diff_integration_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child("Diff integration range").setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child("Diff integration range").setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
         self.ma_window_size_sp = value
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('M.A. window size').setValue(str(value))
-        except KeyError:
-            pass
+        self._pro_params.child('M.A. window size').setValue(str(value))
 
     def updateParameterTree(self):
         """Update the parameter tree.
