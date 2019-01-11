@@ -7,33 +7,28 @@ from ..file_server import FileServer
 from ..helpers import parse_ids, parse_boundary, parse_table_widget
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
-from ..widgets.misc_widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
-)
+from ..widgets.misc_widgets import FixedWidthLineEdit
 
 
-class ControlWidget(QtGui.QWidget):
-    """Base class for the control widgets
+class AbstractControlWidget(QtGui.QGroupBox):
+    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
+                            'border: 1px;' \
+                            'subcontrol-origin: margin;' \
+                            'subcontrol-position: top left;' \
+                            'padding-left: 10px;' \
+                            'padding-top: 10px;' \
+                            'margin-top: 0.0em;}'
 
-    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-        self.parent().registerControlWidget(self)
-
-        self._ctrl_widget = None
-        self._local_widgets_to_disable_during_daq = []
+        self._disabled_widgets_during_daq = []
 
     def initUI(self):
-
+        """Initialization of UI."""
         self.parent()._disabled_widgets_during_daq.extend(
-            self._local_widgets_to_disable_during_daq)
-
-        layout = QtGui.QHBoxLayout()
-
-        if self._ctrl_widget is not None:
-            layout.addWidget(self._ctrl_widget)
-        self.setLayout(layout)
+            self._disabled_widgets_during_daq)
 
     def updateSharedParameters(self, log=False):
         """Update shared parameters for control widget.
@@ -53,7 +48,7 @@ class ControlWidget(QtGui.QWidget):
         return True
 
 
-class AiSetUpWidget(ControlWidget):
+class AiSetUpWidget(AbstractControlWidget):
     """Azimuthal integration set up class
 
     creates a widget for azimuthal integration parameters.
@@ -68,14 +63,8 @@ class AiSetUpWidget(ControlWidget):
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # *************************************************************
-        # Azimuthal integration setup
-        # *************************************************************
-
-        self._ctrl_widget = CustomGroupBox("Azimuthal integration setup")
+    def __init__(self, parent=None):
+        super().__init__("Azimuthal integration setup", parent=parent)
 
         w = 100
         self._sample_dist_le = FixedWidthLineEdit(w, str(config["DISTANCE"]))
@@ -90,7 +79,7 @@ class AiSetUpWidget(ControlWidget):
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(config["INTEGRATION_POINTS"]))
 
-        self._local_widgets_to_disable_during_daq = [
+        self._disabled_widgets_during_daq = [
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
@@ -99,11 +88,10 @@ class AiSetUpWidget(ControlWidget):
             self._itgt_points_le,
         ]
 
-        self._initCtrlUI()
         self.initUI()
 
-    def _initCtrlUI(self):
-
+    def initUI(self):
+        """Override."""
         sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
         cx = QtGui.QLabel("Cx (pixel): ")
         cy = QtGui.QLabel("Cy (pixel): ")
@@ -125,7 +113,7 @@ class AiSetUpWidget(ControlWidget):
         layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
         layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
 
-        self._ctrl_widget.setLayout(layout)
+        self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
@@ -175,7 +163,7 @@ class AiSetUpWidget(ControlWidget):
         return True
 
 
-class GmtSetUpWidget(ControlWidget):
+class GmtSetUpWidget(AbstractControlWidget):
     """Geometry set up class
 
     creates a widget for Geometry parameters.
@@ -184,33 +172,28 @@ class GmtSetUpWidget(ControlWidget):
     # *************************************************************
     # signals related to shared parameters
     # *************************************************************
+    # (geometry file, quadrant positions)
     geometry_sgn = QtCore.pyqtSignal(str, list)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent=None):
+        super().__init__("Geometry setup", parent=parent)
 
-        # *************************************************************
-        # Geometry setup
-        # *************************************************************
-
-        self._ctrl_widget = CustomGroupBox("Geometry setup")
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = FixedWidthLineEdit(285, config["GEOMETRY_FILE"])
 
-        self._local_widgets_to_disable_during_daq = [
+        self._disabled_widgets_during_daq = [
             self._quad_positions_tb,
             self._geom_file_le,
         ]
 
-        self._initCtrlUI()
         self.initUI()
 
-    def _initCtrlUI(self):
-
+    def initUI(self):
+        """Override."""
         geom_file_lb = QtGui.QLabel("Geometry file:")
         quad_positions_lb = QtGui.QLabel("Quadrant positions:")
 
-        self._initQuadTable()
+        self.initQuadTable()
 
         layout = QtGui.QGridLayout()
         layout.addWidget(geom_file_lb, 0, 0, 1, 3)
@@ -218,9 +201,9 @@ class GmtSetUpWidget(ControlWidget):
         layout.addWidget(quad_positions_lb, 2, 0, 1, 2)
         layout.addWidget(self._quad_positions_tb, 3, 0, 1, 2)
 
-        self._ctrl_widget.setLayout(layout)
+        self.setLayout(layout)
 
-    def _initQuadTable(self):
+    def initQuadTable(self):
         n_row = 4
         n_col = 2
         widget = self._quad_positions_tb
@@ -261,7 +244,7 @@ class GmtSetUpWidget(ControlWidget):
         return True
 
 
-class ExpSetUpWidget(ControlWidget):
+class ExpSetUpWidget(AbstractControlWidget):
     """Experiment set up class
 
     creates a widget for the Expreriment details.
@@ -284,13 +267,8 @@ class ExpSetUpWidget(ControlWidget):
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
     photon_energy_sgn = QtCore.pyqtSignal(float)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # *************************************************************
-        # Experiment setup
-        # *************************************************************
-        self._ctrl_widget = CustomGroupBox("Experiment setup")
+    def __init__(self, parent=None):
+        super().__init__("Experiment setup", parent=parent)
 
         w = 100
         self._photon_energy_le = FixedWidthLineEdit(
@@ -308,7 +286,7 @@ class ExpSetUpWidget(ControlWidget):
             w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
-        self._local_widgets_to_disable_during_daq = [
+        self._disabled_widgets_during_daq = [
             self._photon_energy_le,
             self._laser_mode_cb,
             self._on_pulse_le,
@@ -319,10 +297,9 @@ class ExpSetUpWidget(ControlWidget):
             self._ma_window_le,
         ]
 
-        self._initCtrlUI()
         self.initUI()
 
-    def _initCtrlUI(self):
+    def initUI(self):
 
         photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
         laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
@@ -352,7 +329,7 @@ class ExpSetUpWidget(ControlWidget):
         layout.addWidget(ma_window_lb, 7, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 7, 1, 1, 1)
 
-        self._ctrl_widget.setLayout(layout)
+        self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
@@ -434,7 +411,7 @@ class ExpSetUpWidget(ControlWidget):
         return True
 
 
-class DataSrcFileServerWidget(ControlWidget):
+class DataSrcWidget(AbstractControlWidget):
     """Data source and file server set up class
 
     creates a widget for the data source details and file server buttons.
@@ -443,18 +420,12 @@ class DataSrcFileServerWidget(ControlWidget):
     # *************************************************************
     # signals related to shared parameters
     # *************************************************************
-
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
     data_source_sgn = QtCore.pyqtSignal(object)
     pulse_range_sgn = QtCore.pyqtSignal(int, int)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # *************************************************************
-        # data source options
-        # *************************************************************
-        self._data_src_gp = CustomGroupBox("Data source")
+    def __init__(self, parent=None):
+        super().__init__("Data source", parent=parent)
 
         self._hostname_le = FixedWidthLineEdit(165, config["SERVER_ADDR"])
         self._port_le = FixedWidthLineEdit(70, str(config["SERVER_PORT"]))
@@ -471,53 +442,27 @@ class DataSrcFileServerWidget(ControlWidget):
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
 
-        # *************************************************************
-        # file server
-        # *************************************************************
-        self._file_server = None
-        self._file_server_widget = CustomGroupBox("Data stream server")
-        self._server_start_btn = QtGui.QPushButton("Serve")
-        self._server_start_btn.clicked.connect(self._onStartServeFile)
-        self._server_terminate_btn = QtGui.QPushButton("Terminate")
-        self._server_terminate_btn.setEnabled(False)
-        self._server_terminate_btn.clicked.connect(
-            self._onStopServeFile)
-
         self._pulse_range0_le.setEnabled(False)
 
         self._disabled_widgets_during_file_serving = [
             self._source_name_le,
         ]
 
-        self._local_widgets_to_disable_during_daq = [
+        self._disabled_widgets_during_daq = [
             self._hostname_le,
             self._port_le,
             self._source_name_le,
             self._pulse_range1_le,
         ]
-        self._local_widgets_to_disable_during_daq.extend(self._data_src_rbts)
+        self._disabled_widgets_during_daq.extend(self._data_src_rbts)
 
-        self._initCtrlUI()
         self.initUI()
 
     @property
     def file_server(self):
         return self._file_server
 
-    def _initCtrlUI(self):
-        self._initDataSrcUI()
-        self._initFileServerUI()
-
-        self._ctrl_widget = QtGui.QWidget()
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._data_src_gp, 2)
-        layout.addWidget(self._file_server_widget, 1)
-        self._ctrl_widget.setLayout(layout)
-
-    def _initDataSrcUI(self):
-        # *************************************************************
-        # data source panel
-        # *************************************************************
+    def initUI(self):
         hostname_lb = QtGui.QLabel("Hostname: ")
         self._hostname_le.setAlignment(QtCore.Qt.AlignCenter)
         port_lb = QtGui.QLabel("Port: ")
@@ -548,15 +493,9 @@ class DataSrcFileServerWidget(ControlWidget):
         for btn in self._data_src_rbts:
             layout.addWidget(btn)
         layout.addLayout(sub_layout2)
-        self._data_src_gp.setLayout(layout)
+        self.setLayout(layout)
 
-    def _initFileServerUI(self):
-        layout = QtGui.QGridLayout()
-        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
-        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        self._file_server_widget.setLayout(layout)
-
-    def _onStartServeFile(self):
+    def onStartServeFile(self):
         """Actions taken before the start of file serving."""
         folder = self._source_name_le.text().strip()
         port = int(self._port_le.text().strip())
@@ -578,14 +517,6 @@ class DataSrcFileServerWidget(ControlWidget):
         self._server_start_btn.setEnabled(False)
         for widget in self._disabled_widgets_during_file_serving:
             widget.setEnabled(False)
-
-    def _onStopServeFile(self):
-        """Actions taken before the end of file serving."""
-        self._file_server.terminate()
-        self._server_terminate_btn.setEnabled(False)
-        self._server_start_btn.setEnabled(True)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(True)
 
     def updateSharedParameters(self, log=False):
         """Override"""
@@ -618,3 +549,64 @@ class DataSrcFileServerWidget(ControlWidget):
             logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
 
         return True
+
+
+class FileServerWidget(AbstractControlWidget):
+    """Data source and file server set up class
+
+    creates a widget for the data source details and file server buttons.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__("Data stream server", parent=parent)
+
+        self._file_server = None
+        self._server_start_btn = QtGui.QPushButton("Serve")
+        self._server_start_btn.clicked.connect(self.onStartServeFile)
+        self._server_terminate_btn = QtGui.QPushButton("Terminate")
+        self._server_terminate_btn.setEnabled(False)
+        self._server_terminate_btn.clicked.connect(
+            self.onStopServeFile)
+
+        self.initUI()
+
+    @property
+    def file_server(self):
+        return self._file_server
+
+    def initUI(self):
+        layout = QtGui.QGridLayout()
+        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
+        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
+        self.setLayout(layout)
+
+    def onStartServeFile(self):
+        """Actions taken before the start of file serving."""
+        folder = self._source_name_le.text().strip()
+        port = int(self._port_le.text().strip())
+        # process can only be start once
+        self._file_server = FileServer(folder, port)
+        try:
+            # TODO: signal the end of file serving
+            self._file_server.start()
+            logger.info("Start serving file in the folder {} through port {}"
+                        .format(folder, port))
+        except FileNotFoundError:
+            logger.info("{} does not exist!".format(folder))
+            return
+        except zmq.error.ZMQError:
+            logger.info("Port {} is already in use!".format(port))
+            return
+
+        self._server_terminate_btn.setEnabled(True)
+        self._server_start_btn.setEnabled(False)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(False)
+
+    def onStopServeFile(self):
+        """Actions taken before the end of file serving."""
+        self._file_server.terminate()
+        self._server_terminate_btn.setEnabled(False)
+        self._server_start_btn.setEnabled(True)
+        for widget in self._disabled_widgets_during_file_serving:
+            widget.setEnabled(True)

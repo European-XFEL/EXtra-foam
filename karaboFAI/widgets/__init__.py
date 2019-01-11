@@ -2,11 +2,11 @@ from .pyqtgraph import setConfigOption
 setConfigOption("imageAxisOrder", "row-major")
 
 from .control_widgets import (
-    AiSetUpWidget, GmtSetUpWidget, ExpSetUpWidget, DataSrcFileServerWidget
+    AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, FileServerWidget,
+    GmtSetUpWidget
 )
 from .misc_widgets import (
-    colorMapFactory, CustomGroupBox, FixedWidthLineEdit, GuiLogger,
-    InputDialogWithCheckBox
+    colorMapFactory, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
@@ -18,18 +18,27 @@ from .bulletin_widget import BulletinWidget
 
 __all__ = [
     "colorMapFactory",
-    "CustomGroupBox",
-    "FixedWidthLineEdit",
-    "GuiLogger",
-    "InputDialogWithCheckBox",
     "BulletinWidget",
     "ImageAnalysisWidget",
     "MultiPulseAiWidget",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
     "SinglePulseImageWidget",
-    "AiSetUpWidget",
-    "GmtSetUpWidget",
-    "ExpSetUpWidget",
-    "DataSrcFileServerWidget",
 ]
+
+# add control widgets
+__all__.extend([
+    "AiSetUpWidget",
+    "ExpSetUpWidget",
+    "DataSrcWidget",
+    "FileServerWIdget",
+    "GmtSetUpWidget",
+])
+
+# miscellaneous
+__all__.extend([
+    "CustomGroupBox",
+    "FixedWidthLineEdit",
+    "GuiLogger",
+    "InputDialogWithCheckBox",
+])

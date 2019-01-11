@@ -20,7 +20,7 @@ from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    DataSrcFileServerWidget, ExpSetUpWidget, GmtSetUpWidget,
+    DataSrcWidget, ExpSetUpWidget, FileServerWidget, GmtSetUpWidget,
     GuiLogger
 )
 from .windows import BraggSpotsWindow, DrawMaskWindow
@@ -151,8 +151,8 @@ class MainBraggGUI(QtGui.QMainWindow):
         ]
         self.gmt_setup_widget = GmtSetUpWidget(parent=self)
         self.exp_setup_widget = ExpSetUpWidget(parent=self)
-        self.data_src_file_server_widget = DataSrcFileServerWidget(
-            parent=self)
+        self.data_src_widget = DataSrcWidget(parent=self)
+        self.file_server_widget = FileServerWidget(parent=self)
 
         # *************************************************************
         # log window
@@ -223,9 +223,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         layout.addWidget(self.data_src_file_server_widget, 0, 2, 7, 1)
         layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)
-
-    def registerControlWidget(self, instance):
-        self._control_widgets[instance] = 1
 
     def updateAll(self):
         """Update all the plots in the main and child windows."""
