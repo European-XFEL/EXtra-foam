@@ -79,3 +79,18 @@ class ProcessedData:
         if self.image is None:
             return True
         return False
+
+
+class Data4Visualization:
+    """Data shared between all the windows and widgets.
+
+    The internal data is only modified in MainGUI.updateAll()
+    """
+    def __init__(self):
+        self.__value = ProcessedData(-1)
+
+    def get(self):
+        return self.__value
+
+    def set(self, value):
+        self.__value = value

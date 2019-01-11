@@ -26,28 +26,13 @@ from .windows import (
     DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
 from .data_acquisition import DataAcquisition
-from .data_processing import DataProcessor, ProcessedData
+from .data_processing import DataProcessor, Data4Visualization
 from .file_server import FileServer
 from .config import config
 
 
 class MainGUI(QtGui.QMainWindow):
     """The main GUI for azimuthal integration."""
-
-    class Data4Visualization:
-        """Data shared between all the windows and widgets.
-
-        The internal data is only modified in MainGUI.updateAll()
-        """
-        def __init__(self):
-            self.__value = ProcessedData(-1)
-
-        def get(self):
-            return self.__value
-
-        def set(self, value):
-            self.__value = value
-
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
     daq_started_sgn = QtCore.pyqtSignal()
@@ -149,7 +134,7 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Miscellaneous
         # *************************************************************
-        self._data = self.Data4Visualization()
+        self._data = Data4Visualization()
 
         # book-keeping opened windows
         self._plot_windows = WeakKeyDictionary()
