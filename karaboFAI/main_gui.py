@@ -153,36 +153,17 @@ class MainGUI(QtGui.QMainWindow):
     def initConnection(self):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
-
-        self._proc_worker.message.connect(self.onMessageReceived)
-
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
-
-        self.gmt_setup_widget.geometry_sgn.connect(
-            self._proc_worker.onGeometryChanged)
-
-        self.ai_setup_widget.sample_distance_sgn.connect(
-            self._proc_worker.onSampleDistanceChanged)
-        self.ai_setup_widget.center_coordinate_sgn.connect(
-            self._proc_worker.onCenterCoordinateChanged)
-        self.ai_setup_widget.integration_method_sgn.connect(
-            self._proc_worker.onIntegrationMethodChanged)
-        self.ai_setup_widget.integration_range_sgn.connect(
-            self._proc_worker.onIntegrationRangeChanged)
-        self.ai_setup_widget.integration_points_sgn.connect(
-            self._proc_worker.onIntegrationPointsChanged)
-        self.ai_setup_widget.mask_range_sgn.connect(
-            self._proc_worker.onMaskRangeChanged)
-
-        self.exp_setup_widget.photon_energy_sgn.connect(
-            self._proc_worker.onPhotonEnergyChanged)
-
         self.data_src_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
         self.data_src_widget.pulse_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
-        self.data_src_widget.server_tcp_sgn.connect(
-            self._daq_worker.onServerTcpChanged)
+
+        self._proc_worker.message.connect(self.onMessageReceived)
+        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
+        self.data_src_widget.data_source_sgn.connect(
+            self._proc_worker.onSourceChanged)
+        self.data_src_widget.pulse_range_sgn.connect(
+            self._proc_worker.onPulseRangeChanged)
 
     def initUI(self):
         raise NotImplementedError

@@ -70,11 +70,7 @@ class MainFaiGUI(MainGUI):
 
     def initConnection(self):
         """Set up all signal and slot connections."""
-        self._daq_worker.message.connect(self.onMessageReceived)
-
-        self._proc_worker.message.connect(self.onMessageReceived)
-
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
+        super().initConnection()
 
         self.gmt_setup_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
@@ -94,13 +90,6 @@ class MainFaiGUI(MainGUI):
 
         self.exp_setup_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
-
-        self.data_src_widget.data_source_sgn.connect(
-            self._proc_worker.onSourceChanged)
-        self.data_src_widget.pulse_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
-        self.data_src_widget.server_tcp_sgn.connect(
-            self._daq_worker.onServerTcpChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
