@@ -44,6 +44,23 @@ class LaserOnOffWindow(PlotWindow):
         super().__init__(data, parent=parent)
 
         # -------------------------------------------------------------
+        # connect signal and slot
+        # -------------------------------------------------------------
+        self.parent().ai_setup_widget.mask_range_sgn.connect(
+            self.onMaskRangeChanged)
+        self.parent().exp_setup_widget.on_off_pulse_ids_sgn.connect(
+            self.onOffPulseIdChanged)
+        self.parent().exp_setup_widget.diff_integration_range_sgn.connect(
+            self.onDiffIntegrationRangeChanged)
+        self.parent().exp_setup_widget.normalization_range_sgn.connect(
+            self.onNormalizationRangeChanged)
+        self.parent().exp_setup_widget.ma_window_size_sgn.connect(
+            self.onMAWindowSizeChanged)
+
+        # tell MainGUI to emit signals in order to update shared parameters
+        self.parent().updateSharedParameters()
+
+        # -------------------------------------------------------------
         # volatile parameters
         # -------------------------------------------------------------
         self._on_train_received = False

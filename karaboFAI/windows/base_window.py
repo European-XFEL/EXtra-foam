@@ -170,7 +170,7 @@ class PlotWindow(AbstractWindow):
 
         self._ptree = ptree.ParameterTree(showHeader=True)
 
-        # parameters are grouped into 4 groups
+        # parameters groups
         self._exp_params = ptree.Parameter.create(
             name='Experimental setups', type='group')
         self._pro_params = ptree.Parameter.create(
@@ -184,10 +184,6 @@ class PlotWindow(AbstractWindow):
         self._ins_params = ptree.Parameter.create(
             name='General', type='group')
 
-        # -------------------------------------------------------------
-        # define slots' behaviors
-        # -------------------------------------------------------------
-
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
         self.mask_range_sp = None
@@ -197,17 +193,6 @@ class PlotWindow(AbstractWindow):
         self.laser_mode_sp = None
         self.on_pulse_ids_sp = None
         self.off_pulse_ids_sp = None
-
-        self.parent().ai_setup_widget.mask_range_sgn.connect(
-            self.onMaskRangeChanged)
-        self.parent().exp_setup_widget.on_off_pulse_ids_sgn.connect(
-            self.onOffPulseIdChanged)
-        self.parent().exp_setup_widget.diff_integration_range_sgn.connect(
-            self.onDiffIntegrationRangeChanged)
-        self.parent().exp_setup_widget.normalization_range_sgn.connect(
-            self.onNormalizationRangeChanged)
-        self.parent().exp_setup_widget.ma_window_size_sgn.connect(
-            self.onMAWindowSizeChanged)
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)
@@ -241,9 +226,6 @@ class PlotWindow(AbstractWindow):
 
         # this method inject parameters into the parameter tree
         self.updateParameterTree()
-
-        # tell MainGUI to emit signals in order to update shared parameters
-        self.parent().updateSharedParameters()
 
     def initUI(self):
         """Override."""

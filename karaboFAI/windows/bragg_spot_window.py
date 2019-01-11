@@ -16,7 +16,7 @@ import numpy as np
 from scipy import ndimage
 
 from ..widgets.pyqtgraph import (
-    GraphicsLayoutWidget ,ImageItem, LineSegmentROI, mkBrush, mkPen, QtCore,
+    GraphicsLayoutWidget, ImageItem, LineSegmentROI, mkBrush, mkPen, QtCore,
     QtGui, RectROI, ScatterPlotItem
 )
 from ..widgets.pyqtgraph import parametertree as ptree
@@ -70,6 +70,15 @@ class BraggSpotsWindow(PlotWindow):
     def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
+
+        # -------------------------------------------------------------
+        # connect signal and slot
+        # -------------------------------------------------------------
+        self.parent().exp_setup_widget.on_off_pulse_ids_sgn.connect(
+            self.onOffPulseIdChanged)
+
+        # tell MainGUI to emit signals in order to update shared parameters
+        self.parent().updateSharedParameters()
 
         self.setGeometry(100, 100, 1600, 1000)
         self._docker_area = DockArea()
