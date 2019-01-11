@@ -157,6 +157,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onSourceChanged)
         self.data_src_widget.pulse_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
+        self.data_src_widget.server_tcp_sgn.connect(
+            self._daq_worker.onServerTcpChanged)
 
         self._proc_worker.message.connect(self.onMessageReceived)
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
