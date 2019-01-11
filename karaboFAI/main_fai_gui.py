@@ -13,7 +13,7 @@ import os
 
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
-    AiSetUpWidget, AnalysisSetUpWidget, DataSrcWidget, GmtSetUpWidget
+    AiCtrlWidget, AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
 )
 from .windows import LaserOnOffWindow, OverviewWindow
 from .main_gui import MainGUI
@@ -53,13 +53,13 @@ class MainFaiGUI(MainGUI):
         # control widgets
         # *************************************************************
 
-        self.ai_setup_widget = AiSetUpWidget(parent=self)
-        self.gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self.ana_setup_widget = AnalysisSetUpWidget(parent=self)
-        self.data_src_widget = DataSrcWidget(parent=self)
+        self.ai_ctrl_widget = AiCtrlWidget(parent=self)
+        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+        self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
+        self.data_ctrl_widget = DataCtrlWidget(parent=self)
         self._ctrl_widgets = [
-            self.ai_setup_widget, self.gmt_setup_widget, self.ana_setup_widget,
-            self.data_src_widget,
+            self.ai_ctrl_widget, self.geometry_ctrl_widget,
+            self.analysis_ctrl_widget, self.data_ctrl_widget,
         ]
 
         self.initUI()
@@ -71,31 +71,31 @@ class MainFaiGUI(MainGUI):
         """Set up all signal and slot connections."""
         super().initConnection()
 
-        self.gmt_setup_widget.geometry_sgn.connect(
+        self.geometry_ctrl_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-        self.ai_setup_widget.sample_distance_sgn.connect(
+        self.ai_ctrl_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
-        self.ai_setup_widget.center_coordinate_sgn.connect(
+        self.ai_ctrl_widget.center_coordinate_sgn.connect(
             self._proc_worker.onCenterCoordinateChanged)
-        self.ai_setup_widget.integration_method_sgn.connect(
+        self.ai_ctrl_widget.integration_method_sgn.connect(
             self._proc_worker.onIntegrationMethodChanged)
-        self.ai_setup_widget.integration_range_sgn.connect(
+        self.ai_ctrl_widget.integration_range_sgn.connect(
             self._proc_worker.onIntegrationRangeChanged)
-        self.ai_setup_widget.integration_points_sgn.connect(
+        self.ai_ctrl_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
-        self.ana_setup_widget.photon_energy_sgn.connect(
+        self.analysis_ctrl_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
-        self.ana_setup_widget.mask_range_sgn.connect(
+        self.analysis_ctrl_widget.mask_range_sgn.connect(
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self.ai_setup_widget, 0, 0, 3, 2)
-        layout.addWidget(self.ana_setup_widget, 0, 2, 3, 2)
-        layout.addWidget(self.data_src_widget, 0, 4, 3, 2)
+        layout.addWidget(self.ai_ctrl_widget, 0, 0, 3, 2)
+        layout.addWidget(self.analysis_ctrl_widget, 0, 2, 3, 2)
+        layout.addWidget(self.data_ctrl_widget, 0, 4, 3, 2)
 
         layout.addWidget(self._logger.widget, 3, 0, 1, 3)
-        layout.addWidget(self.gmt_setup_widget, 3, 3, 1, 3)
+        layout.addWidget(self.geometry_ctrl_widget, 3, 3, 1, 3)
 
         self._cw.setLayout(layout)

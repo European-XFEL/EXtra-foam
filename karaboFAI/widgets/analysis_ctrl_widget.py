@@ -1,0 +1,179 @@
+"""
+Offline and online data analysis and visualization tool for azimuthal
+integration of different data acquired with various detectors at
+European XFEL.
+
+AnalysisCtrlWidget.
+
+Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
+Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+All rights reserved.
+"""
+from collections import OrderedDict
+
+from .base_ctrl_widgets import AbstractCtrlWidget
+from ..config import config
+from ..helpers import parse_ids, parse_boundary
+from ..logger import logger
+from ..widgets.pyqtgraph import QtCore, QtGui
+from ..widgets.misc_widgets import FixedWidthLineEdit
+
+
+class AnalysisCtrlWidget(AbstractCtrlWidget):
+    """Widget for setting up the analysis parameters."""
+
+    available_modes = OrderedDict({
+        "normal": "Laser-on/off pulses in the same train",
+        "even/odd": "Laser-on/off pulses in even/odd train",
+        "odd/even": "Laser-on/off pulses in odd/even train"
+    })
+
+    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
+    normalization_range_sgn = QtCore.pyqtSignal(float, float)
+    ma_window_size_sgn = QtCore.pyqtSignal(int)
+    # (mode, on-pulse ids, off-pulse ids)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
+    photon_energy_sgn = QtCore.pyqtSignal(float)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
+
+    def __init__(self, parent=None):
+        super().__init__("Analysis setup", parent=parent)
+
+        w = 100
+        self._photon_energy_le = FixedWidthLineEdit(
+            w, str(config["PHOTON_ENERGY"]))
+        self._laser_mode_cb = QtGui.QComboBox()
+        self._laser_mode_cb.setFixedWidth(w)
+        self._laser_mode_cb.addItems(self.available_modes.keys())
+        self._on_pulse_le = FixedWidthLineEdit(w, "0:8:2")
+        self._off_pulse_le = FixedWidthLineEdit(w, "1:8:2")
+        self._normalization_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._diff_integration_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._ma_window_le = FixedWidthLineEdit(w, "9999")
+        self._mask_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
+
+        self._disabled_widgets_during_daq = [
+            self._photon_energy_le,
+            self._laser_mode_cb,
+            self._on_pulse_le,
+            self._off_pulse_le,
+            self._normalization_range_le,
+            self._diff_integration_range_le,
+            self._ma_window_le,
+            self._mask_range_le
+        ]
+
+        self.initUI()
+
+    def initUI(self):
+        """Overload."""
+        photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
+        laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
+        on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
+        off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
+        normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
+        diff_integration_range_lb = QtGui.QLabel(
+            "Diff integration range (1/A): ")
+        ma_window_lb = QtGui.QLabel("M.A. window size: ")
+        mask_range_lb = QtGui.QLabel("Mask range: ")
+
+        layout = QtGui.QGridLayout()
+        layout.addWidget(photon_energy_lb, 0, 0, 1, 1)
+        layout.addWidget(self._photon_energy_le, 0, 1, 1, 1)
+        layout.addWidget(laser_mode_lb, 1, 0, 1, 1)
+        layout.addWidget(self._laser_mode_cb, 1, 1, 1, 1)
+        layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
+        layout.addWidget(self._on_pulse_le, 2, 1, 1, 1)
+        layout.addWidget(off_pulse_lb, 3, 0, 1, 1)
+        layout.addWidget(self._off_pulse_le, 3, 1, 1, 1)
+        layout.addWidget(normalization_range_lb, 4, 0, 1, 1)
+        layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
+        layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
+        layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 6, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
+        layout.addWidget(mask_range_lb, 7, 0, 1, 1)
+        layout.addWidget(self._mask_range_le, 7, 1, 1, 1)
+
+        self.setLayout(layout)
+
+    def updateSharedParameters(self, log=False):
+        """Override"""
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.photon_energy_sgn.emit(photon_energy)
+
+        try:
+            # check pulse ID only when laser on/off pulses are in the same
+            # train (the "normal" mode)
+            mode = self._laser_mode_cb.currentText()
+            on_pulse_ids = parse_ids(self._on_pulse_le.text())
+            off_pulse_ids = parse_ids(self._off_pulse_le.text())
+            if mode == list(self.available_modes.keys())[0]:
+                common = set(on_pulse_ids).intersection(off_pulse_ids)
+                if common:
+                    logger.error(
+                        "Pulse IDs {} are found in both on- and off- pulses.".
+                        format(','.join([str(v) for v in common])))
+                    return False
+
+            self.on_off_pulse_ids_sgn.emit(
+                mode, on_pulse_ids, off_pulse_ids)
+        except ValueError:
+            logger.error("Invalid input! Enter on/off pulse IDs separated "
+                         "by ',' and/or use the range operator ':'!")
+            return False
+
+        try:
+            normalization_range = parse_boundary(
+                self._normalization_range_le.text())
+            self.normalization_range_sgn.emit(*normalization_range)
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return False
+
+        try:
+            diff_integration_range = parse_boundary(
+                self._diff_integration_range_le.text())
+            self.diff_integration_range_sgn.emit(*diff_integration_range)
+        except ValueError as e:
+            logger.error("<Diff integration range>: " + str(e))
+            return False
+
+        try:
+            window_size = int(self._ma_window_le.text())
+            if window_size < 1:
+                logger.error("Moving average window width < 1!")
+                return False
+            self.ma_window_size_sgn.emit(window_size)
+        except ValueError as e:
+            logger.error("<Moving average window size>: " + str(e))
+            return False
+
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.mask_range_sgn.emit(*mask_range)
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
+            return False
+
+        if log:
+            logger.info("<Optical laser mode>: {}".format(mode))
+            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
+            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
+            logger.info("<Normalization range>: ({}, {})".
+                        format(*normalization_range))
+            logger.info("<Diff integration range>: ({}, {})".
+                        format(*diff_integration_range))
+            logger.info("<Moving average window size>: {}".
+                        format(window_size))
+            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
+
+        return True

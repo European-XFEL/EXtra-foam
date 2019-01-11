@@ -1,9 +1,11 @@
 from .pyqtgraph import setConfigOption
 setConfigOption("imageAxisOrder", "row-major")
 
-from .control_widgets import (
-    AiSetUpWidget, DataSrcWidget, AnalysisSetUpWidget, GmtSetUpWidget
-)
+from .ai_ctrl_widget import AiCtrlWidget
+from .geometry_ctrl_widget import GeometryCtrlWidget
+from .analysis_ctrl_widget import AnalysisCtrlWidget
+from .data_ctrl_widget import DataCtrlWidget
+
 from .misc_widgets import (
     colorMapFactory, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
 )
@@ -27,11 +29,10 @@ __all__ = [
 
 # add control widgets
 __all__.extend([
-    "AiSetUpWidget",
-    "AnalysisSetUpWidget",
-    "DataSrcWidget",
-    "FileServerWIdget",
-    "GmtSetUpWidget",
+    "AiCtrlWidget",
+    "AnalysisCtrlWidget",
+    "DataCtrlWidget",
+    "GeometryCtrlWidget",
 ])
 
 # miscellaneous

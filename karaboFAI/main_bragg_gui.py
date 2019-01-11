@@ -9,10 +9,9 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os
+
 from .widgets.pyqtgraph import QtGui
-from .widgets import (
-    AnalysisSetUpWidget, DataSrcWidget, GmtSetUpWidget
-)
+from .widgets import AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
 from .windows import BraggSpotsWindow
 from .main_gui import MainGUI
 
@@ -43,11 +42,12 @@ class MainBraggGUI(MainGUI):
         # control widgets
         # *************************************************************
 
-        self.gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self.ana_setup_widget = AnalysisSetUpWidget(parent=self)
-        self.data_src_widget = DataSrcWidget(parent=self)
+        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+        self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
+        self.data_ctrl_widget = DataCtrlWidget(parent=self)
         self._ctrl_widgets = [
-            self.gmt_setup_widget, self.ana_setup_widget, self.data_src_widget
+            self.geometry_ctrl_widget, self.analysis_ctrl_widget,
+            self.data_ctrl_widget,
         ]
 
         self.initUI()
@@ -59,18 +59,18 @@ class MainBraggGUI(MainGUI):
         """Set up all signal and slot connections."""
         super().initConnection()
 
-        self.gmt_setup_widget.geometry_sgn.connect(
+        self.geometry_ctrl_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-        self.ana_setup_widget.photon_energy_sgn.connect(
+        self.analysis_ctrl_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
-        self.ana_setup_widget.mask_range_sgn.connect(
+        self.analysis_ctrl_widget.mask_range_sgn.connect(
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self.gmt_setup_widget, 0, 0, 4, 1)
-        layout.addWidget(self.ana_setup_widget, 0, 1, 4, 1)
-        layout.addWidget(self.data_src_widget, 0, 2, 7, 1)
+        layout.addWidget(self.geometry_ctrl_widget, 0, 0, 4, 1)
+        layout.addWidget(self.analysis_ctrl_widget, 0, 1, 4, 1)
+        layout.addWidget(self.data_ctrl_widget, 0, 2, 7, 1)
         layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)

@@ -74,9 +74,9 @@ class BraggSpotsWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().ana_setup_widget.mask_range_sgn.connect(
+        self.parent().analysis_ctrl_widget.mask_range_sgn.connect(
             self.onMaskRangeChanged)
-        self.parent().ana_setup_widget.on_off_pulse_ids_sgn.connect(
+        self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters

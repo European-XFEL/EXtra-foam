@@ -154,19 +154,19 @@ class MainGUI(QtGui.QMainWindow):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self.data_src_widget.data_source_sgn.connect(
+        self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
-        self.data_src_widget.pulse_range_sgn.connect(
+        self.data_ctrl_widget.pulse_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
-        self.data_src_widget.server_tcp_sgn.connect(
+        self.data_ctrl_widget.server_tcp_sgn.connect(
             self._daq_worker.onServerTcpChanged)
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
-        self.data_src_widget.data_source_sgn.connect(
+        self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
-        self.data_src_widget.pulse_range_sgn.connect(
+        self.data_ctrl_widget.pulse_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
 
     def initUI(self):
@@ -266,7 +266,7 @@ class MainGUI(QtGui.QMainWindow):
     def onStartServeFile(self):
         """Actions taken before the start of file serving."""
         # process can only be start once
-        folder, port = self.data_src_widget.file_server
+        folder, port = self.data_ctrl_widget.file_server
         self._file_server = FileServer(folder, port)
         try:
             # TODO: signal the end of file serving
