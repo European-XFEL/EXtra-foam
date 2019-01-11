@@ -55,7 +55,7 @@ class SinglePulseImageWidget(ImageView):
         parent.registerPlotWidget(self)
 
         self._mask_range_sp = None
-        parent.parent().ai_setup_widget.mask_range_sgn.connect(
+        parent.parent().ana_setup_widget.mask_range_sgn.connect(
             self.onMaskRangeChanged)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])

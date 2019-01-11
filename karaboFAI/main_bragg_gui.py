@@ -11,7 +11,7 @@ All rights reserved.
 import os
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
-    DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget
+    AnalysisSetUpWidget, DataSrcWidget, GmtSetUpWidget
 )
 from .windows import BraggSpotsWindow
 from .main_gui import MainGUI
@@ -44,10 +44,10 @@ class MainBraggGUI(MainGUI):
         # *************************************************************
 
         self.gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self.exp_setup_widget = ExpSetUpWidget(parent=self)
+        self.ana_setup_widget = AnalysisSetUpWidget(parent=self)
         self.data_src_widget = DataSrcWidget(parent=self)
         self._ctrl_widgets = [
-            self.gmt_setup_widget, self.exp_setup_widget, self.data_src_widget
+            self.gmt_setup_widget, self.ana_setup_widget, self.data_src_widget
         ]
 
         self.initUI()
@@ -61,16 +61,16 @@ class MainBraggGUI(MainGUI):
 
         self.gmt_setup_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-        # self.exp_setup_widget.mask_range_sgn.connect(
-        #     self._proc_worker.onMaskRangeChanged)
-        self.exp_setup_widget.photon_energy_sgn.connect(
+        self.ana_setup_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
+        self.ana_setup_widget.mask_range_sgn.connect(
+            self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self.gmt_setup_widget, 0, 0, 4, 1)
-        layout.addWidget(self.exp_setup_widget, 0, 1, 4, 1)
+        layout.addWidget(self.ana_setup_widget, 0, 1, 4, 1)
         layout.addWidget(self.data_src_widget, 0, 2, 7, 1)
         layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)

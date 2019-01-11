@@ -153,6 +153,7 @@ class MainGUI(QtGui.QMainWindow):
     def initConnection(self):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
+
         self.data_src_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
         self.data_src_widget.pulse_range_sgn.connect(
@@ -161,6 +162,7 @@ class MainGUI(QtGui.QMainWindow):
             self._daq_worker.onServerTcpChanged)
 
         self._proc_worker.message.connect(self.onMessageReceived)
+
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
         self.data_src_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)

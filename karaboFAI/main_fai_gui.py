@@ -13,7 +13,7 @@ import os
 
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
-    AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget
+    AiSetUpWidget, AnalysisSetUpWidget, DataSrcWidget, GmtSetUpWidget
 )
 from .windows import LaserOnOffWindow, OverviewWindow
 from .main_gui import MainGUI
@@ -21,7 +21,7 @@ from .main_gui import MainGUI
 
 class MainFaiGUI(MainGUI):
     """The main GUI for azimuthal integration."""
-    _height = 600  # window height, in pixel
+    _height = 700  # window height, in pixel
     _width = 1200  # window width, in pixel
 
     def __init__(self, *args, **kwargs):
@@ -55,10 +55,10 @@ class MainFaiGUI(MainGUI):
 
         self.ai_setup_widget = AiSetUpWidget(parent=self)
         self.gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self.exp_setup_widget = ExpSetUpWidget(parent=self)
+        self.ana_setup_widget = AnalysisSetUpWidget(parent=self)
         self.data_src_widget = DataSrcWidget(parent=self)
         self._ctrl_widgets = [
-            self.ai_setup_widget, self.gmt_setup_widget, self.exp_setup_widget,
+            self.ai_setup_widget, self.gmt_setup_widget, self.ana_setup_widget,
             self.data_src_widget,
         ]
 
@@ -73,7 +73,6 @@ class MainFaiGUI(MainGUI):
 
         self.gmt_setup_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-
         self.ai_setup_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
         self.ai_setup_widget.center_coordinate_sgn.connect(
@@ -84,17 +83,16 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onIntegrationRangeChanged)
         self.ai_setup_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
-        self.ai_setup_widget.mask_range_sgn.connect(
-            self._proc_worker.onMaskRangeChanged)
-
-        self.exp_setup_widget.photon_energy_sgn.connect(
+        self.ana_setup_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
+        self.ana_setup_widget.mask_range_sgn.connect(
+            self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self.ai_setup_widget, 0, 0, 3, 2)
-        layout.addWidget(self.exp_setup_widget, 0, 2, 3, 2)
+        layout.addWidget(self.ana_setup_widget, 0, 2, 3, 2)
         layout.addWidget(self.data_src_widget, 0, 4, 3, 2)
 
         layout.addWidget(self._logger.widget, 3, 0, 1, 3)

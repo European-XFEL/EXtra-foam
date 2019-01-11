@@ -184,41 +184,48 @@ class PlotWindow(AbstractWindow):
         self._ins_params = ptree.Parameter.create(
             name='Instruction', type='group')
 
-        # shared parameters are updated by signal-slot
-        # Note: shared parameters should end with '_sp'
-        self.mask_range_sp = None
-        self.diff_integration_range_sp = None
-        self.normalization_range_sp = None
-        self.ma_window_size_sp = None
-        self.laser_mode_sp = None
-        self.on_pulse_ids_sp = None
-        self.off_pulse_ids_sp = None
-
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)
+        #
+        # shared parameters are updated by signal-slot
+        # Note: shared parameters should end with '_sp'
         # -------------------------------------------------------------
 
+        self.mask_range_sp = None
         self.mask_range_param = ptree.Parameter.create(
             name='Mask range', type='str', readonly=True
         )
+
+        self.laser_mode_sp = None
         self.optical_laser_mode_param = ptree.Parameter.create(
             name='Optical laser mode', type='str', readonly=True
         )
+
+        self.on_pulse_ids_sp = None
         self.laser_on_pulse_ids_param = ptree.Parameter.create(
             name='Laser-on pulse ID(s)', type='str', readonly=True
         )
+
+        self.off_pulse_ids_sp = None
         self.laser_off_pulse_ids_param = ptree.Parameter.create(
             name='Laser-off pulse ID(s)', type='str', readonly=True
         )
+
+        self.normalization_range_sp = None
         self.normalization_range_param = ptree.Parameter.create(
             name="Normalization range", type='str', readonly=True
         )
+
+        self.diff_integration_range_sp = None
         self.diff_integration_range_param = ptree.Parameter.create(
             name="Diff integration range", type='str', readonly=True
         )
+
+        self.ma_window_size_sp = None
         self.ma_window_size_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
         )
+
         self.reset_action_param = ptree.Parameter.create(
             name='Clear history', type='action'
         )

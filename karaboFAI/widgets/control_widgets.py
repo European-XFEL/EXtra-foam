@@ -56,20 +56,13 @@ class AbstractControlWidget(QtGui.QGroupBox):
 
 
 class AiSetUpWidget(AbstractControlWidget):
-    """Azimuthal integration set up class
+    """Widget for setting up the azimuthal integration parameters."""
 
-    creates a widget for azimuthal integration parameters.
-    """
-
-    # *************************************************************
-    # signals related to shared parameters
-    # *************************************************************
     sample_distance_sgn = QtCore.pyqtSignal(float)
     center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
 
     def __init__(self, parent=None):
         super().__init__("Azimuthal integration setup", parent=parent)
@@ -86,8 +79,6 @@ class AiSetUpWidget(AbstractControlWidget):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(config["INTEGRATION_POINTS"]))
-        self._mask_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
             self._sample_dist_le,
@@ -95,8 +86,7 @@ class AiSetUpWidget(AbstractControlWidget):
             self._cy_le,
             self._itgt_method_cb,
             self._itgt_range_le,
-            self._itgt_points_le,
-            self._mask_range_le
+            self._itgt_points_le
         ]
 
         self.initUI()
@@ -109,7 +99,6 @@ class AiSetUpWidget(AbstractControlWidget):
         itgt_method_lb = QtGui.QLabel("Integration method: ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
-        mask_range_lb = QtGui.QLabel("Mask range: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
@@ -124,8 +113,6 @@ class AiSetUpWidget(AbstractControlWidget):
         layout.addWidget(self._itgt_points_le, 4, 1, 1, 1)
         layout.addWidget(itgt_range_lb, 5, 0, 1, 1)
         layout.addWidget(self._itgt_range_le, 5, 1, 1, 1)
-        layout.addWidget(mask_range_lb, 6, 0, 1, 1)
-        layout.addWidget(self._mask_range_le, 6, 1, 1, 1)
 
         self.setLayout(layout)
 
@@ -161,13 +148,6 @@ class AiSetUpWidget(AbstractControlWidget):
             logger.error("<Integration range>: " + str(e))
             return False
 
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-            self.mask_range_sgn.emit(*mask_range)
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-            return False
-
         if log:
             logger.info("<Sample distance (m)>: {}".format(sample_distance))
             logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
@@ -179,20 +159,13 @@ class AiSetUpWidget(AbstractControlWidget):
                         format(*integration_range))
             logger.info("<Number of integration points>: {}".
                         format(integration_points))
-            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 
 
 class GmtSetUpWidget(AbstractControlWidget):
-    """Geometry set up class
+    """Widget for setting up the geometry parameters."""
 
-    creates a widget for Geometry parameters.
-    """
-
-    # *************************************************************
-    # signals related to shared parameters
-    # *************************************************************
     # (geometry file, quadrant positions)
     geometry_sgn = QtCore.pyqtSignal(str, list)
 
@@ -264,11 +237,8 @@ class GmtSetUpWidget(AbstractControlWidget):
         return True
 
 
-class ExpSetUpWidget(AbstractControlWidget):
-    """Experiment set up class
-
-    creates a widget for the Expreriment details.
-    """
+class AnalysisSetUpWidget(AbstractControlWidget):
+    """Widget for setting up the analysis parameters."""
 
     available_modes = OrderedDict({
         "normal": "Laser-on/off pulses in the same train",
@@ -276,18 +246,16 @@ class ExpSetUpWidget(AbstractControlWidget):
         "odd/even": "Laser-on/off pulses in odd/even train"
     })
 
-    # *************************************************************
-    # signals related to shared parameters
-    # *************************************************************
     diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
     normalization_range_sgn = QtCore.pyqtSignal(float, float)
     ma_window_size_sgn = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
     photon_energy_sgn = QtCore.pyqtSignal(float)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
 
     def __init__(self, parent=None):
-        super().__init__("Experiment setup", parent=parent)
+        super().__init__("Analysis setup", parent=parent)
 
         w = 100
         self._photon_energy_le = FixedWidthLineEdit(
@@ -302,6 +270,8 @@ class ExpSetUpWidget(AbstractControlWidget):
         self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
+        self._mask_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
             self._photon_energy_le,
@@ -311,6 +281,7 @@ class ExpSetUpWidget(AbstractControlWidget):
             self._normalization_range_le,
             self._diff_integration_range_le,
             self._ma_window_le,
+            self._mask_range_le
         ]
 
         self.initUI()
@@ -325,6 +296,7 @@ class ExpSetUpWidget(AbstractControlWidget):
         diff_integration_range_lb = QtGui.QLabel(
             "Diff integration range (1/A): ")
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
+        mask_range_lb = QtGui.QLabel("Mask range: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(photon_energy_lb, 0, 0, 1, 1)
@@ -341,26 +313,19 @@ class ExpSetUpWidget(AbstractControlWidget):
         layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
         layout.addWidget(ma_window_lb, 6, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
+        layout.addWidget(mask_range_lb, 7, 0, 1, 1)
+        layout.addWidget(self._mask_range_le, 7, 1, 1, 1)
 
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
-        try:
-            normalization_range = parse_boundary(
-                self._normalization_range_le.text())
-            self.normalization_range_sgn.emit(*normalization_range)
-        except ValueError as e:
-            logger.error("<Normalization range>: " + str(e))
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
             return False
-
-        try:
-            diff_integration_range = parse_boundary(
-                self._diff_integration_range_le.text())
-            self.diff_integration_range_sgn.emit(*diff_integration_range)
-        except ValueError as e:
-            logger.error("<Diff integration range>: " + str(e))
-            return False
+        else:
+            self.photon_energy_sgn.emit(photon_energy)
 
         try:
             # check pulse ID only when laser on/off pulses are in the same
@@ -384,6 +349,22 @@ class ExpSetUpWidget(AbstractControlWidget):
             return False
 
         try:
+            normalization_range = parse_boundary(
+                self._normalization_range_le.text())
+            self.normalization_range_sgn.emit(*normalization_range)
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return False
+
+        try:
+            diff_integration_range = parse_boundary(
+                self._diff_integration_range_le.text())
+            self.diff_integration_range_sgn.emit(*diff_integration_range)
+        except ValueError as e:
+            logger.error("<Diff integration range>: " + str(e))
+            return False
+
+        try:
             window_size = int(self._ma_window_le.text())
             if window_size < 1:
                 logger.error("Moving average window width < 1!")
@@ -393,12 +374,12 @@ class ExpSetUpWidget(AbstractControlWidget):
             logger.error("<Moving average window size>: " + str(e))
             return False
 
-        photon_energy = float(self._photon_energy_le.text().strip())
-        if photon_energy <= 0:
-            logger.error("<Photon energy>: Invalid input! Must be positive!")
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.mask_range_sgn.emit(*mask_range)
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
             return False
-        else:
-            self.photon_energy_sgn.emit(photon_energy)
 
         if log:
             logger.info("<Optical laser mode>: {}".format(mode))
@@ -411,19 +392,14 @@ class ExpSetUpWidget(AbstractControlWidget):
             logger.info("<Moving average window size>: {}".
                         format(window_size))
             logger.info("<Photon energy (keV)>: {}".format(photon_energy))
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 
 
 class DataSrcWidget(AbstractControlWidget):
-    """Data source and file server set up class
+    """Widget for setting up the data source."""
 
-    creates a widget for the data source details and file server buttons.
-    """
-
-    # *************************************************************
-    # signals related to shared parameters
-    # *************************************************************
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
     data_source_sgn = QtCore.pyqtSignal(object)
     pulse_range_sgn = QtCore.pyqtSignal(int, int)
