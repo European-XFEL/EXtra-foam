@@ -1,9 +1,7 @@
 from collections import OrderedDict
-import zmq
 
 from ..config import config
 from ..data_processing import DataSource
-from ..file_server import FileServer
 from ..helpers import parse_ids, parse_boundary, parse_table_widget
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
@@ -23,12 +21,24 @@ class AbstractControlWidget(QtGui.QGroupBox):
         super().__init__(*args, **kwargs)
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
+        self.parent().daq_started_sgn.connect(self.onDaqStarted)
+        self.parent().daq_stopped_sgn.connect(self.onDaqStopped)
+
         self._disabled_widgets_during_daq = []
 
     def initUI(self):
         """Initialization of UI."""
-        self.parent()._disabled_widgets_during_daq.extend(
-            self._disabled_widgets_during_daq)
+        raise NotImplementedError
+
+    @QtCore.pyqtSlot()
+    def onDaqStarted(self):
+        for widget in self._disabled_widgets_during_daq:
+            widget.setEnabled(False)
+
+    @QtCore.pyqtSlot()
+    def onDaqStopped(self):
+        for widget in self._disabled_widgets_during_daq:
+            widget.setEnabled(True)
 
     def updateSharedParameters(self, log=False):
         """Update shared parameters for control widget.
@@ -42,10 +52,7 @@ class AbstractControlWidget(QtGui.QGroupBox):
         Return True: If method not implemented in the inherited widget
                      class
         """
-
-        if log:
-            logger.info("--- No Shared parameters ---")
-        return True
+        raise NotImplementedError
 
 
 class AiSetUpWidget(AbstractControlWidget):
@@ -62,6 +69,7 @@ class AiSetUpWidget(AbstractControlWidget):
     integration_method_sgn = QtCore.pyqtSignal(str)
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
+    mask_range_sgn = QtCore.pyqtSignal(float, float)
 
     def __init__(self, parent=None):
         super().__init__("Azimuthal integration setup", parent=parent)
@@ -78,6 +86,8 @@ class AiSetUpWidget(AbstractControlWidget):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._itgt_points_le = FixedWidthLineEdit(
             w, str(config["INTEGRATION_POINTS"]))
+        self._mask_range_le = FixedWidthLineEdit(
+            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
             self._sample_dist_le,
@@ -86,6 +96,7 @@ class AiSetUpWidget(AbstractControlWidget):
             self._itgt_method_cb,
             self._itgt_range_le,
             self._itgt_points_le,
+            self._mask_range_le
         ]
 
         self.initUI()
@@ -98,6 +109,7 @@ class AiSetUpWidget(AbstractControlWidget):
         itgt_method_lb = QtGui.QLabel("Integration method: ")
         itgt_points_lb = QtGui.QLabel("Integration points: ")
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
+        mask_range_lb = QtGui.QLabel("Mask range: ")
 
         layout = QtGui.QGridLayout()
         layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
@@ -106,12 +118,14 @@ class AiSetUpWidget(AbstractControlWidget):
         layout.addWidget(self._cx_le, 1, 1, 1, 1)
         layout.addWidget(cy, 2, 0, 1, 1)
         layout.addWidget(self._cy_le, 2, 1, 1, 1)
-        layout.addWidget(itgt_method_lb, 4, 0, 1, 1)
-        layout.addWidget(self._itgt_method_cb, 4, 1, 1, 1)
-        layout.addWidget(itgt_points_lb, 5, 0, 1, 1)
-        layout.addWidget(self._itgt_points_le, 5, 1, 1, 1)
-        layout.addWidget(itgt_range_lb, 6, 0, 1, 1)
-        layout.addWidget(self._itgt_range_le, 6, 1, 1, 1)
+        layout.addWidget(itgt_method_lb, 3, 0, 1, 1)
+        layout.addWidget(self._itgt_method_cb, 3, 1, 1, 1)
+        layout.addWidget(itgt_points_lb, 4, 0, 1, 1)
+        layout.addWidget(self._itgt_points_le, 4, 1, 1, 1)
+        layout.addWidget(itgt_range_lb, 5, 0, 1, 1)
+        layout.addWidget(self._itgt_range_le, 5, 1, 1, 1)
+        layout.addWidget(mask_range_lb, 6, 0, 1, 1)
+        layout.addWidget(self._mask_range_le, 6, 1, 1, 1)
 
         self.setLayout(layout)
 
@@ -147,8 +161,14 @@ class AiSetUpWidget(AbstractControlWidget):
             logger.error("<Integration range>: " + str(e))
             return False
 
+        try:
+            mask_range = parse_boundary(self._mask_range_le.text())
+            self.mask_range_sgn.emit(*mask_range)
+        except ValueError as e:
+            logger.error("<Mask range>: " + str(e))
+            return False
+
         if log:
-            logger.info("--- Shared parameters ---")
             logger.info("<Sample distance (m)>: {}".format(sample_distance))
             logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
                         format(center_x, center_y))
@@ -159,6 +179,7 @@ class AiSetUpWidget(AbstractControlWidget):
                         format(*integration_range))
             logger.info("<Number of integration points>: {}".
                         format(integration_points))
+            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 
@@ -235,7 +256,6 @@ class GmtSetUpWidget(AbstractControlWidget):
             return False
 
         if log:
-            logger.info("--- Shared parameters ---")
             logger.info("<Geometry file>: {}".format(geom_file))
             logger.info("<Quadrant positions>: [{}]".format(
                 ", ".join(["[{}, {}]".format(p[0], p[1])
@@ -261,7 +281,6 @@ class ExpSetUpWidget(AbstractControlWidget):
     # *************************************************************
     diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
     normalization_range_sgn = QtCore.pyqtSignal(float, float)
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
     ma_window_size_sgn = QtCore.pyqtSignal(int)
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
@@ -282,8 +301,6 @@ class ExpSetUpWidget(AbstractControlWidget):
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._diff_integration_range_le = FixedWidthLineEdit(
             w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._mask_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
         self._ma_window_le = FixedWidthLineEdit(w, "9999")
 
         self._disabled_widgets_during_daq = [
@@ -293,14 +310,13 @@ class ExpSetUpWidget(AbstractControlWidget):
             self._off_pulse_le,
             self._normalization_range_le,
             self._diff_integration_range_le,
-            self._mask_range_le,
             self._ma_window_le,
         ]
 
         self.initUI()
 
     def initUI(self):
-
+        """Overload."""
         photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
         laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
         on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
@@ -308,7 +324,6 @@ class ExpSetUpWidget(AbstractControlWidget):
         normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
         diff_integration_range_lb = QtGui.QLabel(
             "Diff integration range (1/A): ")
-        mask_range_lb = QtGui.QLabel("Mask range: ")
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
 
         layout = QtGui.QGridLayout()
@@ -324,16 +339,13 @@ class ExpSetUpWidget(AbstractControlWidget):
         layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
         layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
         layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
-        layout.addWidget(mask_range_lb, 6, 0, 1, 1)
-        layout.addWidget(self._mask_range_le, 6, 1, 1, 1)
-        layout.addWidget(ma_window_lb, 7, 0, 1, 1)
-        layout.addWidget(self._ma_window_le, 7, 1, 1, 1)
+        layout.addWidget(ma_window_lb, 6, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
 
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
-
         try:
             normalization_range = parse_boundary(
                 self._normalization_range_le.text())
@@ -348,12 +360,6 @@ class ExpSetUpWidget(AbstractControlWidget):
             self.diff_integration_range_sgn.emit(*diff_integration_range)
         except ValueError as e:
             logger.error("<Diff integration range>: " + str(e))
-            return False
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-            self.mask_range_sgn.emit(*mask_range)
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
             return False
 
         try:
@@ -395,7 +401,6 @@ class ExpSetUpWidget(AbstractControlWidget):
             self.photon_energy_sgn.emit(photon_energy)
 
         if log:
-            logger.info("--- Shared parameters ---")
             logger.info("<Optical laser mode>: {}".format(mode))
             logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
             logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
@@ -406,7 +411,6 @@ class ExpSetUpWidget(AbstractControlWidget):
             logger.info("<Moving average window size>: {}".
                         format(window_size))
             logger.info("<Photon energy (keV)>: {}".format(photon_energy))
-            logger.info("<Mask range>: ({}, {})".format(*mask_range))
 
         return True
 
@@ -434,6 +438,7 @@ class DataSrcWidget(AbstractControlWidget):
         self._pulse_range1_le = FixedWidthLineEdit(60, str(2699))
 
         self._data_src_rbts = []
+        # the order must match the definition in the DataSource class
         self._data_src_rbts.append(
             QtGui.QRadioButton("Calibrated data@files"))
         self._data_src_rbts.append(
@@ -443,6 +448,13 @@ class DataSrcWidget(AbstractControlWidget):
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
 
         self._pulse_range0_le.setEnabled(False)
+
+        self._server_start_btn = QtGui.QPushButton("Serve")
+        self._server_start_btn.clicked.connect(self.parent().onStartServeFile)
+        self._server_terminate_btn = QtGui.QPushButton("Terminate")
+        self._server_terminate_btn.setEnabled(False)
+        self._server_terminate_btn.clicked.connect(
+            self.parent().onStopServeFile)
 
         self._disabled_widgets_during_file_serving = [
             self._source_name_le,
@@ -458,9 +470,8 @@ class DataSrcWidget(AbstractControlWidget):
 
         self.initUI()
 
-    @property
-    def file_server(self):
-        return self._file_server
+        self.parent().file_server_started_sgn.connect(self.onFileServerStarted)
+        self.parent().file_server_stopped_sgn.connect(self.onFileServerStopped)
 
     def initUI(self):
         hostname_lb = QtGui.QLabel("Hostname: ")
@@ -479,48 +490,35 @@ class DataSrcWidget(AbstractControlWidget):
         sub_layout1.addWidget(self._hostname_le)
         sub_layout1.addWidget(port_lb)
         sub_layout1.addWidget(self._port_le)
-        sub_layout2 = QtGui.QHBoxLayout()
-        sub_layout2.addWidget(pulse_range_lb)
-        sub_layout2.addWidget(self._pulse_range0_le)
-        sub_layout2.addWidget(QtGui.QLabel(" to "))
-        sub_layout2.addWidget(self._pulse_range1_le)
-        sub_layout2.addStretch(2)
-        sub_layout3 = QtGui.QHBoxLayout()
-        sub_layout3.addWidget(source_name_lb)
-        sub_layout3.addWidget(self._source_name_le)
         layout.addLayout(sub_layout1)
-        layout.addLayout(sub_layout3)
-        for btn in self._data_src_rbts:
-            layout.addWidget(btn)
+
+        sub_layout2 = QtGui.QHBoxLayout()
+        sub_layout2.addWidget(source_name_lb)
+        sub_layout2.addWidget(self._source_name_le)
         layout.addLayout(sub_layout2)
+
+        for i, btn in enumerate(self._data_src_rbts):
+            if i == 0:
+                sub_layout3 = QtGui.QHBoxLayout()
+                sub_layout3.addWidget(btn)
+                sub_layout3.addWidget(self._server_start_btn)
+                sub_layout3.addWidget(self._server_terminate_btn)
+                layout.addLayout(sub_layout3)
+            else:
+                layout.addWidget(btn)
+
+        sub_layout4 = QtGui.QHBoxLayout()
+        sub_layout4.addWidget(pulse_range_lb)
+        sub_layout4.addWidget(self._pulse_range0_le)
+        sub_layout4.addWidget(QtGui.QLabel(" to "))
+        sub_layout4.addWidget(self._pulse_range1_le)
+        sub_layout4.addStretch(2)
+        layout.addLayout(sub_layout4)
+
         self.setLayout(layout)
-
-    def onStartServeFile(self):
-        """Actions taken before the start of file serving."""
-        folder = self._source_name_le.text().strip()
-        port = int(self._port_le.text().strip())
-        # process can only be start once
-        self._file_server = FileServer(folder, port)
-        try:
-            # TODO: signal the end of file serving
-            self._file_server.start()
-            logger.info("Start serving file in the folder {} through port {}"
-                        .format(folder, port))
-        except FileNotFoundError:
-            logger.info("{} does not exist!".format(folder))
-            return
-        except zmq.error.ZMQError:
-            logger.info("Port {} is already in use!".format(port))
-            return
-
-        self._server_terminate_btn.setEnabled(True)
-        self._server_start_btn.setEnabled(False)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(False)
 
     def updateSharedParameters(self, log=False):
         """Override"""
-
         if self._data_src_rbts[DataSource.CALIBRATED_FILE].isChecked() is True:
             data_source = DataSource.CALIBRATED_FILE
         elif self._data_src_rbts[DataSource.CALIBRATED].isChecked() is True:
@@ -543,70 +541,24 @@ class DataSrcWidget(AbstractControlWidget):
         self.server_tcp_sgn.emit(server_hostname, server_port)
 
         if log:
-            logger.info("--- Shared parameters ---")
             logger.info("<Host name>, <Port>: {}, {}".
                         format(server_hostname, server_port))
             logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
 
         return True
 
-
-class FileServerWidget(AbstractControlWidget):
-    """Data source and file server set up class
-
-    creates a widget for the data source details and file server buttons.
-    """
-
-    def __init__(self, parent=None):
-        super().__init__("Data stream server", parent=parent)
-
-        self._file_server = None
-        self._server_start_btn = QtGui.QPushButton("Serve")
-        self._server_start_btn.clicked.connect(self.onStartServeFile)
-        self._server_terminate_btn = QtGui.QPushButton("Terminate")
-        self._server_terminate_btn.setEnabled(False)
-        self._server_terminate_btn.clicked.connect(
-            self.onStopServeFile)
-
-        self.initUI()
-
     @property
     def file_server(self):
-        return self._file_server
+        source_name = self._source_name_le.text().strip()
+        server_port = self._port_le.text().strip()
+        return source_name, server_port
 
-    def initUI(self):
-        layout = QtGui.QGridLayout()
-        layout.addWidget(self._server_start_btn, 0, 0, 1, 1)
-        layout.addWidget(self._server_terminate_btn, 0, 1, 1, 1)
-        self.setLayout(layout)
-
-    def onStartServeFile(self):
-        """Actions taken before the start of file serving."""
-        folder = self._source_name_le.text().strip()
-        port = int(self._port_le.text().strip())
-        # process can only be start once
-        self._file_server = FileServer(folder, port)
-        try:
-            # TODO: signal the end of file serving
-            self._file_server.start()
-            logger.info("Start serving file in the folder {} through port {}"
-                        .format(folder, port))
-        except FileNotFoundError:
-            logger.info("{} does not exist!".format(folder))
-            return
-        except zmq.error.ZMQError:
-            logger.info("Port {} is already in use!".format(port))
-            return
-
-        self._server_terminate_btn.setEnabled(True)
+    @QtCore.pyqtSlot()
+    def onFileServerStarted(self):
         self._server_start_btn.setEnabled(False)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(False)
+        self._server_terminate_btn.setEnabled(True)
 
-    def onStopServeFile(self):
-        """Actions taken before the end of file serving."""
-        self._file_server.terminate()
-        self._server_terminate_btn.setEnabled(False)
+    @QtCore.pyqtSlot()
+    def onFileServerStopped(self):
         self._server_start_btn.setEnabled(True)
-        for widget in self._disabled_widgets_during_file_serving:
-            widget.setEnabled(True)
+        self._server_terminate_btn.setEnabled(False)

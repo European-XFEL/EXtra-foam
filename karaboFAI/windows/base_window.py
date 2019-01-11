@@ -198,7 +198,7 @@ class PlotWindow(AbstractWindow):
         self.on_pulse_ids_sp = None
         self.off_pulse_ids_sp = None
 
-        self.parent().exp_setup_widget.mask_range_sgn.connect(
+        self.parent().ai_setup_widget.mask_range_sgn.connect(
             self.onMaskRangeChanged)
         self.parent().exp_setup_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)

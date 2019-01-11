@@ -20,8 +20,7 @@ from .data_processing import COMDataProcessor as DataProcessor, ProcessedData
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import (
-    DataSrcWidget, ExpSetUpWidget, FileServerWidget, GmtSetUpWidget,
-    GuiLogger
+    DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget, GuiLogger
 )
 from .windows import BraggSpotsWindow, DrawMaskWindow
 
@@ -44,11 +43,12 @@ class MainBraggGUI(QtGui.QMainWindow):
         def set(self, value):
             self.__value = value
 
-    # *************************************************************
-    # other signals
-    # *************************************************************
-
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
+
+    daq_started_sgn = QtCore.pyqtSignal()
+    daq_stopped_sgn = QtCore.pyqtSignal()
+    file_server_started_sgn = QtCore.pyqtSignal()
+    file_server_stopped_sgn = QtCore.pyqtSignal()
 
     _height = 600  # window height, in pixel
     _width = 1200  # window width, in pixel
@@ -129,7 +129,7 @@ class MainBraggGUI(QtGui.QMainWindow):
             "geometry file",
             self)
         self._load_geometry_file_at.triggered.connect(
-            self._loadGeometryFile)
+            self.loadGeometryFile)
         tool_bar.addAction(self._load_geometry_file_at)
 
         # *************************************************************
@@ -140,9 +140,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         # book-keeping opened widgets and windows
         self._plot_windows = WeakKeyDictionary()
 
-        # book-keeping control widgets
-        self._control_widgets = WeakKeyDictionary()
-
         self._mask_image = None
 
         self._disabled_widgets_during_daq = [
@@ -152,7 +149,6 @@ class MainBraggGUI(QtGui.QMainWindow):
         self.gmt_setup_widget = GmtSetUpWidget(parent=self)
         self.exp_setup_widget = ExpSetUpWidget(parent=self)
         self.data_src_widget = DataSrcWidget(parent=self)
-        self.file_server_widget = FileServerWidget(parent=self)
 
         # *************************************************************
         # log window
@@ -161,7 +157,9 @@ class MainBraggGUI(QtGui.QMainWindow):
         self._logger = GuiLogger(self)
         logging.getLogger().addHandler(self._logger)
 
-        self._initUI()
+        self._file_server = None
+
+        self.initUI()
 
         if screen_size is None:
             self.move(0, 0)
@@ -177,50 +175,42 @@ class MainBraggGUI(QtGui.QMainWindow):
         # a data processing worker which processes the data in another thread
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
-        self._initPipeline()
+        self.initConnection()
         # For real time plot
         self._running = False
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self._updateAll)
+        self.timer.timeout.connect(self.updateAll)
         self.timer.start(config["TIMER_INTERVAL"])
         self.show()
 
-    def initPipeline(self):
-        """Set up all signal and slot connections for pipeline."""
-        # *************************************************************
-        # DataAcquisition
-        # *************************************************************
-
+    def initConnection(self):
+        """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
-
-        self.data_src_file_server_widget.server_tcp_sgn.connect(
-            self._daq_worker.onServerTcpChanged)
-
-        # *************************************************************
-        # DataProcessor
-        # *************************************************************
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
-        self.data_src_file_server_widget.data_source_sgn.connect(
-            self._proc_worker.onSourceChanged)
+        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
+
         self.gmt_setup_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-        self.exp_setup_widget.mask_range_sgn.connect(
-            self._proc_worker.onMaskRangeChanged)
+        # self.exp_setup_widget.mask_range_sgn.connect(
+        #     self._proc_worker.onMaskRangeChanged)
         self.exp_setup_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
-        self.data_src_file_server_widget.pulse_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
 
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
+        self.data_src_widget.data_source_sgn.connect(
+            self._proc_worker.onSourceChanged)
+        self.data_src_widget.pulse_range_sgn.connect(
+            self._proc_worker.onPulseRangeChanged)
+        self.data_src_widget.server_tcp_sgn.connect(
+            self._daq_worker.onServerTcpChanged)
 
     def initUI(self):
         layout = QtGui.QGridLayout()
 
         layout.addWidget(self.gmt_setup_widget, 0, 0, 4, 1)
         layout.addWidget(self.exp_setup_widget, 0, 1, 4, 1)
-        layout.addWidget(self.data_src_file_server_widget, 0, 2, 7, 1)
+        layout.addWidget(self.data_src_widget, 0, 2, 7, 1)
         layout.addWidget(self._logger.widget, 4, 0, 3, 2)
         self._cw.setLayout(layout)
 
@@ -313,6 +303,31 @@ class MainBraggGUI(QtGui.QMainWindow):
         with self._proc_queue.mutex:
             self._proc_queue.queue.clear()
 
+    def onStartServeFile(self):
+        """Actions taken before the start of file serving."""
+        # process can only be start once
+        folder, port = self.data_src_widget.file_server
+        self._file_server = FileServer(folder, port)
+        try:
+            # TODO: signal the end of file serving
+            self._file_server.start()
+            logger.info("Start serving file in the folder {} through port {}"
+                        .format(folder, port))
+        except FileNotFoundError:
+            logger.info("{} does not exist!".format(folder))
+            return
+        except zmq.error.ZMQError:
+            logger.info("Port {} is already in use!".format(port))
+            return
+
+        self.file_server_started_sgn.emit()
+
+    def onStopServeFile(self):
+        """Actions taken before the end of file serving."""
+        self._file_server.terminate()
+
+        self.file_server_stopped_sgn.emit()
+
     def updateSharedParameters(self, log=False):
         """Update shared parameters for all child windows.
 
@@ -322,7 +337,10 @@ class MainBraggGUI(QtGui.QMainWindow):
         Returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
-        for widget in self._control_widgets:
+        ctrl_widgets = [
+            self.gmt_setup_widget, self.exp_setup_widget, self.data_src_widget,
+        ]
+        for widget in ctrl_widgets:
             if not widget.updateSharedParameters(log=log):
                 return False
         return True
@@ -336,7 +354,5 @@ class MainBraggGUI(QtGui.QMainWindow):
 
         self.clearWorkers()
 
-        if self.data_src_file_server_widget.file_server is not None \
-                and self.data_src_file_server_widget.file_server.is_alive():
-
-            self.data_src_file_server_widget.file_server.terminate()
+        if self._file_server is not None and self._file_server.is_alive():
+            self._file_server.terminate()
