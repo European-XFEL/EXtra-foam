@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Main GUI.
+Abstract main GUI.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -19,12 +19,8 @@ import zmq
 
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
-from .widgets import (
-    AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget, GuiLogger
-)
-from .windows import (
-    DrawMaskWindow, LaserOnOffWindow, OverviewWindow
-)
+from .widgets import GuiLogger
+from .windows import DrawMaskWindow
 from .data_acquisition import DataAcquisition
 from .data_processing import DataProcessor, Data4Visualization
 from .file_server import FileServer
@@ -32,7 +28,9 @@ from .config import config
 
 
 class MainGUI(QtGui.QMainWindow):
-    """The main GUI for azimuthal integration."""
+    """Abstract main GUI."""
+    _root_dir = os.path.dirname(os.path.abspath(__file__))
+
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
     daq_started_sgn = QtCore.pyqtSignal()
@@ -40,8 +38,8 @@ class MainGUI(QtGui.QMainWindow):
     file_server_started_sgn = QtCore.pyqtSignal()
     file_server_stopped_sgn = QtCore.pyqtSignal()
 
-    _height = 600  # window height, in pixel
-    _width = 1100  # window width, in pixel
+    _height = 1  # window height, in pixel
+    _width = 1  # window width, in pixel
 
     def __init__(self, topic, screen_size=None):
         """Initialization.
@@ -65,75 +63,56 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         # Tool bar
         # *************************************************************
-        tool_bar = self.addToolBar("Control")
-
-        root_dir = os.path.dirname(os.path.abspath(__file__))
+        self._tool_bar = self.addToolBar("Control")
 
         #
         self._start_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/start.png")),
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/start.png")),
             "Start DAQ",
             self)
-        tool_bar.addAction(self._start_at)
+        self._tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.onStartDAQ)
 
         #
         self._stop_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/stop.png")),
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/stop.png")),
             "Stop DAQ",
             self)
-        tool_bar.addAction(self._stop_at)
+        self._tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.onStopDAQ)
         self._stop_at.setEnabled(False)
 
         #
-        open_overview_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/overview.png")),
-            "Overview",
-            self)
-        open_overview_window_at.triggered.connect(
-            lambda: OverviewWindow(self._data, parent=self))
-        tool_bar.addAction(open_overview_window_at)
-
-        #
-        open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/on_off_pulses.png")),
-            "On- and off- pulses",
-            self)
-        open_laseronoff_window_at.triggered.connect(
-            lambda: LaserOnOffWindow(self._data, parent=self))
-        tool_bar.addAction(open_laseronoff_window_at)
-
-        #
         self._draw_mask_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/draw_mask.png")),
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/draw_mask.png")),
             "Draw mask",
             self)
         self._draw_mask_at.triggered.connect(
             lambda: DrawMaskWindow(self._data, parent=self))
-        tool_bar.addAction(self._draw_mask_at)
+        self._tool_bar.addAction(self._draw_mask_at)
 
         #
-        self._load_mask_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(root_dir, "icons/load_mask.png")),
+        load_mask_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/load_mask.png")),
             "Load mask",
             self)
-        self._load_mask_at.triggered.connect(self.loadMaskImage)
-        tool_bar.addAction(self._load_mask_at)
+        load_mask_at.triggered.connect(self.loadMaskImage)
+        self._tool_bar.addAction(load_mask_at)
 
         #
-        self._load_geometry_file_at = QtGui.QAction(
+        load_geometry_file_at = QtGui.QAction(
             QtGui.QIcon(
                 self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
             "geometry file",
             self)
-        self._load_geometry_file_at.triggered.connect(
+        load_geometry_file_at.triggered.connect(
             self.loadGeometryFile)
-        tool_bar.addAction(self._load_geometry_file_at)
+        self._tool_bar.addAction(load_geometry_file_at)
 
         # *************************************************************
         # Miscellaneous
         # *************************************************************
+
         self._data = Data4Visualization()
 
         # book-keeping opened windows
@@ -142,21 +121,14 @@ class MainGUI(QtGui.QMainWindow):
         self._mask_image = None
 
         self._disabled_widgets_during_daq = [
-            self._load_mask_at,
-            self._load_geometry_file_at,
+            load_mask_at,
+            load_geometry_file_at,
         ]
-
-        self.ai_setup_widget = AiSetUpWidget(parent=self)
-        self.gmt_setup_widget = GmtSetUpWidget(parent=self)
-        self.exp_setup_widget = ExpSetUpWidget(parent=self)
-        self.data_src_widget = DataSrcWidget(parent=self)
 
         self._logger = GuiLogger(self) 
         logging.getLogger().addHandler(self._logger)
 
         self._file_server = None
-
-        self.initUI()
 
         if screen_size is None:
             self.move(0, 0)
@@ -172,15 +144,11 @@ class MainGUI(QtGui.QMainWindow):
         # a data processing worker which processes the data in another thread
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
-        self.initConnection()
-
         # For real time plot
         self._running = False
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateAll)
         self.timer.start(config["TIMER_INTERVAL"])
-
-        self.show()
 
     def initConnection(self):
         """Set up all signal and slot connections."""
@@ -217,16 +185,7 @@ class MainGUI(QtGui.QMainWindow):
             self._daq_worker.onServerTcpChanged)
 
     def initUI(self):
-        layout = QtGui.QGridLayout()
-
-        layout.addWidget(self.ai_setup_widget, 0, 0, 3, 1)
-        layout.addWidget(self.exp_setup_widget, 0, 1, 3, 1)
-        layout.addWidget(self.data_src_widget, 0, 2, 3, 1)
-
-        layout.addWidget(self._logger.widget, 3, 0, 1, 2)
-        layout.addWidget(self.gmt_setup_widget, 3, 2, 1, 1)
-
-        self._cw.setLayout(layout)
+        raise NotImplementedError
 
     def updateAll(self):
         """Update all the plots in the main and child windows."""
@@ -353,11 +312,7 @@ class MainGUI(QtGui.QMainWindow):
         Returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
-        ctrl_widgets = [
-            self.ai_setup_widget, self.gmt_setup_widget, self.exp_setup_widget,
-            self.data_src_widget,
-        ]
-        for widget in ctrl_widgets:
+        for widget in self._ctrl_widgets:
             if not widget.updateSharedParameters(log=log):
                 return False
         return True

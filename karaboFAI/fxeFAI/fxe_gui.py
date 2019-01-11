@@ -13,7 +13,7 @@ import sys
 import argparse
 
 from ..widgets.pyqtgraph import QtGui
-from ..main_gui import MainGUI
+from ..main_fai_gui import MainFaiGUI
 from ..config import config
 
 
@@ -22,7 +22,7 @@ def fxe_gui(argv=None):
 
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
-    ex = MainGUI("FXE", screen_size=screen_size)
+    ex = MainFaiGUI("FXE", screen_size=screen_size)
     app.exec_()
 
 
