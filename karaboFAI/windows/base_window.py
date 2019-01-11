@@ -182,7 +182,7 @@ class PlotWindow(AbstractWindow):
         self._ana_params = ptree.Parameter.create(
             name='Analysis options', type='group')
         self._ins_params = ptree.Parameter.create(
-            name='General', type='group')
+            name='Instruction', type='group')
 
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
