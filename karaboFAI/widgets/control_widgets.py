@@ -433,7 +433,7 @@ class DataSrcWidget(AbstractControlWidget):
 
         self._hostname_le = FixedWidthLineEdit(165, config["SERVER_ADDR"])
         self._port_le = FixedWidthLineEdit(70, str(config["SERVER_PORT"]))
-        self._source_name_le = FixedWidthLineEdit(280, config["SOURCE_NAME"])
+        self._source_name_le = FixedWidthLineEdit(285, config["SOURCE_NAME"])
         self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
         self._pulse_range1_le = FixedWidthLineEdit(60, str(2699))
 

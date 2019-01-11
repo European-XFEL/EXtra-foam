@@ -11,7 +11,6 @@ All rights reserved.
 """
 import os
 
-from .logger import logger
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
     AiSetUpWidget, DataSrcWidget, ExpSetUpWidget, GmtSetUpWidget
@@ -23,7 +22,7 @@ from .main_gui import MainGUI
 class MainFaiGUI(MainGUI):
     """The main GUI for azimuthal integration."""
     _height = 600  # window height, in pixel
-    _width = 1100  # window width, in pixel
+    _width = 1200  # window width, in pixel
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -94,11 +93,11 @@ class MainFaiGUI(MainGUI):
     def initUI(self):
         layout = QtGui.QGridLayout()
 
-        layout.addWidget(self.ai_setup_widget, 0, 0, 3, 1)
-        layout.addWidget(self.exp_setup_widget, 0, 1, 3, 1)
-        layout.addWidget(self.data_src_widget, 0, 2, 3, 1)
+        layout.addWidget(self.ai_setup_widget, 0, 0, 3, 2)
+        layout.addWidget(self.exp_setup_widget, 0, 2, 3, 2)
+        layout.addWidget(self.data_src_widget, 0, 4, 3, 2)
 
-        layout.addWidget(self._logger.widget, 3, 0, 1, 2)
-        layout.addWidget(self.gmt_setup_widget, 3, 2, 1, 1)
+        layout.addWidget(self._logger.widget, 3, 0, 1, 3)
+        layout.addWidget(self.gmt_setup_widget, 3, 3, 1, 3)
 
         self._cw.setLayout(layout)
