@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os
+import sys
 
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
@@ -99,3 +100,24 @@ class MainFaiGUI(MainGUI):
         layout.addWidget(self.geometry_ctrl_widget, 3, 3, 1, 3)
 
         self._cw.setLayout(layout)
+
+
+def lpd_gui():
+    app = QtGui.QApplication(sys.argv)
+    screen_size = app.primaryScreen().size()
+    ex = MainFaiGUI("LPD", screen_size=screen_size)
+    app.exec_()
+
+
+def agipd_gui():
+    app = QtGui.QApplication(sys.argv)
+    screen_size = app.primaryScreen().size()
+    ex = MainFaiGUI("AGIPD", screen_size=screen_size)
+    app.exec_()
+
+
+def jfrau_gui():
+    app = QtGui.QApplication(sys.argv)
+    screen_size = app.primaryScreen().size()
+    ex = MainFaiGUI("JungFrau", screen_size=screen_size)
+    app.exec_()

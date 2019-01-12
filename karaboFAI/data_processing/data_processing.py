@@ -100,11 +100,11 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
-        if config['TOPIC'] == 'FXE':
+        if config['TOPIC'] == 'LPD':
             with File(filename, 'r') as f:
                 self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
                     f, quad_positions)
-        elif config['TOPIC'] == 'SPB':
+        elif config['TOPIC'] == 'AGIPD':
             try:
                 from karabo_data.geometry2 import AGIPD_1MGeometry
             except (ImportError, ModuleNotFoundError):
@@ -317,17 +317,17 @@ class DataProcessor(Worker):
             # different key. To be included
             modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
-            if config["TOPIC"] == "FXE":
+            if config["TOPIC"] == "LPD":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
-                if config["TOPIC"] == "FXE":
+                if config["TOPIC"] == "LPD":
                     modules_data = stack_detector_data(
                         data, "image.data", only='LPD')
-                elif config['TOPIC'] == 'SPB':
+                elif config['TOPIC'] == 'AGIPD':
                     modules_data = stack_detector_data(
                         data, "image.data", only='AGIPD')
                 elif config["TOPIC"] == 'JungFrau':
@@ -359,9 +359,9 @@ class DataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        if config["TOPIC"] == "FXE":
+        if config["TOPIC"] == "LPD":
             expected_shape = (16, 256, 256)
-        elif config['TOPIC'] == 'SPB':
+        elif config['TOPIC'] == 'AGIPD':
             expected_shape = (16, 512, 128)
         elif config['TOPIC'] == 'JungFrau':
             expected_shape = (1, 512, 1024)
@@ -372,7 +372,7 @@ class DataProcessor(Worker):
             return ProcessedData(tid)
 
         t0 = time.perf_counter()
-        if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
+        if config["TOPIC"] == "LPD" or config["TOPIC"] == "AGIPD":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
         elif config["TOPIC"] == "JungFrau":
             # Just for the time-being to be consistent with other

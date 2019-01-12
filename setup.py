@@ -18,9 +18,9 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
-            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui',
-            'jfrau-gui=karaboFAI.jfrauFAI.jfrau_gui:jfrau_gui',
+            'lpd-fai=karaboFAI.main_fai_gui:lpd_gui',
+            'agipd-fai=karaboFAI.main_fai_gui:agipd_gui',
+            'jfrau-fai=karaboFAI.main_fai_gui:jfrau_gui',
             'bragg-gui=karaboFAI.Bragg.bragg_gui:bragg_gui'
         ],
     },

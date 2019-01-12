@@ -27,7 +27,7 @@ class UpperCaseConfigParser(configparser.ConfigParser):
 class Config(dict):
     """Config class.
 
-    The default topic config, e.g. _default_spb_config, should be the
+    The default topic config, e.g. _default_agipd_config, should be the
     config used in the corresponding experimental hutch on the online
     cluster.
 
@@ -111,7 +111,7 @@ class Config(dict):
     # In order to pass the test, the default topic config must include
     # all the keys in '_allowed_topic_config_keys'.
 
-    _default_spb_config = {
+    _default_agipd_config = {
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
         "SOURCE_NAME": 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
@@ -134,7 +134,7 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
-    _default_fxe_config = {
+    _default_lpd_config = {
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
         "SOURCE_NAME": "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",
@@ -181,8 +181,8 @@ class Config(dict):
     }
 
     _default_topic_configs = {
-        "SPB": _default_spb_config,
-        "FXE": _default_fxe_config,
+        "AGIPD": _default_agipd_config,
+        "LPD": _default_lpd_config,
         "JungFrau": _default_jfrau_config
     }
 
@@ -209,7 +209,8 @@ class Config(dict):
         The default config will be overwritten by the valid config in
         the config file.
 
-        :param str topic: detector topic, allowed options "SPB", "FXE".
+        :param str topic: detector topic, allowed options "LPD", "AGIPD",
+            "JungFrau".
         """
         self.__setitem__("TOPIC", topic)
         self.update(self._default_topic_configs[topic])
@@ -220,20 +221,20 @@ class Config(dict):
 
         The parameters in the config file are grouped by topics, e.g.
 
-        [SPB]
+        [AGIPD]
         SERVER_ADDR = localhost
         SERVER_PORT = 12345
         SOURCE_NAME = /hdf5/data/file/folder/
         SOURCE_TYPE = 0
 
-        [FXE]
+        [LPD]
         SERVER_ADDR = 10.253.0.53
         SERVER_PORT = 4501
         SOURCE_NAME: FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED
         SOURCE_TYPE: 1
 
-        where the "SPB" topic defines a local file server while the
-        "FXE" topic defines an online server.
+        where the "AGIPD" topic defines a local file server while the
+        "LPD" topic defines an online server.
 
         Invalid keys or keys with empty entries will be ignored.
         """
