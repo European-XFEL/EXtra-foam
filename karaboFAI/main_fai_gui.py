@@ -107,20 +107,17 @@ class MainFaiGUI(MainGUI):
 
 def main_fai_gui():
     parser = argparse.ArgumentParser(prog="karaboFAI")
-    parser.add_argument("detector", help="detector name")
+    parser.add_argument("detector", help="detector name (case insensitive)",
+                        choices=['AGIPD', 'LPD', 'JUNGFRAU'],
+                        type=lambda s: s.upper())
 
     args = parser.parse_args()
 
     detector = args.detector
-    if detector.lower() == 'jungfrau':
+    if detector == 'JUNGFRAU':
         detector = 'JungFrau'
     else:
         detector = detector.upper()
-
-    valid_detectors = ['AGIPD', 'LPD', 'JungFrau']
-    if detector not in valid_detectors:
-        raise ValueError("Unknown detector. Valid options are: {}.".
-                         format(valid_detectors))
 
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
