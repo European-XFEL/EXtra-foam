@@ -19,9 +19,6 @@ from .main_gui import MainGUI
 class MainBraggGUI(MainGUI):
     """The main GUI for azimuthal integration."""
 
-    _height = 600  # window height, in pixel
-    _width = 1200  # window width, in pixel
-
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)

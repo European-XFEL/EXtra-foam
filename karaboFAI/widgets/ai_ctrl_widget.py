@@ -14,7 +14,6 @@ from ..config import config
 from ..helpers import parse_boundary
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
-from ..widgets.misc_widgets import FixedWidthLineEdit
 
 
 class AiCtrlWidget(AbstractCtrlWidget):
@@ -29,18 +28,16 @@ class AiCtrlWidget(AbstractCtrlWidget):
     def __init__(self, parent=None):
         super().__init__("Azimuthal integration setup", parent=parent)
 
-        w = 100
-        self._sample_dist_le = FixedWidthLineEdit(w, str(config["DISTANCE"]))
-        self._cx_le = FixedWidthLineEdit(w, str(config["CENTER_X"]))
-        self._cy_le = FixedWidthLineEdit(w, str(config["CENTER_Y"]))
+        self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
+        self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
+        self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
         self._itgt_method_cb = QtGui.QComboBox()
-        self._itgt_method_cb.setFixedWidth(w)
         for method in config["INTEGRATION_METHODS"]:
             self._itgt_method_cb.addItem(method)
-        self._itgt_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._itgt_points_le = FixedWidthLineEdit(
-            w, str(config["INTEGRATION_POINTS"]))
+        self._itgt_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._itgt_points_le = QtGui.QLineEdit(
+            str(config["INTEGRATION_POINTS"]))
 
         self._disabled_widgets_during_daq = [
             self._sample_dist_le,
@@ -62,20 +59,26 @@ class AiCtrlWidget(AbstractCtrlWidget):
         itgt_points_lb = QtGui.QLabel("Integration points: ")
         itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
 
-        layout = QtGui.QGridLayout()
-        layout.addWidget(sample_dist_lb, 0, 0, 1, 1)
-        layout.addWidget(self._sample_dist_le, 0, 1, 1, 1)
-        layout.addWidget(cx, 1, 0, 1, 1)
-        layout.addWidget(self._cx_le, 1, 1, 1, 1)
-        layout.addWidget(cy, 2, 0, 1, 1)
-        layout.addWidget(self._cy_le, 2, 1, 1, 1)
-        layout.addWidget(itgt_method_lb, 3, 0, 1, 1)
-        layout.addWidget(self._itgt_method_cb, 3, 1, 1, 1)
-        layout.addWidget(itgt_points_lb, 4, 0, 1, 1)
-        layout.addWidget(self._itgt_points_le, 4, 1, 1, 1)
-        layout.addWidget(itgt_range_lb, 5, 0, 1, 1)
-        layout.addWidget(self._itgt_range_le, 5, 1, 1, 1)
+        layout = QtGui.QHBoxLayout()
 
+        key_layout = QtGui.QVBoxLayout()
+        key_layout.addWidget(sample_dist_lb)
+        key_layout.addWidget(cx)
+        key_layout.addWidget(cy)
+        key_layout.addWidget(itgt_method_lb)
+        key_layout.addWidget(itgt_points_lb)
+        key_layout.addWidget(itgt_range_lb)
+
+        value_layout = QtGui.QVBoxLayout()
+        value_layout.addWidget(self._sample_dist_le)
+        value_layout.addWidget(self._cx_le)
+        value_layout.addWidget(self._cy_le)
+        value_layout.addWidget(self._itgt_method_cb)
+        value_layout.addWidget(self._itgt_points_le)
+        value_layout.addWidget(self._itgt_range_le)
+
+        layout.addLayout(key_layout)
+        layout.addLayout(value_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):

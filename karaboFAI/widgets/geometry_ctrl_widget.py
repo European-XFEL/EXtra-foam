@@ -14,12 +14,10 @@ from ..config import config
 from ..helpers import parse_table_widget
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
-from ..widgets.misc_widgets import FixedWidthLineEdit
 
 
 class GeometryCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the geometry parameters."""
-
     # (geometry file, quadrant positions)
     geometry_sgn = QtCore.pyqtSignal(str, list)
 
@@ -27,7 +25,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         super().__init__("Geometry setup", parent=parent)
 
         self._quad_positions_tb = QtGui.QTableWidget()
-        self._geom_file_le = FixedWidthLineEdit(285, config["GEOMETRY_FILE"])
+        self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
 
         self._disabled_widgets_during_daq = [
             self._quad_positions_tb,
@@ -44,8 +42,8 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         self.initQuadTable()
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(geom_file_lb, 0, 0, 1, 3)
-        layout.addWidget(self._geom_file_le, 1, 0, 1, 3)
+        layout.addWidget(geom_file_lb, 0, 0, 1, 2)
+        layout.addWidget(self._geom_file_le, 1, 0, 1, 2)
         layout.addWidget(quad_positions_lb, 2, 0, 1, 2)
         layout.addWidget(self._quad_positions_tb, 3, 0, 1, 2)
 

@@ -36,12 +36,6 @@ lookupTableFactory = {name: cmap.getLookupTable()
                       for name, cmap in colorMapFactory.items()}
 
 
-class FixedWidthLineEdit(QtGui.QLineEdit):
-    def __init__(self, width, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFixedWidth(width)
-
-
 class InputDialogWithCheckBox(QtGui.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)

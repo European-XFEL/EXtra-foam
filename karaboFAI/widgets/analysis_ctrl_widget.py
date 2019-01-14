@@ -16,7 +16,6 @@ from ..config import config
 from ..helpers import parse_ids, parse_boundary
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
-from ..widgets.misc_widgets import FixedWidthLineEdit
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
@@ -39,21 +38,18 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def __init__(self, parent=None):
         super().__init__("Analysis setup", parent=parent)
 
-        w = 100
-        self._photon_energy_le = FixedWidthLineEdit(
-            w, str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
-        self._laser_mode_cb.setFixedWidth(w)
         self._laser_mode_cb.addItems(self.available_modes.keys())
-        self._on_pulse_le = FixedWidthLineEdit(w, "0:8:2")
-        self._off_pulse_le = FixedWidthLineEdit(w, "1:8:2")
-        self._normalization_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._diff_integration_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._ma_window_le = FixedWidthLineEdit(w, "9999")
-        self._mask_range_le = FixedWidthLineEdit(
-            w, ', '.join([str(v) for v in config["MASK_RANGE"]]))
+        self._on_pulse_le = QtGui.QLineEdit("0:8:2")
+        self._off_pulse_le = QtGui.QLineEdit("1:8:2")
+        self._normalization_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._diff_integration_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._ma_window_le = QtGui.QLineEdit("9999")
+        self._mask_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
             self._photon_energy_le,
@@ -80,24 +76,29 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         ma_window_lb = QtGui.QLabel("M.A. window size: ")
         mask_range_lb = QtGui.QLabel("Mask range: ")
 
-        layout = QtGui.QGridLayout()
-        layout.addWidget(photon_energy_lb, 0, 0, 1, 1)
-        layout.addWidget(self._photon_energy_le, 0, 1, 1, 1)
-        layout.addWidget(laser_mode_lb, 1, 0, 1, 1)
-        layout.addWidget(self._laser_mode_cb, 1, 1, 1, 1)
-        layout.addWidget(on_pulse_lb, 2, 0, 1, 1)
-        layout.addWidget(self._on_pulse_le, 2, 1, 1, 1)
-        layout.addWidget(off_pulse_lb, 3, 0, 1, 1)
-        layout.addWidget(self._off_pulse_le, 3, 1, 1, 1)
-        layout.addWidget(normalization_range_lb, 4, 0, 1, 1)
-        layout.addWidget(self._normalization_range_le, 4, 1, 1, 1)
-        layout.addWidget(diff_integration_range_lb, 5, 0, 1, 1)
-        layout.addWidget(self._diff_integration_range_le, 5, 1, 1, 1)
-        layout.addWidget(ma_window_lb, 6, 0, 1, 1)
-        layout.addWidget(self._ma_window_le, 6, 1, 1, 1)
-        layout.addWidget(mask_range_lb, 7, 0, 1, 1)
-        layout.addWidget(self._mask_range_le, 7, 1, 1, 1)
+        layout = QtGui.QHBoxLayout()
+        key_layout = QtGui.QVBoxLayout()
+        key_layout.addWidget(photon_energy_lb)
+        key_layout.addWidget(laser_mode_lb)
+        key_layout.addWidget(on_pulse_lb)
+        key_layout.addWidget(off_pulse_lb)
+        key_layout.addWidget(normalization_range_lb)
+        key_layout.addWidget(diff_integration_range_lb)
+        key_layout.addWidget(ma_window_lb)
+        key_layout.addWidget(mask_range_lb)
 
+        value_layout = QtGui.QVBoxLayout()
+        value_layout.addWidget(self._photon_energy_le)
+        value_layout.addWidget(self._laser_mode_cb)
+        value_layout.addWidget(self._on_pulse_le)
+        value_layout.addWidget(self._off_pulse_le)
+        value_layout.addWidget(self._normalization_range_le)
+        value_layout.addWidget(self._diff_integration_range_le)
+        value_layout.addWidget(self._ma_window_le)
+        value_layout.addWidget(self._mask_range_le)
+
+        layout.addLayout(key_layout)
+        layout.addLayout(value_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):

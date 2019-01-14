@@ -23,8 +23,6 @@ from .main_gui import MainGUI
 
 class MainFaiGUI(MainGUI):
     """The main GUI for azimuthal integration."""
-    _height = 700  # window height, in pixel
-    _width = 1200  # window width, in pixel
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -97,8 +95,8 @@ class MainFaiGUI(MainGUI):
         layout.addWidget(self.analysis_ctrl_widget, 0, 2, 3, 2)
         layout.addWidget(self.data_ctrl_widget, 0, 4, 3, 2)
 
-        layout.addWidget(self._logger.widget, 3, 0, 1, 3)
-        layout.addWidget(self.geometry_ctrl_widget, 3, 3, 1, 3)
+        layout.addWidget(self._logger.widget, 3, 0, 2, 4)
+        layout.addWidget(self.geometry_ctrl_widget, 3, 4, 2, 2)
 
         self._cw.setLayout(layout)
 

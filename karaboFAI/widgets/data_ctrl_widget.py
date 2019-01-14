@@ -14,7 +14,6 @@ from ..config import config
 from ..data_processing import DataSource
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
-from ..widgets.misc_widgets import FixedWidthLineEdit
 
 
 class DataCtrlWidget(AbstractCtrlWidget):
@@ -27,11 +26,11 @@ class DataCtrlWidget(AbstractCtrlWidget):
     def __init__(self, parent=None):
         super().__init__("Data source", parent=parent)
 
-        self._hostname_le = FixedWidthLineEdit(165, config["SERVER_ADDR"])
-        self._port_le = FixedWidthLineEdit(70, str(config["SERVER_PORT"]))
-        self._source_name_le = FixedWidthLineEdit(285, config["SOURCE_NAME"])
-        self._pulse_range0_le = FixedWidthLineEdit(60, str(0))
-        self._pulse_range1_le = FixedWidthLineEdit(60, str(2699))
+        self._hostname_le = QtGui.QLineEdit(config["SERVER_ADDR"])
+        self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
+        self._source_name_le = QtGui.QLineEdit(config["SOURCE_NAME"])
+        self._pulse_range0_le = QtGui.QLineEdit(str(0))
+        self._pulse_range1_le = QtGui.QLineEdit(str(2699))
 
         self._data_src_rbts = []
         # the order must match the definition in the DataSource class

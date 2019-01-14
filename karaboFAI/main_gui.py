@@ -38,9 +38,6 @@ class MainGUI(QtGui.QMainWindow):
     file_server_started_sgn = QtCore.pyqtSignal()
     file_server_stopped_sgn = QtCore.pyqtSignal()
 
-    _height = 1  # window height, in pixel
-    _width = 1  # window width, in pixel
-
     def __init__(self, detector, screen_size=None):
         """Initialization.
 
@@ -52,7 +49,6 @@ class MainGUI(QtGui.QMainWindow):
         config.load(detector)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-        self.setFixedSize(self._width, self._height)
 
         self.title = detector + " Azimuthal Integration"
         self.setWindowTitle(self.title + " - main GUI")
@@ -133,7 +129,7 @@ class MainGUI(QtGui.QMainWindow):
         if screen_size is None:
             self.move(0, 0)
         else:
-            self.move(screen_size.width()/2 - self._width/2,
+            self.move(screen_size.width()/2 - self.width()/2,
                       screen_size.height()/20)
 
         self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])

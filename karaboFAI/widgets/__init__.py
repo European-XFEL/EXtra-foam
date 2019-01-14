@@ -7,7 +7,7 @@ from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 
 from .misc_widgets import (
-    colorMapFactory, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
+    colorMapFactory, GuiLogger, InputDialogWithCheckBox
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
