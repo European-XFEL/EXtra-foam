@@ -13,7 +13,7 @@ from .base_ctrl_widgets import AbstractCtrlWidget
 from ..config import config
 from ..helpers import parse_table_widget
 from ..logger import logger
-from ..widgets.pyqtgraph import QtCore, QtGui
+from ..widgets.pyqtgraph import QtCore, QtGui, Qt
 
 
 class GeometryCtrlWidget(AbstractCtrlWidget):
@@ -66,8 +66,14 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         widget.move(0, 0)
         widget.setHorizontalHeaderLabels(['x', 'y'])
         widget.setVerticalHeaderLabels(['1', '2', '3', '4'])
-        widget.setColumnWidth(0, 80)
-        widget.setColumnWidth(1, 80)
+
+        header = widget.horizontalHeader()
+        for i in range(n_col):
+            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+
+        header = widget.verticalHeader()
+        for i in range(n_row):
+            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
 
     def updateSharedParameters(self, log=False):
         """Override"""

@@ -89,15 +89,19 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
-        layout = QtGui.QGridLayout()
+        layout = QtGui.QVBoxLayout()
 
-        layout.addWidget(self.ai_ctrl_widget, 0, 0, 3, 2)
-        layout.addWidget(self.analysis_ctrl_widget, 0, 2, 3, 2)
-        layout.addWidget(self.data_ctrl_widget, 0, 4, 3, 2)
+        layout1 = QtGui.QHBoxLayout()
+        layout1.addWidget(self.ai_ctrl_widget)
+        layout1.addWidget(self.analysis_ctrl_widget)
+        layout1.addWidget(self.data_ctrl_widget)
 
-        layout.addWidget(self._logger.widget, 3, 0, 2, 4)
-        layout.addWidget(self.geometry_ctrl_widget, 3, 4, 2, 2)
+        layout2 = QtGui.QHBoxLayout()
+        layout2.addWidget(self._logger.widget)
+        layout2.addWidget(self.geometry_ctrl_widget)
 
+        layout.addLayout(layout1)
+        layout.addLayout(layout2)
         self._cw.setLayout(layout)
 
 
