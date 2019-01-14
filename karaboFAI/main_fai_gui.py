@@ -109,12 +109,18 @@ def main_fai_gui():
 
     args = parser.parse_args()
 
-    valid_detectors = ['AGIPD', 'LPD', 'JUNGFRAU']
-    if args.detector.upper() not in valid_detectors:
+    detector = args.detector
+    if detector.lower() == 'jungfrau':
+        detector = 'JungFrau'
+    else:
+        detector = detector.upper()
+
+    valid_detectors = ['AGIPD', 'LPD', 'JungFrau']
+    if detector not in valid_detectors:
         raise ValueError("Unknown detector. Valid options are: {}.".
                          format(valid_detectors))
 
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
-    ex = MainFaiGUI(args.detector.upper(), screen_size=screen_size)
+    ex = MainFaiGUI(detector, screen_size=screen_size)
     app.exec_()

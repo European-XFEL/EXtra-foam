@@ -78,11 +78,11 @@ class COMDataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
-        if config['TOPIC'] == 'FXE':
+        if config['DETECTOR'] == 'FXE':
             with File(filename, 'r') as f:
                 self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
                     f, quad_positions)
-        elif config['TOPIC'] == 'SPB':
+        elif config['DETECTOR'] == 'SPB':
             try:
                 from karabo_data.geometry2 import AGIPD_1MGeometry
             except (ImportError, ModuleNotFoundError):
@@ -152,7 +152,7 @@ class COMDataProcessor(Worker):
         """
         # This needs to be checked. Sometimes throws an error readonly
         # when trying to convert nan to -inf. Dirty hack -> to copy
-        if config["TOPIC"] == 'JungFrau':
+        if config["DETECTOR"] == 'JungFrau':
             assembled = np.copy(assembled)
 
         # pre-processing
@@ -213,20 +213,20 @@ class COMDataProcessor(Worker):
             # different key. To be included
             modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
-            if config["TOPIC"] == "FXE":
+            if config["DETECTOR"] == "FXE":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
-                if config["TOPIC"] == "FXE":
+                if config["DETECTOR"] == "FXE":
                     modules_data = stack_detector_data(
                         data, "image.data", only='LPD')
-                elif config['TOPIC'] == 'SPB':
+                elif config['DETECTOR'] == 'SPB':
                     modules_data = stack_detector_data(
                         data, "image.data", only='AGIPD')
-                elif config["TOPIC"] == 'JungFrau':
+                elif config["DETECTOR"] == 'JungFrau':
                     source = next(iter(metadata.values()))["source"]
                     # stack_detector data at the moment doesn't support
                     # JungFrau detector because of different naming
@@ -255,11 +255,11 @@ class COMDataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        if config["TOPIC"] == "FXE":
+        if config["DETECTOR"] == "FXE":
             expected_shape = (16, 256, 256)
-        elif config['TOPIC'] == 'SPB':
+        elif config['DETECTOR'] == 'SPB':
             expected_shape = (16, 512, 128)
-        elif config['TOPIC'] == 'JungFrau':
+        elif config['DETECTOR'] == 'JungFrau':
             expected_shape = (1, 512, 1024)
 
         if hasattr(modules_data, 'shape') is False \
@@ -268,9 +268,9 @@ class COMDataProcessor(Worker):
             return ProcessedData(tid)
 
         t0 = time.perf_counter()
-        if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
+        if config["DETECTOR"] == "FXE" or config["DETECTOR"] == "SPB":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-        elif config["TOPIC"] == "JungFrau":
+        elif config["DETECTOR"] == "JungFrau":
             # Just for the time-being to be consistent with other
             # detector types.
             # Will have some kind of assembly/stacking in case of 2 modules

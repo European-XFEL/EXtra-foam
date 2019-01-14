@@ -100,11 +100,11 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
-        if config['TOPIC'] == 'LPD':
+        if config['DETECTOR'] == 'LPD':
             with File(filename, 'r') as f:
                 self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
                     f, quad_positions)
-        elif config['TOPIC'] == 'AGIPD':
+        elif config['DETECTOR'] == 'AGIPD':
             try:
                 from karabo_data.geometry2 import AGIPD_1MGeometry
             except (ImportError, ModuleNotFoundError):
@@ -198,7 +198,7 @@ class DataProcessor(Worker):
         """
         # This needs to be checked. Sometimes throws an error readonly
         # when trying to convert nan to -inf. Dirty hack -> to copy
-        if config["TOPIC"] == 'JungFrau':
+        if config["DETECTOR"] == 'JungFrau':
             assembled = np.copy(assembled)
 
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
@@ -317,20 +317,20 @@ class DataProcessor(Worker):
             # different key. To be included
             modules_data = data[config["SOURCE_NAME"]]["image.data"]
 
-            if config["TOPIC"] == "LPD":
+            if config["DETECTOR"] == "LPD":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
-                if config["TOPIC"] == "LPD":
+                if config["DETECTOR"] == "LPD":
                     modules_data = stack_detector_data(
                         data, "image.data", only='LPD')
-                elif config['TOPIC'] == 'AGIPD':
+                elif config['DETECTOR'] == 'AGIPD':
                     modules_data = stack_detector_data(
                         data, "image.data", only='AGIPD')
-                elif config["TOPIC"] == 'JungFrau':
+                elif config["DETECTOR"] == 'JungFrau':
                     source = next(iter(metadata.values()))["source"]
                     # stack_detector data at the moment doesn't support
                     # JungFrau detector because of different naming
@@ -359,11 +359,11 @@ class DataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        if config["TOPIC"] == "LPD":
+        if config["DETECTOR"] == "LPD":
             expected_shape = (16, 256, 256)
-        elif config['TOPIC'] == 'AGIPD':
+        elif config['DETECTOR'] == 'AGIPD':
             expected_shape = (16, 512, 128)
-        elif config['TOPIC'] == 'JungFrau':
+        elif config['DETECTOR'] == 'JungFrau':
             expected_shape = (1, 512, 1024)
 
         if hasattr(modules_data, 'shape') is False \
@@ -372,9 +372,9 @@ class DataProcessor(Worker):
             return ProcessedData(tid)
 
         t0 = time.perf_counter()
-        if config["TOPIC"] == "LPD" or config["TOPIC"] == "AGIPD":
+        if config["DETECTOR"] == "LPD" or config["DETECTOR"] == "AGIPD":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-        elif config["TOPIC"] == "JungFrau":
+        elif config["DETECTOR"] == "JungFrau":
             # Just for the time-being to be consistent with other
             # detector types.
             # Will have some kind of assembly/stacking in case of 2 modules

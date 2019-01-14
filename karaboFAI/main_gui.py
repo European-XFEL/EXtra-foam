@@ -41,20 +41,20 @@ class MainGUI(QtGui.QMainWindow):
     _height = 1  # window height, in pixel
     _width = 1  # window width, in pixel
 
-    def __init__(self, topic, screen_size=None):
+    def __init__(self, detector, screen_size=None):
         """Initialization.
 
-        :param str topic: detector topic, allowed options "SPB", "FXE"
+        :param str detector: detector name, e.g. "AGIPD", "LPD".
         """
         super().__init__()
 
         # update global configuration
-        config.load(topic)
+        config.load(detector)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setFixedSize(self._width, self._height)
 
-        self.title = topic + " Azimuthal Integration"
+        self.title = detector + " Azimuthal Integration"
         self.setWindowTitle(self.title + " - main GUI")
 
         self._cw = QtGui.QWidget()
