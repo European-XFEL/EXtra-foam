@@ -1,12 +1,9 @@
 import unittest
 
-from karaboFAI.widgets.pyqtgraph import mkQApp
 from karaboFAI.main_gui import MainGUI
 
 
 class TestMainGui(unittest.TestCase):
-    app = mkQApp()
-
     gui = MainGUI('FXE')
     actions = gui._tool_bar.actions()
 

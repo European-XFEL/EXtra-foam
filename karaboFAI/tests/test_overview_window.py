@@ -6,10 +6,8 @@ from karaboFAI.widgets import (
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageWidget
 )
 from karaboFAI.main_gui import MainGUI
-from karaboFAI.widgets.pyqtgraph import mkQApp, QtGui, QtCore
+from karaboFAI.widgets.pyqtgraph import QtGui, QtCore
 from karaboFAI.windows import OverviewWindow
-
-mkQApp()
 
 
 class Dummy(QtGui.QMainWindow):
