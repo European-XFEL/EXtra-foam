@@ -183,7 +183,7 @@ class Config(dict):
     _default_topic_configs = {
         "AGIPD": _default_agipd_config,
         "LPD": _default_lpd_config,
-        "JungFrau": _default_jfrau_config
+        "JUNGFRAU": _default_jfrau_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")

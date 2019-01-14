@@ -11,6 +11,7 @@ All rights reserved.
 """
 import os
 import sys
+import argparse
 
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
@@ -102,22 +103,18 @@ class MainFaiGUI(MainGUI):
         self._cw.setLayout(layout)
 
 
-def lpd_gui():
+def main_fai_gui():
+    parser = argparse.ArgumentParser(prog="karaboFAI")
+    parser.add_argument("detector", help="detector name")
+
+    args = parser.parse_args()
+
+    valid_detectors = ['AGIPD', 'LPD', 'JUNGFRAU']
+    if args.detector.upper() not in valid_detectors:
+        raise ValueError("Unknown detector. Valid options are: {}.".
+                         format(valid_detectors))
+
     app = QtGui.QApplication(sys.argv)
     screen_size = app.primaryScreen().size()
-    ex = MainFaiGUI("LPD", screen_size=screen_size)
-    app.exec_()
-
-
-def agipd_gui():
-    app = QtGui.QApplication(sys.argv)
-    screen_size = app.primaryScreen().size()
-    ex = MainFaiGUI("AGIPD", screen_size=screen_size)
-    app.exec_()
-
-
-def jfrau_gui():
-    app = QtGui.QApplication(sys.argv)
-    screen_size = app.primaryScreen().size()
-    ex = MainFaiGUI("JungFrau", screen_size=screen_size)
+    ex = MainFaiGUI(args.detector.upper(), screen_size=screen_size)
     app.exec_()
