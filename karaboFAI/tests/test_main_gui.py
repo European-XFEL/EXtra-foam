@@ -25,6 +25,7 @@ class TestMainGui(unittest.TestCase):
         self.actions[Win.DrawMask].trigger()
         self.assertEqual(count, len(self.gui._plot_windows))
 
+        # test Window instances will be unregistered after being closed
         with self.assertRaises(StopIteration):
             i = 0
             while i < 100 and self.gui._plot_windows.keys():
