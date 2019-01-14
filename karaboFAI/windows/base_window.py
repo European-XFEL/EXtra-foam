@@ -146,7 +146,7 @@ class DockerWindow(AbstractWindow):
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
         if parent is not None:
-            self.parent().unregisterPlotWindow(self)
+            parent.unregisterPlotWindow(self)
         super().closeEvent(QCloseEvent)
 
 
@@ -363,5 +363,5 @@ class PlotWindow(AbstractWindow):
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
         if parent is not None:
-            self.parent().unregisterPlotWindow(self)
+            parent.unregisterPlotWindow(self)
         super().closeEvent(QCloseEvent)
