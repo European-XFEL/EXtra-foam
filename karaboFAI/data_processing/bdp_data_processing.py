@@ -14,8 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import queue
 
 import numpy as np
-from scipy import constants
-import pyFAI
+
 from h5py import File
 import fabio
 
@@ -30,7 +29,7 @@ from .proc_utils import nanmean_axis0_para
 from ..worker import Worker
 
 
-class DataProcessor(Worker):
+class BdpDataProcessor(Worker):
     """Class for data processing.
 
     Attributes:
@@ -38,21 +37,6 @@ class DataProcessor(Worker):
         pulse_range_sp (tuple): (min, max) pulse ID to be processed.
             (int, int)
         geom_sp (LPDGeometry): geometry.
-        wavelength_sp (float): photon wavelength in meter.
-        sample_distance_sp (float): distance from the sample to the
-            detector plan (orthogonal distance, not along the beam),
-            in meter.
-        center_coordinate_sp (tuple): (Cx, Cy), where Cx is the
-            coordinate of the point of normal incidence along the
-            detector's second dimension, in pixels, and Cy is the
-            coordinate of the point of normal incidence along the
-            detector's first dimension, in pixels. (int, int)
-        integration_method_sp (string): the azimuthal integration
-            method supported by pyFAI.
-        integration_range_sp (tuple): the lower and upper range of
-            the integration radial unit. (float, float)
-        integration_points_sp (int): number of points in the
-            integration output pattern.
         mask_range_sp (tuple): (min, max), the pixel value outside
             the range will be clipped to the corresponding edge.
         image_mask (numpy.ndarray): a 2D mask.
@@ -76,12 +60,6 @@ class DataProcessor(Worker):
         self.source_sp = None
         self.pulse_range_sp = None
         self.geom_sp = None
-        self.wavelength_sp = None
-        self.sample_distance_sp = None
-        self.center_coordinate_sp = None
-        self.integration_method_sp = None
-        self.integration_range_sp = None
-        self.integration_points_sp = None
         self.mask_range_sp = None
 
     @QtCore.pyqtSlot(str)
@@ -114,37 +92,13 @@ class DataProcessor(Worker):
 
             self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename).snap()
 
-    @QtCore.pyqtSlot(float)
-    def onSampleDistanceChanged(self, value):
-        self.sample_distance_sp = value
-
-    @QtCore.pyqtSlot(int, int)
-    def onCenterCoordinateChanged(self, cx, cy):
-        self.center_coordinate_sp = (cx * config["PIXEL_SIZE"],
-                                     cy * config["PIXEL_SIZE"])
-
-    @QtCore.pyqtSlot(str)
-    def onIntegrationMethodChanged(self, value):
-        self.integration_method_sp = value
-
-    @QtCore.pyqtSlot(float, float)
-    def onIntegrationRangeChanged(self, lb, ub):
-        self.integration_range_sp = (lb, ub)
-
-    @QtCore.pyqtSlot(int)
-    def onIntegrationPointsChanged(self, value):
-        self.integration_points_sp = value
-
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
         self.mask_range_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float)
     def onPhotonEnergyChanged(self, photon_energy):
-        """Compute photon wavelength (m) from photon energy (keV)."""
-        # Plank-einstein relation (E=hv)
-        HC_E = 1e-3 * constants.c * constants.h / constants.e
-        self.wavelength_sp = HC_E / photon_energy
+        pass
 
     @QtCore.pyqtSlot(int, int)
     def onPulseRangeChanged(self, lb, ub):
@@ -201,16 +155,6 @@ class DataProcessor(Worker):
         if config["DETECTOR"] == 'JungFrau':
             assembled = np.copy(assembled)
 
-        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
-                                       poni1=self.center_coordinate_sp[1],
-                                       poni2=self.center_coordinate_sp[0],
-                                       pixel1=config["PIXEL_SIZE"],
-                                       pixel2=config["PIXEL_SIZE"],
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       wavelength=self.wavelength_sp)
-
         # pre-processing
 
         t0 = time.perf_counter()
@@ -229,51 +173,6 @@ class DataProcessor(Worker):
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        # azimuthal integration
-
-        t0 = time.perf_counter()
-
-        if self.image_mask is None:
-            base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
-        else:
-            if self.image_mask.shape != assembled[0].shape:
-                raise ValueError(
-                    "Invalid mask shape {} for image with shape {}".
-                    format(self.image_mask.shape, assembled[0].shape))
-            base_mask = self.image_mask
-
-        def _integrate1d_imp(i):
-            """Use for multiprocessing."""
-            # convert 'nan' to '-inf', as explained above
-            assembled[i][np.isnan(assembled[i])] = -np.inf
-
-            # add threshold mask
-            mask = np.copy(base_mask)
-            mask[(assembled[i] < self.mask_range_sp[0]) |
-                 (assembled[i] > self.mask_range_sp[1])] = 1
-
-            # do integration
-            ret = ai.integrate1d(assembled[i],
-                                 self.integration_points_sp,
-                                 method=self.integration_method_sp,
-                                 mask=mask,
-                                 radial_range=self.integration_range_sp,
-                                 correctSolidAngle=True,
-                                 polarization_factor=1,
-                                 unit="q_A^-1")
-
-            return ret.radial, ret.intensity
-
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            rets = executor.map(_integrate1d_imp,
-                                range(assembled.shape[0]))
-
-        momentums, intensities = zip(*rets)
-        momentum = momentums[0]
-
-        logger.debug("Time for azimuthal integration: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
         # clip the value in the array
         np.clip(assembled_mean, self.mask_range_sp[0], self.mask_range_sp[1],
                 out=assembled_mean)
@@ -285,9 +184,6 @@ class DataProcessor(Worker):
         #       computing power.
 
         data = ProcessedData(tid,
-                             momentum=momentum,
-                             intensity=np.array(intensities),
-                             intensity_mean=np.mean(intensities, axis=0),
                              image=assembled,
                              image_mean=assembled_mean,
                              image_mask=self.image_mask)
@@ -374,6 +270,7 @@ class DataProcessor(Worker):
         t0 = time.perf_counter()
         if config["DETECTOR"] == "LPD" or config["DETECTOR"] == "AGIPD":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
+            print("shape  ", assembled.shape)
         elif config["DETECTOR"] == "JungFrau":
             # Just for the time-being to be consistent with other
             # detector types.

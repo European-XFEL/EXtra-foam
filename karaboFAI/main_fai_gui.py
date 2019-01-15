@@ -13,6 +13,7 @@ import os
 import sys
 import argparse
 
+from .data_processing import FaiDataProcessor as DataProcessor
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
@@ -61,6 +62,7 @@ class MainFaiGUI(MainGUI):
             self.ai_ctrl_widget, self.geometry_ctrl_widget,
             self.analysis_ctrl_widget, self.data_ctrl_widget,
         ]
+        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
         self.initUI()
         self.initConnection()

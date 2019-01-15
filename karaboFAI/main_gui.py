@@ -22,7 +22,7 @@ from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import GuiLogger
 from .windows import DrawMaskWindow
 from .data_acquisition import DataAcquisition
-from .data_processing import DataProcessor, Data4Visualization
+from .data_processing import Data4Visualization
 from .file_server import FileServer
 from .config import config
 
@@ -138,7 +138,7 @@ class MainGUI(QtGui.QMainWindow):
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+        self._proc_worker = None
 
         # For real time plot
         self._running = False

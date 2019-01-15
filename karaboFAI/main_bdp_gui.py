@@ -3,20 +3,23 @@ Offline and online data analysis and visualization tool for Centre  of
 mass analysis from different data acquired with various detectors at
 European XFEL.
 
-Main Bragg GUI.
+Main Bragg diffraction peak GUI.
 
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os
+import sys
+import argparse
 
+from .data_processing import BdpDataProcessor as DataProcessor
 from .widgets.pyqtgraph import QtGui
 from .widgets import AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
 from .windows import BraggSpotsWindow
 from .main_gui import MainGUI
 
 
-class MainBraggGUI(MainGUI):
+class MainBdpGUI(MainGUI):
     """The main GUI for azimuthal integration."""
 
     def __init__(self, *args, **kwargs):
@@ -47,6 +50,8 @@ class MainBraggGUI(MainGUI):
             self.data_ctrl_widget,
         ]
 
+        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+
         self.initUI()
         self.initConnection()
 
@@ -64,10 +69,36 @@ class MainBraggGUI(MainGUI):
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
-        layout = QtGui.QGridLayout()
+        layout = QtGui.QVBoxLayout()
 
-        layout.addWidget(self.geometry_ctrl_widget, 0, 0, 4, 1)
-        layout.addWidget(self.analysis_ctrl_widget, 0, 1, 4, 1)
-        layout.addWidget(self.data_ctrl_widget, 0, 2, 7, 1)
-        layout.addWidget(self._logger.widget, 4, 0, 3, 2)
+        layout1 = QtGui.QHBoxLayout()
+        layout1.addWidget(self.geometry_ctrl_widget)
+        layout1.addWidget(self.analysis_ctrl_widget)
+        layout1.addWidget(self.data_ctrl_widget)
+
+        layout2 = QtGui.QHBoxLayout()
+        layout2.addWidget(self._logger.widget)
+
+        layout.addLayout(layout1)
+        layout.addLayout(layout2)
         self._cw.setLayout(layout)
+
+
+def main_bdp_gui():
+    parser = argparse.ArgumentParser(prog="karaboBDP")
+    parser.add_argument("detector", help="detector name (case insensitive)",
+                        choices=['AGIPD', 'LPD', 'JUNGFRAU'],
+                        type=lambda s: s.upper())
+
+    args = parser.parse_args()
+
+    detector = args.detector
+    if detector == 'JUNGFRAU':
+        detector = 'JungFrau'
+    else:
+        detector = detector.upper()
+
+    app = QtGui.QApplication(sys.argv)
+    screen_size = app.primaryScreen().size()
+    ex = MainBdpGUI(detector, screen_size=screen_size)
+    app.exec_()

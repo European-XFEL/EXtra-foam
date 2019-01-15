@@ -78,6 +78,8 @@ class BraggSpotsWindow(PlotWindow):
             self.onMaskRangeChanged)
         self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
+        self.parent().analysis_ctrl_widget.ma_window_size_sgn.connect(
+            self.onMAWindowSizeChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters
         self.parent().updateSharedParameters()
@@ -118,11 +120,13 @@ class BraggSpotsWindow(PlotWindow):
         self._exp_params.addChildren([
             self.optical_laser_mode_param,
             self.laser_on_pulse_ids_param,
-            self.laser_off_pulse_ids_param
+            self.laser_off_pulse_ids_param,
         ])
 
         self._pro_params.addChildren([
-            self.ma_window_size_param
+            self.ma_window_size_param,
+            self.mask_range_param
+
         ])
 
         self._ana_params.addChildren([
@@ -196,7 +200,7 @@ class BraggSpotsWindow(PlotWindow):
         self._main_vb.addItem(img)
 
         data = self._data.get()
-        if data.empty_image():
+        if data.empty():
             # Define First Region of interests.Around Bragg Data
             roi = RectROI([config['CENTER_X'], config['CENTER_Y']], [50, 50],
                           pen=mkPen((0, 255, 0), width=2))
@@ -468,7 +472,7 @@ class BraggSpotsWindow(PlotWindow):
 
     def update(self):
         data = self._data.get()
-        if data.empty_image():
+        if data.empty():
             return
         self._main_vb.setMouseEnabled(x=False, y=False)
         self._image_items[0].setImage(np.flip(data.image_mean, axis=0),
@@ -601,7 +605,7 @@ class BraggSpotsWindow(PlotWindow):
     # region of interests. One horizontal and one vertical.
     def _click(self, event):
         data = self._data.get()
-        if data.empty_image():
+        if data.empty():
             return
 
         event.accept()

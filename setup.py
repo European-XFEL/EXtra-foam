@@ -19,7 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'karaboFAI=karaboFAI.main_fai_gui:main_fai_gui',
-            'bragg-gui=karaboFAI.Bragg.bragg_gui:bragg_gui'
+            'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
         ],
     },
     package_data={},
