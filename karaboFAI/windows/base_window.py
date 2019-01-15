@@ -32,7 +32,9 @@ class SingletonWindow:
         else:
             if isinstance(self.instance, PlotWindow) \
                     or isinstance(self.instance, DockerWindow):
-                self.instance.parent().registerPlotWindow(self.instance)
+                parent = self.instance.parent()
+                if parent is not None:
+                    parent.registerPlotWindow(self.instance)
                 self.instance.update()
 
         self.instance.show()
@@ -99,7 +101,9 @@ class DockerWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        self.parent().registerPlotWindow(self)
+        parent = kwargs.get("parent", None)
+        if parent is not None:
+            parent.registerPlotWindow(self)
 
         self._plot_widgets = WeakKeyDictionary()  # book-keeping opened windows
 
@@ -140,8 +144,10 @@ class DockerWindow(AbstractWindow):
         del self._plot_widgets[instance]
 
     def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWindow(self)
         super().closeEvent(QCloseEvent)
-        self.parent().unregisterPlotWindow(self)
 
 
 class PlotWindow(AbstractWindow):
@@ -156,7 +162,9 @@ class PlotWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        self.parent().registerPlotWindow(self)
+        parent = kwargs.get("parent", None)
+        if parent is not None:
+            parent.registerPlotWindow(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
@@ -338,5 +346,7 @@ class PlotWindow(AbstractWindow):
         pass
 
     def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWindow(self)
         super().closeEvent(QCloseEvent)
-        self.parent().unregisterPlotWindow(self)

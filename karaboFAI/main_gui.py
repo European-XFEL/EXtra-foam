@@ -58,6 +58,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # *************************************************************
         # Tool bar
+        # Note: the order of 'addAction` affect the unittest!!!
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
 
@@ -303,9 +304,9 @@ class MainGUI(QtGui.QMainWindow):
         logger.info(msg)
 
     def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
-
-        self.clearWorkers()
+        self._clearWorkers()
 
         if self._file_server is not None and self._file_server.is_alive():
             self._file_server.terminate()
+
+        super().closeEvent(QCloseEvent)

@@ -37,7 +37,8 @@ class PlotWidget(GraphicsView):
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
-        parent.registerPlotWidget(self)
+        if parent is not None:
+            parent.registerPlotWidget(self)
 
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
@@ -48,11 +49,13 @@ class PlotWidget(GraphicsView):
         self.plotItem.sigRangeChanged.connect(self.viewRangeChanged)
 
     def clear(self):
+        """Remove all the items in the PlotItem object."""
         plot_item = self.plotItem
         for i in plot_item.items[:]:
             plot_item.removeItem(i)
 
     def reset(self):
+        """Clear the data of all the items in the PlotItem object."""
         pass
 
     def update(self, data):
@@ -87,5 +90,7 @@ class PlotWidget(GraphicsView):
         return self.plotItem.restoreState(state)
 
     def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterPlotWidget(self)
         super().closeEvent(QCloseEvent)
-        self.parent().unregisterPlotWidget(self)
