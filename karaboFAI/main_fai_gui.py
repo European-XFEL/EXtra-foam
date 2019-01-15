@@ -58,10 +58,7 @@ class MainFaiGUI(MainGUI):
         self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
         self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
         self.data_ctrl_widget = DataCtrlWidget(parent=self)
-        self._ctrl_widgets = [
-            self.ai_ctrl_widget, self.geometry_ctrl_widget,
-            self.analysis_ctrl_widget, self.data_ctrl_widget,
-        ]
+
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
         self.initUI()

@@ -25,8 +25,12 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         super().__init__(*args, **kwargs)
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
-        self.parent().daq_started_sgn.connect(self.onDaqStarted)
-        self.parent().daq_stopped_sgn.connect(self.onDaqStopped)
+        parent = self.parent()
+        if parent is not None:
+            parent.registerCtrlWidget(self)
+
+        parent.daq_started_sgn.connect(self.onDaqStarted)
+        parent.daq_stopped_sgn.connect(self.onDaqStopped)
 
         self._disabled_widgets_during_daq = []
 

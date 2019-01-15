@@ -115,6 +115,9 @@ class MainGUI(QtGui.QMainWindow):
         # book-keeping opened windows
         self._plot_windows = WeakKeyDictionary()
 
+        # book-keeping control widgets
+        self._ctrl_widgets = []
+
         self._mask_image = None
 
         self._disabled_widgets_during_daq = [
@@ -207,6 +210,9 @@ class MainGUI(QtGui.QMainWindow):
 
     def unregisterPlotWindow(self, instance):
         del self._plot_windows[instance]
+
+    def registerCtrlWidget(self, instance):
+        self._ctrl_widgets.append(instance)
 
     def loadGeometryFile(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
@@ -304,7 +310,7 @@ class MainGUI(QtGui.QMainWindow):
         logger.info(msg)
 
     def closeEvent(self, QCloseEvent):
-        self._clearWorkers()
+        self.clearWorkers()
 
         if self._file_server is not None and self._file_server.is_alive():
             self._file_server.terminate()
