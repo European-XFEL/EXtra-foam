@@ -3,14 +3,13 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data processor.
+Bragg diffraction peak data processor.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
-from concurrent.futures import ThreadPoolExecutor
 import queue
 
 import numpy as np
@@ -30,7 +29,7 @@ from ..worker import Worker
 
 
 class BdpDataProcessor(Worker):
-    """Class for data processing.
+    """Bragg diffraction peak data processing.
 
     Attributes:
         source_sp (DataSource): data source.

@@ -31,7 +31,7 @@ class MainBdpGUI(MainGUI):
         # *************************************************************
         #
         open_bragg_spots_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/bragg_spots.png")),
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/bragg_diffraction_peak.png")),
             "Bragg spots",
             self)
         open_bragg_spots_window_at.triggered.connect(

@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data processor.
+Fast azimuthal integration data processor.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -31,7 +31,7 @@ from ..worker import Worker
 
 
 class FaiDataProcessor(Worker):
-    """Class for data processing.
+    """Fast azimuthal integration data processing.
 
     Attributes:
         source_sp (DataSource): data source.

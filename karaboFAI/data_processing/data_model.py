@@ -21,6 +21,8 @@ class DataSource(IntEnum):
 class ProcessedData:
     """A class which stores the processed data.
 
+    TODO: separate the ProcessedData class for FAI and BDP?
+
     Attributes:
         tid (int): train ID.
         momentum (numpy.ndarray): x-axis of azimuthal integration result.
