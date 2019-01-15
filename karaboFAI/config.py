@@ -85,6 +85,7 @@ class Config(dict):
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
+        "COLOR_MAP": 'thermal',
     }
 
     # this is to guard again the topic config defined in the file modifying

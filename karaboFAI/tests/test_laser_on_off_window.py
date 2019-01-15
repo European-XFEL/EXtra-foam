@@ -2,12 +2,10 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.widgets.pyqtgraph import mkQApp, QtGui, QtCore
+from karaboFAI.widgets.pyqtgraph import QtGui, QtCore
 from karaboFAI.windows import LaserOnOffWindow
 from karaboFAI.data_processing import ProcessedData, DataSource
 from karaboFAI.main_gui import MainGUI
-
-mkQApp()
 
 
 class Dummy(QtGui.QMainWindow):

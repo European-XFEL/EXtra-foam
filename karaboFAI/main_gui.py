@@ -19,9 +19,7 @@ import zmq
 
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
-from .widgets import (
-    CustomGroupBox, FixedWidthLineEdit, GuiLogger, InputDialogWithCheckBox
-)
+from .widgets import CustomGroupBox, FixedWidthLineEdit, GuiLogger
 from .windows import (
     BraggSpotsWindow, DrawMaskWindow, LaserOnOffWindow, OverviewWindow
 )
@@ -105,6 +103,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # *************************************************************
         # Tool bar
+        # Note: the order of 'addAction` affect the unittest!!!
         # *************************************************************
         tool_bar = self.addToolBar("Control")
 
@@ -180,6 +179,8 @@ class MainGUI(QtGui.QMainWindow):
         self._load_geometry_file_at.triggered.connect(
             self._loadGeometryFile)
         tool_bar.addAction(self._load_geometry_file_at)
+
+        self._tool_bar = tool_bar
 
         # *************************************************************
         # Miscellaneous
@@ -821,9 +822,9 @@ class MainGUI(QtGui.QMainWindow):
         logger.info(msg)
 
     def closeEvent(self, QCloseEvent):
-        super().closeEvent(QCloseEvent)
-
         self._clearWorkers()
 
         if self._file_server is not None and self._file_server.is_alive():
             self._file_server.terminate()
+
+        super().closeEvent(QCloseEvent)
