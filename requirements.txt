@@ -5,7 +5,7 @@ msgpack-numpy>=0.4.4
 pyzmq>=17.1.2
 pyFAI>=0.15.0
 PyQt5>=5.11.0
-karabo-data>=0.1.0
+https://github.com/European-XFEL/karabo_data
 karabo-bridge>=0.2.0
 toolz
 silx>=0.8.0
