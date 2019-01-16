@@ -1,11 +1,15 @@
 Introduction
 ============
 
-**karaboFAI** is a tool that provides on-line (near real-time) and
-off-line data analysis and visualization for experiments at European
-XFEL that require azimuthal integration of diffraction data acquired
-with 2D detectors.
+**karaboFAI** is a tool that provides on-line (real-time, as fast as the
+calibration pipeline) and off-line data analysis and visualization
+for experiments at European XFEL that require azimuthal integration
+of diffraction data acquired with 2D detectors. It is now working with
+AGIPD, LPD and JungFrau detectors.
 
 
-.. image:: Screenshot_from_2018-12-10.png
+.. image:: karaboFAI-0.2.0-control-panel.png
+   :width: 800
+
+.. image:: karaboFAI-0.2.0-overview-window.png
    :width: 800
