@@ -5,27 +5,16 @@ from karaboFAI.widgets import (
     BulletinWidget, ImageAnalysisWidget, MultiPulseAiWidget,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageWidget
 )
-from karaboFAI.main_gui import MainGUI
-from karaboFAI.widgets.pyqtgraph import QtGui, QtCore
+from karaboFAI.main_fai_gui import MainFaiGUI
 from karaboFAI.windows import OverviewWindow
 from karaboFAI.data_processing import Data4Visualization
 
 
-class Dummy(QtGui.QMainWindow):
-
-    def __init__(self):
-        super().__init__()
-
-    def registerPlotWindow(self, instance):
-        pass
-
-    def updateSharedParameters(self):
-        pass
-
-
 class TestOverviewWindow(unittest.TestCase):
+    gui = MainFaiGUI('LPD')
+
     def setUp(self):
-        self._win = OverviewWindow(Data4Visualization(), parent=Dummy())
+        self._win = OverviewWindow(Data4Visualization(), parent=self.gui)
 
     def testInstantiateOverviewWindow(self):
         self.assertEqual(len(self._win._plot_widgets), 8)
