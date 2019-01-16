@@ -49,10 +49,17 @@ class SinglePulseImageWidget(ImageView):
 
     Widget used for displaying the assembled image for a single pulse.
     """
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, *, parent=None, pulse_id=0):
+        """Initialization.
+
+        :param int pulse_id: the ID of the pulse to be displayed.
+        """
         super().__init__(parent=parent)
         parent.registerPlotWidget(self)
+
+        self.pulse_id = pulse_id
+
+        self._is_initialized = False
 
         self._mask_range_sp = None
         parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
@@ -61,12 +68,15 @@ class SinglePulseImageWidget(ImageView):
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
-        pulse_id = 0  # TODO: make pulse_id an input
-
         image = data.image
-        np.clip(image[pulse_id], *self._mask_range_sp, image[pulse_id])
+        np.clip(image[self.pulse_id], *self._mask_range_sp,
+                image[self.pulse_id])
 
-        self.setImage(image[pulse_id], autoRange=True, autoLevels=True)
+        self.setImage(image[self.pulse_id], autoRange=False,
+                      autoLevels=(not self._is_initialized))
+
+        if not self._is_initialized:
+            self._is_initialized = True
 
     def close(self):
         self.parent().unregisterPlotWidget(self)
