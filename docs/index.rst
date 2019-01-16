@@ -7,7 +7,7 @@ Contents:
    :maxdepth: 2
 
    introduction
-   installation
+   deployment
    detectors
    tutorial
    developer
