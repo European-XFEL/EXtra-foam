@@ -8,7 +8,7 @@ of diffraction data acquired with 2D detectors. It is now working with
 AGIPD, LPD and JungFrau detectors.
 
 
-To start
+To start, in eigher **Maxwell cluster** or **online cluster**, type:
 
 .. code-block:: bash
 
