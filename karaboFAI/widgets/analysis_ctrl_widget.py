@@ -124,8 +124,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
                         format(','.join([str(v) for v in common])))
                     return False
 
-            self.on_off_pulse_ids_sgn.emit(
-                mode, on_pulse_ids, off_pulse_ids)
+            self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
