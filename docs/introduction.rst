@@ -8,8 +8,22 @@ of diffraction data acquired with 2D detectors. It is now working with
 AGIPD, LPD and JungFrau detectors.
 
 
+To start
+
+.. code-block:: bash
+
+   /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
+
+Valid detectors are `AGIPD`, `LPD` and `JungFrau`.
+
 .. image:: karaboFAI-0.2.0-control-panel.png
    :width: 800
 
 .. image:: karaboFAI-0.2.0-overview-window.png
+   :width: 800
+
+.. image:: karaboFAI-0.2.0-optical-laser-on-off-window.png
+   :width: 800
+
+.. image:: karaboFAI-0.2.0-integrated-masking-tool-frompyFAI.png
    :width: 800

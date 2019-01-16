@@ -10,7 +10,6 @@ Contents:
    deployment
    detectors
    tutorial
-   developer
 
 
 Indices and tables

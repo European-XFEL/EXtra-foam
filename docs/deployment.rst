@@ -1,7 +1,7 @@
 Deployment
 ==========
 
-On the `Maxwell`:
+On the `Maxwell` cluster:
 
 .. code-block:: bash
 
