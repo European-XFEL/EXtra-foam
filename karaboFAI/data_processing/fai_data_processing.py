@@ -112,7 +112,7 @@ class FaiDataProcessor(Worker):
                     "You are not in the correct branch for SPB experiment!")
                 raise
 
-            self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename).snap()
+            self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChanged(self, value):
