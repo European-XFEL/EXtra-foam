@@ -96,8 +96,8 @@ class MainFaiGUI(MainGUI):
         layout1.addWidget(self.data_ctrl_widget)
 
         layout2 = QtGui.QHBoxLayout()
-        layout2.addWidget(self._logger.widget)
-        layout2.addWidget(self.geometry_ctrl_widget)
+        layout2.addWidget(self._logger.widget, 2)
+        layout2.addWidget(self.geometry_ctrl_widget, 1)
 
         layout.addLayout(layout1)
         layout.addLayout(layout2)

@@ -26,10 +26,13 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
+        self._geom_file_open_btn = QtGui.QPushButton("...")
+        self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._disabled_widgets_during_daq = [
             self._quad_positions_tb,
             self._geom_file_le,
+            self._geom_file_open_btn
         ]
 
         self.initUI()
@@ -41,11 +44,14 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         self.initQuadTable()
 
-        layout = QtGui.QGridLayout()
-        layout.addWidget(geom_file_lb, 0, 0, 1, 2)
-        layout.addWidget(self._geom_file_le, 1, 0, 1, 2)
-        layout.addWidget(quad_positions_lb, 2, 0, 1, 2)
-        layout.addWidget(self._quad_positions_tb, 3, 0, 1, 2)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(geom_file_lb)
+        sub_layout = QtGui.QHBoxLayout()
+        sub_layout.addWidget(self._geom_file_le)
+        sub_layout.addWidget(self._geom_file_open_btn)
+        layout.addLayout(sub_layout)
+        layout.addWidget(quad_positions_lb)
+        layout.addWidget(self._quad_positions_tb)
 
         self.setLayout(layout)
 
@@ -74,6 +80,11 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         header = widget.verticalHeader()
         for i in range(n_row):
             header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+
+    def loadGeometryFile(self):
+        filename = QtGui.QFileDialog.getOpenFileName()[0]
+        if filename:
+            self._geom_file_le.setText(filename)
 
     def updateSharedParameters(self, log=False):
         """Override"""

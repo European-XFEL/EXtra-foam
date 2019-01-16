@@ -96,16 +96,6 @@ class MainGUI(QtGui.QMainWindow):
         load_mask_at.triggered.connect(self.loadMaskImage)
         self._tool_bar.addAction(load_mask_at)
 
-        #
-        load_geometry_file_at = QtGui.QAction(
-            QtGui.QIcon(
-                self.style().standardIcon(QtGui.QStyle.SP_DriveCDIcon)),
-            "geometry file",
-            self)
-        load_geometry_file_at.triggered.connect(
-            self.loadGeometryFile)
-        self._tool_bar.addAction(load_geometry_file_at)
-
         # *************************************************************
         # Miscellaneous
         # *************************************************************
@@ -122,7 +112,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self._disabled_widgets_during_daq = [
             load_mask_at,
-            load_geometry_file_at,
         ]
 
         self._logger = GuiLogger(self) 
@@ -213,11 +202,6 @@ class MainGUI(QtGui.QMainWindow):
 
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)
-
-    def loadGeometryFile(self):
-        filename = QtGui.QFileDialog.getOpenFileName()[0]
-        if filename:
-            self._geom_file_le.setText(filename)
 
     def loadMaskImage(self):
         filename = QtGui.QFileDialog.getOpenFileName()[0]

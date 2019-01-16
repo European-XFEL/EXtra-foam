@@ -7,8 +7,8 @@ from karaboFAI.main_bdp_gui import MainBdpGUI
 
 class FaiWin(IntEnum):
     DrawMask = 2
-    Overview = 5
-    OnOffPulses = 6
+    Overview = 4
+    OnOffPulses = 5
 
 
 class TestMainFaiGui(unittest.TestCase):
@@ -36,7 +36,7 @@ class TestMainFaiGui(unittest.TestCase):
 
 class BdpWin(IntEnum):
     DrawMask = 2
-    BraggDiffractionPeak = 5
+    BraggDiffractionPeak = 4
 
 
 class TestMainBdpGui(unittest.TestCase):
