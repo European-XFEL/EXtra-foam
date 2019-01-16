@@ -269,7 +269,6 @@ class BdpDataProcessor(Worker):
         t0 = time.perf_counter()
         if config["DETECTOR"] == "LPD" or config["DETECTOR"] == "AGIPD":
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-            print("shape  ", assembled.shape)
         elif config["DETECTOR"] == "JungFrau":
             # Just for the time-being to be consistent with other
             # detector types.
