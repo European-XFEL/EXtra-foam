@@ -5,7 +5,7 @@ European XFEL.
 
 Bragg diffraction peak data processor.
 
-Author: Jun Zhu <jun.zhu@xfel.eu>
+Author: Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """

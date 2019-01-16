@@ -297,7 +297,7 @@ class MainGUI(QtGui.QMainWindow):
         :params bool log: True for logging shared parameters and False
             for not.
 
-        Returns bool: True if all shared parameters successfully parsed
+        :returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
