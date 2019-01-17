@@ -17,6 +17,8 @@ Valid detectors are `AGIPD`, `LPD` and `JungFrau`.
 .. note::
    It usually takes a long time to start `karaboFAI` for the first time! This is actually an issue related to the infrastructure and not because `karaboFAI` is slow.
 
+.. image:: images/data_source_online.png
+   :width: 300
 
 .. list-table:: Suggested online clusters
    :header-rows: 1
@@ -48,6 +50,9 @@ The way to start `karaboFAI` on `Maxwell cluster` is the same as on the `online 
 .. code-block:: bash
 
     /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
+
+.. image:: images/data_source_offline.png
+   :width: 300
 
 .. list-table:: Example files
    :header-rows: 1
