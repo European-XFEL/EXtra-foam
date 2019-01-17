@@ -8,6 +8,7 @@ Contents:
 
    introduction
    deployment
+   analysis
    detectors
    tutorial
 

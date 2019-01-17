@@ -7,15 +7,6 @@ for experiments at European XFEL that require azimuthal integration
 of diffraction data acquired with 2D detectors. It is now working with
 AGIPD, LPD and JungFrau detectors.
 
-
-To start, in eigher **Maxwell cluster** or **online cluster**, type:
-
-.. code-block:: bash
-
-   /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
-
-Valid detectors are `AGIPD`, `LPD` and `JungFrau`.
-
 .. image:: karaboFAI-0.2.0-control-panel.png
    :width: 800
 
