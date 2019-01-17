@@ -28,11 +28,11 @@ class SampleDegradationWidget(PlotWidget):
         super().__init__(parent=parent)
 
         self._normalization_range_sp = None
-        parent.parent().normalization_range_sgn.connect(
+        parent.parent().analysis_ctrl_widget.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
 
         self._diff_integration_range_sp = None
-        parent.parent().diff_integration_range_sgn.connect(
+        parent.parent().analysis_ctrl_widget.diff_integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
 
         self.setLabel('left', "Integrated difference (arb.)")

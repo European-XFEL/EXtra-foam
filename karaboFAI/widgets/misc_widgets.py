@@ -36,26 +36,6 @@ lookupTableFactory = {name: cmap.getLookupTable()
                       for name, cmap in colorMapFactory.items()}
 
 
-class FixedWidthLineEdit(QtGui.QLineEdit):
-    def __init__(self, width, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFixedWidth(width)
-
-
-class CustomGroupBox(QtGui.QGroupBox):
-    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
-                            'border: 1px;' \
-                            'subcontrol-origin: margin;' \
-                            'subcontrol-position: top left;' \
-                            'padding-left: 10px;' \
-                            'padding-top: 10px;' \
-                            'margin-top: 0.0em;}'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
-
-
 class InputDialogWithCheckBox(QtGui.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)

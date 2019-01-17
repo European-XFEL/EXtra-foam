@@ -61,9 +61,9 @@ class FileServer(Process):
 
     def run(self):
         """Override."""
-        if config["TOPIC"] == "FXE" or config["TOPIC"] == "SPB":
+        if config["DETECTOR"] in ["LPD", "FXE"]:
             devices = [("*DET/*CH0:xtdf", "image.data")]
-        elif config["TOPIC"] == "JungFrau":
+        elif config["DETECTOR"] == "JungFrau":
             devices = [("*/DET/*:daqOutput", "data.adc")]
         else:
             devices = None

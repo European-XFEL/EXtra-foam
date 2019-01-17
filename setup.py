@@ -7,7 +7,7 @@ REQUIREMENTS = [req.rstrip() for req in REQUIREMENTS]
 
 setup(
     name='karaboFAI',
-    version="0.1.0",
+    version="0.2.0",
     author='Jun Zhu',
     author_email='jun.zhu@xfel.eu',
     description='Azimuthal integration tool',
@@ -18,9 +18,8 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
-            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui',
-            'jfrau-gui=karaboFAI.jfrauFAI.jfrau_gui:jfrau_gui'
+            'karaboFAI=karaboFAI.main_fai_gui:main_fai_gui',
+            'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
         ],
     },
     package_data={},

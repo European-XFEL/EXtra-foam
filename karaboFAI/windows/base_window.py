@@ -178,7 +178,7 @@ class PlotWindow(AbstractWindow):
 
         self._ptree = ptree.ParameterTree(showHeader=True)
 
-        # parameters are grouped into 4 groups
+        # parameters groups
         self._exp_params = ptree.Parameter.create(
             name='Experimental setups', type='group')
         self._pro_params = ptree.Parameter.create(
@@ -190,55 +190,53 @@ class PlotWindow(AbstractWindow):
         self._ana_params = ptree.Parameter.create(
             name='Analysis options', type='group')
         self._ins_params = ptree.Parameter.create(
-            name='General', type='group')
-
-        # -------------------------------------------------------------
-        # define slots' behaviors
-        # -------------------------------------------------------------
-
-        # shared parameters are updated by signal-slot
-        # Note: shared parameters should end with '_sp'
-        self.mask_range_sp = None
-        self.diff_integration_range_sp = None
-        self.normalization_range_sp = None
-        self.ma_window_size_sp = None
-        self.laser_mode_sp = None
-        self.on_pulse_ids_sp = None
-        self.off_pulse_ids_sp = None
-
-        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
-        self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
-        self.parent().diff_integration_range_sgn.connect(
-            self.onDiffIntegrationRangeChanged)
-        self.parent().normalization_range_sgn.connect(
-            self.onNormalizationRangeChanged)
-        self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
+            name='Instruction', type='group')
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)
+        #
+        # shared parameters are updated by signal-slot
+        # Note:
+        # 1. shared parameters should end with '_sp'
+        # 2. we have all the slots and shared parameters here while only
+        #    connect the signal to slot in the concrete class.
         # -------------------------------------------------------------
 
+        self.mask_range_sp = None
         self.mask_range_param = ptree.Parameter.create(
             name='Mask range', type='str', readonly=True
         )
+
+        self.laser_mode_sp = None
         self.optical_laser_mode_param = ptree.Parameter.create(
             name='Optical laser mode', type='str', readonly=True
         )
+
+        self.on_pulse_ids_sp = None
         self.laser_on_pulse_ids_param = ptree.Parameter.create(
             name='Laser-on pulse ID(s)', type='str', readonly=True
         )
+
+        self.off_pulse_ids_sp = None
         self.laser_off_pulse_ids_param = ptree.Parameter.create(
             name='Laser-off pulse ID(s)', type='str', readonly=True
         )
+
+        self.normalization_range_sp = None
         self.normalization_range_param = ptree.Parameter.create(
             name="Normalization range", type='str', readonly=True
         )
+
+        self.diff_integration_range_sp = None
         self.diff_integration_range_param = ptree.Parameter.create(
             name="Diff integration range", type='str', readonly=True
         )
+
+        self.ma_window_size_sp = None
         self.ma_window_size_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
         )
+
         self.reset_action_param = ptree.Parameter.create(
             name='Clear history', type='action'
         )
@@ -246,9 +244,6 @@ class PlotWindow(AbstractWindow):
 
         # this method inject parameters into the parameter tree
         self.updateParameterTree()
-
-        # tell MainGUI to emit signals in order to update shared parameters
-        self.parent().updateSharedParameters()
 
     def initUI(self):
         """Override."""
@@ -283,55 +278,45 @@ class PlotWindow(AbstractWindow):
         self.laser_mode_sp = mode
         self.on_pulse_ids_sp = on_pulse_ids
         self.off_pulse_ids_sp = off_pulse_ids
+
         # then update the parameter tree
-        try:
-            self._exp_params.child('Optical laser mode').setValue(
-                self.available_modes[mode])
-            self._exp_params.child('Laser-on pulse ID(s)').setValue(
-                ', '.join([str(x) for x in on_pulse_ids]))
-            self._exp_params.child('Laser-off pulse ID(s)').setValue(
-                ', '.join([str(x) for x in off_pulse_ids]))
-        except KeyError:
-            pass
+        self._exp_params.child('Optical laser mode').setValue(
+            self.available_modes[mode])
+        self._exp_params.child('Laser-on pulse ID(s)').setValue(
+            ', '.join([str(x) for x in on_pulse_ids]))
+        self._exp_params.child('Laser-off pulse ID(s)').setValue(
+            ', '.join([str(x) for x in off_pulse_ids]))
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
         self.mask_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('Mask range').setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child('Mask range').setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChanged(self, lb, ub):
         self.normalization_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('Normalization range').setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child('Normalization range').setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
         self.diff_integration_range_sp = (lb, ub)
+
         # then update the parameter tree
-        try:
-            self._pro_params.child("Diff integration range").setValue(
-                '{}, {}'.format(lb, ub))
-        except KeyError:
-            pass
+        self._pro_params.child("Diff integration range").setValue(
+            '{}, {}'.format(lb, ub))
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
         self.ma_window_size_sp = value
+
         # then update the parameter tree
-        try:
-            self._pro_params.child('M.A. window size').setValue(str(value))
-        except KeyError:
-            pass
+        self._pro_params.child('M.A. window size').setValue(str(value))
 
     def updateParameterTree(self):
         """Update the parameter tree.
