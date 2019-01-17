@@ -5,7 +5,7 @@ Data Analysis with karaboFAI
 Real-time data analysis
 #######################
 
-To start `karaboFAI` on any online cluster:
+To start **karaboFAI** on any online cluster:
 
 .. code-block:: bash
 
@@ -15,9 +15,9 @@ To start `karaboFAI` on any online cluster:
 Valid detectors are `AGIPD`, `LPD` and `JungFrau`.
 
 .. note::
-   It usually takes a long time to start `karaboFAI` for the first time! This
+   It usually takes a long time to start **karaboFAI** for the first time! This
    is actually an issue related to the infrastructure and not because
-   `karaboFAI` is slow.
+   **karaboFAI** is slow.
 
 For real-time data analysis, the (calibrated) data is streamed via a
 `ZMQ bridge`, which is a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
@@ -50,10 +50,10 @@ the ``Data source`` panel.
 Off-line data analysis
 ######################
 
-For now, `karaboFAI` can be used to replay the experiment with files.
+For now, **karaboFAI** can be used to replay the experiment with files.
 
-The way to start `karaboFAI` on `Maxwell cluster` is the same as on the
-`online cluster`:
+The way to start **karaboFAI** on `Maxwell` cluster is the same as on the
+online cluster:
 
 .. code-block:: bash
 
