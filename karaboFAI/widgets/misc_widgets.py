@@ -27,29 +27,13 @@ class PenFactory:
 
 
 # Valid keys: thermal, flame, yellowy, bipolar, spectrum, cyclic, greyclip, grey
-lookupTableFactory = \
-    {name: ColorMap(*zip(*Gradients[name]["ticks"])).getLookupTable()
+colorMapFactory = \
+    {name: ColorMap(*zip(*Gradients[name]["ticks"]))
      for name in Gradients.keys()}
 
 
-class FixedWidthLineEdit(QtGui.QLineEdit):
-    def __init__(self, width, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setFixedWidth(width)
-
-
-class CustomGroupBox(QtGui.QGroupBox):
-    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
-                            'border: 1px;' \
-                            'subcontrol-origin: margin;' \
-                            'subcontrol-position: top left;' \
-                            'padding-left: 10px;' \
-                            'padding-top: 10px;' \
-                            'margin-top: 0.0em;}'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
+lookupTableFactory = {name: cmap.getLookupTable()
+                      for name, cmap in colorMapFactory.items()}
 
 
 class InputDialogWithCheckBox(QtGui.QDialog):

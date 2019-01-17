@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='karaboFAI',
-    version="0.1.0",
+    version="0.2.0",
     author='Jun Zhu',
     author_email='cas-support@xfel.eu',
     description='Azimuthal integration tool',
@@ -14,8 +14,8 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'fxe-gui=karaboFAI.fxeFAI.fxe_gui:fxe_gui',
-            'spb-gui=karaboFAI.spbFAI.spb_gui:spb_gui'
+            'karaboFAI=karaboFAI.main_fai_gui:main_fai_gui',
+            'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
         ],
     },
     package_data={},
@@ -27,8 +27,9 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.11.0',
-        'karabo-data>=0.1.0',
+        'karabo-data>=0.2.0',
         'karabo-bridge>=0.2.0',
+        'toolz',
         'silx>=0.8.0',
     ],
     extras_require={
@@ -42,7 +43,7 @@ setup(
           'pytest-cov',
         ]
     },
-    python_requires='>=3.6',
+    python_requires='3.6',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',

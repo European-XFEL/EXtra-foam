@@ -27,9 +27,9 @@ class UpperCaseConfigParser(configparser.ConfigParser):
 class Config(dict):
     """Config class.
 
-    The default topic config, e.g. _default_spb_config, should be the
-    config used in the corresponding experimental hutch on the online
-    cluster.
+    The default detector config, e.g. _default_agipd_config, should be
+    the config used in the corresponding experimental hutch on the
+    online cluster.
 
     The config file should hold the config used in users' local PCs,
     typically for offline analysis and tests.
@@ -79,17 +79,18 @@ class Config(dict):
     #               detector's second dimension, in pixels
     # PIXEL_SIZE float: detector pixel size, in meter
 
-    # system config should not appear in the topic config
+    # system config should not appear in the detector config
     _default_sys_config = {
-        "TOPIC": '',  # topic name, leave it empty
+        "DETECTOR": '',  # detector name, leave it empty
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
+        "COLOR_MAP": 'thermal',
     }
 
-    # this is to guard again the topic config defined in the file modifying
-    # the system config
-    _allowed_topic_config_keys = (
+    # this is to guard again the detector config defined in the file
+    # modifying the system config
+    _allowed_detector_config_keys = (
         "SERVER_ADDR",
         "SERVER_PORT",
         "SOURCE_NAME",
@@ -108,10 +109,10 @@ class Config(dict):
         "MASK_RANGE"
     )
 
-    # In order to pass the test, the default topic config must include
-    # all the keys in '_allowed_topic_config_keys'.
+    # In order to pass the test, the default detector config must include
+    # all the keys in '_allowed_detector_config_keys'.
 
-    _default_spb_config = {
+    _default_agipd_config = {
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
         "SOURCE_NAME": 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
@@ -134,7 +135,7 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
-    _default_fxe_config = {
+    _default_lpd_config = {
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
         "SOURCE_NAME": "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",
@@ -157,9 +158,33 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
-    _default_topic_configs = {
-        "SPB": _default_spb_config,
-        "FXE": _default_fxe_config
+    _default_jfrau_config = {
+        "SERVER_ADDR": "",
+        "SERVER_PORT": 2583,
+        "SOURCE_NAME": "",
+        "SOURCE_TYPE": 1,
+        "GEOMETRY_FILE": "",
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
+        "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
+                                'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
+        "INTEGRATION_RANGE": (0.2, 5),
+        "INTEGRATION_POINTS": 512,
+        "PHOTON_ENERGY": 9.3,
+        "DISTANCE": 0.2,
+        "CENTER_Y": 620,
+        "CENTER_X": 580,
+        "PIXEL_SIZE": 0.5e-3,
+        "COLOR_MAP": 'thermal',
+        "MASK_RANGE": (0, 2500)
+    }
+
+    _default_detector_configs = {
+        "AGIPD": _default_agipd_config,
+        "LPD": _default_lpd_config,
+        "JungFrau": _default_jfrau_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")
@@ -173,57 +198,59 @@ class Config(dict):
         """Generate the config file if it does not exist."""
         if not os.path.isfile(self._filename):
             cfg = UpperCaseConfigParser()
-            for topic in self._default_topic_configs.keys():
-                cfg[topic] = {k: "" for k
-                              in self._default_topic_configs[topic].keys()}
+            for detector in self._default_detector_configs.keys():
+                cfg[detector] = \
+                    {k: "" for k in
+                     self._default_detector_configs[detector].keys()}
             with open(self._filename, 'w') as fp:
                 cfg.write(fp)
 
-    def load(self, topic):
+    def load(self, detector):
         """Update the global config.
 
         The default config will be overwritten by the valid config in
         the config file.
 
-        :param str topic: detector topic, allowed options "SPB", "FXE".
+        :param str detector: detector detector, allowed options "LPD", "AGIPD",
+            "JungFrau".
         """
-        self.__setitem__("TOPIC", topic)
-        self.update(self._default_topic_configs[topic])
-        self.from_file(topic)
+        self.__setitem__("DETECTOR", detector)
+        self.update(self._default_detector_configs[detector])
+        self.from_file(detector)
 
-    def from_file(self, topic):
+    def from_file(self, detector):
         """Update the config dictionary from the config file.
 
-        The parameters in the config file are grouped by topics, e.g.
+        The parameters in the config file are grouped by detectors, e.g.
 
-        [SPB]
+        [AGIPD]
         SERVER_ADDR = localhost
         SERVER_PORT = 12345
         SOURCE_NAME = /hdf5/data/file/folder/
         SOURCE_TYPE = 0
 
-        [FXE]
+        [LPD]
         SERVER_ADDR = 10.253.0.53
         SERVER_PORT = 4501
         SOURCE_NAME: FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED
         SOURCE_TYPE: 1
 
-        where the "SPB" topic defines a local file server while the
-        "FXE" topic defines an online server.
+        where the "AGIPD" detector defines a local file server while the
+        "LPD" detector defines an online server.
 
         Invalid keys or keys with empty entries will be ignored.
         """
         cfg = UpperCaseConfigParser()
         cfg.read(self._filename)
 
-        if topic in cfg:
+        if detector in cfg:
             invalid_keys = []
-            for key in cfg[topic]:
-                if key not in self._allowed_topic_config_keys:
+            for key in cfg[detector]:
+                if key not in self._allowed_detector_config_keys:
                     invalid_keys.append(key)
                 else:
-                    if cfg[topic][key]:
-                        self.__setitem__(key, cfg[topic][key])
+                    if cfg[detector][key]:
+                        self.__setitem__(key, cfg[detector][key])
 
             if invalid_keys:
                 msg = "The following invalid keys were found in '{}':\n".\

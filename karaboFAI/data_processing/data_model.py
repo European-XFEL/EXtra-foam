@@ -15,12 +15,13 @@ from enum import IntEnum
 class DataSource(IntEnum):
     CALIBRATED_FILE = 0  # calibrated data from files
     CALIBRATED = 1  # calibrated data from Karabo-bridge
-    ASSEMBLED = 2  # assembled data from Karabo-bridge
-    PROCESSED = 3  # processed data from the Middle-layer device
+    PROCESSED = 2  # processed data from the Middle-layer device
 
 
 class ProcessedData:
     """A class which stores the processed data.
+
+    TODO: separate the ProcessedData class for FAI and BDP?
 
     Attributes:
         tid (int): train ID.
@@ -67,6 +68,21 @@ class ProcessedData:
 
         TODO: improve
         """
-        if self.intensity is None or self.image is None:
+        if self.image is None:
             return True
         return False
+
+
+class Data4Visualization:
+    """Data shared between all the windows and widgets.
+
+    The internal data is only modified in MainGUI.updateAll()
+    """
+    def __init__(self):
+        self.__value = ProcessedData(-1)
+
+    def get(self):
+        return self.__value
+
+    def set(self, value):
+        self.__value = value

@@ -2,34 +2,23 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.widgets.pyqtgraph import mkQApp, QtGui, QtCore
-from karaboFAI.widgets import LaserOnOffWindow
-from karaboFAI.data_processing import ProcessedData, DataSource
-from karaboFAI.main_gui import MainGUI
-
-mkQApp()
-
-
-class Dummy(QtGui.QMainWindow):
-    data_source_sgn = QtCore.pyqtSignal(object)
-    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
-    normalization_range_sgn = QtCore.pyqtSignal(float, float)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
-    ma_window_size_sgn = QtCore.pyqtSignal(int)
-
-    def registerPlotWidget(self, instance):
-        pass
-
-    def updateSharedParameters(self):
-        self.data_source_sgn.emit(DataSource.CALIBRATED_FILE)
-        self.on_off_pulse_ids_sgn.emit("normal", [0, 2], [1, 3])
-        self.normalization_range_sgn.emit(1, 5)
-        self.diff_integration_range_sgn.emit(1, 5)
-        self.ma_window_size_sgn.emit(9999)
+from karaboFAI.windows import LaserOnOffWindow
+from karaboFAI.data_processing import (
+    ProcessedData, DataSource, Data4Visualization
+)
+from karaboFAI.main_fai_gui import MainFaiGUI
 
 
 class TestLaserOnOffWindow(unittest.TestCase):
+    gui = MainFaiGUI("LPD")
+    win = LaserOnOffWindow(Data4Visualization(), parent=gui)
+
+    gui.data_ctrl_widget.data_source_sgn.emit(
+        DataSource.CALIBRATED_FILE)
+    gui.analysis_ctrl_widget.normalization_range_sgn.emit(1, 5)
+    gui.analysis_ctrl_widget.diff_integration_range_sgn.emit(1, 5)
+    gui.analysis_ctrl_widget.ma_window_size_sgn.emit(9999)
+
     def setUp(self):
         self._data = []
         intensity = np.array([[0, 1, 0, 1, 0],
@@ -41,14 +30,16 @@ class TestLaserOnOffWindow(unittest.TestCase):
                                             momentum=np.linspace(1, 5, 5),
                                             intensity=(i+1)*intensity))
 
-        self._parent = Dummy()
-
     def testNormalMode(self):
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               parent=self._parent)
+        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+            "normal", [0, 2], [1, 3])
+
+        win = self.win
+        win._reset()
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
+
         on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
         np.testing.assert_array_almost_equal(normalized_on_pulse, on_pulse_gt)
         off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
@@ -119,9 +110,11 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               parent=self._parent)
-        self._parent.on_off_pulse_ids_sgn.emit("even/odd", [0, 2], [1, 3])
+        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+            "even/odd", [0, 2], [1, 3])
+
+        win = self.win
+        win._reset()
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
@@ -247,9 +240,11 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        win = LaserOnOffWindow(MainGUI.Data4Visualization(),
-                               parent=self._parent)
-        self._parent.on_off_pulse_ids_sgn.emit("odd/even", [0, 2], [1, 3])
+        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+            "odd/even", [0, 2], [1, 3])
+
+        win = self.win
+        win._reset()
 
         # 1st train
         normalized_on_pulse, normalized_off_pulse = win._update(self._data[0])
