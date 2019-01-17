@@ -6,6 +6,7 @@ On the `Maxwell` cluster:
 .. code-block:: bash
 
    cd /gpfs/exfel/sw/software
+   rm -rf karaboFAI
    git clone https://git.xfel.eu/gitlab/dataAnalysis/karaboFAI.git
    cd karaboFAI
    module load anaconda3
