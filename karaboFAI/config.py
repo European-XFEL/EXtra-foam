@@ -58,6 +58,7 @@ class Config(dict):
     #
     # azimuthal integration
     # ---------------------
+    # EXPECTED_SHAPE tuple: shape (modules, y, x) of the detector image data
     # QUAD_POSITIONS tuple: quadrant coordinates for assembling detector
     #                       modules, ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
     # GEOMETRY_FILE str: path of the geometry file of the detector
@@ -97,6 +98,7 @@ class Config(dict):
         "SOURCE_TYPE",
         "GEOMETRY_FILE",
         "QUAD_POSITIONS",
+        "EXPECTED_SHAPE",
         "INTEGRATION_METHODS",
         "INTEGRATION_RANGE",
         "INTEGRATION_POINTS",
@@ -122,6 +124,7 @@ class Config(dict):
                            (0, 0),
                            (0, 0),
                            (0, 0)),
+        "EXPECTED_SHAPE": (16, 512, 128),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (1e-3, 0.1),
@@ -145,6 +148,7 @@ class Config(dict):
                            (11.0, -8.0),
                            (-254.0, 16.0),
                            (-278.0, -275.0)),
+        "EXPECTED_SHAPE": (16, 256, 256),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (0.2, 5),
@@ -168,6 +172,7 @@ class Config(dict):
                            (0, 0),
                            (0, 0),
                            (0, 0)),
+        "EXPECTED_SHAPE": (1, 512, 1024),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (0.2, 5),

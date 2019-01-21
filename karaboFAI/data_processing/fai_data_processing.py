@@ -359,15 +359,8 @@ class FaiDataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        if config["DETECTOR"] == "LPD":
-            expected_shape = (16, 256, 256)
-        elif config['DETECTOR'] == 'AGIPD':
-            expected_shape = (16, 512, 128)
-        elif config['DETECTOR'] == 'JungFrau':
-            expected_shape = (1, 512, 1024)
-
         if hasattr(modules_data, 'shape') is False \
-                or modules_data.shape[-3:] != expected_shape:
+                or modules_data.shape[-3:] != config["EXPECTED_SHAPE"]:
             logger.debug("Error in modules data of train {}".format(tid))
             return ProcessedData(tid)
 
