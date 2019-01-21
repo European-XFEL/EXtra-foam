@@ -31,6 +31,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._source_name_le = QtGui.QLineEdit(config["SOURCE_NAME"])
         self._pulse_range0_le = QtGui.QLineEdit(str(0))
         self._pulse_range1_le = QtGui.QLineEdit(str(2699))
+        self._vip_pulse_id1 = QtGui.QLineEdit(str(0))
+        self._vip_pulse_id2 = QtGui.QLineEdit(str(1))
 
         self._data_src_rbts = []
         # the order must match the definition in the DataSource class
@@ -78,6 +80,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
+        vip_pulses_lb = QtGui.QLabel("VIP pulse IDs: ")
 
         layout = QtGui.QVBoxLayout()
         sub_layout1 = QtGui.QHBoxLayout()
@@ -109,6 +112,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         sub_layout4.addWidget(self._pulse_range1_le)
         sub_layout4.addStretch(2)
         layout.addLayout(sub_layout4)
+
+        sub_layout5 = QtGui.QHBoxLayout()
+        sub_layout5.addWidget(vip_pulses_lb)
+        sub_layout5.addWidget(self._vip_pulse_id1)
+        sub_layout5.addWidget(self._vip_pulse_id2)
+        layout.addLayout(sub_layout5)
 
         self.setLayout(layout)
 
