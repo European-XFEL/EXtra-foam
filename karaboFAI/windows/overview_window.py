@@ -31,11 +31,6 @@ class OverviewWindow(DockerWindow):
         super().__init__(data, parent=parent)
         parent.registerPlotWindow(self)
 
-        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
-            self.onPulseID1Updated)
-        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
-            self.onPulseID2Updated)
-
         self._bulletin_widget = BulletinWidget(parent=self)
         self._assembled_image = ImageAnalysisWidget(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
@@ -51,15 +46,21 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse2_ai = SinglePulseAiWidget(parent=self)
         self._vip_pulse2_img = SinglePulseImageWidget(parent=self)
 
+        self.initUI()
+
+        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
+            self.onPulseID1Updated)
+        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
+            self.onPulseID2Updated)
+        self.resize(1500, 1000)
+
         # tell MainGUI to emit signals in order to update shared parameters
         # Note: must be called after all the Widgets which own shared
         # parameters have been initialized
         parent.updateSharedParameters()
 
-        self.initUI()
         self.update()
 
-        self.resize(1500, 1000)
         logger.info("Open {}".format(self.__class__.__name__))
 
     def initUI(self):
