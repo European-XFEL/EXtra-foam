@@ -35,13 +35,17 @@ class OverviewWindow(DockerWindow):
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
         self._sample_degradation = SampleDegradationWidget(parent=self)
 
-        self._single_pulse_ai1 = SinglePulseAiWidget(parent=self, pulse_id=0)
+        self._single_pulse_ai1 = SinglePulseAiWidget(parent=self)
+        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
+            self._single_pulse_ai1.onPulseIDUpdated)
         self._single_pulse_img1 = SinglePulseImageWidget(
             parent=self, pulse_id=0)
 
-        self._single_pulse_ai2 = SinglePulseAiWidget(parent=self, pulse_id=-1)
+        self._single_pulse_ai2 = SinglePulseAiWidget(parent=self)
+        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
+            self._single_pulse_ai2.onPulseIDUpdated)
         self._single_pulse_img2 = SinglePulseImageWidget(
-            parent=self, pulse_id=-1)
+            parent=self, pulse_id=1)
 
         # tell MainGUI to emit signals in order to update shared parameters
         # Note: must be called after all the Widgets which own shared
