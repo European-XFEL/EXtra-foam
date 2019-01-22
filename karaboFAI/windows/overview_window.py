@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from ..widgets.pyqtgraph import QtCore
 from ..widgets.pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow, SingletonWindow
@@ -30,22 +31,25 @@ class OverviewWindow(DockerWindow):
         super().__init__(data, parent=parent)
         parent.registerPlotWindow(self)
 
+        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
+            self.onPulseID1Updated)
+        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
+            self.onPulseID2Updated)
+
         self._bulletin_widget = BulletinWidget(parent=self)
         self._assembled_image = ImageAnalysisWidget(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
         self._sample_degradation = SampleDegradationWidget(parent=self)
 
-        self._single_pulse_ai1 = SinglePulseAiWidget(parent=self)
-        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
-            self._single_pulse_ai1.onPulseIDUpdated)
-        self._single_pulse_img1 = SinglePulseImageWidget(
-            parent=self, pulse_id=0)
+        self._vip_pulse1_ai_dock = None
+        self._vip_pulse1_img_dock = None
+        self._vip_pulse1_ai = SinglePulseAiWidget(parent=self)
+        self._vip_pulse1_img = SinglePulseImageWidget(parent=self)
 
-        self._single_pulse_ai2 = SinglePulseAiWidget(parent=self)
-        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
-            self._single_pulse_ai2.onPulseIDUpdated)
-        self._single_pulse_img2 = SinglePulseImageWidget(
-            parent=self, pulse_id=1)
+        self._vip_pulse2_ai_dock = None
+        self._vip_pulse2_img_dock = None
+        self._vip_pulse2_ai = SinglePulseAiWidget(parent=self)
+        self._vip_pulse2_img = SinglePulseImageWidget(parent=self)
 
         # tell MainGUI to emit signals in order to update shared parameters
         # Note: must be called after all the Widgets which own shared
@@ -83,22 +87,36 @@ class OverviewWindow(DockerWindow):
         self._docker_area.addDock(sample_degradation_dock, 'bottom', "Bulletin")
         sample_degradation_dock.addWidget(self._sample_degradation)
 
-        single_pulse_ai2_dock = Dock("Single pulse AI 2", size=(600, 250))
-        self._docker_area.addDock(single_pulse_ai2_dock, 'bottom',
+        self._vip_pulse2_ai_dock = Dock("VIP pulse 0000 - AI", size=(600, 250))
+        self._docker_area.addDock(self._vip_pulse2_ai_dock, 'bottom',
                                   "Mean Assembled Image")
-        single_pulse_ai2_dock.addWidget(self._single_pulse_ai2)
+        self._vip_pulse2_ai_dock.addWidget(self._vip_pulse2_ai)
 
-        single_pulse_ai1_dock = Dock("Single pulse AI 1", size=(600, 250))
-        self._docker_area.addDock(single_pulse_ai1_dock, 'bottom',
+        self._vip_pulse1_ai_dock = Dock("VIP pulse 0000 - AI", size=(600, 250))
+        self._docker_area.addDock(self._vip_pulse1_ai_dock, 'bottom',
                                   "Mean Assembled Image")
-        single_pulse_ai1_dock.addWidget(self._single_pulse_ai1)
+        self._vip_pulse1_ai_dock.addWidget(self._vip_pulse1_ai)
 
-        single_pulse_img2_dock = Dock("Single pulse image 2", size=(600, 250))
-        self._docker_area.addDock(single_pulse_img2_dock, 'above',
-                                  "Single pulse AI 2")
-        single_pulse_img2_dock.addWidget(self._single_pulse_img2)
+        self._vip_pulse2_img_dock = Dock("VIP pulse 0000", size=(600, 250))
+        self._docker_area.addDock(self._vip_pulse2_img_dock, 'above',
+                                  self._vip_pulse2_ai_dock)
+        self._vip_pulse2_img_dock.addWidget(self._vip_pulse2_img)
 
-        single_pulse_img1_dock = Dock("Single pulse image 1", size=(600, 250))
-        self._docker_area.addDock(single_pulse_img1_dock, 'above',
-                                  "Single pulse AI 1")
-        single_pulse_img1_dock.addWidget(self._single_pulse_img1)
+        self._vip_pulse1_img_dock = Dock("VIP pulse 0000", size=(600, 250))
+        self._docker_area.addDock(self._vip_pulse1_img_dock, 'above',
+                                  self._vip_pulse1_ai_dock)
+        self._vip_pulse1_img_dock.addWidget(self._vip_pulse1_img)
+
+    @QtCore.pyqtSlot(int)
+    def onPulseID1Updated(self, value):
+        self._vip_pulse1_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
+        self._vip_pulse1_img_dock.setTitle("VIP pulse {:04d}".format(value))
+        self._vip_pulse1_ai.pulse_id = value
+        self._vip_pulse1_img.pulse_id = value
+
+    @QtCore.pyqtSlot(int)
+    def onPulseID2Updated(self, value):
+        self._vip_pulse2_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
+        self._vip_pulse2_img_dock.setTitle("VIP pulse {:04d}".format(value))
+        self._vip_pulse2_ai.pulse_id = value
+        self._vip_pulse2_img.pulse_id = value

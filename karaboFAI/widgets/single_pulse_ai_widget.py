@@ -9,8 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import QtCore
-
 from .plot_widget import PlotWidget
 from ..logger import logger
 from ..widgets.misc_widgets import PenFactory
@@ -27,9 +25,8 @@ class SinglePulseAiWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._pulse_id = 0
+        self.pulse_id = 0
 
-        self.setTitle('')
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.addLegend(offset=(-40, 20))
@@ -48,16 +45,10 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        if self._pulse_id >= data.intensity.shape[0]:
-            logger.error("Out of range: valid range of VIP pulse ID is 0 - {}!".
-                         format(data.intensity.shape[0] - 1))
-            self.setTitle('')
+        try:
+            self._pulse_plot.setData(data.momentum, data.intensity[self.pulse_id])
+        except IndexError as e:
+            logger.error("VIP pulse ID: " + str(e))
             return
 
-        self.setTitle('Pulse ID: {:04d}'.format(self._pulse_id))
-        self._pulse_plot.setData(data.momentum, data.intensity[self._pulse_id])
         self._mean_plot.setData(data.momentum, data.intensity_mean)
-
-    @QtCore.pyqtSlot(int)
-    def onPulseIDUpdated(self, value):
-        self._pulse_id = value

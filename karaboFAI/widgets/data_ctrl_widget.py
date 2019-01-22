@@ -149,17 +149,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         server_port = self._port_le.text().strip()
         self.server_tcp_sgn.emit(server_hostname, server_port)
 
-        vip_pulse1 = int(self._vip_pulse_id1_le.text().strip())
-        if vip_pulse1 < 0:
-            logger.error("<VIP pulse ID 1>: Invalid input!")
-            return False
-        self.vip_pulse_id1_sgn.emit(vip_pulse1)
-
-        vip_pulse2 = int(self._vip_pulse_id2_le.text().strip())
-        if vip_pulse2 < 0:
-            logger.error("<VIP pulse ID 2>: Invalid input!")
-            return False
-        self.vip_pulse_id2_sgn.emit(vip_pulse2)
+        self._emit_vip_pulse_id1()
+        self._emit_vip_pulse_id2()
 
         if log:
             logger.info("<Host name>, <Port>: {}, {}".
@@ -186,14 +177,34 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot()
     def onVipPulse1Confirmed(self):
-        pulse_id = int(self._vip_pulse_id1_le.text().strip())
+        self._emit_vip_pulse_id1()
+
+    def _emit_vip_pulse_id1(self):
+        try:
+            pulse_id = int(self._vip_pulse_id1_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 1>: " + str(e))
+            return
+
         if pulse_id < 0:
-            logger.error("<VIP pulse ID 1>: Invalid input!")
+            logger.error("<VIP pulse ID 1>: pulse ID must be non-negative!")
+            return
+
         self.vip_pulse_id1_sgn.emit(pulse_id)
 
     @QtCore.pyqtSlot()
     def onVipPulse2Confirmed(self):
-        pulse_id = int(self._vip_pulse_id2_le.text().strip())
+        self._emit_vip_pulse_id2()
+
+    def _emit_vip_pulse_id2(self):
+        try:
+            pulse_id = int(self._vip_pulse_id2_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 2>: " + str(e))
+            return
+
         if pulse_id < 0:
-            logger.error("<VIP pulse ID 2>: Invalid input!")
+            logger.error("<VIP pulse ID 2>: pulse ID must be non-negative!")
+            return
+
         self.vip_pulse_id2_sgn.emit(pulse_id)
