@@ -48,7 +48,7 @@ class SinglePulseAiWidget(PlotWidget):
         try:
             self._pulse_plot.setData(data.momentum, data.intensity[self.pulse_id])
         except IndexError as e:
-            logger.error("VIP pulse ID: " + str(e))
+            logger.error("<VIP pulse ID 1/2>: " + str(e))
             return
 
         self._mean_plot.setData(data.momentum, data.intensity_mean)
