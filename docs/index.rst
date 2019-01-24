@@ -1,6 +1,8 @@
 Welcome to karaboFAI's documentation!
 =====================================
 
+.. _welcome:
+
 Contents:
 
 .. toctree::
