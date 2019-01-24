@@ -23,6 +23,9 @@ class DataCtrlWidget(AbstractCtrlWidget):
     data_source_sgn = QtCore.pyqtSignal(object)
     pulse_range_sgn = QtCore.pyqtSignal(int, int)
 
+    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
+    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
+
     def __init__(self, parent=None):
         super().__init__("Data source", parent=parent)
 
@@ -31,6 +34,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._source_name_le = QtGui.QLineEdit(config["SOURCE_NAME"])
         self._pulse_range0_le = QtGui.QLineEdit(str(0))
         self._pulse_range1_le = QtGui.QLineEdit(str(2699))
+        self._vip_pulse_id1_le = QtGui.QLineEdit(str(0))
+        self._vip_pulse_id1_le.returnPressed.connect(self.onVipPulse1Confirmed)
+        self._vip_pulse_id2_le = QtGui.QLineEdit(str(1))
+        self._vip_pulse_id2_le.returnPressed.connect(self.onVipPulse2Confirmed)
 
         self._data_src_rbts = []
         # the order must match the definition in the DataSource class
@@ -78,6 +85,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
         self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
         self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
+        vip_pulse1_lb = QtGui.QLabel("VIP pulse ID 1: ")
+        vip_pulse2_lb = QtGui.QLabel("VIP pulse ID 2: ")
 
         layout = QtGui.QVBoxLayout()
         sub_layout1 = QtGui.QHBoxLayout()
@@ -107,8 +116,14 @@ class DataCtrlWidget(AbstractCtrlWidget):
         sub_layout4.addWidget(self._pulse_range0_le)
         sub_layout4.addWidget(QtGui.QLabel(" to "))
         sub_layout4.addWidget(self._pulse_range1_le)
-        sub_layout4.addStretch(2)
         layout.addLayout(sub_layout4)
+
+        sub_layout5 = QtGui.QHBoxLayout()
+        sub_layout5.addWidget(vip_pulse1_lb)
+        sub_layout5.addWidget(self._vip_pulse_id1_le)
+        sub_layout5.addWidget(vip_pulse2_lb)
+        sub_layout5.addWidget(self._vip_pulse_id2_le)
+        layout.addLayout(sub_layout5)
 
         self.setLayout(layout)
 
@@ -128,12 +143,14 @@ class DataCtrlWidget(AbstractCtrlWidget):
         if pulse_range[1] <= 0:
             logger.error("<Pulse range>: Invalid input!")
             return False
-        else:
-            self.pulse_range_sgn.emit(*pulse_range)
+        self.pulse_range_sgn.emit(*pulse_range)
 
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
         self.server_tcp_sgn.emit(server_hostname, server_port)
+
+        self._emit_vip_pulse_id1()
+        self._emit_vip_pulse_id2()
 
         if log:
             logger.info("<Host name>, <Port>: {}, {}".
@@ -157,3 +174,37 @@ class DataCtrlWidget(AbstractCtrlWidget):
     def onFileServerStopped(self):
         self._server_start_btn.setEnabled(True)
         self._server_terminate_btn.setEnabled(False)
+
+    @QtCore.pyqtSlot()
+    def onVipPulse1Confirmed(self):
+        self._emit_vip_pulse_id1()
+
+    def _emit_vip_pulse_id1(self):
+        try:
+            pulse_id = int(self._vip_pulse_id1_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 1>: " + str(e))
+            return
+
+        if pulse_id < 0:
+            logger.error("<VIP pulse ID 1>: pulse ID must be non-negative!")
+            return
+
+        self.vip_pulse_id1_sgn.emit(pulse_id)
+
+    @QtCore.pyqtSlot()
+    def onVipPulse2Confirmed(self):
+        self._emit_vip_pulse_id2()
+
+    def _emit_vip_pulse_id2(self):
+        try:
+            pulse_id = int(self._vip_pulse_id2_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 2>: " + str(e))
+            return
+
+        if pulse_id < 0:
+            logger.error("<VIP pulse ID 2>: pulse ID must be non-negative!")
+            return
+
+        self.vip_pulse_id2_sgn.emit(pulse_id)

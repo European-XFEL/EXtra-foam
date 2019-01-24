@@ -14,6 +14,7 @@ import numpy as np
 from ..widgets.pyqtgraph import ImageView, QtCore
 
 from .misc_widgets import colorMapFactory
+from ..logger import logger
 from ..config import config
 
 
@@ -49,15 +50,12 @@ class SinglePulseImageWidget(ImageView):
 
     Widget used for displaying the assembled image for a single pulse.
     """
-    def __init__(self, *, parent=None, pulse_id=0):
-        """Initialization.
-
-        :param int pulse_id: the ID of the pulse to be displayed.
-        """
+    def __init__(self, *, parent=None):
+        """Initialization."""
         super().__init__(parent=parent)
         parent.registerPlotWidget(self)
 
-        self.pulse_id = pulse_id
+        self.pulse_id = 0
 
         self._is_initialized = False
 
@@ -69,8 +67,13 @@ class SinglePulseImageWidget(ImageView):
 
     def update(self, data):
         image = data.image
-        np.clip(image[self.pulse_id], *self._mask_range_sp,
-                image[self.pulse_id])
+
+        try:
+            np.clip(image[self.pulse_id], *self._mask_range_sp,
+                    image[self.pulse_id])
+        except IndexError as e:
+            logger.error("<VIP pulse ID 1/2>: " + str(e))
+            return
 
         self.setImage(image[self.pulse_id], autoRange=False,
                       autoLevels=(not self._is_initialized))

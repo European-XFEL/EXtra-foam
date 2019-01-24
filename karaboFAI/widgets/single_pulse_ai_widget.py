@@ -21,14 +21,11 @@ class SinglePulseAiWidget(PlotWidget):
     result of individual pulses. The azimuthal integration result is also
     compared with the average azimuthal integration of all the pulses.
     """
-    def __init__(self, *, parent=None, pulse_id=0):
-        """Initialization.
-
-        :param int pulse_id: the ID of the pulse to be displayed.
-        """
+    def __init__(self, *, parent=None):
+        """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_id = pulse_id
+        self.pulse_id = 0
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
@@ -48,11 +45,10 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-
-        if self.pulse_id >= data.intensity.shape[0]:
-            logger.error("Pulse ID {} out of range (0 - {})!".
-                         format(self.pulse_id, data.intensity.shape[0] - 1))
+        try:
+            self._pulse_plot.setData(data.momentum, data.intensity[self.pulse_id])
+        except IndexError as e:
+            logger.error("<VIP pulse ID 1/2>: " + str(e))
             return
 
-        self._pulse_plot.setData(data.momentum, data.intensity[self.pulse_id])
         self._mean_plot.setData(data.momentum, data.intensity_mean)
