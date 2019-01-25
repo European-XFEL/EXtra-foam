@@ -186,10 +186,35 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
+    _default_fastccd_config = {
+        "SERVER_ADDR": "",
+        "SERVER_PORT": 4501,
+        "SOURCE_NAME": "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
+        "SOURCE_TYPE": 1,
+        "GEOMETRY_FILE": "",
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
+        "EXPECTED_SHAPE": (1, 1934, 960),
+        "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
+                                'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
+        "INTEGRATION_RANGE": (0.2, 5),
+        "INTEGRATION_POINTS": 512,
+        "PHOTON_ENERGY": 1.0,
+        "DISTANCE": 0.2,
+        "CENTER_Y": 620,
+        "CENTER_X": 580,
+        "PIXEL_SIZE": 0.03e-3,
+        "COLOR_MAP": 'thermal',
+        "MASK_RANGE": (0, 2500)
+    }
+
     _default_detector_configs = {
         "AGIPD": _default_agipd_config,
         "LPD": _default_lpd_config,
-        "JungFrau": _default_jfrau_config
+        "JungFrau": _default_jfrau_config,
+        "FastCCD": _default_fastccd_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")
@@ -217,7 +242,7 @@ class Config(dict):
         the config file.
 
         :param str detector: detector detector, allowed options "LPD", "AGIPD",
-            "JungFrau".
+            "JungFrau", "FastCCD".
         """
         self.__setitem__("DETECTOR", detector)
         self.update(self._default_detector_configs[detector])
