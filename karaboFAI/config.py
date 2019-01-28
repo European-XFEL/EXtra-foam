@@ -44,10 +44,10 @@ class Config(dict):
     # -------------------
     # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
     #                   will be masked
-    # TIMER_INTERVAL int: QTimer interval in milliseconds.
+    # TIMER_INTERVAL int: QTimer interval in milliseconds (sys)
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
-    #                     queues in data pipeline
-    # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
+    #                     queues in data pipeline (sys)
+    # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods (sys)
     #
     # networking
     # ----------
@@ -55,16 +55,17 @@ class Config(dict):
     # SERVER_PORT int: TCP port of the ZMQ bridge
     # SOURCE_NAME str: PipeToZeroMQ device ID / folder of the HDF5 data files
     # SOURCE_TYPE int: see data_processing.data_model.DataSource
-    # PULSE_RESOLVED bool: whether the data is pulse resolved
+    # PULSE_RESOLVED bool: whether the data is pulse resolved (readonly)
     #
     # azimuthal integration
     # ---------------------
     # EXPECTED_SHAPE tuple: shape (modules, y, x) of the detector image data
+    #                       (readonly)
+    # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
+    #                         detector (readonly)
+    # GEOMETRY_FILE str: path of the geometry file of the detector
     # QUAD_POSITIONS tuple: quadrant coordinates for assembling detector
     #                       modules, ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-    # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
-    #                         detector
-    # GEOMETRY_FILE str: path of the geometry file of the detector
     # INTEGRATION_METHODS list: azimuthal integration methods supported
     #                           in pyFAI
     # INTEGRATION_RANGE tuple: (lower, upper) range of the radial unit of
@@ -119,7 +120,7 @@ class Config(dict):
     # In order to pass the test, the default detector config must include
     # all the keys in '_allowed_detector_config_keys'.
 
-    # the mandatory config keys should come first, e.g. PULSE_RESOLVED,
+    # the read-only config keys should come first, e.g. PULSE_RESOLVED,
     # REQUIRED_GEOMETRY, EXPECTED_SHAPE
     _default_agipd_config = {
         "PULSE_RESOLVED": True,
