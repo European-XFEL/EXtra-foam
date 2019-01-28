@@ -393,8 +393,9 @@ class BraggSpotsWindow(PlotWindow):
             # This part at the moment makes no physical sense.
             # Atleast to me. To be discussed with Dmitry. I added it
             # here for some kind of history book keeping
-            self._hist_train_on_id.append(data.tid)
-            self._hist_com_on.append(np.mean(np.array(com_on), axis=0))
+            if com_on.size != 0:
+                self._hist_train_on_id.append(data.tid)
+                self._hist_com_on.append(np.mean(np.array(com_on), axis=0))
 
         if self._off_train_received:
 
@@ -463,11 +464,18 @@ class BraggSpotsWindow(PlotWindow):
             # This part at the moment makes no physical sense. Atleast to me.
             # To be discussed with Dmitry. I added it here for some kind of
             # history book keeping
-            self._hist_train_off_id.append(data.tid)
-            self._hist_com_off.append(np.mean(np.array(com_off), axis=0))
+            if com_off.size != 0:
+                self._hist_train_off_id.append(data.tid)
+                self._hist_com_off.append(np.mean(np.array(com_off), axis=0))
 
             self._on_train_received = False
             self._off_train_received = False
+
+        if hasattr(com_on, 'size') is True and com_on.size == 0:
+            com_on = None
+        if hasattr(com_off, 'size') is True and com_off.size == 0:
+            com_off = None
+
         return com_on, com_off
 
     def update(self):
