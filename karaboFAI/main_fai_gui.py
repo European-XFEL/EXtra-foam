@@ -20,6 +20,7 @@ from .widgets import (
 )
 from .windows import LaserOnOffWindow, OverviewWindow
 from .main_gui import MainGUI
+from .config import config
 
 
 class MainFaiGUI(MainGUI):
@@ -55,7 +56,8 @@ class MainFaiGUI(MainGUI):
         # *************************************************************
 
         self.ai_ctrl_widget = AiCtrlWidget(parent=self)
-        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+        if config['REQUIRE_GEOMETRY']:
+            self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
         self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
         self.data_ctrl_widget = DataCtrlWidget(parent=self)
 
@@ -70,8 +72,10 @@ class MainFaiGUI(MainGUI):
         """Set up all signal and slot connections."""
         super().initConnection()
 
-        self.geometry_ctrl_widget.geometry_sgn.connect(
-            self._proc_worker.onGeometryChanged)
+        if config['REQUIRE_GEOMETRY']:
+            self.geometry_ctrl_widget.geometry_sgn.connect(
+                self._proc_worker.onGeometryChanged)
+
         self.ai_ctrl_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
         self.ai_ctrl_widget.center_coordinate_sgn.connect(
@@ -82,6 +86,7 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onIntegrationRangeChanged)
         self.ai_ctrl_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
+
         self.analysis_ctrl_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
         self.analysis_ctrl_widget.mask_range_sgn.connect(
@@ -96,8 +101,11 @@ class MainFaiGUI(MainGUI):
         layout1.addWidget(self.data_ctrl_widget)
 
         layout2 = QtGui.QHBoxLayout()
-        layout2.addWidget(self._logger.widget, 2)
-        layout2.addWidget(self.geometry_ctrl_widget, 1)
+        if config['REQUIRE_GEOMETRY']:
+            layout2.addWidget(self._logger.widget, 2)
+            layout2.addWidget(self.geometry_ctrl_widget, 1)
+        else:
+            layout2.addWidget(self._logger.widget)
 
         layout.addLayout(layout1)
         layout.addLayout(layout2)
@@ -107,7 +115,7 @@ class MainFaiGUI(MainGUI):
 def main_fai_gui():
     parser = argparse.ArgumentParser(prog="karaboFAI")
     parser.add_argument("detector", help="detector name (case insensitive)",
-                        choices=['AGIPD', 'LPD', 'JUNGFRAU'],
+                        choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
                         type=lambda s: s.upper())
 
     args = parser.parse_args()
@@ -115,6 +123,8 @@ def main_fai_gui():
     detector = args.detector
     if detector == 'JUNGFRAU':
         detector = 'JungFrau'
+    elif detector == 'FASTCCD':
+        detector = 'FastCCD'
     else:
         detector = detector.upper()
 
