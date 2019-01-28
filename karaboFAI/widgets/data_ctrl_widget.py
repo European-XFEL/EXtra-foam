@@ -32,12 +32,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._hostname_le = QtGui.QLineEdit(config["SERVER_ADDR"])
         self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
         self._source_name_le = QtGui.QLineEdit(config["SOURCE_NAME"])
-        self._pulse_range0_le = QtGui.QLineEdit(str(0))
-        self._pulse_range1_le = QtGui.QLineEdit(str(2699))
-        self._vip_pulse_id1_le = QtGui.QLineEdit(str(0))
-        self._vip_pulse_id1_le.returnPressed.connect(self.onVipPulse1Confirmed)
-        self._vip_pulse_id2_le = QtGui.QLineEdit(str(1))
-        self._vip_pulse_id2_le.returnPressed.connect(self.onVipPulse2Confirmed)
 
         self._data_src_rbts = []
         # the order must match the definition in the DataSource class
@@ -49,14 +43,23 @@ class DataCtrlWidget(AbstractCtrlWidget):
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
         self._data_src_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
 
-        self._pulse_range0_le.setEnabled(False)
-
         self._server_start_btn = QtGui.QPushButton("Serve")
         self._server_start_btn.clicked.connect(self.parent().onStartServeFile)
         self._server_terminate_btn = QtGui.QPushButton("Terminate")
         self._server_terminate_btn.setEnabled(False)
         self._server_terminate_btn.clicked.connect(
             self.parent().onStopServeFile)
+
+        if config['PULSE_RESOLVED']:
+            self._pulse_range0_le = QtGui.QLineEdit(str(0))
+            self._pulse_range0_le.setEnabled(False)
+            self._pulse_range1_le = QtGui.QLineEdit(str(2699))
+            self._vip_pulse_id1_le = QtGui.QLineEdit(str(0))
+            self._vip_pulse_id1_le.returnPressed.connect(
+                self.onVipPulse1Confirmed)
+            self._vip_pulse_id2_le = QtGui.QLineEdit(str(1))
+            self._vip_pulse_id2_le.returnPressed.connect(
+                self.onVipPulse2Confirmed)
 
         self._disabled_widgets_during_file_serving = [
             self._source_name_le,
@@ -66,9 +69,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
             self._hostname_le,
             self._port_le,
             self._source_name_le,
-            self._pulse_range1_le,
         ]
         self._disabled_widgets_during_daq.extend(self._data_src_rbts)
+        if config['PULSE_RESOLVED']:
+            self._disabled_widgets_during_daq.append(self._pulse_range1_le)
 
         self.initUI()
 
@@ -82,11 +86,13 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._port_le.setAlignment(QtCore.Qt.AlignCenter)
         source_name_lb = QtGui.QLabel("Source: ")
         self._source_name_le.setAlignment(QtCore.Qt.AlignCenter)
-        pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
-        self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
-        self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
-        vip_pulse1_lb = QtGui.QLabel("VIP pulse ID 1: ")
-        vip_pulse2_lb = QtGui.QLabel("VIP pulse ID 2: ")
+
+        if config['PULSE_RESOLVED']:
+            pulse_range_lb = QtGui.QLabel("Pulse ID range: ")
+            self._pulse_range0_le.setAlignment(QtCore.Qt.AlignCenter)
+            self._pulse_range1_le.setAlignment(QtCore.Qt.AlignCenter)
+            vip_pulse1_lb = QtGui.QLabel("VIP pulse ID 1: ")
+            vip_pulse2_lb = QtGui.QLabel("VIP pulse ID 2: ")
 
         layout = QtGui.QVBoxLayout()
         sub_layout1 = QtGui.QHBoxLayout()
@@ -111,19 +117,20 @@ class DataCtrlWidget(AbstractCtrlWidget):
             else:
                 layout.addWidget(btn)
 
-        sub_layout4 = QtGui.QHBoxLayout()
-        sub_layout4.addWidget(pulse_range_lb)
-        sub_layout4.addWidget(self._pulse_range0_le)
-        sub_layout4.addWidget(QtGui.QLabel(" to "))
-        sub_layout4.addWidget(self._pulse_range1_le)
-        layout.addLayout(sub_layout4)
+        if config['PULSE_RESOLVED']:
+            sub_layout4 = QtGui.QHBoxLayout()
+            sub_layout4.addWidget(pulse_range_lb)
+            sub_layout4.addWidget(self._pulse_range0_le)
+            sub_layout4.addWidget(QtGui.QLabel(" to "))
+            sub_layout4.addWidget(self._pulse_range1_le)
+            layout.addLayout(sub_layout4)
 
-        sub_layout5 = QtGui.QHBoxLayout()
-        sub_layout5.addWidget(vip_pulse1_lb)
-        sub_layout5.addWidget(self._vip_pulse_id1_le)
-        sub_layout5.addWidget(vip_pulse2_lb)
-        sub_layout5.addWidget(self._vip_pulse_id2_le)
-        layout.addLayout(sub_layout5)
+            sub_layout5 = QtGui.QHBoxLayout()
+            sub_layout5.addWidget(vip_pulse1_lb)
+            sub_layout5.addWidget(self._vip_pulse_id1_le)
+            sub_layout5.addWidget(vip_pulse2_lb)
+            sub_layout5.addWidget(self._vip_pulse_id2_le)
+            layout.addLayout(sub_layout5)
 
         self.setLayout(layout)
 
@@ -138,24 +145,26 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self.data_source_sgn.emit(data_source)
 
-        pulse_range = (int(self._pulse_range0_le.text()),
-                       int(self._pulse_range1_le.text()))
-        if pulse_range[1] <= 0:
-            logger.error("<Pulse range>: Invalid input!")
-            return False
-        self.pulse_range_sgn.emit(*pulse_range)
-
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
         self.server_tcp_sgn.emit(server_hostname, server_port)
 
-        self._emit_vip_pulse_id1()
-        self._emit_vip_pulse_id2()
+        if config['PULSE_RESOLVED']:
+            pulse_range = (int(self._pulse_range0_le.text()),
+                           int(self._pulse_range1_le.text()))
+            if pulse_range[1] <= 0:
+                logger.error("<Pulse range>: Invalid input!")
+                return False
+            self.pulse_range_sgn.emit(*pulse_range)
+
+            self._emit_vip_pulse_id1()
+            self._emit_vip_pulse_id2()
 
         if log:
             logger.info("<Host name>, <Port>: {}, {}".
                         format(server_hostname, server_port))
-            logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
+            if config['PULSE_RESOLVED']:
+                logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
 
         return True
 
