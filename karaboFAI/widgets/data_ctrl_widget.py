@@ -26,8 +26,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
     vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
 
-    def __init__(self, parent=None):
-        super().__init__("Data source", parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__("Data source", *args, **kwargs)
 
         self._hostname_le = QtGui.QLineEdit(config["SERVER_ADDR"])
         self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
@@ -54,7 +54,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         # PULSE_RESOLVED = True case. It makes sense since these attributes
         # also appear in the defined methods.
 
-        if config["PULSE_RESOLVED"]:
+        if self._pulse_resolved:
             pulse_range0 = 0
             pulse_range1 = 2699
             vip_pulse_id1 = 0
@@ -129,7 +129,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
             else:
                 layout.addWidget(btn)
 
-        if config['PULSE_RESOLVED']:
+        if self._pulse_resolved:
             sub_layout4 = QtGui.QHBoxLayout()
             sub_layout4.addWidget(pulse_range_lb)
             sub_layout4.addWidget(self._pulse_range0_le)
@@ -174,7 +174,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         if log:
             logger.info("<Host name>, <Port>: {}, {}".
                         format(server_hostname, server_port))
-            if config['PULSE_RESOLVED']:
+            if self._pulse_resolved:
                 logger.info("<Pulse range>: ({}, {})".format(*pulse_range))
 
         return True

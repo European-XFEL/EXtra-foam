@@ -25,8 +25,8 @@ class AiCtrlWidget(AbstractCtrlWidget):
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
 
-    def __init__(self, parent=None):
-        super().__init__("Azimuthal integration setup", parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__("Azimuthal integration setup", *args, **kwargs)
 
         self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
         self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
