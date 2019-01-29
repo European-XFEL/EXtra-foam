@@ -35,14 +35,23 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     photon_energy_sgn = QtCore.pyqtSignal(float)
     mask_range_sgn = QtCore.pyqtSignal(float, float)
 
-    def __init__(self, parent=None):
-        super().__init__("Analysis setup", parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__("Analysis setup", *args, **kwargs)
 
         self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
-        self._laser_mode_cb.addItems(self.available_modes.keys())
-        self._on_pulse_le = QtGui.QLineEdit("0:8:2")
-        self._off_pulse_le = QtGui.QLineEdit("1:8:2")
+
+        if self._pulse_resolved:
+            self._laser_mode_cb.addItems(self.available_modes.keys())
+            on_pulse_ids = "0:8:2"
+            off_pulse_ids = "1:8:2"
+        else:
+            self._laser_mode_cb.addItems(list(self.available_modes.keys())[1:])
+            on_pulse_ids = "0"
+            off_pulse_ids = "0"
+        self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
+        self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
+
         self._normalization_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._diff_integration_range_le = QtGui.QLineEdit(
@@ -80,8 +89,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         key_layout = QtGui.QVBoxLayout()
         key_layout.addWidget(photon_energy_lb)
         key_layout.addWidget(laser_mode_lb)
-        key_layout.addWidget(on_pulse_lb)
-        key_layout.addWidget(off_pulse_lb)
+        if self._pulse_resolved:
+            key_layout.addWidget(on_pulse_lb)
+            key_layout.addWidget(off_pulse_lb)
         key_layout.addWidget(normalization_range_lb)
         key_layout.addWidget(diff_integration_range_lb)
         key_layout.addWidget(ma_window_lb)
@@ -90,8 +100,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         value_layout = QtGui.QVBoxLayout()
         value_layout.addWidget(self._photon_energy_le)
         value_layout.addWidget(self._laser_mode_cb)
-        value_layout.addWidget(self._on_pulse_le)
-        value_layout.addWidget(self._off_pulse_le)
+        if self._pulse_resolved:
+            value_layout.addWidget(self._on_pulse_le)
+            value_layout.addWidget(self._off_pulse_le)
         value_layout.addWidget(self._normalization_range_le)
         value_layout.addWidget(self._diff_integration_range_le)
         value_layout.addWidget(self._ma_window_le)
@@ -116,7 +127,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             mode = self._laser_mode_cb.currentText()
             on_pulse_ids = parse_ids(self._on_pulse_le.text())
             off_pulse_ids = parse_ids(self._off_pulse_le.text())
-            if mode == list(self.available_modes.keys())[0]:
+            if mode == "normal" and self._pulse_resolved:
                 common = set(on_pulse_ids).intersection(off_pulse_ids)
                 if common:
                     logger.error(

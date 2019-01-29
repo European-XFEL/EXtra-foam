@@ -381,7 +381,7 @@ class FaiDataProcessor(Worker):
             return ProcessedData(tid)
 
         assembled = assembled[
-            self.pulse_range_sp[0]:self.pulse_range_sp[1] + 1]
+            self.pulse_range_sp[0]:self.pulse_range_sp[1]]
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))

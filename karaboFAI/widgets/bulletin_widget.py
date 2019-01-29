@@ -14,10 +14,16 @@ from .pyqtgraph import QtGui
 
 class BulletinWidget(QtGui.QWidget):
     """BulletinWidget class."""
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, *, parent=None, pulse_resolved=True):
+        """Initialization.
+
+        :param bool pulse_resolved: whether the related data is
+            pulse-resolved or not.
+        """
         super().__init__(parent=parent)
         parent.registerPlotWidget(self)
+
+        self._pulse_resolved = pulse_resolved
 
         self._trainid_lb = QtGui.QLabel("")
         self._trainid_lb.setFont(QtGui.QFont("Times", 20, QtGui.QFont.Bold))
@@ -34,10 +40,12 @@ class BulletinWidget(QtGui.QWidget):
 
     def clear(self):
         self._trainid_lb.setText("Train ID: ")
-        self._npulses_lb.setText("Number of pulses per train: ")
+        if self._pulse_resolved:
+            self._npulses_lb.setText("Number of pulses per train: ")
 
     def update(self, data):
         """Override."""
         self._trainid_lb.setText("Train ID: {}".format(data.tid))
-        self._npulses_lb.setText(
-            "Number of pulses per train: {}".format(len(data.intensity)))
+        if self._pulse_resolved:
+            self._npulses_lb.setText(
+                "Number of pulses per train: {}".format(len(data.intensity)))

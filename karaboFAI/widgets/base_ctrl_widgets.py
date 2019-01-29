@@ -21,8 +21,13 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, title, *, pulse_resolved=True, parent=None):
+        """Initialization.
+
+        :param bool pulse_resolved: whether the related data is
+            pulse-resolved or not.
+        """
+        super().__init__(title, parent=parent)
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
         parent = self.parent()
@@ -33,6 +38,9 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         parent.daq_stopped_sgn.connect(self.onDaqStopped)
 
         self._disabled_widgets_during_daq = []
+
+        # whether the related detector is pulse resolved or not
+        self._pulse_resolved = pulse_resolved
 
     def initUI(self):
         """Initialization of UI."""

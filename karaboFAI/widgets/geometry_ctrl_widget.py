@@ -21,8 +21,8 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
     # (geometry file, quadrant positions)
     geometry_sgn = QtCore.pyqtSignal(str, list)
 
-    def __init__(self, parent=None):
-        super().__init__("Geometry setup", parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__("Geometry setup", *args, **kwargs)
 
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])

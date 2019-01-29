@@ -18,8 +18,11 @@ from .widgets.pyqtgraph import QtGui
 from .widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
 )
-from .windows import LaserOnOffWindow, OverviewWindow
+from .windows import (
+    LaserOnOffWindow, OverviewWindow, OverviewWindowTrainResolved
+)
 from .main_gui import MainGUI
+from .config import config
 
 
 class MainFaiGUI(MainGUI):
@@ -37,8 +40,13 @@ class MainFaiGUI(MainGUI):
             QtGui.QIcon(os.path.join(self._root_dir, "icons/overview.png")),
             "Overview",
             self)
-        open_overview_window_at.triggered.connect(
-            lambda: OverviewWindow(self._data, parent=self))
+        if self._pulse_resolved:
+            open_overview_window_at.triggered.connect(
+                lambda: OverviewWindow(self._data, parent=self))
+        else:
+            open_overview_window_at.triggered.connect(
+                lambda: OverviewWindowTrainResolved(self._data, parent=self))
+
         self._tool_bar.addAction(open_overview_window_at)
 
         #
@@ -47,7 +55,9 @@ class MainFaiGUI(MainGUI):
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            lambda: LaserOnOffWindow(self._data, parent=self))
+            lambda: LaserOnOffWindow(self._data,
+                                     parent=self,
+                                     pulse_resolved=self._pulse_resolved))
         self._tool_bar.addAction(open_laseronoff_window_at)
 
         # *************************************************************
@@ -55,9 +65,12 @@ class MainFaiGUI(MainGUI):
         # *************************************************************
 
         self.ai_ctrl_widget = AiCtrlWidget(parent=self)
-        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
-        self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
-        self.data_ctrl_widget = DataCtrlWidget(parent=self)
+        if config['REQUIRE_GEOMETRY']:
+            self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+        self.analysis_ctrl_widget = AnalysisCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+        self.data_ctrl_widget = DataCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
 
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 
@@ -70,8 +83,10 @@ class MainFaiGUI(MainGUI):
         """Set up all signal and slot connections."""
         super().initConnection()
 
-        self.geometry_ctrl_widget.geometry_sgn.connect(
-            self._proc_worker.onGeometryChanged)
+        if config['REQUIRE_GEOMETRY']:
+            self.geometry_ctrl_widget.geometry_sgn.connect(
+                self._proc_worker.onGeometryChanged)
+
         self.ai_ctrl_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
         self.ai_ctrl_widget.center_coordinate_sgn.connect(
@@ -82,6 +97,7 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onIntegrationRangeChanged)
         self.ai_ctrl_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
+
         self.analysis_ctrl_widget.photon_energy_sgn.connect(
             self._proc_worker.onPhotonEnergyChanged)
         self.analysis_ctrl_widget.mask_range_sgn.connect(
@@ -96,8 +112,11 @@ class MainFaiGUI(MainGUI):
         layout1.addWidget(self.data_ctrl_widget)
 
         layout2 = QtGui.QHBoxLayout()
-        layout2.addWidget(self._logger.widget, 2)
-        layout2.addWidget(self.geometry_ctrl_widget, 1)
+        if config['REQUIRE_GEOMETRY']:
+            layout2.addWidget(self._logger.widget, 2)
+            layout2.addWidget(self.geometry_ctrl_widget, 1)
+        else:
+            layout2.addWidget(self._logger.widget)
 
         layout.addLayout(layout1)
         layout.addLayout(layout2)
@@ -107,7 +126,7 @@ class MainFaiGUI(MainGUI):
 def main_fai_gui():
     parser = argparse.ArgumentParser(prog="karaboFAI")
     parser.add_argument("detector", help="detector name (case insensitive)",
-                        choices=['AGIPD', 'LPD', 'JUNGFRAU'],
+                        choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
                         type=lambda s: s.upper())
 
     args = parser.parse_args()
@@ -115,6 +134,8 @@ def main_fai_gui():
     detector = args.detector
     if detector == 'JUNGFRAU':
         detector = 'JungFrau'
+    elif detector == 'FASTCCD':
+        detector = 'FastCCD'
     else:
         detector = detector.upper()
 

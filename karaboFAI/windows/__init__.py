@@ -1,7 +1,7 @@
 from .bragg_spot_window import BraggSpotsWindow
 from .draw_mask_window import DrawMaskWindow
 from .laser_on_off_window import LaserOnOffWindow
-from .overview_window import OverviewWindow
+from .overview_window import OverviewWindow, OverviewWindowTrainResolved
 
 
 __all__ = [
@@ -9,4 +9,5 @@ __all__ = [
     "DrawMaskWindow",
     "LaserOnOffWindow",
     "OverviewWindow",
+    "OverviewWindowTrainResolved"
 ]
