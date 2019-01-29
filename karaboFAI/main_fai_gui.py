@@ -40,7 +40,7 @@ class MainFaiGUI(MainGUI):
             QtGui.QIcon(os.path.join(self._root_dir, "icons/overview.png")),
             "Overview",
             self)
-        if config["PULSE_RESOLVED"]:
+        if self._pulse_resolved:
             open_overview_window_at.triggered.connect(
                 lambda: OverviewWindow(self._data, parent=self))
         else:
@@ -57,7 +57,7 @@ class MainFaiGUI(MainGUI):
         open_laseronoff_window_at.triggered.connect(
             lambda: LaserOnOffWindow(self._data,
                                      parent=self,
-                                     pulse_resolved=config["PULSE_RESOLVED"]))
+                                     pulse_resolved=self._pulse_resolved))
         self._tool_bar.addAction(open_laseronoff_window_at)
 
         # *************************************************************
@@ -68,9 +68,9 @@ class MainFaiGUI(MainGUI):
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
-            parent=self, pulse_resolved=config["PULSE_RESOLVED"])
+            parent=self, pulse_resolved=self._pulse_resolved)
         self.data_ctrl_widget = DataCtrlWidget(
-            parent=self, pulse_resolved=config["PULSE_RESOLVED"])
+            parent=self, pulse_resolved=self._pulse_resolved)
 
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 

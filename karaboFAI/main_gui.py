@@ -48,6 +48,8 @@ class MainGUI(QtGui.QMainWindow):
         # update global configuration
         config.load(detector)
 
+        self._pulse_resolved = config["PULSE_RESOLVED"]
+
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.title = detector + " Azimuthal Integration"
