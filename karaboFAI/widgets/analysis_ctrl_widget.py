@@ -127,7 +127,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             mode = self._laser_mode_cb.currentText()
             on_pulse_ids = parse_ids(self._on_pulse_le.text())
             off_pulse_ids = parse_ids(self._off_pulse_le.text())
-            if mode == list(self.available_modes.keys())[0] and self._pulse_resolved:
+            if mode == "normal" and self._pulse_resolved:
                 common = set(on_pulse_ids).intersection(off_pulse_ids)
                 if common:
                     logger.error(
