@@ -21,7 +21,7 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
 
-    def __init__(self, title, *, parent=None, pulse_resolved=True):
+    def __init__(self, title, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is
