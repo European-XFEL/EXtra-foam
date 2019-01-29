@@ -198,7 +198,7 @@ class FaiDataProcessor(Worker):
         """
         # This needs to be checked. Sometimes throws an error readonly
         # when trying to convert nan to -inf. Dirty hack -> to copy
-        if config["DETECTOR"] == 'JungFrau':
+        if config["DETECTOR"] in ('JungFrau', 'FastCCD'):
             assembled = np.copy(assembled)
 
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
@@ -321,6 +321,7 @@ class FaiDataProcessor(Worker):
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
         else:
+            # get the train ID of the first metadata
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
@@ -331,15 +332,18 @@ class FaiDataProcessor(Worker):
                     modules_data = stack_detector_data(
                         data, "image.data", only='AGIPD')
                 elif config["DETECTOR"] == 'JungFrau':
-                    source = next(iter(metadata.values()))["source"]
-                    # stack_detector data at the moment doesn't support
-                    # JungFrau detector because of different naming
-                    # convention for source types.
-                    modules_data = data[source]['data.adc'][:,np.newaxis,:,:]
+                    # hard coded for now
+                    key = "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput"
+                    modules_data = data[key]['data.adc'][:, np.newaxis, ...]
                     # Add new axis which mimics module_number which at
                     # the moment is only 1. Once we will have stack
                     # detector data for JungFrau we will have
                     # required shape anyway (num_pulses, modules, y,x)
+                elif config["DETECTOR"] == "FastCCD":
+                    # hard coded for now
+                    key = "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput"
+                    modules_data = data[key]["data.image.pixels"][
+                        np.newaxis, np.newaxis, ...]
 
             # To handle a bug when using the recent karabo_data on the
             # old data set:
@@ -365,9 +369,9 @@ class FaiDataProcessor(Worker):
             return ProcessedData(tid)
 
         t0 = time.perf_counter()
-        if config["DETECTOR"] == "LPD" or config["DETECTOR"] == "AGIPD":
+        if config["DETECTOR"] in ("LPD", "AGIPD"):
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-        elif config["DETECTOR"] == "JungFrau":
+        elif config["DETECTOR"] in ("JungFrau", "FastCCD"):
             # Just for the time-being to be consistent with other
             # detector types.
             # Will have some kind of assembly/stacking in case of 2 modules
