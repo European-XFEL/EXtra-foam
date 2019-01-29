@@ -3,7 +3,8 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-OverviewWindow.
+OverviewWindow for pulse-resolved detectors.
+OverviewWindowTrainResolved for train-resolved detectors.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -22,8 +23,10 @@ from ..widgets import (
 
 @SingletonWindow
 class OverviewWindow(DockerWindow):
-    """OverviewWindow class."""
+    """OverviewWindow class.
 
+    For pulse-resolved detectors.
+    """
     title = "overview"
 
     def __init__(self, data, *, parent=None):
@@ -34,6 +37,7 @@ class OverviewWindow(DockerWindow):
         self._bulletin_widget = BulletinWidget(parent=self)
         self._assembled_image = ImageAnalysisWidget(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
+
         self._sample_degradation = SampleDegradationWidget(parent=self)
 
         self._vip_pulse1_ai_dock = None
@@ -52,6 +56,7 @@ class OverviewWindow(DockerWindow):
             self.onPulseID1Updated)
         parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
             self.onPulseID2Updated)
+
         self.resize(1500, 1000)
 
         # tell MainGUI to emit signals in order to update shared parameters
@@ -121,3 +126,56 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse2_img_dock.setTitle("VIP pulse {:04d}".format(value))
         self._vip_pulse2_ai.pulse_id = value
         self._vip_pulse2_img.pulse_id = value
+
+
+@SingletonWindow
+class OverviewWindowTrainResolved(DockerWindow):
+    """OverviewWindow class.
+
+    For train-resolved detectors.
+    """
+
+    title = "overview"
+
+    def __init__(self, data, *, parent=None):
+        """Initialization."""
+        super().__init__(data, parent=parent)
+        parent.registerPlotWindow(self)
+
+        self._bulletin_widget = BulletinWidget(parent=self,
+                                               pulse_resolved=False)
+        self._assembled_image = ImageAnalysisWidget(parent=self)
+        self._ai = MultiPulseAiWidget(parent=self)
+
+        self.initUI()
+
+        self.resize(1200, 500)
+
+        # tell MainGUI to emit signals in order to update shared parameters
+        # Note: must be called after all the Widgets which own shared
+        # parameters have been initialized
+        parent.updateSharedParameters()
+
+        self.update()
+
+        logger.info("Open {}".format(self.__class__.__name__))
+
+    def initUI(self):
+        """Override."""
+        super().initUI()
+
+    def initPlotUI(self):
+        """Override."""
+        assembled_image_dock = Dock("Assembled Image", size=(600, 400))
+        self._docker_area.addDock(assembled_image_dock, 'left')
+        assembled_image_dock.addWidget(self._assembled_image)
+
+        ai_dock = Dock("Azimuthal Integration", size=(600, 400))
+        self._docker_area.addDock(ai_dock, 'right')
+        ai_dock.addWidget(self._ai)
+
+        bulletin_docker = Dock("Bulletin", size=(600, 100))
+        self._docker_area.addDock(bulletin_docker, 'top',
+                                  "Azimuthal Integration")
+        bulletin_docker.addWidget(self._bulletin_widget)
+        bulletin_docker.hideTitleBar()

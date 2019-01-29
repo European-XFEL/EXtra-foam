@@ -18,7 +18,9 @@ from .widgets.pyqtgraph import QtGui
 from .widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
 )
-from .windows import LaserOnOffWindow, OverviewWindow
+from .windows import (
+    LaserOnOffWindow, OverviewWindow, OverviewWindowTrainResolved
+)
 from .main_gui import MainGUI
 from .config import config
 
@@ -38,8 +40,13 @@ class MainFaiGUI(MainGUI):
             QtGui.QIcon(os.path.join(self._root_dir, "icons/overview.png")),
             "Overview",
             self)
-        open_overview_window_at.triggered.connect(
-            lambda: OverviewWindow(self._data, parent=self))
+        if config["PULSE_RESOLVED"]:
+            open_overview_window_at.triggered.connect(
+                lambda: OverviewWindow(self._data, parent=self))
+        else:
+            open_overview_window_at.triggered.connect(
+                lambda: OverviewWindowTrainResolved(self._data, parent=self))
+
         self._tool_bar.addAction(open_overview_window_at)
 
         #
