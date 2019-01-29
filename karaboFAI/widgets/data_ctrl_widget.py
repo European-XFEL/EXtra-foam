@@ -56,7 +56,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         if self._pulse_resolved:
             pulse_range0 = 0
-            pulse_range1 = 2699
+            pulse_range1 = 2700
             vip_pulse_id1 = 0
             vip_pulse_id2 = 1
         else:
