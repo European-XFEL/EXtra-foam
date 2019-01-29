@@ -188,19 +188,99 @@ class FaiDataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def process_assembled_data(self, assembled, tid):
-        """Process assembled image data.
+    def process_assembled_data_ts(self, assembled, tid):
+        """Process train-resolved assembled image data.
 
-        :param numpy.ndarray assembled: assembled image data.
+        :param numpy.ndarray assembled: assembled image data, (y, x)
         :param int tid: train ID
 
         :return ProcessedData: processed data.
         """
         # This needs to be checked. Sometimes throws an error readonly
         # when trying to convert nan to -inf. Dirty hack -> to copy
-        if config["DETECTOR"] in ('JungFrau', 'FastCCD'):
-            assembled = np.copy(assembled)
+        assembled = np.copy(assembled)
 
+        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
+                                       poni1=self.center_coordinate_sp[1],
+                                       poni2=self.center_coordinate_sp[0],
+                                       pixel1=config["PIXEL_SIZE"],
+                                       pixel2=config["PIXEL_SIZE"],
+                                       rot1=0,
+                                       rot2=0,
+                                       rot3=0,
+                                       wavelength=self.wavelength_sp)
+
+        # pre-processing
+
+        t0 = time.perf_counter()
+
+        # Convert 'nan' to '-inf' and it will later be converted to the
+        # lower range of mask, which is usually 0.
+        # We do not convert 'nan' to 0 because: if the lower range of
+        # mask is a negative value, 0 will be converted to a value
+        # between 0 and 255 later.
+        assembled[np.isnan(assembled)] = -np.inf
+
+        logger.debug("Time for pre-processing: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
+
+        # azimuthal integration
+
+        t0 = time.perf_counter()
+
+        if self.image_mask is None:
+            mask = np.zeros_like(assembled, dtype=np.uint8)
+        else:
+            if self.image_mask.shape != assembled.shape:
+                raise ValueError(
+                    "Invalid mask shape {} for image with shape {}".
+                    format(self.image_mask.shape, assembled.shape))
+            mask = self.image_mask
+
+        # add threshold mask
+        mask[(assembled < self.mask_range_sp[0]) |
+             (assembled > self.mask_range_sp[1])] = 1
+
+        # do integration
+        ret = ai.integrate1d(assembled,
+                             self.integration_points_sp,
+                             method=self.integration_method_sp,
+                             mask=mask,
+                             radial_range=self.integration_range_sp,
+                             correctSolidAngle=True,
+                             polarization_factor=1,
+                             unit="q_A^-1")
+
+        momentum = ret.radial
+        intensity = ret.intensity
+
+        logger.debug("Time for azimuthal integration: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
+
+        # clip the value in the array
+        np.clip(assembled, self.mask_range_sp[0], self.mask_range_sp[1],
+                out=assembled)
+        # now 'assembled' contains only numerical values within
+        # the mask range
+
+        data = ProcessedData(tid,
+                             momentum=momentum,
+                             intensity=intensity,
+                             intensity_mean=intensity,
+                             image=assembled,
+                             image_mean=assembled,
+                             image_mask=self.image_mask)
+
+        return data
+
+    def process_assembled_data_ps(self, assembled, tid):
+        """Process pulse-resolved assembled image data.
+
+        :param numpy.ndarray assembled: assembled image data, (pulse_id, y, x)
+        :param int tid: train ID
+
+        :return ProcessedData: processed data.
+        """
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
                                        poni1=self.center_coordinate_sp[1],
                                        poni2=self.center_coordinate_sp[0],
@@ -325,25 +405,27 @@ class FaiDataProcessor(Worker):
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             try:
-                if config["DETECTOR"] == "LPD":
+                if config["DETECTOR"] in ("LPD", "AGIPD"):
                     modules_data = stack_detector_data(
-                        data, "image.data", only='LPD')
-                elif config['DETECTOR'] == 'AGIPD':
-                    modules_data = stack_detector_data(
-                        data, "image.data", only='AGIPD')
+                        data, "image.data", only=config["DETECTOR"])
+
                 elif config["DETECTOR"] == 'JungFrau':
-                    # hard coded for now
-                    key = "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput"
-                    modules_data = data[key]['data.adc'][:, np.newaxis, ...]
-                    # Add new axis which mimics module_number which at
-                    # the moment is only 1. Once we will have stack
-                    # detector data for JungFrau we will have
-                    # required shape anyway (num_pulses, modules, y,x)
+                    # Can the device be more meaningful?
+                    key = [s for s in data.keys()
+                           if "RECEIVER:daqOutput" in s][0]
+                    # (modules, y, x)
+                    modules_data = data[key]['data.adc']
                 elif config["DETECTOR"] == "FastCCD":
-                    # hard coded for now
-                    key = "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput"
-                    modules_data = data[key]["data.image.pixels"][
-                        np.newaxis, np.newaxis, ...]
+                    key = [s for s in data.keys() if "FCCD:daqOutput" in s][0]
+                    # (y, x)
+                    modules_data = data[key]["data.image.pixels"]
+
+                expected_dim = len(config["EXPECTED_SHAPE"])
+                if hasattr(modules_data, 'shape') is False \
+                        or modules_data.shape[-expected_dim:] != config["EXPECTED_SHAPE"]:
+                    msg = "Error in the shape of modules data"
+                    logger.debug(msg)
+                    raise ValueError(msg)
 
             # To handle a bug when using the recent karabo_data on the
             # old data set:
@@ -363,19 +445,21 @@ class FaiDataProcessor(Worker):
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        if hasattr(modules_data, 'shape') is False \
-                or modules_data.shape[-3:] != config["EXPECTED_SHAPE"]:
-            logger.debug("Error in modules data of train {}".format(tid))
-            return ProcessedData(tid)
-
         t0 = time.perf_counter()
-        if config["DETECTOR"] in ("LPD", "AGIPD"):
+        # AGIPD, LPD
+        if modules_data.ndim == 4:
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
-        elif config["DETECTOR"] in ("JungFrau", "FastCCD"):
-            # Just for the time-being to be consistent with other
-            # detector types.
-            # Will have some kind of assembly/stacking in case of 2 modules
-            assembled = np.squeeze(modules_data, axis=1)
+        # JungFrau
+        elif modules_data.ndim == 3:
+            # In the future, we may need a position_all_modules for JungFrau
+            # or we can simply stack the image.
+            assembled = modules_data.squeeze(axis=0)
+        # FastCCD
+        else:
+            assembled = modules_data
+
+        logger.debug("Time for assembling: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         # This is a bug in old version of karabo_data. The above function
         # could return a numpy.ndarray with shape (0, x, x)
@@ -384,10 +468,11 @@ class FaiDataProcessor(Worker):
                          format(assembled.shape, tid))
             return ProcessedData(tid)
 
-        assembled = assembled[
-            self.pulse_range_sp[0]:self.pulse_range_sp[1]]
-
-        logger.debug("Time for assembling: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
-        return self.process_assembled_data(assembled, tid)
+        # pulse-resolved
+        if assembled.ndim == 3:
+            assembled = assembled[
+                self.pulse_range_sp[0]:self.pulse_range_sp[1]]
+            return self.process_assembled_data_ps(assembled, tid)
+        # train-resolved
+        else:
+            return self.process_assembled_data_ts(assembled, tid)
