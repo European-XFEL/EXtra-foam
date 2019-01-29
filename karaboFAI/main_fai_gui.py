@@ -55,7 +55,9 @@ class MainFaiGUI(MainGUI):
             "On- and off- pulses",
             self)
         open_laseronoff_window_at.triggered.connect(
-            lambda: LaserOnOffWindow(self._data, parent=self))
+            lambda: LaserOnOffWindow(self._data,
+                                     parent=self,
+                                     pulse_resolved=config["PULSE_RESOLVED"]))
         self._tool_bar.addAction(open_laseronoff_window_at)
 
         # *************************************************************
@@ -65,8 +67,10 @@ class MainFaiGUI(MainGUI):
         self.ai_ctrl_widget = AiCtrlWidget(parent=self)
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
-        self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
-        self.data_ctrl_widget = DataCtrlWidget(parent=self)
+        self.analysis_ctrl_widget = AnalysisCtrlWidget(
+            parent=self, pulse_resolved=config["PULSE_RESOLVED"])
+        self.data_ctrl_widget = DataCtrlWidget(
+            parent=self, pulse_resolved=config["PULSE_RESOLVED"])
 
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
 

@@ -39,9 +39,8 @@ class LaserOnOffWindow(PlotWindow):
 
     title = "optical laser on/off"
 
-    def __init__(self, data, *, parent=None):
-        """Initialization."""
-        super().__init__(data, parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # -------------------------------------------------------------
         # connect signal and slot
@@ -123,11 +122,12 @@ class LaserOnOffWindow(PlotWindow):
 
     def updateParameterTree(self):
         """Override."""
-        self._exp_params.addChildren([
-            self.optical_laser_mode_param,
-            self.laser_on_pulse_ids_param,
-            self.laser_off_pulse_ids_param
-        ])
+        self._exp_params.addChildren([self.optical_laser_mode_param])
+        if self._pulse_resolved:
+            self._exp_params.addChildren([
+                self.laser_on_pulse_ids_param,
+                self.laser_off_pulse_ids_param
+            ])
 
         self._pro_params.addChildren([
             self.normalization_range_param,
