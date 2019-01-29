@@ -54,7 +54,8 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        if data.intensity.ndim == 3:
+        # pulse resolved data
+        if data.intensity.ndim == 2:
             try:
                 self._pulse_plot.setData(data.momentum,
                                          data.intensity[self.pulse_id])
