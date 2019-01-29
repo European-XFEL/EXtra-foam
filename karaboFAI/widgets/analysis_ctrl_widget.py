@@ -40,12 +40,13 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
         self._laser_mode_cb = QtGui.QComboBox()
-        self._laser_mode_cb.addItems(self.available_modes.keys())
 
         if self._pulse_resolved:
+            self._laser_mode_cb.addItems(self.available_modes.keys())
             on_pulse_ids = "0:8:2"
             off_pulse_ids = "1:8:2"
         else:
+            self._laser_mode_cb.addItems(list(self.available_modes.keys())[1:])
             on_pulse_ids = "0"
             off_pulse_ids = "0"
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
