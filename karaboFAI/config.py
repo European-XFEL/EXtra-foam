@@ -44,10 +44,10 @@ class Config(dict):
     # -------------------
     # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
     #                   will be masked
-    # TIMER_INTERVAL int: QTimer interval in milliseconds.
+    # TIMER_INTERVAL int: QTimer interval in milliseconds (sys)
     # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
-    #                     queues in data pipeline
-    # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods
+    #                     queues in data pipeline (sys)
+    # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods (sys)
     #
     # networking
     # ----------
@@ -55,13 +55,17 @@ class Config(dict):
     # SERVER_PORT int: TCP port of the ZMQ bridge
     # SOURCE_NAME str: PipeToZeroMQ device ID / folder of the HDF5 data files
     # SOURCE_TYPE int: see data_processing.data_model.DataSource
+    # PULSE_RESOLVED bool: whether the data is pulse resolved (readonly)
     #
     # azimuthal integration
     # ---------------------
     # EXPECTED_SHAPE tuple: shape (modules, y, x) of the detector image data
+    #                       (readonly)
+    # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
+    #                         detector (readonly)
+    # GEOMETRY_FILE str: path of the geometry file of the detector
     # QUAD_POSITIONS tuple: quadrant coordinates for assembling detector
     #                       modules, ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-    # GEOMETRY_FILE str: path of the geometry file of the detector
     # INTEGRATION_METHODS list: azimuthal integration methods supported
     #                           in pyFAI
     # INTEGRATION_RANGE tuple: (lower, upper) range of the radial unit of
@@ -80,25 +84,27 @@ class Config(dict):
     #               detector's second dimension, in pixels
     # PIXEL_SIZE float: detector pixel size, in meter
 
-    # system config should not appear in the detector config
+    # system config
     _default_sys_config = {
         "DETECTOR": '',  # detector name, leave it empty
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
-        "COLOR_MAP": 'thermal',
     }
 
-    # this is to guard again the detector config defined in the file
-    # modifying the system config
-    _allowed_detector_config_keys = (
+    _detector_readonly_config_keys = (
+        "PULSE_RESOLVED",
+        "REQUIRE_GEOMETRY",
+        "EXPECTED_SHAPE",
+    )
+
+    _detector_reconfigurable_keys = (
         "SERVER_ADDR",
         "SERVER_PORT",
         "SOURCE_NAME",
         "SOURCE_TYPE",
         "GEOMETRY_FILE",
         "QUAD_POSITIONS",
-        "EXPECTED_SHAPE",
         "INTEGRATION_METHODS",
         "INTEGRATION_RANGE",
         "INTEGRATION_POINTS",
@@ -114,7 +120,12 @@ class Config(dict):
     # In order to pass the test, the default detector config must include
     # all the keys in '_allowed_detector_config_keys'.
 
+    # the read-only config keys should come first, e.g. PULSE_RESOLVED,
+    # REQUIRED_GEOMETRY, EXPECTED_SHAPE
     _default_agipd_config = {
+        "PULSE_RESOLVED": True,
+        "REQUIRE_GEOMETRY": True,
+        "EXPECTED_SHAPE": (16, 512, 128),
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
         "SOURCE_NAME": 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
@@ -124,7 +135,6 @@ class Config(dict):
                            (0, 0),
                            (0, 0),
                            (0, 0)),
-        "EXPECTED_SHAPE": (16, 512, 128),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (1e-3, 0.1),
@@ -139,6 +149,9 @@ class Config(dict):
     }
 
     _default_lpd_config = {
+        "PULSE_RESOLVED": True,
+        "REQUIRE_GEOMETRY": True,
+        "EXPECTED_SHAPE": (16, 256, 256),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
         "SOURCE_NAME": "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",
@@ -148,7 +161,6 @@ class Config(dict):
                            (11.0, -8.0),
                            (-254.0, 16.0),
                            (-278.0, -275.0)),
-        "EXPECTED_SHAPE": (16, 256, 256),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (0.2, 5),
@@ -163,6 +175,9 @@ class Config(dict):
     }
 
     _default_jfrau_config = {
+        "PULSE_RESOLVED": False,
+        "REQUIRE_GEOMETRY": False,
+        "EXPECTED_SHAPE": (1, 512, 1024),
         "SERVER_ADDR": "",
         "SERVER_PORT": 2583,
         "SOURCE_NAME": "",
@@ -172,7 +187,6 @@ class Config(dict):
                            (0, 0),
                            (0, 0),
                            (0, 0)),
-        "EXPECTED_SHAPE": (1, 512, 1024),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (0.2, 5),
@@ -186,10 +200,37 @@ class Config(dict):
         "MASK_RANGE": (0, 2500)
     }
 
+    _default_fastccd_config = {
+        "PULSE_RESOLVED": False,
+        "REQUIRE_GEOMETRY": False,
+        "EXPECTED_SHAPE": (1, 1934, 960),
+        "SERVER_ADDR": "",
+        "SERVER_PORT": 4501,
+        "SOURCE_NAME": "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
+        "SOURCE_TYPE": 1,
+        "GEOMETRY_FILE": "",
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
+        "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
+                                'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
+        "INTEGRATION_RANGE": (0.2, 5),
+        "INTEGRATION_POINTS": 512,
+        "PHOTON_ENERGY": 1.0,
+        "DISTANCE": 0.2,
+        "CENTER_Y": 620,
+        "CENTER_X": 580,
+        "PIXEL_SIZE": 0.03e-3,
+        "COLOR_MAP": 'thermal',
+        "MASK_RANGE": (0, 2500)
+    }
+
     _default_detector_configs = {
         "AGIPD": _default_agipd_config,
         "LPD": _default_lpd_config,
-        "JungFrau": _default_jfrau_config
+        "JungFrau": _default_jfrau_config,
+        "FastCCD": _default_fastccd_config
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")
@@ -204,9 +245,10 @@ class Config(dict):
         if not os.path.isfile(self._filename):
             cfg = UpperCaseConfigParser()
             for detector in self._default_detector_configs.keys():
+                # only write the reconfigurable keys to the file
                 cfg[detector] = \
                     {k: "" for k in
-                     self._default_detector_configs[detector].keys()}
+                     self._detector_reconfigurable_keys}
             with open(self._filename, 'w') as fp:
                 cfg.write(fp)
 
@@ -217,7 +259,7 @@ class Config(dict):
         the config file.
 
         :param str detector: detector detector, allowed options "LPD", "AGIPD",
-            "JungFrau".
+            "JungFrau", "FastCCD".
         """
         self.__setitem__("DETECTOR", detector)
         self.update(self._default_detector_configs[detector])
@@ -251,14 +293,20 @@ class Config(dict):
         if detector in cfg:
             invalid_keys = []
             for key in cfg[detector]:
-                if key not in self._allowed_detector_config_keys:
+                if key in self._default_sys_config:
+                    raise KeyError("Found system config key in the file: '{}'".
+                                   format(key))
+                elif key in self._detector_readonly_config_keys:
+                    raise KeyError("Found read-only key in the file: '{}'".
+                                   format(key))
+                elif key not in self._detector_reconfigurable_keys:
                     invalid_keys.append(key)
                 else:
                     if cfg[detector][key]:
                         self.__setitem__(key, cfg[detector][key])
 
             if invalid_keys:
-                msg = "The following invalid keys were found in '{}':\n".\
+                msg = "The following unknown keys were found in '{}':\n".\
                     format(self._filename)
                 msg += ", ".join(invalid_keys)
                 print(msg)
