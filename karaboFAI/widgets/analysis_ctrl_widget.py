@@ -25,6 +25,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
     vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
 
+    max_pulse_id_validator = QtGui.QIntValidator(1, 2700)
+    vip_pulse_validator = QtGui.QIntValidator(0, 2699)
+
     def __init__(self, *args, **kwargs):
         super().__init__("General analysis setup", *args, **kwargs)
 
@@ -34,7 +37,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         if self._pulse_resolved:
             min_pulse_id = 0
-            max_pulse_id = 2700
+            max_pulse_id = self.max_pulse_id_validator.top()
             vip_pulse_id1 = 0
             vip_pulse_id2 = 1
         else:
@@ -46,16 +49,14 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._min_pulse_id_le = QtGui.QLineEdit(str(min_pulse_id))
         self._min_pulse_id_le.setEnabled(False)
         self._max_pulse_id_le = QtGui.QLineEdit(str(max_pulse_id))
-
-        validator = QtGui.QIntValidator()
-        validator.setBottom(0)
+        self._max_pulse_id_le.setValidator(self.max_pulse_id_validator)
 
         self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
-        self._vip_pulse_id1_le.setValidator(validator)
+        self._vip_pulse_id1_le.setValidator(self.vip_pulse_validator)
         self._vip_pulse_id1_le.returnPressed.connect(
             self.onVipPulseConfirmed)
         self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
-        self._vip_pulse_id2_le.setValidator(validator)
+        self._vip_pulse_id2_le.setValidator(self.vip_pulse_validator)
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
@@ -93,11 +94,12 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             logger.error("<Image mask range>: " + str(e))
             return False
 
+        if not self._max_pulse_id_le.hasAcceptableInput():
+            logger.error("<Max. pulse ID>: Invalid input! "
+                         "Must be an integer between 1 and 2700!")
+            return False
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()))
-        if pulse_id_range[1] <= 0:
-            logger.error("<Pulse ID range>: Invalid input!")
-            return False
         self.pulse_id_range_sgn.emit(*pulse_id_range)
 
         self._vip_pulse_id1_le.returnPressed.emit()
