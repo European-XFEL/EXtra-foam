@@ -11,6 +11,7 @@ Contents:
    introduction
    deployment
    analysis
+   geometry
    detectors
    tutorial
 

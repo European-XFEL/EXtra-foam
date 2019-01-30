@@ -82,3 +82,32 @@ of the directory which contains the (calibrated) files.
      - /gpfs/exfel/exp/FXE/201801/p002118/proc/r0143
    * - FastCCD
      -
+
+Main GUI
+########
+
+The main GUI of **karaboFAI** is divided into several control panels with different
+functions and a log window.
+
+
+General analysis setup panel
+----------------------------
+
+
+Correlation analysis setup panel
+--------------------------------
+
+
+Pump-probe analysis setup panel
+-------------------------------
+
+
+Geometry setup panel
+--------------------
+
+Geometry setup panel is only available for the detector which requires a geometry
+file to assembled the images from different modules, for example, AGIPD and LPD.
+
+
+Data source setup panel
+-----------------------
