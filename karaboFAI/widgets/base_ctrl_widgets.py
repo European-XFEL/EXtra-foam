@@ -59,7 +59,7 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
     def updateSharedParameters(self):
         """Update shared parameters for control widget.
 
-        :return: None if any of the parameters is invalid and a string of
-            to be logged information.
+        :return: None if any of the parameters is invalid. Otherwise, a
+            string of to be logged information.
         """
         raise NotImplementedError
