@@ -27,13 +27,15 @@ class SampleDegradationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
+        grand_parent = parent.parent()  # :)
+
         self._normalization_range_sp = None
-        parent.parent().analysis_ctrl_widget.normalization_range_sgn.connect(
+        grand_parent.pump_probe_ctrl_widget.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
 
-        self._diff_integration_range_sp = None
-        parent.parent().analysis_ctrl_widget.diff_integration_range_sgn.connect(
-            self.onDiffIntegrationRangeChanged)
+        self._integration_range_sp = None
+        grand_parent.pump_probe_ctrl_widget.integration_range_sgn.connect(
+            self.onIntegrationRangeChanged)
 
         self.setLabel('left', "Integrated difference (arb.)")
         self.setLabel('bottom', "Pulse ID")
@@ -59,7 +61,7 @@ class SampleDegradationWidget(PlotWidget):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self._diff_integration_range_sp)[0]
+            fom = slice_curve(diff, momentum, *self._integration_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
         self.addItem(BarGraphItem(
@@ -70,5 +72,5 @@ class SampleDegradationWidget(PlotWidget):
         self._normalization_range_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float, float)
-    def onDiffIntegrationRangeChanged(self, lb, ub):
-        self._diff_integration_range_sp = (lb, ub)
+    def onIntegrationRangeChanged(self, lb, ub):
+        self._integration_range_sp = (lb, ub)

@@ -74,11 +74,11 @@ class BraggSpotsWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().analysis_ctrl_widget.mask_range_sgn.connect(
+        self.parent().analysis_ctrl_widget.image_mask_range_sgn.connect(
             self.onMaskRangeChanged)
-        self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
+        self.parent().pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
-        self.parent().analysis_ctrl_widget.ma_window_size_sgn.connect(
+        self.parent().pump_probe_ctrl_widget.moving_average_window_sgn.connect(
             self.onMAWindowSizeChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters
@@ -124,7 +124,7 @@ class BraggSpotsWindow(PlotWindow):
         ])
 
         self._pro_params.addChildren([
-            self.ma_window_size_param,
+            self.moving_average_window_param,
             self.mask_range_param
 
         ])
@@ -375,14 +375,14 @@ class BraggSpotsWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) < self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_ma) \
                             / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) == self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.ma_window_size_sp
+                            / self.moving_average_window_sp
                     else:
                         raise ValueError
 
@@ -448,14 +448,14 @@ class BraggSpotsWindow(PlotWindow):
             # trains.
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
+            elif len(self._off_pulses_hist) <= self.moving_average_window_sp:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_ma) \
                     / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
+            elif len(self._off_pulses_hist) == self.moving_average_window_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.ma_window_size_sp
+                    / self.moving_average_window_sp
             else:
                 raise ValueError
 

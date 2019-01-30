@@ -16,7 +16,8 @@ import argparse
 from .data_processing import FaiDataProcessor as DataProcessor
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
-    AiCtrlWidget, AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
+    AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
+    GeometryCtrlWidget, PumpProbeCtrlWidget
 )
 from .windows import (
     LaserOnOffWindow, OverviewWindow, OverviewWindowTrainResolved
@@ -67,8 +68,14 @@ class MainFaiGUI(MainGUI):
         self.ai_ctrl_widget = AiCtrlWidget(parent=self)
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
+        self.correlation_ctrl_widget = CorrelationCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+        self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -76,6 +83,8 @@ class MainFaiGUI(MainGUI):
 
         self.initUI()
         self.initConnection()
+
+        self.resize(self.sizeHint().width(), self.minimumSizeHint().height())
 
         self.show()
 
@@ -87,6 +96,8 @@ class MainFaiGUI(MainGUI):
             self.geometry_ctrl_widget.geometry_sgn.connect(
                 self._proc_worker.onGeometryChanged)
 
+        self.ai_ctrl_widget.photon_energy_sgn.connect(
+            self._proc_worker.onPhotonEnergyChanged)
         self.ai_ctrl_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChanged)
         self.ai_ctrl_widget.center_coordinate_sgn.connect(
@@ -98,28 +109,30 @@ class MainFaiGUI(MainGUI):
         self.ai_ctrl_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChanged)
 
-        self.analysis_ctrl_widget.photon_energy_sgn.connect(
-            self._proc_worker.onPhotonEnergyChanged)
-        self.analysis_ctrl_widget.mask_range_sgn.connect(
+        self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
+            self._proc_worker.onPulseRangeChanged)
+        self.analysis_ctrl_widget.image_mask_range_sgn.connect(
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
-        layout = QtGui.QVBoxLayout()
-
-        layout1 = QtGui.QHBoxLayout()
-        layout1.addWidget(self.ai_ctrl_widget)
-        layout1.addWidget(self.analysis_ctrl_widget)
-        layout1.addWidget(self.data_ctrl_widget)
-
-        layout2 = QtGui.QHBoxLayout()
+        misc_layout = QtGui.QHBoxLayout()
+        misc_layout.addWidget(self.ai_ctrl_widget)
         if config['REQUIRE_GEOMETRY']:
-            layout2.addWidget(self._logger.widget, 2)
-            layout2.addWidget(self.geometry_ctrl_widget, 1)
-        else:
-            layout2.addWidget(self._logger.widget)
+            misc_layout.addWidget(self.geometry_ctrl_widget)
+        misc_layout.addWidget(self.data_ctrl_widget)
 
-        layout.addLayout(layout1)
-        layout.addLayout(layout2)
+        right_layout = QtGui.QVBoxLayout()
+        right_layout.addLayout(misc_layout)
+        right_layout.addWidget(self._logger.widget)
+
+        analysis_layout = QtGui.QVBoxLayout()
+        analysis_layout.addWidget(self.analysis_ctrl_widget)
+        analysis_layout.addWidget(self.correlation_ctrl_widget)
+        analysis_layout.addWidget(self.pump_probe_ctrl_widget)
+
+        layout = QtGui.QHBoxLayout()
+        layout.addLayout(analysis_layout)
+        layout.addLayout(right_layout)
         self._cw.setLayout(layout)
 
 

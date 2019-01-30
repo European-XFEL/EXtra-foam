@@ -15,7 +15,10 @@ import argparse
 
 from .data_processing import BdpDataProcessor as DataProcessor
 from .widgets.pyqtgraph import QtGui
-from .widgets import AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget
+from .widgets import (
+    AnalysisCtrlWidget, DataCtrlWidget, GeometryCtrlWidget,
+    PumpProbeCtrlWidget
+)
 from .windows import BraggSpotsWindow
 from .main_gui import MainGUI
 
@@ -45,6 +48,7 @@ class MainBdpGUI(MainGUI):
 
         self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
         self.analysis_ctrl_widget = AnalysisCtrlWidget(parent=self)
+        self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(parent=self)
         self.data_ctrl_widget = DataCtrlWidget(parent=self)
 
         self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
@@ -60,9 +64,10 @@ class MainBdpGUI(MainGUI):
 
         self.geometry_ctrl_widget.geometry_sgn.connect(
             self._proc_worker.onGeometryChanged)
-        self.analysis_ctrl_widget.photon_energy_sgn.connect(
-            self._proc_worker.onPhotonEnergyChanged)
-        self.analysis_ctrl_widget.mask_range_sgn.connect(
+
+        self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
+            self._proc_worker.onPulseRangeChanged)
+        self.analysis_ctrl_widget.image_mask_range_sgn.connect(
             self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
@@ -71,6 +76,7 @@ class MainBdpGUI(MainGUI):
         layout1 = QtGui.QHBoxLayout()
         layout1.addWidget(self.geometry_ctrl_widget)
         layout1.addWidget(self.analysis_ctrl_widget)
+        layout1.addWidget(self.pump_probe_ctrl_widget)
         layout1.addWidget(self.data_ctrl_widget)
 
         layout2 = QtGui.QHBoxLayout()

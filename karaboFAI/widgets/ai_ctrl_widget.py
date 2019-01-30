@@ -18,7 +18,7 @@ from ..widgets.pyqtgraph import QtCore, QtGui
 
 class AiCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
-
+    photon_energy_sgn = QtCore.pyqtSignal(float)
     sample_distance_sgn = QtCore.pyqtSignal(float)
     center_coordinate_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)
@@ -28,6 +28,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Azimuthal integration setup", *args, **kwargs)
 
+        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
         self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
         self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
@@ -40,6 +41,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             str(config["INTEGRATION_POINTS"]))
 
         self._disabled_widgets_during_daq = [
+            self._photon_energy_le,
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
@@ -52,37 +54,34 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        sample_dist_lb = QtGui.QLabel("Sample distance (m): ")
-        cx = QtGui.QLabel("Cx (pixel): ")
-        cy = QtGui.QLabel("Cy (pixel): ")
-        itgt_method_lb = QtGui.QLabel("Integration method: ")
-        itgt_points_lb = QtGui.QLabel("Integration points: ")
-        itgt_range_lb = QtGui.QLabel("Integration range (1/A): ")
+        layout = QtGui.QGridLayout()
+        AR = QtCore.Qt.AlignRight
 
-        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 0, 0, AR)
+        layout.addWidget(self._photon_energy_le, 0, 1)
+        layout.addWidget(QtGui.QLabel("Sample distance (m): "), 1, 0, AR)
+        layout.addWidget(self._sample_dist_le, 1, 1)
+        layout.addWidget(QtGui.QLabel("Cx (pixel): "), 2, 0, AR)
+        layout.addWidget(self._cx_le, 2, 1)
+        layout.addWidget(QtGui.QLabel("Cy (pixel): "), 3, 0, AR)
+        layout.addWidget(self._cy_le, 3, 1)
+        layout.addWidget(QtGui.QLabel("Integration method: "), 4, 0, AR)
+        layout.addWidget(self._itgt_method_cb, 4, 1)
+        layout.addWidget(QtGui.QLabel("Integration points: "), 5, 0, AR)
+        layout.addWidget(self._itgt_points_le, 5, 1)
+        layout.addWidget(QtGui.QLabel("Integration range (1/A): "), 6, 0, AR)
+        layout.addWidget(self._itgt_range_le, 6, 1)
 
-        key_layout = QtGui.QVBoxLayout()
-        key_layout.addWidget(sample_dist_lb)
-        key_layout.addWidget(cx)
-        key_layout.addWidget(cy)
-        key_layout.addWidget(itgt_method_lb)
-        key_layout.addWidget(itgt_points_lb)
-        key_layout.addWidget(itgt_range_lb)
-
-        value_layout = QtGui.QVBoxLayout()
-        value_layout.addWidget(self._sample_dist_le)
-        value_layout.addWidget(self._cx_le)
-        value_layout.addWidget(self._cy_le)
-        value_layout.addWidget(self._itgt_method_cb)
-        value_layout.addWidget(self._itgt_points_le)
-        value_layout.addWidget(self._itgt_range_le)
-
-        layout.addLayout(key_layout)
-        layout.addLayout(value_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
+        photon_energy = float(self._photon_energy_le.text().strip())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return False
+        else:
+            self.photon_energy_sgn.emit(photon_energy)
 
         sample_distance = float(self._sample_dist_le.text().strip())
         if sample_distance <= 0:
@@ -114,6 +113,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             return False
 
         if log:
+            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
             logger.info("<Sample distance (m)>: {}".format(sample_distance))
             logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
                         format(center_x, center_y))

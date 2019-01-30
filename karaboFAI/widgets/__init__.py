@@ -15,6 +15,8 @@ from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
 from .bulletin_widget import BulletinWidget
+from .correlation_ctrl_widget import CorrelationCtrlWidget
+from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 
 
 __all__ = [
@@ -31,8 +33,10 @@ __all__ = [
 __all__.extend([
     "AiCtrlWidget",
     "AnalysisCtrlWidget",
+    "CorrelationCtrlWidget",
     "DataCtrlWidget",
     "GeometryCtrlWidget",
+    "PumpProbeCtrlWidget"
 ])
 
 # miscellaneous

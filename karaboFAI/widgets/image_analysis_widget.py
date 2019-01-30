@@ -59,8 +59,8 @@ class SinglePulseImageWidget(ImageView):
 
         self._is_initialized = False
 
-        self._mask_range_sp = None
-        parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
+        self._image_mask_range_sp = None
+        parent.parent().analysis_ctrl_widget.image_mask_range_sgn.connect(
             self.onMaskRangeChanged)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
@@ -69,7 +69,7 @@ class SinglePulseImageWidget(ImageView):
         image = data.image
 
         try:
-            np.clip(image[self.pulse_id], *self._mask_range_sp,
+            np.clip(image[self.pulse_id], *self._image_mask_range_sp,
                     image[self.pulse_id])
         except IndexError as e:
             logger.error("<VIP pulse ID 1/2>: " + str(e))
@@ -87,4 +87,4 @@ class SinglePulseImageWidget(ImageView):
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
-        self._mask_range_sp = (lb, ub)
+        self._image_mask_range_sp = (lb, ub)

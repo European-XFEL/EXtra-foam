@@ -230,13 +230,13 @@ class PlotWindow(AbstractWindow):
             name="Normalization range", type='str', readonly=True
         )
 
-        self.diff_integration_range_sp = None
-        self.diff_integration_range_param = ptree.Parameter.create(
+        self.integration_range_sp = None
+        self.integration_range_param = ptree.Parameter.create(
             name="Diff integration range", type='str', readonly=True
         )
 
-        self.ma_window_size_sp = None
-        self.ma_window_size_param = ptree.Parameter.create(
+        self.moving_average_window_sp = None
+        self.moving_average_window_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
         )
 
@@ -308,7 +308,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
-        self.diff_integration_range_sp = (lb, ub)
+        self.integration_range_sp = (lb, ub)
 
         # then update the parameter tree
         self._pro_params.child("Diff integration range").setValue(
@@ -316,7 +316,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
-        self.ma_window_size_sp = value
+        self.moving_average_window_sp = value
 
         # then update the parameter tree
         self._pro_params.child('M.A. window size').setValue(str(value))

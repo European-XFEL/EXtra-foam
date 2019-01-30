@@ -147,8 +147,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
-        self.data_ctrl_widget.pulse_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
         self.data_ctrl_widget.server_tcp_sgn.connect(
             self._daq_worker.onServerTcpChanged)
 
@@ -157,8 +155,6 @@ class MainGUI(QtGui.QMainWindow):
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
         self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
-        self.data_ctrl_widget.pulse_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
 
     def initUI(self):
         raise NotImplementedError

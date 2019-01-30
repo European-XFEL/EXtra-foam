@@ -9,182 +9,132 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import OrderedDict
-
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..config import config
-from ..helpers import parse_ids, parse_boundary
+from ..helpers import parse_boundary
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
-    """Widget for setting up the analysis parameters."""
+    """Widget for setting up the general analysis parameters."""
 
-    available_modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
-    })
+    image_mask_range_sgn = QtCore.pyqtSignal(float, float)
 
-    diff_integration_range_sgn = QtCore.pyqtSignal(float, float)
-    normalization_range_sgn = QtCore.pyqtSignal(float, float)
-    ma_window_size_sgn = QtCore.pyqtSignal(int)
-    # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
-    photon_energy_sgn = QtCore.pyqtSignal(float)
-    mask_range_sgn = QtCore.pyqtSignal(float, float)
+    pulse_id_range_sgn = QtCore.pyqtSignal(int, int)
+    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
+    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Analysis setup", *args, **kwargs)
+        super().__init__("General analysis setup", *args, **kwargs)
 
-        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
-        self._laser_mode_cb = QtGui.QComboBox()
+        # We keep the definitions of attributes which are not used in the
+        # PULSE_RESOLVED = True case. It makes sense since these attributes
+        # also appear in the defined methods.
 
         if self._pulse_resolved:
-            self._laser_mode_cb.addItems(self.available_modes.keys())
-            on_pulse_ids = "0:8:2"
-            off_pulse_ids = "1:8:2"
+            min_pulse_id = 0
+            max_pulse_id = 2700
+            vip_pulse_id1 = 0
+            vip_pulse_id2 = 1
         else:
-            self._laser_mode_cb.addItems(list(self.available_modes.keys())[1:])
-            on_pulse_ids = "0"
-            off_pulse_ids = "0"
-        self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
-        self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
+            min_pulse_id = 0
+            max_pulse_id = 1  # not included, Python convention
+            vip_pulse_id1 = 0
+            vip_pulse_id2 = 0
 
-        self._normalization_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._diff_integration_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._ma_window_le = QtGui.QLineEdit("9999")
-        self._mask_range_le = QtGui.QLineEdit(
+        self._min_pulse_id_le = QtGui.QLineEdit(str(min_pulse_id))
+        self._min_pulse_id_le.setEnabled(False)
+        self._max_pulse_id_le = QtGui.QLineEdit(str(max_pulse_id))
+
+        self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
+        self._vip_pulse_id1_le.returnPressed.connect(
+            self.onVipPulse1Confirmed)
+        self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
+        self._vip_pulse_id2_le.returnPressed.connect(
+            self.onVipPulse2Confirmed)
+
+        self._image_mask_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["MASK_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
-            self._photon_energy_le,
-            self._laser_mode_cb,
-            self._on_pulse_le,
-            self._off_pulse_le,
-            self._normalization_range_le,
-            self._diff_integration_range_le,
-            self._ma_window_le,
-            self._mask_range_le
+            self._max_pulse_id_le,
+            self._image_mask_range_le
         ]
 
         self.initUI()
 
     def initUI(self):
         """Overload."""
-        photon_energy_lb = QtGui.QLabel("Photon energy (keV): ")
-        laser_mode_lb = QtGui.QLabel("Laser on/off mode: ")
-        on_pulse_lb = QtGui.QLabel("On-pulse IDs: ")
-        off_pulse_lb = QtGui.QLabel("Off-pulse IDs: ")
-        normalization_range_lb = QtGui.QLabel("Normalization range (1/A): ")
-        diff_integration_range_lb = QtGui.QLabel(
-            "Diff integration range (1/A): ")
-        ma_window_lb = QtGui.QLabel("M.A. window size: ")
-        mask_range_lb = QtGui.QLabel("Mask range: ")
+        layout = QtGui.QFormLayout()
+        layout.setLabelAlignment(QtCore.Qt.AlignRight)
 
-        layout = QtGui.QHBoxLayout()
-        key_layout = QtGui.QVBoxLayout()
-        key_layout.addWidget(photon_energy_lb)
-        key_layout.addWidget(laser_mode_lb)
+        layout.addRow("Image mask range: ", self._image_mask_range_le)
+
         if self._pulse_resolved:
-            key_layout.addWidget(on_pulse_lb)
-            key_layout.addWidget(off_pulse_lb)
-        key_layout.addWidget(normalization_range_lb)
-        key_layout.addWidget(diff_integration_range_lb)
-        key_layout.addWidget(ma_window_lb)
-        key_layout.addWidget(mask_range_lb)
+            layout.addRow("Min. pulse ID: ", self._min_pulse_id_le)
+            layout.addRow("Max. pulse ID: ", self._max_pulse_id_le)
+            layout.addRow("VIP pulse ID 1: ", self._vip_pulse_id1_le)
+            layout.addRow("VIP pulse ID 2: ", self._vip_pulse_id2_le)
 
-        value_layout = QtGui.QVBoxLayout()
-        value_layout.addWidget(self._photon_energy_le)
-        value_layout.addWidget(self._laser_mode_cb)
-        if self._pulse_resolved:
-            value_layout.addWidget(self._on_pulse_le)
-            value_layout.addWidget(self._off_pulse_le)
-        value_layout.addWidget(self._normalization_range_le)
-        value_layout.addWidget(self._diff_integration_range_le)
-        value_layout.addWidget(self._ma_window_le)
-        value_layout.addWidget(self._mask_range_le)
-
-        layout.addLayout(key_layout)
-        layout.addLayout(value_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
-        photon_energy = float(self._photon_energy_le.text().strip())
-        if photon_energy <= 0:
-            logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return False
-        else:
-            self.photon_energy_sgn.emit(photon_energy)
-
         try:
-            # check pulse ID only when laser on/off pulses are in the same
-            # train (the "normal" mode)
-            mode = self._laser_mode_cb.currentText()
-            on_pulse_ids = parse_ids(self._on_pulse_le.text())
-            off_pulse_ids = parse_ids(self._off_pulse_le.text())
-            if mode == "normal" and self._pulse_resolved:
-                common = set(on_pulse_ids).intersection(off_pulse_ids)
-                if common:
-                    logger.error(
-                        "Pulse IDs {} are found in both on- and off- pulses.".
-                        format(','.join([str(v) for v in common])))
-                    return False
-
-            self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
-        except ValueError:
-            logger.error("Invalid input! Enter on/off pulse IDs separated "
-                         "by ',' and/or use the range operator ':'!")
-            return False
-
-        try:
-            normalization_range = parse_boundary(
-                self._normalization_range_le.text())
-            self.normalization_range_sgn.emit(*normalization_range)
+            mask_range = parse_boundary(self._image_mask_range_le.text())
+            self.image_mask_range_sgn.emit(*mask_range)
         except ValueError as e:
-            logger.error("<Normalization range>: " + str(e))
+            logger.error("<Image mask range>: " + str(e))
             return False
 
-        try:
-            diff_integration_range = parse_boundary(
-                self._diff_integration_range_le.text())
-            self.diff_integration_range_sgn.emit(*diff_integration_range)
-        except ValueError as e:
-            logger.error("<Diff integration range>: " + str(e))
+        pulse_id_range = (int(self._min_pulse_id_le.text()),
+                          int(self._max_pulse_id_le.text()))
+        if pulse_id_range[1] <= 0:
+            logger.error("<Pulse ID range>: Invalid input!")
             return False
+        self.pulse_id_range_sgn.emit(*pulse_id_range)
 
-        try:
-            window_size = int(self._ma_window_le.text())
-            if window_size < 1:
-                logger.error("Moving average window width < 1!")
-                return False
-            self.ma_window_size_sgn.emit(window_size)
-        except ValueError as e:
-            logger.error("<Moving average window size>: " + str(e))
-            return False
-
-        try:
-            mask_range = parse_boundary(self._mask_range_le.text())
-            self.mask_range_sgn.emit(*mask_range)
-        except ValueError as e:
-            logger.error("<Mask range>: " + str(e))
-            return False
+        self._emit_vip_pulse_id1()
+        self._emit_vip_pulse_id2()
 
         if log:
-            logger.info("<Optical laser mode>: {}".format(mode))
-            logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
-            logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
-            logger.info("<Normalization range>: ({}, {})".
-                        format(*normalization_range))
-            logger.info("<Diff integration range>: ({}, {})".
-                        format(*diff_integration_range))
-            logger.info("<Moving average window size>: {}".
-                        format(window_size))
-            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
-            logger.info("<Mask range>: ({}, {})".format(*mask_range))
+            if self._pulse_resolved:
+                logger.info("<Pulse ID range>: ({}, {})"
+                            .format(*pulse_id_range))
 
         return True
+
+    @QtCore.pyqtSlot()
+    def onVipPulse1Confirmed(self):
+        self._emit_vip_pulse_id1()
+
+    def _emit_vip_pulse_id1(self):
+        try:
+            pulse_id = int(self._vip_pulse_id1_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 1>: " + str(e))
+            return
+
+        if pulse_id < 0:
+            logger.error("<VIP pulse ID 1>: pulse ID must be non-negative!")
+            return
+
+        self.vip_pulse_id1_sgn.emit(pulse_id)
+
+    @QtCore.pyqtSlot()
+    def onVipPulse2Confirmed(self):
+        self._emit_vip_pulse_id2()
+
+    def _emit_vip_pulse_id2(self):
+        try:
+            pulse_id = int(self._vip_pulse_id2_le.text().strip())
+        except ValueError as e:
+            logger.error("<VIP pulse ID 2>: " + str(e))
+            return
+
+        if pulse_id < 0:
+            logger.error("<VIP pulse ID 2>: pulse ID must be non-negative!")
+            return
+
+        self.vip_pulse_id2_sgn.emit(pulse_id)

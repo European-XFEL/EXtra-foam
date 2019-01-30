@@ -26,7 +26,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
-        self._geom_file_open_btn = QtGui.QPushButton("...")
+        self._geom_file_open_btn = QtGui.QPushButton("Select")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._disabled_widgets_during_daq = [
@@ -39,18 +39,15 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        geom_file_lb = QtGui.QLabel("Geometry file:")
-        quad_positions_lb = QtGui.QLabel("Quadrant positions:")
-
         self.initQuadTable()
 
         layout = QtGui.QVBoxLayout()
-        layout.addWidget(geom_file_lb)
+        layout.addWidget(QtGui.QLabel("Geometry file:"))
         sub_layout = QtGui.QHBoxLayout()
         sub_layout.addWidget(self._geom_file_le)
         sub_layout.addWidget(self._geom_file_open_btn)
         layout.addLayout(sub_layout)
-        layout.addWidget(quad_positions_lb)
+        layout.addWidget(QtGui.QLabel("Quadrant positions:"))
         layout.addWidget(self._quad_positions_tb)
 
         self.setLayout(layout)
