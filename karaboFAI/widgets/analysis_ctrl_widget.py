@@ -49,10 +49,10 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
         self._vip_pulse_id1_le.returnPressed.connect(
-            self.onVipPulse1Confirmed)
+            self.onVipPulseConfirmed)
         self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
         self._vip_pulse_id2_le.returnPressed.connect(
-            self.onVipPulse2Confirmed)
+            self.onVipPulseConfirmed)
 
         self._image_mask_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["MASK_RANGE"]]))
@@ -95,8 +95,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             return False
         self.pulse_id_range_sgn.emit(*pulse_id_range)
 
-        self._emit_vip_pulse_id1()
-        self._emit_vip_pulse_id2()
+        self._vip_pulse_id1_le.returnPressed.emit()
+        self._vip_pulse_id2_le.returnPressed.emit()
 
         if log:
             if self._pulse_resolved:
@@ -105,36 +105,24 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         return True
 
-    @QtCore.pyqtSlot()
-    def onVipPulse1Confirmed(self):
-        self._emit_vip_pulse_id1()
+    def onVipPulseConfirmed(self):
+        sender = self.sender()
+        if sender is self._vip_pulse_id1_le:
+            sender_id = 1
+            sgn = self.vip_pulse_id1_sgn
+        else:
+            sender_id = 2
+            sgn = self.vip_pulse_id2_sgn
 
-    def _emit_vip_pulse_id1(self):
         try:
-            pulse_id = int(self._vip_pulse_id1_le.text().strip())
+            pulse_id = int(sender.text().strip())
         except ValueError as e:
-            logger.error("<VIP pulse ID 1>: " + str(e))
+            logger.error("<VIP pulse ID {}>: ".format(sender_id) + str(e))
             return
 
         if pulse_id < 0:
-            logger.error("<VIP pulse ID 1>: pulse ID must be non-negative!")
+            logger.error("<VIP pulse ID {}>: pulse ID must be non-negative!".
+                         format(sender_id))
             return
 
-        self.vip_pulse_id1_sgn.emit(pulse_id)
-
-    @QtCore.pyqtSlot()
-    def onVipPulse2Confirmed(self):
-        self._emit_vip_pulse_id2()
-
-    def _emit_vip_pulse_id2(self):
-        try:
-            pulse_id = int(self._vip_pulse_id2_le.text().strip())
-        except ValueError as e:
-            logger.error("<VIP pulse ID 2>: " + str(e))
-            return
-
-        if pulse_id < 0:
-            logger.error("<VIP pulse ID 2>: pulse ID must be non-negative!")
-            return
-
-        self.vip_pulse_id2_sgn.emit(pulse_id)
+        sgn.emit(pulse_id)
