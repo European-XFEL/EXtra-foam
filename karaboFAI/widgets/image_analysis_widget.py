@@ -72,7 +72,7 @@ class SinglePulseImageWidget(ImageView):
             np.clip(image[self.pulse_id], *self._image_mask_range_sp,
                     image[self.pulse_id])
         except IndexError as e:
-            logger.error("<VIP pulse ID 1/2>: " + str(e))
+            logger.error("<VIP pulse ID>: " + str(e))
             return
 
         self.setImage(image[self.pulse_id], autoRange=False,

@@ -25,7 +25,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
     vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
 
-    max_pulse_id_validator = QtGui.QIntValidator(1, 2700)
+    max_pulse_id_validator = QtGui.QIntValidator(0, 2699)
     vip_pulse_validator = QtGui.QIntValidator(0, 2699)
 
     def __init__(self, *args, **kwargs):
@@ -42,7 +42,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             vip_pulse_id2 = 1
         else:
             min_pulse_id = 0
-            max_pulse_id = 1  # not included, Python convention
+            max_pulse_id = 0
             vip_pulse_id1 = 0
             vip_pulse_id2 = 0
 
@@ -94,12 +94,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             logger.error("<Image mask range>: " + str(e))
             return False
 
-        if not self._max_pulse_id_le.hasAcceptableInput():
-            logger.error("<Max. pulse ID>: Invalid input! "
-                         "Must be an integer between 1 and 2700!")
-            return False
+        # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
-                          int(self._max_pulse_id_le.text()))
+                          int(self._max_pulse_id_le.text()) + 1)
         self.pulse_id_range_sgn.emit(*pulse_id_range)
 
         self._vip_pulse_id1_le.returnPressed.emit()
