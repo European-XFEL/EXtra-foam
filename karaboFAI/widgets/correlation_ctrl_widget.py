@@ -57,7 +57,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         # correlation
         layout.addRow("Figure of merit (FOM): ", self._figure_of_merit_cb)
         layout.addRow("Normalized by: ", self._normalizers_cb)
-        layout.addRow("Integration range: ", self._integration_range_le)
+        layout.addRow("Integration range (1/A): ", self._integration_range_le)
         layout.addRow("Correlation param 1: ", self._correlation1_le)
         layout.addRow("Correlation param 2: ", self._correlation2_le)
 
