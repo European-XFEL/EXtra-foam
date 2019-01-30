@@ -47,10 +47,15 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._min_pulse_id_le.setEnabled(False)
         self._max_pulse_id_le = QtGui.QLineEdit(str(max_pulse_id))
 
+        validator = QtGui.QIntValidator()
+        validator.setBottom(0)
+
         self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
+        self._vip_pulse_id1_le.setValidator(validator)
         self._vip_pulse_id1_le.returnPressed.connect(
             self.onVipPulseConfirmed)
         self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
+        self._vip_pulse_id2_le.setValidator(validator)
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
@@ -108,21 +113,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def onVipPulseConfirmed(self):
         sender = self.sender()
         if sender is self._vip_pulse_id1_le:
-            sender_id = 1
             sgn = self.vip_pulse_id1_sgn
         else:
-            sender_id = 2
             sgn = self.vip_pulse_id2_sgn
 
-        try:
-            pulse_id = int(sender.text().strip())
-        except ValueError as e:
-            logger.error("<VIP pulse ID {}>: ".format(sender_id) + str(e))
-            return
-
-        if pulse_id < 0:
-            logger.error("<VIP pulse ID {}>: pulse ID must be non-negative!".
-                         format(sender_id))
-            return
-
-        sgn.emit(pulse_id)
+        sgn.emit(int(sender.text()))
