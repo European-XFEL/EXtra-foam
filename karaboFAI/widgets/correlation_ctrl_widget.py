@@ -63,6 +63,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         self.setLayout(layout)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
-        return True
+        return ""

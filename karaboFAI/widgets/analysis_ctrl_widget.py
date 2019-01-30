@@ -85,14 +85,14 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self.setLayout(layout)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
         try:
-            mask_range = parse_boundary(self._image_mask_range_le.text())
-            self.image_mask_range_sgn.emit(*mask_range)
+            image_mask_range = parse_boundary(self._image_mask_range_le.text())
+            self.image_mask_range_sgn.emit(*image_mask_range)
         except ValueError as e:
             logger.error("<Image mask range>: " + str(e))
-            return False
+            return None
 
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
@@ -102,12 +102,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id1_le.returnPressed.emit()
         self._vip_pulse_id2_le.returnPressed.emit()
 
-        if log:
-            if self._pulse_resolved:
-                logger.info("<Pulse ID range>: ({}, {})"
-                            .format(*pulse_id_range))
+        info = "\n<Image mask range>: ({}, {})".format(*image_mask_range)
+        if self._pulse_resolved:
+            info += "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
 
-        return True
+        return info
 
     def onVipPulseConfirmed(self):
         sender = self.sender()

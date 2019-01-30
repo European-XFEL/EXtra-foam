@@ -74,19 +74,19 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
         self.setLayout(layout)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
         photon_energy = float(self._photon_energy_le.text().strip())
         if photon_energy <= 0:
             logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return False
+            return None
         else:
             self.photon_energy_sgn.emit(photon_energy)
 
         sample_distance = float(self._sample_dist_le.text().strip())
         if sample_distance <= 0:
             logger.error("<Sample distance>: Invalid input! Must be positive!")
-            return False
+            return None
         else:
             self.sample_distance_sgn.emit(sample_distance)
 
@@ -101,7 +101,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
         if integration_points <= 0:
             logger.error(
                 "<Integration points>: Invalid input! Must be positive!")
-            return False
+            return None
         else:
             self.integration_points_sgn.emit(integration_points)
 
@@ -110,19 +110,17 @@ class AiCtrlWidget(AbstractCtrlWidget):
             self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
-            return False
+            return None
 
-        if log:
-            logger.info("<Photon energy (keV)>: {}".format(photon_energy))
-            logger.info("<Sample distance (m)>: {}".format(sample_distance))
-            logger.info("<Cx (pixel), Cy (pixel>: ({:d}, {:d})".
-                        format(center_x, center_y))
-            logger.info("<Cy (pixel)>: {:d}".format(center_y))
-            logger.info("<Integration method>: '{}'".format(
-                integration_method))
-            logger.info("<Integration range (1/A)>: ({}, {})".
-                        format(*integration_range))
-            logger.info("<Number of integration points>: {}".
-                        format(integration_points))
+        info = "\n<Photon energy (keV)>: {}".format(photon_energy)
+        info += "\n<Sample distance (m)>: {}".format(sample_distance)
+        info += "\n<Cx (pixel), Cy (pixel>: ({:d}, {:d})".format(
+            center_x, center_y)
+        info += "\n<Cy (pixel)>: {:d}".format(center_y)
+        info += "\n<Integration method>: '{}'".format(integration_method)
+        info += "\n<Integration range (1/A)>: ({}, {})".format(
+            *integration_range)
+        info += "\n<Number of integration points>: {}".format(
+            integration_points)
 
-        return True
+        return info

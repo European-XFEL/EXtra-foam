@@ -212,7 +212,7 @@ class MainGUI(QtGui.QMainWindow):
         self.clearQueues()
         self._running = True  # starting to update plots
 
-        if not self.updateSharedParameters(True):
+        if not self.updateSharedParameters():
             return
         self._proc_worker.start()
         self._daq_worker.start()
@@ -273,18 +273,20 @@ class MainGUI(QtGui.QMainWindow):
 
         self.file_server_stopped_sgn.emit()
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Update shared parameters for all child windows.
-
-        :params bool log: True for logging shared parameters and False
-            for not.
 
         :returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
+        total_info = ""
         for widget in self._ctrl_widgets:
-            if not widget.updateSharedParameters(log=log):
+            info = widget.updateSharedParameters()
+            if info is None:
                 return False
+            total_info += info
+
+        logger.info(total_info)
         return True
 
     @QtCore.pyqtSlot(str)

@@ -104,11 +104,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
         server_port = self._port_le.text().strip()
         self.server_tcp_sgn.emit(server_hostname, server_port)
 
-        if log:
-            logger.info("<Host name>, <Port>: {}, {}".
-                        format(server_hostname, server_port))
+        info = "\n<Host name>, <Port>: {}, {}".format(
+            server_hostname, server_port)
 
-        return True
+        return info
 
     @property
     def file_server(self):

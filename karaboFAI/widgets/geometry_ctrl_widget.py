@@ -83,21 +83,22 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         if filename:
             self._geom_file_le.setText(filename)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
-
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
             self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + str(e))
-            return False
+            return None
 
-        if log:
-            logger.info("<Geometry file>: {}".format(geom_file))
-            logger.info("<Quadrant positions>: [{}]".format(
+        if config["REQUIRE_GEOMETRY"]:
+            info = "\n<Geometry file>: {}".format(geom_file)
+            info += ("\n<Quadrant positions>: [{}]".format(
                 ", ".join(["[{}, {}]".format(p[0], p[1])
                            for p in quad_positions])))
+        else:
+            info = ""
 
-        return True
+        return info

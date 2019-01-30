@@ -89,7 +89,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self.setLayout(layout)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
         try:
             # check pulse ID only when laser on/off pulses are in the same
@@ -103,13 +103,13 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                     logger.error(
                         "Pulse IDs {} are found in both on- and off- pulses.".
                         format(','.join([str(v) for v in common])))
-                    return False
+                    return None
 
             self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
         except ValueError:
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
-            return False
+            return None
 
         try:
             normalization_range = parse_boundary(
@@ -117,7 +117,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self.normalization_range_sgn.emit(*normalization_range)
         except ValueError as e:
             logger.error("<Normalization range>: " + str(e))
-            return False
+            return None
 
         try:
             integration_range = parse_boundary(
@@ -125,28 +125,24 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
             logger.error("<Integration range>: " + str(e))
-            return False
+            return None
 
         try:
             window_size = int(self._moving_average_window_le.text())
             if window_size < 1:
                 logger.error("Moving average window < 1!")
-                return False
+                return None
             self.moving_average_window_sgn.emit(window_size)
         except ValueError as e:
             logger.error("<Moving average window>: " + str(e))
-            return False
+            return None
 
-        if log:
-            logger.info("<Optical laser mode>: {}".format(mode))
-            if self._pulse_resolved:
-                logger.info("<On-pulse IDs>: {}".format(on_pulse_ids))
-                logger.info("<Off-pulse IDs>: {}".format(off_pulse_ids))
-            logger.info("<Normalization range>: ({}, {})".
-                        format(*normalization_range))
-            logger.info("<Integration range>: ({}, {})".
-                        format(*integration_range))
-            logger.info("<Moving average window>: {}".
-                        format(window_size))
+        info = "\n<Optical laser mode>: {}".format(mode)
+        if self._pulse_resolved:
+            info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
+            info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
+        info += "\n<Normalization range>: ({}, {})".format(*normalization_range)
+        info += "\n<Integration range>: ({}, {})".format(*integration_range)
+        info += "\n<Moving average window>: {}".format(window_size)
 
-        return True
+        return info
