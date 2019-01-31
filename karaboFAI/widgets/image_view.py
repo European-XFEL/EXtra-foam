@@ -35,6 +35,7 @@ class ImageView(QtGui.QWidget):
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
         self._plot_widget.addItem(self._image_item)
+        self.invertY(True)
         self.setAspectLocked(True)
 
         self._hist_widget = HistogramLUTWidget()
@@ -75,6 +76,13 @@ class ImageView(QtGui.QWidget):
         :param bool lock: True to lock and False to unlock.
         """
         self._plot_widget.plotItem.vb.setAspectLocked(lock)
+
+    def invertY(self, inv=True):
+        """Invert the Y axis.
+
+        :param bool inv: True for inverting the Y axis and False for not.
+        """
+        self._plot_widget.plotItem.vb.invertY(inv)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)
