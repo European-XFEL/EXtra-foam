@@ -35,6 +35,7 @@ class ImageView(QtGui.QWidget):
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
         self._plot_widget.addItem(self._image_item)
+        self.setAspectLocked(True)
 
         self._is_initialized = False
 
@@ -61,6 +62,13 @@ class ImageView(QtGui.QWidget):
 
     def clear(self):
         self._image_item.clear()
+
+    def setAspectLocked(self, lock):
+        """Lock or unlock the aspect ratio of the displayed image.
+
+        :param bool lock: True to lock and False to unlock.
+        """
+        self._plot_widget.plotItem.vb.setAspectLocked(lock)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)

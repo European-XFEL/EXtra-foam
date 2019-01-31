@@ -30,8 +30,7 @@ class PlotWidget(GraphicsView):
         'setXRange', 'setYRange', 'setRange', 'autoRange',
         'enableAutoRange', 'disableAutoRange',
         'setXLink', 'setYLink', 'setLabel', 'setTitle', 'setLimits',
-        'viewRect', 'setMouseEnabled', 'setAspectLocked',
-        'register', 'unregister'
+        'viewRect', 'setMouseEnabled', 'register', 'unregister'
     ]
 
     def __init__(self, parent=None, background='default', **kargs):
