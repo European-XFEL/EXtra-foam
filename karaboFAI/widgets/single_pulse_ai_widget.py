@@ -56,11 +56,13 @@ class SinglePulseAiWidget(PlotWidget):
         """Override."""
         # pulse resolved data
         if data.intensity.ndim == 2:
-            try:
+            max_id = len(data.intensity) - 1
+            if self.pulse_id <= max_id:
                 self._pulse_plot.setData(data.momentum,
                                          data.intensity[self.pulse_id])
-            except IndexError as e:
-                logger.error("<VIP pulse ID 1/2>: " + str(e))
+            else:
+                logger.error("<VIP pulse ID 1/2>: VIP pulse ID ({}) > Maximum "
+                             "pulse ID ({})".format(self.pulse_id, max_id))
                 return
         else:
             self._pulse_plot.setData(data.momentum, data.intensity)
