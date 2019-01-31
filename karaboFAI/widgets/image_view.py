@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from ..widgets.pyqtgraph import QtGui, QtCore, ImageItem
+from ..widgets.pyqtgraph import QtGui, QtCore, HistogramLUTWidget, ImageItem
 
 from .misc_widgets import colorMapFactory
 from .plot_widget import PlotWidget
@@ -37,6 +37,9 @@ class ImageView(QtGui.QWidget):
         self._plot_widget.addItem(self._image_item)
         self.setAspectLocked(True)
 
+        self._hist_widget = HistogramLUTWidget()
+        self._hist_widget.setImageItem(self._image_item)
+
         self._is_initialized = False
 
         self.initUI()
@@ -44,8 +47,9 @@ class ImageView(QtGui.QWidget):
         # self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def initUI(self):
-        layout = QtGui.QVBoxLayout()
+        layout = QtGui.QHBoxLayout()
         layout.addWidget(self._plot_widget)
+        layout.addWidget(self._hist_widget)
         self.setLayout(layout)
 
     def update(self, data):
