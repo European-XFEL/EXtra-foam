@@ -257,11 +257,10 @@ class FaiDataProcessor(Worker):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        # clip the value in the array
+        # clip the array, which now will contain only numerical values
+        # within the mask range
         np.clip(assembled, self.mask_range_sp[0], self.mask_range_sp[1],
                 out=assembled)
-        # now 'assembled' contains only numerical values within
-        # the mask range
 
         data = ProcessedData(tid,
                              momentum=momentum,
@@ -354,11 +353,10 @@ class FaiDataProcessor(Worker):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        # clip the value in the array
+        # clip the array, which now will contain only numerical values
+        # within the mask range
         np.clip(assembled_mean, self.mask_range_sp[0], self.mask_range_sp[1],
                 out=assembled_mean)
-        # now 'assembled_mean' contains only numerical values within
-        # the mask range
 
         # Note: 'assembled' still contains 'inf' and '-inf', we only do
         #       the clip later when necessary in order not to waste
