@@ -15,6 +15,7 @@ from ..widgets.pyqtgraph import QtGui, QtCore, HistogramLUTWidget, ImageItem
 
 from .misc_widgets import colorMapFactory
 from .plot_widget import PlotWidget
+from ..data_processing import quick_min_max
 from ..logger import logger
 from ..config import config
 
@@ -27,8 +28,14 @@ class ImageView(QtGui.QWidget):
     Note: this ImageView widget is different from the one implemented
           in pyqtgraph!!!
     """
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, *, parent=None, level_mode='mono'):
+        """Initialization.
+
+        :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
+            a single set of black/white level lines is drawn, and the
+            levels apply to all channels in the image. If 'rgba', then
+            one set of levels is drawn for each channel.
+        """
         super().__init__(parent=parent)
         parent.registerPlotWidget(self)
 
@@ -39,11 +46,14 @@ class ImageView(QtGui.QWidget):
         self.setAspectLocked(True)
 
         self._hist_widget = HistogramLUTWidget()
+        self._hist_widget.setLevelMode(level_mode)
         self._hist_widget.setImageItem(self._image_item)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
         self._is_initialized = False
+        self._image = None
+        self._image_levels = None
 
         self.initUI()
         # TODO: logarithmic level
@@ -58,15 +68,41 @@ class ImageView(QtGui.QWidget):
 
     def update(self, data):
         """karaboFAI interface."""
-        self.updateImage(data.image_mean,
-                         auto_levels=(not self._is_initialized))
+        self.setImage(data.image_mean, auto_range=True, auto_levels=True)
 
         if not self._is_initialized:
             self._is_initialized = True
 
-    def updateImage(self, img, auto_levels=False):
-        """Update the current displayed image."""
-        self._image_item.setImage(img, auto_levels=auto_levels)
+    def setImage(self, img, *, auto_range=True, auto_levels=True, levels=None):
+        """Set the current displayed image.
+
+        :param np.ndarray img: the image to be displayed.
+        :param bool auto_range: whether to scale/pan the view to fit
+            the image.
+        :param bool auto_levels: whether to update the white/black levels
+            to fit the image.
+        :param tuple levels: (min, max), the white and black level values
+            to use.
+        """
+        self._image = img
+        self._process_image()
+
+        self._image_item.setImage(img, auto_levels=False)
+
+        if levels is None and auto_levels:
+            self.setLevels(rgba=[self._image_levels])
+        if levels is not None:
+            self.setLevels(*levels)
+
+        if auto_range:
+            self._plot_widget.plotItem.vb.autoRange()
+
+    def setLevels(self, *args, **kwargs):
+        """Set the min/max (bright and dark) levels.
+
+        See HistogramLUTItem.setLevels.
+        """
+        self._hist_widget.setLevels(*args, **kwargs)
 
     def clear(self):
         self._image_item.clear()
@@ -74,7 +110,7 @@ class ImageView(QtGui.QWidget):
     def setColorMap(self, cm):
         """Set colormap for the displayed image.
 
-        :param cm: a ColorMap object.:
+        :param cm: a ColorMap object.
         """
         self._hist_widget.gradient.setColorMap(cm)
 
@@ -91,6 +127,12 @@ class ImageView(QtGui.QWidget):
         :param bool inv: True for inverting the Y axis and False for not.
         """
         self._plot_widget.plotItem.vb.invertY(inv)
+
+    def _process_image(self):
+        """Returns the image data after it has been processed by any normalization options in use.
+        """
+        if not self._is_initialized:
+            self._image_levels = quick_min_max(self._image)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)
@@ -109,8 +151,6 @@ class SinglePulseImageView(ImageView):
 
         self.pulse_id = 0
 
-        self._is_initialized = False
-
         self._mask_range_sp = None
         parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
             self.onMaskRangeChanged)
@@ -128,8 +168,9 @@ class SinglePulseImageView(ImageView):
             logger.error("<VIP pulse ID 1/2>: " + str(e))
             return
 
-        self.updateImage(image[self.pulse_id],
-                         auto_levels=(not self._is_initialized))
+        self.setImage(image[self.pulse_id],
+                      auto_range=False,
+                      auto_levels=(not self._is_initialized))
 
         if not self._is_initialized:
             self._is_initialized = True

@@ -1,9 +1,11 @@
 import unittest
+import time
 
 import numpy as np
 
 from karaboFAI.data_processing import (
-    down_sample, nanmean_axis0_para, normalize_curve, slice_curve, up_sample
+    down_sample, nanmean_axis0_para, normalize_curve, quick_min_max,
+    slice_curve, up_sample
 )
 
 
@@ -149,3 +151,14 @@ class TestDataProcessor(unittest.TestCase):
 
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., 1.]])
         np.testing.assert_array_almost_equal(expected, ret)
+
+    def test_quickminmax(self):
+        with self.assertRaises(ValueError):
+            quick_min_max(np.arange(8).reshape(2, 2, 2))
+        with self.assertRaises(TypeError):
+            quick_min_max([])
+
+        self.assertEqual((0, 9), quick_min_max(np.arange(10).reshape(2, 5)))
+
+        x = np.arange(1e6).reshape(1000, 1000)
+        self.assertEqual((0, 996996), quick_min_max(x))

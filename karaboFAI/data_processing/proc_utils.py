@@ -204,3 +204,24 @@ def nanmean_axis0_para(data, *, chunk_size=10, max_workers=4):
             start += chunk_size
 
     return ret
+
+
+def quick_min_max(x):
+    """Estimate the min/max values of input by down-sampling.
+
+    :param numpy.ndarray x: data, 2D array for now.
+
+    :return tuple: (min, max)
+    """
+    if not isinstance(x, np.ndarray):
+        raise TypeError("Input must be a numpy.ndarray!")
+
+    if x.ndim != 2:
+        raise ValueError("Input must be a 2D array!")
+
+    while x.size > 1e5:
+        sl = [slice(None)] * x.ndim
+        sl[np.argmax(x.shape)] = slice(None, None, 2)
+        x = x[sl]
+
+    return float(np.nanmin(x)), float(np.nanmax(x))
