@@ -41,11 +41,12 @@ class ImageView(QtGui.QWidget):
         self._hist_widget = HistogramLUTWidget()
         self._hist_widget.setImageItem(self._image_item)
 
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+
         self._is_initialized = False
 
         self.initUI()
         # TODO: logarithmic level
-        # self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
@@ -69,6 +70,13 @@ class ImageView(QtGui.QWidget):
 
     def clear(self):
         self._image_item.clear()
+
+    def setColorMap(self, cm):
+        """Set colormap for the displayed image.
+
+        :param cm: a ColorMap object.:
+        """
+        self._hist_widget.gradient.setColorMap(cm)
 
     def setAspectLocked(self, lock):
         """Lock or unlock the aspect ratio of the displayed image.
@@ -107,7 +115,7 @@ class SinglePulseImageView(ImageView):
         parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
             self.onMaskRangeChanged)
 
-        # self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
