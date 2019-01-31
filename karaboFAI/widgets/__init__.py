@@ -11,7 +11,7 @@ from .misc_widgets import (
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
-from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
+from .image_view import ImageView, SinglePulseImageView
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
 from .bulletin_widget import BulletinWidget
@@ -20,11 +20,11 @@ from .bulletin_widget import BulletinWidget
 __all__ = [
     "colorMapFactory",
     "BulletinWidget",
-    "ImageAnalysisWidget",
+    "ImageView",
     "MultiPulseAiWidget",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
-    "SinglePulseImageWidget",
+    "SinglePulseImageView",
 ]
 
 # add control widgets
