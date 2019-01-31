@@ -471,6 +471,6 @@ class FaiDataProcessor(Worker):
             assembled = assembled[
                 self.pulse_range_sp[0]:self.pulse_range_sp[1]]
             return self.process_assembled_data_ps(assembled, tid)
+
         # train-resolved
-        else:
-            return self.process_assembled_data_ts(assembled, tid)
+        return self.process_assembled_data_ts(assembled, tid)
