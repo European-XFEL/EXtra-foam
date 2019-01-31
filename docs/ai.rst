@@ -1,5 +1,5 @@
-Geometry
-========
+Azimuthal Integration
+=====================
 
 **karaboFAI** uses pyFAI_ to do azimuthal integration. As illustrated in the
 sketch below, the **origin** is located at the sample position, more precisely,

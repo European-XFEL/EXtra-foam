@@ -9,3 +9,4 @@ Supported Detectors
    detectors/agipd
    detectors/jungfrau
    detectors/lpd
+   detectors/fastccd
