@@ -51,6 +51,8 @@ class ImageView(QtGui.QWidget):
         layout.addWidget(self._plot_widget)
         layout.addWidget(self._hist_widget)
         self.setLayout(layout)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
     def update(self, data):
         """karaboFAI interface."""
