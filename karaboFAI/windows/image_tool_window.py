@@ -22,8 +22,8 @@ class ROICtrlWidget(QtGui.QGroupBox):
         """"""
         super().__init__(title, parent=parent)
 
-        self._roi_width_le = QtGui.QLineEdit()
-        self._roi_height_le = QtGui.QLineEdit()
+        self._width_le = QtGui.QLineEdit()
+        self._height_le = QtGui.QLineEdit()
 
         self._lock_cb = QtGui.QCheckBox("Lock")
         self.activate_cb = QtGui.QCheckBox("Activate")
@@ -33,9 +33,9 @@ class ROICtrlWidget(QtGui.QGroupBox):
     def initUI(self):
         wh_layout = QtGui.QHBoxLayout()
         wh_layout.addWidget(QtGui.QLabel("Width: "))
-        wh_layout.addWidget(self._roi_width_le)
+        wh_layout.addWidget(self._width_le)
         wh_layout.addWidget(QtGui.QLabel("Height: "))
-        wh_layout.addWidget(self._roi_height_le)
+        wh_layout.addWidget(self._height_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -47,6 +47,10 @@ class ROICtrlWidget(QtGui.QGroupBox):
         layout.addLayout(wh_layout)
 
         self.setLayout(layout)
+
+    def updateParameters(self, pos, size):
+        self._width_le.setText(str(size[0]))
+        self._height_le.setText(str(size[1]))
 
 
 class MaskCtrlWidget(QtGui.QGroupBox):
@@ -77,10 +81,14 @@ class ImageToolWindow(AbstractWindow):
         super().__init__(data, parent=parent)
 
         self._image_view = ImageView()
+        self._image_view.roi1.sigRegionChangeFinished.connect(
+            self.roiRegionChangedEvent)
+        self._image_view.roi2.sigRegionChangeFinished.connect(
+            self.roiRegionChangedEvent)
 
         self._roi_ctrls = [ROICtrlWidget("ROI {}".format(i)) for i in range(2)]
         for ctrl in self._roi_ctrls:
-            ctrl.activate_cb.stateChanged.connect(self.onToggleROIActivation)
+            ctrl.activate_cb.stateChanged.connect(self.toggleRoiActivationEvent)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
 
@@ -118,7 +126,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view.setImage(data.image_mean)
 
-    def onToggleROIActivation(self, state):
+    def toggleRoiActivationEvent(self, state):
         sender = self.sender()
         if sender is self._roi_ctrls[0].activate_cb:
             if state == QtCore.Qt.Checked:
@@ -134,3 +142,9 @@ class ImageToolWindow(AbstractWindow):
     def _activate_roi(self, idx):
         self._roi_ctrls[idx].activate_cb.setChecked(True)
 
+    def roiRegionChangedEvent(self):
+        sender = self.sender()
+        if sender is self._image_view.roi1:
+            self._roi_ctrls[0].updateParameters(sender.pos(), sender.size())
+        elif sender is self._image_view.roi2:
+            self._roi_ctrls[1].updateParameters(sender.pos(), sender.size())
