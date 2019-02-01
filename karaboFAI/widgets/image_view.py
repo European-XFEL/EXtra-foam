@@ -12,13 +12,36 @@ All rights reserved.
 import numpy as np
 
 from ..widgets.pyqtgraph import (
-    QtGui, QtCore, HistogramLUTWidget, ImageItem, RectROI
+    QtGui, QtCore, HistogramLUTWidget, ImageItem, ROI
 )
 from .misc_widgets import colorMapFactory, PenFactory
 from .plot_widget import PlotWidget
 from ..data_processing import quick_min_max
 from ..logger import logger
 from ..config import config
+
+
+class RectROI(ROI):
+    """Rectangular ROI widget.
+
+    Note: the widget is slightly different from pyqtgraph.RectROI
+    """
+    def __init__(self, pos, size, centered=False, **args):
+        super().__init__(pos, size, **args)
+        if centered:
+            center = [0.5, 0.5]
+        else:
+            center = [0, 0]
+
+        self.addScaleHandle([1, 1], center)
+
+        self.handle = self.handles[0]  # there is only one handler
+
+    def lockAspect(self):
+        self.handle['lockAspect'] = True
+
+    def unLockAspect(self):
+        self.handle['lockAspect'] = False
 
 
 class ImageView(QtGui.QWidget):

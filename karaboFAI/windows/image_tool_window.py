@@ -40,30 +40,32 @@ class ROICtrlWidget(QtGui.QGroupBox):
         self._cx_le.editingFinished.connect(self.roiRegionChangedEvent)
         self._cy_le.editingFinished.connect(self.roiRegionChangedEvent)
 
-        self._lock_cb = QtGui.QCheckBox("Lock")
         self.activate_cb = QtGui.QCheckBox("Activate")
+        self._lock_cb = QtGui.QCheckBox("Lock")
+        self.lock_aspect_cb = QtGui.QCheckBox("Lock aspect ratio")
 
         self.initUI()
 
     def initUI(self):
-        wh_layout = QtGui.QHBoxLayout()
-        wh_layout.addWidget(QtGui.QLabel("Width: "))
-        wh_layout.addWidget(self._width_le)
-        wh_layout.addWidget(QtGui.QLabel("Height: "))
-        wh_layout.addWidget(self._height_le)
-        wh_layout.addWidget(QtGui.QLabel("X center: "))
-        wh_layout.addWidget(self._cx_le)
-        wh_layout.addWidget(QtGui.QLabel("Y center: "))
-        wh_layout.addWidget(self._cy_le)
+        le_layout = QtGui.QHBoxLayout()
+        le_layout.addWidget(QtGui.QLabel("Width: "))
+        le_layout.addWidget(self._width_le)
+        le_layout.addWidget(QtGui.QLabel("Height: "))
+        le_layout.addWidget(self._height_le)
+        le_layout.addWidget(QtGui.QLabel("X center: "))
+        le_layout.addWidget(self._cx_le)
+        le_layout.addWidget(QtGui.QLabel("Y center: "))
+        le_layout.addWidget(self._cy_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
         cb_layout.addWidget(self._lock_cb)
+        cb_layout.addWidget(self.lock_aspect_cb)
 
         layout = QtGui.QVBoxLayout()
 
         layout.addLayout(cb_layout)
-        layout.addLayout(wh_layout)
+        layout.addLayout(le_layout)
 
         self.setLayout(layout)
 
@@ -123,6 +125,12 @@ class ImageToolWindow(AbstractWindow):
             self.toggleRoiActivationEvent)
         self._roi2_ctrl.activate_cb.stateChanged.connect(
             self.toggleRoiActivationEvent)
+        self._roi1_ctrl.lock_aspect_cb.stateChanged.connect(
+            self.lockAspectEvent
+        )
+        self._roi2_ctrl.lock_aspect_cb.stateChanged.connect(
+            self.lockAspectEvent
+        )
         self._roi1_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
         self._roi2_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
 
@@ -175,6 +183,19 @@ class ImageToolWindow(AbstractWindow):
                 self._image_view.roi2.show()
             else:
                 self._image_view.roi2.hide()
+
+    def lockAspectEvent(self, state):
+        sender = self.sender()
+        if sender is self._roi1_ctrl.lock_aspect_cb:
+            if state == QtCore.Qt.Checked:
+                self._image_view.roi1.lockAspect()
+            else:
+                self._image_view.roi1.unLockAspect()
+        elif sender is self._roi2_ctrl.lock_aspect_cb:
+            if state == QtCore.Qt.Checked:
+                self._image_view.roi2.lockAspect()
+            else:
+                self._image_view.roi2.unLockAspect()
 
     def _activate_roi1(self):
         self._roi1_ctrl.activate_cb.setChecked(True)
