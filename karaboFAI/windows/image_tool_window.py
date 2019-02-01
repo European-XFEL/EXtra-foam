@@ -90,13 +90,13 @@ class ImageToolWindow(AbstractWindow):
         self._roi_ctrl2.activate_cb.stateChanged.connect(
             self.onToggleROIActivation)
 
-        self._mask_panel = MaskCtrlWidget("Mask tool")
+        self._mask_panel = MaskCtrlWidget("Masking tool")
 
         self._update_image_btn = QtGui.QPushButton("Update image")
         self._update_image_btn.clicked.connect(self.updateImage)
 
         self.initUI()
-        self.resize(600, 800)
+        self.resize(800, 800)
         self.updateImage()
 
         logger.info("Open DrawMaskWindow")
@@ -106,15 +106,14 @@ class ImageToolWindow(AbstractWindow):
         tool_layout = QtGui.QGridLayout()
         tool_layout.addWidget(self._roi_ctrl1, 0, 0, 1, 1)
         tool_layout.addWidget(self._roi_ctrl2, 1, 0, 1, 1)
-        tool_layout.addWidget(self._mask_panel, 0, 1, 2, 1)
 
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._image_view)
-        layout.addWidget(self._update_image_btn)
-        layout.addLayout(tool_layout)
+        layout = QtGui.QGridLayout()
+        layout.addWidget(self._image_view, 0, 0, 1, 1)
+        layout.addLayout(tool_layout, 1, 0, 1, 1)
+        layout.addWidget(self._mask_panel, 0, 1, 1, 1)
+        layout.addWidget(self._update_image_btn, 1, 1, 1, 1)
 
         self._cw.setLayout(layout)
-        self._cw.layout().setContentsMargins(0, 0, 0, 0)
 
     def updateImage(self):
         """For updating image manually."""
