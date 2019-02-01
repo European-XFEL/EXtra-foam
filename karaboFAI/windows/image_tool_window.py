@@ -192,12 +192,12 @@ class ImageToolWindow(AbstractWindow):
     @QtCore.pyqtSlot(float, float, float, float)
     def onRoiRegionChanged(self, w, h, cx, cy):
         sender = self.sender()
-        state = {
-            'pos': (cx, cy),
-            'size': (w, h),
-            'angle': (0.0, 0.0)
-        }
         if sender is self._roi1_ctrl:
-            self._image_view.roi1.setState(state)
-        elif sender is self._roi2_ctrl:
-            self._image_view.roi2.setSize(state)
+            roi = self._image_view.roi1
+        else:
+            roi = self._image_view.roi2
+
+        # If 'update' == False, the state change will be remembered
+        # but not processed and no signals will be emitted.
+        roi.setSize((w, h), update=False)
+        roi.setPos((cx, cy), update=False)
