@@ -52,6 +52,9 @@ class ImageView(QtGui.QWidget):
     Note: this ImageView widget is different from the one implemented
           in pyqtgraph!!!
     """
+    roi1_color = 'yellow'
+    roi2_color = 'green'
+
     # we want it to share across all the images (not implemented yet)
     _roi1_pos = (20, 20)
     _roi1_size = (50, 50)
@@ -73,10 +76,10 @@ class ImageView(QtGui.QWidget):
             pass
 
         self.roi1 = RectROI(self._roi1_pos, self._roi1_size,
-                            pen=PenFactory.yellow)
+                            pen=PenFactory.__dict__[self.roi1_color])
         self.roi1.hide()
         self.roi2 = RectROI(self._roi2_pos, self._roi2_size,
-                            pen=PenFactory.green)
+                            pen=PenFactory.__dict__[self.roi2_color])
         self.roi2.hide()
 
         self._plot_widget = PlotWidget()

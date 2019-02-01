@@ -119,8 +119,10 @@ class ImageToolWindow(AbstractWindow):
         self._image_view.roi2.sigRegionChangeFinished.connect(
             self.roiRegionChangedEvent)
 
-        self._roi1_ctrl = ROICtrlWidget("ROI 1")
-        self._roi2_ctrl = ROICtrlWidget("ROI 2")
+        self._roi1_ctrl = ROICtrlWidget(
+            "ROI 1 ({})".format(ImageView.roi1_color))
+        self._roi2_ctrl = ROICtrlWidget(
+            "ROI 2 ({})".format(ImageView.roi2_color))
         self._roi1_ctrl.activate_cb.stateChanged.connect(
             self.toggleRoiActivationEvent)
         self._roi2_ctrl.activate_cb.stateChanged.connect(
