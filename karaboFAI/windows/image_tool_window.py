@@ -9,10 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import QtCore, QtGui, RectROI
+from ..widgets.pyqtgraph import QtCore, QtGui
 
 from ..widgets import ImageView
-from ..widgets import PenFactory
 from .base_window import AbstractWindow, SingletonWindow
 from ..logger import logger
 
@@ -74,24 +73,15 @@ class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class."""
     title = "image tool"
 
-    _default_roi_origin = (20, 20)
-    _default_roi_size = (100, 100)
-
     def __init__(self, data, *, parent=None):
         super().__init__(data, parent=parent)
 
         self._image_view = ImageView()
 
-        self._roi1 = RectROI(self._default_roi_origin, self._default_roi_size,
-                             pen=PenFactory.yellow)
-        self._image_view.addItem(self._roi1)
         self._roi_ctrl1 = ROICtrlWidget("ROI 1")
         self._roi_ctrl1.activate_cb.stateChanged.connect(
             self.onToggleROIActivation)
 
-        self._roi2 = RectROI(self._default_roi_origin, self._default_roi_size,
-                             pen=PenFactory.green)
-        self._image_view.addItem(self._roi2)
         self._roi_ctrl2 = ROICtrlWidget("ROI 2")
         self._roi_ctrl2.activate_cb.stateChanged.connect(
             self.onToggleROIActivation)
@@ -133,12 +123,11 @@ class ImageToolWindow(AbstractWindow):
         sender = self.sender()
         if sender is self._roi_ctrl1.activate_cb:
             if state == QtCore.Qt.Checked:
-                self._roi1.hide()
+                self._image_view.roi1.show()
             else:
-                self._roi1.show()
+                self._image_view.roi1.hide()
         else:
-            self._roi2.hide()
             if state == QtCore.Qt.Checked:
-                self._roi2.hide()
+                self._image_view.roi2.show()
             else:
-                self._roi2.show()
+                self._image_view.roi2.hide()

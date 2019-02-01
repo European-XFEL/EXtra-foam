@@ -11,9 +11,10 @@ All rights reserved.
 """
 import numpy as np
 
-from ..widgets.pyqtgraph import QtGui, QtCore, HistogramLUTWidget, ImageItem
-
-from .misc_widgets import colorMapFactory
+from ..widgets.pyqtgraph import (
+    QtGui, QtCore, HistogramLUTWidget, ImageItem, RectROI
+)
+from .misc_widgets import colorMapFactory, PenFactory
 from .plot_widget import PlotWidget
 from ..data_processing import quick_min_max
 from ..logger import logger
@@ -28,6 +29,12 @@ class ImageView(QtGui.QWidget):
     Note: this ImageView widget is different from the one implemented
           in pyqtgraph!!!
     """
+    # we want it to share across all the images (not implemented yet)
+    _roi1_pos = (20, 20)
+    _roi1_size = (50, 50)
+    _roi2_pos = (20, 20)
+    _roi2_size = (50, 50)
+
     def __init__(self, *, parent=None, level_mode='mono'):
         """Initialization.
 
@@ -42,9 +49,18 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
+        self.roi1 = RectROI(self._roi1_pos, self._roi1_size,
+                            pen=PenFactory.yellow)
+        self.roi1.hide()
+        self.roi2 = RectROI(self._roi2_pos, self._roi2_size,
+                            pen=PenFactory.green)
+        self.roi2.hide()
+
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
         self._plot_widget.addItem(self._image_item)
+        self._plot_widget.addItem(self.roi1)
+        self._plot_widget.addItem(self.roi2)
         self.invertY(True)
         self.setAspectLocked(True)
 
@@ -59,7 +75,6 @@ class ImageView(QtGui.QWidget):
         self._image_levels = None
 
         self.initUI()
-        # TODO: logarithmic level
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
