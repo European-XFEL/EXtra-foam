@@ -69,6 +69,8 @@ class ImageView(QtGui.QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
 
+        self._plot_widget.hideAxis()
+
     def update(self, data):
         """karaboFAI interface."""
         self.setImage(data.image_mean,

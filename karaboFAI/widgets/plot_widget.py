@@ -79,6 +79,10 @@ class PlotWidget(GraphicsView):
     def addLegend(self, *args, **kwargs):
         self.plotItem.addLegend(*args, **kwargs)
 
+    def hideAxis(self):
+        for v in ["left", 'bottom']:
+            self.plotItem.hideAxis(v)
+
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 

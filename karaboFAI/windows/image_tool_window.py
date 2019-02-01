@@ -83,6 +83,7 @@ class ImageToolWindow(AbstractWindow):
         self._roi_ctrl1 = ROICtrlWidget("ROI 1")
         self._roi_ctrl1.activate_cb.stateChanged.connect(
             self.onToggleROIActivation)
+
         self._roi2 = RectROI([20, 20], [20, 20])
         self._image_view.addItem(self._roi2)
         self._roi_ctrl2 = ROICtrlWidget("ROI 2")
