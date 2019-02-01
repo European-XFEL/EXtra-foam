@@ -100,8 +100,8 @@ class MainGUI(QtGui.QMainWindow):
 
         #
         image_tool_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/load_mask.png")),
-            "Image analysis",
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/image_tool.png")),
+            "Image tool",
             self)
         image_tool_at.triggered.connect(
             lambda: ImageToolWindow(self._data, parent=self))
