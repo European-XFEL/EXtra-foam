@@ -13,11 +13,10 @@ from ..widgets.pyqtgraph import QtCore, QtGui
 
 from ..widgets import ImageView
 from .base_window import AbstractWindow, SingletonWindow
-from ..logger import logger
 
 
 class ROICtrlWidget(QtGui.QGroupBox):
-
+    """Widget for controlling of ROI."""
     # w, h, cx, cy
     roi_region_changed_sgn = QtCore.Signal(float, float, float, float)
 
@@ -25,7 +24,7 @@ class ROICtrlWidget(QtGui.QGroupBox):
     _size_validator = QtGui.QDoubleValidator(0.0, 10000.0, 1)
 
     def __init__(self, title, *, parent=None):
-        """"""
+        """Initialization"""
         super().__init__(title, parent=parent)
 
         self._width_le = QtGui.QLineEdit()
@@ -84,7 +83,7 @@ class ROICtrlWidget(QtGui.QGroupBox):
 
 
 class MaskCtrlWidget(QtGui.QGroupBox):
-
+    """Widget for masking image."""
     def __init__(self, title, *, parent=None):
         """"""
         super().__init__(title, parent=parent)
@@ -94,7 +93,6 @@ class MaskCtrlWidget(QtGui.QGroupBox):
         self.initUI()
 
     def initUI(self):
-
         layout = QtGui.QVBoxLayout()
 
         layout.addWidget(self._lock_cb)
@@ -104,8 +102,11 @@ class MaskCtrlWidget(QtGui.QGroupBox):
 
 @SingletonWindow
 class ImageToolWindow(AbstractWindow):
-    """ImageToolWindow class."""
-    title = "image tool"
+    """ImageToolWindow class.
+
+    This tool provides selecting of ROI and image masking.
+    """
+    title = "Image tool"
 
     def __init__(self, data, *, parent=None):
         super().__init__(data, parent=parent)
@@ -136,8 +137,6 @@ class ImageToolWindow(AbstractWindow):
         self.initUI()
         self.resize(800, 800)
         self.updateImage()
-
-        logger.info("Open DrawMaskWindow")
 
     def initUI(self):
         """Override."""
