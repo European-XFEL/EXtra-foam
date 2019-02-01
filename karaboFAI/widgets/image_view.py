@@ -116,18 +116,13 @@ class ImageView(QtGui.QWidget):
         self._hist_widget.gradient.setColorMap(cm)
 
     def setAspectLocked(self, lock):
-        """Lock or unlock the aspect ratio of the displayed image.
-
-        :param bool lock: True to lock and False to unlock.
-        """
         self._plot_widget.plotItem.vb.setAspectLocked(lock)
 
     def invertY(self, inv=True):
-        """Invert the Y axis.
-
-        :param bool inv: True for inverting the Y axis and False for not.
-        """
         self._plot_widget.plotItem.vb.invertY(inv)
+
+    def addItem(self, item):
+        self._plot_widget.plotItem.vb.addItem(item)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)

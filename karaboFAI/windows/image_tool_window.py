@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import QtGui
+from ..widgets.pyqtgraph import QtGui, RectROI
 
 from ..widgets import ImageView
 from .base_window import AbstractWindow, SingletonWindow
@@ -77,7 +77,11 @@ class ImageToolWindow(AbstractWindow):
         super().__init__(data, parent=parent)
 
         self._image_view = ImageView()
+        self._roi1 = RectROI([20, 20], [20, 20], pen=(0, 9))
+        self._image_view.addItem(self._roi1)
         self._roi_ctrl1 = ROICtrlWidget("ROI 1")
+        self._roi2 = RectROI([20, 20], [20, 20])
+        self._image_view.addItem(self._roi2)
         self._roi_ctrl2 = ROICtrlWidget("ROI 2")
         self._mask_panel = MaskCtrlWidget("Mask tool")
 
@@ -85,7 +89,7 @@ class ImageToolWindow(AbstractWindow):
         self._update_image_btn.clicked.connect(self.updateImage)
 
         self.initUI()
-        self.resize(800, 600)
+        self.resize(600, 800)
         self.updateImage()
 
         logger.info("Open DrawMaskWindow")
