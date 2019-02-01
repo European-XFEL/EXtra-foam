@@ -18,12 +18,16 @@ from ..logger import logger
 
 class ROICtrlWidget(QtGui.QGroupBox):
 
+    roi_region_changed_sgn = QtCore.Signal(float, float)
+
     def __init__(self, title, *, parent=None):
         """"""
         super().__init__(title, parent=parent)
 
         self._width_le = QtGui.QLineEdit()
         self._height_le = QtGui.QLineEdit()
+        self._width_le.editingFinished.connect(self.roiRegionChangedEvent)
+        self._height_le.editingFinished.connect(self.roiRegionChangedEvent)
 
         self._lock_cb = QtGui.QCheckBox("Lock")
         self.activate_cb = QtGui.QCheckBox("Activate")
@@ -51,6 +55,11 @@ class ROICtrlWidget(QtGui.QGroupBox):
     def updateParameters(self, pos, size):
         self._width_le.setText(str(size[0]))
         self._height_le.setText(str(size[1]))
+
+    def roiRegionChangedEvent(self):
+        w = float(self._width_le.text())
+        h = float(self._height_le.text())
+        self.roi_region_changed_sgn.emit(w, h)
 
 
 class MaskCtrlWidget(QtGui.QGroupBox):
@@ -86,9 +95,17 @@ class ImageToolWindow(AbstractWindow):
         self._image_view.roi2.sigRegionChangeFinished.connect(
             self.roiRegionChangedEvent)
 
-        self._roi_ctrls = [ROICtrlWidget("ROI {}".format(i)) for i in range(2)]
-        for ctrl in self._roi_ctrls:
-            ctrl.activate_cb.stateChanged.connect(self.toggleRoiActivationEvent)
+        self._roi1_ctrl = ROICtrlWidget("ROI 1")
+        self._roi2_ctrl = ROICtrlWidget("ROI 2")
+        self._roi1_ctrl.activate_cb.stateChanged.connect(
+            self.toggleRoiActivationEvent)
+        self._roi2_ctrl.activate_cb.stateChanged.connect(
+            self.toggleRoiActivationEvent)
+        self._roi1_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
+        self._roi2_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
+
+        self._image_view.roi1.setSize(self._image_view.roi1.size())
+        self._image_view.roi2.setSize(self._image_view.roi2.size())
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
 
@@ -104,8 +121,8 @@ class ImageToolWindow(AbstractWindow):
     def initUI(self):
         """Override."""
         tool_layout = QtGui.QGridLayout()
-        tool_layout.addWidget(self._roi_ctrls[0], 0, 0, 1, 1)
-        tool_layout.addWidget(self._roi_ctrls[1], 1, 0, 1, 1)
+        tool_layout.addWidget(self._roi1_ctrl, 0, 0, 1, 1)
+        tool_layout.addWidget(self._roi2_ctrl, 1, 0, 1, 1)
 
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 1)
@@ -115,8 +132,8 @@ class ImageToolWindow(AbstractWindow):
 
         self._cw.setLayout(layout)
 
-        for i in range(2):
-            self._activate_roi(i)
+        self._activate_roi1()
+        self._activate_roi2()
 
     def updateImage(self):
         """For updating image manually."""
@@ -128,23 +145,34 @@ class ImageToolWindow(AbstractWindow):
 
     def toggleRoiActivationEvent(self, state):
         sender = self.sender()
-        if sender is self._roi_ctrls[0].activate_cb:
+        if sender is self._roi1_ctrl.activate_cb:
             if state == QtCore.Qt.Checked:
                 self._image_view.roi1.show()
             else:
                 self._image_view.roi1.hide()
-        elif sender is self._roi_ctrls[1].activate_cb:
+        elif sender is self._roi2_ctrl.activate_cb:
             if state == QtCore.Qt.Checked:
                 self._image_view.roi2.show()
             else:
                 self._image_view.roi2.hide()
 
-    def _activate_roi(self, idx):
-        self._roi_ctrls[idx].activate_cb.setChecked(True)
+    def _activate_roi1(self):
+        self._roi1_ctrl.activate_cb.setChecked(True)
+
+    def _activate_roi2(self):
+        self._roi2_ctrl.activate_cb.setChecked(True)
 
     def roiRegionChangedEvent(self):
         sender = self.sender()
         if sender is self._image_view.roi1:
-            self._roi_ctrls[0].updateParameters(sender.pos(), sender.size())
+            self._roi1_ctrl.updateParameters(sender.pos(), sender.size())
         elif sender is self._image_view.roi2:
-            self._roi_ctrls[1].updateParameters(sender.pos(), sender.size())
+            self._roi2_ctrl.updateParameters(sender.pos(), sender.size())
+
+    @QtCore.pyqtSlot(float, float)
+    def onRoiRegionChanged(self, w, h):
+        sender = self.sender()
+        if sender is self._roi1_ctrl:
+            self._image_view.roi1.setSize((w, h))
+        elif sender is self._roi2_ctrl:
+            self._image_view.roi2.setSize((w, h))
