@@ -7,7 +7,7 @@ from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 
 from .misc_widgets import (
-    colorMapFactory, GuiLogger, InputDialogWithCheckBox
+    colorMapFactory, GuiLogger, InputDialogWithCheckBox, PenFactory
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
@@ -41,4 +41,5 @@ __all__.extend([
     "FixedWidthLineEdit",
     "GuiLogger",
     "InputDialogWithCheckBox",
+    "PenFactory"
 ])

@@ -12,6 +12,7 @@ All rights reserved.
 from ..widgets.pyqtgraph import QtCore, QtGui, RectROI
 
 from ..widgets import ImageView
+from ..widgets import PenFactory
 from .base_window import AbstractWindow, SingletonWindow
 from ..logger import logger
 
@@ -73,18 +74,23 @@ class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class."""
     title = "image tool"
 
+    _default_roi_origin = (20, 20)
+    _default_roi_size = (100, 100)
+
     def __init__(self, data, *, parent=None):
         super().__init__(data, parent=parent)
 
         self._image_view = ImageView()
 
-        self._roi1 = RectROI([20, 20], [20, 20], pen=(0, 9))
+        self._roi1 = RectROI(self._default_roi_origin, self._default_roi_size,
+                             pen=PenFactory.yellow)
         self._image_view.addItem(self._roi1)
         self._roi_ctrl1 = ROICtrlWidget("ROI 1")
         self._roi_ctrl1.activate_cb.stateChanged.connect(
             self.onToggleROIActivation)
 
-        self._roi2 = RectROI([20, 20], [20, 20])
+        self._roi2 = RectROI(self._default_roi_origin, self._default_roi_size,
+                             pen=PenFactory.green)
         self._image_view.addItem(self._roi2)
         self._roi_ctrl2 = ROICtrlWidget("ROI 2")
         self._roi_ctrl2.activate_cb.stateChanged.connect(
