@@ -21,14 +21,21 @@ class ROICtrlWidget(QtGui.QGroupBox):
     # w, h, cx, cy
     roi_region_changed_sgn = QtCore.Signal(float, float, float, float)
 
+    _pos_validator = QtGui.QDoubleValidator(-10000.0, 10000.0, 1)
+    _size_validator = QtGui.QDoubleValidator(0.0, 10000.0, 1)
+
     def __init__(self, title, *, parent=None):
         """"""
         super().__init__(title, parent=parent)
 
         self._width_le = QtGui.QLineEdit()
+        self._width_le.setValidator(self._size_validator)
         self._height_le = QtGui.QLineEdit()
+        self._height_le.setValidator(self._size_validator)
         self._cx_le = QtGui.QLineEdit()
+        self._cx_le.setValidator(self._pos_validator)
         self._cy_le = QtGui.QLineEdit()
+        self._cy_le.setValidator(self._pos_validator)
         self._width_le.editingFinished.connect(self.roiRegionChangedEvent)
         self._height_le.editingFinished.connect(self.roiRegionChangedEvent)
         self._cx_le.editingFinished.connect(self.roiRegionChangedEvent)
