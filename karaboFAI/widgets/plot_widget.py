@@ -24,15 +24,6 @@ class PlotWidget(GraphicsView):
     sigRangeChanged = QtCore.Signal(object, object)
     sigTransformChanged = QtCore.Signal(object)
 
-    # The following methods are wrapped directly from PlotItem:
-    __plotitem_methods = [
-        'plot', 'removeItem', 'addLegend',
-        'setXRange', 'setYRange', 'setRange', 'autoRange',
-        'enableAutoRange', 'disableAutoRange',
-        'setXLink', 'setYLink', 'setLabel', 'setTitle', 'setLimits',
-        'viewRect', 'setMouseEnabled', 'register', 'unregister'
-    ]
-
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
@@ -66,18 +57,27 @@ class PlotWidget(GraphicsView):
         self.setParent(None)
         super().close()
 
-    def __getattr__(self, attr):
-        """Forward methods from plotItem."""
-        if attr in self.__plotitem_methods:
-            return getattr(self.plotItem, attr)
-        raise AttributeError(attr)
-
     def addItem(self, *args, **kwargs):
-        """Explicitly call the addItem in PlotItem.
+        """Explicitly call PlotItem.addItem.
 
         GraphicsView also has the addItem method.
         """
         self.plotItem.addItem(*args, **kwargs)
+
+    def plot(self, *args, **kwargs):
+        return self.plotItem.plot(*args, **kwargs)
+
+    def setAspectLocked(self, *args, **kwargs):
+        self.plotItem.setAspectLocked(*args, **kwargs)
+
+    def setLabel(self, *args, **kwargs):
+        self.plotItem.setLabel(*args, **kwargs)
+
+    def setTitle(self, *args, **kwargs):
+        self.plotItem.setTitle(*args, **kwargs)
+
+    def addLegend(self, *args, **kwargs):
+        self.plotItem.addLegend(*args, **kwargs)
 
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)

@@ -115,14 +115,14 @@ class ImageView(QtGui.QWidget):
         """
         self._hist_widget.gradient.setColorMap(cm)
 
-    def setAspectLocked(self, lock):
-        self._plot_widget.plotItem.vb.setAspectLocked(lock)
+    def setAspectLocked(self, *args, **kwargs):
+        self._plot_widget.setAspectLocked(*args, **kwargs)
 
-    def invertY(self, inv=True):
-        self._plot_widget.plotItem.vb.invertY(inv)
+    def invertY(self, *args, **kwargs):
+        self._plot_widget.plotItem.invertY(*args, **kwargs)
 
-    def addItem(self, item):
-        self._plot_widget.plotItem.vb.addItem(item)
+    def addItem(self, *args, **kwargs):
+        self._plot_widget.addItem(*args, **kwargs)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)
