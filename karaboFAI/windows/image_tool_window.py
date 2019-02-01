@@ -18,7 +18,8 @@ from ..logger import logger
 
 class ROICtrlWidget(QtGui.QGroupBox):
 
-    roi_region_changed_sgn = QtCore.Signal(float, float)
+    # w, h, cx, cy
+    roi_region_changed_sgn = QtCore.Signal(float, float, float, float)
 
     def __init__(self, title, *, parent=None):
         """"""
@@ -26,8 +27,12 @@ class ROICtrlWidget(QtGui.QGroupBox):
 
         self._width_le = QtGui.QLineEdit()
         self._height_le = QtGui.QLineEdit()
+        self._cx_le = QtGui.QLineEdit()
+        self._cy_le = QtGui.QLineEdit()
         self._width_le.editingFinished.connect(self.roiRegionChangedEvent)
         self._height_le.editingFinished.connect(self.roiRegionChangedEvent)
+        self._cx_le.editingFinished.connect(self.roiRegionChangedEvent)
+        self._cy_le.editingFinished.connect(self.roiRegionChangedEvent)
 
         self._lock_cb = QtGui.QCheckBox("Lock")
         self.activate_cb = QtGui.QCheckBox("Activate")
@@ -40,6 +45,10 @@ class ROICtrlWidget(QtGui.QGroupBox):
         wh_layout.addWidget(self._width_le)
         wh_layout.addWidget(QtGui.QLabel("Height: "))
         wh_layout.addWidget(self._height_le)
+        wh_layout.addWidget(QtGui.QLabel("X center: "))
+        wh_layout.addWidget(self._cx_le)
+        wh_layout.addWidget(QtGui.QLabel("Y center: "))
+        wh_layout.addWidget(self._cy_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -52,14 +61,18 @@ class ROICtrlWidget(QtGui.QGroupBox):
 
         self.setLayout(layout)
 
-    def updateParameters(self, pos, size):
+    def updateParameters(self, size, pos):
         self._width_le.setText(str(size[0]))
         self._height_le.setText(str(size[1]))
+        self._cx_le.setText(str(pos[0]))
+        self._cy_le.setText(str(pos[1]))
 
     def roiRegionChangedEvent(self):
         w = float(self._width_le.text())
         h = float(self._height_le.text())
-        self.roi_region_changed_sgn.emit(w, h)
+        cx = float(self._cx_le.text())
+        cy = float(self._cy_le.text())
+        self.roi_region_changed_sgn.emit(w, h, cx, cy)
 
 
 class MaskCtrlWidget(QtGui.QGroupBox):
@@ -165,14 +178,19 @@ class ImageToolWindow(AbstractWindow):
     def roiRegionChangedEvent(self):
         sender = self.sender()
         if sender is self._image_view.roi1:
-            self._roi1_ctrl.updateParameters(sender.pos(), sender.size())
+            self._roi1_ctrl.updateParameters(sender.size(), sender.pos())
         elif sender is self._image_view.roi2:
-            self._roi2_ctrl.updateParameters(sender.pos(), sender.size())
+            self._roi2_ctrl.updateParameters(sender.size(), sender.pos())
 
-    @QtCore.pyqtSlot(float, float)
-    def onRoiRegionChanged(self, w, h):
+    @QtCore.pyqtSlot(float, float, float, float)
+    def onRoiRegionChanged(self, w, h, cx, cy):
         sender = self.sender()
+        state = {
+            'pos': (cx, cy),
+            'size': (w, h),
+            'angle': (0.0, 0.0)
+        }
         if sender is self._roi1_ctrl:
-            self._image_view.roi1.setSize((w, h))
+            self._image_view.roi1.setState(state)
         elif sender is self._roi2_ctrl:
-            self._image_view.roi2.setSize((w, h))
+            self._image_view.roi2.setSize(state)
