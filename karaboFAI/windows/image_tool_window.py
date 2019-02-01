@@ -78,13 +78,9 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageView()
 
-        self._roi_ctrl1 = ROICtrlWidget("ROI 1")
-        self._roi_ctrl1.activate_cb.stateChanged.connect(
-            self.onToggleROIActivation)
-
-        self._roi_ctrl2 = ROICtrlWidget("ROI 2")
-        self._roi_ctrl2.activate_cb.stateChanged.connect(
-            self.onToggleROIActivation)
+        self._roi_ctrls = [ROICtrlWidget("ROI {}".format(i)) for i in range(2)]
+        for ctrl in self._roi_ctrls:
+            ctrl.activate_cb.stateChanged.connect(self.onToggleROIActivation)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
 
@@ -100,8 +96,8 @@ class ImageToolWindow(AbstractWindow):
     def initUI(self):
         """Override."""
         tool_layout = QtGui.QGridLayout()
-        tool_layout.addWidget(self._roi_ctrl1, 0, 0, 1, 1)
-        tool_layout.addWidget(self._roi_ctrl2, 1, 0, 1, 1)
+        tool_layout.addWidget(self._roi_ctrls[0], 0, 0, 1, 1)
+        tool_layout.addWidget(self._roi_ctrls[1], 1, 0, 1, 1)
 
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 1)
@@ -110,6 +106,9 @@ class ImageToolWindow(AbstractWindow):
         layout.addWidget(self._update_image_btn, 1, 1, 1, 1)
 
         self._cw.setLayout(layout)
+
+        for i in range(2):
+            self._activate_roi(i)
 
     def updateImage(self):
         """For updating image manually."""
@@ -121,13 +120,17 @@ class ImageToolWindow(AbstractWindow):
 
     def onToggleROIActivation(self, state):
         sender = self.sender()
-        if sender is self._roi_ctrl1.activate_cb:
+        if sender is self._roi_ctrls[0].activate_cb:
             if state == QtCore.Qt.Checked:
                 self._image_view.roi1.show()
             else:
                 self._image_view.roi1.hide()
-        else:
+        elif sender is self._roi_ctrls[1].activate_cb:
             if state == QtCore.Qt.Checked:
                 self._image_view.roi2.show()
             else:
                 self._image_view.roi2.hide()
+
+    def _activate_roi(self, idx):
+        self._roi_ctrls[idx].activate_cb.setChecked(True)
+

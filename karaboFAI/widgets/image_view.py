@@ -32,7 +32,7 @@ class ImageView(QtGui.QWidget):
     # we want it to share across all the images (not implemented yet)
     _roi1_pos = (20, 20)
     _roi1_size = (50, 50)
-    _roi2_pos = (20, 20)
+    _roi2_pos = (40, 40)
     _roi2_size = (50, 50)
 
     def __init__(self, *, parent=None, level_mode='mono'):
