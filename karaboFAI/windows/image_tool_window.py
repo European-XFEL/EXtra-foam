@@ -62,10 +62,11 @@ class ROICtrlWidget(QtGui.QGroupBox):
         self.setLayout(layout)
 
     def updateParameters(self, size, pos):
-        self._width_le.setText(str(size[0]))
-        self._height_le.setText(str(size[1]))
-        self._cx_le.setText(str(pos[0]))
-        self._cy_le.setText(str(pos[1]))
+        digits = 1
+        self._width_le.setText(str(round(size[0], digits)))
+        self._height_le.setText(str(round(size[1], digits)))
+        self._cx_le.setText(str(round(pos[0], digits)))
+        self._cy_le.setText(str(round(pos[1], digits)))
 
     def roiRegionChangedEvent(self):
         w = float(self._width_le.text())
@@ -81,7 +82,7 @@ class MaskCtrlWidget(QtGui.QGroupBox):
         """"""
         super().__init__(title, parent=parent)
 
-        self._lock_cb = QtGui.QCheckBox("Lock")
+        self._lock_cb = QtGui.QCheckBox("Not implemented")
 
         self.initUI()
 
