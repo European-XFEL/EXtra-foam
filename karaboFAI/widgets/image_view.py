@@ -37,7 +37,10 @@ class ImageView(QtGui.QWidget):
             one set of levels is drawn for each channel.
         """
         super().__init__(parent=parent)
-        parent.registerPlotWidget(self)
+        try:
+            parent.registerPlotWidget(self)
+        except AttributeError:
+            pass
 
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
@@ -63,17 +66,19 @@ class ImageView(QtGui.QWidget):
         layout.addWidget(self._plot_widget)
         layout.addWidget(self._hist_widget)
         self.setLayout(layout)
-        self.setContentsMargins(0, 0, 0, 0)
         self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setSpacing(0)
 
     def update(self, data):
         """karaboFAI interface."""
-        self.setImage(data.image_mean, auto_range=True, auto_levels=True)
+        self.setImage(data.image_mean,
+                      auto_range=False,
+                      auto_levels=(not self._is_initialized))
 
         if not self._is_initialized:
             self._is_initialized = True
 
-    def setImage(self, img, *, auto_range=True, auto_levels=True, levels=None):
+    def setImage(self, img, *, auto_range=True, auto_levels=True):
         """Set the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
@@ -81,18 +86,14 @@ class ImageView(QtGui.QWidget):
             the image.
         :param bool auto_levels: whether to update the white/black levels
             to fit the image.
-        :param tuple levels: (min, max), the white and black level values
-            to use.
         """
         self._image = img
-        self._process_image()
 
-        self._image_item.setImage(img, auto_levels=False)
+        self._image_item.setImage(self._image, autoLevels=False)
 
-        if levels is None and auto_levels:
+        if auto_levels:
+            self._image_levels = quick_min_max(self._image)
             self.setLevels(rgba=[self._image_levels])
-        if levels is not None:
-            self.setLevels(*levels)
 
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
@@ -127,12 +128,6 @@ class ImageView(QtGui.QWidget):
         :param bool inv: True for inverting the Y axis and False for not.
         """
         self._plot_widget.plotItem.vb.invertY(inv)
-
-    def _process_image(self):
-        """Returns the image data after it has been processed by any normalization options in use.
-        """
-        if not self._is_initialized:
-            self._image_levels = quick_min_max(self._image)
 
     def close(self):
         self.parent().unregisterPlotWidget(self)

@@ -20,7 +20,7 @@ import zmq
 from .logger import logger
 from .widgets.pyqtgraph import QtCore, QtGui
 from .widgets import GuiLogger
-from .windows import DrawMaskWindow
+from .windows import DrawMaskWindow, ImageToolWindow
 from .data_acquisition import DataAcquisition
 from .data_processing import Data4Visualization
 from .file_server import FileServer
@@ -97,6 +97,15 @@ class MainGUI(QtGui.QMainWindow):
             self)
         load_mask_at.triggered.connect(self.loadMaskImage)
         self._tool_bar.addAction(load_mask_at)
+
+        #
+        image_tool_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/load_mask.png")),
+            "Image analysis",
+            self)
+        image_tool_at.triggered.connect(
+            lambda: ImageToolWindow(self._data, parent=self))
+        self._tool_bar.addAction(image_tool_at)
 
         # *************************************************************
         # Miscellaneous
@@ -210,6 +219,9 @@ class MainGUI(QtGui.QMainWindow):
         if not filename:
             logger.error("Please specify the image mask file!")
         self.image_mask_sgn.emit(filename)
+
+    def openImageAnalysis(self):
+        self._img = ImageAnalysisWidget(parent=self)
 
     def onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
