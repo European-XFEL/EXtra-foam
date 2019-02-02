@@ -26,22 +26,32 @@ class RectROI(ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, pos, size, centered=False, **args):
+    def __init__(self, pos, size, **args):
         super().__init__(pos, size, **args)
-        if centered:
-            center = [0.5, 0.5]
-        else:
-            center = [0, 0]
 
-        self.addScaleHandle([1, 1], center)
+        self._add_handle()
 
-        self.handle = self.handles[0]  # there is only one handler
+        self._handle_info = self.handles[0]  # there is only one handler
 
     def lockAspect(self):
-        self.handle['lockAspect'] = True
+        self._handle_info['lockAspect'] = True
 
     def unLockAspect(self):
-        self.handle['lockAspect'] = False
+        self._handle_info['lockAspect'] = False
+
+    def lock(self):
+        self.translatable = False
+        self.removeHandle(0)
+        self._handle_info = None
+
+    def unLock(self):
+        self.translatable = True
+        self._add_handle()
+        self._handle_info = self.handles[0]
+
+    def _add_handle(self):
+        # position, scaling center
+        self.addScaleHandle([1, 1], [0, 0])
 
 
 class ImageView(QtGui.QWidget):
