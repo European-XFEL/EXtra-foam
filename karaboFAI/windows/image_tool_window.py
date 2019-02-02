@@ -86,15 +86,23 @@ class ROICtrlWidget(QtGui.QGroupBox):
         cy = float(self._cy_le.text())
         self.roi_region_changed_sgn.emit(w, h, cx, cy)
 
-    def lockEdit(self):
+    def disableLockEdit(self):
         for w in self._line_edits:
             w.setDisabled(True)
         self.lock_aspect_cb.setDisabled(True)
 
-    def unlockEdit(self):
+    def enableLockEdit(self):
         for w in self._line_edits:
             w.setDisabled(False)
         self.lock_aspect_cb.setDisabled(False)
+
+    def disableAllEdit(self):
+        self.disableLockEdit()
+        self.lock_cb.setDisabled(True)
+
+    def enableAllEdit(self):
+        self.lock_cb.setDisabled(False)
+        self.enableLockEdit()
 
 
 class MaskCtrlWidget(QtGui.QGroupBox):
@@ -189,47 +197,50 @@ class ImageToolWindow(AbstractWindow):
         self._image_view.setImage(data.image_mean)
 
     def toggleRoiActivationEvent(self, state):
-        sender = self.sender()
-        if sender is self._roi1_ctrl.activate_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi1.show()
-            else:
-                self._image_view.roi1.hide()
-        elif sender is self._roi2_ctrl.activate_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi2.show()
-            else:
-                self._image_view.roi2.hide()
+        sender = self.sender().parent()
+        if sender is self._roi1_ctrl:
+            roi = self._image_view.roi1
+        elif sender is self._roi2_ctrl:
+            roi = self._image_view.roi2
+        else:
+            return
+
+        if state == QtCore.Qt.Checked:
+            roi.show()
+            sender.enableAllEdit()
+        else:
+            roi.hide()
+            sender.disableAllEdit()
 
     def lockAspectEvent(self, state):
-        sender = self.sender()
-        if sender is self._roi1_ctrl.lock_aspect_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi1.lockAspect()
-            else:
-                self._image_view.roi1.unLockAspect()
-        elif sender is self._roi2_ctrl.lock_aspect_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi2.lockAspect()
-            else:
-                self._image_view.roi2.unLockAspect()
+        sender = self.sender().parent()
+        if sender is self._roi1_ctrl:
+            roi = self._image_view.roi1
+        elif sender is self._roi2_ctrl:
+            roi = self._image_view.roi2
+        else:
+            return
+
+        if state == QtCore.Qt.Checked:
+            roi.lockAspect()
+        else:
+            roi.unLockAspect()
 
     def lockEvent(self, state):
-        sender = self.sender()
-        if sender is self._roi1_ctrl.lock_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi1.lock()
-                self._roi1_ctrl.lockEdit()
-            else:
-                self._image_view.roi1.unLock()
-                self._roi1_ctrl.unlockEdit()
-        elif sender is self._roi2_ctrl.lock_cb:
-            if state == QtCore.Qt.Checked:
-                self._image_view.roi2.lock()
-                self._roi2_ctrl.lockEdit()
-            else:
-                self._image_view.roi2.unLock()
-                self._roi2_ctrl.unlockEdit()
+        sender = self.sender().parent()
+        if sender is self._roi1_ctrl:
+            roi = self._image_view.roi1
+        elif sender is self._roi2_ctrl:
+            roi = self._image_view.roi2
+        else:
+            return
+
+        if state == QtCore.Qt.Checked:
+            roi.lock()
+            sender.disableLockEdit()
+        else:
+            roi.unLock()
+            sender.enableLockEdit()
 
     def _activate_roi1(self):
         self._roi1_ctrl.activate_cb.setChecked(True)
