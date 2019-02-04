@@ -53,7 +53,7 @@ class FaiDataProcessor(Worker):
             the integration radial unit. (float, float)
         integration_points_sp (int): number of points in the
             integration output pattern.
-        mask_range_sp (tuple): (min, max), the pixel value outside
+        threshold_mask_sp (tuple): (min, max), the pixel value outside
             the range will be clipped to the corresponding edge.
         image_mask (numpy.ndarray): a 2D mask.
     """
@@ -82,7 +82,8 @@ class FaiDataProcessor(Worker):
         self.integration_method_sp = None
         self.integration_range_sp = None
         self.integration_points_sp = None
-        self.mask_range_sp = None
+        self.threshold_mask_sp = (config["MASK_RANGE"][0],
+                                  config["MASK_RANGE"][1])
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -136,8 +137,8 @@ class FaiDataProcessor(Worker):
         self.integration_points_sp = value
 
     @QtCore.pyqtSlot(float, float)
-    def onMaskRangeChanged(self, lb, ub):
-        self.mask_range_sp = (lb, ub)
+    def onThresholdMaskChanged(self, lb, ub):
+        self.threshold_mask_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float)
     def onPhotonEnergyChanged(self, photon_energy):
@@ -240,8 +241,9 @@ class FaiDataProcessor(Worker):
             mask = self.image_mask
 
         # add threshold mask
-        mask[(assembled < self.mask_range_sp[0]) |
-             (assembled > self.mask_range_sp[1])] = 1
+        mask_min = self.threshold_mask_sp[0]
+        mask_max = self.threshold_mask_sp[1]
+        mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
         # do integration
         ret = ai.integrate1d(assembled,
@@ -261,15 +263,15 @@ class FaiDataProcessor(Worker):
 
         # clip the array, which now will contain only numerical values
         # within the mask range
-        np.clip(assembled, self.mask_range_sp[0], self.mask_range_sp[1],
-                out=assembled)
+        np.clip(assembled, mask_min, mask_max, out=assembled)
 
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=intensity,
                              intensity_mean=intensity,
-                             image=assembled,
+                             images=assembled,
                              image_mean=assembled,
+                             threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 
         return data
@@ -323,6 +325,9 @@ class FaiDataProcessor(Worker):
                     format(self.image_mask.shape, assembled[0].shape))
             base_mask = self.image_mask
 
+        mask_min = self.threshold_mask_sp[0]
+        mask_max = self.threshold_mask_sp[1]
+
         def _integrate1d_imp(i):
             """Use for multiprocessing."""
             # convert 'nan' to '-inf', as explained above
@@ -330,8 +335,7 @@ class FaiDataProcessor(Worker):
 
             # add threshold mask
             mask = np.copy(base_mask)
-            mask[(assembled[i] < self.mask_range_sp[0]) |
-                 (assembled[i] > self.mask_range_sp[1])] = 1
+            mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
 
             # do integration
             ret = ai.integrate1d(assembled[i],
@@ -357,8 +361,7 @@ class FaiDataProcessor(Worker):
 
         # clip the array, which now will contain only numerical values
         # within the mask range
-        np.clip(assembled_mean, self.mask_range_sp[0], self.mask_range_sp[1],
-                out=assembled_mean)
+        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
 
         # Note: 'assembled' still contains 'inf' and '-inf', we only do
         #       the clip later when necessary in order not to waste
@@ -368,8 +371,9 @@ class FaiDataProcessor(Worker):
                              momentum=momentum,
                              intensity=np.array(intensities),
                              intensity_mean=np.mean(intensities, axis=0),
-                             image=assembled,
+                             images=assembled,
                              image_mean=assembled_mean,
+                             threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 
         return data

@@ -42,10 +42,9 @@ class OverviewWindow(DockerWindow):
     _TOTAL_W = _ASSEMBLED_IMG_W + _M_PULSE_AI_W
     _TOTAL_H = _ASSEMBLED_IMG_H + 2 * _S_PULSE_AI_H
 
-    def __init__(self, data, *, parent=None):
+    def __init__(self, *args, **kwargs):
         """Initialization."""
-        super().__init__(data, parent=parent)
-        parent.registerPlotWindow(self)
+        super().__init__(*args, **kwargs)
 
         self._bulletin_widget = BulletinWidget(parent=self)
         self._assembled_image = ImageView(parent=self)
@@ -64,6 +63,8 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse2_img = SinglePulseImageView(parent=self)
 
         self.initUI()
+
+        parent = self.parent()
 
         parent.analysis_ctrl_widget.vip_pulse_id1_sgn.connect(
             self.onPulseID1Updated)

@@ -13,6 +13,7 @@ from ..widgets.pyqtgraph import QtCore, QtGui
 
 from ..widgets import ImageView
 from .base_window import AbstractWindow, SingletonWindow
+from ..config import config
 
 
 class ROICtrlWidget(QtGui.QGroupBox):
@@ -107,20 +108,39 @@ class ROICtrlWidget(QtGui.QGroupBox):
 
 class MaskCtrlWidget(QtGui.QGroupBox):
     """Widget for masking image."""
+
+    threshold_mask_sgn = QtCore.pyqtSignal(float, float)
+
+    _double_validator = QtGui.QDoubleValidator()
+
     def __init__(self, title, *, parent=None):
         """"""
         super().__init__(title, parent=parent)
 
-        self._lock_cb = QtGui.QCheckBox("Not implemented")
+        self._min_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][0]))
+        self._min_pixel_le.setValidator(self._double_validator)
+        self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
+        self._max_pixel_le.setValidator(self._double_validator)
+        self._min_pixel_le.returnPressed.connect(self.thresholdMaskChangedEvent)
+        self._max_pixel_le.returnPressed.connect(self.thresholdMaskChangedEvent)
 
         self.initUI()
 
     def initUI(self):
+        threshold_layout = QtGui.QHBoxLayout()
+        threshold_layout.addWidget(QtGui.QLabel("Min.: "))
+        threshold_layout.addWidget(self._min_pixel_le)
+        threshold_layout.addWidget(QtGui.QLabel("Max.: "))
+        threshold_layout.addWidget(self._max_pixel_le)
+
         layout = QtGui.QVBoxLayout()
 
-        layout.addWidget(self._lock_cb)
-
+        layout.addLayout(threshold_layout)
         self.setLayout(layout)
+
+    def thresholdMaskChangedEvent(self):
+        self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
+                                     float(self._max_pixel_le.text()))
 
 
 @SingletonWindow
@@ -131,8 +151,8 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
-    def __init__(self, data, *, parent=None):
-        super().__init__(data, parent=parent)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self._image_view = ImageView()
         self._image_view.roi1.sigRegionChangeFinished.connect(
@@ -163,6 +183,9 @@ class ImageToolWindow(AbstractWindow):
         self._image_view.roi2.setSize(self._image_view.roi2.size())
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
+        parent = self.parent()
+        self._mask_panel.threshold_mask_sgn.connect(
+            parent._proc_worker.onThresholdMaskChanged)
 
         self._update_image_btn = QtGui.QPushButton("Update image")
         self._update_image_btn.clicked.connect(self.updateImage)

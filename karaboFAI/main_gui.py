@@ -114,7 +114,7 @@ class MainGUI(QtGui.QMainWindow):
         self._data = Data4Visualization()
 
         # book-keeping opened windows
-        self._plot_windows = WeakKeyDictionary()
+        self._windows = WeakKeyDictionary()
 
         # book-keeping control widgets
         self._ctrl_widgets = []
@@ -183,7 +183,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         # clear the previous plots no matter what comes next
-        for w in self._plot_windows.keys():
+        for w in self._windows.keys():
             w.clear()
 
         if self._data.get().empty():
@@ -193,7 +193,7 @@ class MainGUI(QtGui.QMainWindow):
         t0 = time.perf_counter()
 
         # update the all the plots
-        for w in self._plot_windows.keys():
+        for w in self._windows.keys():
             w.update()
 
         logger.debug("Time for updating the plots: {:.1f} ms"
@@ -201,11 +201,11 @@ class MainGUI(QtGui.QMainWindow):
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
 
-    def registerPlotWindow(self, instance):
-        self._plot_windows[instance] = 1
+    def registerWindow(self, instance):
+        self._windows[instance] = 1
 
-    def unregisterPlotWindow(self, instance):
-        del self._plot_windows[instance]
+    def unregisterWindow(self, instance):
+        del self._windows[instance]
 
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)

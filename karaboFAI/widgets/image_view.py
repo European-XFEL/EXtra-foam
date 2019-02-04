@@ -195,23 +195,24 @@ class SinglePulseImageView(ImageView):
         self.pulse_id = 0
 
         self._mask_range_sp = None
-        parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
-            self.onMaskRangeChanged)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
-        image = data.image
+        images = data.images
+        threshold_mask = data.threshold_mask
 
-        try:
-            np.clip(image[self.pulse_id], *self._mask_range_sp,
-                    image[self.pulse_id])
-        except IndexError as e:
-            logger.error("<VIP pulse ID 1/2>: " + str(e))
+        max_id = len(data.intensity) - 1
+        if self.pulse_id <= max_id:
+            np.clip(images[self.pulse_id], *threshold_mask,
+                    images[self.pulse_id])
+        else:
+            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
+                         "pulse ID ({})".format(self.pulse_id, max_id))
             return
 
-        self.setImage(image[self.pulse_id],
+        self.setImage(images[self.pulse_id],
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
@@ -221,7 +222,3 @@ class SinglePulseImageView(ImageView):
     def close(self):
         self.parent().unregisterPlotWidget(self)
         super().close()
-
-    @QtCore.pyqtSlot(float, float)
-    def onMaskRangeChanged(self, lb, ub):
-        self._mask_range_sp = (lb, ub)

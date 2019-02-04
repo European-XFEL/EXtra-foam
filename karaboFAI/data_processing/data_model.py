@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
 from enum import IntEnum
 
 
@@ -35,6 +36,7 @@ class ProcessedData:
             Shape = (pulse_id, y, x)
         image_mean (numpy.ndarray): average of the detector images over
             pulses. Shape = (y, x)
+        threshold_mask (tuple): (min, max) threshold of the image mask.
         image_mask (numpy.ndarray): an image mask which is applied to all
             the detector images, default = None. Shape = (y, x)
     """
@@ -42,8 +44,9 @@ class ProcessedData:
                  momentum=None,
                  intensity=None,
                  intensity_mean=None,
-                 image=None,
+                 images=None,
                  image_mean=None,
+                 threshold_mask=(-np.inf, np.inf),
                  image_mask=None):
         """Initialization."""
         if not isinstance(tid, int):
@@ -55,8 +58,12 @@ class ProcessedData:
         self.intensity = intensity
         self.intensity_mean = intensity_mean
 
-        self.image = image
+        self.images = images
         self.image_mean = image_mean
+
+        # the mask information is stored in the data so that all the
+        # processing and visualization can use the same mask
+        self.threshold_mask = threshold_mask
         self.image_mask = image_mask
 
     @property
@@ -68,7 +75,7 @@ class ProcessedData:
 
         TODO: improve
         """
-        if self.image is None:
+        if self.images is None:
             return True
         return False
 

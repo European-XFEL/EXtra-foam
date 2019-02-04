@@ -10,16 +10,11 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..config import config
-from ..helpers import parse_boundary
-from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
-
-    image_mask_range_sgn = QtCore.pyqtSignal(float, float)
 
     pulse_id_range_sgn = QtCore.pyqtSignal(int, int)
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
@@ -60,12 +55,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
-        self._image_mask_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["MASK_RANGE"]]))
-
         self._disabled_widgets_during_daq = [
             self._max_pulse_id_le,
-            self._image_mask_range_le
         ]
 
         self.initUI()
@@ -74,8 +65,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         """Overload."""
         layout = QtGui.QFormLayout()
         layout.setLabelAlignment(QtCore.Qt.AlignRight)
-
-        layout.addRow("Image mask range: ", self._image_mask_range_le)
 
         if self._pulse_resolved:
             layout.addRow("Min. pulse ID: ", self._min_pulse_id_le)
@@ -87,13 +76,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
-        try:
-            image_mask_range = parse_boundary(self._image_mask_range_le.text())
-            self.image_mask_range_sgn.emit(*image_mask_range)
-        except ValueError as e:
-            logger.error("<Image mask range>: " + str(e))
-            return None
-
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)
@@ -102,9 +84,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id1_le.returnPressed.emit()
         self._vip_pulse_id2_le.returnPressed.emit()
 
-        info = "\n<Image mask range>: ({}, {})".format(*image_mask_range)
         if self._pulse_resolved:
-            info += "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
+            info = "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
 
         return info
 

@@ -34,7 +34,7 @@ class SingletonWindow:
                     or isinstance(self.instance, DockerWindow):
                 parent = self.instance.parent()
                 if parent is not None:
-                    parent.registerPlotWindow(self.instance)
+                    parent.registerWindow(self.instance)
                 self.instance.update()
 
         self.instance.show()
@@ -49,7 +49,7 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *, parent=None, pulse_resolved=True):
+    def __init__(self, data, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -58,6 +58,9 @@ class AbstractWindow(QtGui.QMainWindow):
             pulse-resolved or not.
         """
         super().__init__(parent=parent)
+        if parent is not None:
+            parent.registerWindow(self)
+
         self._data = data
         self._pulse_resolved = pulse_resolved
 
@@ -98,15 +101,32 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
+    def clear(self):
+        """Clear widgets.
+
+        This method is called by the main GUI.
+        """
+        pass
+
+    def update(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        pass
+
+    def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterWindow(self)
+        super().closeEvent(QCloseEvent)
+
 
 class DockerWindow(AbstractWindow):
     """QMainWindow displaying a single DockArea."""
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        parent = kwargs.get("parent", None)
-        if parent is not None:
-            parent.registerPlotWindow(self)
 
         self._plot_widgets = WeakKeyDictionary()  # book-keeping opened windows
 
@@ -146,12 +166,6 @@ class DockerWindow(AbstractWindow):
     def unregisterPlotWidget(self, instance):
         del self._plot_widgets[instance]
 
-    def closeEvent(self, QCloseEvent):
-        parent = self.parent()
-        if parent is not None:
-            parent.unregisterPlotWindow(self)
-        super().closeEvent(QCloseEvent)
-
 
 class PlotWindow(AbstractWindow):
     """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree."""
@@ -165,9 +179,6 @@ class PlotWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        parent = kwargs.get("parent", None)
-        if parent is not None:
-            parent.registerPlotWindow(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
@@ -347,9 +358,3 @@ class PlotWindow(AbstractWindow):
     def _reset(self):
         """Reset all internal states/histories."""
         pass
-
-    def closeEvent(self, QCloseEvent):
-        parent = self.parent()
-        if parent is not None:
-            parent.unregisterPlotWindow(self)
-        super().closeEvent(QCloseEvent)
