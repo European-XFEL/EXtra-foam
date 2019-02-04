@@ -196,8 +196,10 @@ class FaiDataProcessor(Worker):
 
         :return ProcessedData: processed data.
         """
-        # This needs to be checked. Sometimes throws an error readonly
-        # when trying to convert nan to -inf. Dirty hack -> to copy
+        # 'assembled' is a reference to the array data received from the
+        # pyzmq. The array data is only readable since the data is owned
+        # by a pointer in the zmq message (it is not copied). However,
+        # other data like data['metadata'] is writeable.
         assembled = np.copy(assembled)
 
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
