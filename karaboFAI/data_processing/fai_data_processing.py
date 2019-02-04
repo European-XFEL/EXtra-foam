@@ -419,7 +419,7 @@ class FaiDataProcessor(Worker):
                     modules_data = data[key]["data.image.pixels"]
 
                 expected_dim = len(config["EXPECTED_SHAPE"])
-                if hasattr(modules_data, 'shape') is False \
+                if not hasattr(modules_data, 'shape') \
                         or modules_data.shape[-expected_dim:] != config["EXPECTED_SHAPE"]:
                     msg = "Error in the shape of modules data"
                     logger.debug(msg)
