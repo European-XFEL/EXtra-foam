@@ -14,7 +14,7 @@ from .pyqtgraph import QtGui
 
 class BulletinWidget(QtGui.QWidget):
     """BulletinWidget class."""
-    def __init__(self, *, parent=None, pulse_resolved=True):
+    def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is

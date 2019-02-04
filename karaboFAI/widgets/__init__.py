@@ -7,11 +7,11 @@ from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 
 from .misc_widgets import (
-    colorMapFactory, GuiLogger, InputDialogWithCheckBox
+    colorMapFactory, GuiLogger, InputDialogWithCheckBox, PenFactory
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
-from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
+from .image_view import ImageView, SinglePulseImageView
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
 from .bulletin_widget import BulletinWidget
@@ -22,11 +22,11 @@ from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 __all__ = [
     "colorMapFactory",
     "BulletinWidget",
-    "ImageAnalysisWidget",
+    "ImageView",
     "MultiPulseAiWidget",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
-    "SinglePulseImageWidget",
+    "SinglePulseImageView",
 ]
 
 # add control widgets
@@ -45,4 +45,5 @@ __all__.extend([
     "FixedWidthLineEdit",
     "GuiLogger",
     "InputDialogWithCheckBox",
+    "PenFactory"
 ])

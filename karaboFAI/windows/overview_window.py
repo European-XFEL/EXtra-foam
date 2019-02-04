@@ -16,8 +16,8 @@ from ..widgets.pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
-    BulletinWidget, ImageAnalysisWidget, MultiPulseAiWidget,
-    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageWidget
+    BulletinWidget, ImageView, MultiPulseAiWidget,
+    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 
 
@@ -48,7 +48,7 @@ class OverviewWindow(DockerWindow):
         parent.registerPlotWindow(self)
 
         self._bulletin_widget = BulletinWidget(parent=self)
-        self._assembled_image = ImageAnalysisWidget(parent=self)
+        self._assembled_image = ImageView(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
 
         self._sample_degradation = SampleDegradationWidget(parent=self)
@@ -56,12 +56,12 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse1_ai_dock = None
         self._vip_pulse1_img_dock = None
         self._vip_pulse1_ai = SinglePulseAiWidget(parent=self)
-        self._vip_pulse1_img = SinglePulseImageWidget(parent=self)
+        self._vip_pulse1_img = SinglePulseImageView(parent=self)
 
         self._vip_pulse2_ai_dock = None
         self._vip_pulse2_img_dock = None
         self._vip_pulse2_ai = SinglePulseAiWidget(parent=self)
-        self._vip_pulse2_img = SinglePulseImageWidget(parent=self)
+        self._vip_pulse2_img = SinglePulseImageView(parent=self)
 
         self.initUI()
 
@@ -179,8 +179,8 @@ class OverviewWindowTrainResolved(DockerWindow):
 
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
-        self._assembled_image = ImageAnalysisWidget(parent=self)
-        self._ai = SinglePulseAiWidget(plot_mean=False, parent=self)
+        self._assembled_image = ImageView(parent=self)
+        self._ai = MultiPulseAiWidget(parent=self)
 
         self.initUI()
 
