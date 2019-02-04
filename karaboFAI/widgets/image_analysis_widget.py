@@ -59,8 +59,8 @@ class SinglePulseImageWidget(ImageView):
 
         self._is_initialized = False
 
-        self._mask_range_sp = None
-        parent.parent().analysis_ctrl_widget.mask_range_sgn.connect(
+        self._image_mask_range_sp = None
+        parent.parent().analysis_ctrl_widget.image_mask_range_sgn.connect(
             self.onMaskRangeChanged)
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
@@ -75,7 +75,7 @@ class SinglePulseImageWidget(ImageView):
             self.setImage(image[self.pulse_id], autoRange=False,
                           autoLevels=(not self._is_initialized))
         else:
-            logger.error("<VIP pulse ID 1/2>: VIP pulse ID ({}) > Maximum "
+            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
                          "pulse ID ({})".format(self.pulse_id, max_id))
             return
 
@@ -88,4 +88,4 @@ class SinglePulseImageWidget(ImageView):
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
-        self._mask_range_sp = (lb, ub)
+        self._image_mask_range_sp = (lb, ub)

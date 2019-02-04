@@ -65,9 +65,9 @@ class OverviewWindow(DockerWindow):
 
         self.initUI()
 
-        parent.data_ctrl_widget.vip_pulse_id1_sgn.connect(
+        parent.analysis_ctrl_widget.vip_pulse_id1_sgn.connect(
             self.onPulseID1Updated)
-        parent.data_ctrl_widget.vip_pulse_id2_sgn.connect(
+        parent.analysis_ctrl_widget.vip_pulse_id2_sgn.connect(
             self.onPulseID2Updated)
 
         self.resize(self._TOTAL_W, self._TOTAL_W)

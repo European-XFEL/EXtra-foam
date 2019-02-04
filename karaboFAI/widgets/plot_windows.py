@@ -157,20 +157,20 @@ class PlotWindow(AbstractWindow):
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
         self.mask_range_sp = None
-        self.diff_integration_range_sp = None
+        self.integration_range_sp = None
         self.normalization_range_sp = None
-        self.ma_window_size_sp = None
+        self.moving_average_window_sp = None
         self.laser_mode_sp = None
         self.on_pulse_ids_sp = None
         self.off_pulse_ids_sp = None
 
-        self.parent().mask_range_sgn.connect(self.onMaskRangeChanged)
+        self.parent().image_mask_range_sgn.connect(self.onMaskRangeChanged)
         self.parent().on_off_pulse_ids_sgn.connect(self.onOffPulseIdChanged)
-        self.parent().diff_integration_range_sgn.connect(
+        self.parent().integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
         self.parent().normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
-        self.parent().ma_window_size_sgn.connect(self.onMAWindowSizeChanged)
+        self.parent().moving_average_window_sgn.connect(self.onMAWindowSizeChanged)
 
         # -------------------------------------------------------------
         # available Parameters (shared parameters and actions)
@@ -191,10 +191,10 @@ class PlotWindow(AbstractWindow):
         self.normalization_range_param = ptree.Parameter.create(
             name="Normalization range", type='str', readonly=True
         )
-        self.diff_integration_range_param = ptree.Parameter.create(
+        self.integration_range_param = ptree.Parameter.create(
             name="Diff integration range", type='str', readonly=True
         )
-        self.ma_window_size_param = ptree.Parameter.create(
+        self.moving_average_window_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
         )
         self.reset_action_param = ptree.Parameter.create(
@@ -274,7 +274,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
-        self.diff_integration_range_sp = (lb, ub)
+        self.integration_range_sp = (lb, ub)
         # then update the parameter tree
         try:
             self._pro_params.child("Diff integration range").setValue(
@@ -284,7 +284,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
-        self.ma_window_size_sp = value
+        self.moving_average_window_sp = value
         # then update the parameter tree
         try:
             self._pro_params.child('M.A. window size').setValue(str(value))
@@ -524,8 +524,8 @@ class LaserOnOffWindow(PlotWindow):
 
         self._pro_params.addChildren([
             self.normalization_range_param,
-            self.diff_integration_range_param,
-            self.ma_window_size_param
+            self.integration_range_param,
+            self.moving_average_window_param
         ])
 
         self._act_params.addChildren([
@@ -599,14 +599,14 @@ class LaserOnOffWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) < self.moving_average_window_sp:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) == self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.ma_window_size_sp
+                            / self.moving_average_window_sp
                     else:
                         raise ValueError  # should never reach here
 
@@ -623,14 +623,14 @@ class LaserOnOffWindow(PlotWindow):
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
+            elif len(self._off_pulses_hist) <= self.moving_average_window_sp:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
+            elif len(self._off_pulses_hist) == self.moving_average_window_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.ma_window_size_sp
+                    / self.moving_average_window_sp
             else:
                 raise ValueError  # should never reach here
 
@@ -640,7 +640,7 @@ class LaserOnOffWindow(PlotWindow):
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit and update history
-            fom = slice_curve(diff, momentum, *self.diff_integration_range_sp)[0]
+            fom = slice_curve(diff, momentum, *self.integration_range_sp)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)
@@ -821,7 +821,7 @@ class BraggSpotsWindow(PlotWindow):
         ])
 
         self._pro_params.addChildren([
-            self.ma_window_size_param
+            self.moving_average_window_param
         ])
 
         self._ana_params.addChildren([
@@ -1044,14 +1044,14 @@ class BraggSpotsWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) < self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_ma) \
                             / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) == self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.ma_window_size_sp
+                            / self.moving_average_window_sp
                     else:
                         raise ValueError
 
@@ -1116,14 +1116,14 @@ class BraggSpotsWindow(PlotWindow):
             # trains.
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
+            elif len(self._off_pulses_hist) <= self.moving_average_window_sp:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_ma) \
                     / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
+            elif len(self._off_pulses_hist) == self.moving_average_window_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.ma_window_size_sp
+                    / self.moving_average_window_sp
             else:
                 raise ValueError
 
@@ -1445,7 +1445,7 @@ class SampleDegradationMonitor(PlotWindow):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.diff_integration_range_sp)[0]
+            fom = slice_curve(diff, momentum, *self.integration_range_sp)[0]
             foms.append(np.sum(np.abs(fom)))
 
         bar = BarGraphItem(
@@ -1459,7 +1459,7 @@ class SampleDegradationMonitor(PlotWindow):
         """Override."""
         self._pro_params.addChildren([
             self.normalization_range_param,
-            self.diff_integration_range_param,
+            self.integration_range_param,
         ])
 
         params = ptree.Parameter.create(name='params', type='group',

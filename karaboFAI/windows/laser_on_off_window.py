@@ -45,13 +45,14 @@ class LaserOnOffWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
+        parent = self.parent()
+        parent.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
-        self.parent().analysis_ctrl_widget.diff_integration_range_sgn.connect(
+        parent.pump_probe_ctrl_widget.integration_range_sgn.connect(
             self.onDiffIntegrationRangeChanged)
-        self.parent().analysis_ctrl_widget.normalization_range_sgn.connect(
+        parent.pump_probe_ctrl_widget.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
-        self.parent().analysis_ctrl_widget.ma_window_size_sgn.connect(
+        parent.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
             self.onMAWindowSizeChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters
@@ -131,8 +132,8 @@ class LaserOnOffWindow(PlotWindow):
 
         self._pro_params.addChildren([
             self.normalization_range_param,
-            self.diff_integration_range_param,
-            self.ma_window_size_param
+            self.integration_range_param,
+            self.moving_average_window_param
         ])
 
         self._act_params.addChildren([
@@ -206,14 +207,14 @@ class LaserOnOffWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) < self.moving_average_window_sp:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) == self.moving_average_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.ma_window_size_sp
+                            / self.moving_average_window_sp
                     else:
                         raise ValueError  # should never reach here
 
@@ -230,14 +231,14 @@ class LaserOnOffWindow(PlotWindow):
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
+            elif len(self._off_pulses_hist) <= self.moving_average_window_sp:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
+            elif len(self._off_pulses_hist) == self.moving_average_window_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.ma_window_size_sp
+                    / self.moving_average_window_sp
             else:
                 raise ValueError  # should never reach here
 
@@ -247,7 +248,7 @@ class LaserOnOffWindow(PlotWindow):
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit and update history
-            fom = slice_curve(diff, momentum, *self.diff_integration_range_sp)[0]
+            fom = slice_curve(diff, momentum, *self.integration_range_sp)[0]
             self._fom_hist.append(np.sum(np.abs(fom)))
             # always append the off-pulse id
             self._fom_hist_train_id.append(data.tid)

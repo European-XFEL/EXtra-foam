@@ -15,9 +15,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     gui.data_ctrl_widget.data_source_sgn.emit(
         DataSource.CALIBRATED_FILE)
-    gui.analysis_ctrl_widget.normalization_range_sgn.emit(1, 5)
-    gui.analysis_ctrl_widget.diff_integration_range_sgn.emit(1, 5)
-    gui.analysis_ctrl_widget.ma_window_size_sgn.emit(9999)
+    gui.pump_probe_ctrl_widget.normalization_range_sgn.emit(1, 5)
+    gui.pump_probe_ctrl_widget.integration_range_sgn.emit(1, 5)
+    gui.pump_probe_ctrl_widget.moving_average_window_sgn.emit(9999)
 
     def setUp(self):
         self._data = []
@@ -31,7 +31,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
                                             intensity=(i+1)*intensity))
 
     def testNormalMode(self):
-        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+        self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
             "normal", [0, 2], [1, 3])
 
         win = self.win
@@ -110,7 +110,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+        self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
             "even/odd", [0, 2], [1, 3])
 
         win = self.win
@@ -240,7 +240,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        self.gui.analysis_ctrl_widget.on_off_pulse_ids_sgn.emit(
+        self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
             "odd/even", [0, 2], [1, 3])
 
         win = self.win

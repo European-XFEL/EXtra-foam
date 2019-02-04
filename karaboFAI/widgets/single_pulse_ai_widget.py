@@ -61,7 +61,7 @@ class SinglePulseAiWidget(PlotWidget):
                 self._pulse_plot.setData(data.momentum,
                                          data.intensity[self.pulse_id])
             else:
-                logger.error("<VIP pulse ID 1/2>: VIP pulse ID ({}) > Maximum "
+                logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
                              "pulse ID ({})".format(self.pulse_id, max_id))
                 return
         else:
