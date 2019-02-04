@@ -261,16 +261,17 @@ class FaiDataProcessor(Worker):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        assembled_mean = np.copy(assembled)
         # clip the array, which now will contain only numerical values
         # within the mask range
-        np.clip(assembled, mask_min, mask_max, out=assembled)
+        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
 
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=intensity,
                              intensity_mean=intensity,
                              images=assembled,
-                             image_mean=assembled,
+                             image_mean=assembled_mean,
                              threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 

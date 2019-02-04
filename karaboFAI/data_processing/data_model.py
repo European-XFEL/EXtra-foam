@@ -46,7 +46,7 @@ class ProcessedData:
                  intensity_mean=None,
                  images=None,
                  image_mean=None,
-                 threshold_mask=(-np.inf, np.inf),
+                 threshold_mask=None,
                  image_mask=None):
         """Initialization."""
         if not isinstance(tid, int):
