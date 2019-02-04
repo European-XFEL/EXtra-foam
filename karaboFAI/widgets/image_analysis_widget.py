@@ -68,15 +68,16 @@ class SinglePulseImageWidget(ImageView):
     def update(self, data):
         image = data.image
 
-        try:
+        max_id = len(image) - 1
+        if self.pulse_id <= max_id:
             np.clip(image[self.pulse_id], *self._mask_range_sp,
                     image[self.pulse_id])
-        except IndexError as e:
-            logger.error("<VIP pulse ID 1/2>: " + str(e))
+            self.setImage(image[self.pulse_id], autoRange=False,
+                          autoLevels=(not self._is_initialized))
+        else:
+            logger.error("<VIP pulse ID 1/2>: VIP pulse ID ({}) > Maximum "
+                         "pulse ID ({})".format(self.pulse_id, max_id))
             return
-
-        self.setImage(image[self.pulse_id], autoRange=False,
-                      autoLevels=(not self._is_initialized))
 
         if not self._is_initialized:
             self._is_initialized = True

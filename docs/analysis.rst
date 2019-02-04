@@ -12,7 +12,7 @@ To start **karaboFAI** on any online cluster:
     /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
 
 
-Valid detectors are `AGIPD`, `LPD` and `JungFrau`.
+Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
 
 .. note::
    It usually takes a long time to start **karaboFAI** for the first time! This
@@ -81,4 +81,4 @@ of the directory which contains the (calibrated) files.
    * - JungFrau
      - /gpfs/exfel/exp/FXE/201801/p002118/proc/r0143
    * - FastCCD
-     -
+     - /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141

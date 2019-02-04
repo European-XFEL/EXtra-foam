@@ -177,10 +177,10 @@ class OverviewWindowTrainResolved(DockerWindow):
         super().__init__(data, parent=parent)
         parent.registerPlotWindow(self)
 
-        self._bulletin_widget = BulletinWidget(parent=self,
-                                               pulse_resolved=False)
+        self._bulletin_widget = BulletinWidget(pulse_resolved=False,
+                                               parent=self)
         self._assembled_image = ImageAnalysisWidget(parent=self)
-        self._ai = MultiPulseAiWidget(parent=self)
+        self._ai = SinglePulseAiWidget(plot_mean=False, parent=self)
 
         self.initUI()
 
