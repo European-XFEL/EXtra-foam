@@ -524,7 +524,8 @@ class FaiDataProcessor(Worker):
                 w2, h2, cx2, cy2 = self.roi2_sp
                 roi2_intensity = np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2])
 
-        data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
+            data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
+
         if data.roi_hist.full():
             self.log("ROI history is full!")
 

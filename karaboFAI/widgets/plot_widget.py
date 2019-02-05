@@ -16,15 +16,16 @@ All rights reserved.
 from .pyqtgraph import GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui
 from .misc_widgets import PenFactory
 from ..logger import logger
+from ..config import config
 
 
 class PlotWidget(GraphicsView):
     """GraphicsView widget displaying a single PlotItem.
 
-    This is a reimplementation of the PlotWidget in pyqtgraph.
+    Note: it is different from the PlotWidget in pyqtgraph.
 
-    :class:`GraphicsView <pyqtgraph.GraphicsView>` widget with a single
-    :class:`PlotItem <pyqtgraph.PlotItem>` inside.
+    This base class should be used to display plots except image in
+    karaboFAI. For image, please refer to ImageView class.
     """
     # signals wrapped from PlotItem / ViewBox
     sigRangeChanged = QtCore.Signal(object, object)
@@ -112,15 +113,16 @@ class SinglePulseAiWidget(PlotWidget):
     result of individual pulses. The azimuthal integration result is also
     compared with the average azimuthal integration of all the pulses.
     """
-    def __init__(self, *, plot_mean=True, parent=None):
+    def __init__(self, *, pulse_id=0, plot_mean=True, parent=None):
         """Initialization.
 
+        :param int pulse_id: ID of the pulse to be plotted.
         :param bool plot_mean: whether to plot the mean AI of all pulses
             if the data is pulse resolved.
         """
         super().__init__(parent=parent)
 
-        self.pulse_id = 0
+        self.pulse_id = pulse_id
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
@@ -216,8 +218,10 @@ class RoiIntensityMonitor(PlotWidget):
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
 
-        self._roi1_plot = self.plot(name="ROI 1", pen=PenFactory.yellow)
-        self._roi2_plot = self.plot(name="ROI 2", pen=PenFactory.green)
+        self._roi1_plot = self.plot(
+            name="ROI 1", pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
+        self._roi2_plot = self.plot(
+            name="ROI 2", pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
 
     def clear(self):
         """Override."""

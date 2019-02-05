@@ -17,16 +17,20 @@ from ..config import config
 
 
 class RoiCtrlWidget(QtGui.QGroupBox):
-    """Widget for controlling of ROI."""
-    # w, h, cx, cy
+    """Widget for controlling of an ROI."""
+    # activated, w, h, cx, cy
     roi_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
     _size_validator = QtGui.QIntValidator(0, 10000)
 
-    def __init__(self, title, *, parent=None):
-        """Initialization"""
+    def __init__(self, roi, *, title="ROI control", parent=None):
+        """Initialization.
+
+        :param RectROI roi: RectROI object.
+        """
         super().__init__(title, parent=parent)
+        self._roi = roi
 
         self._width_le = QtGui.QLineEdit()
         self._width_le.setValidator(self._size_validator)
@@ -49,6 +53,12 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self.lock_aspect_cb = QtGui.QCheckBox("Lock aspect ratio")
 
         self.initUI()
+
+        roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
+        roi.sigRegionChangeFinished.emit(roi)  # fill the QLineEdit(s)
+        self.activate_cb.stateChanged.connect(self.toggleRoiActivationEvent)
+        self.lock_cb.stateChanged.connect(self.lockEvent)
+        self.lock_aspect_cb.stateChanged.connect(self.lockAspectEvent)
 
     def initUI(self):
         le_layout = QtGui.QHBoxLayout()
@@ -73,6 +83,41 @@ class RoiCtrlWidget(QtGui.QGroupBox):
 
         self.setLayout(layout)
 
+    @QtCore.pyqtSlot(object)
+    def onRoiRegionChangeFinished(self, roi):
+        """Connect to the signal from an ROI object."""
+        w, h = [int(v) for v in roi.size()]
+        cx, cy = [int(v) for v in roi.pos()]
+        self.updateParameters(w, h, cx, cy)
+        # inform widgets outside this window
+        self.roi_region_changed_sgn.emit(True, w, h, cx, cy)
+
+    def toggleRoiActivationEvent(self, state):
+        if state == QtCore.Qt.Checked:
+            self._roi.show()
+            self.enableAllEdit()
+            self.roi_region_changed_sgn.emit(
+                True, *self._roi.size(), *self._roi.pos())
+        else:
+            self._roi.hide()
+            self.disableAllEdit()
+            self.roi_region_changed_sgn.emit(
+                False, *self._roi.size(), *self._roi.pos())
+
+    def lockEvent(self, state):
+        if state == QtCore.Qt.Checked:
+            self._roi.lock()
+            self.disableLockEdit()
+        else:
+            self._roi.unLock()
+            self.enableLockEdit()
+
+    def lockAspectEvent(self, state):
+        if state == QtCore.Qt.Checked:
+            self._roi.lockAspect()
+        else:
+            self._roi.unLockAspect()
+
     def updateParameters(self, w, h, cx, cy):
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
@@ -80,11 +125,17 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._cy_le.setText(str(cy))
 
     def roiRegionChangedEvent(self):
-        w = self._width_le.text()
-        h = self._height_le.text()
-        cx = self._cx_le.text()
-        cy = self._cy_le.text()
-        self.roi_region_changed_sgn.emit(w, h, cx, cy)
+        w = int(self._width_le.text())
+        h = int(self._height_le.text())
+        cx = int(self._cx_le.text())
+        cy = int(self._cy_le.text())
+
+        # If 'update' == False, the state change will be remembered
+        # but not processed and no signals will be emitted.
+        self._roi.setSize((w, h), update=False)
+        self._roi.setPos((cx, cy), update=False)
+
+        self.roi_region_changed_sgn.emit(True, w, h, cx, cy)
 
     def disableLockEdit(self):
         for w in self._line_edits:
@@ -152,9 +203,6 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
-    # w, h, cx, cy
-    roi1_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
-    roi2_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
     clear_roi_hist_sgn = QtCore.Signal
 
     def __init__(self, *args, **kwargs):
@@ -162,38 +210,22 @@ class ImageToolWindow(AbstractWindow):
         parent = self.parent()
 
         self._image_view = ImageView(lock_roi=False)
-        self._image_view.roi1.sigRegionChangeFinished.connect(
-            self.onRoiRegionChangeFinished)
-        self._image_view.roi2.sigRegionChangeFinished.connect(
-            self.onRoiRegionChangeFinished)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
         self._clear_roi_hist_btn.clicked.connect(
             parent._proc_worker.roiHistClearEvent)
+
         self._roi1_ctrl = RoiCtrlWidget(
-            "ROI 1 ({})".format(ImageView.roi1_color))
+            self._image_view.roi1,
+            title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
         self._roi2_ctrl = RoiCtrlWidget(
-            "ROI 2 ({})".format(ImageView.roi2_color))
-        self._roi1_ctrl.activate_cb.stateChanged.connect(
-            self.toggleRoiActivationEvent)
-        self._roi2_ctrl.activate_cb.stateChanged.connect(
-            self.toggleRoiActivationEvent)
-        self._roi1_ctrl.lock_aspect_cb.stateChanged.connect(
-            self.lockAspectEvent
-        )
-        self._roi2_ctrl.lock_aspect_cb.stateChanged.connect(
-            self.lockAspectEvent
-        )
-        self._roi1_ctrl.lock_cb.stateChanged.connect(self.lockEvent)
-        self._roi2_ctrl.lock_cb.stateChanged.connect(self.lockEvent)
-        self._roi1_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
-        self._roi2_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
+            self._image_view.roi2,
+            title="ROI 2 ({})".format(config['ROI_COLORS'][1]))
 
-        self.roi1_region_changed_sgn.connect(parent._proc_worker.onRoi1Changed)
-        self.roi2_region_changed_sgn.connect(parent._proc_worker.onRoi2Changed)
-
-        self._image_view.roi1.setSize(self._image_view.roi1.size())
-        self._image_view.roi2.setSize(self._image_view.roi2.size())
+        self._roi1_ctrl.roi_region_changed_sgn.connect(
+            parent._proc_worker.onRoi1Changed)
+        self._roi2_ctrl.roi_region_changed_sgn.connect(
+            parent._proc_worker.onRoi2Changed)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
@@ -221,9 +253,6 @@ class ImageToolWindow(AbstractWindow):
 
         self._cw.setLayout(layout)
 
-        self._activate_roi1()
-        self._activate_roi2()
-
     def updateImage(self):
         """For updating image manually."""
         data = self._data.get()
@@ -231,85 +260,3 @@ class ImageToolWindow(AbstractWindow):
             return
 
         self._image_view.setImage(data.image_mean)
-
-    def toggleRoiActivationEvent(self, state):
-        sender = self.sender().parent()
-        if sender is self._roi1_ctrl:
-            roi = self._image_view.roi1
-        elif sender is self._roi2_ctrl:
-            roi = self._image_view.roi2
-        else:
-            return
-
-        if state == QtCore.Qt.Checked:
-            roi.show()
-            sender.enableAllEdit()
-        else:
-            roi.hide()
-            sender.disableAllEdit()
-
-    def lockAspectEvent(self, state):
-        sender = self.sender().parent()
-        if sender is self._roi1_ctrl:
-            roi = self._image_view.roi1
-        elif sender is self._roi2_ctrl:
-            roi = self._image_view.roi2
-        else:
-            return
-
-        if state == QtCore.Qt.Checked:
-            roi.lockAspect()
-        else:
-            roi.unLockAspect()
-
-    def lockEvent(self, state):
-        sender = self.sender().parent()
-        if sender is self._roi1_ctrl:
-            roi = self._image_view.roi1
-        elif sender is self._roi2_ctrl:
-            roi = self._image_view.roi2
-        else:
-            return
-
-        if state == QtCore.Qt.Checked:
-            roi.lock()
-            sender.disableLockEdit()
-        else:
-            roi.unLock()
-            sender.enableLockEdit()
-
-    def _activate_roi1(self):
-        self._roi1_ctrl.activate_cb.setChecked(True)
-
-    def _activate_roi2(self):
-        self._roi2_ctrl.activate_cb.setChecked(True)
-
-    @QtCore.pyqtSlot(object)
-    def onRoiRegionChangeFinished(self, roi):
-        """Connect to the signal from an ROI object."""
-        w, h = [int(v) for v in roi.size()]
-        cx, cy = [int(v) for v in roi.pos()]
-        if roi is self._image_view.roi1:
-            self._roi1_ctrl.updateParameters(w, h, cx, cy)
-            # inform widgets outside this window
-            self.roi1_region_changed_sgn.emit(True, w, h, cx, cy)
-        elif roi is self._image_view.roi2:
-            self._roi2_ctrl.updateParameters(w, h, cx, cy)
-            self.roi2_region_changed_sgn.emit(True, w, h, cx, cy)
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoiRegionChanged(self, w, h, cx, cy):
-        """Connect to the signal from RoiCtrlWidget."""
-        sender = self.sender()
-        if sender is self._roi1_ctrl:
-            roi = self._image_view.roi1
-            # a relay signal for widgets outside this window
-            self.roi1_region_changed_sgn.emit(True, w, h, cx, cy)
-        else:
-            roi = self._image_view.roi2
-            self.roi2_region_changed_sgn.emit(True, w, h, cx, cy)
-
-        # If 'update' == False, the state change will be remembered
-        # but not processed and no signals will be emitted.
-        roi.setSize((w, h), update=False)
-        roi.setPos((cx, cy), update=False)

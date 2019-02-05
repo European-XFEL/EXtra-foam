@@ -66,17 +66,10 @@ class ImageView(QtGui.QWidget):
 
     Widget used for displaying and analyzing a single image.
 
-    Note: this ImageView widget is different from the one implemented
-          in pyqtgraph!!!
+    Note: it is different from the ImageView in pyqtgraph!
     """
-    roi1_color = 'yellow'
-    roi2_color = 'green'
-
-    # we want it to share across all the images (not implemented yet)
-    _roi1_pos = (20, 20)
-    _roi1_size = (50, 50)
-    _roi2_pos = (40, 40)
-    _roi2_size = (50, 50)
+    ROI_POS0 = (50, 50)
+    ROI_SIZE0 = (50, 50)
 
     def __init__(self, *, parent=None, level_mode='mono', lock_roi=True):
         """Initialization.
@@ -92,12 +85,14 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
-        self.roi1 = RectROI(self._roi1_pos, self._roi1_size,
+        self.roi1 = RectROI(self.ROI_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
-                            pen=PenFactory.__dict__[self.roi1_color])
-        self.roi2 = RectROI(self._roi2_pos, self._roi2_size,
+                            pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
+        self.roi2 = RectROI(self.ROI_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
-                            pen=PenFactory.__dict__[self.roi2_color])
+                            pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
+        self.roi1.hide()
+        self.roi2.hide()
 
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
@@ -142,14 +137,20 @@ class ImageView(QtGui.QWidget):
 
     def updateROI(self, data):
         if data.roi1 is not None:
-            w1, h1, cx1, cy1 = data.roi1
-            self.roi1.setSize((w1, h1), update=False)
-            self.roi1.setPos((cx1, cy1), update=False)
+            self.roi1.show()
+            w, h, cx, cy = data.roi1
+            self.roi1.setSize((w, h), update=False)
+            self.roi1.setPos((cx, cy), update=False)
+        else:
+            self.roi1.hide()
 
         if data.roi2 is not None:
-            w2, h2, cx2, cy2 = data.roi2
-            self.roi2.setSize((w2, h2), update=False)
-            self.roi2.setPos((cx2, cy2), update=False)
+            self.roi2.show()
+            w, h, cx, cy = data.roi2
+            self.roi2.setSize((w, h), update=False)
+            self.roi2.setPos((cx, cy), update=False)
+        else:
+            self.roi2.hide()
 
     def setImage(self, img, *, auto_range=True, auto_levels=True):
         """Set the current displayed image.
@@ -205,13 +206,13 @@ class ImageView(QtGui.QWidget):
 class SinglePulseImageView(ImageView):
     """SinglePulseImageView class.
 
-    Widget used for displaying the assembled image for a single pulse.
+    Widget used for displaying the assembled image of a single pulse.
     """
-    def __init__(self, *, parent=None):
+    def __init__(self, *, pulse_id=0, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_id = 0
+        self.pulse_id = pulse_id
 
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
