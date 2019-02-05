@@ -13,8 +13,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
 from .pyqtgraph import GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui
 from .misc_widgets import PenFactory
 from ..logger import logger

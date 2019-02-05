@@ -167,7 +167,7 @@ class OverviewWindowTrainResolved(DockerWindow):
 
     _ASSEMBLED_IMG_W = 600
     _ASSEMBLED_IMG_H = 500
-    _AI_W = 600
+    _AI_W = 900
     _AI_H = _ASSEMBLED_IMG_H
     _BULLETIN_W = _AI_W
     _BULLETIN_H = 100
