@@ -84,8 +84,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id1_le.returnPressed.emit()
         self._vip_pulse_id2_le.returnPressed.emit()
 
+        info = ''
         if self._pulse_resolved:
-            info = "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
+            info += "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
 
         return info
 

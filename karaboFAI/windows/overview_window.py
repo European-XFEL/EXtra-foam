@@ -176,7 +176,6 @@ class OverviewWindowTrainResolved(DockerWindow):
     def __init__(self, data, *, parent=None):
         """Initialization."""
         super().__init__(data, parent=parent)
-        parent.registerPlotWindow(self)
 
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
