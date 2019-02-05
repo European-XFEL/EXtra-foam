@@ -164,6 +164,9 @@ class ImageToolWindow(AbstractWindow):
         self._image_view.roi2.sigRegionChangeFinished.connect(
             self.roiRegionChangedEvent)
 
+        self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
+        self._clear_roi_hist_btn.clicked.connect(
+            parent._proc_worker.onRoiHistCleared)
         self._roi1_ctrl = ROICtrlWidget(
             "ROI 1 ({})".format(ImageView.roi1_color))
         self._roi2_ctrl = ROICtrlWidget(
@@ -202,9 +205,10 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
-        tool_layout = QtGui.QGridLayout()
-        tool_layout.addWidget(self._roi1_ctrl, 0, 0, 1, 1)
-        tool_layout.addWidget(self._roi2_ctrl, 1, 0, 1, 1)
+        tool_layout = QtGui.QVBoxLayout()
+        tool_layout.addWidget(self._clear_roi_hist_btn)
+        tool_layout.addWidget(self._roi1_ctrl)
+        tool_layout.addWidget(self._roi2_ctrl)
 
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 1)

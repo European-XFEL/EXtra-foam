@@ -260,6 +260,7 @@ class RoiImageView(ImageView):
     def update(self, data):
         """Override."""
         image = data.image_mean
+
         if self._is_roi1:
             w, h, cx, cy = data.roi1
         else:

@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
 from enum import IntEnum
 
 
@@ -19,10 +18,21 @@ class DataSource(IntEnum):
     PROCESSED = 2  # processed data from the Middle-layer device
 
 
+class RoiHist:
+    """A class which stores historical data of ROI."""
+    train_ids = []
+    roi1_intensities = []
+    roi2_intensities = []
+
+    @classmethod
+    def clear(cls):
+        cls.train_ids.clear()
+        cls.roi1_intensities.clear()
+        cls.roi2_intensities.clear()
+
+
 class ProcessedData:
     """A class which stores the processed data.
-
-    TODO: separate the ProcessedData class for FAI and BDP?
 
     Attributes:
         tid (int): train ID.
@@ -65,6 +75,7 @@ class ProcessedData:
 
         self.roi1 = roi1
         self.roi2 = roi2
+        self.roi_hist = RoiHist()
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -74,6 +85,18 @@ class ProcessedData:
     @property
     def tid(self):
         return self._tid
+
+    @property
+    def roi_train_ids(self):
+        return self.roi_hist.train_ids
+
+    @property
+    def roi1_intensities(self):
+        return self.roi_hist.roi1_intensities
+
+    @property
+    def roi2_intensities(self):
+        return self.roi_hist.roi2_intensities
 
     def empty(self):
         """Check the goodness of the data.

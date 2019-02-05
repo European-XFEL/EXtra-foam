@@ -221,10 +221,6 @@ class RoiIntensityMonitor(PlotWidget):
         self._roi1_plot = self.plot(name="ROI 1", pen=PenFactory.yellow)
         self._roi2_plot = self.plot(name="ROI 2", pen=PenFactory.green)
 
-        self._train_ids = []
-        self._roi1_intensity = []
-        self._roi2_intensity = []
-
     def clear(self):
         """Override."""
         self.reset()
@@ -236,14 +232,9 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        image = data.image_mean
+        train_ids = data.roi_train_ids
+        roi1_intensities = data.roi1_intensities
+        roi2_intensities = data.roi2_intensities
 
-        w1, h1, cx1, cy1 = data.roi1
-        w2, h2, cx2, cy2 = data.roi2
-
-        self._train_ids.append(data.tid)
-        self._roi1_intensity.append(np.sum(image[cy1:cy1+h1, cx1:cx1+w1]))
-        self._roi2_intensity.append(np.sum(image[cy2:cy2+h2, cx2:cx2+w2]))
-
-        self._roi1_plot.setData(self._train_ids, self._roi1_intensity)
-        self._roi2_plot.setData(self._train_ids, self._roi2_intensity)
+        self._roi1_plot.setData(train_ids, roi1_intensities)
+        self._roi2_plot.setData(train_ids, roi2_intensities)

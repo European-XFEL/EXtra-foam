@@ -23,7 +23,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from ..widgets.pyqtgraph import QtCore
-from .data_model import DataSource, ProcessedData
+from .data_model import DataSource, ProcessedData, RoiHist
 from ..config import config
 from ..logger import logger
 from .proc_utils import nanmean_axis0_para
@@ -161,6 +161,9 @@ class FaiDataProcessor(Worker):
     def onRoi2Changed(self, w, h, cx, cy):
         self.roi2_sp = (w, h, cx, cy)
 
+    def onRoiHistCleared(self):
+        RoiHist.clear()
+
     def run(self):
         """Run the data processor."""
         self._running = True
@@ -199,8 +202,8 @@ class FaiDataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def process_assembled_data_ts(self, assembled, tid):
-        """Process train-resolved assembled image data.
+    def integrate_assembled_data_ts(self, assembled, tid):
+        """Azimuthal integration of train-resolved assembled image data.
 
         :param numpy.ndarray assembled: assembled image data, (y, x)
         :param int tid: train ID
@@ -282,15 +285,13 @@ class FaiDataProcessor(Worker):
                              intensity_mean=intensity,
                              images=assembled,
                              image_mean=assembled_mean,
-                             roi1=self.roi1_sp,
-                             roi2=self.roi2_sp,
                              threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 
         return data
 
-    def process_assembled_data_ps(self, assembled, tid):
-        """Process pulse-resolved assembled image data.
+    def integrate_assembled_data_ps(self, assembled, tid):
+        """Azimuthal integration of pulse-resolved assembled image data.
 
         :param numpy.ndarray assembled: assembled image data, (pulse_id, y, x)
         :param int tid: train ID
@@ -385,8 +386,6 @@ class FaiDataProcessor(Worker):
                              intensity_mean=np.mean(intensities, axis=0),
                              images=assembled,
                              image_mean=assembled_mean,
-                             roi1=self.roi1_sp,
-                             roi2=self.roi2_sp,
                              threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 
@@ -486,11 +485,41 @@ class FaiDataProcessor(Worker):
                          format(assembled.shape, tid))
             return ProcessedData(tid)
 
-        # pulse-resolved
         if assembled.ndim == 3:
+            # pulse-resolved
             assembled = assembled[
                 self.pulse_range_sp[0]:self.pulse_range_sp[1]]
-            return self.process_assembled_data_ps(assembled, tid)
+            ai_data = self.integrate_assembled_data_ps(assembled, tid)
+        else:
+            # train-resolved
+            ai_data = self.integrate_assembled_data_ts(assembled, tid)
 
-        # train-resolved
-        return self.process_assembled_data_ts(assembled, tid)
+        return self.post_process_data(ai_data)
+
+    def post_process_data(self, data):
+        """Data post-processing after azimuthal integration
+
+        :param ProcessedData data: data includes azimuthal integration
+            information.
+        """
+        # Add ROI information
+        if data.tid > 0:
+            data.roi_hist.train_ids.append(data.tid)
+
+            if self.roi1_sp is not None:
+                data.roi1 = self.roi1_sp
+                w1, h1, cx1, cy1 = self.roi1_sp
+                data.roi_hist.roi1_intensities.append(
+                    np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1]))
+            else:
+                data.roi_hist.roi1_intensities.append(None)
+
+            if self.roi2_sp is not None:
+                data.roi2 = self.roi2_sp
+                w2, h2, cx2, cy2 = self.roi2_sp
+                data.roi_hist.roi2_intensities.append(
+                    np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2]))
+            else:
+                data.roi_hist.roi2_intensities.append(None)
+
+        return data
