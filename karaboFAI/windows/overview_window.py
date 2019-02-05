@@ -170,8 +170,12 @@ class OverviewWindowTrainResolved(DockerWindow):
     _AI_H = _ASSEMBLED_IMG_H
     _BULLETIN_W = _AI_W
     _BULLETIN_H = 100
+    _ROI_W = 600
+    _ROI_H = 250
+    _ROI_INTENSITY_W = _AI_W
+    _ROI_INTENSITY_H = 2 * _ROI_H - _BULLETIN_H
     _TOTAL_W = _ASSEMBLED_IMG_W + _AI_W
-    _TOTAL_H = _ASSEMBLED_IMG_H
+    _TOTAL_H = _ASSEMBLED_IMG_H + 2 * _ROI_H
 
     def __init__(self, data, *, parent=None):
         """Initialization."""
@@ -181,6 +185,10 @@ class OverviewWindowTrainResolved(DockerWindow):
                                                parent=self)
         self._assembled_image = ImageView(parent=self)
         self._ai = MultiPulseAiWidget(parent=self)
+
+        self._roi1_image = ImageView(parent=self)
+        self._roi2_image = ImageView(parent=self)
+        self._roi_intensity = MultiPulseAiWidget(parent=self)
 
         self.initUI()
 
@@ -212,7 +220,23 @@ class OverviewWindowTrainResolved(DockerWindow):
 
         bulletin_docker = Dock("Bulletin",
                                size=(self._BULLETIN_W, self._BULLETIN_H))
-        self._docker_area.addDock(bulletin_docker, 'top',
+        self._docker_area.addDock(bulletin_docker, 'bottom',
                                   "Azimuthal Integration")
         bulletin_docker.addWidget(self._bulletin_widget)
         bulletin_docker.hideTitleBar()
+
+        roi1_image_dock = Dock("ROI1", size=(self._ROI_W, self._ROI_H))
+        self._docker_area.addDock(roi1_image_dock, 'bottom',
+                                  assembled_image_dock)
+        roi1_image_dock.addWidget(self._roi1_image)
+
+        roi2_image_dock = Dock("ROI2", size=(self._ROI_W, self._ROI_H))
+        self._docker_area.addDock(roi2_image_dock, 'bottom',
+                                  roi1_image_dock)
+        roi2_image_dock.addWidget(self._roi2_image)
+
+        roi_intensity_dock = Dock("ROI intensity", size=(
+            self._ROI_INTENSITY_W, self._ROI_INTENSITY_H))
+        self._docker_area.addDock(roi_intensity_dock, 'bottom',
+                                  bulletin_docker)
+        roi_intensity_dock.addWidget(self._roi_intensity)
