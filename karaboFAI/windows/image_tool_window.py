@@ -160,9 +160,9 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageView(lock_roi=False)
         self._image_view.roi1.sigRegionChangeFinished.connect(
-            self.roiRegionChangedEvent)
+            self.onRoiRegionChangeFinished)
         self._image_view.roi2.sigRegionChangeFinished.connect(
-            self.roiRegionChangedEvent)
+            self.onRoiRegionChangeFinished)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
         self._clear_roi_hist_btn.clicked.connect(
@@ -281,15 +281,15 @@ class ImageToolWindow(AbstractWindow):
     def _activate_roi2(self):
         self._roi2_ctrl.activate_cb.setChecked(True)
 
-    def roiRegionChangedEvent(self):
-        sender = self.sender()
-        w, h = [int(v) for v in sender.size()]
-        cx, cy = [int(v) for v in sender.pos()]
-        if sender is self._image_view.roi1:
+    @QtCore.pyqtSlot(object)
+    def onRoiRegionChangeFinished(self, roi):
+        w, h = [int(v) for v in roi.size()]
+        cx, cy = [int(v) for v in roi.pos()]
+        if roi is self._image_view.roi1:
             self._roi1_ctrl.updateParameters(w, h, cx, cy)
             # inform widgets outside this window
             self.roi1_region_changed_sgn.emit(w, h, cx, cy)
-        elif sender is self._image_view.roi2:
+        elif roi is self._image_view.roi2:
             self._roi2_ctrl.updateParameters(w, h, cx, cy)
             self.roi2_region_changed_sgn.emit(w, h, cx, cy)
 
