@@ -24,11 +24,30 @@ class RoiHist:
     roi1_intensities = []
     roi2_intensities = []
 
+    MAX_LENGTH = 100000
+
     @classmethod
     def clear(cls):
         cls.train_ids.clear()
         cls.roi1_intensities.clear()
         cls.roi2_intensities.clear()
+
+    @classmethod
+    def append(cls, tid, roi1, roi2):
+        cls.train_ids.append(tid)
+        cls.roi1_intensities.append(roi1)
+        cls.roi2_intensities.append(roi2)
+        if len(cls.train_ids) > cls.MAX_LENGTH:
+            # expensive
+            cls.train_ids.pop(0)
+            cls.roi1_intensities.pop(0)
+            cls.roi2_intensities.pop(0)
+
+    @classmethod
+    def full(cls):
+        if len(cls.train_ids) >= cls.MAX_LENGTH:
+            return True
+        return False
 
 
 class ProcessedData:

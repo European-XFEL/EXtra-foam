@@ -504,22 +504,21 @@ class FaiDataProcessor(Worker):
         """
         # Add ROI information
         if data.tid > 0:
-            data.roi_hist.train_ids.append(data.tid)
 
+            roi1_intensity = None
             if self.roi1_sp is not None:
                 data.roi1 = self.roi1_sp
                 w1, h1, cx1, cy1 = self.roi1_sp
-                data.roi_hist.roi1_intensities.append(
-                    np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1]))
-            else:
-                data.roi_hist.roi1_intensities.append(None)
+                roi1_intensity = np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1])
 
+            roi2_intensity = None
             if self.roi2_sp is not None:
                 data.roi2 = self.roi2_sp
                 w2, h2, cx2, cy2 = self.roi2_sp
-                data.roi_hist.roi2_intensities.append(
-                    np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2]))
-            else:
-                data.roi_hist.roi2_intensities.append(None)
+                roi2_intensity = np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2])
+
+        data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
+        if data.roi_hist.full():
+            self.log("ROI history is full!")
 
         return data
