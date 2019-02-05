@@ -12,7 +12,9 @@ from .misc_widgets import (
 
 from .sample_degradation_widget import SampleDegradationWidget
 from .image_view import ImageView, RoiImageView, SinglePulseImageView
-from .plot_widget import SinglePulseAiWidget, MultiPulseAiWidget
+from .plot_widget import (
+    MultiPulseAiWidget, SinglePulseAiWidget, RoiIntensityMonitor
+)
 from .bulletin_widget import BulletinWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
@@ -24,6 +26,7 @@ __all__ = [
     "ImageView",
     "MultiPulseAiWidget",
     "RoiImageView",
+    "RoiIntensityMonitor",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
     "SinglePulseImageView",

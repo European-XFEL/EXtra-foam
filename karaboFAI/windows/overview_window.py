@@ -17,7 +17,8 @@ from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
     BulletinWidget, ImageView, MultiPulseAiWidget, RoiImageView,
-    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
+    RoiIntensityMonitor, SampleDegradationWidget, SinglePulseAiWidget,
+    SinglePulseImageView
 )
 
 
@@ -188,7 +189,7 @@ class OverviewWindowTrainResolved(DockerWindow):
 
         self._roi1_image = RoiImageView(parent=self)
         self._roi2_image = RoiImageView(roi1=False, parent=self)
-        self._roi_intensity = MultiPulseAiWidget(parent=self)
+        self._roi_intensity = RoiIntensityMonitor(parent=self)
 
         self.initUI()
 

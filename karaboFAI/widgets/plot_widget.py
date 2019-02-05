@@ -3,15 +3,18 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PlotWidget.
+PlotWidget
 
-SinglePulseAiWidget.
-MultiPulseAiWidget.
+SinglePulseAiWidget
+MultiPulseAiWidget
+RoiIntensityMonitor
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .pyqtgraph import GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui
 from .misc_widgets import PenFactory
 from ..logger import logger
@@ -201,3 +204,46 @@ class MultiPulseAiWidget(PlotWidget):
         else:
             for item, intensity in zip(self.plotItem.items, intensities):
                 item.setData(momentum, intensity)
+
+
+class RoiIntensityMonitor(PlotWidget):
+    """RoiIntensityMonitor class.
+
+    Widget used for displaying the evolution of the integration of ROIs.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "Train ID")
+        self.setLabel('left', "Intensity (arb. u.)")
+
+        self._roi1_plot = self.plot(name="ROI 1", pen=PenFactory.yellow)
+        self._roi2_plot = self.plot(name="ROI 2", pen=PenFactory.green)
+
+        self._train_ids = []
+        self._roi1_intensity = []
+        self._roi2_intensity = []
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._roi1_plot.setData([], [])
+        self._roi2_plot.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        image = data.image_mean
+
+        w1, h1, cx1, cy1 = data.roi1
+        w2, h2, cx2, cy2 = data.roi2
+
+        self._train_ids.append(data.tid)
+        self._roi1_intensity.append(np.sum(image[cy1:cy1+h1, cx1:cx1+w1]))
+        self._roi2_intensity.append(np.sum(image[cy2:cy2+h2, cx2:cx2+w2]))
+
+        self._roi1_plot.setData(self._train_ids, self._roi1_intensity)
+        self._roi2_plot.setData(self._train_ids, self._roi2_intensity)
