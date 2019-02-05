@@ -26,12 +26,18 @@ class RectROI(ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, pos, size, **args):
+    def __init__(self, pos, size, *, lock=True, **args):
+        """Initialization.
+
+        :param bool lock: whether the ROI is modifiable.
+        """
         super().__init__(pos, size, **args)
 
-        self._add_handle()
-
-        self._handle_info = self.handles[0]  # there is only one handler
+        if lock:
+            self.translatable = False
+        else:
+            self._add_handle()
+            self._handle_info = self.handles[0]  # there is only one handler
 
     def lockAspect(self):
         self._handle_info['lockAspect'] = True
@@ -50,6 +56,7 @@ class RectROI(ROI):
         self._handle_info = self.handles[0]
 
     def _add_handle(self):
+        """An alternative to addHandle in parent class."""
         # position, scaling center
         self.addScaleHandle([1, 1], [0, 0])
 
@@ -71,7 +78,7 @@ class ImageView(QtGui.QWidget):
     _roi2_pos = (40, 40)
     _roi2_size = (50, 50)
 
-    def __init__(self, *, parent=None, level_mode='mono'):
+    def __init__(self, *, parent=None, level_mode='mono', lock_roi=True):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
@@ -86,8 +93,10 @@ class ImageView(QtGui.QWidget):
             pass
 
         self.roi1 = RectROI(self._roi1_pos, self._roi1_size,
+                            lock=lock_roi,
                             pen=PenFactory.__dict__[self.roi1_color])
         self.roi2 = RectROI(self._roi2_pos, self._roi2_size,
+                            lock=lock_roi,
                             pen=PenFactory.__dict__[self.roi2_color])
 
         self._plot_widget = PlotWidget()
@@ -126,16 +135,21 @@ class ImageView(QtGui.QWidget):
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
-        w1, h1, cx1, cy1 = data.roi1
-        w2, h2, cx2, cy2 = data.roi2
-
-        self.roi1.setSize((w1, h1), update=False)
-        self.roi1.setPos((cx1, cy1), update=False)
-        self.roi2.setSize((w2, h2), update=False)
-        self.roi2.setPos((cx2, cy2), update=False)
+        self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True
+
+    def updateROI(self, data):
+        if data.roi1 is not None:
+            w1, h1, cx1, cy1 = data.roi1
+            self.roi1.setSize((w1, h1), update=False)
+            self.roi1.setPos((cx1, cy1), update=False)
+
+        if data.roi2 is not None:
+            w2, h2, cx2, cy2 = data.roi2
+            self.roi2.setSize((w2, h2), update=False)
+            self.roi2.setPos((cx2, cy2), update=False)
 
     def setImage(self, img, *, auto_range=True, auto_levels=True):
         """Set the current displayed image.
@@ -196,7 +210,6 @@ class SinglePulseImageView(ImageView):
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
-        parent.registerPlotWidget(self)
 
         self.pulse_id = 0
 
@@ -222,13 +235,7 @@ class SinglePulseImageView(ImageView):
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
-        w1, h1, cx1, cy1 = data.roi1
-        w2, h2, cx2, cy2 = data.roi2
-
-        self.roi1.setSize((w1, h1), update=False)
-        self.roi1.setPos((cx1, cy1), update=False)
-        self.roi2.setSize((w2, h2), update=False)
-        self.roi2.setPos((cx2, cy2), update=False)
+        self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True

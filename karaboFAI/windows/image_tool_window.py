@@ -159,7 +159,7 @@ class ImageToolWindow(AbstractWindow):
         super().__init__(*args, **kwargs)
         parent = self.parent()
 
-        self._image_view = ImageView()
+        self._image_view = ImageView(lock_roi=False)
         self._image_view.roi1.sigRegionChangeFinished.connect(
             self.roiRegionChangedEvent)
         self._image_view.roi2.sigRegionChangeFinished.connect(
