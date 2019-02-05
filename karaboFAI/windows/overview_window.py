@@ -184,7 +184,7 @@ class OverviewWindowTrainResolved(DockerWindow):
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
         self._assembled_image = ImageView(parent=self)
-        self._ai = MultiPulseAiWidget(parent=self)
+        self._ai = SinglePulseAiWidget(parent=self)
 
         self._roi1_image = RoiImageView(parent=self)
         self._roi2_image = RoiImageView(roi1=False, parent=self)

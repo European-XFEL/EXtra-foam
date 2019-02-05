@@ -12,8 +12,7 @@ from .misc_widgets import (
 
 from .sample_degradation_widget import SampleDegradationWidget
 from .image_view import ImageView, RoiImageView, SinglePulseImageView
-from .single_pulse_ai_widget import SinglePulseAiWidget
-from .multi_pulse_ai_widget import MultiPulseAiWidget
+from .plot_widget import SinglePulseAiWidget, MultiPulseAiWidget
 from .bulletin_widget import BulletinWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
