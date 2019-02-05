@@ -16,10 +16,10 @@ from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
 
 
-class ROICtrlWidget(QtGui.QGroupBox):
+class RoiCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of ROI."""
     # w, h, cx, cy
-    roi_region_changed_sgn = QtCore.Signal(int, int, int, int)
+    roi_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
     _size_validator = QtGui.QIntValidator(0, 10000)
@@ -120,8 +120,10 @@ class MaskCtrlWidget(QtGui.QGroupBox):
         self._min_pixel_le.setValidator(self._double_validator)
         self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
         self._max_pixel_le.setValidator(self._double_validator)
-        self._min_pixel_le.returnPressed.connect(self.thresholdMaskChangedEvent)
-        self._max_pixel_le.returnPressed.connect(self.thresholdMaskChangedEvent)
+        self._min_pixel_le.returnPressed.connect(
+            self.thresholdMaskChangedEvent)
+        self._max_pixel_le.returnPressed.connect(
+            self.thresholdMaskChangedEvent)
 
         self.initUI()
 
@@ -151,8 +153,9 @@ class ImageToolWindow(AbstractWindow):
     title = "Image tool"
 
     # w, h, cx, cy
-    roi1_region_changed_sgn = QtCore.Signal(int, int, int, int)
-    roi2_region_changed_sgn = QtCore.Signal(int, int, int, int)
+    roi1_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
+    roi2_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
+    clear_roi_hist_sgn = QtCore.Signal
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -166,10 +169,10 @@ class ImageToolWindow(AbstractWindow):
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
         self._clear_roi_hist_btn.clicked.connect(
-            parent._proc_worker.onRoiHistCleared)
-        self._roi1_ctrl = ROICtrlWidget(
+            parent._proc_worker.roiHistClearEvent)
+        self._roi1_ctrl = RoiCtrlWidget(
             "ROI 1 ({})".format(ImageView.roi1_color))
-        self._roi2_ctrl = ROICtrlWidget(
+        self._roi2_ctrl = RoiCtrlWidget(
             "ROI 2 ({})".format(ImageView.roi2_color))
         self._roi1_ctrl.activate_cb.stateChanged.connect(
             self.toggleRoiActivationEvent)
@@ -283,27 +286,28 @@ class ImageToolWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(object)
     def onRoiRegionChangeFinished(self, roi):
+        """Connect to the signal from an ROI object."""
         w, h = [int(v) for v in roi.size()]
         cx, cy = [int(v) for v in roi.pos()]
         if roi is self._image_view.roi1:
             self._roi1_ctrl.updateParameters(w, h, cx, cy)
             # inform widgets outside this window
-            self.roi1_region_changed_sgn.emit(w, h, cx, cy)
+            self.roi1_region_changed_sgn.emit(True, w, h, cx, cy)
         elif roi is self._image_view.roi2:
             self._roi2_ctrl.updateParameters(w, h, cx, cy)
-            self.roi2_region_changed_sgn.emit(w, h, cx, cy)
+            self.roi2_region_changed_sgn.emit(True, w, h, cx, cy)
 
-    @QtCore.pyqtSlot(int, int, int, int)
+    @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoiRegionChanged(self, w, h, cx, cy):
-        """Connect to the signal from ROICtrlWidget."""
+        """Connect to the signal from RoiCtrlWidget."""
         sender = self.sender()
         if sender is self._roi1_ctrl:
             roi = self._image_view.roi1
             # a relay signal for widgets outside this window
-            self.roi1_region_changed_sgn.emit(w, h, cx, cy)
+            self.roi1_region_changed_sgn.emit(True, w, h, cx, cy)
         else:
             roi = self._image_view.roi2
-            self.roi2_region_changed_sgn.emit(w, h, cx, cy)
+            self.roi2_region_changed_sgn.emit(True, w, h, cx, cy)
 
         # If 'update' == False, the state change will be remembered
         # but not processed and no signals will be emitted.

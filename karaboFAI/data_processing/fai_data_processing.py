@@ -153,15 +153,21 @@ class FaiDataProcessor(Worker):
     def onPulseRangeChanged(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
 
-    @QtCore.pyqtSlot(int, int, int, int)
-    def onRoi1Changed(self, w, h, cx, cy):
-        self.roi1_sp = (w, h, cx, cy)
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onRoi1Changed(self, activated, w, h, cx, cy):
+        if activated:
+            self.roi1_sp = (w, h, cx, cy)
+        else:
+            self.roi1_sp = None
 
-    @QtCore.pyqtSlot(int, int, int, int)
-    def onRoi2Changed(self, w, h, cx, cy):
-        self.roi2_sp = (w, h, cx, cy)
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onRoi2Changed(self, activated, w, h, cx, cy):
+        if activated:
+            self.roi2_sp = (w, h, cx, cy)
+        else:
+            self.roi2_sp = None
 
-    def onRoiHistCleared(self):
+    def roiHistClearEvent(self):
         RoiHist.clear()
 
     def run(self):
@@ -504,14 +510,15 @@ class FaiDataProcessor(Worker):
         """
         # Add ROI information
         if data.tid > 0:
-
-            roi1_intensity = None
+            # it should be valid to set ROI intensity to zero if the data
+            # is not available
+            roi1_intensity = 0
             if self.roi1_sp is not None:
                 data.roi1 = self.roi1_sp
                 w1, h1, cx1, cy1 = self.roi1_sp
                 roi1_intensity = np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1])
 
-            roi2_intensity = None
+            roi2_intensity = 0
             if self.roi2_sp is not None:
                 data.roi2 = self.roi2_sp
                 w2, h2, cx2, cy2 = self.roi2_sp

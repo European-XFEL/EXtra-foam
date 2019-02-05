@@ -262,8 +262,12 @@ class RoiImageView(ImageView):
         image = data.image_mean
 
         if self._is_roi1:
+            if data.roi1 is None:
+                return
             w, h, cx, cy = data.roi1
         else:
+            if data.roi2 is None:
+                return
             w, h, cx, cy = data.roi2
 
         self.setImage(image[cy:cy+h, cx:cx+w],
