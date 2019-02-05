@@ -87,10 +87,8 @@ class ImageView(QtGui.QWidget):
 
         self.roi1 = RectROI(self._roi1_pos, self._roi1_size,
                             pen=PenFactory.__dict__[self.roi1_color])
-        self.roi1.hide()
         self.roi2 = RectROI(self._roi2_pos, self._roi2_size,
                             pen=PenFactory.__dict__[self.roi2_color])
-        self.roi2.hide()
 
         self._plot_widget = PlotWidget()
         self._image_item = ImageItem(border='w')
@@ -127,6 +125,14 @@ class ImageView(QtGui.QWidget):
         self.setImage(data.image_mean,
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
+
+        w1, h1, cx1, cy1 = data.roi1
+        w2, h2, cx2, cy2 = data.roi2
+
+        self.roi1.setSize((w1, h1), update=False)
+        self.roi1.setPos((cx1, cy1), update=False)
+        self.roi2.setSize((w2, h2), update=False)
+        self.roi2.setPos((cx2, cy2), update=False)
 
         if not self._is_initialized:
             self._is_initialized = True
@@ -215,6 +221,14 @@ class SinglePulseImageView(ImageView):
         self.setImage(images[self.pulse_id],
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
+
+        w1, h1, cx1, cy1 = data.roi1
+        w2, h2, cx2, cy2 = data.roi2
+
+        self.roi1.setSize((w1, h1), update=False)
+        self.roi1.setPos((cx1, cy1), update=False)
+        self.roi2.setSize((w2, h2), update=False)
+        self.roi2.setPos((cx2, cy2), update=False)
 
         if not self._is_initialized:
             self._is_initialized = True

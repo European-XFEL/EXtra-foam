@@ -46,6 +46,8 @@ class ProcessedData:
                  intensity_mean=None,
                  images=None,
                  image_mean=None,
+                 roi1=None,
+                 roi2=None,
                  threshold_mask=None,
                  image_mask=None):
         """Initialization."""
@@ -60,6 +62,9 @@ class ProcessedData:
 
         self.images = images
         self.image_mean = image_mean
+
+        self.roi1 = roi1
+        self.roi2 = roi2
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask

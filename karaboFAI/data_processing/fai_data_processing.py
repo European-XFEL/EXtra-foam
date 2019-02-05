@@ -84,6 +84,8 @@ class FaiDataProcessor(Worker):
         self.integration_points_sp = None
         self.threshold_mask_sp = (config["MASK_RANGE"][0],
                                   config["MASK_RANGE"][1])
+        self.roi1_sp = None
+        self.roi2_sp = None
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -150,6 +152,14 @@ class FaiDataProcessor(Worker):
     @QtCore.pyqtSlot(int, int)
     def onPulseRangeChanged(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float, float, float)
+    def onRoi1Changed(self, w, h, cx, cy):
+        self.roi1_sp = (w, h, cx, cy)
+
+    @QtCore.pyqtSlot(float, float, float, float)
+    def onRoi2Changed(self, w, h, cx, cy):
+        self.roi2_sp = (w, h, cx, cy)
 
     def run(self):
         """Run the data processor."""
@@ -272,6 +282,8 @@ class FaiDataProcessor(Worker):
                              intensity_mean=intensity,
                              images=assembled,
                              image_mean=assembled_mean,
+                             roi1=self.roi1_sp,
+                             roi2=self.roi2_sp,
                              threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 
@@ -367,13 +379,14 @@ class FaiDataProcessor(Worker):
         # Note: 'assembled' still contains 'inf' and '-inf', we only do
         #       the clip later when necessary in order not to waste
         #       computing power.
-
         data = ProcessedData(tid,
                              momentum=momentum,
                              intensity=np.array(intensities),
                              intensity_mean=np.mean(intensities, axis=0),
                              images=assembled,
                              image_mean=assembled_mean,
+                             roi1=self.roi1_sp,
+                             roi2=self.roi2_sp,
                              threshold_mask=(mask_min, mask_max),
                              image_mask=self.image_mask)
 

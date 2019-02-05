@@ -73,12 +73,12 @@ class ROICtrlWidget(QtGui.QGroupBox):
 
         self.setLayout(layout)
 
-    def updateParameters(self, size, pos):
+    def updateParameters(self, w, h, cx, cy):
         digits = 1
-        self._width_le.setText(str(round(size[0], digits)))
-        self._height_le.setText(str(round(size[1], digits)))
-        self._cx_le.setText(str(round(pos[0], digits)))
-        self._cy_le.setText(str(round(pos[1], digits)))
+        self._width_le.setText(str(round(w, digits)))
+        self._height_le.setText(str(round(h, digits)))
+        self._cx_le.setText(str(round(cx, digits)))
+        self._cy_le.setText(str(round(cy, digits)))
 
     def roiRegionChangedEvent(self):
         w = float(self._width_le.text())
@@ -151,8 +151,13 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
+    # w, h, cx, cy
+    roi1_region_changed_sgn = QtCore.Signal(float, float, float, float)
+    roi2_region_changed_sgn = QtCore.Signal(float, float, float, float)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        parent = self.parent()
 
         self._image_view = ImageView()
         self._image_view.roi1.sigRegionChangeFinished.connect(
@@ -179,11 +184,13 @@ class ImageToolWindow(AbstractWindow):
         self._roi1_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
         self._roi2_ctrl.roi_region_changed_sgn.connect(self.onRoiRegionChanged)
 
+        self.roi1_region_changed_sgn.connect(parent._proc_worker.onRoi1Changed)
+        self.roi2_region_changed_sgn.connect(parent._proc_worker.onRoi2Changed)
+
         self._image_view.roi1.setSize(self._image_view.roi1.size())
         self._image_view.roi2.setSize(self._image_view.roi2.size())
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
-        parent = self.parent()
         self._mask_panel.threshold_mask_sgn.connect(
             parent._proc_worker.onThresholdMaskChanged)
 
@@ -273,18 +280,27 @@ class ImageToolWindow(AbstractWindow):
 
     def roiRegionChangedEvent(self):
         sender = self.sender()
+        w, h = sender.size()
+        cx, cy = sender.pos()
         if sender is self._image_view.roi1:
-            self._roi1_ctrl.updateParameters(sender.size(), sender.pos())
+            self._roi1_ctrl.updateParameters(w, h, cx, cy)
+            # inform widgets outside this window
+            self.roi1_region_changed_sgn.emit(w, h, cx, cy)
         elif sender is self._image_view.roi2:
-            self._roi2_ctrl.updateParameters(sender.size(), sender.pos())
+            self._roi2_ctrl.updateParameters(w, h, cx, cy)
+            self.roi2_region_changed_sgn.emit(w, h, cx, cy)
 
     @QtCore.pyqtSlot(float, float, float, float)
     def onRoiRegionChanged(self, w, h, cx, cy):
+        """Connect to the signal from ROICtrlWidget."""
         sender = self.sender()
         if sender is self._roi1_ctrl:
             roi = self._image_view.roi1
+            # a relay signal for widgets outside this window
+            self.roi1_region_changed_sgn.emit(w, h, cx, cy)
         else:
             roi = self._image_view.roi2
+            self.roi2_region_changed_sgn.emit(w, h, cx, cy)
 
         # If 'update' == False, the state change will be remembered
         # but not processed and no signals will be emitted.
