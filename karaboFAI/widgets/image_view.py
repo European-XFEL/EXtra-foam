@@ -31,7 +31,7 @@ class RectROI(ROI):
 
         :param bool lock: whether the ROI is modifiable.
         """
-        super().__init__(pos, size, **args)
+        super().__init__(pos, size, translateSnap=True, scaleSnap=True, **args)
 
         if lock:
             self.translatable = False
@@ -213,8 +213,6 @@ class SinglePulseImageView(ImageView):
 
         self.pulse_id = 0
 
-        self._mask_range_sp = None
-
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
@@ -240,6 +238,36 @@ class SinglePulseImageView(ImageView):
         if not self._is_initialized:
             self._is_initialized = True
 
-    def close(self):
-        self.parent().unregisterPlotWidget(self)
-        super().close()
+
+class RoiImageView(ImageView):
+    """RoiImageView class.
+
+    Widget used for displaying the ROI for the assembled image.
+    """
+    def __init__(self, *, roi1=True, parent=None):
+        """Initialization.
+
+        :param bool roi1: True for displaying ROI1 and False for ROI2.
+        """
+        super().__init__(parent=parent)
+
+        self._is_roi1 = roi1
+
+        self.roi1.hide()
+        self.roi2.hide()
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+
+    def update(self, data):
+        """Override."""
+        image = data.image_mean
+        if self._is_roi1:
+            w, h, cx, cy = data.roi1
+        else:
+            w, h, cx, cy = data.roi2
+
+        self.setImage(image[cy:cy+h, cx:cx+w],
+                      auto_range=False,
+                      auto_levels=(not self._is_initialized))
+
+        if not self._is_initialized:
+            self._is_initialized = True

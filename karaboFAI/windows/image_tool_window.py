@@ -19,10 +19,10 @@ from ..config import config
 class ROICtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of ROI."""
     # w, h, cx, cy
-    roi_region_changed_sgn = QtCore.Signal(float, float, float, float)
+    roi_region_changed_sgn = QtCore.Signal(int, int, int, int)
 
-    _pos_validator = QtGui.QDoubleValidator(-10000.0, 10000.0, 1)
-    _size_validator = QtGui.QDoubleValidator(0.0, 10000.0, 1)
+    _pos_validator = QtGui.QIntValidator(-10000, 10000)
+    _size_validator = QtGui.QIntValidator(0, 10000)
 
     def __init__(self, title, *, parent=None):
         """Initialization"""
@@ -74,17 +74,16 @@ class ROICtrlWidget(QtGui.QGroupBox):
         self.setLayout(layout)
 
     def updateParameters(self, w, h, cx, cy):
-        digits = 1
-        self._width_le.setText(str(round(w, digits)))
-        self._height_le.setText(str(round(h, digits)))
-        self._cx_le.setText(str(round(cx, digits)))
-        self._cy_le.setText(str(round(cy, digits)))
+        self._width_le.setText(str(w))
+        self._height_le.setText(str(h))
+        self._cx_le.setText(str(cx))
+        self._cy_le.setText(str(cy))
 
     def roiRegionChangedEvent(self):
-        w = float(self._width_le.text())
-        h = float(self._height_le.text())
-        cx = float(self._cx_le.text())
-        cy = float(self._cy_le.text())
+        w = self._width_le.text()
+        h = self._height_le.text()
+        cx = self._cx_le.text()
+        cy = self._cy_le.text()
         self.roi_region_changed_sgn.emit(w, h, cx, cy)
 
     def disableLockEdit(self):
@@ -152,8 +151,8 @@ class ImageToolWindow(AbstractWindow):
     title = "Image tool"
 
     # w, h, cx, cy
-    roi1_region_changed_sgn = QtCore.Signal(float, float, float, float)
-    roi2_region_changed_sgn = QtCore.Signal(float, float, float, float)
+    roi1_region_changed_sgn = QtCore.Signal(int, int, int, int)
+    roi2_region_changed_sgn = QtCore.Signal(int, int, int, int)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -280,8 +279,8 @@ class ImageToolWindow(AbstractWindow):
 
     def roiRegionChangedEvent(self):
         sender = self.sender()
-        w, h = sender.size()
-        cx, cy = sender.pos()
+        w, h = [int(v) for v in sender.size()]
+        cx, cy = [int(v) for v in sender.pos()]
         if sender is self._image_view.roi1:
             self._roi1_ctrl.updateParameters(w, h, cx, cy)
             # inform widgets outside this window
@@ -290,7 +289,7 @@ class ImageToolWindow(AbstractWindow):
             self._roi2_ctrl.updateParameters(w, h, cx, cy)
             self.roi2_region_changed_sgn.emit(w, h, cx, cy)
 
-    @QtCore.pyqtSlot(float, float, float, float)
+    @QtCore.pyqtSlot(int, int, int, int)
     def onRoiRegionChanged(self, w, h, cx, cy):
         """Connect to the signal from ROICtrlWidget."""
         sender = self.sender()

@@ -153,11 +153,11 @@ class FaiDataProcessor(Worker):
     def onPulseRangeChanged(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
 
-    @QtCore.pyqtSlot(float, float, float, float)
+    @QtCore.pyqtSlot(int, int, int, int)
     def onRoi1Changed(self, w, h, cx, cy):
         self.roi1_sp = (w, h, cx, cy)
 
-    @QtCore.pyqtSlot(float, float, float, float)
+    @QtCore.pyqtSlot(int, int, int, int)
     def onRoi2Changed(self, w, h, cx, cy):
         self.roi2_sp = (w, h, cx, cy)
 

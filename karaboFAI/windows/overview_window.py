@@ -16,7 +16,7 @@ from ..widgets.pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
-    BulletinWidget, ImageView, MultiPulseAiWidget,
+    BulletinWidget, ImageView, MultiPulseAiWidget, RoiImageView,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 
@@ -186,8 +186,8 @@ class OverviewWindowTrainResolved(DockerWindow):
         self._assembled_image = ImageView(parent=self)
         self._ai = MultiPulseAiWidget(parent=self)
 
-        self._roi1_image = ImageView(parent=self)
-        self._roi2_image = ImageView(parent=self)
+        self._roi1_image = RoiImageView(parent=self)
+        self._roi2_image = RoiImageView(roi1=False, parent=self)
         self._roi_intensity = MultiPulseAiWidget(parent=self)
 
         self.initUI()

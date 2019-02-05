@@ -11,7 +11,7 @@ from .misc_widgets import (
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
-from .image_view import ImageView, SinglePulseImageView
+from .image_view import ImageView, RoiImageView, SinglePulseImageView
 from .single_pulse_ai_widget import SinglePulseAiWidget
 from .multi_pulse_ai_widget import MultiPulseAiWidget
 from .bulletin_widget import BulletinWidget
@@ -24,6 +24,7 @@ __all__ = [
     "BulletinWidget",
     "ImageView",
     "MultiPulseAiWidget",
+    "RoiImageView",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
     "SinglePulseImageView",
