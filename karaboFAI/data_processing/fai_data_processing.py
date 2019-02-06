@@ -416,8 +416,7 @@ class FaiDataProcessor(Worker):
         return data
 
     def _validate_roi(self, w, h, cx, cy, img_h, img_w):
-        """Check whether the ROI is within the image.
-        """
+        """Check whether the ROI is within the image."""
         if w < 0 or h < 0 or cx + w > img_w or cy + h > img_h:
             return False
         return True
@@ -437,9 +436,6 @@ class FaiDataProcessor(Worker):
         t0 = time.perf_counter()
 
         if from_file is False:
-            if len(metadata.items()) > 1:
-                logger.debug("Found multiple data sources!")
-
             tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
             # Data coming from bridge in case of JungFrau will have
             # different key. To be included
