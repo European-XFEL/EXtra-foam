@@ -84,8 +84,10 @@ class MainFaiGUI(MainGUI):
 
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
+
         self.correlation_ctrl_widget = CorrelationCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
+
         self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -126,6 +128,7 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onPulseRangeChanged)
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
             self._proc_worker.onEnableAiStateChange)
+        self.analysis_ctrl_widget.enable_ai_cb.setChecked(True)
 
         self._mediator.roi_hist_clear_sgn.connect(
             self._proc_worker.onRoiHistClear)

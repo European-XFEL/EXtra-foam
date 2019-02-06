@@ -68,7 +68,12 @@ class DataProcessor(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
-        self._enable_ai = False  # whether to turn azimuthal integration on
+        # whether to turn azimuthal integration on
+        self._enable_ai = True
+        # whether to turn laser on-off on
+        self._enable_on_off = True
+        # whether to turn correlation analysis on
+        self._enable_correlation = True
 
         self.image_mask = None
 

@@ -55,11 +55,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
-        self.enable_ai_cb = QtGui.QCheckBox(
-            "Azimuthal integration")
+        self.enable_ai_cb = QtGui.QCheckBox("Azimuthal integration")
 
         self._disabled_widgets_during_daq = [
             self._max_pulse_id_le,
+            self.enable_ai_cb,
         ]
 
         self.initUI()
