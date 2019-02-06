@@ -13,7 +13,7 @@ import os
 import sys
 import argparse
 
-from .data_processing import FaiDataProcessor as DataProcessor
+from .data_processing import DataProcessor
 from .widgets.pyqtgraph import QtGui
 from .widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,

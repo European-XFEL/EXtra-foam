@@ -30,8 +30,8 @@ from .proc_utils import nanmean_axis0_para
 from ..worker import Worker
 
 
-class FaiDataProcessor(Worker):
-    """Fast azimuthal integration data processing.
+class DataProcessor(Worker):
+    """Processing data received from the bridge.
 
     Attributes:
         source_sp (DataSource): data source.

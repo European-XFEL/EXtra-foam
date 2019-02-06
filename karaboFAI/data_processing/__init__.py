@@ -3,7 +3,7 @@ from .proc_utils import (
     down_sample, nanmean_axis0_para, normalize_curve, quick_min_max,
     slice_curve, up_sample
 )
-from .fai_data_processing import FaiDataProcessor
+from .data_processor import DataProcessor
 from .bdp_data_processing import BdpDataProcessor
 
 __all__ = [
@@ -17,5 +17,5 @@ __all__ = [
     'slice_curve',
     'up_sample',
     'BdpDataProcessor',
-    'FaiDataProcessor'
+    'DataProcessor'
 ]
