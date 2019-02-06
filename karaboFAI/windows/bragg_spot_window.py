@@ -74,8 +74,6 @@ class BraggSpotsWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().analysis_ctrl_widget.image_mask_range_sgn.connect(
-            self.onMaskRangeChanged)
         self.parent().pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
         self.parent().pump_probe_ctrl_widget.moving_average_window_sgn.connect(

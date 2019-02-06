@@ -67,8 +67,6 @@ class MainBdpGUI(MainGUI):
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
-        self.analysis_ctrl_widget.image_mask_range_sgn.connect(
-            self._proc_worker.onMaskRangeChanged)
 
     def initUI(self):
         layout = QtGui.QVBoxLayout()

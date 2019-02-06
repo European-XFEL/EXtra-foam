@@ -198,15 +198,6 @@ class MainGUI(QtGui.QMainWindow):
         self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
 
-        self._mediator.roi_hist_clear_sgn.connect(
-            self._proc_worker.onRoiHistClear)
-        self._mediator.roi1_region_changed_sgn.connect(
-            self._proc_worker.onRoi1Changed)
-        self._mediator.roi2_region_changed_sgn.connect(
-            self._proc_worker.onRoi2Changed)
-        self._mediator.threshold_mask_change_sgn.connect(
-            self._proc_worker.onThresholdMaskChange)
-
     def initUI(self):
         raise NotImplementedError
 
