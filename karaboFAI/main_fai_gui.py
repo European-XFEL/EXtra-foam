@@ -112,6 +112,8 @@ class MainFaiGUI(MainGUI):
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._proc_worker.onPulseRangeChanged)
+        self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
+            self._proc_worker.onEnableAiStateChange)
 
         self._mediator.roi_hist_clear_sgn.connect(
             self._proc_worker.onRoiHistClear)
@@ -122,8 +124,10 @@ class MainFaiGUI(MainGUI):
         self._mediator.threshold_mask_change_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
 
-        self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
-            self._proc_worker.onEnableAiStateChange)
+        self.correlation_ctrl_widget.param1_sgn.connect(
+            self._proc_worker.onCorrelationParam1Change)
+        self.correlation_ctrl_widget.param2_sgn.connect(
+            self._proc_worker.onCorrelationParam2Change)
 
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()

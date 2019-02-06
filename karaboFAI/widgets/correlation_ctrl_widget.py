@@ -25,6 +25,9 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "single image", "on-off"
     )
 
+    param1_sgn = QtCore.pyqtSignal(str, str)
+    param2_sgn = QtCore.pyqtSignal(str, str)
+
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
 
@@ -74,4 +77,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
+        src1 = self._src1_le.text()
+        key1 = self._key1_le.text()
+        self.param1_sgn.emit(src1, key1)
+
+        src2 = self._src2_le.text()
+        key2 = self._key2_le.text()
+        self.param2_sgn.emit(src2, key2)
+
         return ""

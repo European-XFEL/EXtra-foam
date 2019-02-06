@@ -90,6 +90,9 @@ class DataProcessor(Worker):
         self.roi1_sp = None
         self.roi2_sp = None
 
+        self.correlation_param1 = None
+        self.correlation_param2 = None
+
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
         try:
@@ -159,6 +162,14 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(int, int)
     def onPulseRangeChanged(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
+
+    @QtCore.pyqtSlot(str, str)
+    def onCorrelationParam1Change(self, src, key):
+        self.correlation_param1 = (src, key)
+
+    @QtCore.pyqtSlot(str, str)
+    def onCorrelationParam2Change(self, src, key):
+        self.correlation_param2 = (src, key)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Changed(self, activated, w, h, cx, cy):
@@ -435,6 +446,7 @@ class DataProcessor(Worker):
 
         :return ProcessedData: processed data.
         """
+        print(self.correlation_param1, self.correlation_param2)
         data, metadata = calibrated_data
 
         t0 = time.perf_counter()
