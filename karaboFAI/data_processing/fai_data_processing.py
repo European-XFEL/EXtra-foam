@@ -68,6 +68,8 @@ class FaiDataProcessor(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
+        self._enable_ai = False  # whether to turn azimuthal integration on
+
         self.image_mask = None
 
         # shared parameters are updated by signal-slot
@@ -171,6 +173,13 @@ class FaiDataProcessor(Worker):
     def onRoiHistClear(self):
         RoiHist.clear()
 
+    @QtCore.pyqtSlot(int)
+    def onEnableAiStateChange(self, state):
+        if state:
+            self._enable_ai = True
+        else:
+            self._enable_ai = False
+
     def run(self):
         """Run the data processor."""
         self._running = True
@@ -209,119 +218,40 @@ class FaiDataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def integrate_assembled_data_ts(self, assembled, tid):
-        """Azimuthal integration of train-resolved assembled image data.
+    def preprocess_data(self, assembled, tid):
+        """Data pre-processing.
 
-        :param numpy.ndarray assembled: assembled image data, (y, x)
-        :param int tid: train ID
+        The original data contains 'nan', 'inf' and '-inf' pixels
 
-        :return ProcessedData: processed data.
+        :param numpy.ndarray assembled: assembled image data,
+            (pulse_id, y, x) for pulse-resolved data and (y, x)
+            for train-resolved data.
+        :param int tid: train ID.
+
+        :return ProcessedData: pre-processed data.
         """
-        # 'assembled' is a reference to the array data received from the
-        # pyzmq. The array data is only readable since the data is owned
-        # by a pointer in the zmq message (it is not copied). However,
-        # other data like data['metadata'] is writeable.
-        assembled = np.copy(assembled)
-
-        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
-                                       poni1=self.center_coordinate_sp[1],
-                                       poni2=self.center_coordinate_sp[0],
-                                       pixel1=config["PIXEL_SIZE"],
-                                       pixel2=config["PIXEL_SIZE"],
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       wavelength=self.wavelength_sp)
-
-        # pre-processing
+        mask_min, mask_max = self.threshold_mask_sp
 
         t0 = time.perf_counter()
 
-        # Convert 'nan' to '-inf' and it will later be converted to the
-        # lower range of mask, which is usually 0.
-        # We do not convert 'nan' to 0 because: if the lower range of
-        # mask is a negative value, 0 will be converted to a value
-        # between 0 and 255 later.
-        assembled[np.isnan(assembled)] = -np.inf
+        if assembled.ndim == 3:
+            # pulse resolved
 
-        logger.debug("Time for pre-processing: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
-        # azimuthal integration
-
-        t0 = time.perf_counter()
-
-        if self.image_mask is None:
-            mask = np.zeros_like(assembled, dtype=np.uint8)
+            assembled = assembled[
+                        self.pulse_range_sp[0]:self.pulse_range_sp[1]]
+            assembled_mean = nanmean_axis0_para(assembled,
+                                                max_workers=8, chunk_size=20)
         else:
-            if self.image_mask.shape != assembled.shape:
-                raise ValueError(
-                    "Invalid mask shape {} for image with shape {}".
-                    format(self.image_mask.shape, assembled.shape))
-            mask = self.image_mask
+            # train resolved
 
-        # add threshold mask
-        mask_min = self.threshold_mask_sp[0]
-        mask_max = self.threshold_mask_sp[1]
-        mask[(assembled < mask_min) | (assembled > mask_max)] = 1
+            # 'assembled' is a reference to the array data received from the
+            # pyzmq. The array data is only readable since the data is owned
+            # by a pointer in the zmq message (it is not copied). However,
+            # other data like data['metadata'] is writeable.
+            assembled = np.copy(assembled)
 
-        # do integration
-        ret = ai.integrate1d(assembled,
-                             self.integration_points_sp,
-                             method=self.integration_method_sp,
-                             mask=mask,
-                             radial_range=self.integration_range_sp,
-                             correctSolidAngle=True,
-                             polarization_factor=1,
-                             unit="q_A^-1")
-
-        momentum = ret.radial
-        intensity = ret.intensity
-
-        logger.debug("Time for azimuthal integration: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
-        assembled_mean = np.copy(assembled)
-        # clip the array, which now will contain only numerical values
-        # within the mask range
-        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
-
-        data = ProcessedData(tid,
-                             momentum=momentum,
-                             intensity=intensity,
-                             intensity_mean=intensity,
-                             images=assembled,
-                             image_mean=assembled_mean,
-                             threshold_mask=(mask_min, mask_max),
-                             image_mask=self.image_mask)
-
-        return data
-
-    def integrate_assembled_data_ps(self, assembled, tid):
-        """Azimuthal integration of pulse-resolved assembled image data.
-
-        :param numpy.ndarray assembled: assembled image data, (pulse_id, y, x)
-        :param int tid: train ID
-
-        :return ProcessedData: processed data.
-        """
-        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
-                                       poni1=self.center_coordinate_sp[1],
-                                       poni2=self.center_coordinate_sp[0],
-                                       pixel1=config["PIXEL_SIZE"],
-                                       pixel2=config["PIXEL_SIZE"],
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       wavelength=self.wavelength_sp)
-
-        # pre-processing
-
-        t0 = time.perf_counter()
-
-        # original data contains 'nan', 'inf' and '-inf' pixels
-        assembled_mean = nanmean_axis0_para(assembled,
-                                            max_workers=8, chunk_size=20)
+            # we want assembled to be untouched
+            assembled_mean = np.copy(assembled)
 
         # Convert 'nan' to '-inf' and it will later be converted to the
         # lower range of mask, which is usually 0.
@@ -329,37 +259,98 @@ class FaiDataProcessor(Worker):
         # mask is a negative value, 0 will be converted to a value
         # between 0 and 255 later.
         assembled_mean[np.isnan(assembled_mean)] = -np.inf
+        # clip the array, which now will contain only numerical values
+        # within the mask range
+        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
+
+        if self.image_mask is None:
+            image_mask = np.zeros_like(assembled_mean, dtype=np.uint8)
+        else:
+            if self.image_mask.shape != assembled_mean.shape:
+                self.log("Invalid mask shape {} for image with shape {}".
+                         format(self.image_mask.shape, assembled_mean.shape))
+
+            image_mask = self.image_mask
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        # azimuthal integration
+        # Note: 'assembled' still contains 'inf' and '-inf', we only do
+        #       the clip later when necessary in order not to waste
+        #       computing power.
+        data = ProcessedData(tid)
+        data.images = assembled
+        data.image_mean = assembled_mean
+        data.threshold_mask = (mask_min, mask_max)
+        data.image_mask = image_mask
+
+        return data
+
+    def perform_azimuthal_integration(self, data):
+        """Perform azimuthal integration.
+
+        :param ProcessedData data: data after pre-processing.
+
+        :return ProcessedData: processed data containing azimuthal
+            integration result.
+        """
+        assembled = data.images
+        image_mask = data.image_mask
+        mask_min, mask_max = data.threshold_mask
+
+        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
+                                       poni1=self.center_coordinate_sp[1],
+                                       poni2=self.center_coordinate_sp[0],
+                                       pixel1=config["PIXEL_SIZE"],
+                                       pixel2=config["PIXEL_SIZE"],
+                                       rot1=0,
+                                       rot2=0,
+                                       rot3=0,
+                                       wavelength=self.wavelength_sp)
 
         t0 = time.perf_counter()
 
-        if self.image_mask is None:
-            base_mask = np.zeros_like(assembled[0], dtype=np.uint8)
+        if assembled.ndim == 3:
+            # pulse-resolved
+
+            def _integrate1d_imp(i):
+                """Use for multiprocessing."""
+                # convert 'nan' to '-inf', as explained above
+                assembled[i][np.isnan(assembled[i])] = -np.inf
+
+                mask = np.copy(image_mask)
+                # merge image mask and threshold mask
+                mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
+
+                # do integration
+                ret = ai.integrate1d(assembled[i],
+                                     self.integration_points_sp,
+                                     method=self.integration_method_sp,
+                                     mask=mask,
+                                     radial_range=self.integration_range_sp,
+                                     correctSolidAngle=True,
+                                     polarization_factor=1,
+                                     unit="q_A^-1")
+
+                return ret.radial, ret.intensity
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                rets = executor.map(_integrate1d_imp,
+                                    range(assembled.shape[0]))
+
+            momentums, intensities = zip(*rets)
+            momentum = momentums[0]
+            intensities = np.array(intensities)
+            intensities_mean = np.mean(intensities, axis=0)
+
         else:
-            if self.image_mask.shape != assembled[0].shape:
-                raise ValueError(
-                    "Invalid mask shape {} for image with shape {}".
-                    format(self.image_mask.shape, assembled[0].shape))
-            base_mask = self.image_mask
+            # train-resolved
 
-        mask_min = self.threshold_mask_sp[0]
-        mask_max = self.threshold_mask_sp[1]
+            mask = np.copy(image_mask)
+            # merge image mask and threshold mask
+            mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
-        def _integrate1d_imp(i):
-            """Use for multiprocessing."""
-            # convert 'nan' to '-inf', as explained above
-            assembled[i][np.isnan(assembled[i])] = -np.inf
-
-            # add threshold mask
-            mask = np.copy(base_mask)
-            mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
-
-            # do integration
-            ret = ai.integrate1d(assembled[i],
+            ret = ai.integrate1d(assembled,
                                  self.integration_points_sp,
                                  method=self.integration_method_sp,
                                  mask=mask,
@@ -368,33 +359,51 @@ class FaiDataProcessor(Worker):
                                  polarization_factor=1,
                                  unit="q_A^-1")
 
-            return ret.radial, ret.intensity
+            momentum = ret.radial
+            # There is only one intensity data, but we use plural here to
+            # be consistent with pulse-resolved data.
+            intensities = ret.intensity
+            intensities_mean = intensities
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            rets = executor.map(_integrate1d_imp,
-                                range(assembled.shape[0]))
+            logger.debug("Time for azimuthal integration: {:.1f} ms"
+                         .format(1000 * (time.perf_counter() - t0)))
 
-        momentums, intensities = zip(*rets)
-        momentum = momentums[0]
+        data.momentum = momentum
+        data.intensities = intensities
+        data.intensity_mean = intensities_mean
 
-        logger.debug("Time for azimuthal integration: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
+        return data
 
-        # clip the array, which now will contain only numerical values
-        # within the mask range
-        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
+    def postprocess_data(self, data):
+        """Data post-processing after azimuthal integration
 
-        # Note: 'assembled' still contains 'inf' and '-inf', we only do
-        #       the clip later when necessary in order not to waste
-        #       computing power.
-        data = ProcessedData(tid,
-                             momentum=momentum,
-                             intensity=np.array(intensities),
-                             intensity_mean=np.mean(intensities, axis=0),
-                             images=assembled,
-                             image_mean=assembled_mean,
-                             threshold_mask=(mask_min, mask_max),
-                             image_mask=self.image_mask)
+        :param ProcessedData data: data includes azimuthal integration
+            information.
+        """
+        # Add ROI information
+
+        # Note: We need to put some data in the history, even if ROI is not
+        # activated. This is required for the case that ROI1 and ROI2 were
+        # activate at different times.
+        if data.tid > 0:
+            # it should be valid to set ROI intensity to zero if the data
+            # is not available
+            roi1_intensity = 0
+            if self.roi1_sp is not None:
+                data.roi1 = self.roi1_sp
+                w1, h1, cx1, cy1 = self.roi1_sp
+                roi1_intensity = np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1])
+
+            roi2_intensity = 0
+            if self.roi2_sp is not None:
+                data.roi2 = self.roi2_sp
+                w2, h2, cx2, cy2 = self.roi2_sp
+                roi2_intensity = np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2])
+
+            data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
+
+        if data.roi_hist.full():
+            self.log("ROI history is full!")
 
         return data
 
@@ -492,46 +501,11 @@ class FaiDataProcessor(Worker):
                          format(assembled.shape, tid))
             return ProcessedData(tid)
 
-        if assembled.ndim == 3:
-            # pulse-resolved
-            assembled = assembled[
-                self.pulse_range_sp[0]:self.pulse_range_sp[1]]
-            ai_data = self.integrate_assembled_data_ps(assembled, tid)
-        else:
-            # train-resolved
-            ai_data = self.integrate_assembled_data_ts(assembled, tid)
+        # data processing work flow
 
-        return self.post_process_data(ai_data)
+        proc_data = self.preprocess_data(assembled, tid)
 
-    def post_process_data(self, data):
-        """Data post-processing after azimuthal integration
+        if self._enable_ai:
+            proc_data = self.perform_azimuthal_integration(proc_data)
 
-        :param ProcessedData data: data includes azimuthal integration
-            information.
-        """
-        # Add ROI information
-
-        # Note: We need to put some data in the history, even if ROI is not
-        # activated. This is required for the case that ROI1 and ROI2 were
-        # activate at different times.
-        if data.tid > 0:
-            # it should be valid to set ROI intensity to zero if the data
-            # is not available
-            roi1_intensity = 0
-            if self.roi1_sp is not None:
-                data.roi1 = self.roi1_sp
-                w1, h1, cx1, cy1 = self.roi1_sp
-                roi1_intensity = np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1])
-
-            roi2_intensity = 0
-            if self.roi2_sp is not None:
-                data.roi2 = self.roi2_sp
-                w2, h2, cx2, cy2 = self.roi2_sp
-                roi2_intensity = np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2])
-
-            data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
-
-        if data.roi_hist.full():
-            self.log("ROI history is full!")
-
-        return data
+        return self.postprocess_data(proc_data)

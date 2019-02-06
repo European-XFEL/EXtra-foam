@@ -198,7 +198,7 @@ class LaserOnOffWindow(PlotWindow):
             if self.laser_mode_sp == available_modes[0] or \
                     not self._off_train_received:
 
-                this_on_pulses = data.intensity[self.on_pulse_ids_sp].mean(axis=0)
+                this_on_pulses = data.intensities[self.on_pulse_ids_sp].mean(axis=0)
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
                     self._on_pulses_ma += \
@@ -226,7 +226,7 @@ class LaserOnOffWindow(PlotWindow):
         if self._off_train_received:
             # update off-pulse
 
-            this_off_pulses = data.intensity[self.off_pulse_ids_sp].mean(axis=0)
+            this_off_pulses = data.intensities[self.off_pulse_ids_sp].mean(axis=0)
             self._off_pulses_hist.append(this_off_pulses)
 
             if self._off_pulses_ma is None:
@@ -272,16 +272,16 @@ class LaserOnOffWindow(PlotWindow):
         if data.empty():
             return
 
-        if max(self.on_pulse_ids_sp) > data.intensity.shape[0]:
+        if max(self.on_pulse_ids_sp) > data.intensities.shape[0]:
             logger.error("On-pulse ID {} out of range (0 - {})".
                          format(max(self.on_pulse_ids_sp),
-                                data.intensity.shape[0] - 1))
+                                data.intensities.shape[0] - 1))
             return
 
-        if max(self.off_pulse_ids_sp) > data.intensity.shape[0]:
+        if max(self.off_pulse_ids_sp) > data.intensities.shape[0]:
             logger.error("Off-pulse ID {} out of range (0 - {})".
                          format(max(self.off_pulse_ids_sp),
-                                data.intensity.shape[0] - 1))
+                                data.intensities.shape[0] - 1))
             return
 
         normalized_on_pulse, normalized_off_pulse = self._update(data)

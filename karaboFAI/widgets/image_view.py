@@ -224,7 +224,7 @@ class SinglePulseImageView(ImageView):
         images = data.images
         threshold_mask = data.threshold_mask
 
-        max_id = len(data.intensity) - 1
+        max_id = len(data.images) - 1
         if self.pulse_id <= max_id:
             np.clip(images[self.pulse_id], *threshold_mask,
                     images[self.pulse_id])

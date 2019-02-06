@@ -55,6 +55,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
+        self.enable_ai_cb = QtGui.QCheckBox(
+            "Azimuthal integration")
+
         self._disabled_widgets_during_daq = [
             self._max_pulse_id_le,
         ]
@@ -65,6 +68,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         """Overload."""
         layout = QtGui.QFormLayout()
         layout.setLabelAlignment(QtCore.Qt.AlignRight)
+
+        layout.addRow(self.enable_ai_cb)
 
         if self._pulse_resolved:
             layout.addRow("Min. pulse ID: ", self._min_pulse_id_le)

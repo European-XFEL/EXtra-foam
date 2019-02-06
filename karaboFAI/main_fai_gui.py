@@ -122,6 +122,9 @@ class MainFaiGUI(MainGUI):
         self._mediator.threshold_mask_change_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
 
+        self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
+            self._proc_worker.onEnableAiStateChange)
+
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()
         misc_layout.addWidget(self.ai_ctrl_widget)

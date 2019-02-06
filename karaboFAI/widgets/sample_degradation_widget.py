@@ -46,10 +46,14 @@ class SampleDegradationWidget(PlotWidget):
         # TODO: since this becomes a mandatory widget, we can consider to
         # TODO: move the calculation outside of the update method.
         momentum = data.momentum
+        intensities = data.intensities
+
+        if intensities is None:
+            return
 
         # normalize azimuthal integration curves for each pulse
         normalized_pulse_intensities = []
-        for pulse_intensity in data.intensity:
+        for pulse_intensity in intensities:
             normalized = normalize_curve(
                 pulse_intensity, momentum, *self._normalization_range_sp)
             normalized_pulse_intensities.append(normalized)

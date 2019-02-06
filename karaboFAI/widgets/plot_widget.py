@@ -147,21 +147,27 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        if data.intensity.ndim == 2:
+        momentum = data.momentum
+        intensities = data.intensities
+
+        if intensities is None:
+            return
+
+        if intensities.ndim == 2:
             # pulse resolved data
-            max_id = len(data.intensity) - 1
+            max_id = len(data.images) - 1
             if self.pulse_id <= max_id:
-                self._pulse_plot.setData(data.momentum,
-                                         data.intensity[self.pulse_id])
+                self._pulse_plot.setData(momentum,
+                                         intensities[self.pulse_id])
             else:
                 logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
                              "pulse ID ({})".format(self.pulse_id, max_id))
                 return
         else:
-            self._pulse_plot.setData(data.momentum, data.intensity)
+            self._pulse_plot.setData(momentum, intensities)
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(data.momentum, data.intensity_mean)
+            self._mean_plot.setData(momentum, data.intensity_mean)
 
 
 class MultiPulseAiWidget(PlotWidget):
@@ -191,7 +197,10 @@ class MultiPulseAiWidget(PlotWidget):
     def update(self, data):
         """Override."""
         momentum = data.momentum
-        intensities = data.intensity
+        intensities = data.intensities
+
+        if intensities is None:
+            return
 
         n_pulses = len(intensities)
         if n_pulses != self._n_pulses:
