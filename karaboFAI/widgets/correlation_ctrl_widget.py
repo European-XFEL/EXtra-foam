@@ -17,8 +17,6 @@ from ..config import config
 class CorrelationCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the correlation analysis parameters."""
 
-    allowed_corr_params = ("photon energy",)
-
     normalizers = (
         "integrated curve", "reference signal"
     )
@@ -41,11 +39,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self._integration_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
 
-        self._correlation1_le = QtGui.QComboBox()
-        self._correlation2_le = QtGui.QComboBox()
-        for param in self.allowed_corr_params:
-            self._correlation1_le.addItem(param)
-            self._correlation2_le.addItem(param)
+        self._src1_le = QtGui.QComboBox()
+        self._src2_le = QtGui.QComboBox()
+        self._key1_le = QtGui.QComboBox()
+        self._key2_le = QtGui.QComboBox()
 
         self.initUI()
 
@@ -58,8 +55,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         layout.addRow("Figure of merit (FOM): ", self._figure_of_merit_cb)
         layout.addRow("Normalized by: ", self._normalizers_cb)
         layout.addRow("Integration range (1/A): ", self._integration_range_le)
-        layout.addRow("Correlation param 1: ", self._correlation1_le)
-        layout.addRow("Correlation param 2: ", self._correlation2_le)
+        layout.addRow("Source 1: ", self._src1_le)
+        layout.addRow("Key 1: ", self._key1_le)
+        layout.addRow("Source 2: ", self._src2_le)
+        layout.addRow("Key 2: ", self._key2_le)
 
         self.setLayout(layout)
 
