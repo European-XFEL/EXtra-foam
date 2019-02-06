@@ -40,10 +40,10 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._cx_le.setValidator(self._pos_validator)
         self._cy_le = QtGui.QLineEdit()
         self._cy_le.setValidator(self._pos_validator)
-        self._width_le.editingFinished.connect(self.roiRegionChangedEvent)
-        self._height_le.editingFinished.connect(self.roiRegionChangedEvent)
-        self._cx_le.editingFinished.connect(self.roiRegionChangedEvent)
-        self._cy_le.editingFinished.connect(self.roiRegionChangedEvent)
+        self._width_le.editingFinished.connect(self.onRoiRegionChanged)
+        self._height_le.editingFinished.connect(self.onRoiRegionChanged)
+        self._cx_le.editingFinished.connect(self.onRoiRegionChanged)
+        self._cy_le.editingFinished.connect(self.onRoiRegionChanged)
 
         self._line_edits = (self._width_le, self._height_le,
                             self._cx_le, self._cy_le)
@@ -56,9 +56,9 @@ class RoiCtrlWidget(QtGui.QGroupBox):
 
         roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
         roi.sigRegionChangeFinished.emit(roi)  # fill the QLineEdit(s)
-        self.activate_cb.stateChanged.connect(self.toggleRoiActivationEvent)
-        self.lock_cb.stateChanged.connect(self.lockEvent)
-        self.lock_aspect_cb.stateChanged.connect(self.lockAspectEvent)
+        self.activate_cb.stateChanged.connect(self.onToggleRoiActivation)
+        self.lock_cb.stateChanged.connect(self.onLock)
+        self.lock_aspect_cb.stateChanged.connect(self.onLockAspect)
 
     def initUI(self):
         le_layout = QtGui.QHBoxLayout()
@@ -92,7 +92,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         # inform widgets outside this window
         self.roi_region_changed_sgn.emit(True, w, h, cx, cy)
 
-    def toggleRoiActivationEvent(self, state):
+    @QtCore.pyqtSlot(int)
+    def onToggleRoiActivation(self, state):
         if state == QtCore.Qt.Checked:
             self._roi.show()
             self.enableAllEdit()
@@ -104,7 +105,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
             self.roi_region_changed_sgn.emit(
                 False, *self._roi.size(), *self._roi.pos())
 
-    def lockEvent(self, state):
+    @QtCore.pyqtSlot(int)
+    def onLock(self, state):
         if state == QtCore.Qt.Checked:
             self._roi.lock()
             self.disableLockEdit()
@@ -112,7 +114,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
             self._roi.unLock()
             self.enableLockEdit()
 
-    def lockAspectEvent(self, state):
+    @QtCore.pyqtSlot(int)
+    def onLockAspect(self, state):
         if state == QtCore.Qt.Checked:
             self._roi.lockAspect()
         else:
@@ -124,7 +127,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._cx_le.setText(str(cx))
         self._cy_le.setText(str(cy))
 
-    def roiRegionChangedEvent(self):
+    @QtCore.pyqtSlot()
+    def onRoiRegionChanged(self):
         w = int(self._width_le.text())
         h = int(self._height_le.text())
         cx = int(self._cx_le.text())
