@@ -175,7 +175,7 @@ class FaiDataProcessor(Worker):
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
-        if state:
+        if state == QtCore.Qt.Checked:
             self._enable_ai = True
         else:
             self._enable_ai = False
