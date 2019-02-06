@@ -75,7 +75,8 @@ class DataProcessor(Worker):
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
 
-        self.source_sp = None
+        self.source_type_sp = None
+        self.source_name_sp = None  # detector source name
         self.pulse_range_sp = None
         self.geom_sp = None
         self.wavelength_sp = None
@@ -100,8 +101,12 @@ class DataProcessor(Worker):
             self.log(msg)
 
     @QtCore.pyqtSlot(object)
-    def onSourceChanged(self, value):
-        self.source_sp = value
+    def onSourceTypeChange(self, value):
+        self.source_type_sp = value
+
+    @QtCore.pyqtSlot(str)
+    def onSourceNameChange(self, value):
+        self.source_name_sp = value
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
@@ -192,12 +197,12 @@ class DataProcessor(Worker):
 
             t0 = time.perf_counter()
 
-            if self.source_sp == DataSource.CALIBRATED_FILE:
+            if self.source_type_sp == DataSource.CALIBRATED_FILE:
                 processed_data = self.process_calibrated_data(
                     data, from_file=True)
-            elif self.source_sp == DataSource.CALIBRATED:
+            elif self.source_type_sp == DataSource.CALIBRATED:
                 processed_data = self.process_calibrated_data(data)
-            elif self.source_sp == DataSource.PROCESSED:
+            elif self.source_type_sp == DataSource.PROCESSED:
                 processed_data = data[0]
             else:
                 raise ValueError("Unknown data source!")
@@ -237,8 +242,7 @@ class DataProcessor(Worker):
         if assembled.ndim == 3:
             # pulse resolved
 
-            assembled = assembled[
-                        self.pulse_range_sp[0]:self.pulse_range_sp[1]]
+            assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1]]
             assembled_mean = nanmean_axis0_para(assembled,
                                                 max_workers=8, chunk_size=20)
         else:
@@ -436,10 +440,10 @@ class DataProcessor(Worker):
         t0 = time.perf_counter()
 
         if from_file is False:
-            tid = metadata[config["SOURCE_NAME"]]["timestamp.tid"]
+            tid = metadata[self.source_name_sp]["timestamp.tid"]
             # Data coming from bridge in case of JungFrau will have
             # different key. To be included
-            modules_data = data[config["SOURCE_NAME"]]["image.data"]
+            modules_data = data[self.source_name_sp]["image.data"]
 
             if config["DETECTOR"] == "LPD":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
@@ -454,15 +458,11 @@ class DataProcessor(Worker):
                         data, "image.data", only=config["DETECTOR"])
 
                 elif config["DETECTOR"] == 'JungFrau':
-                    # Can the device be more meaningful?
-                    key = [s for s in data.keys()
-                           if "RECEIVER:daqOutput" in s][0]
                     # (modules, y, x)
-                    modules_data = data[key]['data.adc']
+                    modules_data = data[self.source_name_sp]['data.adc']
                 elif config["DETECTOR"] == "FastCCD":
-                    key = [s for s in data.keys() if "FCCD:daqOutput" in s][0]
                     # (y, x)
-                    modules_data = data[key]["data.image.pixels"]
+                    modules_data = data[self.source_name_sp]["data.image.pixels"]
 
                 expected_dim = len(config["EXPECTED_SHAPE"])
                 if not hasattr(modules_data, 'shape') \

@@ -53,8 +53,9 @@ class Config(dict):
     # ----------
     # SERVER_ADDR str: TCP address of the ZMQ bridge
     # SERVER_PORT int: TCP port of the ZMQ bridge
-    # SOURCE_NAME str: PipeToZeroMQ device ID / folder of the HDF5 data files
+    # SOURCE_NAME str: PipeToZeroMQ device ID
     # SOURCE_TYPE int: see data_processing.data_model.DataSource
+    # DATA_FOLDER str: data folder if streamed from files
     # PULSE_RESOLVED bool: whether the data is pulse resolved (readonly)
     #
     # azimuthal integration
@@ -97,13 +98,14 @@ class Config(dict):
         "PULSE_RESOLVED",
         "REQUIRE_GEOMETRY",
         "EXPECTED_SHAPE",
+        "SOURCE_NAME",
     )
 
     _detector_reconfigurable_keys = (
         "SERVER_ADDR",
         "SERVER_PORT",
-        "SOURCE_NAME",
         "SOURCE_TYPE",
+        "DATA_FOLDER",
         "GEOMETRY_FILE",
         "QUAD_POSITIONS",
         "INTEGRATION_METHODS",
@@ -122,15 +124,16 @@ class Config(dict):
     # all the keys in '_allowed_detector_config_keys'.
 
     # the read-only config keys should come first, e.g. PULSE_RESOLVED,
-    # REQUIRED_GEOMETRY, EXPECTED_SHAPE
+    # REQUIRED_GEOMETRY, EXPECTED_SHAPE, SOURCE_NAME
     _default_agipd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
         "EXPECTED_SHAPE": (16, 512, 128),
+        "SOURCE_NAME": ('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',),
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
-        "SOURCE_NAME": 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
         "SOURCE_TYPE": 1,
+        "DATA_FOLDER": "",
         "GEOMETRY_FILE": '/home/spbonc/xfel_geom_AgBehenate_20181012.geom',
         "QUAD_POSITIONS": ((0, 0),
                            (0, 0),
@@ -153,10 +156,11 @@ class Config(dict):
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
         "EXPECTED_SHAPE": (16, 256, 256),
+        "SOURCE_NAME": ("FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
-        "SOURCE_NAME": "FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",
         "SOURCE_TYPE": 1,
+        "DATA_FOLDER": "",
         "GEOMETRY_FILE": os.path.join(os.path.expanduser("~"), "lpd_mar_18.h5"),
         "QUAD_POSITIONS": ((-13.0, -299.0),
                            (11.0, -8.0),
@@ -179,15 +183,13 @@ class Config(dict):
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
         "EXPECTED_SHAPE": (1, 512, 1024),
+        "SOURCE_NAME": ("FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
-        "SOURCE_NAME": "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
         "SOURCE_TYPE": 1,
+        "DATA_FOLDER": "",
         "GEOMETRY_FILE": "",
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
+        "QUAD_POSITIONS": (),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (0.2, 5),
@@ -205,15 +207,13 @@ class Config(dict):
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
         "EXPECTED_SHAPE": (1934, 960),
+        "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",),
         "SERVER_ADDR": "",
         "SERVER_PORT": 4501,
-        "SOURCE_NAME": "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
         "SOURCE_TYPE": 1,
+        "DATA_FOLDER": "",
         "GEOMETRY_FILE": "",
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
+        "QUAD_POSITIONS": (),
         "INTEGRATION_METHODS": ['BBox', 'numpy', 'cython', 'splitpixel', 'lut',
                                 'csr', 'nosplit_csr', 'lut_ocl', 'csr_ocl'],
         "INTEGRATION_RANGE": (1e-3, 0.02),

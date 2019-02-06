@@ -187,16 +187,16 @@ class MainGUI(QtGui.QMainWindow):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self.data_ctrl_widget.data_source_sgn.connect(
-            self._proc_worker.onSourceChanged)
+        self.data_ctrl_widget.source_type_sgn.connect(
+            self._proc_worker.onSourceTypeChange)
         self.data_ctrl_widget.server_tcp_sgn.connect(
             self._daq_worker.onServerTcpChanged)
+        self.data_ctrl_widget.source_name_sgn.connect(
+            self._proc_worker.onSourceNameChange)
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
-        self.data_ctrl_widget.data_source_sgn.connect(
-            self._proc_worker.onSourceChanged)
 
     def initUI(self):
         raise NotImplementedError
