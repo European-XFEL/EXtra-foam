@@ -8,12 +8,16 @@ PlotWidget
 SinglePulseAiWidget
 MultiPulseAiWidget
 RoiIntensityMonitor
+CorrelationWidget
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .pyqtgraph import GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui
+from .pyqtgraph import (
+    GraphicsView, intColor, mkBrush, mkPen, PlotItem, QtCore, QtGui,
+    ScatterPlotItem
+)
 from .misc_widgets import PenFactory
 from ..logger import logger
 from ..config import config
@@ -260,3 +264,38 @@ class RoiIntensityMonitor(PlotWidget):
     @QtCore.pyqtSlot(int)
     def onWindowSizeChanged(self, v):
         self._window = v
+
+
+class CorrelationWidget(PlotWidget):
+    """CorrelationWidget class.
+
+    Widget used for displaying correlations between FOM and different
+    parameters.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "ROI (arb. u.)")
+        self.setLabel('left', "Correlator (arb. u.)")
+
+        self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
+                                     brush=mkBrush(255, 255, 255, 120))
+        self.addItem(self._plot)
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._plot.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        import random
+        x = list(range(1000))
+        random.shuffle(x)
+        y = list(range(1000))
+        random.shuffle(y)
+        self._plot.setData(x, y)

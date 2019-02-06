@@ -13,24 +13,38 @@ from .misc_widgets import (
 from .sample_degradation_widget import SampleDegradationWidget
 from .image_view import ImageView, RoiImageView, SinglePulseImageView
 from .plot_widget import (
-    MultiPulseAiWidget, SinglePulseAiWidget, RoiIntensityMonitor
+    CorrelationWidget, MultiPulseAiWidget, SinglePulseAiWidget,
+    RoiIntensityMonitor
 )
 from .bulletin_widget import BulletinWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 
 
+# miscellaneous
 __all__ = [
-    "colorMapFactory",
     "BulletinWidget",
-    "ImageView",
+    "colorMapFactory",
+    "GuiLogger",
+    "InputDialogWithCheckBox",
+    "PenFactory"
+]
+
+# add plot widgets
+__all__.extend([
+    "CorrelationWidget",
     "MultiPulseAiWidget",
-    "RoiImageView",
     "RoiIntensityMonitor",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
+])
+
+# add image widgets
+__all__.extend([
+    "ImageView",
+    "RoiImageView",
     "SinglePulseImageView",
-]
+])
 
 # add control widgets
 __all__.extend([
@@ -40,13 +54,4 @@ __all__.extend([
     "DataCtrlWidget",
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget"
-])
-
-# miscellaneous
-__all__.extend([
-    "CustomGroupBox",
-    "FixedWidthLineEdit",
-    "GuiLogger",
-    "InputDialogWithCheckBox",
-    "PenFactory"
 ])

@@ -20,7 +20,8 @@ from .widgets import (
     GeometryCtrlWidget, PumpProbeCtrlWidget
 )
 from .windows import (
-    LaserOnOffWindow, OverviewWindow, OverviewWindowTrainResolved
+    CorrelationWindow, LaserOnOffWindow, OverviewWindow,
+    OverviewWindowTrainResolved
 )
 from .main_gui import MainGUI
 from .config import config
@@ -61,6 +62,17 @@ class MainFaiGUI(MainGUI):
                                      parent=self,
                                      pulse_resolved=self._pulse_resolved))
         self._tool_bar.addAction(open_laseronoff_window_at)
+
+        #
+        open_correlation_window_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/scatter.png")),
+            "Correlations",
+            self)
+        open_correlation_window_at.triggered.connect(
+            lambda: CorrelationWindow(self._data,
+                                      parent=self,
+                                      pulse_resolved=self._pulse_resolved))
+        self._tool_bar.addAction(open_correlation_window_at)
 
         # *************************************************************
         # control widgets
