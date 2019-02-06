@@ -446,7 +446,6 @@ class DataProcessor(Worker):
 
         :return ProcessedData: processed data.
         """
-        print(self.correlation_param1, self.correlation_param2)
         data, metadata = calibrated_data
 
         t0 = time.perf_counter()

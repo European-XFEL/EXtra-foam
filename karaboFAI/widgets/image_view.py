@@ -68,8 +68,9 @@ class ImageView(QtGui.QWidget):
 
     Note: it is different from the ImageView in pyqtgraph!
     """
-    ROI_POS0 = (50, 50)
-    ROI_SIZE0 = (50, 50)
+    ROI1_POS0 = (50, 50)
+    ROI2_POS0 = (60, 60)
+    ROI_SIZE0 = (100, 100)
 
     def __init__(self, *, level_mode='mono', lock_roi=True, parent=None):
         """Initialization.
@@ -78,6 +79,8 @@ class ImageView(QtGui.QWidget):
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
+        :param bool lock_roi: True for non-movable/non-translatable ROI.
+            This is used in ImageView with passive ROI.
         """
         super().__init__(parent=parent)
         try:
@@ -85,10 +88,10 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
-        self.roi1 = RectROI(self.ROI_POS0, self.ROI_SIZE0,
+        self.roi1 = RectROI(self.ROI1_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
                             pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
-        self.roi2 = RectROI(self.ROI_POS0, self.ROI_SIZE0,
+        self.roi2 = RectROI(self.ROI2_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
                             pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
         self.roi1.hide()
