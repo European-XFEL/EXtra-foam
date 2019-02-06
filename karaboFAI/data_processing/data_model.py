@@ -69,19 +69,24 @@ class ProcessedData:
         image_mask (numpy.ndarray): an image mask which is applied to all
             the detector images, default = None. Shape = (y, x)
     """
-    def __init__(self, tid):
+    def __init__(self, tid, *,
+                 momentum=None,
+                 intensities=None,
+                 intensity_mean=None,
+                 images=None,
+                 image_mean=None):
         """Initialization."""
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
         # tid is not allowed to be modified once initialized.
         self._tid = tid
 
-        self.momentum = None
-        self.intensities = None
-        self.intensity_mean = None
+        self.momentum = momentum
+        self.intensities = intensities
+        self.intensity_mean = intensity_mean
 
-        self.images = None
-        self.image_mean = None
+        self.images = images
+        self.image_mean = image_mean
 
         self.roi1 = None
         self.roi2 = None

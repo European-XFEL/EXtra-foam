@@ -13,7 +13,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
     gui = MainFaiGUI("LPD")
     win = LaserOnOffWindow(Data4Visualization(), parent=gui)
 
-    gui.data_ctrl_widget.data_source_sgn.emit(
+    gui.data_ctrl_widget.source_type_sgn.emit(
         DataSource.CALIBRATED_FILE)
     gui.pump_probe_ctrl_widget.normalization_range_sgn.emit(1, 5)
     gui.pump_probe_ctrl_widget.integration_range_sgn.emit(1, 5)
@@ -28,7 +28,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         for i in range(10):
             self._data.append(ProcessedData(i,
                                             momentum=np.linspace(1, 5, 5),
-                                            intensity=(i+1)*intensity))
+                                            intensities=(i+1)*intensity))
 
     def testNormalMode(self):
         self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
