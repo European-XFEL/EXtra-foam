@@ -441,6 +441,7 @@ class DataProcessor(Worker):
 
         if from_file is False:
             tid = metadata[self.source_name_sp]["timestamp.tid"]
+
             # Data coming from bridge in case of JungFrau will have
             # different key. To be included
             modules_data = data[self.source_name_sp]["image.data"]
@@ -452,44 +453,54 @@ class DataProcessor(Worker):
             # get the train ID of the first metadata
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
-            try:
-                if config["DETECTOR"] in ("LPD", "AGIPD"):
+            expected_shape = config["EXPECTED_SHAPE"]
+
+            if config["DETECTOR"] in ("LPD", "AGIPD"):
+                try:
                     modules_data = stack_detector_data(
                         data, "image.data", only=config["DETECTOR"])
 
-                elif config["DETECTOR"] == 'JungFrau':
+                    if not hasattr(modules_data, 'shape') \
+                            or modules_data.shape[-len(expected_shape):] != expected_shape:
+                        raise ValueError("Error in the shape of modules data")
+
+                # To handle a bug when using the recent karabo_data on the
+                # old data set:
+                # 1. Missing "image.data" will raise KeyError!
+                # 2. Different modules could have different shapes, e.g.
+                #    a train with 32 pulses could has a module with shape
+                #    (4, 256, 256), which means the data for some pulses
+                #    were lost. It will raise ValueError!
+                #
+                # Note: we log the information in 'debug' since otherwise it
+                #       will go to the log window and cause problems like
+                #       segmentation fault.
+                except (KeyError, ValueError) as e:
+                    logger.debug("Error in stacking detector data: " + str(e))
+                    return ProcessedData(tid)
+
+            elif config["DETECTOR"] == 'JungFrau':
+                try:
                     # (modules, y, x)
                     modules_data = data[self.source_name_sp]['data.adc']
-                elif config["DETECTOR"] == "FastCCD":
+                except KeyError:
+                    logger.debug(f"Source [{self.source_name_sp}] is not in "
+                                 f"the received data!")
+                    return ProcessedData(tid)
+            elif config["DETECTOR"] == "FastCCD":
+                try:
                     # (y, x)
                     modules_data = data[self.source_name_sp]["data.image.pixels"]
-
-                expected_dim = len(config["EXPECTED_SHAPE"])
-                if not hasattr(modules_data, 'shape') \
-                        or modules_data.shape[-expected_dim:] != config["EXPECTED_SHAPE"]:
-                    msg = "Error in the shape of modules data"
-                    logger.debug(msg)
-                    raise ValueError(msg)
-
-            # To handle a bug when using the recent karabo_data on the
-            # old data set:
-            # 1. Missing "image.data" will raise KeyError!
-            # 2. Different modules could have different shapes, e.g.
-            #    a train with 32 pulses could has a module with shape
-            #    (4, 256, 256), which means the data for some pulses
-            #    were lost. It will raise ValueError!
-            #
-            # Note: we log the information in 'debug' since otherwise it
-            #       will go to the log window and cause problems like
-            #       segmentation fault.
-            except (KeyError, ValueError) as e:
-                logger.debug("Error in stacking detector data: " + str(e))
-                return ProcessedData(tid)
+                except KeyError:
+                    logger.debug(f"Source [{self.source_name_sp}] is not in "
+                                 f"the received data!")
+                    return ProcessedData(tid)
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         t0 = time.perf_counter()
+
         # AGIPD, LPD
         if modules_data.ndim == 4:
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
