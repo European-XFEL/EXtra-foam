@@ -510,6 +510,10 @@ class FaiDataProcessor(Worker):
             information.
         """
         # Add ROI information
+
+        # Note: We need to put some data in the history, even if ROI is not
+        # activated. This is required for the case that ROI1 and ROI2 were
+        # activate at different times.
         if data.tid > 0:
             # it should be valid to set ROI intensity to zero if the data
             # is not available
