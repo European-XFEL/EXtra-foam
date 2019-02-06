@@ -39,10 +39,20 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self._integration_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
 
-        self._src1_le = QtGui.QComboBox()
-        self._src2_le = QtGui.QComboBox()
-        self._key1_le = QtGui.QComboBox()
-        self._key2_le = QtGui.QComboBox()
+        self._src1_le = QtGui.QLineEdit()
+        self._src2_le = QtGui.QLineEdit()
+        self._key1_le = QtGui.QLineEdit()
+        self._key2_le = QtGui.QLineEdit()
+
+        self._disabled_widgets_during_daq = [
+            self._figure_of_merit_cb,
+            self._normalizers_cb,
+            self._integration_range_le,
+            self._src1_le,
+            self._key1_le,
+            self._src2_le,
+            self._key2_le,
+        ]
 
         self.initUI()
 
