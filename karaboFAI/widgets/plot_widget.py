@@ -223,6 +223,7 @@ class RoiIntensityMonitor(PlotWidget):
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
+        self.addLegend(offset=(-40, 20))
 
         self._roi1_plot = self.plot(
             name="ROI 1", pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
