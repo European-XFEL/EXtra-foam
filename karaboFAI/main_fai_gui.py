@@ -144,6 +144,10 @@ class MainFaiGUI(MainGUI):
         self.correlation_ctrl_widget.param2_sgn.connect(
             self._proc_worker.onCorrelationParam2Change)
 
+        self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
+            self._proc_worker.onOffPulseStateChange
+        )
+
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()
         misc_layout.addWidget(self.ai_ctrl_widget)

@@ -94,6 +94,9 @@ class DataProcessor(Worker):
                                   config["MASK_RANGE"][1])
         self.roi1_sp = None
         self.roi2_sp = None
+        self.laser_mode_sp = None
+        self.on_pulse_ids_sp = None
+        self.off_pulse_ids_sp = None
 
         self.correlation_param1 = None
         self.correlation_param2 = None
@@ -131,6 +134,12 @@ class DataProcessor(Worker):
                 raise
 
             self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
+
+    @QtCore.pyqtSlot(str, list, list)
+    def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
+        self.laser_mode_sp = mode
+        self.on_pulse_ids_sp = on_pulse_ids
+        self.off_pulse_ids_sp = off_pulse_ids
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChanged(self, value):
