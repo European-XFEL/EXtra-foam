@@ -205,7 +205,7 @@ class DataProcessor(Worker):
             elif self.source_type_sp == DataSource.PROCESSED:
                 processed_data = data[0]
             else:
-                raise ValueError("Unknown data source!")
+                self.log("Unknown data source!")
 
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
