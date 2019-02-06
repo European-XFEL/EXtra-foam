@@ -205,7 +205,6 @@ class ImageToolWindow(AbstractWindow):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        parent = self.parent()
 
         self._image_view = ImageView(lock_roi=False)
 
@@ -214,9 +213,13 @@ class ImageToolWindow(AbstractWindow):
             self._mediator.onRoiHistClear)
 
         self._roi_hist_window_le = QtGui.QLineEdit(str(600))
+        validator = QtGui.QIntValidator()
+        validator.setBottom(1)
+        self._roi_hist_window_le.setValidator(validator)
         self._roi_hist_window_le.editingFinished.connect(
             self._mediator.onRoiIntensityWindowChange
         )
+
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
             title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
