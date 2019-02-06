@@ -386,19 +386,27 @@ class FaiDataProcessor(Worker):
         # activated. This is required for the case that ROI1 and ROI2 were
         # activate at different times.
         if data.tid > 0:
+            img = data.image_mean
+
             # it should be valid to set ROI intensity to zero if the data
             # is not available
             roi1_intensity = 0
             if self.roi1_sp is not None:
-                data.roi1 = self.roi1_sp
-                w1, h1, cx1, cy1 = self.roi1_sp
-                roi1_intensity = np.sum(data.image_mean[cy1:cy1+h1, cx1:cx1+w1])
+                if not self._validate_roi(*self.roi1_sp, *img.shape):
+                    self.roi1_sp = None
+                else:
+                    data.roi1 = self.roi1_sp
+                    w, h, cx, cy = self.roi1_sp
+                    roi1_intensity = np.sum(img[cy:cy+h, cx:cx+w])
 
             roi2_intensity = 0
             if self.roi2_sp is not None:
-                data.roi2 = self.roi2_sp
-                w2, h2, cx2, cy2 = self.roi2_sp
-                roi2_intensity = np.sum(data.image_mean[cy2:cy2+h2, cx2:cx2+w2])
+                if not self._validate_roi(*self.roi2_sp, *img.shape):
+                    self.roi2_sp = None
+                else:
+                    data.roi2 = self.roi2_sp
+                    w, h, cx, cy = self.roi2_sp
+                    roi2_intensity = np.sum(data.image_mean[cy:cy+h, cx:cx+w])
 
             data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
 
@@ -406,6 +414,13 @@ class FaiDataProcessor(Worker):
             self.log("ROI history is full!")
 
         return data
+
+    def _validate_roi(self, w, h, cx, cy, img_h, img_w):
+        """Check whether the ROI is within the image.
+        """
+        if w < 0 or h < 0 or cx + w > img_w or cy + h > img_h:
+            return False
+        return True
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process calibrated data.
