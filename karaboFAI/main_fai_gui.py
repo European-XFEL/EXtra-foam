@@ -46,7 +46,8 @@ class MainFaiGUI(MainGUI):
                 lambda: OverviewWindow(self._data, parent=self))
         else:
             open_overview_window_at.triggered.connect(
-                lambda: OverviewWindowTrainResolved(self._data, parent=self))
+                lambda: OverviewWindowTrainResolved(
+                    self._data, mediator=self._mediator, parent=self))
 
         self._tool_bar.addAction(open_overview_window_at)
 

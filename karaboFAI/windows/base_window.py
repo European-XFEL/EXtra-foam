@@ -49,7 +49,7 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *, pulse_resolved=True, parent=None):
+    def __init__(self, data, *, mediator=None, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -63,6 +63,7 @@ class AbstractWindow(QtGui.QMainWindow):
 
         self._data = data
         self._pulse_resolved = pulse_resolved
+        self._mediator = mediator
 
         try:
             if self.title:

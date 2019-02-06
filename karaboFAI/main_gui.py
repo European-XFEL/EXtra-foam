@@ -27,6 +27,15 @@ from .file_server import FileServer
 from .config import config
 
 
+class Mediator(QtCore.QObject):
+    roi_intensity_window_sgn = QtCore.pyqtSignal(int)
+
+    @QtCore.pyqtSlot()
+    def onRoiIntensityWindowChanged(self):
+        v = int(self.sender().text())
+        self.roi_intensity_window_sgn.emit(v)
+
+
 class MainGUI(QtGui.QMainWindow):
     """Abstract main GUI."""
     _root_dir = os.path.dirname(os.path.abspath(__file__))
@@ -44,6 +53,8 @@ class MainGUI(QtGui.QMainWindow):
         :param str detector: detector name, e.g. "AGIPD", "LPD".
         """
         super().__init__()
+
+        self._mediator = Mediator()
 
         # update global configuration
         config.load(detector)
@@ -104,7 +115,8 @@ class MainGUI(QtGui.QMainWindow):
             "Image tool",
             self)
         image_tool_at.triggered.connect(
-            lambda: ImageToolWindow(self._data, parent=self))
+            lambda: ImageToolWindow(
+                self._data, mediator=self._mediator, parent=self))
         self._tool_bar.addAction(image_tool_at)
 
         # *************************************************************
@@ -215,9 +227,6 @@ class MainGUI(QtGui.QMainWindow):
         if not filename:
             logger.error("Please specify the image mask file!")
         self.image_mask_sgn.emit(filename)
-
-    def openImageAnalysis(self):
-        self._img = ImageAnalysisWidget(parent=self)
 
     def onStartDAQ(self):
         """Actions taken before the start of a 'run'."""

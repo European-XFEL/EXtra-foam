@@ -178,9 +178,9 @@ class OverviewWindowTrainResolved(DockerWindow):
     _TOTAL_W = _ASSEMBLED_IMG_W + _AI_W
     _TOTAL_H = _ASSEMBLED_IMG_H + 2 * _ROI_H
 
-    def __init__(self, data, *, parent=None):
+    def __init__(self, *args, **kwargs):
         """Initialization."""
-        super().__init__(data, parent=parent)
+        super().__init__(*args, **kwargs)
 
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
@@ -189,7 +189,10 @@ class OverviewWindowTrainResolved(DockerWindow):
 
         self._roi1_image = RoiImageView(parent=self)
         self._roi2_image = RoiImageView(roi1=False, parent=self)
+
         self._roi_intensity = RoiIntensityMonitor(parent=self)
+        self._mediator.roi_intensity_window_sgn.connect(
+            self._roi_intensity.onWindowSizeChanged)
 
         self.initUI()
 

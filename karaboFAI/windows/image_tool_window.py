@@ -203,8 +203,6 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
-    clear_roi_hist_sgn = QtCore.Signal
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         parent = self.parent()
@@ -215,6 +213,10 @@ class ImageToolWindow(AbstractWindow):
         self._clear_roi_hist_btn.clicked.connect(
             parent._proc_worker.roiHistClearEvent)
 
+        self._roi_hist_window_le = QtGui.QLineEdit(str(600))
+        self._roi_hist_window_le.editingFinished.connect(
+            self._mediator.onRoiIntensityWindowChanged
+        )
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
             title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
@@ -240,8 +242,13 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
+        roi_ctrl_layout = QtGui.QHBoxLayout()
+        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI monitor window size: "))
+        roi_ctrl_layout.addWidget(self._roi_hist_window_le)
+        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn)
+
         tool_layout = QtGui.QVBoxLayout()
-        tool_layout.addWidget(self._clear_roi_hist_btn)
+        tool_layout.addLayout(roi_ctrl_layout)
         tool_layout.addWidget(self._roi1_ctrl)
         tool_layout.addWidget(self._roi2_ctrl)
 

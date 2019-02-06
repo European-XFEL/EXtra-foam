@@ -211,9 +211,15 @@ class RoiIntensityMonitor(PlotWidget):
 
     Widget used for displaying the evolution of the integration of ROIs.
     """
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, *, window=600, parent=None):
+        """Initialization.
+
+        :param int window: window size, i.e. maximum number of trains to
+            display. Default = 600.
+        """
         super().__init__(parent=parent)
+
+        self._window = window
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
@@ -234,9 +240,13 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        train_ids = data.roi_train_ids
-        roi1_intensities = data.roi1_intensities
-        roi2_intensities = data.roi2_intensities
+        train_ids = data.roi_train_ids[-self._window:]
+        roi1_intensities = data.roi1_intensities[-self._window:]
+        roi2_intensities = data.roi2_intensities[-self._window:]
 
         self._roi1_plot.setData(train_ids, roi1_intensities)
         self._roi2_plot.setData(train_ids, roi2_intensities)
+
+    @QtCore.pyqtSlot(int)
+    def onWindowSizeChanged(self, v):
+        self._window = v
