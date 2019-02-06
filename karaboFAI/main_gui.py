@@ -29,11 +29,32 @@ from .config import config
 
 class Mediator(QtCore.QObject):
     roi_intensity_window_sgn = QtCore.pyqtSignal(int)
+    roi_hist_clear_sgn = QtCore.pyqtSignal()
+    roi1_region_changed_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    roi2_region_changed_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+
+    threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
 
     @QtCore.pyqtSlot()
-    def onRoiIntensityWindowChanged(self):
+    def onRoiIntensityWindowChange(self):
         v = int(self.sender().text())
         self.roi_intensity_window_sgn.emit(v)
+
+    @QtCore.pyqtSlot()
+    def onRoiHistClear(self):
+        self.roi_hist_clear_sgn.emit()
+
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onRoi1Changed(self, activated, w, h, cx, cy):
+        self.roi1_region_changed_sgn.emit(activated, w, h, cx, cy)
+
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onRoi2Changed(self, activated, w, h, cx, cy):
+        self.roi2_region_changed_sgn.emit(activated, w, h, cx, cy)
+
+    @QtCore.pyqtSlot(float, float)
+    def onThresholdMaskChange(self, lb, ub):
+        self.threshold_mask_change_sgn.emit(lb, ub)
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -176,6 +197,15 @@ class MainGUI(QtGui.QMainWindow):
         self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
         self.data_ctrl_widget.data_source_sgn.connect(
             self._proc_worker.onSourceChanged)
+
+        self._mediator.roi_hist_clear_sgn.connect(
+            self._proc_worker.onRoiHistClear)
+        self._mediator.roi1_region_changed_sgn.connect(
+            self._proc_worker.onRoi1Changed)
+        self._mediator.roi2_region_changed_sgn.connect(
+            self._proc_worker.onRoi2Changed)
+        self._mediator.threshold_mask_change_sgn.connect(
+            self._proc_worker.onThresholdMaskChange)
 
     def initUI(self):
         raise NotImplementedError

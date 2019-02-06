@@ -139,7 +139,7 @@ class FaiDataProcessor(Worker):
         self.integration_points_sp = value
 
     @QtCore.pyqtSlot(float, float)
-    def onThresholdMaskChanged(self, lb, ub):
+    def onThresholdMaskChange(self, lb, ub):
         self.threshold_mask_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float)
@@ -167,7 +167,8 @@ class FaiDataProcessor(Worker):
         else:
             self.roi2_sp = None
 
-    def roiHistClearEvent(self):
+    @QtCore.pyqtSlot()
+    def onRoiHistClear(self):
         RoiHist.clear()
 
     def run(self):

@@ -211,11 +211,11 @@ class ImageToolWindow(AbstractWindow):
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
         self._clear_roi_hist_btn.clicked.connect(
-            parent._proc_worker.roiHistClearEvent)
+            self._mediator.onRoiHistClear)
 
         self._roi_hist_window_le = QtGui.QLineEdit(str(600))
         self._roi_hist_window_le.editingFinished.connect(
-            self._mediator.onRoiIntensityWindowChanged
+            self._mediator.onRoiIntensityWindowChange
         )
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
@@ -225,13 +225,13 @@ class ImageToolWindow(AbstractWindow):
             title="ROI 2 ({})".format(config['ROI_COLORS'][1]))
 
         self._roi1_ctrl.roi_region_changed_sgn.connect(
-            parent._proc_worker.onRoi1Changed)
+            self._mediator.onRoi1Changed)
         self._roi2_ctrl.roi_region_changed_sgn.connect(
-            parent._proc_worker.onRoi2Changed)
+            self._mediator.onRoi2Changed)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
-            parent._proc_worker.onThresholdMaskChanged)
+            self._mediator.onThresholdMaskChange)
 
         self._update_image_btn = QtGui.QPushButton("Update image")
         self._update_image_btn.clicked.connect(self.updateImage)
