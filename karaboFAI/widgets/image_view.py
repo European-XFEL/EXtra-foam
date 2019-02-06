@@ -71,7 +71,7 @@ class ImageView(QtGui.QWidget):
     ROI_POS0 = (50, 50)
     ROI_SIZE0 = (50, 50)
 
-    def __init__(self, *, parent=None, level_mode='mono', lock_roi=True):
+    def __init__(self, *, level_mode='mono', lock_roi=True, parent=None):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
@@ -189,6 +189,9 @@ class ImageView(QtGui.QWidget):
         """
         self._hist_widget.gradient.setColorMap(cm)
 
+    def setBorder(self, *args, **kwargs):
+        self._image_item.setBorder(*args, **kwargs)
+
     def setAspectLocked(self, *args, **kwargs):
         self._plot_widget.setAspectLocked(*args, **kwargs)
 
@@ -245,12 +248,12 @@ class RoiImageView(ImageView):
 
     Widget used for displaying the ROI for the assembled image.
     """
-    def __init__(self, *, roi1=True, parent=None):
+    def __init__(self, roi1=True, *args, **kwargs):
         """Initialization.
 
         :param bool roi1: True for displaying ROI1 and False for ROI2.
         """
-        super().__init__(parent=parent)
+        super().__init__(**kwargs)
 
         self._is_roi1 = roi1
 

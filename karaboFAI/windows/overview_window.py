@@ -16,10 +16,11 @@ from ..widgets.pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
-    BulletinWidget, ImageView, MultiPulseAiWidget, RoiImageView,
+    BulletinWidget, ImageView, MultiPulseAiWidget, PenFactory, RoiImageView,
     RoiIntensityMonitor, SampleDegradationWidget, SinglePulseAiWidget,
     SinglePulseImageView
 )
+from ..config import config
 
 
 @SingletonWindow
@@ -188,7 +189,9 @@ class OverviewWindowTrainResolved(DockerWindow):
         self._ai = SinglePulseAiWidget(parent=self)
 
         self._roi1_image = RoiImageView(parent=self)
+        self._roi1_image.setBorder(PenFactory.__dict__[config["ROI_COLORS"][0]])
         self._roi2_image = RoiImageView(roi1=False, parent=self)
+        self._roi2_image.setBorder(PenFactory.__dict__[config["ROI_COLORS"][1]])
 
         self._roi_intensity = RoiIntensityMonitor(parent=self)
         self._mediator.roi_intensity_window_sgn.connect(
@@ -201,7 +204,7 @@ class OverviewWindowTrainResolved(DockerWindow):
         # tell MainGUI to emit signals in order to update shared parameters
         # Note: must be called after all the Widgets which own shared
         # parameters have been initialized
-        parent.updateSharedParameters()
+        self.parent().updateSharedParameters()
 
         self.update()
 
