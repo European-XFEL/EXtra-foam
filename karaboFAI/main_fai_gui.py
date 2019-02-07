@@ -20,8 +20,7 @@ from .widgets import (
     GeometryCtrlWidget, PumpProbeCtrlWidget
 )
 from .windows import (
-    CorrelationWindow, LaserOnOffWindow, OverviewWindow,
-    OverviewWindowTrainResolved
+    CorrelationWindow, OverviewWindow, OverviewWindowTrainResolved
 )
 from .main_gui import MainGUI
 from .config import config
@@ -51,17 +50,6 @@ class MainFaiGUI(MainGUI):
                     self._data, mediator=self._mediator, parent=self))
 
         self._tool_bar.addAction(open_overview_window_at)
-
-        #
-        open_laseronoff_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/on_off_pulses.png")),
-            "On- and off- pulses",
-            self)
-        open_laseronoff_window_at.triggered.connect(
-            lambda: LaserOnOffWindow(self._data,
-                                     parent=self,
-                                     pulse_resolved=self._pulse_resolved))
-        self._tool_bar.addAction(open_laseronoff_window_at)
 
         #
         open_correlation_window_at = QtGui.QAction(

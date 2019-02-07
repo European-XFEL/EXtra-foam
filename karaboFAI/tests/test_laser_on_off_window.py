@@ -2,7 +2,6 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.windows import LaserOnOffWindow
 from karaboFAI.data_processing import (
     ProcessedData, DataSource, Data4Visualization, OpLaserMode
 )

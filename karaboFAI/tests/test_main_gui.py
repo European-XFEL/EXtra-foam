@@ -7,7 +7,6 @@ from karaboFAI.main_fai_gui import MainFaiGUI
 class FaiWin(IntEnum):
     DrawMask = 2
     Overview = 5
-    OnOffPulses = 6
 
 
 class TestMainFaiGui(unittest.TestCase):
@@ -16,7 +15,7 @@ class TestMainFaiGui(unittest.TestCase):
 
     def testOpenCloseWindows(self):
         count = 0
-        for idx in (FaiWin.DrawMask, FaiWin.Overview, FaiWin.OnOffPulses):
+        for idx in (FaiWin.DrawMask, FaiWin.Overview):
             count += 1
             self.actions[idx].trigger()
             self.assertEqual(count, len(self.gui._windows))
