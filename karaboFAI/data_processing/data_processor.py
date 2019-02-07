@@ -198,16 +198,16 @@ class DataProcessor(Worker):
         self.correlation_param2 = (src, key)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi1Changed(self, activated, w, h, cx, cy):
+    def onRoi1Changed(self, activated, w, h, px, py):
         if activated:
-            self.roi1 = (w, h, cx, cy)
+            self.roi1 = (w, h, px, py)
         else:
             self.roi1 = None
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi2Changed(self, activated, w, h, cx, cy):
+    def onRoi2Changed(self, activated, w, h, px, py):
         if activated:
-            self.roi2 = (w, h, cx, cy)
+            self.roi2 = (w, h, px, py)
         else:
             self.roi2 = None
 
@@ -436,8 +436,8 @@ class DataProcessor(Worker):
                     self.roi1 = None
                 else:
                     data.roi1 = self.roi1
-                    w, h, cx, cy = self.roi1
-                    roi1_intensity = np.sum(img[cy:cy+h, cx:cx+w])
+                    w, h, px, py = self.roi1
+                    roi1_intensity = np.sum(img[py:py+h, px:px+w])
 
             roi2_intensity = 0
             if self.roi2 is not None:
@@ -445,8 +445,8 @@ class DataProcessor(Worker):
                     self.roi2 = None
                 else:
                     data.roi2 = self.roi2
-                    w, h, cx, cy = self.roi2
-                    roi2_intensity = np.sum(data.image_mean[cy:cy+h, cx:cx+w])
+                    w, h, px, py = self.roi2
+                    roi2_intensity = np.sum(data.image_mean[py:py+h, px:px+w])
 
             data.update_roi_hist(data.tid, roi1_intensity, roi2_intensity)
 

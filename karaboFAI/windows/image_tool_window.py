@@ -18,7 +18,7 @@ from ..config import config
 
 class RoiCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of an ROI."""
-    # activated, w, h, cx, cy
+    # activated, w, h, px, py
     roi_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
@@ -36,17 +36,17 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._width_le.setValidator(self._size_validator)
         self._height_le = QtGui.QLineEdit()
         self._height_le.setValidator(self._size_validator)
-        self._cx_le = QtGui.QLineEdit()
-        self._cx_le.setValidator(self._pos_validator)
-        self._cy_le = QtGui.QLineEdit()
-        self._cy_le.setValidator(self._pos_validator)
+        self._px_le = QtGui.QLineEdit()
+        self._px_le.setValidator(self._pos_validator)
+        self._py_le = QtGui.QLineEdit()
+        self._py_le.setValidator(self._pos_validator)
         self._width_le.editingFinished.connect(self.onRoiRegionChanged)
         self._height_le.editingFinished.connect(self.onRoiRegionChanged)
-        self._cx_le.editingFinished.connect(self.onRoiRegionChanged)
-        self._cy_le.editingFinished.connect(self.onRoiRegionChanged)
+        self._px_le.editingFinished.connect(self.onRoiRegionChanged)
+        self._py_le.editingFinished.connect(self.onRoiRegionChanged)
 
         self._line_edits = (self._width_le, self._height_le,
-                            self._cx_le, self._cy_le)
+                            self._px_le, self._py_le)
 
         self.activate_cb = QtGui.QCheckBox("Activate")
         self.lock_cb = QtGui.QCheckBox("Lock")
@@ -66,10 +66,10 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         le_layout.addWidget(self._width_le)
         le_layout.addWidget(QtGui.QLabel("Height: "))
         le_layout.addWidget(self._height_le)
-        le_layout.addWidget(QtGui.QLabel("X center: "))
-        le_layout.addWidget(self._cx_le)
-        le_layout.addWidget(QtGui.QLabel("Y center: "))
-        le_layout.addWidget(self._cy_le)
+        le_layout.addWidget(QtGui.QLabel("x0: "))
+        le_layout.addWidget(self._px_le)
+        le_layout.addWidget(QtGui.QLabel("y0: "))
+        le_layout.addWidget(self._py_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -87,10 +87,10 @@ class RoiCtrlWidget(QtGui.QGroupBox):
     def onRoiRegionChangeFinished(self, roi):
         """Connect to the signal from an ROI object."""
         w, h = [int(v) for v in roi.size()]
-        cx, cy = [int(v) for v in roi.pos()]
-        self.updateParameters(w, h, cx, cy)
+        px, py = [int(v) for v in roi.pos()]
+        self.updateParameters(w, h, px, py)
         # inform widgets outside this window
-        self.roi_region_changed_sgn.emit(True, w, h, cx, cy)
+        self.roi_region_changed_sgn.emit(True, w, h, px, py)
 
     @QtCore.pyqtSlot(int)
     def onToggleRoiActivation(self, state):
@@ -121,25 +121,25 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         else:
             self._roi.unLockAspect()
 
-    def updateParameters(self, w, h, cx, cy):
+    def updateParameters(self, w, h, px, py):
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self._cx_le.setText(str(cx))
-        self._cy_le.setText(str(cy))
+        self._px_le.setText(str(px))
+        self._py_le.setText(str(py))
 
     @QtCore.pyqtSlot()
     def onRoiRegionChanged(self):
         w = int(self._width_le.text())
         h = int(self._height_le.text())
-        cx = int(self._cx_le.text())
-        cy = int(self._cy_le.text())
+        px = int(self._px_le.text())
+        py = int(self._py_le.text())
 
         # If 'update' == False, the state change will be remembered
         # but not processed and no signals will be emitted.
         self._roi.setSize((w, h), update=False)
-        self._roi.setPos((cx, cy), update=False)
+        self._roi.setPos((px, py), update=False)
 
-        self.roi_region_changed_sgn.emit(True, w, h, cx, cy)
+        self.roi_region_changed_sgn.emit(True, w, h, px, py)
 
     def disableLockEdit(self):
         for w in self._line_edits:

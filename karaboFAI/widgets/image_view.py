@@ -141,17 +141,17 @@ class ImageView(QtGui.QWidget):
     def updateROI(self, data):
         if data.roi1 is not None:
             self.roi1.show()
-            w, h, cx, cy = data.roi1
+            w, h, px, py = data.roi1
             self.roi1.setSize((w, h), update=False)
-            self.roi1.setPos((cx, cy), update=False)
+            self.roi1.setPos((px, py), update=False)
         else:
             self.roi1.hide()
 
         if data.roi2 is not None:
             self.roi2.show()
-            w, h, cx, cy = data.roi2
+            w, h, px, py = data.roi2
             self.roi2.setSize((w, h), update=False)
-            self.roi2.setPos((cx, cy), update=False)
+            self.roi2.setPos((px, py), update=False)
         else:
             self.roi2.hide()
 
@@ -271,13 +271,13 @@ class RoiImageView(ImageView):
         if self._is_roi1:
             if data.roi1 is None:
                 return
-            w, h, cx, cy = data.roi1
+            w, h, px, py = data.roi1
         else:
             if data.roi2 is None:
                 return
-            w, h, cx, cy = data.roi2
+            w, h, px, py = data.roi2
 
-        self.setImage(image[cy:cy+h, cx:cx+w],
+        self.setImage(image[py:py+h, px:px+w],
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 

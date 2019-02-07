@@ -53,12 +53,12 @@ class Mediator(QtCore.QObject):
         self.roi_hist_clear_sgn.emit()
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi1Changed(self, activated, w, h, cx, cy):
-        self.roi1_region_changed_sgn.emit(activated, w, h, cx, cy)
+    def onRoi1Changed(self, activated, w, h, px, py):
+        self.roi1_region_changed_sgn.emit(activated, w, h, px, py)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi2Changed(self, activated, w, h, cx, cy):
-        self.roi2_region_changed_sgn.emit(activated, w, h, cx, cy)
+    def onRoi2Changed(self, activated, w, h, px, py):
+        self.roi2_region_changed_sgn.emit(activated, w, h, px, py)
 
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
