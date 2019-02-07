@@ -284,7 +284,7 @@ class ImageToolWindow(AbstractWindow):
         It is used for updating the image manually.
         """
         data = self._data.get()
-        if data.empty():
+        if data.images is None:
             return
 
         self._image_view.setImage(data.image_mean)

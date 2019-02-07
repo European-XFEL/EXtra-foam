@@ -254,9 +254,9 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        train_ids = data.roi_train_ids[-self._window:]
-        roi1_intensities = data.roi1_intensity_hist[-self._window:]
-        roi2_intensities = data.roi2_intensity_hist[-self._window:]
+        train_ids = data.roi.train_ids[-self._window:]
+        roi1_intensities = data.roi.roi1_intensity_hist[-self._window:]
+        roi2_intensities = data.roi.roi2_intensity_hist[-self._window:]
 
         self._roi1_plot.setData(train_ids, roi1_intensities)
         self._roi2_plot.setData(train_ids, roi2_intensities)
@@ -293,7 +293,7 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        x = data.on_off_fom_hist
+        x = data.on_off.fom_hist
         y = list(range(len(x)))
         self._plot.setData(x, y)
 
@@ -325,8 +325,8 @@ class LaserOnOffRoiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        train_ids = data.on_off_train_ids
-        fom_hist = data.on_off_fom_hist
+        train_ids = data.on_off.train_ids
+        fom_hist = data.on_off.fom_hist
 
         self._plot.setData(train_ids, fom_hist)
 
@@ -363,9 +363,9 @@ class LaserOnOffAiWidget(PlotWidget):
     def update(self, data):
         """Override."""
         momentum = data.momentum
-        on_pulse = data.laser_on_intensity
-        off_pulse = data.laser_off_intensity
-        diff = data.laser_delta_intensity
+        on_pulse = data.on_off.on_pulse
+        off_pulse = data.on_off.off_pulse
+        diff = data.on_off.diff
 
         self._on_pulse.setData(momentum, on_pulse)
         self._off_pulse.setData(momentum, off_pulse)

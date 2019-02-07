@@ -22,13 +22,13 @@ import fabio
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
-from ..widgets.pyqtgraph import QtCore
 from .data_model import DataSource, ProcessedData, RoiData, LaserOnOffData
+from .laser_on_off_processor import LaserOnOffProcessor
+from .proc_utils import nanmean_axis0_para
 from ..config import config
 from ..logger import logger
-from .proc_utils import nanmean_axis0_para
+from ..widgets.pyqtgraph import QtCore
 from ..worker import Worker
-from .laser_on_off_processor import LaserOnOffProcessor
 
 
 class DataProcessor(Worker):
@@ -439,7 +439,7 @@ class DataProcessor(Worker):
                 if not self._validate_roi(*self.roi1, *img.shape):
                     self.roi1 = None
                 else:
-                    data.roi1 = self.roi1
+                    data.roi.roi1 = self.roi1
                     w, h, px, py = self.roi1
                     roi1_intensity = np.sum(img[py:py+h, px:px+w])
 
@@ -448,11 +448,11 @@ class DataProcessor(Worker):
                 if not self._validate_roi(*self.roi2, *img.shape):
                     self.roi2 = None
                 else:
-                    data.roi2 = self.roi2
+                    data.roi.roi2 = self.roi2
                     w, h, px, py = self.roi2
                     roi2_intensity = np.sum(data.image_mean[py:py+h, px:px+w])
 
-            data.update_roi_hist(data.tid, roi1_intensity, roi2_intensity)
+            data.roi.update_hist(data.tid, roi1_intensity, roi2_intensity)
 
         return data
 

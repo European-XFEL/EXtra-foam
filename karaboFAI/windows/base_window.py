@@ -147,7 +147,7 @@ class DockerWindow(AbstractWindow):
         This method is called by the main GUI.
         """
         data = self._data.get()
-        if data.empty():
+        if data.images is None:
             return
 
         for widget in self._plot_widgets:

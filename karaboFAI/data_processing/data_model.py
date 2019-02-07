@@ -22,9 +22,9 @@ class DataSource(IntEnum):
 
 
 class OpLaserMode(IntEnum):
-    NORMAL = 0
-    EVEN_ON = 1
-    ODD_ON = 2
+    NORMAL = 0  # on-/off- pulses in the same train
+    EVEN_ON = 1  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_ON = 2  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class AbstractData(abc.ABC):
@@ -86,9 +86,9 @@ class LaserOnOffData(AbstractData):
 
     def __init__(self):
         super().__init__()
-        self.on_pulse_intensity = None
-        self.off_pulse_intensity = None
-        self.on_off_diff = None
+        self.on_pulse = None
+        self.off_pulse = None
+        self.diff = None
 
     @classmethod
     def clear(cls):
@@ -120,10 +120,12 @@ class ProcessedData:
             Shape = (pulse_id, intensity)
         intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
             integration result over pulses. Shape = (intensity,)
-        image (numpy.ndarray): detector images for all the pulses.
+        images (numpy.ndarray): detector images for all the pulses.
             Shape = (pulse_id, y, x)
         image_mean (numpy.ndarray): average of the detector images over
             pulses. Shape = (y, x)
+        roi (RoiData): class stores ROI related data.
+        on_off (LaserOnOffData): class stores laser on-off data.
         threshold_mask (tuple): (min, max) threshold of the image mask.
         image_mask (numpy.ndarray): an image mask which is applied to all
             the detector images, default = None. Shape = (y, x)
@@ -147,9 +149,9 @@ class ProcessedData:
         self.images = images
         self.image_mean = image_mean
 
-        self._roi = RoiData()
+        self.roi = RoiData()
 
-        self._laser_on_off = LaserOnOffData()
+        self.on_off = LaserOnOffData()
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -160,77 +162,9 @@ class ProcessedData:
     def tid(self):
         return self._tid
 
-    @property
-    def roi1(self):
-        return self._roi.roi1
-
-    @roi1.setter
-    def roi1(self, v):
-        self._roi.roi1 = v
-
-    @property
-    def roi2(self):
-        return self._roi.roi2
-
-    @roi2.setter
-    def roi2(self, v):
-        self._roi.roi2 = v
-
-    @property
-    def roi_train_ids(self):
-        return self._roi.train_ids
-
-    @property
-    def roi1_intensity_hist(self):
-        return self._roi.roi1_intensity_hist
-
-    @property
-    def roi2_intensity_hist(self):
-        return self._roi.roi2_intensity_hist
-
-    @property
-    def laser_on_intensity(self):
-        return self._laser_on_off.on_pulse_intensity
-
-    @laser_on_intensity.setter
-    def laser_on_intensity(self, v):
-        self._laser_on_off.on_pulse_intensity = v
-
-    @property
-    def laser_off_intensity(self):
-        return self._laser_on_off.off_pulse_intensity
-
-    @laser_off_intensity.setter
-    def laser_off_intensity(self, v):
-        self._laser_on_off.off_pulse_intensity = v
-
-    @property
-    def laser_delta_intensity(self):
-        return self._laser_on_off.on_off_diff
-
-    @laser_delta_intensity.setter
-    def laser_delta_intensity(self, v):
-        self._laser_on_off.on_off_diff = v
-
-    @property
-    def on_off_train_ids(self):
-        return self._laser_on_off.train_ids
-
-    @property
-    def on_off_fom_hist(self):
-        return self._laser_on_off.fom_hist
-
-    def update_roi_hist(self, *args, **kwargs):
-        self._roi.update_hist(*args, **kwargs)
-
-    def update_on_off_hist(self, *args, **kwargs):
-        self._laser_on_off.update_hist(*args, **kwargs)
-
     def empty(self):
-        """Check the goodness of the data.
-
-        TODO: improve
-        """
+        """Check the goodness of the data."""
+        logger.debug("Deprecated! Check the specific data!")
         if self.images is None:
             return True
         return False

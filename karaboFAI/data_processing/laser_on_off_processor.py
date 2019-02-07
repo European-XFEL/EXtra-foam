@@ -173,10 +173,10 @@ class LaserOnOffProcessor:
             self._on_train_received = False
             self._off_train_received = False
 
-        data.laser_on_intensity = normalized_on_pulse
-        data.laser_off_intensity = normalized_off_pulse
-        data.laser_delta_intensity = diff
-        data.update_on_off_hist(data.tid, fom)
+        data.on_off.on_pulse = normalized_on_pulse
+        data.on_off.off_pulse = normalized_off_pulse
+        data.on_off.diff = diff
+        data.on_off.update_hist(data.tid, fom)
 
     def reset(self):
         """Override."""
