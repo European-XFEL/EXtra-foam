@@ -282,6 +282,7 @@ class BraggSpotsWindow(PlotWindow):
         p.setTitle(' ')
 
     def _update(self, data):
+        self.mask_range_sp = (0, 2500)
 
         # Same logic as LaserOnOffWindow.
         available_modes = list(self.available_modes.keys())
@@ -321,9 +322,9 @@ class BraggSpotsWindow(PlotWindow):
                 # Collects centre of mass for each pulse in
                 # this_on_pulses list
                 for pid in self.on_pulse_ids_sp:
-                    if pid >= data.image.shape[0]:
+                    if pid >= data.images.shape[0]:
                         logger.error("Pulse ID {} out of range (0 - {})!".
-                                     format(pid, data.image.shape[0] - 1))
+                                     format(pid, data.images.shape[0] - 1))
                         continue
 
                     for index, key in enumerate(slices):
@@ -335,12 +336,11 @@ class BraggSpotsWindow(PlotWindow):
                         #       around background ROI
 
                         slices[key] = self._rois[index].getArrayRegion(
-                            data.image[pid], self._image_items[0])
+                            data.images[pid], self._image_items[0])
                         # convert nan to -inf so that we can clip
                         # negatives and values above mask range.
                         # np.clip will not clip NaNs.
                         (slices[key])[np.isnan(slices[key])] = - np.inf
-
                         np.clip(slices[key], self.mask_range_sp[0],
                                 self.mask_range_sp[1], out=slices[key])
                         # clip to restrict between mask values 0-2500
@@ -399,9 +399,9 @@ class BraggSpotsWindow(PlotWindow):
 
             this_off_pulses = []
             for pid in self.off_pulse_ids_sp:
-                if pid > data.image.shape[0]-1:
+                if pid > data.images.shape[0]-1:
                     logger.error("Pulse ID {} out of range (0 - {})!".
-                                 format(pid, data.image.shape[0] - 1))
+                                 format(pid, data.images.shape[0] - 1))
                     continue
 
                 for index, key in enumerate(slices):
@@ -412,7 +412,7 @@ class BraggSpotsWindow(PlotWindow):
                     # key : background stores array region around
                     #       background ROI
                     slices[key] = self._rois[index].getArrayRegion(
-                        data.image[pid], self._image_items[0])
+                        data.images[pid], self._image_items[0])
                     # convert nan to -inf so that we can clip
                     # negatives and values above mask range.
                     # np.clip will not clip NaNs.

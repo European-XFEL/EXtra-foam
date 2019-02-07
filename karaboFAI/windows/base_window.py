@@ -9,11 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
 from weakref import WeakKeyDictionary
 
 from ..widgets.pyqtgraph import GraphicsLayoutWidget, QtCore, QtGui
 from ..widgets.pyqtgraph import parametertree as ptree
 from ..widgets.pyqtgraph.dockarea import DockArea
+from ..data_processing import OpLaserMode
 
 
 class SingletonWindow:
@@ -168,7 +170,15 @@ class DockerWindow(AbstractWindow):
 
 
 class PlotWindow(AbstractWindow):
-    """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree."""
+    """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree.
+
+    DEPRECATED!
+    """
+    available_modes = OrderedDict({
+        OpLaserMode.NORMAL: "Laser-on/off pulses in the same train",
+        OpLaserMode.EVEN_ON: "Laser-on/off pulses in even/odd train",
+        OpLaserMode.ODD_ON: "Laser-on/off pulses in odd/even train"
+    })
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

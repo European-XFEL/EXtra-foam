@@ -59,7 +59,7 @@ class BdpDataProcessor(Worker):
         self.source_sp = None
         self.pulse_range_sp = None
         self.geom_sp = None
-        self.mask_range_sp = None
+        self.mask_range_sp = [0, 2500]
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -72,8 +72,12 @@ class BdpDataProcessor(Worker):
             self.log(msg)
 
     @QtCore.pyqtSlot(object)
-    def onSourceChanged(self, value):
+    def onSourceTypeChange(self, value):
         self.source_sp = value
+
+    @QtCore.pyqtSlot(str)
+    def onSourceNameChange(self, value):
+        self.source_name_sp = value
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
@@ -183,9 +187,9 @@ class BdpDataProcessor(Worker):
         #       computing power.
 
         data = ProcessedData(tid,
-                             image=assembled,
-                             image_mean=assembled_mean,
-                             image_mask=self.image_mask)
+                             images=assembled,
+                             image_mean=assembled_mean)
+        data.image_mask = self.image_mask
 
         return data
 
