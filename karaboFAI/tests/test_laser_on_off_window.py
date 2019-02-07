@@ -4,7 +4,7 @@ import numpy as np
 
 from karaboFAI.windows import LaserOnOffWindow
 from karaboFAI.data_processing import (
-    ProcessedData, DataSource, Data4Visualization
+    ProcessedData, DataSource, Data4Visualization, OpLaserMode
 )
 from karaboFAI.main_fai_gui import MainFaiGUI
 
@@ -32,7 +32,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
     def testNormalMode(self):
         self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
-            "normal", [0, 2], [1, 3])
+            OpLaserMode.NORMAL, [0, 2], [1, 3])
 
         win = self.win
         win._reset()
@@ -111,7 +111,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
     def testEvenOddMode(self):
         """On-pulse has even id."""
         self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
-            "even/odd", [0, 2], [1, 3])
+            OpLaserMode.EVEN_ON, [0, 2], [1, 3])
 
         win = self.win
         win._reset()
@@ -241,7 +241,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
     def testOddEvenMode(self):
         """On-pulse has odd id."""
         self.gui.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.emit(
-            "odd/even", [0, 2], [1, 3])
+            OpLaserMode.ODD_ON, [0, 2], [1, 3])
 
         win = self.win
         win._reset()

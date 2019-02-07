@@ -145,8 +145,13 @@ class MainFaiGUI(MainGUI):
             self._proc_worker.onCorrelationParam2Change)
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
-            self._proc_worker.onOffPulseStateChange
-        )
+            self._proc_worker.onOffPulseStateChange)
+        self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
+            self._proc_worker.onMovingAverageWindowChange)
+        self.pump_probe_ctrl_widget.normalization_range_sgn.connect(
+            self._proc_worker.onNormalizationRangeChange)
+        self.pump_probe_ctrl_widget.integration_range_sgn.connect(
+            self._proc_worker.onOnOffIntegrationRangeChange)
 
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()

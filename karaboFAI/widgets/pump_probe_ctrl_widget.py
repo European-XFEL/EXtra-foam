@@ -16,18 +16,19 @@ from ..config import config
 from ..helpers import parse_ids, parse_boundary
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
+from ..data_processing import OpLaserMode
 
 
 class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     available_modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
+        "normal": OpLaserMode.NORMAL,
+        "even/odd": OpLaserMode.EVEN_ON,
+        "odd/even": OpLaserMode.ODD_ON
     })
     # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(str, list, list)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     normalization_range_sgn = QtCore.pyqtSignal(float, float)
@@ -94,7 +95,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         try:
             # check pulse ID only when laser on/off pulses are in the same
             # train (the "normal" mode)
-            mode = self._laser_mode_cb.currentText()
+            mode = self.available_modes[self._laser_mode_cb.currentText()]
             on_pulse_ids = parse_ids(self._on_pulse_le.text())
             off_pulse_ids = parse_ids(self._off_pulse_le.text())
             if mode == "normal" and self._pulse_resolved:

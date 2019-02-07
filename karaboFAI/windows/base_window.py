@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import OrderedDict
 from weakref import WeakKeyDictionary
 
 from ..widgets.pyqtgraph import GraphicsLayoutWidget, QtCore, QtGui
@@ -171,12 +170,6 @@ class DockerWindow(AbstractWindow):
 class PlotWindow(AbstractWindow):
     """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree."""
 
-    available_modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
-    })
-
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
@@ -288,19 +281,11 @@ class PlotWindow(AbstractWindow):
         for item in self._image_items:
             item.clear()
 
-    @QtCore.pyqtSlot(str, list, list)
+    @QtCore.pyqtSlot(object, list, list)
     def onOffPulseIdChanged(self, mode, on_pulse_ids, off_pulse_ids):
         self.laser_mode_sp = mode
         self.on_pulse_ids_sp = on_pulse_ids
         self.off_pulse_ids_sp = off_pulse_ids
-
-        # then update the parameter tree
-        self._exp_params.child('Optical laser mode').setValue(
-            self.available_modes[mode])
-        self._exp_params.child('Laser-on pulse ID(s)').setValue(
-            ', '.join([str(x) for x in on_pulse_ids]))
-        self._exp_params.child('Laser-off pulse ID(s)').setValue(
-            ', '.join([str(x) for x in off_pulse_ids]))
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):

@@ -3,13 +3,16 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data model for analysis and visualization.
+Data models for analysis and visualization.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from enum import IntEnum
+import abc
+
+from ..logger import logger
 
 
 class DataSource(IntEnum):
@@ -18,36 +21,95 @@ class DataSource(IntEnum):
     PROCESSED = 2  # processed data from the Middle-layer device
 
 
-class RoiHist:
-    """A class which stores historical data of ROI."""
-    train_ids = []
-    roi1_intensities = []
-    roi2_intensities = []
+class OpLaserMode(IntEnum):
+    NORMAL = 0
+    EVEN_ON = 1
+    ODD_ON = 2
 
+
+class AbstractData(abc.ABC):
+    """Abstract data for data node in ProcessedData."""
     MAX_LENGTH = 100000
 
     @classmethod
+    @abc.abstractmethod
     def clear(cls):
-        cls.train_ids.clear()
-        cls.roi1_intensities.clear()
-        cls.roi2_intensities.clear()
+        pass
 
     @classmethod
-    def append(cls, tid, roi1, roi2):
+    @abc.abstractmethod
+    def update_hist(cls, *args, **kwargs):
+        pass
+
+
+class RoiData(AbstractData):
+    """A class which stores ROI data."""
+    MAX_LENGTH = 100000
+
+    roi1 = None
+    roi2 = None
+    train_ids = []
+    roi1_intensity_hist = []
+    roi2_intensity_hist = []
+
+    def __init__(self):
+        super().__init__()
+
+    @classmethod
+    def clear(cls):
+        cls.roi1 = None
+        cls.roi2 = None
+        cls.train_ids.clear()
+        cls.roi1_intensity_hist.clear()
+        cls.roi2_intensity_hist.clear()
+
+    @classmethod
+    def update_hist(cls, tid, intensity1, intensity2):
         cls.train_ids.append(tid)
-        cls.roi1_intensities.append(roi1)
-        cls.roi2_intensities.append(roi2)
+        cls.roi1_intensity_hist.append(intensity1)
+        cls.roi2_intensity_hist.append(intensity2)
         if len(cls.train_ids) > cls.MAX_LENGTH:
             # expensive
             cls.train_ids.pop(0)
-            cls.roi1_intensities.pop(0)
-            cls.roi2_intensities.pop(0)
+            cls.roi1_intensity_hist.pop(0)
+            cls.roi2_intensity_hist.pop(0)
+
+        if len(cls.train_ids) >= cls.MAX_LENGTH:
+            logger.DEBUG("ROI history is full!")
+
+
+class LaserOnOffData(AbstractData):
+    """A class which stores Laser on-off data."""
+    MAX_LENGTH = 100000
+
+    on_pulse_intensity = None
+    off_pulse_intensity = None
+    on_off_diff = None
+    train_ids = []
+    fom_hist = []
+
+    def __init__(self):
+        super().__init__()
 
     @classmethod
-    def full(cls):
+    def clear(cls):
+        cls.on_pulse_intensity = None
+        cls.off_pulse_intensity = None
+        cls.on_off_diff = None
+        cls.fom_hist.clear()
+
+    @classmethod
+    def update_hist(cls, tid, fom):
+        cls.train_ids.append(tid)
+        cls.fom_hist.append(fom)
+
+        if len(cls.train_ids) > cls.MAX_LENGTH:
+            # expensive
+            cls.train_ids.pop(0)
+            cls.fom_hist.pop(0)
+
         if len(cls.train_ids) >= cls.MAX_LENGTH:
-            return True
-        return False
+            logger.DEBUG("Laser on-off history is full!")
 
 
 class ProcessedData:
@@ -88,9 +150,9 @@ class ProcessedData:
         self.images = images
         self.image_mean = image_mean
 
-        self.roi1 = None
-        self.roi2 = None
-        self.roi_hist = RoiHist()
+        self._roi_hist = RoiData()
+
+        self._laser_on_off = LaserOnOffData()
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -102,16 +164,38 @@ class ProcessedData:
         return self._tid
 
     @property
+    def roi1(self):
+        return self._roi_hist.roi1
+
+    @roi1.setter
+    def roi1(self, v):
+        self._roi_hist.roi1 = v
+
+    @property
+    def roi2(self):
+        return self._roi_hist.roi2
+
+    @roi2.setter
+    def roi2(self, v):
+        self._roi_hist.roi2 = v
+
+    @property
     def roi_train_ids(self):
-        return self.roi_hist.train_ids
+        return self._roi_hist.train_ids
 
     @property
     def roi1_intensities(self):
-        return self.roi_hist.roi1_intensities
+        return self._roi_hist.roi1_intensity_hist
 
     @property
     def roi2_intensities(self):
-        return self.roi_hist.roi2_intensities
+        return self._roi_hist.roi2_intensity_hist
+
+    def update_roi_hist(self, *args, **kwargs):
+        self._roi_hist.update_hist(*args, **kwargs)
+
+    def update_on_off_hist(self, *args, **kwargs):
+        self._laser_on_off.update_hist(*args, **kwargs)
 
     def empty(self):
         """Check the goodness of the data.

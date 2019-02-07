@@ -21,6 +21,7 @@ from .base_window import PlotWindow
 from ..logger import logger
 from ..data_processing.proc_utils import normalize_curve, slice_curve
 from ..widgets.misc_widgets import PenFactory
+from ..data_processing import OpLaserMode
 
 
 class LaserOnOffWindow(PlotWindow):
@@ -154,17 +155,16 @@ class LaserOnOffWindow(PlotWindow):
                   normalized moving average for off-pulses)
         :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
         """
-        available_modes = list(self.available_modes.keys())
-        if self.laser_mode_sp == available_modes[0]:
+        if self.laser_mode_sp == OpLaserMode.NORMAL:
             # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
 
-            if self.laser_mode_sp == available_modes[1]:
+            if self.laser_mode_sp == OpLaserMode.NORMAL.EVEN_ON:
                 flag = 0  # on-train has even train ID
-            elif self.laser_mode_sp == available_modes[2]:
+            elif self.laser_mode_sp == OpLaserMode.ODD_ON:
                 flag = 1  # on-train has odd train ID
             else:
                 raise ValueError("Unknown laser mode!")
@@ -195,10 +195,10 @@ class LaserOnOffWindow(PlotWindow):
         if self._on_train_received:
             # update on-pulse
 
-            if self.laser_mode_sp == available_modes[0] or \
-                    not self._off_train_received:
+            if self.laser_mode_sp == OpLaserMode.NORMAL or not self._off_train_received:
 
                 this_on_pulses = data.intensities[self.on_pulse_ids_sp].mean(axis=0)
+
                 if self._drop_last_on_pulse:
                     length = len(self._on_pulses_hist)
                     self._on_pulses_ma += \

@@ -23,11 +23,12 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 
 from ..widgets.pyqtgraph import QtCore
-from .data_model import DataSource, ProcessedData, RoiHist
+from .data_model import DataSource, ProcessedData, RoiData, LaserOnOffData
 from ..config import config
 from ..logger import logger
 from .proc_utils import nanmean_axis0_para
 from ..worker import Worker
+from .laser_on_off_processor import LaserOnOffProcessor
 
 
 class DataProcessor(Worker):
@@ -92,14 +93,13 @@ class DataProcessor(Worker):
         self.integration_points_sp = None
         self.threshold_mask_sp = (config["MASK_RANGE"][0],
                                   config["MASK_RANGE"][1])
-        self.roi1_sp = None
-        self.roi2_sp = None
-        self.laser_mode_sp = None
-        self.on_pulse_ids_sp = None
-        self.off_pulse_ids_sp = None
+        self.roi1 = None
+        self.roi2 = None
 
         self.correlation_param1 = None
         self.correlation_param2 = None
+
+        self._laser_on_off_processor = LaserOnOffProcessor()
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -135,11 +135,23 @@ class DataProcessor(Worker):
 
             self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
 
-    @QtCore.pyqtSlot(str, list, list)
+    @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        self.laser_mode_sp = mode
-        self.on_pulse_ids_sp = on_pulse_ids
-        self.off_pulse_ids_sp = off_pulse_ids
+        self._laser_on_off_processor.laser_mode = mode
+        self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
+        self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
+
+    @QtCore.pyqtSlot(int)
+    def onMovingAverageWindowChange(self, value):
+        self._laser_on_off_processor.moving_average_window = value
+
+    @QtCore.pyqtSlot(float, float)
+    def onNormalizationRangeChange(self, lb, ub):
+        self._laser_on_off_processor.normalization_range = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float)
+    def onOnOffIntegrationRangeChange(self, lb, ub):
+        self._laser_on_off_processor.integration_range = (lb, ub)
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChanged(self, value):
@@ -188,20 +200,20 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Changed(self, activated, w, h, cx, cy):
         if activated:
-            self.roi1_sp = (w, h, cx, cy)
+            self.roi1 = (w, h, cx, cy)
         else:
-            self.roi1_sp = None
+            self.roi1 = None
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi2Changed(self, activated, w, h, cx, cy):
         if activated:
-            self.roi2_sp = (w, h, cx, cy)
+            self.roi2 = (w, h, cx, cy)
         else:
-            self.roi2_sp = None
+            self.roi2 = None
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
-        RoiHist.clear()
+        RoiData.clear()
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
@@ -391,11 +403,12 @@ class DataProcessor(Worker):
             momentum = ret.radial
             # There is only one intensity data, but we use plural here to
             # be consistent with pulse-resolved data.
-            intensities = ret.intensity
-            intensities_mean = intensities
+            intensities_mean = ret.intensity
+            # for the convenience of data processing later
+            intensities = np.expand_dims(intensities_mean, axis=0)
 
-            logger.debug("Time for azimuthal integration: {:.1f} ms"
-                         .format(1000 * (time.perf_counter() - t0)))
+        logger.debug("Time for azimuthal integration: {:.1f} ms"
+                     .format(1000 * (time.perf_counter() - t0)))
 
         data.momentum = momentum
         data.intensities = intensities
@@ -420,27 +433,24 @@ class DataProcessor(Worker):
             # it should be valid to set ROI intensity to zero if the data
             # is not available
             roi1_intensity = 0
-            if self.roi1_sp is not None:
-                if not self._validate_roi(*self.roi1_sp, *img.shape):
-                    self.roi1_sp = None
+            if self.roi1 is not None:
+                if not self._validate_roi(*self.roi1, *img.shape):
+                    self.roi1 = None
                 else:
-                    data.roi1 = self.roi1_sp
-                    w, h, cx, cy = self.roi1_sp
+                    data.roi1 = self.roi1
+                    w, h, cx, cy = self.roi1
                     roi1_intensity = np.sum(img[cy:cy+h, cx:cx+w])
 
             roi2_intensity = 0
-            if self.roi2_sp is not None:
-                if not self._validate_roi(*self.roi2_sp, *img.shape):
-                    self.roi2_sp = None
+            if self.roi2 is not None:
+                if not self._validate_roi(*self.roi2, *img.shape):
+                    self.roi2 = None
                 else:
-                    data.roi2 = self.roi2_sp
-                    w, h, cx, cy = self.roi2_sp
+                    data.roi2 = self.roi2
+                    w, h, cx, cy = self.roi2
                     roi2_intensity = np.sum(data.image_mean[cy:cy+h, cx:cx+w])
 
-            data.roi_hist.append(data.tid, roi1_intensity, roi2_intensity)
-
-        if data.roi_hist.full():
-            self.log("ROI history is full!")
+            data.update_roi_hist(data.tid, roi1_intensity, roi2_intensity)
 
         return data
 
@@ -553,6 +563,7 @@ class DataProcessor(Worker):
         proc_data = self.preprocess_data(assembled, tid)
 
         if self._enable_ai:
-            proc_data = self.perform_azimuthal_integration(proc_data)
+            self.perform_azimuthal_integration(proc_data)
+            self._laser_on_off_processor.process(proc_data)
 
         return self.postprocess_data(proc_data)
