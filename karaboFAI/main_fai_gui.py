@@ -239,7 +239,7 @@ class MainGUI(QtGui.QMainWindow):
         self.initUI()
         self.initConnection()
 
-        self.resize(self.sizeHint().width(), self.minimumSizeHint().height())
+        self.resize(self.minimumSizeHint())
 
         self.show()
 

@@ -72,10 +72,17 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout.addRow(self.enable_ai_cb)
 
         if self._pulse_resolved:
-            layout.addRow("Min. pulse ID: ", self._min_pulse_id_le)
-            layout.addRow("Max. pulse ID: ", self._max_pulse_id_le)
-            layout.addRow("VIP pulse ID 1: ", self._vip_pulse_id1_le)
-            layout.addRow("VIP pulse ID 2: ", self._vip_pulse_id2_le)
+            pid_layout = QtGui.QGridLayout()
+            pid_layout.addWidget(QtGui.QLabel("Min. pulse ID: "), 0, 0, 1, 1)
+            pid_layout.addWidget(self._min_pulse_id_le, 0, 1, 1, 1)
+            pid_layout.addWidget(QtGui.QLabel("Max. pulse ID: "), 0, 2, 1, 1)
+            pid_layout.addWidget(self._max_pulse_id_le, 0, 3, 1, 1)
+
+            pid_layout.addWidget(QtGui.QLabel("VIP pulse ID 1: "), 1, 0, 1, 1)
+            pid_layout.addWidget(self._vip_pulse_id1_le, 1, 1, 1, 1)
+            pid_layout.addWidget(QtGui.QLabel("VIP pulse ID 2: "), 1, 2, 1, 1)
+            pid_layout.addWidget(self._vip_pulse_id2_le, 1, 3, 1, 1)
+            layout.addRow(pid_layout)
 
         self.setLayout(layout)
 

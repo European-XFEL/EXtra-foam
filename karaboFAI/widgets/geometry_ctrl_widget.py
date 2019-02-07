@@ -26,6 +26,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
+        self._geom_file_le.setMinimumWidth(180)
         self._geom_file_open_btn = QtGui.QPushButton("Select")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
