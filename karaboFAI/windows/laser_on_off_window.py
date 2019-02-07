@@ -92,9 +92,6 @@ class LaserOnOffWindow(PlotWindow):
         # on- and off- pulses
         p1 = self._gl_widget.addPlot()
         self._plot_items.append(p1)
-        p1.setLabel('left', "Scattering signal (arb. u.)")
-        p1.setLabel('bottom', "Momentum transfer (1/A)")
-        p1.setTitle('Moving average of on- and off- pulses')
 
         self._gl_widget.nextRow()
 

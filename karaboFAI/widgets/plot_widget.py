@@ -332,3 +332,42 @@ class LaserOnOffRoiWidget(PlotWidget):
         fom_hist = data.on_off_fom_hist
 
         self._plot.setData(train_ids, fom_hist)
+
+
+class LaserOnOffAiWidget(PlotWidget):
+    """LaserOnOffAiWidget class.
+
+    Widget used for displaying the average of the azimuthal integrations
+    of laser-on and laser-off pulses.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('left', "Scattering signal (arb. u.)")
+        self.setLabel('bottom', "Momentum transfer (1/A)")
+        self.setTitle('Moving average of on- and off- pulses')
+        self.addLegend(offset=(-60, 20))
+
+        self._on_pulse = self.plot(
+            name="Laser-on", pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
+        self._off_pulse = self.plot(
+            name="Laser-off", pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._on_pulse.setData([], [])
+        self._off_pulse.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        momentum = data.momentum
+        on_pulse = data.laser_on_intensity
+        off_pulse = data.laser_off_intensity
+
+        self._on_pulse.setData(momentum, on_pulse)
+        self._off_pulse.setData(momentum, off_pulse)

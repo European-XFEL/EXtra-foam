@@ -16,9 +16,9 @@ from ..widgets.pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
-    BulletinWidget, ImageView, LaserOnOffRoiWidget, MultiPulseAiWidget,
-    PenFactory, RoiImageView, RoiIntensityMonitor, SampleDegradationWidget,
-    SinglePulseAiWidget, SinglePulseImageView
+    BulletinWidget, ImageView, LaserOnOffAiWidget, LaserOnOffRoiWidget,
+    MultiPulseAiWidget, PenFactory, RoiImageView, RoiIntensityMonitor,
+    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ..config import config
 
@@ -64,7 +64,8 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse2_ai = SinglePulseAiWidget(parent=self)
         self._vip_pulse2_img = SinglePulseImageView(parent=self)
 
-        self._laser_on_off = LaserOnOffRoiWidget(parent=self)
+        self._laser_on_off_roi = LaserOnOffRoiWidget(parent=self)
+        self._laser_on_off_ai = LaserOnOffAiWidget(parent=self)
 
         self.initUI()
 
@@ -103,6 +104,13 @@ class OverviewWindow(DockerWindow):
         self._docker_area.addDock(multi_pulse_ai_dock, 'right')
         multi_pulse_ai_dock.addWidget(self._multi_pulse_ai)
 
+        laser_on_off_ai_dock = Dock("Laser On-Off Azimuthal Integration",
+                                    size=(self._M_PULSE_AI_W,
+                                          self._M_PULSE_AI_H))
+        self._docker_area.addDock(laser_on_off_ai_dock, 'above',
+                                  multi_pulse_ai_dock)
+        laser_on_off_ai_dock.addWidget(self._laser_on_off_ai)
+
         bulletin_docker = Dock("Bulletin",
                                size=(self._BULLETIN_W, self._BULLETIN_H))
         self._docker_area.addDock(bulletin_docker, 'bottom',
@@ -116,12 +124,12 @@ class OverviewWindow(DockerWindow):
             sample_degradation_dock, 'bottom', "Bulletin")
         sample_degradation_dock.addWidget(self._sample_degradation)
 
-        laser_on_off_dock = Dock("Laser On-Off Azimuthal Integration",
-                                 size=(self._M_PULSE_AI_W,
-                                       self._M_PULSE_AI_H))
-        self._docker_area.addDock(laser_on_off_dock, 'above',
+        laser_on_off_roi_dock = Dock("Laser On-Off Azimuthal Integration",
+                                     size=(self._SAMPLE_W,
+                                           self._SAMPLE_H))
+        self._docker_area.addDock(laser_on_off_roi_dock, 'above',
                                   sample_degradation_dock)
-        laser_on_off_dock.addWidget(self._laser_on_off)
+        laser_on_off_roi_dock.addWidget(self._laser_on_off_roi)
 
         self._vip_pulse2_ai_dock = Dock("VIP pulse 0000 - AI",
                                         size=(self._S_PULSE_AI_W,

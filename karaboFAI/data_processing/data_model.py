@@ -150,9 +150,9 @@ class ProcessedData:
         self.images = images
         self.image_mean = image_mean
 
-        self._roi_hist = RoiData()
+        self._roi_hist = RoiData
 
-        self._laser_on_off = LaserOnOffData()
+        self._laser_on_off = LaserOnOffData
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -190,6 +190,22 @@ class ProcessedData:
     @property
     def roi2_intensity_hist(self):
         return self._roi_hist.roi2_intensity_hist
+
+    @property
+    def laser_on_intensity(self):
+        return self._laser_on_off.on_pulse_intensity
+
+    @laser_on_intensity.setter
+    def laser_on_intensity(self, v):
+        self._laser_on_off.on_pulse_intensity = v
+
+    @property
+    def laser_off_intensity(self):
+        return self._laser_on_off.off_pulse_intensity
+
+    @laser_off_intensity.setter
+    def laser_off_intensity(self, v):
+        self._laser_on_off.off_pulse_intensity = v
 
     @property
     def on_off_train_ids(self):

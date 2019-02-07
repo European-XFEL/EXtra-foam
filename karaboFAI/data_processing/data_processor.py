@@ -414,8 +414,6 @@ class DataProcessor(Worker):
         data.intensities = intensities
         data.intensity_mean = intensities_mean
 
-        return data
-
     def postprocess_data(self, data):
         """Data post-processing after azimuthal integration
 

@@ -173,8 +173,8 @@ class LaserOnOffProcessor:
             self._on_train_received = False
             self._off_train_received = False
 
-        data.on_pulse_intensity = normalized_on_pulse
-        data.off_pulse_intensity = normalized_off_pulse
+        data.laser_on_intensity = normalized_on_pulse
+        data.laser_off_intensity = normalized_off_pulse
         data.on_off_diff = diff
         data.update_on_off_hist(data.tid, fom)
 
