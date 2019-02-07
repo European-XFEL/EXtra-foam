@@ -1,7 +1,7 @@
 import unittest
 from enum import IntEnum
 
-from karaboFAI.main_fai_gui import MainFaiGUI
+from karaboFAI.main_fai_gui import MainGUI
 
 
 class FaiWin(IntEnum):
@@ -10,7 +10,7 @@ class FaiWin(IntEnum):
 
 
 class TestMainFaiGui(unittest.TestCase):
-    gui = MainFaiGUI('LPD')
+    gui = MainGUI('LPD')
     actions = gui._tool_bar.actions()
 
     def testOpenCloseWindows(self):

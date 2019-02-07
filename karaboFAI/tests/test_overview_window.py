@@ -5,19 +5,19 @@ from karaboFAI.widgets import (
     BulletinWidget, ImageView, MultiPulseAiWidget,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
-from karaboFAI.main_fai_gui import MainFaiGUI
+from karaboFAI.main_fai_gui import MainGUI
 from karaboFAI.windows import OverviewWindow
 from karaboFAI.data_processing import Data4Visualization
 
 
 class TestOverviewWindow(unittest.TestCase):
-    gui = MainFaiGUI('LPD')
+    gui = MainGUI('LPD')
 
     def setUp(self):
         self._win = OverviewWindow(Data4Visualization(), parent=self.gui)
 
     def testInstantiateOverviewWindow(self):
-        self.assertEqual(len(self._win._plot_widgets), 8)
+        self.assertEqual(len(self._win._plot_widgets), 10)
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
