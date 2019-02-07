@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .widgets.pyqtgraph import QtCore
+from .logger import logger
 
 
 class Worker(QtCore.QThread):
@@ -27,6 +28,7 @@ class Worker(QtCore.QThread):
         :param str msg: message string.
         """
         self.message.emit(msg)
+        logger.debug(msg)
 
     def terminate(self):
         self._running = False

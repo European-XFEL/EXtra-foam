@@ -99,7 +99,12 @@ class DataProcessor(Worker):
         self.correlation_param1 = None
         self.correlation_param2 = None
 
-        self._laser_on_off_processor = LaserOnOffProcessor()
+        self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
+        self._laser_on_off_processor.message_sgn.connect(self.onMessageReceived)
+
+    @QtCore.pyqtSlot(str)
+    def onMessageReceived(self, msg):
+        self.log(msg)
 
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
@@ -129,7 +134,7 @@ class DataProcessor(Worker):
             try:
                 from karabo_data.geometry2 import AGIPD_1MGeometry
             except (ImportError, ModuleNotFoundError):
-                logger.debug(
+                self.log(
                     "You are not in the correct branch for SPB experiment!")
                 raise
 
@@ -513,7 +518,7 @@ class DataProcessor(Worker):
                 #       will go to the log window and cause problems like
                 #       segmentation fault.
                 except (KeyError, ValueError) as e:
-                    logger.debug("Error in stacking detector data: " + str(e))
+                    self.log("Error in stacking detector data: " + str(e))
                     return ProcessedData(tid)
 
             elif config["DETECTOR"] == 'JungFrau':
@@ -521,16 +526,16 @@ class DataProcessor(Worker):
                     # (modules, y, x)
                     modules_data = data[self.source_name_sp]['data.adc']
                 except KeyError:
-                    logger.debug(f"Source [{self.source_name_sp}] is not in "
-                                 f"the received data!")
+                    self.log(f"Source [{self.source_name_sp}] is not in "
+                             f"the received data!")
                     return ProcessedData(tid)
             elif config["DETECTOR"] == "FastCCD":
                 try:
                     # (y, x)
                     modules_data = data[self.source_name_sp]["data.image.pixels"]
                 except KeyError:
-                    logger.debug(f"Source [{self.source_name_sp}] is not in "
-                                 f"the received data!")
+                    self.log(f"Source [{self.source_name_sp}] is not in "
+                             f"the received data!")
                     return ProcessedData(tid)
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
@@ -556,8 +561,8 @@ class DataProcessor(Worker):
         # This is a bug in old version of karabo_data. The above function
         # could return a numpy.ndarray with shape (0, x, x)
         if assembled.shape[0] == 0:
-            logger.debug("Bad shape {} in assembled image of train {}".
-                         format(assembled.shape, tid))
+            self.log("Bad shape {} in assembled image of train {}".
+                     format(assembled.shape, tid))
             return ProcessedData(tid)
 
         # data processing work flow

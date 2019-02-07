@@ -2,12 +2,12 @@ from collections import deque
 
 import numpy as np
 
+from ..widgets.pyqtgraph import QtCore
 from ..data_processing.proc_utils import normalize_curve, slice_curve
 from ..data_processing import OpLaserMode
-from ..logger import logger
 
 
-class LaserOnOffProcessor:
+class LaserOnOffProcessor(QtCore.QObject):
     """LaserOnOffProcessor class.
 
     A processor which calculated the moving average of the average of the
@@ -15,7 +15,11 @@ class LaserOnOffProcessor:
     as their difference. It also calculates the the figure of merit (FOM),
     which is integration of the absolute aforementioned difference.
     """
-    def __init__(self):
+
+    message_sgn = QtCore.pyqtSignal(str)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.laser_mode = None
         self.on_pulse_ids = None
         self.off_pulse_ids = None
@@ -57,14 +61,14 @@ class LaserOnOffProcessor:
         n_pulses = intensities.shape[0]
         max_on_pulse_id = max(self.on_pulse_ids)
         if max_on_pulse_id >= n_pulses:
-            logger.debug(f"On-pulse ID {max_on_pulse_id} out of range "
-                         f"(0 - {n_pulses - 1})")
+            self.log(f"On-pulse ID {max_on_pulse_id} out of range "
+                     f"(0 - {n_pulses - 1})")
             return
 
         max_off_pulse_id = max(self.off_pulse_ids)
         if max_off_pulse_id >= n_pulses:
-            logger.debug(f"Off-pulse ID {max_off_pulse_id} out of range "
-                         f"(0 - {n_pulses - 1})")
+            self.log(f"Off-pulse ID {max_off_pulse_id} out of range "
+                     f"(0 - {n_pulses - 1})")
             return
 
         if self.laser_mode == OpLaserMode.NORMAL:
@@ -78,7 +82,7 @@ class LaserOnOffProcessor:
             elif self.laser_mode == OpLaserMode.ODD_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                logger.debug(f"Unexpected laser mode! {self.laser_mode}")
+                self.log(f"Unexpected laser mode! {self.laser_mode}")
                 return
 
             # Off-train will only be acknowledged when an on-train
@@ -180,6 +184,10 @@ class LaserOnOffProcessor:
         data.on_off.off_pulse = normalized_off_pulse
         data.on_off.diff = diff
         data.on_off.update_hist(data.tid, fom)
+
+    def log(self, msg):
+        """Log information in the main GUI."""
+        self.message_sgn.emit(msg)
 
     def reset(self):
         """Override."""
