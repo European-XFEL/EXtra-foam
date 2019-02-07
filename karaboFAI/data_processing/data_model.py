@@ -92,9 +92,7 @@ class LaserOnOffData(AbstractData):
 
     @classmethod
     def clear(cls):
-        cls.on_pulse_intensity = None
-        cls.off_pulse_intensity = None
-        cls.on_off_diff = None
+        cls.train_ids.clear()
         cls.fom_hist.clear()
 
     @classmethod

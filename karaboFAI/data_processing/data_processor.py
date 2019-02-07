@@ -215,6 +215,10 @@ class DataProcessor(Worker):
     def onRoiHistClear(self):
         RoiData.clear()
 
+    @QtCore.pyqtSlot()
+    def onLaserOnOffClear(self):
+        LaserOnOffData.clear()
+
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
         if state == QtCore.Qt.Checked:

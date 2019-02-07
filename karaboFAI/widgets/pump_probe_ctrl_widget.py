@@ -61,6 +61,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._moving_average_window_le = QtGui.QLineEdit("9999")
 
+        self.clear_hist_btn = QtGui.QPushButton("Clear history")
+
         self._disabled_widgets_during_daq = [
             self._laser_mode_cb,
             self._on_pulse_le,
@@ -87,6 +89,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                       self._integration_range_le)
         layout.addRow("Moving average window: ",
                       self._moving_average_window_le)
+        layout.addRow(self.clear_hist_btn)
 
         self.setLayout(layout)
 

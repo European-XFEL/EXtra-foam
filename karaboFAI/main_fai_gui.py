@@ -303,6 +303,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onNormalizationRangeChange)
         self.pump_probe_ctrl_widget.integration_range_sgn.connect(
             self._proc_worker.onOnOffIntegrationRangeChange)
+        self.pump_probe_ctrl_widget.clear_hist_btn.clicked.connect(
+            self._proc_worker.onLaserOnOffClear)
 
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()
