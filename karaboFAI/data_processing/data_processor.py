@@ -452,9 +452,9 @@ class DataProcessor(Worker):
 
         return data
 
-    def _validate_roi(self, w, h, cx, cy, img_h, img_w):
+    def _validate_roi(self, w, h, px, py, img_h, img_w):
         """Check whether the ROI is within the image."""
-        if w < 0 or h < 0 or cx + w > img_w or cy + h > img_h:
+        if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
             return False
         return True
 

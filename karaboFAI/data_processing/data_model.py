@@ -46,8 +46,6 @@ class RoiData(AbstractData):
     """A class which stores ROI data."""
     MAX_LENGTH = 100000
 
-    roi1 = None
-    roi2 = None
     train_ids = []
     roi1_intensity_hist = []
     roi2_intensity_hist = []
@@ -55,10 +53,11 @@ class RoiData(AbstractData):
     def __init__(self):
         super().__init__()
 
+        self.roi1 = None
+        self.roi2 = None
+
     @classmethod
     def clear(cls):
-        cls.roi1 = None
-        cls.roi2 = None
         cls.train_ids.clear()
         cls.roi1_intensity_hist.clear()
         cls.roi2_intensity_hist.clear()
@@ -82,14 +81,14 @@ class LaserOnOffData(AbstractData):
     """A class which stores Laser on-off data."""
     MAX_LENGTH = 100000
 
-    on_pulse_intensity = None
-    off_pulse_intensity = None
-    on_off_diff = None
     train_ids = []
     fom_hist = []
 
     def __init__(self):
         super().__init__()
+        self.on_pulse_intensity = None
+        self.off_pulse_intensity = None
+        self.on_off_diff = None
 
     @classmethod
     def clear(cls):
@@ -150,9 +149,9 @@ class ProcessedData:
         self.images = images
         self.image_mean = image_mean
 
-        self._roi_hist = RoiData
+        self._roi = RoiData()
 
-        self._laser_on_off = LaserOnOffData
+        self._laser_on_off = LaserOnOffData()
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -165,31 +164,31 @@ class ProcessedData:
 
     @property
     def roi1(self):
-        return self._roi_hist.roi1
+        return self._roi.roi1
 
     @roi1.setter
     def roi1(self, v):
-        self._roi_hist.roi1 = v
+        self._roi.roi1 = v
 
     @property
     def roi2(self):
-        return self._roi_hist.roi2
+        return self._roi.roi2
 
     @roi2.setter
     def roi2(self, v):
-        self._roi_hist.roi2 = v
+        self._roi.roi2 = v
 
     @property
     def roi_train_ids(self):
-        return self._roi_hist.train_ids
+        return self._roi.train_ids
 
     @property
     def roi1_intensity_hist(self):
-        return self._roi_hist.roi1_intensity_hist
+        return self._roi.roi1_intensity_hist
 
     @property
     def roi2_intensity_hist(self):
-        return self._roi_hist.roi2_intensity_hist
+        return self._roi.roi2_intensity_hist
 
     @property
     def laser_on_intensity(self):
@@ -224,7 +223,7 @@ class ProcessedData:
         return self._laser_on_off.fom_hist
 
     def update_roi_hist(self, *args, **kwargs):
-        self._roi_hist.update_hist(*args, **kwargs)
+        self._roi.update_hist(*args, **kwargs)
 
     def update_on_off_hist(self, *args, **kwargs):
         self._laser_on_off.update_hist(*args, **kwargs)
