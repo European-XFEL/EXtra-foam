@@ -38,6 +38,7 @@ class SingletonWindow:
                 self.instance.update()
 
         self.instance.show()
+        self.instance.activateWindow()
         return self.instance
 
 
