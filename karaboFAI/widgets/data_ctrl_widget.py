@@ -44,11 +44,11 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
 
-        self._server_start_btn = QtGui.QPushButton("Serve")
-        self._server_start_btn.clicked.connect(self.parent().onStartServeFile)
-        self._server_kill_btn = QtGui.QPushButton("Kill")
-        self._server_kill_btn.setEnabled(False)
-        self._server_kill_btn.clicked.connect(
+        self._serve_start_btn = QtGui.QPushButton("Serve")
+        self._serve_start_btn.clicked.connect(self.parent().onStartServeFile)
+        self._serve_terminate_btn = QtGui.QPushButton("Terminate")
+        self._serve_terminate_btn.setEnabled(False)
+        self._serve_terminate_btn.clicked.connect(
             self.parent().onStopServeFile)
 
         self._disabled_widgets_during_daq = [
@@ -81,8 +81,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         layout.addLayout(src_layout)
 
         sub_layout2 = QtGui.QHBoxLayout()
-        sub_layout2.addWidget(self._server_start_btn)
-        sub_layout2.addWidget(self._server_kill_btn)
+        sub_layout2.addWidget(self._serve_start_btn)
+        sub_layout2.addWidget(self._serve_terminate_btn)
         layout.addLayout(sub_layout2)
 
         layout.addWidget(self._source_type_rbts[0])
@@ -124,12 +124,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot()
     def onFileServerStarted(self):
-        self._server_start_btn.setEnabled(False)
-        self._server_kill_btn.setEnabled(True)
+        self._serve_start_btn.setEnabled(False)
+        self._serve_terminate_btn.setEnabled(True)
         self._data_folder_le.setEnabled(False)
 
     @QtCore.pyqtSlot()
     def onFileServerStopped(self):
-        self._server_start_btn.setEnabled(True)
-        self._server_kill_btn.setEnabled(False)
+        self._serve_start_btn.setEnabled(True)
+        self._serve_terminate_btn.setEnabled(False)
         self._data_folder_le.setEnabled(True)
