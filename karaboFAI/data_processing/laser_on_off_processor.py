@@ -175,7 +175,7 @@ class LaserOnOffProcessor:
 
         data.laser_on_intensity = normalized_on_pulse
         data.laser_off_intensity = normalized_off_pulse
-        data.on_off_diff = diff
+        data.laser_delta_intensity = diff
         data.update_on_off_hist(data.tid, fom)
 
     def reset(self):

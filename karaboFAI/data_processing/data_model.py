@@ -208,6 +208,14 @@ class ProcessedData:
         self._laser_on_off.off_pulse_intensity = v
 
     @property
+    def laser_delta_intensity(self):
+        return self._laser_on_off.on_off_diff
+
+    @laser_delta_intensity.setter
+    def laser_delta_intensity(self, v):
+        self._laser_on_off.on_off_diff = v
+
+    @property
     def on_off_train_ids(self):
         return self._laser_on_off.train_ids
 

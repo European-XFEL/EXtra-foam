@@ -349,10 +349,9 @@ class LaserOnOffAiWidget(PlotWidget):
         self.setTitle('Moving average of on- and off- pulses')
         self.addLegend(offset=(-60, 20))
 
-        self._on_pulse = self.plot(
-            name="Laser-on", pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
-        self._off_pulse = self.plot(
-            name="Laser-off", pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
+        self._on_pulse = self.plot(name="Laser-on", pen=PenFactory.purple)
+        self._off_pulse = self.plot(name="Laser-off", pen=PenFactory.green)
+        self._diff = self.plot(name="On - Off x 20", pen=PenFactory.yellow)
 
     def clear(self):
         """Override."""
@@ -362,12 +361,15 @@ class LaserOnOffAiWidget(PlotWidget):
         """Override."""
         self._on_pulse.setData([], [])
         self._off_pulse.setData([], [])
+        self._diff.setData([], [])
 
     def update(self, data):
         """Override."""
         momentum = data.momentum
         on_pulse = data.laser_on_intensity
         off_pulse = data.laser_off_intensity
+        diff = data.laser_delta_intensity
 
         self._on_pulse.setData(momentum, on_pulse)
         self._off_pulse.setData(momentum, off_pulse)
+        self._diff.setData(momentum, 20 * diff)
