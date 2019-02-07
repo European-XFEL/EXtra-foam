@@ -13,8 +13,8 @@ from .misc_widgets import (
 from .sample_degradation_widget import SampleDegradationWidget
 from .image_view import ImageView, RoiImageView, SinglePulseImageView
 from .plot_widget import (
-    CorrelationWidget, MultiPulseAiWidget, SinglePulseAiWidget,
-    RoiIntensityMonitor
+    CorrelationWidget, LaserOnOffRoiWidget, MultiPulseAiWidget,
+    SinglePulseAiWidget, RoiIntensityMonitor
 )
 from .bulletin_widget import BulletinWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
@@ -33,6 +33,7 @@ __all__ = [
 # add plot widgets
 __all__.extend([
     "CorrelationWidget",
+    "LaserOnOffRoiWidget",
     "MultiPulseAiWidget",
     "RoiIntensityMonitor",
     "SampleDegradationWidget",

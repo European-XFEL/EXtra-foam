@@ -159,8 +159,10 @@ class LaserOnOffProcessor:
 
             # calculate figure-of-merit and update history
             fom = slice_curve(diff, momentum, *self.integration_range)[0]
+            fom = np.sum(np.abs(fom))
 
             # an extra check
+            # TODO: check whether it is necessary
             if len(self._on_pulses_hist) != len(self._off_pulses_hist):
                 raise ValueError("Length of on-pulse history {} != length "
                                  "of off-pulse history {}".
@@ -173,7 +175,8 @@ class LaserOnOffProcessor:
 
         data.on_pulse_intensity = normalized_on_pulse
         data.off_pulse_intensity = normalized_off_pulse
-        data.update_on_off_hist(diff, fom)
+        data.on_off_diff = diff
+        data.update_on_off_hist(data.tid, fom)
 
     def reset(self):
         """Override."""

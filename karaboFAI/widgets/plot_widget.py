@@ -255,8 +255,8 @@ class RoiIntensityMonitor(PlotWidget):
     def update(self, data):
         """Override."""
         train_ids = data.roi_train_ids[-self._window:]
-        roi1_intensities = data.roi1_intensities[-self._window:]
-        roi2_intensities = data.roi2_intensities[-self._window:]
+        roi1_intensities = data.roi1_intensity_hist[-self._window:]
+        roi2_intensities = data.roi2_intensity_hist[-self._window:]
 
         self._roi1_plot.setData(train_ids, roi1_intensities)
         self._roi2_plot.setData(train_ids, roi2_intensities)
@@ -299,3 +299,36 @@ class CorrelationWidget(PlotWidget):
         y = list(range(1000))
         random.shuffle(y)
         self._plot.setData(x, y)
+
+
+class LaserOnOffRoiWidget(PlotWidget):
+    """LaserOnOffRoiWidget class.
+
+    Widget used for displaying the evolution of ROIs in the Laser On-off
+    data analysis.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "Train ID")
+        self.setLabel('left', "ROI (arb. u.)")
+
+        self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
+                                     brush=mkBrush(120, 255, 255, 255))
+        self.addItem(self._plot)
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._plot.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        train_ids = data.on_off_train_ids
+        fom_hist = data.on_off_fom_hist
+
+        self._plot.setData(train_ids, fom_hist)

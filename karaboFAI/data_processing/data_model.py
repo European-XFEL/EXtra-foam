@@ -184,12 +184,20 @@ class ProcessedData:
         return self._roi_hist.train_ids
 
     @property
-    def roi1_intensities(self):
+    def roi1_intensity_hist(self):
         return self._roi_hist.roi1_intensity_hist
 
     @property
-    def roi2_intensities(self):
+    def roi2_intensity_hist(self):
         return self._roi_hist.roi2_intensity_hist
+
+    @property
+    def on_off_train_ids(self):
+        return self._laser_on_off.train_ids
+
+    @property
+    def on_off_fom_hist(self):
+        return self._laser_on_off.fom_hist
 
     def update_roi_hist(self, *args, **kwargs):
         self._roi_hist.update_hist(*args, **kwargs)
