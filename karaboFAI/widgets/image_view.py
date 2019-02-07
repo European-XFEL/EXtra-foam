@@ -155,6 +155,10 @@ class ImageView(QtGui.QWidget):
         else:
             self.roi2.hide()
 
+    @property
+    def image(self):
+        return self._image
+
     def setImage(self, img, *, auto_range=True, auto_levels=True):
         """Set the current displayed image.
 

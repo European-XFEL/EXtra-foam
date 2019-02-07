@@ -245,7 +245,7 @@ class ImageToolWindow(AbstractWindow):
 
         self.initUI()
         self.resize(800, 800)
-        self.updateImage()
+        self.update()
 
     def initUI(self):
         """Override."""
@@ -267,8 +267,22 @@ class ImageToolWindow(AbstractWindow):
 
         self._cw.setLayout(layout)
 
+    def update(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        # Always automatically get an image
+        if self._image_view.image is not None:
+            return
+
+        self.updateImage()
+
     def updateImage(self):
-        """For updating image manually."""
+        """Update the current image.
+
+        It is used for updating the image manually.
+        """
         data = self._data.get()
         if data.empty():
             return
