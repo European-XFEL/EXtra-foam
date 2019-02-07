@@ -293,11 +293,8 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        import random
-        x = list(range(1000))
-        random.shuffle(x)
-        y = list(range(1000))
-        random.shuffle(y)
+        x = data.on_off_fom_hist
+        y = list(range(len(x)))
         self._plot.setData(x, y)
 
 
