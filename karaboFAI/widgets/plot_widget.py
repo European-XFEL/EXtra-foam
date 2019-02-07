@@ -367,6 +367,9 @@ class LaserOnOffAiWidget(PlotWidget):
         off_pulse = data.on_off.off_pulse
         diff = data.on_off.diff
 
+        if on_pulse is None or off_pulse is None:
+            return
+
         self._on_pulse.setData(momentum, on_pulse)
         self._off_pulse.setData(momentum, off_pulse)
         self._diff.setData(momentum, 20 * diff)

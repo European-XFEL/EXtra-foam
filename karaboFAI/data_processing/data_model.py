@@ -22,9 +22,10 @@ class DataSource(IntEnum):
 
 
 class OpLaserMode(IntEnum):
-    NORMAL = 0  # on-/off- pulses in the same train
-    EVEN_ON = 1  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_ON = 2  # on/-off- pulses have odd/even train IDs, respectively
+    INACTIVE = 0  # not perform any relevant calculation
+    NORMAL = 1  # on-/off- pulses in the same train
+    EVEN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class AbstractData(abc.ABC):

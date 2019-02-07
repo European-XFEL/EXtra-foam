@@ -48,6 +48,9 @@ class LaserOnOffProcessor:
           normalized moving average for off-pulses)
         :rtype: (1D numpy.ndarray / None, 1D numpy.ndarray / None)
         """
+        if self.laser_mode == OpLaserMode.INACTIVE:
+            return
+
         momentum = data.momentum
         intensities = data.intensities
 
@@ -75,7 +78,7 @@ class LaserOnOffProcessor:
             elif self.laser_mode == OpLaserMode.ODD_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                logger.debug("Unknown laser mode!")
+                logger.debug(f"Unexpected laser mode! {self.laser_mode}")
                 return
 
             # Off-train will only be acknowledged when an on-train

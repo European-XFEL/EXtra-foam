@@ -23,6 +23,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     available_modes = OrderedDict({
+        "inactive": OpLaserMode.INACTIVE,
         "normal": OpLaserMode.NORMAL,
         "even/odd": OpLaserMode.EVEN_ON,
         "odd/even": OpLaserMode.ODD_ON
@@ -43,12 +44,14 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         # PULSE_RESOLVED = True case. It makes sense since these attributes
         # also appear in the defined methods.
 
+        all_keys = list(self.available_modes.keys())
         if self._pulse_resolved:
-            self._laser_mode_cb.addItems(self.available_modes.keys())
+            self._laser_mode_cb.addItems(all_keys)
             on_pulse_ids = "0:8:2"
             off_pulse_ids = "1:8:2"
         else:
-            self._laser_mode_cb.addItems(list(self.available_modes.keys())[1:])
+            all_keys.remove("normal")
+            self._laser_mode_cb.addItems(all_keys)
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
@@ -95,25 +98,32 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
-        try:
-            # check pulse ID only when laser on/off pulses are in the same
-            # train (the "normal" mode)
-            mode = self.available_modes[self._laser_mode_cb.currentText()]
-            on_pulse_ids = parse_ids(self._on_pulse_le.text())
-            off_pulse_ids = parse_ids(self._off_pulse_le.text())
-            if mode == "normal" and self._pulse_resolved:
-                common = set(on_pulse_ids).intersection(off_pulse_ids)
-                if common:
-                    logger.error(
-                        "Pulse IDs {} are found in both on- and off- pulses.".
-                        format(','.join([str(v) for v in common])))
-                    return None
+        mode_description = self._laser_mode_cb.currentText()
+        mode = self.available_modes[mode_description]
+        if mode != OpLaserMode.INACTIVE:
+            try:
+                # check pulse ID only when laser on/off pulses are in the same
+                # train (the "normal" mode)
+                on_pulse_ids = parse_ids(self._on_pulse_le.text())
+                off_pulse_ids = parse_ids(self._off_pulse_le.text())
+                if not on_pulse_ids or not off_pulse_ids:
+                    raise ValueError
+                if mode == OpLaserMode.NORMAL and self._pulse_resolved:
+                    common = set(on_pulse_ids).intersection(off_pulse_ids)
+                    if common:
+                        logger.error("Pulse IDs {} are found in both on- and "
+                                     "off- pulses.".format(','.join([str(v) for v in common])))
+                        return None
 
-            self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
-        except ValueError:
-            logger.error("Invalid input! Enter on/off pulse IDs separated "
-                         "by ',' and/or use the range operator ':'!")
-            return None
+            except ValueError:
+                logger.error("Invalid input! Enter on/off pulse IDs separated "
+                             "by ',' and/or use the range operator ':'!")
+                return None
+        else:
+            on_pulse_ids = []
+            off_pulse_ids = []
+
+        self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
         try:
             normalization_range = parse_boundary(
@@ -141,12 +151,13 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             logger.error("<Moving average window>: " + str(e))
             return None
 
-        info = "\n<Optical laser mode>: {}".format(mode)
-        if self._pulse_resolved:
-            info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
-            info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
-        info += "\n<Normalization range>: ({}, {})".format(*normalization_range)
-        info += "\n<Integration range>: ({}, {})".format(*integration_range)
-        info += "\n<Moving average window>: {}".format(window_size)
+        info = "\n<Optical laser mode>: {}".format(mode_description)
+        if on_pulse_ids and off_pulse_ids:
+            if self._pulse_resolved:
+                info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
+                info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
+            info += "\n<Normalization range>: ({}, {})".format(*normalization_range)
+            info += "\n<Integration range>: ({}, {})".format(*integration_range)
+            info += "\n<Moving average window>: {}".format(window_size)
 
         return info
