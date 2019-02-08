@@ -304,8 +304,13 @@ class Config(dict):
                     raise KeyError("Found system config key in the file: '{}'".
                                    format(key))
                 elif key in self._detector_readonly_config_keys:
-                    raise KeyError("Found read-only key in the file: '{}'".
-                                   format(key))
+                    if key == 'SOURCE_NAME':
+                        msg = "You may have used the old version of " \
+                              "karaboFAI. Please change 'SOURCE_NAME' to " \
+                              "'DATA_FOLDER' in the the file " \
+                              "~/.karaboFAI/settings.ini"
+                    raise KeyError("Found read-only key in the file: '{}'. ".
+                                   format(key) + msg)
                 elif key not in self._detector_reconfigurable_keys:
                     invalid_keys.append(key)
                 else:
