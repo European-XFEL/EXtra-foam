@@ -14,7 +14,6 @@ Contents:
    gui
    windows
    ai
-   detectors
 
 
 Indices and tables
