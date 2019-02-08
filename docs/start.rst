@@ -82,4 +82,4 @@ files.
    * - JungFrau
      - /gpfs/exfel/exp/FXE/201801/p002118/proc/r0143
    * - FastCCD
-     -
+     - /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141
