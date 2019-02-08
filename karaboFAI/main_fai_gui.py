@@ -34,6 +34,8 @@ from .file_server import FileServer
 from .config import config
 from .logger import logger
 
+from . import __version__
+
 
 class Mediator(QtCore.QObject):
     roi_intensity_window_sgn = QtCore.pyqtSignal(int)
@@ -90,7 +92,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.title = detector + " Azimuthal Integration"
+        self.title = detector + " Azimuthal Integration " + __version__
         self.setWindowTitle(self.title + " - main GUI")
 
         self._cw = QtGui.QWidget()
