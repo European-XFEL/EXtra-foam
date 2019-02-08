@@ -194,14 +194,6 @@ class DataProcessor(Worker):
     def onPulseRangeChanged(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
 
-    @QtCore.pyqtSlot(str, str)
-    def onCorrelationParam1Change(self, src, key):
-        self.correlation_param1 = (src, key)
-
-    @QtCore.pyqtSlot(str, str)
-    def onCorrelationParam2Change(self, src, key):
-        self.correlation_param2 = (src, key)
-
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Changed(self, activated, w, h, px, py):
         if activated:

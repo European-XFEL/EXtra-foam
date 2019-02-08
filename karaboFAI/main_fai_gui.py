@@ -292,11 +292,6 @@ class MainGUI(QtGui.QMainWindow):
         self._mediator.threshold_mask_change_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
 
-        self.correlation_ctrl_widget.param1_sgn.connect(
-            self._proc_worker.onCorrelationParam1Change)
-        self.correlation_ctrl_widget.param2_sgn.connect(
-            self._proc_worker.onCorrelationParam2Change)
-
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)
         self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
