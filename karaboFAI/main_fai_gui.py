@@ -92,7 +92,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.title = detector + " Azimuthal Integration " + __version__
+        self.title = f"karaboFAI {__version__} ({detector})"
         self.setWindowTitle(self.title + " - main GUI")
 
         self._cw = QtGui.QWidget()
