@@ -42,22 +42,27 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "single image", "on-off"
     )
 
+    # leave the default device ID empty since the available devices
+    # in different instruments are different
     _available_categories = OrderedDict({
         "": CorrelationParam(),
         "XGM": CorrelationParam(
-            device_ids=["device name", "very long device name"],
+            device_ids=["", "device name", "very long device name"],
             properties=["property1", "property2"],
         ),
         "MonoChromator": CorrelationParam(
-            device_ids=["device name", "very long device name"],
+            device_ids=["", "device name", "very long device name"],
             properties=["property1", "property2"],
         ),
         "Motor": CorrelationParam(
-            device_ids=["device name", "very long device name"],
+            device_ids=["", "device name", "very long device name"],
             properties=["property1", "property2"],
         ),
         "User defined": CorrelationParam()
     })
+
+    # index, device ID, property name
+    correlation_param_sgn = QtCore.pyqtSignal(int, str, str)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
@@ -118,7 +123,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             combo.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            # the rest columns will be set automatically
+            table.setCellWidget(i_row, 1, QtGui.QLineEdit())
+            table.cellWidget(i_row, 1).setReadOnly(True)
+            table.setCellWidget(i_row, 2, QtGui.QLineEdit())
+            table.cellWidget(i_row, 2).setReadOnly(True)
 
         header = table.horizontalHeader()
         for i in range(n_col):
@@ -137,20 +145,60 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         # i_row is the row number in the QTableWidget
         if not text or text == "User defined":
             # '' or 'User defined'
-            le1 = QtGui.QLineEdit()
-            le2 = QtGui.QLineEdit()
+            device_id_le = QtGui.QLineEdit()
+            property_le = QtGui.QLineEdit()
+
             if not text:
-                le1.setReadOnly(True)
-                le2.setReadOnly(True)
-            self._table.setCellWidget(i_row, 1, le1)
-            self._table.setCellWidget(i_row, 2, le2)
+                device_id_le.setReadOnly(True)
+                property_le.setReadOnly(True)
+            else:
+                device_id_le.editingFinished.connect(functools.partial(
+                    self.onCorrelationParamChangeLe, i_row, 1))
+                property_le.editingFinished.connect(functools.partial(
+                    self.onCorrelationParamChangeLe, i_row, 2))
+
+            self._table.setCellWidget(i_row, 1, device_id_le)
+            self._table.setCellWidget(i_row, 2, property_le)
         else:
             combo_device_ids = QtGui.QComboBox()
             for device_id in self._available_categories[text].device_ids:
                 combo_device_ids.addItem(device_id)
+            combo_device_ids.currentTextChanged.connect(functools.partial(
+                self.onCorrelationParamChangeCb, i_row, 1))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
             combo_properties = QtGui.QComboBox()
-            for property in self._available_categories[text].properties:
-                combo_properties.addItem(property)
+            for ppt in self._available_categories[text].properties:
+                combo_properties.addItem(ppt)
+            combo_properties.currentTextChanged.connect(functools.partial(
+                self.onCorrelationParamChangeCb, i_row, 2))
             self._table.setCellWidget(i_row, 2, combo_properties)
+
+        # we always have invalid (empty) input when the category changes
+        self.correlation_param_sgn.emit(i_row, '', '')
+
+    @QtCore.pyqtSlot()
+    def onCorrelationParamChangeLe(self, i_row, i_col):
+        if i_col == 1:
+            # device ID changed
+            device_id = self.sender().text()
+            ppt = self._table.cellWidget(i_row, 2).text()
+        elif i_col == 2:
+            # property changed
+            device_id = self._table.cellWidget(i_row, 1).text()
+            ppt = self.sender().text()
+
+        self.correlation_param_sgn.emit(i_row, device_id, ppt)
+
+    @QtCore.pyqtSlot(str)
+    def onCorrelationParamChangeCb(self, i_row, i_col, text):
+        if i_col == 1:
+            # device ID changed
+            device_id = text
+            ppt = self._table.cellWidget(i_row, 2).currentText()
+        elif i_col == 2:
+            # property changed
+            device_id = self._table.cellWidget(i_row, 1).currentText()
+            ppt = text
+
+        self.correlation_param_sgn.emit(i_row, device_id, ppt)

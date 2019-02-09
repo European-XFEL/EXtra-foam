@@ -223,6 +223,10 @@ class DataProcessor(Worker):
         else:
             self._enable_ai = False
 
+    @QtCore.pyqtSlot(int, str, str)
+    def onCorrelationParamChange(self, idx, device_id, ppt):
+        print(idx, device_id, ppt)
+
     def run(self):
         """Run the data processor."""
         self._running = True
