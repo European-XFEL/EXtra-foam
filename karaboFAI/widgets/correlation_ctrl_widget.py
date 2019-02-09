@@ -9,64 +9,28 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import abc
+from collections import OrderedDict
+import functools
+
 from ..widgets.pyqtgraph import Qt, QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..config import config
 
 
-class CorrelationParam(abc.ABC):
-    """Base class for correlation parameters."""
-    def __init__(self):
-        self.device_id = QtGui.QComboBox()
-        for device_id in self._available_device_ids:
-            self.device_id.addItem(device_id)
-
-        self.property = QtGui.QComboBox()
-        for property in self._available_properties:
-            self.property.addItem(property)
-
-
-class CorrelationParamXGM(CorrelationParam):
-    _available_device_ids = [
-        'SCS_BLU_XGM/XGM/DOOCS',
-        'SA3_XTD10_XGM/XGM/DOOCS'
-    ]
-
-    _available_properties = [
-        'data.intensityTD'
-    ]
-
-    def __init__(self):
-        super().__init__()
-
-
-class CorrelationParamMono(CorrelationParam):
-    _available_device_ids = [
-    ]
-
-    _available_properties = [
-        "actualEnergy"
-    ]
-
-    def __init__(self):
-        super().__init__()
-
-
-class CorrelationParamMotor(CorrelationParam):
-    _available_device_ids = [
-    ]
-
-    _available_properties = [
-    ]
-
-    def __init__(self):
-        super().__init__()
-
-
-
 class CorrelationCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the correlation analysis parameters."""
+
+    class CorrelationParam:
+        def __init__(self, device_ids=None, properties=None):
+            if device_ids is None:
+                self.device_ids = []
+            else:
+                self.device_ids = device_ids
+
+            if properties is None:
+                self.properties = []
+            else:
+                self.properties = properties
 
     _n_params = 4  # maximum number of correlated parameters
 
@@ -78,8 +42,22 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "single image", "on-off"
     )
 
-    param1_sgn = QtCore.pyqtSignal(str, str)
-    param2_sgn = QtCore.pyqtSignal(str, str)
+    _available_categories = OrderedDict({
+        "": CorrelationParam(),
+        "XGM": CorrelationParam(
+            device_ids=["device name", "very long device name"],
+            properties=["property1", "property2"],
+        ),
+        "MonoChromator": CorrelationParam(
+            device_ids=["device name", "very long device name"],
+            properties=["property1", "property2"],
+        ),
+        "Motor": CorrelationParam(
+            device_ids=["device name", "very long device name"],
+            properties=["property1", "property2"],
+        ),
+        "User defined": CorrelationParam()
+    })
 
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
@@ -122,35 +100,25 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self.initParamTable()
 
     def initParamTable(self):
-        """"""
+        """Initialize the correlation parameter table widget."""
         table = self._table
 
         n_row = self._n_params
         n_col = 3
-        table.setColumnCount(3)
-        data1 = ['', '', '', '']
-        data2 = ['', '', '', '']
-        avaible_param_types = ["", "XGM", "Mono", "Motor", "User defined"]
 
-        table.setRowCount(4)
-
+        table.setColumnCount(n_col)
+        table.setRowCount(n_row)
+        table.setHorizontalHeaderLabels(['Category', 'Device ID', 'Property'])
+        table.setVerticalHeaderLabels(['1', '2', '3', '4'])
         for i_row in range(self._n_params):
             combo = QtGui.QComboBox()
-            for t in avaible_param_types:
+            for t in self._available_categories.keys():
                 combo.addItem(t)
             table.setCellWidget(i_row, 0, combo)
+            combo.currentTextChanged.connect(
+                functools.partial(self.onCategoryChange, i_row))
 
-            item1 = QtGui.QTableWidgetItem(data1[i_row])
-            table.setItem(i_row, 1, item1)
-
-            item2 = QtGui.QTableWidgetItem(data2[i_row])
-            table.setItem(i_row, 2, item2)
-
-        table.cellChanged.connect(self.onTableCellChanged)
-
-        table.setHorizontalHeaderLabels(
-            ['Category', 'Device ID', 'Property'])
-        table.setVerticalHeaderLabels(['1', '2', '3', '4'])
+            # the rest columns will be set automatically
 
         header = table.horizontalHeader()
         for i in range(n_col):
@@ -164,9 +132,25 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         """Override"""
         return ""
 
-    @QtCore.pyqtSlot(int, int)
-    def onTableCellChanged(self, row, col):
-        table = self._table
-        if col == 0:
-            # category changed
-            category = table.itemAt(row, col).currentText()
+    @QtCore.pyqtSlot(str)
+    def onCategoryChange(self, i_row, text):
+        # i_row is the row number in the QTableWidget
+        if not text or text == "User defined":
+            # '' or 'User defined'
+            le1 = QtGui.QLineEdit()
+            le2 = QtGui.QLineEdit()
+            if not text:
+                le1.setReadOnly(True)
+                le2.setReadOnly(True)
+            self._table.setCellWidget(i_row, 1, le1)
+            self._table.setCellWidget(i_row, 2, le2)
+        else:
+            combo_device_ids = QtGui.QComboBox()
+            for device_id in self._available_categories[text].device_ids:
+                combo_device_ids.addItem(device_id)
+            self._table.setCellWidget(i_row, 1, combo_device_ids)
+
+            combo_properties = QtGui.QComboBox()
+            for property in self._available_categories[text].properties:
+                combo_properties.addItem(property)
+            self._table.setCellWidget(i_row, 2, combo_properties)
