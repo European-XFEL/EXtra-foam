@@ -15,6 +15,7 @@ import functools
 from ..widgets.pyqtgraph import Qt, QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..config import config
+from ..data_processing import FomName
 
 
 class CorrelationCtrlWidget(AbstractCtrlWidget):
@@ -34,21 +35,18 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     _n_params = 4  # maximum number of correlated parameters
 
-    normalizers = (
-        "integrated curve", "reference signal"
-    )
-
-    figure_of_merits = (
-        "single image", "on-off"
-    )
+    _available_foms = OrderedDict({
+        "assembled mean": FomName.ASSEMBLED_MEAN,
+        "on-off": FomName.LASER_ON_OFF,
+    })
 
     # leave the default device ID empty since the available devices
     # in different instruments are different
     _available_categories = OrderedDict({
         "": CorrelationParam(),
         "XGM": CorrelationParam(
-            device_ids=["", "device name", "very long device name"],
-            properties=["property1", "property2"],
+            device_ids=["", "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput", "very long device name"],
+            properties=["timestamp.tid", "property2"],
         ),
         "MonoChromator": CorrelationParam(
             device_ids=["", "device name", "very long device name"],
@@ -64,27 +62,21 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     # index, device ID, property name
     correlation_param_sgn = QtCore.pyqtSignal(int, str, str)
 
+    correlation_fom_sgn = QtCore.pyqtSignal(object)
+
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
 
         self._figure_of_merit_cb = QtGui.QComboBox()
-        for v in self.figure_of_merits:
+        for v in self._available_foms:
             self._figure_of_merit_cb.addItem(v)
-
-        self._normalizers_cb = QtGui.QComboBox()
-        for v in self.normalizers:
-            self._normalizers_cb.addItem(v)
-
-        self._integration_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._figure_of_merit_cb.currentTextChanged.connect(
+            lambda x: self.correlation_fom_sgn.emit(self._available_foms[x]))
 
         self._table = QtGui.QTableWidget()
 
         self._disabled_widgets_during_daq = [
             self._figure_of_merit_cb,
-            self._normalizers_cb,
-            self._integration_range_le,
-            self._table
         ]
 
         self.initUI()
@@ -96,8 +88,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         # correlation
         layout.addRow("Figure of merit (FOM): ", self._figure_of_merit_cb)
-        layout.addRow("Normalized by: ", self._normalizers_cb)
-        layout.addRow("Integration range (1/A): ", self._integration_range_le)
         layout.addRow(self._table)
 
         self.setLayout(layout)
@@ -138,6 +128,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
+        self._figure_of_merit_cb.currentTextChanged.emit(
+            self._figure_of_merit_cb.currentText())
         return ""
 
     @QtCore.pyqtSlot(str)

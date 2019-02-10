@@ -30,11 +30,11 @@ class SampleDegradationWidget(PlotWidget):
         grand_parent = parent.parent()  # :)
 
         self._normalization_range_sp = None
-        grand_parent.pump_probe_ctrl_widget.normalization_range_sgn.connect(
+        grand_parent.analysis_ctrl_widget.normalization_range_sgn.connect(
             self.onNormalizationRangeChanged)
 
         self._integration_range_sp = None
-        grand_parent.pump_probe_ctrl_widget.integration_range_sgn.connect(
+        grand_parent.analysis_ctrl_widget.integration_range_sgn.connect(
             self.onIntegrationRangeChanged)
 
         self.setLabel('left', "Integrated difference (arb.)")

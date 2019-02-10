@@ -9,12 +9,23 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..widgets.pyqtgraph import QtCore, QtGui
+from ..data_processing import AiNormalizer
+from ..helpers import parse_boundary
+from ..config import config
+from ..logger import logger
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
+
+    _available_normalizers = OrderedDict({
+        "curve": AiNormalizer.CURVE,
+        "roi": AiNormalizer.ROI
+    })
 
     pulse_id_range_sgn = QtCore.pyqtSignal(int, int)
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
@@ -22,6 +33,10 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     max_pulse_id_validator = QtGui.QIntValidator(0, 2699)
     vip_pulse_validator = QtGui.QIntValidator(0, 2699)
+
+    ai_normalizer_sgn = QtCore.pyqtSignal(object)
+    integration_range_sgn = QtCore.pyqtSignal(float, float)
+    normalization_range_sgn = QtCore.pyqtSignal(float, float)
 
     def __init__(self, *args, **kwargs):
         super().__init__("General analysis setup", *args, **kwargs)
@@ -57,9 +72,22 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self.enable_ai_cb = QtGui.QCheckBox("Azimuthal integration")
 
+        self._normalizers_cb = QtGui.QComboBox()
+        for v in self._available_normalizers:
+            self._normalizers_cb.addItem(v)
+        self._normalizers_cb.currentTextChanged.connect(
+            lambda x: self.ai_normalizer_sgn.emit(self._available_normalizers[x]))
+        self._normalization_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+        self._integration_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+
         self._disabled_widgets_during_daq = [
             self._max_pulse_id_le,
             self.enable_ai_cb,
+            self._normalizers_cb,
+            self._normalization_range_le,
+            self._integration_range_le,
         ]
 
         self.initUI()
@@ -70,6 +98,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         layout.addRow(self.enable_ai_cb)
+        layout.addRow("Normalized by: ", self._normalizers_cb)
+        layout.addRow("Normalization range (1/A): ",
+                      self._normalization_range_le)
+        layout.addRow("Integration range (1/A): ",
+                      self._integration_range_le)
 
         if self._pulse_resolved:
             pid_layout = QtGui.QGridLayout()
@@ -96,9 +129,30 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id1_le.returnPressed.emit()
         self._vip_pulse_id2_le.returnPressed.emit()
 
+        self._normalizers_cb.currentTextChanged.emit(
+            self._normalizers_cb.currentText())
+
+        try:
+            normalization_range = parse_boundary(
+                self._normalization_range_le.text())
+            self.normalization_range_sgn.emit(*normalization_range)
+        except ValueError as e:
+            logger.error("<Normalization range>: " + str(e))
+            return None
+
+        try:
+            integration_range = parse_boundary(
+                self._integration_range_le.text())
+            self.integration_range_sgn.emit(*integration_range)
+        except ValueError as e:
+            logger.error("<Integration range>: " + str(e))
+            return None
+
         info = ''
         if self._pulse_resolved:
             info += "\n<Pulse ID range>: ({}, {})".format(*pulse_id_range)
+            info += "\n<Normalization range>: ({}, {})".format(*normalization_range)
+            info += "\n<Integration range>: ({}, {})".format(*integration_range)
 
         return info
 

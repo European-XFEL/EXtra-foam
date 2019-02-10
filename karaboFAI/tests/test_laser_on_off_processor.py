@@ -4,7 +4,7 @@ import numpy as np
 
 from karaboFAI.data_processing import ProcessedData, OpLaserMode
 from karaboFAI.data_processing.data_model import LaserOnOffData
-from karaboFAI.data_processing.laser_on_off_processor import LaserOnOffProcessor
+from karaboFAI.data_processing.data_processor import LaserOnOffProcessor
 
 
 class TestLaserOnOffWindow(unittest.TestCase):
@@ -48,8 +48,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(0)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 2nd train
         data = self._data[1]
@@ -65,8 +66,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(1)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 3rd train
         data = self._data[2]
@@ -82,8 +84,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(2)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
@@ -106,8 +109,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 2nd train
         data = self._data[1]
@@ -123,8 +127,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(1)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 3rd train
         data = self._data[2]
@@ -139,8 +144,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(2)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 4th train
         data = self._data[3]
@@ -156,8 +162,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(3)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 5th train was lost
 
@@ -173,8 +180,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(5)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 7th train
         data = self._data[6]
@@ -189,8 +197,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 7th train was sent twice (on train is followed by an on train)
         data = self._data[6]
@@ -205,8 +214,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 8th train was lost
 
@@ -223,8 +233,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(8)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 10th train
         data = self._data[9]
@@ -240,8 +251,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(9)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
@@ -262,8 +274,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 2nd train
         data = self._data[1]
@@ -277,8 +290,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(1)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 3rd train
         data = self._data[2]
@@ -294,8 +308,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(2)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 4th train
         data = self._data[3]
@@ -310,8 +325,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(3)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
 
         # 5th train
         data = self._data[4]
@@ -327,5 +343,6 @@ class TestLaserOnOffWindow(unittest.TestCase):
         np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(2.5)
         train_ids_gt.append(4)
-        np.testing.assert_array_equal(data.on_off.fom_hist, fom_hist_gt)
-        np.testing.assert_array_equal(data.on_off.train_ids, train_ids_gt)
+        tids, foms, _ = data.on_off.foms
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)

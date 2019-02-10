@@ -24,22 +24,17 @@ class CorrelationWindow(DockerWindow):
     """
     title = "correlation"
 
-    _n_plots = 4
-
-    _WIDGET_W = 600
-    _WIDGET_H = 450
+    N_PLOTS = 4
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
         self._plots = []
-        for i in range(self._n_plots):
-            self._plots.append(CorrelationWidget(parent=self))
+        for i in range(self.N_PLOTS):
+            self._plots.append(CorrelationWidget(i, parent=self))
 
         self.initUI()
-
-        self.resize(self._WIDGET_W * 2, self._WIDGET_H * 2)
 
         self.update()
 
@@ -53,7 +48,8 @@ class CorrelationWindow(DockerWindow):
         """Override."""
         docks = []
         for i, widget in enumerate(self._plots, 1):
-            dock = Dock(f'correlation {i}', closable=True)
+            dock = Dock(str(i), closable=True)
+            dock.hideTitleBar()
             docks.append(dock)
             self._docker_area.addDock(dock, 'right')
             dock.addWidget(widget)

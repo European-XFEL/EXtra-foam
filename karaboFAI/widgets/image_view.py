@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageView and SinglePulseImageView.
+ImageView and other derivative ImageView widgets.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -12,7 +12,7 @@ All rights reserved.
 import numpy as np
 
 from ..widgets.pyqtgraph import (
-    QtGui, QtCore, HistogramLUTWidget, ImageItem, ROI
+    QtCore, QtGui, HistogramLUTWidget, ImageItem, ROI
 )
 from .misc_widgets import colorMapFactory, PenFactory
 from .plot_widget import PlotWidget
@@ -216,7 +216,7 @@ class ImageView(QtGui.QWidget):
 class SinglePulseImageView(ImageView):
     """SinglePulseImageView class.
 
-    Widget used for displaying the assembled image of a single pulse.
+    Widget for displaying the assembled image of a single pulse.
     """
     def __init__(self, *, pulse_id=0, parent=None):
         """Initialization."""
@@ -253,7 +253,7 @@ class SinglePulseImageView(ImageView):
 class RoiImageView(ImageView):
     """RoiImageView class.
 
-    Widget used for displaying the ROI for the assembled image.
+    Widget for displaying the ROI for the assembled image.
     """
     def __init__(self, roi1=True, *args, **kwargs):
         """Initialization.

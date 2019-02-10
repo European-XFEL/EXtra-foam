@@ -9,8 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from enum import IntEnum
 import abc
+from enum import IntEnum
 
 from ..logger import logger
 
@@ -28,90 +28,124 @@ class OpLaserMode(IntEnum):
     ODD_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
 
 
+class FomName(IntEnum):
+    # Calculate the FOM based on the azimuthal integration of the mean
+    # of the assembled image(s).
+    ASSEMBLED_MEAN = 1
+    # Calculate the FOM based on the difference between the azimuthal
+    # integration result between the laser on/off pulse(s).
+    LASER_ON_OFF = 2
+
+
+class AiNormalizer(IntEnum):
+    # Normalize the azimuthal integration curve by integration of the
+    # curve itself.
+    CURVE = 1
+    # Normalize the azimuthal integration curve by the sum of the
+    # integrations of the ROI(s).
+    ROI = 2
+
+
+class TrainData:
+    MAX_LENGTH = 1000000
+
+    def __init__(self, **kwargs):
+        # x can be tid or a correlated param
+
+        # We need to have a 'x' for each sub-dataset due to the
+        # concurrency of data processing.
+        self._x = []
+        self._values = []
+        self._info = kwargs
+
+    def __get__(self, instance, instance_type):
+        if instance is None:
+            return self
+        return self._x, self._values, self._info
+
+    def __set__(self, instance, pair):
+        x, value = pair
+        self._x.append(x)
+        self._values.append(value)
+
+        # TODO: improve, e.g., cache
+        if len(self._x) > self.MAX_LENGTH:
+            self.__delete__(instance)
+
+    def __delete__(self, instance):
+        del self._x[0]
+        del self._values[0]
+
+    def clear(self):
+        self._x.clear()
+        self._values.clear()
+
+
 class AbstractData(abc.ABC):
-    """Abstract data for data node in ProcessedData."""
-    MAX_LENGTH = 100000
 
     @classmethod
-    @abc.abstractmethod
     def clear(cls):
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    def update_hist(cls, *args, **kwargs):
-        pass
+        for kls in cls.__dict__:
+            if isinstance(cls.__dict__[kls], TrainData):
+                # descriptor protocol will not be triggered here
+                cls.__dict__[kls].clear()
 
 
 class RoiData(AbstractData):
     """A class which stores ROI data."""
-    MAX_LENGTH = 100000
 
-    train_ids = []
-    roi1_intensity_hist = []
-    roi2_intensity_hist = []
+    # intensity histories of ROI1 and ROI2
+    intensities1 = TrainData()
+    intensities2 = TrainData()
 
-    def __init__(self):
-        super().__init__()
-
-        self.roi1 = None
-        self.roi2 = None
-
-    @classmethod
-    def clear(cls):
-        cls.train_ids.clear()
-        cls.roi1_intensity_hist.clear()
-        cls.roi2_intensity_hist.clear()
-
-    @classmethod
-    def update_hist(cls, tid, intensity1, intensity2):
-        cls.train_ids.append(tid)
-        cls.roi1_intensity_hist.append(intensity1)
-        cls.roi2_intensity_hist.append(intensity2)
-        if len(cls.train_ids) > cls.MAX_LENGTH:
-            # expensive
-            cls.train_ids.pop(0)
-            cls.roi1_intensity_hist.pop(0)
-            cls.roi2_intensity_hist.pop(0)
-
-        if len(cls.train_ids) >= cls.MAX_LENGTH:
-            logger.DEBUG("ROI history is full!")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.roi1 = None  # (w, h, px, py)
+        self.roi2 = None  # (w, h, px, py)
 
 
 class LaserOnOffData(AbstractData):
     """A class which stores Laser on-off data."""
-    MAX_LENGTH = 100000
 
-    train_ids = []
-    fom_hist = []
+    # FOM history
+    foms = TrainData()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.on_pulse = None
         self.off_pulse = None
         self.diff = None
 
-    @classmethod
-    def clear(cls):
-        cls.train_ids.clear()
-        cls.fom_hist.clear()
+
+class CorrelationData(AbstractData):
+    """A class which stores Laser on-off data."""
 
     @classmethod
-    def update_hist(cls, tid, fom):
-        cls.train_ids.append(tid)
-        cls.fom_hist.append(fom)
+    def add_param(cls, idx, device_id, ppt):
+        setattr(cls, f'param{idx}', TrainData(device_id=device_id,
+                                              property=ppt))
 
-        if len(cls.train_ids) > cls.MAX_LENGTH:
-            # expensive
-            cls.train_ids.pop(0)
-            cls.fom_hist.pop(0)
+    @classmethod
+    def remove_param(cls, idx):
+        name = f'param{idx}'
+        if hasattr(cls, name):
+            delattr(cls, name)
 
-        if len(cls.train_ids) >= cls.MAX_LENGTH:
-            logger.DEBUG("Laser on-off history is full!")
+    @classmethod
+    def get_params(cls):
+        params = []
+        for kls in cls.__dict__:
+            if isinstance(cls.__dict__[kls], TrainData):
+                params.append(kls)
+
+        return params
 
 
 class ProcessedData:
     """A class which stores the processed data.
+
+    ProcessedData also provide interface for manipulating the other node
+    dataset, e.g. RoiData, CorrelationData, LaserOnOffData.
 
     Attributes:
         tid (int): train ID.
@@ -125,12 +159,14 @@ class ProcessedData:
             Shape = (pulse_id, y, x)
         image_mean (numpy.ndarray): average of the detector images over
             pulses. Shape = (y, x)
-        roi (RoiData): class stores ROI related data.
-        on_off (LaserOnOffData): class stores laser on-off data.
+        roi (RoiData): stores ROI related data.
+        on_off (LaserOnOffData): stores laser on-off related data.
+        correlation (CorrelationData): correlation related data.
         threshold_mask (tuple): (min, max) threshold of the image mask.
         image_mask (numpy.ndarray): an image mask which is applied to all
             the detector images, default = None. Shape = (y, x)
     """
+
     def __init__(self, tid, *,
                  momentum=None,
                  intensities=None,
@@ -140,8 +176,8 @@ class ProcessedData:
         """Initialization."""
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
-        # tid is not allowed to be modified once initialized.
-        self._tid = tid
+
+        self._tid = tid  # current Train ID
 
         self.momentum = momentum
         self.intensities = intensities
@@ -151,8 +187,8 @@ class ProcessedData:
         self.image_mean = image_mean
 
         self.roi = RoiData()
-
         self.on_off = LaserOnOffData()
+        self.correlation = CorrelationData()
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -162,6 +198,35 @@ class ProcessedData:
     @property
     def tid(self):
         return self._tid
+
+    @classmethod
+    def clear_roi_hist(cls):
+        RoiData.clear()
+
+    @classmethod
+    def clear_onoff_hist(cls):
+        LaserOnOffData.clear()
+
+    @classmethod
+    def clear_correlation_hist(cls):
+        CorrelationData.clear()
+
+    @staticmethod
+    def add_correlator(idx, device_id, ppt):
+        """Add a correlated parameter.
+
+        :param int idx: index
+        :param str device_id: device ID
+        :param str ppt: property
+        """
+        if device_id and ppt:
+            CorrelationData.add_param(idx, device_id, ppt)
+        else:
+            CorrelationData.remove_param(idx)
+
+    @staticmethod
+    def get_correlators():
+        return CorrelationData.get_params()
 
     def empty(self):
         """Check the goodness of the data."""

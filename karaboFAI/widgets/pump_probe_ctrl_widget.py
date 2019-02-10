@@ -12,8 +12,7 @@ All rights reserved.
 from collections import OrderedDict
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..config import config
-from ..helpers import parse_ids, parse_boundary
+from ..helpers import parse_ids
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore, QtGui
 from ..data_processing import OpLaserMode
@@ -22,7 +21,7 @@ from ..data_processing import OpLaserMode
 class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
-    available_modes = OrderedDict({
+    _available_modes = OrderedDict({
         "inactive": OpLaserMode.INACTIVE,
         "normal": OpLaserMode.NORMAL,
         "even/odd": OpLaserMode.EVEN_ON,
@@ -31,8 +30,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
-    integration_range_sgn = QtCore.pyqtSignal(float, float)
-    normalization_range_sgn = QtCore.pyqtSignal(float, float)
     moving_average_window_sgn = QtCore.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
@@ -44,7 +41,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         # PULSE_RESOLVED = True case. It makes sense since these attributes
         # also appear in the defined methods.
 
-        all_keys = list(self.available_modes.keys())
+        all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
             self._laser_mode_cb.addItems(all_keys)
             on_pulse_ids = "0:8:2"
@@ -58,10 +55,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
-        self._normalization_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
-        self._integration_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._moving_average_window_le = QtGui.QLineEdit("9999")
 
         self.clear_hist_btn = QtGui.QPushButton("Clear history")
@@ -70,8 +63,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
-            self._normalization_range_le,
-            self._integration_range_le,
             self._moving_average_window_le,
         ]
 
@@ -86,10 +77,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         if self._pulse_resolved:
             layout.addRow("On-pulse IDs: ", self._on_pulse_le)
             layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
-        layout.addRow("Normalization range (1/A): ",
-                      self._normalization_range_le)
-        layout.addRow("Integration range (1/A): ",
-                      self._integration_range_le)
         layout.addRow("Moving average window: ",
                       self._moving_average_window_le)
         layout.addRow(self.clear_hist_btn)
@@ -99,7 +86,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     def updateSharedParameters(self):
         """Override"""
         mode_description = self._laser_mode_cb.currentText()
-        mode = self.available_modes[mode_description]
+        mode = self._available_modes[mode_description]
         if mode != OpLaserMode.INACTIVE:
             try:
                 # check pulse ID only when laser on/off pulses are in the same
@@ -126,22 +113,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
         try:
-            normalization_range = parse_boundary(
-                self._normalization_range_le.text())
-            self.normalization_range_sgn.emit(*normalization_range)
-        except ValueError as e:
-            logger.error("<Normalization range>: " + str(e))
-            return None
-
-        try:
-            integration_range = parse_boundary(
-                self._integration_range_le.text())
-            self.integration_range_sgn.emit(*integration_range)
-        except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
-            return None
-
-        try:
             window_size = int(self._moving_average_window_le.text())
             if window_size < 1:
                 logger.error("Moving average window < 1!")
@@ -156,8 +127,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             if self._pulse_resolved:
                 info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
                 info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
-            info += "\n<Normalization range>: ({}, {})".format(*normalization_range)
-            info += "\n<Integration range>: ({}, {})".format(*integration_range)
             info += "\n<Moving average window>: {}".format(window_size)
 
         return info

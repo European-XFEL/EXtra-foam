@@ -282,6 +282,12 @@ class MainGUI(QtGui.QMainWindow):
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
             self._proc_worker.onEnableAiStateChange)
         self.analysis_ctrl_widget.enable_ai_cb.setChecked(True)
+        self.analysis_ctrl_widget.ai_normalizer_sgn.connect(
+            self._proc_worker.onAiNormalizeChange)
+        self.analysis_ctrl_widget.normalization_range_sgn.connect(
+            self._proc_worker.onNormalizationRangeChange)
+        self.analysis_ctrl_widget.integration_range_sgn.connect(
+            self._proc_worker.onFomIntegrationRangeChange)
 
         self._mediator.roi_hist_clear_sgn.connect(
             self._proc_worker.onRoiHistClear)
@@ -296,16 +302,13 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onOffPulseStateChange)
         self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
             self._proc_worker.onMovingAverageWindowChange)
-        self.pump_probe_ctrl_widget.normalization_range_sgn.connect(
-            self._proc_worker.onNormalizationRangeChange)
-        self.pump_probe_ctrl_widget.integration_range_sgn.connect(
-            self._proc_worker.onOnOffIntegrationRangeChange)
         self.pump_probe_ctrl_widget.clear_hist_btn.clicked.connect(
             self._proc_worker.onLaserOnOffClear)
 
         self.correlation_ctrl_widget.correlation_param_sgn.connect(
-            self._proc_worker.onCorrelationParamChange
-        )
+            self._proc_worker.onCorrelationParamChange)
+        self.correlation_ctrl_widget.correlation_fom_sgn.connect(
+            self._proc_worker.onCorrelationFomChange)
 
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()
@@ -346,7 +349,7 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._windows.keys():
             w.clear()
 
-        if self._data.get().empty():
+        if self._data.get().image_mean is None:
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
             return
 

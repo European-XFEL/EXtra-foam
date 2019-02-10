@@ -3,12 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PlotWidget
-
-SinglePulseAiWidget
-MultiPulseAiWidget
-RoiIntensityMonitor
-CorrelationWidget
+Base PlotWidget and various concrete PlotWidgets.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -114,7 +109,7 @@ class SinglePulseAiWidget(PlotWidget):
     """SinglePulseAiWidget class.
 
     A widget which allows user to visualize the the azimuthal integration
-    result of individual pulses. The azimuthal integration result is also
+    result of a single pulse. The azimuthal integration result is also
     compared with the average azimuthal integration of all the pulses.
     """
     def __init__(self, *, pulse_id=0, plot_mean=True, parent=None):
@@ -177,7 +172,7 @@ class SinglePulseAiWidget(PlotWidget):
 class MultiPulseAiWidget(PlotWidget):
     """MultiPulseAiWidget class.
 
-    Widget used for displaying azimuthal integration result for all
+    Widget for displaying azimuthal integration result for all
     the pulses in a train.
     """
     def __init__(self, *, parent=None):
@@ -222,7 +217,7 @@ class MultiPulseAiWidget(PlotWidget):
 class RoiIntensityMonitor(PlotWidget):
     """RoiIntensityMonitor class.
 
-    Widget used for displaying the evolution of the integration of ROIs.
+    Widget for displaying the evolution of the integration of ROIs.
     """
     def __init__(self, *, window=600, parent=None):
         """Initialization.
@@ -254,12 +249,12 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        train_ids = data.roi.train_ids[-self._window:]
-        roi1_intensities = data.roi.roi1_intensity_hist[-self._window:]
-        roi2_intensities = data.roi.roi2_intensity_hist[-self._window:]
-
-        self._roi1_plot.setData(train_ids, roi1_intensities)
-        self._roi2_plot.setData(train_ids, roi2_intensities)
+        tids1, intensities1, _ = data.roi.intensities1
+        self._roi1_plot.setData(
+            tids1[-self._window:], intensities1[-self._window:])
+        tids2, intensities2, _ = data.roi.intensities2
+        self._roi2_plot.setData(
+            tids2[-self._window:], intensities2[-self._window:])
 
     @QtCore.pyqtSlot(int)
     def onWindowSizeChanged(self, v):
@@ -269,19 +264,28 @@ class RoiIntensityMonitor(PlotWidget):
 class CorrelationWidget(PlotWidget):
     """CorrelationWidget class.
 
-    Widget used for displaying correlations between FOM and different
-    parameters.
+    Widget for displaying correlations between FOM and different parameters.
     """
-    def __init__(self, *, parent=None):
+
+    MIN_W = 400
+    MIN_H = 300
+
+    def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
+        self._idx = idx
+        self._title = ' '
+
         self.setLabel('bottom', "ROI (arb. u.)")
         self.setLabel('left', "Correlator (arb. u.)")
+        self.setTitle(self._title)
 
         self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
                                      brush=mkBrush(255, 255, 255, 120))
         self.addItem(self._plot)
+
+        self.setMinimumSize(self.MIN_W, self.MIN_H)
 
     def clear(self):
         """Override."""
@@ -293,16 +297,20 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        x = data.on_off.fom_hist
-        y = list(range(len(x)))
-        self._plot.setData(x, y)
+        try:
+            foms, correlator, info = getattr(data.correlation, f'param{self._idx}')
+            self._plot.setData(foms, correlator)
+            title = info['device_id'] + " | " + info['property']
+            if title != self._title:
+                self.setTitle(title)
+        except AttributeError:
+            pass
 
 
-class LaserOnOffRoiWidget(PlotWidget):
-    """LaserOnOffRoiWidget class.
+class LaserOnOffFomWidget(PlotWidget):
+    """LaserOnOffFomWidget class.
 
-    Widget used for displaying the evolution of ROIs in the Laser On-off
-    data analysis.
+    Widget for displaying the evolution of FOM in the Laser On-off analysis.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -325,17 +333,15 @@ class LaserOnOffRoiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        train_ids = data.on_off.train_ids
-        fom_hist = data.on_off.fom_hist
-
-        self._plot.setData(train_ids, fom_hist)
+        tids, foms, _ = data.on_off.foms
+        self._plot.setData(tids, foms)
 
 
 class LaserOnOffAiWidget(PlotWidget):
     """LaserOnOffAiWidget class.
 
-    Widget used for displaying the average of the azimuthal integrations
-    of laser-on and laser-off pulses.
+    Widget for displaying the average of the azimuthal integrations
+    of laser-on/off pulses.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
