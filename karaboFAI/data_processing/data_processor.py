@@ -536,10 +536,7 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
-        if state == QtCore.Qt.Checked:
-            self._enable_ai = True
-        else:
-            self._enable_ai = False
+        self._enable_ai = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int, str, str)
     def onCorrelationParamChange(self, idx, device_id, ppt):
