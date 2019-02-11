@@ -124,13 +124,14 @@ class SinglePulseAiWidget(PlotWidget):
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setTitle(' ')
+
+        if plot_mean:
+            self.addLegend(offset=(-40, 20))
 
         self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("y"))
 
         if plot_mean:
             self._mean_plot = self.plot(name="mean", pen=make_pen("c"))
-            self.addLegend(offset=(-40, 20))
         else:
             self._mean_plot = None
 

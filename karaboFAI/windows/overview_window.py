@@ -202,7 +202,7 @@ class OverviewWindowTrainResolved(DockerWindow):
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
         self._assembled_image = ImageView(parent=self)
-        self._ai = SinglePulseAiWidget(parent=self)
+        self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
 
         self._roi1_image = RoiImageView(parent=self)
         self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
