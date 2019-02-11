@@ -211,7 +211,7 @@ class Config(dict):
         "REQUIRE_GEOMETRY": False,
         "EXPECTED_SHAPE": (1934, 960),
         "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",),
-        "SERVER_ADDR": "",
+        "SERVER_ADDR": "10.253.0.140",
         "SERVER_PORT": 4501,
         "SOURCE_TYPE": 1,
         "DATA_FOLDER": "",
