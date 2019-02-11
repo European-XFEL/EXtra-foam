@@ -2,8 +2,9 @@ Data Analysis with karaboFAI
 ============================
 
 
-Real-time data analysis
-#######################
+Data analysis in real time
+--------------------------
+
 
 To start **karaboFAI** on any online cluster:
 
@@ -24,7 +25,7 @@ For real-time data analysis, the (calibrated) data is streamed via a
 Normally, the user should not modify ``Hostname``, ``Port`` and ``Source`` in
 the ``Data source`` panel.
 
-.. image:: images/data_source_online.png
+.. image:: images/data_source_real_time.png
    :width: 300
 
 .. list-table:: Suggested online clusters
@@ -47,8 +48,8 @@ the ``Data source`` panel.
      - sa1-br-kc-comp-3
      - exflonc15
 
-Off-line data analysis
-######################
+Data analysis with files
+------------------------
 
 For now, **karaboFAI** can be used to replay the experiment with files.
 
@@ -59,13 +60,13 @@ online cluster:
 
     /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
 
-For off-line data analysis, the data is streamed from files after the
-``Serve`` button is clicked. The user is free to use any available ``port``.
-``Hostname`` is usually `localhost`, but it can also be a remote machine.
-Different from the real-time case, ``Source`` here refers to the full path
-of the directory which contains the (calibrated) files.
+The data is streamed from files after the ``Serve`` button is clicked. The user
+is free to use any available ``port``. ``Hostname`` is usually `localhost`, but
+it can also be a remote machine. Different from the real-time case, ``Source``
+here refers to the full path of the directory which contains the (calibrated)
+files.
 
-.. image:: images/data_source_offline.png
+.. image:: images/data_source_from_file.png
    :width: 300
 
 .. list-table:: Example files
