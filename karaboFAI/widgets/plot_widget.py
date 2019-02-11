@@ -267,19 +267,19 @@ class CorrelationWidget(PlotWidget):
     Widget for displaying correlations between FOM and different parameters.
     """
 
-    MIN_W = 400
-    MIN_H = 300
+    MIN_W = 600
+    MIN_H = 450
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
         self._idx = idx
-        self._title = ' '
+        self._correlator_name = None
 
-        self.setLabel('bottom', "ROI (arb. u.)")
-        self.setLabel('left', "Correlator (arb. u.)")
-        self.setTitle(self._title)
+        self.setLabel('left', "FOM (arb. u.)")
+        self.setLabel('bottom', "Correlator (arb. u.)")
+        self.setTitle(' ')
 
         self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
                                      brush=mkBrush(255, 255, 255, 120))
@@ -299,10 +299,11 @@ class CorrelationWidget(PlotWidget):
         """Override."""
         try:
             foms, correlator, info = getattr(data.correlation, f'param{self._idx}')
-            self._plot.setData(foms, correlator)
-            title = info['device_id'] + " | " + info['property']
-            if title != self._title:
-                self.setTitle(title)
+            self._plot.setData(correlator, foms)
+            name = info['device_id'] + " | " + info['property']
+            if name != self._correlator_name:
+                self.setLabel('bottom', f"{name} (arb. u.)")
+                self._correlator_name = name
         except AttributeError:
             pass
 

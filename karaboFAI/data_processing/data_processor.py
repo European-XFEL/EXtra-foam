@@ -121,19 +121,23 @@ class CorrelationProcessor(AbstractProcessor):
 
         for param in ProcessedData.get_correlators():
             _, _, info = getattr(proc_data.correlation, param)
-            try:
-                device_data = orig_data[info['device_id']]
-            except KeyError:
-                self.log(f"Device '{info['device_id']}' is not in the data!")
-                continue
+            if info['device_id'] == "Any":
+                # orig_data cannot be empty here
+                tid = next(iter(orig_data.values()))['metadata']["timestamp.tid"]
+                setattr(proc_data.correlation, param, (fom, tid))
+            else:
+                try:
+                    device_data = orig_data[info['device_id']]
+                except KeyError:
+                    self.log(f"Device '{info['device_id']}' is not in the data!")
+                    continue
 
-            try:
-                # TODO: remove 'metadata', this is only for the convenience of debugging
-                v = device_data['metadata'][info['property']]
-                setattr(proc_data.correlation, param, (fom, v))
-            except KeyError:
-                self.log(f"{info['device_id']} does not have property "
-                         f"'{info['property']}'")
+                try:
+                    setattr(proc_data.correlation, param,
+                            (fom, device_data[info['property']]))
+                except KeyError:
+                    self.log(f"{info['device_id']} does not have property "
+                             f"'{info['property']}'")
 
 
 class LaserOnOffProcessor(AbstractProcessor):

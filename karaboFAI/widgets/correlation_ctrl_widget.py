@@ -40,21 +40,38 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "on-off": FomName.LASER_ON_OFF,
     })
 
-    # leave the default device ID empty since the available devices
-    # in different instruments are different
+    # Leave the default device ID empty since the available devices
+    # in different instruments are different.
+    #
+    # TODO: move this to a separate config file
     _available_categories = OrderedDict({
         "": CorrelationParam(),
         "XGM": CorrelationParam(
-            device_ids=["", "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput", "very long device name"],
-            properties=["timestamp.tid", "property2"],
+            device_ids=[
+                "",
+                "SA1_XTD2_XGM/DOOCS/MAIN",
+                "SPB_XTD9_XGM/DOOCS/MAIN",
+                "SA3_XTD10_XGM/XGM/DOOCS",
+                "SCS_BLU_XGM/XGM/DOOCS"
+            ],
+            properties=["data.intensityTD"],
         ),
         "MonoChromator": CorrelationParam(
-            device_ids=["", "device name", "very long device name"],
-            properties=["property1", "property2"],
+            device_ids=[
+                "",
+                "SCS_XTD10_MONO/MDL/PHOTON_ENERGY"
+            ],
+            properties=["actualEnergy"],
         ),
         "Motor": CorrelationParam(
-            device_ids=["", "device name", "very long device name"],
-            properties=["property1", "property2"],
+            device_ids=[
+                ""
+            ],
+            properties=["actualPosition"],
+        ),
+        "Train ID": CorrelationParam(
+            device_ids=["", "Any"],
+            properties=["timestamp.tid"]
         ),
         "User defined": CorrelationParam()
     })
