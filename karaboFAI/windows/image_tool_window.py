@@ -9,8 +9,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import QtCore, QtGui
+from collections import OrderedDict
 
+from ..widgets.pyqtgraph import QtCore, QtGui
+from ..data_processing import RoiValueType
 from ..widgets import ImageView
 from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
@@ -218,6 +220,13 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
+    _available_roi_value_types = OrderedDict({
+        "integration": RoiValueType.INTEGRATION,
+        "mean": RoiValueType.MEAN,
+    })
+
+    roi_value_type_sgn = QtCore.pyqtSignal(object)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -227,13 +236,23 @@ class ImageToolWindow(AbstractWindow):
         self._clear_roi_hist_btn.clicked.connect(
             self._mediator.onRoiHistClear)
 
-        self._roi_hist_window_le = QtGui.QLineEdit(str(600))
+        self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
         validator = QtGui.QIntValidator()
         validator.setBottom(1)
-        self._roi_hist_window_le.setValidator(validator)
-        self._roi_hist_window_le.editingFinished.connect(
-            self._mediator.onRoiIntensityWindowChange
+        self._roi_displayed_range_le.setValidator(validator)
+        self._roi_displayed_range_le.editingFinished.connect(
+            self._mediator.onRoiDisplayedRangeChange
         )
+
+        self._roi_value_type_cb = QtGui.QComboBox()
+        for v in self._available_roi_value_types:
+            self._roi_value_type_cb.addItem(v)
+        self._roi_value_type_cb.currentTextChanged.connect(
+            lambda x: self.roi_value_type_sgn.emit(
+                self._available_roi_value_types[x]))
+        self.roi_value_type_sgn.connect(self._mediator.onRoiValueTypeChange)
+        self._roi_value_type_cb.currentTextChanged.emit(
+            self._roi_value_type_cb.currentText())
 
         self._bkg_le = QtGui.QLineEdit(str(0))
         self._bkg_le.setValidator(QtGui.QIntValidator())
@@ -265,8 +284,10 @@ class ImageToolWindow(AbstractWindow):
     def initUI(self):
         """Override."""
         roi_ctrl_layout = QtGui.QHBoxLayout()
-        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI monitor window size: "))
-        roi_ctrl_layout.addWidget(self._roi_hist_window_le)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "))
+        roi_ctrl_layout.addWidget(self._roi_value_type_cb)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "))
+        roi_ctrl_layout.addWidget(self._roi_displayed_range_le)
         roi_ctrl_layout.addWidget(self._clear_roi_hist_btn)
         roi_ctrl_layout.addWidget(QtGui.QLabel("Bkg level: "))
         roi_ctrl_layout.addWidget(self._bkg_le)

@@ -216,10 +216,11 @@ class MultiPulseAiWidget(PlotWidget):
                 item.setData(momentum, intensity)
 
 
-class RoiIntensityMonitor(PlotWidget):
-    """RoiIntensityMonitor class.
+class RoiValueMonitor(PlotWidget):
+    """RoiValueMonitor class.
 
-    Widget for displaying the evolution of the integration of ROIs.
+    Widget for displaying the evolution of the value (integration, median,
+    mean) of ROIs.
     """
     def __init__(self, *, window=600, parent=None):
         """Initialization.
@@ -252,15 +253,15 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids1, intensities1, _ = data.roi.intensities1
+        tids1, values1, _ = data.roi.values1
         self._roi1_plot.setData(
-            tids1[-self._window:], intensities1[-self._window:])
-        tids2, intensities2, _ = data.roi.intensities2
+            tids1[-self._window:], values1[-self._window:])
+        tids2, values2, _ = data.roi.values2
         self._roi2_plot.setData(
-            tids2[-self._window:], intensities2[-self._window:])
+            tids2[-self._window:], values2[-self._window:])
 
     @QtCore.pyqtSlot(int)
-    def onWindowSizeChanged(self, v):
+    def onDisplayRangeChange(self, v):
         self._window = v
 
 

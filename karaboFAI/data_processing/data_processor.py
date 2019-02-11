@@ -25,6 +25,7 @@ from karabo_data.geometry import LPDGeometry
 
 from .data_model import (
     AiNormalizer, DataSource, FomName, OpLaserMode, ProcessedData,
+    RoiValueType
 )
 from .proc_utils import nanmean_axis0_para, normalize_curve, slice_curve
 from ..config import config
@@ -393,6 +394,7 @@ class DataProcessor(Worker):
         self.roi1 = None
         self.roi2 = None
         self._bkg = 0
+        self._roi_value_type = None
 
         self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
         self._correlation_processor = CorrelationProcessor(parent=self)
@@ -522,6 +524,10 @@ class DataProcessor(Worker):
     def onRoiHistClear(self):
         ProcessedData.clear_roi_hist()
 
+    @QtCore.pyqtSlot(object)
+    def onRoiValueTypeChange(self, value):
+        self._roi_value_type = value
+
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
@@ -613,7 +619,6 @@ class DataProcessor(Worker):
             # by a pointer in the zmq message (it is not copied). However,
             # other data like data['metadata'] is writeable.
             assembled = np.copy(assembled)
-
             # we want assembled to be untouched
             assembled_mean = np.copy(assembled)
 
@@ -746,38 +751,50 @@ class DataProcessor(Worker):
 
         :param ProcessedData data: data after preprocessing.
         """
+        def get_roi_value(roi_param, full_image):
+            w, h, px, py = roi_param
+            roi_img = full_image[py:py + h, px:px + w]
+            if self._roi_value_type == RoiValueType.INTEGRATION:
+                ret = np.sum(roi_img)
+            elif self._roi_value_type == RoiValueType.MEAN:
+                ret = np.mean(roi_img)
+            elif self._roi_value_type == RoiValueType.MEDIAN:
+                ret = np.median(roi_img)
+            else:
+                ret = 0
+
+            return ret
+
+        def validate_roi(w, h, px, py, img_h, img_w):
+            """Check whether the ROI is within the image."""
+            if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
+                return False
+            return True
+
         tid = data.tid
         if tid > 0:
             img = data.image_mean
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
-            intensity1 = 0
+            values1 = 0
             if self.roi1 is not None:
-                if not self._validate_roi(*self.roi1, *img.shape):
+                if not validate_roi(*self.roi1, *img.shape):
                     self.roi1 = None
                 else:
                     data.roi.roi1 = self.roi1
-                    w, h, px, py = self.roi1
-                    intensity1 = np.sum(img[py:py+h, px:px+w])
+                    values1 = get_roi_value(self.roi1, img)
 
-            intensity2 = 0
+            values2 = 0
             if self.roi2 is not None:
-                if not self._validate_roi(*self.roi2, *img.shape):
+                if not validate_roi(*self.roi2, *img.shape):
                     self.roi2 = None
                 else:
                     data.roi.roi2 = self.roi2
-                    w, h, px, py = self.roi2
-                    intensity2 = np.sum(img[py:py+h, px:px+w])
+                    values2 = get_roi_value(self.roi2, img)
 
-            data.roi.intensities1 = (tid, intensity1)
-            data.roi.intensities2 = (tid, intensity2)
-
-    def _validate_roi(self, w, h, px, py, img_h, img_w):
-        """Check whether the ROI is within the image."""
-        if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
-            return False
-        return True
+            data.roi.values1 = (tid, values1)
+            data.roi.values2 = (tid, values2)
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process the calibrated data.
