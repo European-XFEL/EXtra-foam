@@ -201,7 +201,7 @@ class Config(dict):
         "DISTANCE": 0.2,
         "CENTER_Y": 620,
         "CENTER_X": 580,
-        "PIXEL_SIZE": 0.5e-3,
+        "PIXEL_SIZE": 0.075e-3,
         "COLOR_MAP": 'thermal',
         "MASK_RANGE": (0, 2500)
     }
@@ -228,7 +228,7 @@ class Config(dict):
         "DISTANCE": 5.0,
         "CENTER_Y": 1000,
         "CENTER_X": 480,
-        "PIXEL_SIZE": 0.03e-3,
+        "PIXEL_SIZE": 0.030e-3,
         "COLOR_MAP": 'thermal',
         "MASK_RANGE": (0, 2500)
     }
