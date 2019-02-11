@@ -22,11 +22,11 @@ class RoiCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of an ROI."""
 
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
-                            'border: 1px;' \
+                            'border: 0px;' \
                             'subcontrol-origin: margin;' \
                             'subcontrol-position: top left;' \
-                            'padding-left: 10px;' \
-                            'padding-top: 10px;' \
+                            'padding-left: 5px;' \
+                            'padding-top: 5px;' \
                             'margin-top: 0.0em;}'
 
     # activated, w, h, px, py
@@ -95,6 +95,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         layout.addLayout(le_layout)
 
         self.setLayout(layout)
+        # left, top, right, bottom
+        self.layout().setContentsMargins(2, 1, 2, 1)
 
     @QtCore.pyqtSlot(object)
     def onRoiRegionChangeFinished(self, roi):
@@ -206,6 +208,7 @@ class MaskCtrlWidget(QtGui.QGroupBox):
 
         layout.addLayout(threshold_layout)
         self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
 
     def thresholdMaskChangedEvent(self):
         self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
@@ -310,6 +313,7 @@ class ImageToolWindow(AbstractWindow):
         layout.addWidget(self._update_image_btn, 1, 1, 1, 1)
 
         self._cw.setLayout(layout)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
     def update(self):
         """Update widgets.
