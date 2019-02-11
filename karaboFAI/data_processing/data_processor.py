@@ -91,12 +91,12 @@ class CorrelationProcessor(AbstractProcessor):
                 normalized_intensity = normalize_curve(
                     intensity, momentum, *self.normalization_range)
             elif self.normalizer == AiNormalizer.ROI:
-                _, intensities1, _ = proc_data.roi.intensities1
-                _, intensities2, _ = proc_data.roi.intensities2
+                _, values1, _ = proc_data.roi.values1
+                _, values2, _ = proc_data.roi.values2
 
-                denominator = (intensities1[-1] + intensities2[-1])/2.
+                denominator = (values1[-1] + values2[-1])/2.
                 if denominator == 0:
-                    self.log("ROI intensity is zero!")
+                    self.log("ROI value is zero!")
                     return
                 normalized_intensity = intensity / denominator
 
@@ -527,6 +527,7 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(object)
     def onRoiValueTypeChange(self, value):
         self._roi_value_type = value
+        ProcessedData.clear_roi_hist()
 
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
