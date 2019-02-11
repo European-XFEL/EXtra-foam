@@ -29,7 +29,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list, str)
+    on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
     moving_average_window_sgn = QtCore.pyqtSignal(int)
 
@@ -53,8 +53,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
-        self._difference_on_off = QtGui.QComboBox()
-        self._difference_on_off.addItems(["absolute", "simple"])
+        self.difference_on_off_cb = QtGui.QCheckBox("Absolute difference")
 
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
@@ -68,7 +67,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self._on_pulse_le,
             self._off_pulse_le,
             self._moving_average_window_le,
-            self._difference_on_off,
+            self.difference_on_off_cb,
         ]
 
         self.initUI()
@@ -79,7 +78,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         layout.addRow("Laser on/off mode: ", self._laser_mode_cb)
-        layout.addRow("Difference on/off: ", self._difference_on_off)
+        layout.addRow(self.difference_on_off_cb)
         if self._pulse_resolved:
             layout.addRow("On-pulse IDs: ", self._on_pulse_le)
             layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
@@ -96,7 +95,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         if mode != OpLaserMode.INACTIVE:
             try:
-                difference_type = self._difference_on_off.currentText()
                 # check pulse ID only when laser on/off pulses are in the same
                 # train (the "normal" mode)
                 on_pulse_ids = parse_ids(self._on_pulse_le.text())
@@ -115,12 +113,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                              "by ',' and/or use the range operator ':'!")
                 return None
         else:
-            difference_type = ""
             on_pulse_ids = []
             off_pulse_ids = []
 
-        self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids,
-                                       difference_type)
+        self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
         try:
             window_size = int(self._moving_average_window_le.text())

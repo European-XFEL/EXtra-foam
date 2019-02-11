@@ -158,7 +158,7 @@ class LaserOnOffProcessor(AbstractProcessor):
         self.on_pulse_ids = None
         self.off_pulse_ids = None
 
-        self.difference_type = None
+        self.abs_difference = True
 
         self.moving_average_window = 1
 
@@ -300,7 +300,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
             # calculate figure-of-merit and update history
             fom = slice_curve(diff, momentum, *self.integration_range)[0]
-            if self.difference_type == "absolute":
+            if self.abs_difference:
                 fom = np.sum(np.abs(fom))
             else:
                 fom = np.sum(fom)
@@ -441,12 +441,18 @@ class DataProcessor(Worker):
 
             self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
 
-    @QtCore.pyqtSlot(object, list, list, str)
-    def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids, difference_type):
+    @QtCore.pyqtSlot(object, list, list)
+    def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
         self._laser_on_off_processor.laser_mode = mode
         self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
         self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
-        self._laser_on_off_processor.difference_type = difference_type
+
+    @QtCore.pyqtSlot(int)
+    def onDifferenceOnOffStateChange(self, state):
+        if state == QtCore.Qt.Checked:
+            self._laser_on_off_processor.abs_difference = True
+        else:
+            self._laser_on_off_processor.abs_difference = False
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):
