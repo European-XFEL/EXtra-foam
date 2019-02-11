@@ -29,11 +29,9 @@ class RoiCtrlWidget(QtGui.QGroupBox):
 
     # activated, w, h, px, py
     roi_region_change_sgn = QtCore.Signal(bool, int, int, int, int)
-    roi_bkg_change_sgn = QtCore.Signal(int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
     _size_validator = QtGui.QIntValidator(0, 10000)
-    _bkg_validator = QtGui.QIntValidator()
 
     def __init__(self, roi, *, title="ROI control", parent=None):
         """Initialization.
@@ -57,11 +55,6 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._height_le.editingFinished.connect(self.onRoiRegionChanged)
         self._px_le.editingFinished.connect(self.onRoiRegionChanged)
         self._py_le.editingFinished.connect(self.onRoiRegionChanged)
-
-        self._bkg_le = QtGui.QLineEdit(str(0))
-        self._bkg_le.setValidator(self._bkg_validator)
-        self._bkg_le.editingFinished.connect(
-            lambda: self.roi_bkg_change_sgn.emit(int(self._bkg_le.text())))
 
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
@@ -88,8 +81,6 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         le_layout.addWidget(self._px_le)
         le_layout.addWidget(QtGui.QLabel("y0: "))
         le_layout.addWidget(self._py_le)
-        le_layout.addWidget(QtGui.QLabel("Bkg: "))
-        le_layout.addWidget(self._bkg_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -244,6 +235,10 @@ class ImageToolWindow(AbstractWindow):
             self._mediator.onRoiIntensityWindowChange
         )
 
+        self._bkg_le = QtGui.QLineEdit(str(0))
+        self._bkg_le.setValidator(QtGui.QIntValidator())
+        self._bkg_le.editingFinished.connect(self._mediator.onBkgChange)
+
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
             title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
@@ -255,10 +250,6 @@ class ImageToolWindow(AbstractWindow):
             self._mediator.onRoi1Change)
         self._roi2_ctrl.roi_region_change_sgn.connect(
             self._mediator.onRoi2Change)
-        self._roi1_ctrl.roi_bkg_change_sgn.connect(
-            self._mediator.onRoi1BkgChange)
-        self._roi2_ctrl.roi_bkg_change_sgn.connect(
-            self._mediator.onRoi2BkgChange)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
@@ -277,6 +268,8 @@ class ImageToolWindow(AbstractWindow):
         roi_ctrl_layout.addWidget(QtGui.QLabel("ROI monitor window size: "))
         roi_ctrl_layout.addWidget(self._roi_hist_window_le)
         roi_ctrl_layout.addWidget(self._clear_roi_hist_btn)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Bkg level: "))
+        roi_ctrl_layout.addWidget(self._bkg_le)
 
         tool_layout = QtGui.QVBoxLayout()
         tool_layout.addLayout(roi_ctrl_layout)

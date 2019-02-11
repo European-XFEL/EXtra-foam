@@ -392,8 +392,7 @@ class DataProcessor(Worker):
 
         self.roi1 = None
         self.roi2 = None
-        self._roi1_bkg = 0
-        self._roi2_bkg = 0
+        self._bkg = 0
 
         self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
         self._correlation_processor = CorrelationProcessor(parent=self)
@@ -516,12 +515,8 @@ class DataProcessor(Worker):
             self.roi2 = None
 
     @QtCore.pyqtSlot(int)
-    def onRoi1BkgChange(self, v):
-        self._roi1_bkg = v
-
-    @QtCore.pyqtSlot(int)
-    def onRoi2BkgChange(self, v):
-        self._roi2_bkg = v
+    def onBkgChange(self, v):
+        self._bkg = v
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
@@ -644,6 +639,9 @@ class DataProcessor(Worker):
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        if self._bkg:
+            assembled_mean -= self._bkg
+
         # Note: 'assembled' still contains 'inf' and '-inf', we only do
         #       the clip later when necessary in order not to waste
         #       computing power.
@@ -760,9 +758,8 @@ class DataProcessor(Worker):
                     self.roi1 = None
                 else:
                     data.roi.roi1 = self.roi1
-                    data.roi.roi1_bkg = self._roi1_bkg
                     w, h, px, py = self.roi1
-                    intensity1 = np.sum(img[py:py+h, px:px+w]) - self._roi1_bkg
+                    intensity1 = np.sum(img[py:py+h, px:px+w])
 
             intensity2 = 0
             if self.roi2 is not None:
@@ -770,9 +767,8 @@ class DataProcessor(Worker):
                     self.roi2 = None
                 else:
                     data.roi.roi2 = self.roi2
-                    data.roi.roi2_bkg = self._roi2_bkg
                     w, h, px, py = self.roi2
-                    intensity2 = np.sum(img[py:py+h, px:px+w]) - self._roi2_bkg
+                    intensity2 = np.sum(img[py:py+h, px:px+w])
 
             data.roi.intensities1 = (tid, intensity1)
             data.roi.intensities2 = (tid, intensity2)

@@ -103,9 +103,6 @@ class RoiData(AbstractData):
         self.roi1 = None  # (w, h, px, py)
         self.roi2 = None  # (w, h, px, py)
 
-        self.roi1_bkg = 0
-        self.roi2_bkg = 0
-
 
 class LaserOnOffData(AbstractData):
     """A class which stores Laser on-off data."""

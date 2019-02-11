@@ -276,12 +276,10 @@ class RoiImageView(ImageView):
             if data.roi.roi1 is None:
                 return
             w, h, px, py = data.roi.roi1
-            bkg = data.roi.roi1_bkg
         else:
             if data.roi.roi2 is None:
                 return
             w, h, px, py = data.roi.roi2
-            bkg = data.roi.roi2_bkg
 
         self.setImage(image[py:py+h, px:px+w],
                       auto_range=False,
