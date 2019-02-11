@@ -24,7 +24,7 @@ from ..widgets.pyqtgraph.dockarea import DockArea, Dock
 
 from .base_window import PlotWindow
 from ..logger import logger
-from ..widgets.misc_widgets import PenFactory, lookupTableFactory
+from ..widgets.misc_widgets import lookupTableFactory, make_pen
 from ..config import config
 
 
@@ -531,12 +531,12 @@ class BraggSpotsWindow(PlotWindow):
                 p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
                 p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]],
-                       com_on[:, index], name='On', pen=PenFactory.green,
+                       com_on[:, index], name='On', pen=make_pen("green"),
                        symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
                 p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]],
                        com_off[:, index], name="Off",
-                       pen=PenFactory.purple, symbol='o',
+                       pen=make_pen("purple"), symbol='o',
                        symbolBrush=mkBrush(255, 0, 255, 255))
 
         for idx, p in enumerate(self._plot_items[-2:]):
@@ -552,7 +552,7 @@ class BraggSpotsWindow(PlotWindow):
                 p.addItem(s)
                 p.plot(self._hist_train_off_id,
                        np.array(self._hist_com_off)[:, idx],
-                       pen=PenFactory.purple, name='Off')
+                       pen=make_pen("purple"), name='Off')
             if self._hist_com_on:
                 s = ScatterPlotItem(size=10,
                                     pen=mkPen(None),
@@ -565,7 +565,7 @@ class BraggSpotsWindow(PlotWindow):
 
                 p.plot(self._hist_train_on_id,
                        np.array(self._hist_com_on)[:, idx],
-                       pen=PenFactory.green, name='On')
+                       pen=make_pen("green"), name='On')
                 p.addLegend()
 
 

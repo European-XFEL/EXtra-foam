@@ -7,7 +7,7 @@ from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 
 from .misc_widgets import (
-    colorMapFactory, GuiLogger, InputDialogWithCheckBox, PenFactory
+    colorMapFactory, GuiLogger, InputDialogWithCheckBox, make_brush, make_pen
 )
 
 from .sample_degradation_widget import SampleDegradationWidget
@@ -27,7 +27,8 @@ __all__ = [
     "colorMapFactory",
     "GuiLogger",
     "InputDialogWithCheckBox",
-    "PenFactory"
+    "make_brush",
+    "make_pen"
 ]
 
 # add plot widgets

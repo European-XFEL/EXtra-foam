@@ -13,7 +13,7 @@ from .pyqtgraph import (
     GraphicsView, intColor, mkBrush, mkPen, PlotItem, QtCore, QtGui,
     ScatterPlotItem
 )
-from .misc_widgets import PenFactory
+from .misc_widgets import make_pen
 from ..logger import logger
 from ..config import config
 
@@ -127,10 +127,10 @@ class SinglePulseAiWidget(PlotWidget):
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setTitle(' ')
 
-        self._pulse_plot = self.plot(name="pulse_plot", pen=PenFactory.yellow)
+        self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("yellow"))
 
         if plot_mean:
-            self._mean_plot = self.plot(name="mean", pen=PenFactory.cyan)
+            self._mean_plot = self.plot(name="mean", pen=make_pen("cyan"))
             self.addLegend(offset=(-40, 20))
         else:
             self._mean_plot = None
@@ -237,9 +237,9 @@ class RoiIntensityMonitor(PlotWidget):
         self.addLegend(offset=(-40, 20))
 
         self._roi1_plot = self.plot(
-            name="ROI 1", pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
+            name="ROI 1", pen=make_pen(config["ROI_COLORS"][0]))
         self._roi2_plot = self.plot(
-            name="ROI 2", pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
+            name="ROI 2", pen=make_pen(config["ROI_COLORS"][1]))
 
     def clear(self):
         """Override."""
@@ -357,9 +357,9 @@ class LaserOnOffAiWidget(PlotWidget):
         self.setTitle('Moving average of on- and off- pulses')
         self.addLegend(offset=(-60, 20))
 
-        self._on_pulse = self.plot(name="Laser-on", pen=PenFactory.purple)
-        self._off_pulse = self.plot(name="Laser-off", pen=PenFactory.green)
-        self._diff = self.plot(name="On - Off x 20", pen=PenFactory.yellow)
+        self._on_pulse = self.plot(name="Laser-on", pen=make_pen("purple"))
+        self._off_pulse = self.plot(name="Laser-off", pen=make_pen("green"))
+        self._diff = self.plot(name="On - Off x 20", pen=make_pen("yellow"))
 
     def clear(self):
         """Override."""

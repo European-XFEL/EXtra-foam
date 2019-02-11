@@ -15,15 +15,21 @@ from .pyqtgraph import ColorMap, mkPen, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
-# TODO: improve
-class PenFactory:
-    _w = 3
-    red = mkPen((255, 0, 0), width=_w)
-    green = mkPen((0, 255, 0), width=_w)
-    blue = mkPen((0, 0, 255), width=_w)
-    cyan = mkPen((0, 255, 255), width=_w)
-    purple = mkPen((255, 0, 255), width=_w)
-    yellow = mkPen((255, 255, 0), width=_w)
+def make_pen(color, width=2):
+    """Convenient function for making QPen."""
+    colors = {
+        'red': (255, 0, 0),
+        'green': (0, 255, 0),
+        'blue': (0, 0, 255),
+        'cyan': (0, 255, 255),
+        'purple': (255, 0, 255),
+        'yellow': (255, 255, 0)
+    }
+    return mkPen(colors[color], width=width)
+
+
+def make_brush(color, size=10):
+    pass
 
 
 # Valid keys: thermal, flame, yellowy, bipolar, spectrum, cyclic, greyclip, grey

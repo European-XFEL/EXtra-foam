@@ -14,7 +14,7 @@ import numpy as np
 from ..widgets.pyqtgraph import (
     QtCore, QtGui, HistogramLUTWidget, ImageItem, ROI
 )
-from .misc_widgets import colorMapFactory, PenFactory
+from .misc_widgets import colorMapFactory, make_pen
 from .plot_widget import PlotWidget
 from ..data_processing import quick_min_max
 from ..logger import logger
@@ -90,10 +90,10 @@ class ImageView(QtGui.QWidget):
 
         self.roi1 = RectROI(self.ROI1_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
-                            pen=PenFactory.__dict__[config["ROI_COLORS"][0]])
+                            pen=make_pen(config["ROI_COLORS"][0]))
         self.roi2 = RectROI(self.ROI2_POS0, self.ROI_SIZE0,
                             lock=lock_roi,
-                            pen=PenFactory.__dict__[config["ROI_COLORS"][1]])
+                            pen=make_pen(config["ROI_COLORS"][1]))
         self.roi1.hide()
         self.roi2.hide()
 
