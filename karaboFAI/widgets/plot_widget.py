@@ -10,10 +10,9 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .pyqtgraph import (
-    GraphicsView, intColor, mkBrush, mkPen, PlotItem, QtCore, QtGui,
-    ScatterPlotItem
+    GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui, ScatterPlotItem
 )
-from .misc_widgets import make_pen
+from .misc_widgets import make_brush, make_pen
 from ..logger import logger
 from ..config import config
 
@@ -127,10 +126,10 @@ class SinglePulseAiWidget(PlotWidget):
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setTitle(' ')
 
-        self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("yellow"))
+        self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("y"))
 
         if plot_mean:
-            self._mean_plot = self.plot(name="mean", pen=make_pen("cyan"))
+            self._mean_plot = self.plot(name="mean", pen=make_pen("c"))
             self.addLegend(offset=(-40, 20))
         else:
             self._mean_plot = None
@@ -273,6 +272,15 @@ class CorrelationWidget(PlotWidget):
     MIN_W = 600
     MIN_H = 450
 
+    _brushes = {
+        0: make_brush('g', 120),
+        1: make_brush('c', 120),
+        2: make_brush('y', 120),
+        3: make_brush('p', 120)
+    }
+
+    _brush_size = 10
+
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
@@ -284,8 +292,9 @@ class CorrelationWidget(PlotWidget):
         self.setLabel('bottom', "Correlator (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
-                                     brush=mkBrush(255, 255, 255, 120))
+        self._plot = ScatterPlotItem(size=self._brush_size,
+                                     pen=mkPen(None),
+                                     brush=self._brushes[self._idx])
         self.addItem(self._plot)
 
         self.setMinimumSize(self.MIN_W, self.MIN_H)
@@ -301,7 +310,8 @@ class CorrelationWidget(PlotWidget):
     def update(self, data):
         """Override."""
         try:
-            foms, correlator, info = getattr(data.correlation, f'param{self._idx}')
+            foms, correlator, info = getattr(data.correlation,
+                                             f'param{self._idx}')
             self._plot.setData(correlator, foms)
             name = info['device_id'] + " | " + info['property']
             if name != self._correlator_name:
@@ -316,6 +326,9 @@ class LaserOnOffFomWidget(PlotWidget):
 
     Widget for displaying the evolution of FOM in the Laser On-off analysis.
     """
+
+    _brush_size = 10
+
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
@@ -324,8 +337,8 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setLabel('left', "ROI (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
-                                     brush=mkBrush(120, 255, 255, 255))
+        self._plot = ScatterPlotItem(
+            size=self._brush_size, pen=mkPen(None), brush=make_brush('c'))
         self.addItem(self._plot)
 
     def clear(self):
@@ -357,9 +370,9 @@ class LaserOnOffAiWidget(PlotWidget):
         self.setTitle('Moving average of on- and off- pulses')
         self.addLegend(offset=(-60, 20))
 
-        self._on_pulse = self.plot(name="Laser-on", pen=make_pen("purple"))
-        self._off_pulse = self.plot(name="Laser-off", pen=make_pen("green"))
-        self._diff = self.plot(name="On - Off x 20", pen=make_pen("yellow"))
+        self._on_pulse = self.plot(name="Laser-on", pen=make_pen("p"))
+        self._off_pulse = self.plot(name="Laser-off", pen=make_pen("g"))
+        self._diff = self.plot(name="On - Off x 20", pen=make_pen("y"))
 
     def clear(self):
         """Override."""
