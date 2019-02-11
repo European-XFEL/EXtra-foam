@@ -57,7 +57,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self._moving_average_window_le = QtGui.QLineEdit("9999")
 
-        self.clear_hist_btn = QtGui.QPushButton("Clear history")
+        self.clear_hist_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
             self._laser_mode_cb,

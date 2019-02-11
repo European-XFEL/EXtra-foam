@@ -526,6 +526,7 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
+        self._laser_on_off_processor.reset()
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
