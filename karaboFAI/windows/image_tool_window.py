@@ -232,7 +232,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageView(lock_roi=False)
 
-        self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
+        self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(
             self._mediator.onRoiHistClear)
 
