@@ -37,13 +37,13 @@ class TestDataModel(unittest.TestCase):
         data = ProcessedData(1234)
         self.assertEqual(1234, data.tid)
 
-        data.roi.intensities1 = (1234, None)
-        tids, values, _ = data.roi.intensities1
+        data.roi.values1 = (1234, None)
+        tids, values, _ = data.roi.values1
         self.assertListEqual([1234], tids)
         self.assertListEqual([None], values)
 
-        data.roi.intensities1 = (1235, 2.0)
-        tids, values, _ = data.roi.intensities1
+        data.roi.values1 = (1235, 2.0)
+        tids, values, _ = data.roi.values1
         self.assertListEqual([1234, 1235], tids)
         self.assertListEqual([None, 2.0], values)
 
