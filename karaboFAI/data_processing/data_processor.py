@@ -438,7 +438,11 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        self._laser_on_off_processor.laser_mode = mode
+        if mode != self._laser_on_off_processor:
+            self._laser_on_off_processor.laser_mode = mode
+            self._laser_on_off_processor.reset()
+            ProcessedData.clear_onoff_hist()
+
         self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
         self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
 
