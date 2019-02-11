@@ -88,6 +88,10 @@ class PlotWidget(GraphicsView):
         for v in ["left", 'bottom']:
             self.plotItem.hideAxis(v)
 
+    def showAxis(self):
+        for v in ["left", 'bottom']:
+            self.plotItem.showAxis(v)
+
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 

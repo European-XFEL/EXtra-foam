@@ -230,7 +230,8 @@ class ImageToolWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageView(lock_roi=False)
+        self._image_view = ImageView(
+            lock_roi=False, hide_axis=False, enable_hover=True)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(
