@@ -125,6 +125,7 @@ class SinglePulseAiWidget(PlotWidget):
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
+        self.setTitle(' ')
 
         self._pulse_plot = self.plot(name="pulse_plot", pen=PenFactory.yellow)
 
@@ -183,6 +184,7 @@ class MultiPulseAiWidget(PlotWidget):
 
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
+        self.setTitle(' ')
 
     def clear(self):
         """Override."""
@@ -231,6 +233,7 @@ class RoiIntensityMonitor(PlotWidget):
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
+        self.setTitle(' ')
         self.addLegend(offset=(-40, 20))
 
         self._roi1_plot = self.plot(
@@ -319,6 +322,7 @@ class LaserOnOffFomWidget(PlotWidget):
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "ROI (arb. u.)")
+        self.setTitle(' ')
 
         self._plot = ScatterPlotItem(size=10, pen=mkPen(None),
                                      brush=mkBrush(120, 255, 255, 255))
