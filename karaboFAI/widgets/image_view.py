@@ -248,7 +248,8 @@ class ImageView(QtGui.QWidget):
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
-            self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
+            self._plot_widget.setTitle(
+                f'x={x}, y={y} ({self.image.shape[0] - y}), value={round(v, 1)}')
 
 
 class SinglePulseImageView(ImageView):
