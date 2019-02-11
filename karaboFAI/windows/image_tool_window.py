@@ -258,6 +258,10 @@ class ImageToolWindow(AbstractWindow):
         self._bkg_le.setValidator(QtGui.QIntValidator())
         self._bkg_le.editingFinished.connect(self._mediator.onBkgChange)
 
+        self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
+        self._lock_bkg_cb.stateChanged.connect(
+            lambda x: self._bkg_le.setEnabled(x != QtCore.Qt.Checked))
+
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
             title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
@@ -283,14 +287,15 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
-        roi_ctrl_layout = QtGui.QHBoxLayout()
-        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "))
-        roi_ctrl_layout.addWidget(self._roi_value_type_cb)
-        roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "))
-        roi_ctrl_layout.addWidget(self._roi_displayed_range_le)
-        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn)
-        roi_ctrl_layout.addWidget(QtGui.QLabel("Bkg level: "))
-        roi_ctrl_layout.addWidget(self._bkg_le)
+        roi_ctrl_layout = QtGui.QGridLayout()
+        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
+        roi_ctrl_layout.addWidget(self._roi_value_type_cb, 0, 1)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
+        roi_ctrl_layout.addWidget(self._roi_displayed_range_le, 0, 3)
+        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn, 0, 4)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 1, 0)
+        roi_ctrl_layout.addWidget(self._bkg_le, 1, 1)
+        roi_ctrl_layout.addWidget(self._lock_bkg_cb, 1, 2)
 
         tool_layout = QtGui.QVBoxLayout()
         tool_layout.addLayout(roi_ctrl_layout)
