@@ -18,11 +18,22 @@ from ..config import config
 
 class RoiCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of an ROI."""
+
+    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
+                            'border: 1px;' \
+                            'subcontrol-origin: margin;' \
+                            'subcontrol-position: top left;' \
+                            'padding-left: 10px;' \
+                            'padding-top: 10px;' \
+                            'margin-top: 0.0em;}'
+
     # activated, w, h, px, py
-    roi_region_changed_sgn = QtCore.Signal(bool, int, int, int, int)
+    roi_region_change_sgn = QtCore.Signal(bool, int, int, int, int)
+    roi_bkg_change_sgn = QtCore.Signal(int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
     _size_validator = QtGui.QIntValidator(0, 10000)
+    _bkg_validator = QtGui.QIntValidator()
 
     def __init__(self, roi, *, title="ROI control", parent=None):
         """Initialization.
@@ -30,6 +41,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         :param RectROI roi: RectROI object.
         """
         super().__init__(title, parent=parent)
+        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
+
         self._roi = roi
 
         self._width_le = QtGui.QLineEdit()
@@ -44,6 +57,11 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._height_le.editingFinished.connect(self.onRoiRegionChanged)
         self._px_le.editingFinished.connect(self.onRoiRegionChanged)
         self._py_le.editingFinished.connect(self.onRoiRegionChanged)
+
+        self._bkg_le = QtGui.QLineEdit(str(0))
+        self._bkg_le.setValidator(self._bkg_validator)
+        self._bkg_le.editingFinished.connect(
+            lambda: self.roi_bkg_change_sgn.emit(int(self._bkg_le.text())))
 
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
@@ -62,14 +80,16 @@ class RoiCtrlWidget(QtGui.QGroupBox):
 
     def initUI(self):
         le_layout = QtGui.QHBoxLayout()
-        le_layout.addWidget(QtGui.QLabel("Width: "))
+        le_layout.addWidget(QtGui.QLabel("w: "))
         le_layout.addWidget(self._width_le)
-        le_layout.addWidget(QtGui.QLabel("Height: "))
+        le_layout.addWidget(QtGui.QLabel("h: "))
         le_layout.addWidget(self._height_le)
         le_layout.addWidget(QtGui.QLabel("x0: "))
         le_layout.addWidget(self._px_le)
         le_layout.addWidget(QtGui.QLabel("y0: "))
         le_layout.addWidget(self._py_le)
+        le_layout.addWidget(QtGui.QLabel("Bkg: "))
+        le_layout.addWidget(self._bkg_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -90,19 +110,19 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         px, py = [int(v) for v in roi.pos()]
         self.updateParameters(w, h, px, py)
         # inform widgets outside this window
-        self.roi_region_changed_sgn.emit(True, w, h, px, py)
+        self.roi_region_change_sgn.emit(True, w, h, px, py)
 
     @QtCore.pyqtSlot(int)
     def onToggleRoiActivation(self, state):
         if state == QtCore.Qt.Checked:
             self._roi.show()
             self.enableAllEdit()
-            self.roi_region_changed_sgn.emit(
+            self.roi_region_change_sgn.emit(
                 True, *self._roi.size(), *self._roi.pos())
         else:
             self._roi.hide()
             self.disableAllEdit()
-            self.roi_region_changed_sgn.emit(
+            self.roi_region_change_sgn.emit(
                 False, *self._roi.size(), *self._roi.pos())
 
     @QtCore.pyqtSlot(int)
@@ -231,10 +251,14 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.roi2,
             title="ROI 2 ({})".format(config['ROI_COLORS'][1]))
 
-        self._roi1_ctrl.roi_region_changed_sgn.connect(
-            self._mediator.onRoi1Changed)
-        self._roi2_ctrl.roi_region_changed_sgn.connect(
-            self._mediator.onRoi2Changed)
+        self._roi1_ctrl.roi_region_change_sgn.connect(
+            self._mediator.onRoi1Change)
+        self._roi2_ctrl.roi_region_change_sgn.connect(
+            self._mediator.onRoi2Change)
+        self._roi1_ctrl.roi_bkg_change_sgn.connect(
+            self._mediator.onRoi1BkgChange)
+        self._roi2_ctrl.roi_bkg_change_sgn.connect(
+            self._mediator.onRoi2BkgChange)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
