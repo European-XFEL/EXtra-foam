@@ -189,6 +189,7 @@ class LaserOnOffProcessor(AbstractProcessor):
         if self.laser_mode == OpLaserMode.INACTIVE:
             return
 
+        print("absolute difference ", self.abs_difference)
         momentum = proc_data.momentum
         intensities = proc_data.intensities
 
@@ -448,11 +449,8 @@ class DataProcessor(Worker):
         self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
 
     @QtCore.pyqtSlot(int)
-    def onDifferenceOnOffStateChange(self, state):
-        if state == QtCore.Qt.Checked:
-            self._laser_on_off_processor.abs_difference = True
-        else:
-            self._laser_on_off_processor.abs_difference = False
+    def onAbsDifferenceStateChange(self, state):
+        self._laser_on_off_processor.abs_difference = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):
