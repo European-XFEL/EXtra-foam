@@ -154,7 +154,7 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._roi.setSize((w, h), update=False)
         self._roi.setPos((px, py), update=False)
 
-        self.roi_region_changed_sgn.emit(True, w, h, px, py)
+        self.roi_region_change_sgn.emit(True, w, h, px, py)
 
     def disableLockEdit(self):
         for w in self._line_edits:
