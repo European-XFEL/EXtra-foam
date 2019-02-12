@@ -123,6 +123,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
+        abs_diff_state = self.abs_difference_cb.checkState()
+        self.abs_difference_sgn.emit(abs_diff_state)
+
         window_size = int(self._moving_average_window_le.text())
         if window_size < 1:
             logger.error("Moving average window < 1!")
@@ -136,6 +139,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                 info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
             info += "\n<Moving average window>: {}".format(window_size)
 
-        info += "\n<Use absolute difference>: {}".format(bool(state))
+        info += "\n<Use absolute difference>: {}".format(bool(abs_diff_state))
 
         return info
