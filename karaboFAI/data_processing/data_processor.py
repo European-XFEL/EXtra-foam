@@ -406,6 +406,8 @@ class DataProcessor(Worker):
 
         self.image_mask = None
 
+        self._crop_area = None
+
         self.roi1 = None
         self.roi2 = None
         self._bkg = 0
@@ -548,6 +550,13 @@ class DataProcessor(Worker):
         self._roi_value_type = value
         ProcessedData.clear_roi_hist()
 
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onCropAreaChange(self, restore, w, h, px, py):
+        if restore:
+            self._crop_area = None
+        else:
+            self._crop_area = (w, h, px, py)
+
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
@@ -626,16 +635,26 @@ class DataProcessor(Worker):
             # pulse resolved
 
             assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1]]
+
+            if self._crop_area is not None:
+                w, h, x, y = self._crop_area
+                assembled = assembled[:, x:x+w, y:y+h]
+
             assembled_mean = nanmean_axis0_para(assembled,
                                                 max_workers=8, chunk_size=20)
         else:
             # train resolved
 
-            # 'assembled' is a reference to the array data received from the
-            # pyzmq. The array data is only readable since the data is owned
-            # by a pointer in the zmq message (it is not copied). However,
-            # other data like data['metadata'] is writeable.
-            assembled = np.copy(assembled)
+            if self._crop_area is not None:
+                w, h, x, y = self._crop_area
+                assembled = assembled[x:x+w, y:y+h]
+            else:
+                # 'assembled' is a reference to the array data received from the
+                # pyzmq. The array data is only readable since the data is owned
+                # by a pointer in the zmq message (it is not copied). However,
+                # other data like data['metadata'] is writeable.
+                assembled = np.copy(assembled)
+
             # we want assembled to be untouched
             assembled_mean = np.copy(assembled)
 

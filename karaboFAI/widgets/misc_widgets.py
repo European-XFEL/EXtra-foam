@@ -25,9 +25,9 @@ class Colors:
         self.y = (255, 255, 0, alpha)  # yellow
 
 
-def make_pen(color, width=2, alpha=255):
+def make_pen(color, width=2, alpha=255, **kwargs):
     """Convenient function for making QPen."""
-    return mkPen(getattr(Colors(alpha=alpha), color[0]), width=width)
+    return mkPen(getattr(Colors(alpha=alpha), color[0]), width=width, **kwargs)
 
 
 def make_brush(color, alpha=255):

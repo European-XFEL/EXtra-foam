@@ -45,6 +45,8 @@ class Mediator(QtCore.QObject):
     roi2_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
     bkg_change_sgn = QtCore.pyqtSignal(int)
 
+    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+
     threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
 
     @QtCore.pyqtSlot()
@@ -71,6 +73,10 @@ class Mediator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def onBkgChange(self):
         self.bkg_change_sgn.emit(int(self.sender().text()))
+
+    @QtCore.pyqtSlot(bool, int, int, int, int)
+    def onCropAreaChange(self, restore, w, h, px, py):
+        self.crop_area_change_sgn.emit(restore, w, h, px, py)
 
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
@@ -311,6 +317,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onBkgChange)
         self._mediator.threshold_mask_change_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
+        self._mediator.crop_area_change_sgn.connect(
+            self._proc_worker.onCropAreaChange)
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)

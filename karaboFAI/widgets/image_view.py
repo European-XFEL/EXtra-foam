@@ -15,7 +15,7 @@ from ..widgets.pyqtgraph import QtCore, QtGui, HistogramLUTWidget, ROI
 from ..widgets import pyqtgraph as pg
 from .misc_widgets import colorMapFactory, make_pen
 from .plot_widget import PlotWidget
-from ..data_processing import quick_min_max
+from ..data_processing import quick_min_max, intersection
 from ..logger import logger
 from ..config import config
 
@@ -60,6 +60,26 @@ class RectROI(ROI):
         self.addScaleHandle([1, 1], [0, 0])
 
 
+class CropROI(ROI):
+    """Rectangular cropping widget."""
+    def __init__(self, pos, size):
+        """Initialization."""
+        super().__init__(pos, size,
+                         translateSnap=True,
+                         scaleSnap=True,
+                         pen=make_pen('y', width=1, style=QtCore.Qt.DashDotLine))
+
+        self._add_handles()
+
+    def _add_handles(self):
+        # position, scaling center
+        self.addScaleHandle([1, 1], [0, 0])
+        self.addScaleHandle([1, 0.5], [0, 0.5])
+        self.addScaleHandle([0.5, 1], [0.5, 0])
+        self.addScaleHandle([0, 0.5], [1, 0.5])
+        self.addScaleHandle([0.5, 0], [0.5, 1])
+
+
 class ImageItem(pg.ImageItem):
     """ImageItem with mouseHover event."""
     mouse_moved_sgn = QtCore.pyqtSignal(int, int, float)
@@ -97,6 +117,8 @@ class ImageView(QtGui.QWidget):
     ROI2_POS0 = (60, 60)
     ROI_SIZE0 = (100, 100)
 
+    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+
     def __init__(self, *, level_mode='mono',
                  lock_roi=True, parent=None, hide_axis=True, enable_hover=False):
         """Initialization.
@@ -125,6 +147,9 @@ class ImageView(QtGui.QWidget):
         self.roi1.hide()
         self.roi2.hide()
 
+        self.crop = CropROI((0, 0), (100, 100))
+        self.crop.hide()
+
         self._plot_widget = PlotWidget()
         if hide_axis:
             self._plot_widget.hideAxis()
@@ -135,6 +160,7 @@ class ImageView(QtGui.QWidget):
         self._plot_widget.addItem(self._image_item)
         self._plot_widget.addItem(self.roi1)
         self._plot_widget.addItem(self.roi2)
+        self._plot_widget.addItem(self.crop)
         self.invertY(True)
         self.setAspectLocked(True)
 
@@ -146,6 +172,7 @@ class ImageView(QtGui.QWidget):
 
         self._is_initialized = False
         self._image = None
+        self._orig_image = None
         self._image_levels = None
 
         self.initUI()
@@ -250,6 +277,46 @@ class ImageView(QtGui.QWidget):
         else:
             self._plot_widget.setTitle(
                 f'x={x}, y={y} ({self.image.shape[0] - y}), value={round(v, 1)}')
+
+    def onCropToggle(self):
+        if self.crop.isVisible():
+            self.crop.hide()
+        else:
+            if self._image is not None:
+                self.crop.setPos(0, 0)
+                self.crop.setSize(self._image.shape[::-1])
+            self.crop.show()
+
+    def onCropConfirmed(self):
+        if not self.crop.isVisible():
+            return
+
+        if self._image is None:
+            return
+
+        if self._orig_image is None:
+            # the current image is the original one
+            self._orig_image = self._image
+
+        x, y = self.crop.pos()
+        w, h = self.crop.size()
+        h0, w0 = self._image.shape
+
+        w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
+        if w > 0 and h > 0:
+            # there is intersection
+            self.crop_area_change_sgn.emit(False, w, h, x, y)
+            self.setImage(self._image[y:y+h, x:x+w])
+
+        self.crop.hide()
+
+    def onRestoreImage(self):
+        if self._orig_image is None:
+            return
+
+        self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
+        self.setImage(self._orig_image)
+        self._orig_image = None
 
 
 class SinglePulseImageView(ImageView):

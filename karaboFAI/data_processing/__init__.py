@@ -3,8 +3,8 @@ from .data_model import (
     ProcessedData, RoiValueType
 )
 from .proc_utils import (
-    down_sample, nanmean_axis0_para, normalize_curve, quick_min_max,
-    slice_curve, up_sample
+    down_sample, intersection, nanmean_axis0_para, normalize_curve,
+    quick_min_max, slice_curve, up_sample
 )
 from .data_processor import DataProcessor
 from .bdp_data_processing import BdpDataProcessor
@@ -17,6 +17,7 @@ __all__ = [
     'DataSource',
     'down_sample',
     'FomName',
+    'intersection',
     'OpLaserMode',
     'ProcessedData',
     'nanmean_axis0_para',

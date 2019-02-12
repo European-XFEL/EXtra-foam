@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os
 from collections import OrderedDict
 
 from ..widgets.pyqtgraph import QtCore, QtGui
@@ -219,20 +220,6 @@ class MaskCtrlWidget(BaseImageToolCtrlWidget):
                                      float(self._max_pixel_le.text()))
 
 
-class CropCtrlWidget(BaseImageToolCtrlWidget):
-    """Widget for cropping image."""
-
-    def __init__(self, title, *, parent=None):
-        """"""
-        super().__init__(title, parent=parent)
-
-        self.initUI()
-
-    def initUI(self):
-        pass
-
-
-
 @SingletonWindow
 class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
@@ -247,6 +234,8 @@ class ImageToolWindow(AbstractWindow):
     })
 
     roi_value_type_sgn = QtCore.pyqtSignal(object)
+
+    _root_dir = os.path.dirname(os.path.abspath(__file__))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -300,7 +289,36 @@ class ImageToolWindow(AbstractWindow):
         self._mask_panel.threshold_mask_sgn.connect(
             self._mediator.onThresholdMaskChange)
 
-        self._crop_panel = CropCtrlWidget("Cropping tool")
+        self._image_view.crop_area_change_sgn.connect(
+            self._mediator.onCropAreaChange)
+
+        #
+        # tool bar
+        #
+        self._tool_bar = self.addToolBar("Control")
+
+        self._crop_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/crop_selection.png")),
+            "Crop",
+            self)
+        self._tool_bar.addAction(self._crop_at)
+        self._crop_at.triggered.connect(self._image_view.onCropToggle)
+
+        self._crop_to_selection_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/crop.png")),
+            "Crop to selection",
+            self)
+        self._tool_bar.addAction(self._crop_to_selection_at)
+        self._crop_to_selection_at.triggered.connect(
+            self._image_view.onCropConfirmed)
+
+        self._restore_image_at = QtGui.QAction(
+            QtGui.QIcon(os.path.join(self._root_dir, "icons/restore.png")),
+            "Restore image",
+            self)
+        self._tool_bar.addAction(self._restore_image_at)
+        self._restore_image_at.triggered.connect(
+            self._image_view.onRestoreImage)
 
         self._update_image_btn = QtGui.QPushButton("Update image")
         self._update_image_btn.clicked.connect(self.updateImage)
@@ -327,11 +345,10 @@ class ImageToolWindow(AbstractWindow):
         tool_layout.addWidget(self._roi2_ctrl)
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(self._image_view, 0, 0, 3, 3)
-        layout.addLayout(tool_layout, 3, 0, 1, 3)
-        layout.addWidget(self._crop_panel, 0, 3, 1, 1)
-        layout.addWidget(self._mask_panel, 1, 3, 2, 1)
-        layout.addWidget(self._update_image_btn, 3, 3, 1, 1)
+        layout.addWidget(self._image_view, 0, 0, 4, 4)
+        layout.addLayout(tool_layout, 4, 0, 1, 4)
+        layout.addWidget(self._mask_panel, 0, 4, 4, 1)
+        layout.addWidget(self._update_image_btn, 4, 4, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)

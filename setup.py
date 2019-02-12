@@ -30,7 +30,10 @@ setup(
         ],
     },
     package_data={
-        'karaboFAI': ['icons/*.png']
+        'karaboFAI': [
+            'icons/*.png',
+            'windows/icons/*.png'
+        ]
     },
     install_requires=[
         'numpy>=1.16.1',
