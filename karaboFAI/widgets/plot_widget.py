@@ -35,6 +35,8 @@ class PlotWidget(GraphicsView):
         if parent is not None:
             parent.registerPlotWidget(self)
 
+        self._data = None  # keep the last data (could be invalid)
+
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
         self.enableMouse(False)
@@ -318,13 +320,14 @@ class CorrelationWidget(PlotWidget):
         try:
             foms, correlator, info = getattr(data.correlation,
                                              f'param{self._idx}')
-            self._plot.setData(correlator, foms)
-            name = info['device_id'] + " | " + info['property']
-            if name != self._correlator_name:
-                self.setLabel('bottom', f"{name} (arb. u.)")
-                self._correlator_name = name
         except AttributeError:
-            pass
+            return
+
+        self._plot.setData(correlator, foms)
+        name = info['device_id'] + " | " + info['property']
+        if name != self._correlator_name:
+            self.setLabel('bottom', f"{name} (arb. u.)")
+            self._correlator_name = name
 
 
 class LaserOnOffFomWidget(PlotWidget):
@@ -397,9 +400,17 @@ class LaserOnOffAiWidget(PlotWidget):
         off_pulse = data.on_off.off_pulse
         diff = data.on_off.diff
 
-        if on_pulse is None or off_pulse is None:
-            return
+        if on_pulse is None:
+            self._data = None
+        else:
+            if off_pulse is None:
+                if self._data is None:
+                    return
+                # on-pulse arrives but off-pulse does not
+                momentum, on_pulse, off_pulse, diff = self._data
+            else:
+                self._data = (momentum, on_pulse, off_pulse, diff)
 
-        self._on_pulse.setData(momentum, on_pulse)
-        self._off_pulse.setData(momentum, off_pulse)
-        self._diff.setData(momentum, 20 * diff)
+            self._on_pulse.setData(momentum, on_pulse)
+            self._off_pulse.setData(momentum, off_pulse)
+            self._diff.setData(momentum, 20 * diff)

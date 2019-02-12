@@ -223,6 +223,9 @@ class LaserOnOffProcessor(AbstractProcessor):
             # it always shows the on-train plot alone first, which
             # is followed by a combined plots if the next train is
             # an off-train pulse.
+            #
+            # Note: if this logic changes, one also need to modify
+            #       the visualization part.
             if self._on_train_received:
                 if proc_data.tid % 2 == 1 ^ flag:
                     # an on-pulse is followed by an off-pulse
