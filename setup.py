@@ -29,7 +29,9 @@ setup(
             'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
         ],
     },
-    package_data={},
+    package_data={
+        'karaboFAI': ['icons/*.png']
+    },
     install_requires=[
         'numpy>=1.16.1',
         'scipy>=1.1.0',
