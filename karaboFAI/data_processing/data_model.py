@@ -46,6 +46,11 @@ class AiNormalizer(IntEnum):
     ROI = 2
 
 
+class RoiValueType(IntEnum):
+    INTEGRATION = 1  # monitor integration of ROI
+    MEAN = 2  # monitor mean of ROI
+
+
 class TrainData:
     MAX_LENGTH = 1000000
 
@@ -94,17 +99,14 @@ class AbstractData(abc.ABC):
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
-    # intensity histories of ROI1 and ROI2
-    intensities1 = TrainData()
-    intensities2 = TrainData()
+    # value (integration/mean/median) histories of ROI1 and ROI2
+    values1 = TrainData()
+    values2 = TrainData()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.roi1 = None  # (w, h, px, py)
         self.roi2 = None  # (w, h, px, py)
-
-        self.roi1_bkg = 0
-        self.roi2_bkg = 0
 
 
 class LaserOnOffData(AbstractData):

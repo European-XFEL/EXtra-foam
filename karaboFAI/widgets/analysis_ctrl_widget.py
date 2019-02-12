@@ -24,7 +24,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     _available_normalizers = OrderedDict({
         "curve": AiNormalizer.CURVE,
-        "roi": AiNormalizer.ROI
+        "ROI": AiNormalizer.ROI
     })
 
     pulse_id_range_sgn = QtCore.pyqtSignal(int, int)

@@ -11,9 +11,8 @@ All rights reserved.
 """
 import numpy as np
 
-from ..widgets.pyqtgraph import (
-    QtCore, QtGui, HistogramLUTWidget, ImageItem, ROI
-)
+from ..widgets.pyqtgraph import QtCore, QtGui, HistogramLUTWidget, ROI
+from ..widgets import pyqtgraph as pg
 from .misc_widgets import colorMapFactory, make_pen
 from .plot_widget import PlotWidget
 from ..data_processing import quick_min_max
@@ -61,6 +60,32 @@ class RectROI(ROI):
         self.addScaleHandle([1, 1], [0, 0])
 
 
+class ImageItem(pg.ImageItem):
+    """ImageItem with mouseHover event."""
+    mouse_moved_sgn = QtCore.pyqtSignal(int, int, float)
+
+    def __init__(self, enable_hover=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._enable_hover = enable_hover
+
+    def hoverEvent(self, event):
+        """Override."""
+        if not self._enable_hover:
+            return
+
+        if event.isExit():
+            x = -1  # out of image
+            y = -1  # out of image
+            value = 0.0
+        else:
+            pos = event.pos()
+            x = int(pos.x())
+            y = int(pos.y())
+            value = self.image[y, x]
+
+        self.mouse_moved_sgn.emit(x, y, value)
+
+
 class ImageView(QtGui.QWidget):
     """ImageView class.
 
@@ -72,7 +97,8 @@ class ImageView(QtGui.QWidget):
     ROI2_POS0 = (60, 60)
     ROI_SIZE0 = (100, 100)
 
-    def __init__(self, *, level_mode='mono', lock_roi=True, parent=None):
+    def __init__(self, *, level_mode='mono',
+                 lock_roi=True, parent=None, hide_axis=True, enable_hover=False):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
@@ -81,6 +107,8 @@ class ImageView(QtGui.QWidget):
             one set of levels is drawn for each channel.
         :param bool lock_roi: True for non-movable/non-translatable ROI.
             This is used in ImageView with passive ROI.
+        :param bool hide_axis: True for hiding left and bottom axes.
+        :param enable_hover: True for enable mouseHover event.
         """
         super().__init__(parent=parent)
         try:
@@ -98,7 +126,12 @@ class ImageView(QtGui.QWidget):
         self.roi2.hide()
 
         self._plot_widget = PlotWidget()
-        self._image_item = ImageItem(border='w')
+        if hide_axis:
+            self._plot_widget.hideAxis()
+        if enable_hover:
+            self._plot_widget.setTitle('')  # reserve space
+        self._image_item = ImageItem(enable_hover=enable_hover, border='w')
+        self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._plot_widget.addItem(self._image_item)
         self._plot_widget.addItem(self.roi1)
         self._plot_widget.addItem(self.roi2)
@@ -124,8 +157,6 @@ class ImageView(QtGui.QWidget):
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
-
-        self._plot_widget.hideAxis()
 
     def update(self, data):
         """karaboFAI interface."""
@@ -212,6 +243,14 @@ class ImageView(QtGui.QWidget):
         self.parent().unregisterPlotWidget(self)
         super().close()
 
+    @QtCore.pyqtSlot(int, int, float)
+    def onMouseMoved(self, x, y, v):
+        if x < 0 or y < 0:
+            self._plot_widget.setTitle('')
+        else:
+            self._plot_widget.setTitle(
+                f'x={x}, y={y} ({self.image.shape[0] - y}), value={round(v, 1)}')
+
 
 class SinglePulseImageView(ImageView):
     """SinglePulseImageView class.
@@ -276,12 +315,10 @@ class RoiImageView(ImageView):
             if data.roi.roi1 is None:
                 return
             w, h, px, py = data.roi.roi1
-            bkg = data.roi.roi1_bkg
         else:
             if data.roi.roi2 is None:
                 return
             w, h, px, py = data.roi.roi2
-            bkg = data.roi.roi2_bkg
 
         self.setImage(image[py:py+h, px:px+w],
                       auto_range=False,

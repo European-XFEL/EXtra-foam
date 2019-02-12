@@ -61,9 +61,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
-        self._moving_average_window_le = QtGui.QLineEdit("9999")
+        self._moving_average_window_le = QtGui.QLineEdit("600")
+        self._moving_average_window_le.setValidator(
+            QtGui.QIntValidator(1, 600))
 
-        self.clear_hist_btn = QtGui.QPushButton("Clear history")
+        self.clear_hist_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
             self._laser_mode_cb,
@@ -121,19 +123,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
-        # checks state of Absolute difference Checkbox and emit a signal
-        state = self.abs_difference_cb.checkState()
-        self.abs_difference_sgn.emit(state)
-
-        try:
-            window_size = int(self._moving_average_window_le.text())
-            if window_size < 1:
-                logger.error("Moving average window < 1!")
-                return None
-            self.moving_average_window_sgn.emit(window_size)
-        except ValueError as e:
-            logger.error("<Moving average window>: " + str(e))
+        window_size = int(self._moving_average_window_le.text())
+        if window_size < 1:
+            logger.error("Moving average window < 1!")
             return None
+        self.moving_average_window_sgn.emit(window_size)
 
         info = "\n<Optical laser mode>: {}".format(mode_description)
         if on_pulse_ids and off_pulse_ids:

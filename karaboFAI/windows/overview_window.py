@@ -17,7 +17,7 @@ from .base_window import DockerWindow, SingletonWindow
 from ..logger import logger
 from ..widgets import (
     BulletinWidget, ImageView, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    make_pen, MultiPulseAiWidget, RoiImageView, RoiIntensityMonitor,
+    make_pen, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ..config import config
@@ -202,16 +202,16 @@ class OverviewWindowTrainResolved(DockerWindow):
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
         self._assembled_image = ImageView(parent=self)
-        self._ai = SinglePulseAiWidget(parent=self)
+        self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
 
         self._roi1_image = RoiImageView(parent=self)
         self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
         self._roi2_image = RoiImageView(roi1=False, parent=self)
         self._roi2_image.setBorder(make_pen(config["ROI_COLORS"][1]))
 
-        self._roi_intensity = RoiIntensityMonitor(parent=self)
-        self._mediator.roi_intensity_window_sgn.connect(
-            self._roi_intensity.onWindowSizeChanged)
+        self._roi_intensity = RoiValueMonitor(parent=self)
+        self._mediator.roi_displayed_range_sgn.connect(
+            self._roi_intensity.onDisplayRangeChange)
 
         self.initUI()
 

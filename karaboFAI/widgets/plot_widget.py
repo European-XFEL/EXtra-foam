@@ -35,6 +35,8 @@ class PlotWidget(GraphicsView):
         if parent is not None:
             parent.registerPlotWidget(self)
 
+        self._data = None  # keep the last data (could be invalid)
+
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
         self.enableMouse(False)
@@ -88,6 +90,10 @@ class PlotWidget(GraphicsView):
         for v in ["left", 'bottom']:
             self.plotItem.hideAxis(v)
 
+    def showAxis(self):
+        for v in ["left", 'bottom']:
+            self.plotItem.showAxis(v)
+
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 
@@ -124,13 +130,14 @@ class SinglePulseAiWidget(PlotWidget):
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setTitle(' ')
+
+        if plot_mean:
+            self.addLegend(offset=(-40, 20))
 
         self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("y"))
 
         if plot_mean:
             self._mean_plot = self.plot(name="mean", pen=make_pen("c"))
-            self.addLegend(offset=(-40, 20))
         else:
             self._mean_plot = None
 
@@ -215,10 +222,11 @@ class MultiPulseAiWidget(PlotWidget):
                 item.setData(momentum, intensity)
 
 
-class RoiIntensityMonitor(PlotWidget):
-    """RoiIntensityMonitor class.
+class RoiValueMonitor(PlotWidget):
+    """RoiValueMonitor class.
 
-    Widget for displaying the evolution of the integration of ROIs.
+    Widget for displaying the evolution of the value (integration, median,
+    mean) of ROIs.
     """
     def __init__(self, *, window=600, parent=None):
         """Initialization.
@@ -251,15 +259,15 @@ class RoiIntensityMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids1, intensities1, _ = data.roi.intensities1
+        tids1, values1, _ = data.roi.values1
         self._roi1_plot.setData(
-            tids1[-self._window:], intensities1[-self._window:])
-        tids2, intensities2, _ = data.roi.intensities2
+            tids1[-self._window:], values1[-self._window:])
+        tids2, values2, _ = data.roi.values2
         self._roi2_plot.setData(
-            tids2[-self._window:], intensities2[-self._window:])
+            tids2[-self._window:], values2[-self._window:])
 
     @QtCore.pyqtSlot(int)
-    def onWindowSizeChanged(self, v):
+    def onDisplayRangeChange(self, v):
         self._window = v
 
 
@@ -312,13 +320,14 @@ class CorrelationWidget(PlotWidget):
         try:
             foms, correlator, info = getattr(data.correlation,
                                              f'param{self._idx}')
-            self._plot.setData(correlator, foms)
-            name = info['device_id'] + " | " + info['property']
-            if name != self._correlator_name:
-                self.setLabel('bottom', f"{name} (arb. u.)")
-                self._correlator_name = name
         except AttributeError:
-            pass
+            return
+
+        self._plot.setData(correlator, foms)
+        name = info['device_id'] + " | " + info['property']
+        if name != self._correlator_name:
+            self.setLabel('bottom', f"{name} (arb. u.)")
+            self._correlator_name = name
 
 
 class LaserOnOffFomWidget(PlotWidget):
@@ -391,9 +400,17 @@ class LaserOnOffAiWidget(PlotWidget):
         off_pulse = data.on_off.off_pulse
         diff = data.on_off.diff
 
-        if on_pulse is None or off_pulse is None:
-            return
+        if on_pulse is None:
+            self._data = None
+        else:
+            if off_pulse is None:
+                if self._data is None:
+                    return
+                # on-pulse arrives but off-pulse does not
+                momentum, on_pulse, off_pulse, diff = self._data
+            else:
+                self._data = (momentum, on_pulse, off_pulse, diff)
 
-        self._on_pulse.setData(momentum, on_pulse)
-        self._off_pulse.setData(momentum, off_pulse)
-        self._diff.setData(momentum, 20 * diff)
+            self._on_pulse.setData(momentum, on_pulse)
+            self._off_pulse.setData(momentum, off_pulse)
+            self._diff.setData(momentum, 20 * diff)

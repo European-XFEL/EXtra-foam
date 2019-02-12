@@ -38,23 +38,27 @@ from . import __version__
 
 
 class Mediator(QtCore.QObject):
-    roi_intensity_window_sgn = QtCore.pyqtSignal(int)
+    roi_displayed_range_sgn = QtCore.pyqtSignal(int)
     roi_hist_clear_sgn = QtCore.pyqtSignal()
+    roi_value_tyoe_change_sgn = QtCore.pyqtSignal(object)
     roi1_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
     roi2_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    roi1_bkg_change_sgn = QtCore.pyqtSignal(int)
-    roi2_bkg_change_sgn = QtCore.pyqtSignal(int)
+    bkg_change_sgn = QtCore.pyqtSignal(int)
 
     threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
 
     @QtCore.pyqtSlot()
-    def onRoiIntensityWindowChange(self):
+    def onRoiDisplayedRangeChange(self):
         v = int(self.sender().text())
-        self.roi_intensity_window_sgn.emit(v)
+        self.roi_displayed_range_sgn.emit(v)
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
         self.roi_hist_clear_sgn.emit()
+
+    @QtCore.pyqtSlot(object)
+    def onRoiValueTypeChange(self, state):
+        self.roi_value_tyoe_change_sgn.emit(state)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Change(self, activated, w, h, px, py):
@@ -64,13 +68,9 @@ class Mediator(QtCore.QObject):
     def onRoi2Change(self, activated, w, h, px, py):
         self.roi2_region_change_sgn.emit(activated, w, h, px, py)
 
-    @QtCore.pyqtSlot(int)
-    def onRoi1BkgChange(self, v):
-        self.roi1_bkg_change_sgn.emit(v)
-
-    @QtCore.pyqtSlot(int)
-    def onRoi2BkgChange(self, v):
-        self.roi2_bkg_change_sgn.emit(v)
+    @QtCore.pyqtSlot()
+    def onBkgChange(self):
+        self.bkg_change_sgn.emit(int(self.sender().text()))
 
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
@@ -303,12 +303,12 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onRoiHistClear)
         self._mediator.roi1_region_change_sgn.connect(
             self._proc_worker.onRoi1Change)
+        self._mediator.roi_value_tyoe_change_sgn.connect(
+            self._proc_worker.onRoiValueTypeChange)
         self._mediator.roi2_region_change_sgn.connect(
             self._proc_worker.onRoi2Change)
-        self._mediator.roi1_bkg_change_sgn.connect(
-            self._proc_worker.onRoi1BkgChange)
-        self._mediator.roi2_bkg_change_sgn.connect(
-            self._proc_worker.onRoi2BkgChange)
+        self._mediator.bkg_change_sgn.connect(
+            self._proc_worker.onBkgChange)
         self._mediator.threshold_mask_change_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
 

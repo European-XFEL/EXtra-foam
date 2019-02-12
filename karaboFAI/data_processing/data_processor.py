@@ -25,6 +25,7 @@ from karabo_data.geometry import LPDGeometry
 
 from .data_model import (
     AiNormalizer, DataSource, FomName, OpLaserMode, ProcessedData,
+    RoiValueType
 )
 from .proc_utils import nanmean_axis0_para, normalize_curve, slice_curve
 from ..config import config
@@ -90,12 +91,18 @@ class CorrelationProcessor(AbstractProcessor):
                 normalized_intensity = normalize_curve(
                     intensity, momentum, *self.normalization_range)
             elif self.normalizer == AiNormalizer.ROI:
-                _, intensities1, _ = proc_data.roi.intensities1
-                _, intensities2, _ = proc_data.roi.intensities2
+                _, values1, _ = proc_data.roi.values1
+                _, values2, _ = proc_data.roi.values2
 
-                denominator = (intensities1[-1] + intensities2[-1])/2.
+                try:
+                    denominator = (values1[-1] + values2[-1])/2.
+                except IndexError:
+                    # this could happen if the history is clear just now
+                    # TODO: we may need to improve here
+                    return
+
                 if denominator == 0:
-                    self.log("ROI intensity is zero!")
+                    self.log("ROI value is zero!")
                     return
                 normalized_intensity = intensity / denominator
 
@@ -225,6 +232,9 @@ class LaserOnOffProcessor(AbstractProcessor):
             # it always shows the on-train plot alone first, which
             # is followed by a combined plots if the next train is
             # an off-train pulse.
+            #
+            # Note: if this logic changes, one also need to modify
+            #       the visualization part.
             if self._on_train_received:
                 if proc_data.tid % 2 == 1 ^ flag:
                     # an on-pulse is followed by an off-pulse
@@ -398,8 +408,8 @@ class DataProcessor(Worker):
 
         self.roi1 = None
         self.roi2 = None
-        self._roi1_bkg = 0
-        self._roi2_bkg = 0
+        self._bkg = 0
+        self._roi_value_type = None
 
         self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
         self._correlation_processor = CorrelationProcessor(parent=self)
@@ -444,7 +454,11 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        self._laser_on_off_processor.laser_mode = mode
+        if mode != self._laser_on_off_processor:
+            self._laser_on_off_processor.laser_mode = mode
+            self._laser_on_off_processor.reset()
+            ProcessedData.clear_onoff_hist()
+
         self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
         self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
 
@@ -522,27 +536,26 @@ class DataProcessor(Worker):
             self.roi2 = None
 
     @QtCore.pyqtSlot(int)
-    def onRoi1BkgChange(self, v):
-        self._roi1_bkg = v
-
-    @QtCore.pyqtSlot(int)
-    def onRoi2BkgChange(self, v):
-        self._roi2_bkg = v
+    def onBkgChange(self, v):
+        self._bkg = v
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
         ProcessedData.clear_roi_hist()
 
+    @QtCore.pyqtSlot(object)
+    def onRoiValueTypeChange(self, value):
+        self._roi_value_type = value
+        ProcessedData.clear_roi_hist()
+
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
+        self._laser_on_off_processor.reset()
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
-        if state == QtCore.Qt.Checked:
-            self._enable_ai = True
-        else:
-            self._enable_ai = False
+        self._enable_ai = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int, str, str)
     def onCorrelationParamChange(self, idx, device_id, ppt):
@@ -623,7 +636,6 @@ class DataProcessor(Worker):
             # by a pointer in the zmq message (it is not copied). However,
             # other data like data['metadata'] is writeable.
             assembled = np.copy(assembled)
-
             # we want assembled to be untouched
             assembled_mean = np.copy(assembled)
 
@@ -648,6 +660,9 @@ class DataProcessor(Worker):
 
         logger.debug("Time for pre-processing: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
+
+        if self._bkg:
+            assembled_mean -= self._bkg
 
         # Note: 'assembled' still contains 'inf' and '-inf', we only do
         #       the clip later when necessary in order not to waste
@@ -753,40 +768,50 @@ class DataProcessor(Worker):
 
         :param ProcessedData data: data after preprocessing.
         """
+        def get_roi_value(roi_param, full_image):
+            w, h, px, py = roi_param
+            roi_img = full_image[py:py + h, px:px + w]
+            if self._roi_value_type == RoiValueType.INTEGRATION:
+                ret = np.sum(roi_img)
+            elif self._roi_value_type == RoiValueType.MEAN:
+                ret = np.mean(roi_img)
+            elif self._roi_value_type == RoiValueType.MEDIAN:
+                ret = np.median(roi_img)
+            else:
+                ret = 0
+
+            return ret
+
+        def validate_roi(w, h, px, py, img_h, img_w):
+            """Check whether the ROI is within the image."""
+            if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
+                return False
+            return True
+
         tid = data.tid
         if tid > 0:
             img = data.image_mean
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
-            intensity1 = 0
+            values1 = 0
             if self.roi1 is not None:
-                if not self._validate_roi(*self.roi1, *img.shape):
+                if not validate_roi(*self.roi1, *img.shape):
                     self.roi1 = None
                 else:
                     data.roi.roi1 = self.roi1
-                    data.roi.roi1_bkg = self._roi1_bkg
-                    w, h, px, py = self.roi1
-                    intensity1 = np.sum(img[py:py+h, px:px+w]) - self._roi1_bkg
+                    values1 = get_roi_value(self.roi1, img)
 
-            intensity2 = 0
+            values2 = 0
             if self.roi2 is not None:
-                if not self._validate_roi(*self.roi2, *img.shape):
+                if not validate_roi(*self.roi2, *img.shape):
                     self.roi2 = None
                 else:
                     data.roi.roi2 = self.roi2
-                    data.roi.roi2_bkg = self._roi2_bkg
-                    w, h, px, py = self.roi2
-                    intensity2 = np.sum(img[py:py+h, px:px+w]) - self._roi2_bkg
+                    values2 = get_roi_value(self.roi2, img)
 
-            data.roi.intensities1 = (tid, intensity1)
-            data.roi.intensities2 = (tid, intensity2)
-
-    def _validate_roi(self, w, h, px, py, img_h, img_w):
-        """Check whether the ROI is within the image."""
-        if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
-            return False
-        return True
+            data.roi.values1 = (tid, values1)
+            data.roi.values2 = (tid, values2)
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process the calibrated data.

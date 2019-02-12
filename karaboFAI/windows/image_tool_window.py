@@ -9,8 +9,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..widgets.pyqtgraph import QtCore, QtGui
+from collections import OrderedDict
 
+from ..widgets.pyqtgraph import QtCore, QtGui
+from ..data_processing import RoiValueType
 from ..widgets import ImageView
 from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
@@ -20,20 +22,18 @@ class RoiCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of an ROI."""
 
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
-                            'border: 1px;' \
+                            'border: 0px;' \
                             'subcontrol-origin: margin;' \
                             'subcontrol-position: top left;' \
-                            'padding-left: 10px;' \
-                            'padding-top: 10px;' \
+                            'padding-left: 5px;' \
+                            'padding-top: 5px;' \
                             'margin-top: 0.0em;}'
 
     # activated, w, h, px, py
     roi_region_change_sgn = QtCore.Signal(bool, int, int, int, int)
-    roi_bkg_change_sgn = QtCore.Signal(int)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
     _size_validator = QtGui.QIntValidator(0, 10000)
-    _bkg_validator = QtGui.QIntValidator()
 
     def __init__(self, roi, *, title="ROI control", parent=None):
         """Initialization.
@@ -57,11 +57,6 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self._height_le.editingFinished.connect(self.onRoiRegionChanged)
         self._px_le.editingFinished.connect(self.onRoiRegionChanged)
         self._py_le.editingFinished.connect(self.onRoiRegionChanged)
-
-        self._bkg_le = QtGui.QLineEdit(str(0))
-        self._bkg_le.setValidator(self._bkg_validator)
-        self._bkg_le.editingFinished.connect(
-            lambda: self.roi_bkg_change_sgn.emit(int(self._bkg_le.text())))
 
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
@@ -88,8 +83,6 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         le_layout.addWidget(self._px_le)
         le_layout.addWidget(QtGui.QLabel("y0: "))
         le_layout.addWidget(self._py_le)
-        le_layout.addWidget(QtGui.QLabel("Bkg: "))
-        le_layout.addWidget(self._bkg_le)
 
         cb_layout = QtGui.QHBoxLayout()
         cb_layout.addWidget(self.activate_cb)
@@ -102,6 +95,8 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         layout.addLayout(le_layout)
 
         self.setLayout(layout)
+        # left, top, right, bottom
+        self.layout().setContentsMargins(2, 1, 2, 1)
 
     @QtCore.pyqtSlot(object)
     def onRoiRegionChangeFinished(self, roi):
@@ -213,6 +208,7 @@ class MaskCtrlWidget(QtGui.QGroupBox):
 
         layout.addLayout(threshold_layout)
         self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
 
     def thresholdMaskChangedEvent(self):
         self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
@@ -227,22 +223,48 @@ class ImageToolWindow(AbstractWindow):
     """
     title = "Image tool"
 
+    _available_roi_value_types = OrderedDict({
+        "integration": RoiValueType.INTEGRATION,
+        "mean": RoiValueType.MEAN,
+    })
+
+    roi_value_type_sgn = QtCore.pyqtSignal(object)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageView(lock_roi=False)
+        self._image_view = ImageView(
+            lock_roi=False, hide_axis=False, enable_hover=True)
 
-        self._clear_roi_hist_btn = QtGui.QPushButton("Clear ROI history")
+        self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(
             self._mediator.onRoiHistClear)
 
-        self._roi_hist_window_le = QtGui.QLineEdit(str(600))
+        self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
         validator = QtGui.QIntValidator()
         validator.setBottom(1)
-        self._roi_hist_window_le.setValidator(validator)
-        self._roi_hist_window_le.editingFinished.connect(
-            self._mediator.onRoiIntensityWindowChange
+        self._roi_displayed_range_le.setValidator(validator)
+        self._roi_displayed_range_le.editingFinished.connect(
+            self._mediator.onRoiDisplayedRangeChange
         )
+
+        self._roi_value_type_cb = QtGui.QComboBox()
+        for v in self._available_roi_value_types:
+            self._roi_value_type_cb.addItem(v)
+        self._roi_value_type_cb.currentTextChanged.connect(
+            lambda x: self.roi_value_type_sgn.emit(
+                self._available_roi_value_types[x]))
+        self.roi_value_type_sgn.connect(self._mediator.onRoiValueTypeChange)
+        self._roi_value_type_cb.currentTextChanged.emit(
+            self._roi_value_type_cb.currentText())
+
+        self._bkg_le = QtGui.QLineEdit(str(0))
+        self._bkg_le.setValidator(QtGui.QIntValidator())
+        self._bkg_le.editingFinished.connect(self._mediator.onBkgChange)
+
+        self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
+        self._lock_bkg_cb.stateChanged.connect(
+            lambda x: self._bkg_le.setEnabled(x != QtCore.Qt.Checked))
 
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
@@ -255,10 +277,6 @@ class ImageToolWindow(AbstractWindow):
             self._mediator.onRoi1Change)
         self._roi2_ctrl.roi_region_change_sgn.connect(
             self._mediator.onRoi2Change)
-        self._roi1_ctrl.roi_bkg_change_sgn.connect(
-            self._mediator.onRoi1BkgChange)
-        self._roi2_ctrl.roi_bkg_change_sgn.connect(
-            self._mediator.onRoi2BkgChange)
 
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
@@ -273,10 +291,15 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
-        roi_ctrl_layout = QtGui.QHBoxLayout()
-        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI monitor window size: "))
-        roi_ctrl_layout.addWidget(self._roi_hist_window_le)
-        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn)
+        roi_ctrl_layout = QtGui.QGridLayout()
+        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
+        roi_ctrl_layout.addWidget(self._roi_value_type_cb, 0, 1)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
+        roi_ctrl_layout.addWidget(self._roi_displayed_range_le, 0, 3)
+        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn, 0, 4)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 1, 0)
+        roi_ctrl_layout.addWidget(self._bkg_le, 1, 1)
+        roi_ctrl_layout.addWidget(self._lock_bkg_cb, 1, 2)
 
         tool_layout = QtGui.QVBoxLayout()
         tool_layout.addLayout(roi_ctrl_layout)
@@ -290,6 +313,7 @@ class ImageToolWindow(AbstractWindow):
         layout.addWidget(self._update_image_btn, 1, 1, 1, 1)
 
         self._cw.setLayout(layout)
+        self.layout().setContentsMargins(0, 0, 0, 0)
 
     def update(self):
         """Update widgets.

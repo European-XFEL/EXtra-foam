@@ -1,6 +1,6 @@
 from .data_model import (
     AiNormalizer, Data4Visualization, DataSource, FomName, OpLaserMode,
-    ProcessedData
+    ProcessedData, RoiValueType
 )
 from .proc_utils import (
     down_sample, nanmean_axis0_para, normalize_curve, quick_min_max,
@@ -22,6 +22,7 @@ __all__ = [
     'nanmean_axis0_para',
     'normalize_curve',
     'quick_min_max',
+    'RoiValueType',
     'slice_curve',
     'up_sample',
 ]
