@@ -18,9 +18,7 @@ from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
 
 
-class RoiCtrlWidget(QtGui.QGroupBox):
-    """Widget for controlling of an ROI."""
-
+class BaseImageToolCtrlWidget(QtGui.QGroupBox):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
                             'border: 0px;' \
                             'subcontrol-origin: margin;' \
@@ -29,6 +27,13 @@ class RoiCtrlWidget(QtGui.QGroupBox):
                             'padding-top: 5px;' \
                             'margin-top: 0.0em;}'
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
+
+
+class RoiCtrlWidget(BaseImageToolCtrlWidget):
+    """Widget for controlling of an ROI."""
     # activated, w, h, px, py
     roi_region_change_sgn = QtCore.Signal(bool, int, int, int, int)
 
@@ -41,7 +46,6 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         :param RectROI roi: RectROI object.
         """
         super().__init__(title, parent=parent)
-        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
         self._roi = roi
 
@@ -175,7 +179,7 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self.enableLockEdit()
 
 
-class MaskCtrlWidget(QtGui.QGroupBox):
+class MaskCtrlWidget(BaseImageToolCtrlWidget):
     """Widget for masking image."""
 
     threshold_mask_sgn = QtCore.pyqtSignal(float, float)
@@ -213,6 +217,20 @@ class MaskCtrlWidget(QtGui.QGroupBox):
     def thresholdMaskChangedEvent(self):
         self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
                                      float(self._max_pixel_le.text()))
+
+
+class CropCtrlWidget(BaseImageToolCtrlWidget):
+    """Widget for cropping image."""
+
+    def __init__(self, title, *, parent=None):
+        """"""
+        super().__init__(title, parent=parent)
+
+        self.initUI()
+
+    def initUI(self):
+        pass
+
 
 
 @SingletonWindow
@@ -282,6 +300,8 @@ class ImageToolWindow(AbstractWindow):
         self._mask_panel.threshold_mask_sgn.connect(
             self._mediator.onThresholdMaskChange)
 
+        self._crop_panel = CropCtrlWidget("Cropping tool")
+
         self._update_image_btn = QtGui.QPushButton("Update image")
         self._update_image_btn.clicked.connect(self.updateImage)
 
@@ -307,10 +327,11 @@ class ImageToolWindow(AbstractWindow):
         tool_layout.addWidget(self._roi2_ctrl)
 
         layout = QtGui.QGridLayout()
-        layout.addWidget(self._image_view, 0, 0, 1, 1)
-        layout.addLayout(tool_layout, 1, 0, 1, 1)
-        layout.addWidget(self._mask_panel, 0, 1, 1, 1)
-        layout.addWidget(self._update_image_btn, 1, 1, 1, 1)
+        layout.addWidget(self._image_view, 0, 0, 3, 3)
+        layout.addLayout(tool_layout, 3, 0, 1, 3)
+        layout.addWidget(self._crop_panel, 0, 3, 1, 1)
+        layout.addWidget(self._mask_panel, 1, 3, 2, 1)
+        layout.addWidget(self._update_image_btn, 3, 3, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
