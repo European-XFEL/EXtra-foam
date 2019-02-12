@@ -94,7 +94,13 @@ class CorrelationProcessor(AbstractProcessor):
                 _, values1, _ = proc_data.roi.values1
                 _, values2, _ = proc_data.roi.values2
 
-                denominator = (values1[-1] + values2[-1])/2.
+                try:
+                    denominator = (values1[-1] + values2[-1])/2.
+                except IndexError:
+                    # this could happen if the history is clear just now
+                    # TODO: we may need to improve here
+                    return
+
                 if denominator == 0:
                     self.log("ROI value is zero!")
                     return
