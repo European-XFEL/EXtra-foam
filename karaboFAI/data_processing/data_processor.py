@@ -165,6 +165,8 @@ class LaserOnOffProcessor(AbstractProcessor):
         self.on_pulse_ids = None
         self.off_pulse_ids = None
 
+        self.abs_difference = True
+
         self.moving_average_window = 1
 
         self.normalizer = None
@@ -194,6 +196,7 @@ class LaserOnOffProcessor(AbstractProcessor):
         if self.laser_mode == OpLaserMode.INACTIVE:
             return
 
+        print("absolute difference ", self.abs_difference)
         momentum = proc_data.momentum
         intensities = proc_data.intensities
 
@@ -308,7 +311,10 @@ class LaserOnOffProcessor(AbstractProcessor):
 
             # calculate figure-of-merit and update history
             fom = slice_curve(diff, momentum, *self.integration_range)[0]
-            fom = np.sum(np.abs(fom))
+            if self.abs_difference:
+                fom = np.sum(np.abs(fom))
+            else:
+                fom = np.sum(fom)
 
             # an extra check
             # TODO: check whether it is necessary
@@ -455,6 +461,10 @@ class DataProcessor(Worker):
 
         self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
         self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
+
+    @QtCore.pyqtSlot(int)
+    def onAbsDifferenceStateChange(self, state):
+        self._laser_on_off_processor.abs_difference = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):

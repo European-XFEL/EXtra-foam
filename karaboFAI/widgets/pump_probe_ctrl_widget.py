@@ -27,10 +27,13 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         "even/odd": OpLaserMode.EVEN_ON,
         "odd/even": OpLaserMode.ODD_ON
     })
+
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
     moving_average_window_sgn = QtCore.pyqtSignal(int)
+
+    abs_difference_sgn = QtCore.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe analysis setup", *args, **kwargs)
@@ -52,6 +55,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
+        self.abs_difference_cb = QtGui.QCheckBox("Absolute difference")
+        self.abs_difference_cb.setChecked(True)
+
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
@@ -66,6 +72,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self._on_pulse_le,
             self._off_pulse_le,
             self._moving_average_window_le,
+            self.abs_difference_cb,
         ]
 
         self.initUI()
@@ -76,6 +83,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.setLabelAlignment(QtCore.Qt.AlignRight)
 
         layout.addRow("Laser on/off mode: ", self._laser_mode_cb)
+        layout.addRow(self.abs_difference_cb)
         if self._pulse_resolved:
             layout.addRow("On-pulse IDs: ", self._on_pulse_le)
             layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
@@ -89,6 +97,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         """Override"""
         mode_description = self._laser_mode_cb.currentText()
         mode = self._available_modes[mode_description]
+
         if mode != OpLaserMode.INACTIVE:
             try:
                 # check pulse ID only when laser on/off pulses are in the same
@@ -126,5 +135,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                 info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
                 info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
             info += "\n<Moving average window>: {}".format(window_size)
+
+        info += "\n<Use absolute difference>: {}".format(bool(state))
 
         return info

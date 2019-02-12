@@ -314,6 +314,8 @@ class MainGUI(QtGui.QMainWindow):
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)
+        self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
+            self._proc_worker.onAbsDifferenceStateChange)
         self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
             self._proc_worker.onMovingAverageWindowChange)
         self.pump_probe_ctrl_widget.clear_hist_btn.clicked.connect(
