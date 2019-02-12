@@ -318,7 +318,7 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onAbsDifferenceStateChange)
         self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
             self._proc_worker.onMovingAverageWindowChange)
-        self.pump_probe_ctrl_widget.clear_hist_btn.clicked.connect(
+        self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._proc_worker.onLaserOnOffClear)
 
         self.correlation_ctrl_widget.correlation_param_sgn.connect(

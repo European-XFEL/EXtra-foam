@@ -65,7 +65,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._moving_average_window_le.setValidator(
             QtGui.QIntValidator(1, 600))
 
-        self.clear_hist_btn = QtGui.QPushButton("Reset")
+        self.reset_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
             self._laser_mode_cb,
@@ -89,7 +89,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
         layout.addRow("Moving average window: ",
                       self._moving_average_window_le)
-        layout.addRow(self.clear_hist_btn)
+        layout.addRow(self.reset_btn)
 
         self.setLayout(layout)
 
