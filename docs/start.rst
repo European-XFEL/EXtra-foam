@@ -62,8 +62,8 @@ Data analysis with files
 
 The data is streamed from files after the ``Serve`` button is clicked. The user
 is free to use any available ``port``. ``Hostname`` is usually `localhost`, but
-it can also be a remote machine. Different from the real-time case, ``Source``
-here refers to the full path of the directory which contains the (calibrated)
+it can also be a remote machine. Different from the real-time case, the user
+needs to specify the full path of the directory which contains the (calibrated)
 files.
 
 .. image:: images/data_source_from_file.png
