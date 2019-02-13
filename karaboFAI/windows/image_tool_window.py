@@ -12,10 +12,11 @@ All rights reserved.
 import os
 from collections import OrderedDict
 
+from .base_window import AbstractWindow, SingletonWindow
+
 from ..widgets.pyqtgraph import QtCore, QtGui
 from ..data_processing import RoiValueType
 from ..widgets import ImageView
-from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
 
 
@@ -249,8 +250,7 @@ class ImageToolWindow(AbstractWindow):
         validator.setBottom(1)
         self._roi_displayed_range_le.setValidator(validator)
         self._roi_displayed_range_le.editingFinished.connect(
-            self._mediator.onRoiDisplayedRangeChange
-        )
+            self._mediator.onRoiDisplayedRangeChange)
 
         self._roi_value_type_cb = QtGui.QComboBox()
         for v in self._available_roi_value_types:
@@ -314,6 +314,8 @@ class ImageToolWindow(AbstractWindow):
         self._mask_ctrl = MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
             self._mediator.onThresholdMaskChange)
+        self._mask_ctrl.threshold_mask_sgn.connect(
+            self._image_view.onImageMaskChange)
         self._mask_at = QtGui.QWidgetAction(self._tool_bar)
         self._mask_at.setDefaultWidget(self._mask_ctrl)
         self._tool_bar.addAction(self._mask_at)

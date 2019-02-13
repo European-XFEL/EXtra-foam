@@ -237,6 +237,15 @@ class ImageView(QtGui.QWidget):
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
 
+    def updateImage(self):
+        """Update the current image."""
+        if self._image is None:
+            return
+
+        # The point is that we need to get the original image here instead
+        # of the masked image.
+        # TODO: to be implemented
+
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
 
@@ -318,6 +327,11 @@ class ImageView(QtGui.QWidget):
         self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
         self.setImage(self._orig_image)
         self._orig_image = None
+
+    @QtCore.pyqtSlot(float, float)
+    def onImageMaskChange(self, v0, v1):
+        # TODO: to implement
+        self.updateImage()
 
 
 class SinglePulseImageView(ImageView):
