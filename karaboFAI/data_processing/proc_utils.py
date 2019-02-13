@@ -245,4 +245,4 @@ def intersection(w1, h1, x1, y1, w2, h2, x2, y2):
     w = xx - x
     h = yy - y
 
-    return w, h, x1, y1
+    return w, h, x, y

@@ -4,8 +4,8 @@ import time
 import numpy as np
 
 from karaboFAI.data_processing import (
-    down_sample, nanmean_axis0_para, normalize_curve, quick_min_max,
-    slice_curve, up_sample
+    down_sample, intersection, nanmean_axis0_para, normalize_curve,
+    quick_min_max, slice_curve, up_sample
 )
 
 
@@ -162,3 +162,19 @@ class TestDataProcessor(unittest.TestCase):
 
         x = np.arange(1e6).reshape(1000, 1000)
         self.assertEqual((0, 996996), quick_min_max(x))
+
+    def test_interaction(self):
+        # one contains the other
+        self.assertListEqual(list(intersection(100, 80, 0, 0, 50, 30, 0, 0)),
+                             [50, 30, 0, 0])
+        self.assertListEqual(list(intersection(10, 5, 5, 2, 50, 50, 0, 0)),
+                             [10, 5, 5, 2])
+        # no interaction
+        self.assertListEqual(list(intersection(100, 100, 0, 0, 5, 5, -10, -10)),
+                             [-5, -5, 0, 0])
+
+        # partially intersect
+        self.assertListEqual(list(intersection(10, 10, 0, 0, 15, 15, -10, -10)),
+                             [5, 5, 0, 0])
+        self.assertListEqual(list(intersection(10, 10, 1, 1, 15, 15, 5, 10)),
+                             [6, 1, 5, 10])

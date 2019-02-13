@@ -196,7 +196,6 @@ class LaserOnOffProcessor(AbstractProcessor):
         if self.laser_mode == OpLaserMode.INACTIVE:
             return
 
-        print("absolute difference ", self.abs_difference)
         momentum = proc_data.momentum
         intensities = proc_data.intensities
 
