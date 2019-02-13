@@ -648,7 +648,7 @@ class DataProcessor(Worker):
 
             if self._crop_area is not None:
                 w, h, x, y = self._crop_area
-                assembled = assembled[y:y+h, x:x+w]
+                assembled = np.copy(assembled[y:y+h, x:x+w])
             else:
                 # 'assembled' is a reference to the array data received from the
                 # pyzmq. The array data is only readable since the data is owned
