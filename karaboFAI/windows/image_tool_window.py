@@ -288,6 +288,7 @@ class ImageToolWindow(AbstractWindow):
         self._mask_panel = MaskCtrlWidget("Masking tool")
         self._mask_panel.threshold_mask_sgn.connect(
             self._mediator.onThresholdMaskChange)
+        self._mask_panel.setFixedSize(self._mask_panel.minimumSizeHint())
 
         self._image_view.crop_area_change_sgn.connect(
             self._mediator.onCropAreaChange)
