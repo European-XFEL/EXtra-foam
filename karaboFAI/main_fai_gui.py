@@ -373,7 +373,7 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._windows.keys():
             w.clear()
 
-        if self._data.get().image_mean is None:
+        if self._data.get().image is None:
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
             return
 

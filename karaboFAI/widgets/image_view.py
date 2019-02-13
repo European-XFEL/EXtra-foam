@@ -187,7 +187,7 @@ class ImageView(QtGui.QWidget):
 
     def update(self, data):
         """karaboFAI interface."""
-        self.setImage(data.image_mean,
+        self.setImage(data.image.masked_mean_image,
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
@@ -349,10 +349,10 @@ class SinglePulseImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        images = data.images
-        threshold_mask = data.threshold_mask
+        images = data.image.images
+        threshold_mask = data.image.threshold_mask
 
-        max_id = len(data.images) - 1
+        max_id = data.image.n_images - 1
         if self.pulse_id <= max_id:
             np.clip(images[self.pulse_id], *threshold_mask,
                     images[self.pulse_id])
@@ -391,7 +391,7 @@ class RoiImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        image = data.image_mean
+        image = data.image.mean_image
 
         if self._is_roi1:
             if data.roi.roi1 is None:

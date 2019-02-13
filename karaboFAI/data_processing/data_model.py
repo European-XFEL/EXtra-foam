@@ -12,7 +12,11 @@ All rights reserved.
 import abc
 from enum import IntEnum
 
+import numpy as np
+from cached_property import cached_property
+
 from ..logger import logger
+from .proc_utils import nanmean_axis0_para
 
 
 class DataSource(IntEnum):
@@ -146,6 +150,103 @@ class CorrelationData(AbstractData):
         return params
 
 
+class ImageData:
+    """A class that manages the detector images.
+
+    Attributes:
+        _images (numpy.ndarray): detector images for all the pulses in
+            a train. shape = (pulse_id, y, x) for pulse-resolved
+            detectors and shape = (y, x) for train-resolved detectors.
+        _threshold_mask (tuple): (min, max) threshold of the pixel value.
+        _image_mask (numpy.ndarray): an image mask, default = None.
+            Shape = (y, x)
+        _crop_area (tuple): (w, h, x, y) of the cropped image.
+    """
+    def __init__(self, images, *,
+                 threshold_mask=None,
+                 image_mask=None,
+                 background_level=None,
+                 crop_area=None):
+        """Initialization."""
+        self._images = images
+        self._bkg = background_level
+        if images is not None:
+            self._images -= background_level
+        self._crop_area = crop_area
+
+        # the mask information is stored in the data so that all the
+        # processing and visualization can use the same mask
+        self._threshold_mask = threshold_mask
+        self._image_mask = image_mask
+
+    @cached_property
+    def n_images(self):
+        if self._images is None:
+            return 0
+        if self._images.ndim == 3:
+            return self._images.shape[0]
+        return 1
+
+    @property
+    def threshold_mask(self):
+        return self._threshold_mask
+
+    @cached_property
+    def image_mask(self):
+        if self._image_mask is None:
+            image_mask = np.zeros_like(self.mean_image, dtype=np.uint8)
+        else:
+            if self.image_mask.shape != self.mean_image.shape:
+                print("Invalid mask shape {} for image with shape {}".
+                      format(self._image_mask.shape, self.mean_image.shape))
+
+            image_mask = self.image_mask
+
+        return image_mask
+
+    @cached_property
+    def mean_image(self):
+        """Average of the detector images over pulses in a train.
+
+        :return numpy.ndarray: a single image, shape = (y, x)
+        """
+        if self._images.ndim == 3:
+            # pulse resolved
+            return nanmean_axis0_para(self.images,
+                                      max_workers=8, chunk_size=20)
+        # train resolved
+        return self.images
+
+    @cached_property
+    def masked_mean_image(self):
+        # keep both mean image and masked mean image so that we can
+        # recalculate the masked image
+        mean_image = np.copy(self.mean_image)
+
+        # Convert 'nan' to '-inf' and it will later be converted to the
+        # lower range of mask, which is usually 0.
+        # We do not convert 'nan' to 0 because: if the lower range of
+        # mask is a negative value, 0 will be converted to a value
+        # between 0 and 255 later.
+        mean_image[np.isnan(mean_image)] = -np.inf
+        # clip the array, which now will contain only numerical values
+        # within the mask range
+        np.clip(mean_image, *self._threshold_mask, out=mean_image)
+        return mean_image
+
+    @cached_property
+    def images(self):
+        """Return the cropped image.
+
+        Warning: it shares the memory space with self._images
+        """
+        if self._crop_area is None:
+            return self._images
+
+        w, h, x, y = self._crop_area
+        return self._images[..., y:y+h, x:x+w]
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
@@ -160,49 +261,37 @@ class ProcessedData:
             Shape = (pulse_id, intensity)
         intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
             integration result over pulses. Shape = (intensity,)
-        images (numpy.ndarray): detector images for all the pulses.
-            Shape = (pulse_id, y, x)
-        image_mean (numpy.ndarray): average of the detector images over
-            pulses. Shape = (y, x)
         roi (RoiData): stores ROI related data.
         on_off (LaserOnOffData): stores laser on-off related data.
         correlation (CorrelationData): correlation related data.
-        threshold_mask (tuple): (min, max) threshold of the image mask.
-        image_mask (numpy.ndarray): an image mask which is applied to all
-            the detector images, default = None. Shape = (y, x)
     """
 
-    def __init__(self, tid, *,
-                 momentum=None,
-                 intensities=None,
-                 intensity_mean=None,
-                 images=None,
-                 image_mean=None):
+    def __init__(self, tid, images=None, **kwargs):
         """Initialization."""
         if not isinstance(tid, int):
             raise ValueError("Train ID must be an integer!")
 
         self._tid = tid  # current Train ID
+        if images is None:
+            self._image_data = None
+        else:
+            self._image_data = ImageData(images, **kwargs)
 
-        self.momentum = momentum
-        self.intensities = intensities
-        self.intensity_mean = intensity_mean
-
-        self.images = images
-        self.image_mean = image_mean
+        self.momentum = None
+        self.intensities = None
+        self.intensity_mean = None
 
         self.roi = RoiData()
         self.on_off = LaserOnOffData()
         self.correlation = CorrelationData()
 
-        # the mask information is stored in the data so that all the
-        # processing and visualization can use the same mask
-        self.threshold_mask = None
-        self.image_mask = None
-
     @property
     def tid(self):
         return self._tid
+
+    @property
+    def image(self):
+        return self._image_data
 
     @classmethod
     def clear_roi_hist(cls):
@@ -236,7 +325,7 @@ class ProcessedData:
     def empty(self):
         """Check the goodness of the data."""
         logger.debug("Deprecated! Check the specific data!")
-        if self.images is None:
+        if self.image is None:
             return True
         return False
 

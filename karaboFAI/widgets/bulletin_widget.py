@@ -48,4 +48,4 @@ class BulletinWidget(QtGui.QWidget):
         self._trainid_lb.setText("Train ID: {}".format(data.tid))
         if self._pulse_resolved:
             self._npulses_lb.setText(
-                "Number of pulses per train: {}".format(len(data.images)))
+                "Number of pulses per train: {}".format(data.image.n_images))

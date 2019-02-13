@@ -27,7 +27,7 @@ from .data_model import (
     AiNormalizer, DataSource, FomName, OpLaserMode, ProcessedData,
     RoiValueType
 )
-from .proc_utils import nanmean_axis0_para, normalize_curve, slice_curve
+from .proc_utils import normalize_curve, slice_curve
 from ..config import config
 from ..logger import logger
 from ..widgets.pyqtgraph import QtCore
@@ -403,7 +403,7 @@ class DataProcessor(Worker):
         self.threshold_mask_sp = (config["MASK_RANGE"][0],
                                   config["MASK_RANGE"][1])
 
-        self.image_mask = None
+        self._image_mask = None
 
         self._crop_area = None
 
@@ -422,7 +422,7 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(str)
     def onImageMaskChanged(self, filename):
         try:
-            self.image_mask = fabio.open(filename).data
+            self._image_mask = fabio.open(filename).data
             msg = "Image mask {} loaded!".format(filename)
         except (IOError, OSError) as e:
             msg = str(e)
@@ -616,94 +616,14 @@ class DataProcessor(Worker):
 
         self.log("Data processor stopped!")
 
-    def preprocess_data(self, assembled, tid):
-        """Data pre-processing.
-
-        The original data contains 'nan', 'inf' and '-inf' pixels
-
-        :param numpy.ndarray assembled: assembled image data,
-            (pulse_id, y, x) for pulse-resolved data and (y, x)
-            for train-resolved data.
-        :param int tid: train ID.
-
-        :return ProcessedData: pre-processed data.
-        """
-        mask_min, mask_max = self.threshold_mask_sp
-
-        t0 = time.perf_counter()
-
-        if assembled.ndim == 3:
-            # pulse resolved
-
-            assembled = assembled[self.pulse_range_sp[0]:self.pulse_range_sp[1]]
-
-            if self._crop_area is not None:
-                w, h, x, y = self._crop_area
-                assembled = assembled[:, y:y+h, x:x+w]
-
-            assembled_mean = nanmean_axis0_para(assembled,
-                                                max_workers=8, chunk_size=20)
-        else:
-            # train resolved
-
-            if self._crop_area is not None:
-                w, h, x, y = self._crop_area
-                assembled = np.copy(assembled[y:y+h, x:x+w])
-            else:
-                # 'assembled' is a reference to the array data received
-                # from the pyzmq. The array data is only readable since
-                # the data is owned by a pointer in the zmq message (it
-                # is not copied). However, other data like data['metadata']
-                # is writeable.
-                assembled = np.copy(assembled)
-
-            # we want assembled to be untouched
-            assembled_mean = np.copy(assembled)
-
-        # Convert 'nan' to '-inf' and it will later be converted to the
-        # lower range of mask, which is usually 0.
-        # We do not convert 'nan' to 0 because: if the lower range of
-        # mask is a negative value, 0 will be converted to a value
-        # between 0 and 255 later.
-        assembled_mean[np.isnan(assembled_mean)] = -np.inf
-        # clip the array, which now will contain only numerical values
-        # within the mask range
-        np.clip(assembled_mean, mask_min, mask_max, out=assembled_mean)
-
-        if self.image_mask is None:
-            image_mask = np.zeros_like(assembled_mean, dtype=np.uint8)
-        else:
-            if self.image_mask.shape != assembled_mean.shape:
-                self.log("Invalid mask shape {} for image with shape {}".
-                         format(self.image_mask.shape, assembled_mean.shape))
-
-            image_mask = self.image_mask
-
-        logger.debug("Time for pre-processing: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
-
-        if self._bkg:
-            assembled_mean -= self._bkg
-
-        # Note: 'assembled' still contains 'inf' and '-inf', we only do
-        #       the clip later when necessary in order not to waste
-        #       computing power.
-        data = ProcessedData(tid)
-        data.images = assembled
-        data.image_mean = assembled_mean
-        data.threshold_mask = (mask_min, mask_max)
-        data.image_mask = image_mask
-
-        return data
-
     def perform_azimuthal_integration(self, data):
         """Perform azimuthal integration.
 
         :param ProcessedData data: data after pre-processing.
         """
-        assembled = data.images
-        image_mask = data.image_mask
-        mask_min, mask_max = data.threshold_mask
+        assembled = data.image.images
+        image_mask = data.image.image_mask
+        mask_min, mask_max = data.image.threshold_mask
 
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
                                        poni1=self.center_coordinate_sp[1],
@@ -796,8 +716,6 @@ class DataProcessor(Worker):
                 ret = np.sum(roi_img)
             elif self._roi_value_type == RoiValueType.MEAN:
                 ret = np.mean(roi_img)
-            elif self._roi_value_type == RoiValueType.MEDIAN:
-                ret = np.median(roi_img)
             else:
                 ret = 0
 
@@ -811,7 +729,7 @@ class DataProcessor(Worker):
 
         tid = data.tid
         if tid > 0:
-            img = data.image_mean
+            img = data.image.masked_mean_image
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
@@ -918,10 +836,16 @@ class DataProcessor(Worker):
         elif modules_data.ndim == 3:
             # In the future, we may need a position_all_modules for JungFrau
             # or we can simply stack the image.
-            assembled = modules_data.squeeze(axis=0)
+            #
+            # 'assembled' is a reference to the array data received
+            # from the pyzmq. The array data is only readable since
+            # the data is owned by a pointer in the zmq message (it
+            # is not copied). However, other data like data['metadata']
+            # is writeable. The same applies to FastCCD
+            assembled = np.copy(modules_data.squeeze(axis=0))
         # FastCCD
         else:
-            assembled = modules_data
+            assembled = np.copy(modules_data)
 
         logger.debug("Time for assembling: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
@@ -939,7 +863,11 @@ class DataProcessor(Worker):
         # integration -> perform laser on-off analysis -> add correlation
         # information
 
-        proc_data = self.preprocess_data(assembled, tid)
+        proc_data = ProcessedData(tid, assembled,
+                                  threshold_mask=self.threshold_mask_sp,
+                                  image_mask=self._image_mask,
+                                  background_level=self._bkg,
+                                  crop_area=self._crop_area)
 
         self.process_roi(proc_data)
 
