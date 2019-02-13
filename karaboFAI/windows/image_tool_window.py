@@ -180,16 +180,16 @@ class RoiCtrlWidget(BaseImageToolCtrlWidget):
         self.enableLockEdit()
 
 
-class MaskCtrlWidget(BaseImageToolCtrlWidget):
-    """Widget for masking image."""
+class MaskCtrlWidget(QtGui.QWidget):
+    """Widget inside the action bar for masking image."""
 
     threshold_mask_sgn = QtCore.pyqtSignal(float, float)
 
     _double_validator = QtGui.QDoubleValidator()
 
-    def __init__(self, title, *, parent=None):
-        """"""
-        super().__init__(title, parent=parent)
+    def __init__(self, parent=None):
+        """Initialization"""
+        super().__init__(parent=parent)
 
         self._min_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][0]))
         self._min_pixel_le.setValidator(self._double_validator)
@@ -202,16 +202,15 @@ class MaskCtrlWidget(BaseImageToolCtrlWidget):
 
         self.initUI()
 
+        self.setFixedSize(self.minimumSizeHint())
+
     def initUI(self):
-        threshold_layout = QtGui.QHBoxLayout()
-        threshold_layout.addWidget(QtGui.QLabel("Min.: "))
-        threshold_layout.addWidget(self._min_pixel_le)
-        threshold_layout.addWidget(QtGui.QLabel("Max.: "))
-        threshold_layout.addWidget(self._max_pixel_le)
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Min. val: "))
+        layout.addWidget(self._min_pixel_le)
+        layout.addWidget(QtGui.QLabel("Max. val: "))
+        layout.addWidget(self._max_pixel_le)
 
-        layout = QtGui.QVBoxLayout()
-
-        layout.addLayout(threshold_layout)
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
 
@@ -242,6 +241,8 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageView(
             lock_roi=False, hide_axis=False, enable_hover=True)
+        self._image_view.crop_area_change_sgn.connect(
+            self._mediator.onCropAreaChange)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(
@@ -285,14 +286,6 @@ class ImageToolWindow(AbstractWindow):
         self._roi2_ctrl.roi_region_change_sgn.connect(
             self._mediator.onRoi2Change)
 
-        self._mask_panel = MaskCtrlWidget("Masking tool")
-        self._mask_panel.threshold_mask_sgn.connect(
-            self._mediator.onThresholdMaskChange)
-        self._mask_panel.setFixedSize(self._mask_panel.minimumSizeHint())
-
-        self._image_view.crop_area_change_sgn.connect(
-            self._mediator.onCropAreaChange)
-
         #
         # tool bar
         #
@@ -322,8 +315,19 @@ class ImageToolWindow(AbstractWindow):
         self._restore_image_at.triggered.connect(
             self._image_view.onRestoreImage)
 
+        self._mask_ctrl = MaskCtrlWidget()
+        self._mask_ctrl.threshold_mask_sgn.connect(
+            self._mediator.onThresholdMaskChange)
+        self._mask_at = QtGui.QWidgetAction(self._tool_bar)
+        self._mask_at.setDefaultWidget(self._mask_ctrl)
+        self._tool_bar.addAction(self._mask_at)
+
         self._update_image_btn = QtGui.QPushButton("Update image")
+        self._update_image_btn.setStyleSheet('background-color: green')
         self._update_image_btn.clicked.connect(self.updateImage)
+        self._update_image_at = QtGui.QWidgetAction(self._tool_bar)
+        self._update_image_at.setDefaultWidget(self._update_image_btn)
+        self._tool_bar.addAction(self._update_image_at)
 
         self.initUI()
         self.resize(800, 800)
@@ -346,11 +350,9 @@ class ImageToolWindow(AbstractWindow):
         tool_layout.addWidget(self._roi1_ctrl)
         tool_layout.addWidget(self._roi2_ctrl)
 
-        layout = QtGui.QGridLayout()
-        layout.addWidget(self._image_view, 0, 0, 4, 4)
-        layout.addLayout(tool_layout, 4, 0, 1, 4)
-        layout.addWidget(self._mask_panel, 0, 4, 4, 1)
-        layout.addWidget(self._update_image_btn, 4, 4, 1, 1)
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self._image_view)
+        layout.addLayout(tool_layout)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
