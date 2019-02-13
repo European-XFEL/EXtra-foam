@@ -276,7 +276,8 @@ class ImageView(QtGui.QWidget):
             self._plot_widget.setTitle('')
         else:
             self._plot_widget.setTitle(
-                f'x={x}, y={y} ({self.image.shape[0] - y}), value={round(v, 1)}')
+                f'x={x}, y={y} ({self.image.shape[0] - y}), '
+                f'value={round(v, 1)}')
 
     def onCropToggle(self):
         if self.crop.isVisible():

@@ -298,7 +298,8 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar = self.addToolBar("Control")
 
         self._crop_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/crop_selection.png")),
+            QtGui.QIcon(os.path.join(self._root_dir,
+                                     "icons/crop_selection.png")),
             "Crop",
             self)
         self._tool_bar.addAction(self._crop_at)

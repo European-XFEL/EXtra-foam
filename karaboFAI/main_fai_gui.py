@@ -324,7 +324,7 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onOffPulseStateChange)
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
             self._proc_worker.onAbsDifferenceStateChange)
-        self.pump_probe_ctrl_widget.moving_average_window_sgn.connect(
+        self.pump_probe_ctrl_widget.moving_avg_window_sgn.connect(
             self._proc_worker.onMovingAverageWindowChange)
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._proc_worker.onLaserOnOffClear)

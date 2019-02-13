@@ -31,7 +31,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
-    moving_average_window_sgn = QtCore.pyqtSignal(int)
+    moving_avg_window_sgn = QtCore.pyqtSignal(int)
 
     abs_difference_sgn = QtCore.pyqtSignal(int)
 
@@ -61,8 +61,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
-        self._moving_average_window_le = QtGui.QLineEdit("600")
-        self._moving_average_window_le.setValidator(
+        self._moving_avg_window_le = QtGui.QLineEdit("1")
+        self._moving_avg_window_le.setValidator(
             QtGui.QIntValidator(1, 600))
 
         self.reset_btn = QtGui.QPushButton("Reset")
@@ -71,7 +71,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
-            self._moving_average_window_le,
+            self._moving_avg_window_le,
             self.abs_difference_cb,
         ]
 
@@ -88,7 +88,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             layout.addRow("On-pulse IDs: ", self._on_pulse_le)
             layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
         layout.addRow("Moving average window: ",
-                      self._moving_average_window_le)
+                      self._moving_avg_window_le)
         layout.addRow(self.reset_btn)
 
         self.setLayout(layout)
@@ -126,11 +126,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         abs_diff_state = self.abs_difference_cb.checkState()
         self.abs_difference_sgn.emit(abs_diff_state)
 
-        window_size = int(self._moving_average_window_le.text())
+        window_size = int(self._moving_avg_window_le.text())
         if window_size < 1:
             logger.error("Moving average window < 1!")
             return None
-        self.moving_average_window_sgn.emit(window_size)
+        self.moving_avg_window_sgn.emit(window_size)
 
         info = "\n<Optical laser mode>: {}".format(mode_description)
         if on_pulse_ids and off_pulse_ids:

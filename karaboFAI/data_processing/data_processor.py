@@ -167,7 +167,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         self.abs_difference = True
 
-        self.moving_average_window = 1
+        self.moving_avg_window = 1
 
         self.normalizer = None
         self.normalization_range = None
@@ -265,14 +265,14 @@ class LaserOnOffProcessor(AbstractProcessor):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.moving_average_window:
+                    elif len(self._on_pulses_hist) < self.moving_avg_window:
                         self._on_pulses_ma += \
                                 (this_on_pulses - self._on_pulses_ma) \
                                 / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.moving_average_window:
+                    elif len(self._on_pulses_hist) == self.moving_avg_window:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.moving_average_window
+                            / self.moving_avg_window
                     else:
                         raise ValueError  # should never reach here
 
@@ -292,14 +292,14 @@ class LaserOnOffProcessor(AbstractProcessor):
 
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.moving_average_window:
+            elif len(self._off_pulses_hist) <= self.moving_avg_window:
                 self._off_pulses_ma += \
                         (this_off_pulses - self._off_pulses_ma) \
                         / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.moving_average_window + 1:
+            elif len(self._off_pulses_hist) == self.moving_avg_window + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.moving_average_window
+                    / self.moving_avg_window
             else:
                 raise ValueError  # should never reach here
 
@@ -469,7 +469,7 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):
-        self._laser_on_off_processor.moving_average_window = value
+        self._laser_on_off_processor.moving_avg_window = value
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChange(self, lb, ub):
@@ -650,10 +650,11 @@ class DataProcessor(Worker):
                 w, h, x, y = self._crop_area
                 assembled = np.copy(assembled[y:y+h, x:x+w])
             else:
-                # 'assembled' is a reference to the array data received from the
-                # pyzmq. The array data is only readable since the data is owned
-                # by a pointer in the zmq message (it is not copied). However,
-                # other data like data['metadata'] is writeable.
+                # 'assembled' is a reference to the array data received
+                # from the pyzmq. The array data is only readable since
+                # the data is owned by a pointer in the zmq message (it
+                # is not copied). However, other data like data['metadata']
+                # is writeable.
                 assembled = np.copy(assembled)
 
             # we want assembled to be untouched
