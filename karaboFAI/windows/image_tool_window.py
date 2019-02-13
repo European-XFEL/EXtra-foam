@@ -19,7 +19,9 @@ from .base_window import AbstractWindow, SingletonWindow
 from ..config import config
 
 
-class BaseImageToolCtrlWidget(QtGui.QGroupBox):
+class RoiCtrlWidget(QtGui.QGroupBox):
+    """Widget for controlling of an ROI."""
+
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
                             'border: 0px;' \
                             'subcontrol-origin: margin;' \
@@ -28,13 +30,6 @@ class BaseImageToolCtrlWidget(QtGui.QGroupBox):
                             'padding-top: 5px;' \
                             'margin-top: 0.0em;}'
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
-
-
-class RoiCtrlWidget(BaseImageToolCtrlWidget):
-    """Widget for controlling of an ROI."""
     # activated, w, h, px, py
     roi_region_change_sgn = QtCore.Signal(bool, int, int, int, int)
 
@@ -47,6 +42,7 @@ class RoiCtrlWidget(BaseImageToolCtrlWidget):
         :param RectROI roi: RectROI object.
         """
         super().__init__(title, parent=parent)
+        self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
         self._roi = roi
 
