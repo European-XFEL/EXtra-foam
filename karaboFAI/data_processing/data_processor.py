@@ -553,8 +553,10 @@ class DataProcessor(Worker):
     def onCropAreaChange(self, restore, w, h, px, py):
         if restore:
             self._crop_area = None
+            self.log("Restore the original image.")
         else:
             self._crop_area = (w, h, px, py)
+            self.log(f"Crop area: w = {w}, h = {h}, px = {px}, py = {py}")
 
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
@@ -637,7 +639,7 @@ class DataProcessor(Worker):
 
             if self._crop_area is not None:
                 w, h, x, y = self._crop_area
-                assembled = assembled[:, x:x+w, y:y+h]
+                assembled = assembled[:, y:y+h, x:x+w]
 
             assembled_mean = nanmean_axis0_para(assembled,
                                                 max_workers=8, chunk_size=20)
@@ -646,7 +648,7 @@ class DataProcessor(Worker):
 
             if self._crop_area is not None:
                 w, h, x, y = self._crop_area
-                assembled = assembled[x:x+w, y:y+h]
+                assembled = assembled[y:y+h, x:x+w]
             else:
                 # 'assembled' is a reference to the array data received from the
                 # pyzmq. The array data is only readable since the data is owned
