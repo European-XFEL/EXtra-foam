@@ -40,7 +40,13 @@ class DataCtrlWidget(AbstractCtrlWidget):
             QtGui.QRadioButton("Calibrated data@ZMQ bridge"))
         self._source_type_rbts.append(
             QtGui.QRadioButton("Processed data@ZMQ bridge"))
-        self._source_type_rbts[int(config["SOURCE_TYPE"])].setChecked(True)
+
+        source_type = int(config["SOURCE_TYPE"])
+        self._source_type_rbts[source_type].setChecked(True)
+        # this is a temporary solution to switch the two difference
+        # source names for FastCCD at SCS
+        if self._source_name_cb.count() > source_type:
+            self._source_name_cb.setCurrentIndex(source_type)
 
         self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
 
