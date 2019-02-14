@@ -375,4 +375,4 @@ class ImageToolWindow(AbstractWindow):
         if data.image is None:
             return
 
-        self._image_view.setImage(data.image.masked_mean_image)
+        self._image_view.setImageData(data.image)

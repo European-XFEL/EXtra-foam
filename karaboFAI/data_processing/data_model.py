@@ -187,9 +187,17 @@ class ImageData:
             return self._images.shape[0]
         return 1
 
-    @property
-    def threshold_mask(self):
-        return self._threshold_mask
+    def pos(self, x, y):
+        if self._crop_area is None:
+            return x, y
+        _, _, x0, y0 = self._crop_area
+        return x + x0, y + y0
+
+    @cached_property
+    def shape(self):
+        if self._images is None:
+            return None
+        return self._images.shape[-2:]
 
     @cached_property
     def image_mask(self):
@@ -245,6 +253,22 @@ class ImageData:
 
         w, h, x, y = self._crop_area
         return self._images[..., y:y+h, x:x+w]
+
+    @property
+    def threshold_mask(self):
+        return self._threshold_mask
+
+    @threshold_mask.setter
+    def threshold_mask(self, v):
+        self._threshold_mask = v
+
+    @property
+    def crop_area(self):
+        return self._crop_area
+
+    @crop_area.setter
+    def crop_area(self, v):
+        self._crop_area = v
 
 
 class ProcessedData:
