@@ -86,8 +86,12 @@ class Config(dict):
     # PIXEL_SIZE float: detector pixel size, in meter
 
     # system config
+    # -------------
+    # "IMAGE_DATA_KEYS" tuple: image data keys, "image.data": AGIPD, LPD,
+    #                          "data.image.data": FastCCD,
     _default_sys_config = {
         "DETECTOR": '',  # detector name, leave it empty
+        "IMAGE_DATA_KEYS": ("image.data", "data.image.data"),
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,

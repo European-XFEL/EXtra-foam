@@ -384,6 +384,8 @@ class DataProcessor(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
+        self._image_data_key = None
+
         # whether to turn azimuthal integration on
         self._enable_ai = True
 
@@ -852,9 +854,16 @@ class DataProcessor(Worker):
         if from_file is False:
             tid = metadata[self.source_name_sp]["timestamp.tid"]
 
-            # Data coming from bridge in case of JungFrau will have
-            # different key. To be included
-            modules_data = data[self.source_name_sp]["image.data"]
+            det_data = data[self.source_name_sp]
+            if self._image_data_key is None:
+                try:
+                    self._image_data_key = [k for k in config['IMAGE_DATA_KEYS']
+                                            if k in det_data][0]
+                except IndexError:
+                    raise KeyError(f"None of the image data keys was found: "
+                                   f"{', '.join(config['IMAGE_DATA_KEY'])}")
+
+            modules_data = det_data[self._image_data_key]
 
             if config["DETECTOR"] == "LPD":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
