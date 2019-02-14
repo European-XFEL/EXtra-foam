@@ -2,23 +2,29 @@ Data Analysis with karaboFAI
 ============================
 
 
-Data analysis in real time
---------------------------
-
-
-To start **karaboFAI** on any online cluster:
+To start **karaboFAI** on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
+    source /gpfs/exfel/sw/software/modules
+    module load xfel
+    karaboFAI DETECTOR_NAME
+
+    # or a fallback solution
     /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
 
 
 Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
 
 .. note::
-   It usually takes a long time to start **karaboFAI** for the first time! This
+   It usually takes some time to start **karaboFAI** for the first time! This
    is actually an issue related to the infrastructure and not because
    **karaboFAI** is slow.
+
+
+Data analysis in real time
+--------------------------
+
 
 For real-time data analysis, the (calibrated) data is streamed via a
 `ZMQ bridge`, which is a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
@@ -51,20 +57,13 @@ the ``Data source`` panel.
 Data analysis with files
 ------------------------
 
-For now, **karaboFAI** can be used to replay the experiment with files.
+**karaboFAI** can be used to replay the experiment with files.
 
-The way to start **karaboFAI** on `Maxwell` cluster is the same as on the
-online cluster:
-
-.. code-block:: bash
-
-    /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
 
 The data is streamed from files after the ``Serve`` button is clicked. The user
-is free to use any available ``port``. ``Hostname`` is usually `localhost`, but
-it can also be a remote machine. Different from the real-time case, ``Source``
-here refers to the full path of the directory which contains the (calibrated)
-files.
+is free to use any available ``port``. ``Hostname`` should be `localhost` and
+the user needs to specify the full path of the directory which contains the
+(calibrated) files.
 
 .. image:: images/data_source_from_file.png
    :width: 300
