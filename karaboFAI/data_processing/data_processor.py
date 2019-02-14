@@ -657,7 +657,11 @@ class DataProcessor(Worker):
                 # the data is owned by a pointer in the zmq message (it
                 # is not copied). However, other data like data['metadata']
                 # is writeable.
-                assembled = np.copy(assembled)
+                #
+                # Instead of use np.copy(), we do the following trick. The
+                # reason is that for some detector, e.g. FastCCD, the online
+                # data type is integer.
+                assembled = assembled.astype(np.float32)
 
             # we want assembled to be untouched
             assembled_mean = np.copy(assembled)
