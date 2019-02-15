@@ -384,8 +384,6 @@ class DataProcessor(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
-        self._image_data_key = None
-
         # whether to turn azimuthal integration on
         self._enable_ai = True
 
@@ -860,21 +858,17 @@ class DataProcessor(Worker):
             tid = metadata[self.source_name_sp]["timestamp.tid"]
 
             det_data = data[self.source_name_sp]
-            if self._image_data_key is None:
-                try:
-                    self._image_data_key = [k for k in config['IMAGE_DATA_KEYS']
-                                            if k in det_data][0]
-                except IndexError:
-                    raise KeyError(f"None of the image data keys was found: "
-                                   f"{', '.join(config['IMAGE_DATA_KEY'])}")
-
-            modules_data = det_data[self._image_data_key]
 
             if config["DETECTOR"] == "LPD":
+                modules_data = det_data["image.data"]
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
             elif config["DETECTOR"] == "FastCCD":
+                modules_data = det_data["data.image"]
+                # (y, x, 1)
                 modules_data = modules_data.squeeze(axis=-1)
+            else:
+                raise NotImplementedError
         else:
             # get the train ID of the first metadata
             tid = next(iter(metadata.values()))["timestamp.tid"]

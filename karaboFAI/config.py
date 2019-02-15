@@ -91,7 +91,6 @@ class Config(dict):
     #                          "data.image.data": FastCCD,
     _default_sys_config = {
         "DETECTOR": '',  # detector name, leave it empty
-        "IMAGE_DATA_KEYS": ("image.data", "data.image"),
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
