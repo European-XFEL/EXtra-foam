@@ -648,20 +648,21 @@ class DataProcessor(Worker):
         else:
             # train resolved
 
+            # 'assembled' is a reference to the array data received
+            # from the pyzmq. The array data is only readable since
+            # the data is owned by a pointer in the zmq message (it
+            # is not copied). However, other data like data['metadata']
+            # is writeable.
+            #
+            # Instead of use np.copy(), we do the following trick. The
+            # reason is that: at one time I need to connect to the raw
+            # of FastCCD and the processing fails because of the data
+            # type.
+            assembled = assembled.astype(np.float32)
+
             if self._crop_area is not None:
                 w, h, x, y = self._crop_area
-                assembled = np.copy(assembled[y:y+h, x:x+w])
-            else:
-                # 'assembled' is a reference to the array data received
-                # from the pyzmq. The array data is only readable since
-                # the data is owned by a pointer in the zmq message (it
-                # is not copied). However, other data like data['metadata']
-                # is writeable.
-                #
-                # Instead of use np.copy(), we do the following trick. The
-                # reason is that for some detector, e.g. FastCCD, the online
-                # data type is integer.
-                assembled = assembled.astype(np.float32)
+                assembled = assembled[y:y+h, x:x+w]
 
             # we want assembled to be untouched
             assembled_mean = np.copy(assembled)
@@ -855,7 +856,7 @@ class DataProcessor(Worker):
 
         t0 = time.perf_counter()
 
-        if from_file is False:
+        if not from_file:
             tid = metadata[self.source_name_sp]["timestamp.tid"]
 
             det_data = data[self.source_name_sp]
@@ -872,6 +873,8 @@ class DataProcessor(Worker):
             if config["DETECTOR"] == "LPD":
                 # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
+            elif config["DETECTOR"] == "FastCCD":
+                modules_data = modules_data.squeeze(axis=-1)
         else:
             # get the train ID of the first metadata
             tid = next(iter(metadata.values()))["timestamp.tid"]
@@ -928,12 +931,12 @@ class DataProcessor(Worker):
         if modules_data.ndim == 4:
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
         # JungFrau
-        elif modules_data.ndim == 3:
+        elif config['DETECTOR'] == 'JungFrau':
             # In the future, we may need a position_all_modules for JungFrau
             # or we can simply stack the image.
             assembled = modules_data.squeeze(axis=0)
         # FastCCD
-        else:
+        elif config['DETECTOR'] == 'FastCCD':
             assembled = modules_data
 
         logger.debug("Time for assembling: {:.1f} ms"
