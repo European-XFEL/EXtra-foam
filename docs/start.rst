@@ -17,9 +17,18 @@ To start **karaboFAI** on online or `Maxwell` clusters:
 Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
 
 .. note::
-   It usually takes some time to start **karaboFAI** for the first time! This
-   is actually an issue related to the infrastructure and not because
-   **karaboFAI** is slow.
+    It usually takes some time to start **karaboFAI** for the first time! This
+    is actually an issue related to the infrastructure and not because
+    **karaboFAI** is slow.
+
+.. note::
+    In order to have a better experience with **karaboFAI** on the `Maxwell` cluster,
+    you should need FastX2_ at max-display_. There is also a link for downloading
+    the desktop client on the bottom-right corner when you opened max-display_. For
+    more details, please refer to the official website for FastX2_ at DESY.
+
+.. _FastX2: https://confluence.desy.de/display/IS/FastX2
+.. _max-display: https://max-display.desy.de:3443/
 
 
 Data analysis in real time
