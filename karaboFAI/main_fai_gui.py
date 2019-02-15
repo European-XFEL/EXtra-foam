@@ -95,7 +95,7 @@ class MainGUI(QtGui.QMainWindow):
     file_server_started_sgn = QtCore.pyqtSignal()
     file_server_stopped_sgn = QtCore.pyqtSignal()
 
-    def __init__(self, detector, screen_size=None):
+    def __init__(self, detector):
         """Initialization."""
         super().__init__()
 
@@ -211,12 +211,6 @@ class MainGUI(QtGui.QMainWindow):
         logging.getLogger().addHandler(self._logger)
 
         self._file_server = None
-
-        if screen_size is None:
-            self.move(0, 0)
-        else:
-            self.move(screen_size.width()/2 - self.width()/2,
-                      screen_size.height()/20)
 
         self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
@@ -515,6 +509,5 @@ def start():
         detector = detector.upper()
 
     app = QtGui.QApplication(sys.argv)
-    screen_size = app.primaryScreen().size()
-    ex = MainGUI(detector, screen_size=screen_size)
+    ex = MainGUI(detector)
     app.exec_()
