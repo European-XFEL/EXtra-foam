@@ -655,7 +655,7 @@ class DataProcessor(Worker):
             # Instead of use np.copy(), we do the following trick. The
             # reason is that: at one time I need to connect to the raw
             # of FastCCD and the processing fails because of the data
-            # type.
+            # type of FastCCD is integer.
             assembled = assembled.astype(np.float32)
 
             if self._crop_area is not None:
@@ -900,21 +900,29 @@ class DataProcessor(Worker):
                     return ProcessedData(tid)
 
             elif config["DETECTOR"] == 'JungFrau':
-                try:
-                    # (modules, y, x)
-                    modules_data = data[self.source_name_sp]['data.adc']
-                except KeyError:
+                if self.source_name_sp not in data:
                     self.log(f"Source [{self.source_name_sp}] is not in "
                              f"the received data!")
                     return ProcessedData(tid)
+                else:
+                    try:
+                        # (modules, y, x)
+                        modules_data = data[self.source_name_sp]['data.adc']
+                    except KeyError:
+                        raise
+
             elif config["DETECTOR"] == "FastCCD":
-                try:
-                    # (y, x)
-                    modules_data = data[self.source_name_sp]["data.image.pixels"]
-                except KeyError:
+                if self.source_name_sp not in data:
                     self.log(f"Source [{self.source_name_sp}] is not in "
                              f"the received data!")
                     return ProcessedData(tid)
+                else:
+                    try:
+                        # (y, x)
+                        modules_data = data[self.source_name_sp][
+                            'data.image.pixels']
+                    except KeyError:
+                        raise
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
