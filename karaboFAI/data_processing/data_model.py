@@ -157,6 +157,7 @@ class ImageData:
         _images (numpy.ndarray): detector images for all the pulses in
             a train. shape = (pulse_id, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
+        _bkg (int): background level of the detector image.
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
@@ -195,8 +196,6 @@ class ImageData:
 
     @cached_property
     def shape(self):
-        if self._images is None:
-            return None
         return self._images.shape[-2:]
 
     @cached_property
@@ -205,8 +204,9 @@ class ImageData:
             image_mask = np.zeros_like(self.mean_image, dtype=np.uint8)
         else:
             if self.image_mask.shape != self.mean_image.shape:
-                print("Invalid mask shape {} for image with shape {}".
-                      format(self._image_mask.shape, self.mean_image.shape))
+                raise ValueError(
+                    "Invalid mask shape {} for image with shape {}".
+                    format(self._image_mask.shape, self.mean_image.shape))
 
             image_mask = self.image_mask
 
@@ -229,22 +229,7 @@ class ImageData:
     def masked_mean_image(self):
         # keep both mean image and masked mean image so that we can
         # recalculate the masked image
-        #
-        # Another benefit of copy self.mean_image is:
-        #
-        # For train-resolved detector, self._images is a reference
-        # to the array data received from the pyzmq. This array data
-        # is only readable since the data is owned by a pointer in
-        # the zmq message (it is not copied). However, other data
-        # like data['metadata'] is writeable. Therefore, in order to
-        # apply mask on the 'mean_image', the image data must be
-        # copied.
-        #
-        # Instead of using np.copy(), we do the following trick. The
-        # reason is that: at one time I need to connect to the raw
-        # of FastCCD and the processing fails because of the data
-        # type of FastCCD is integer.
-        mean_image = self.mean_image.astype(np.float32)
+        mean_image = np.copy(self.mean_image)
 
         # Convert 'nan' to '-inf' and it will later be converted to the
         # lower range of mask, which is usually 0.

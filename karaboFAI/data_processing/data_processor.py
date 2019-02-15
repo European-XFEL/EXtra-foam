@@ -384,6 +384,8 @@ class DataProcessor(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
+        self._detector = config['DETECTOR']
+
         # whether to turn azimuthal integration on
         self._enable_ai = True
 
@@ -439,11 +441,11 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChanged(self, filename, quad_positions):
-        if config['DETECTOR'] == 'LPD':
+        if self._detector == 'LPD':
             with File(filename, 'r') as f:
                 self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
                     f, quad_positions)
-        elif config['DETECTOR'] == 'AGIPD':
+        elif self._detector == 'AGIPD':
             try:
                 from karabo_data.geometry2 import AGIPD_1MGeometry
             except (ImportError, ModuleNotFoundError):
@@ -765,6 +767,8 @@ class DataProcessor(Worker):
         """
         data, metadata = calibrated_data
 
+        detector = self._detector
+
         t0 = time.perf_counter()
 
         if not from_file:
@@ -772,26 +776,30 @@ class DataProcessor(Worker):
 
             det_data = data[self.source_name_sp]
 
-            if config["DETECTOR"] == "LPD":
+            if detector in ('AGIPD', 'LPD'):
                 modules_data = det_data["image.data"]
-                # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
-                modules_data = np.moveaxis(np.moveaxis(modules_data, 3, 0), 3, 2)
-            elif config["DETECTOR"] == "FastCCD":
+                if detector == 'LPD':
+                    # (modules, x, y, memory cells)
+                    # -> (memory cells, modules, y, x)
+                    modules_data = np.moveaxis(
+                        np.moveaxis(modules_data, 3, 0), 3, 2)
+            elif detector == "FastCCD":
                 modules_data = det_data["data.image"]
                 # (y, x, 1)
                 modules_data = modules_data.squeeze(axis=-1)
             else:
                 raise NotImplementedError
+
         else:
             # get the train ID of the first metadata
             tid = next(iter(metadata.values()))["timestamp.tid"]
 
             expected_shape = config["EXPECTED_SHAPE"]
 
-            if config["DETECTOR"] in ("LPD", "AGIPD"):
+            if detector in ('AGIPD', 'LPD'):
                 try:
                     modules_data = stack_detector_data(
-                        data, "image.data", only=config["DETECTOR"])
+                        data, "image.data", only=detector)
 
                     if not hasattr(modules_data, 'shape') \
                             or modules_data.shape[-len(expected_shape):] != expected_shape:
@@ -812,7 +820,7 @@ class DataProcessor(Worker):
                     self.log("Error in stacking detector data: " + str(e))
                     return ProcessedData(tid)
 
-            elif config["DETECTOR"] == 'JungFrau':
+            elif detector == 'JungFrau':
                 if self.source_name_sp not in data:
                     self.log(f"Source [{self.source_name_sp}] is not in "
                              f"the received data!")
@@ -824,7 +832,7 @@ class DataProcessor(Worker):
                     except KeyError:
                         raise
 
-            elif config["DETECTOR"] == "FastCCD":
+            elif detector == "FastCCD":
                 if self.source_name_sp not in data:
                     self.log(f"Source [{self.source_name_sp}] is not in "
                              f"the received data!")
@@ -836,23 +844,33 @@ class DataProcessor(Worker):
                             'data.image.pixels']
                     except KeyError:
                         raise
+            else:
+                raise NotImplementedError
 
         logger.debug("Time for moveaxis/stacking: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
         t0 = time.perf_counter()
 
+        # Note:
+        #
+        # For train-resolved detector, assembled is a reference
+        # to the array data received from the pyzmq. This array data
+        # is only readable since the data is owned by a pointer in
+        # the zmq message (it is not copied). However, other data
+        # like data['metadata'] is writeable.
+
         # AGIPD, LPD
-        if modules_data.ndim == 4:
+        if detector in ('AGIPD', 'LPD'):
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
         # JungFrau
-        elif config['DETECTOR'] == 'JungFrau':
+        elif detector == 'JungFrau':
             # In the future, we may need a position_all_modules for JungFrau
             # or we can simply stack the image.
-            assembled = modules_data.squeeze(axis=0)
+            assembled = np.copy(modules_data.squeeze(axis=0))
         # FastCCD
-        elif config['DETECTOR'] == 'FastCCD':
-            assembled = modules_data
+        elif detector == 'FastCCD':
+            assembled = np.copy(modules_data)
         else:
             raise NotImplementedError
 
