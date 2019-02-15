@@ -7,8 +7,7 @@ On the `Maxwell` cluster:
 
     git clone https://git.xfel.eu/gitlab/dataAnalysis/karaboFAI.git
     cd karaboFAI
-    source /gpfs/exfel/sw/software/modules
-    module load xfel
+    module load exfel exfel_anaconda3
     pip install .
 
 .. note::

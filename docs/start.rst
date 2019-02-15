@@ -7,7 +7,7 @@ To start **karaboFAI** on online or `Maxwell` clusters:
 .. code-block:: bash
 
     source /gpfs/exfel/sw/software/modules
-    module load xfel
+    module load exfel_anaconda3
     karaboFAI DETECTOR_NAME
 
     # or a fallback solution
