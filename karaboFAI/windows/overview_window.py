@@ -23,7 +23,6 @@ from ..widgets import (
 from ..config import config
 
 
-@SingletonWindow
 class OverviewWindow(DockerWindow):
     """OverviewWindow class.
 
@@ -173,7 +172,6 @@ class OverviewWindow(DockerWindow):
         self._vip_pulse2_img.pulse_id = value
 
 
-@SingletonWindow
 class OverviewWindowTrainResolved(DockerWindow):
     """OverviewWindow class.
 

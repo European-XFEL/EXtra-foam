@@ -16,7 +16,6 @@ from ..logger import logger
 from ..widgets import CorrelationWidget
 
 
-@SingletonWindow
 class CorrelationWindow(DockerWindow):
     """CorrelationWindow class.
 
