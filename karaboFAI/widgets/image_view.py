@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
+import weakref
 
 from ..widgets.pyqtgraph import QtCore, QtGui, HistogramLUTWidget, ROI
 from ..widgets import pyqtgraph as pg
@@ -172,7 +173,7 @@ class ImageView(QtGui.QWidget):
 
         self._is_initialized = False
         self._image = None
-        self._orig_image = None
+        self._image_data = None
         self._image_levels = None
 
         self.initUI()
@@ -187,7 +188,7 @@ class ImageView(QtGui.QWidget):
 
     def update(self, data):
         """karaboFAI interface."""
-        self.setImage(data.image_mean,
+        self.setImage(data.image.masked_mean_image,
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
@@ -226,9 +227,8 @@ class ImageView(QtGui.QWidget):
         :param bool auto_levels: whether to update the white/black levels
             to fit the image.
         """
+        self._image_item.setImage(img, autoLevels=False)
         self._image = img
-
-        self._image_item.setImage(self._image, autoLevels=False)
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -237,14 +237,14 @@ class ImageView(QtGui.QWidget):
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
 
-    def updateImage(self):
-        """Update the current image."""
-        if self._image is None:
-            return
+    def setImageData(self, image_data):
+        """Set the ImageData.
 
-        # The point is that we need to get the original image here instead
-        # of the masked image.
-        # TODO: to be implemented
+        :param ImageData image_data: ImageData instance
+        """
+        self._image_data = image_data
+        if image_data is not None:
+            self.setImage(image_data.masked_mean_image)
 
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
@@ -281,11 +281,12 @@ class ImageView(QtGui.QWidget):
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
+        x, y = self._image_data.pos(x, y)
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
             self._plot_widget.setTitle(
-                f'x={x}, y={y} ({self.image.shape[0] - y}), '
+                f'x={x}, y={y} ({self._image_data.shape[0] - y - 1}), '
                 f'value={round(v, 1)}')
 
     def onCropToggle(self):
@@ -304,10 +305,6 @@ class ImageView(QtGui.QWidget):
         if self._image is None:
             return
 
-        if self._orig_image is None:
-            # the current image is the original one
-            self._orig_image = self._image
-
         x, y = self.crop.pos()
         w, h = self.crop.size()
         h0, w0 = self._image.shape
@@ -316,22 +313,25 @@ class ImageView(QtGui.QWidget):
         if w > 0 and h > 0:
             # there is intersection
             self.crop_area_change_sgn.emit(False, w, h, x, y)
+            self._image_data.crop_area = (w, h, x, y)
             self.setImage(self._image[y:y+h, x:x+w])
 
         self.crop.hide()
 
     def onRestoreImage(self):
-        if self._orig_image is None:
+        if self._image_data is None:
             return
 
         self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
-        self.setImage(self._orig_image)
-        self._orig_image = None
+        self._image_data.crop_area = None
+        self.setImage(self._image_data.masked_mean_image)
 
     @QtCore.pyqtSlot(float, float)
     def onImageMaskChange(self, v0, v1):
-        # TODO: to implement
-        self.updateImage()
+        # recalculate the unmasked mean image
+        del self._image_data.__dict__['masked_mean_image']
+        self._image_data.threshold_mask = (v0, v1)
+        self.setImage(self._image_data.masked_mean_image)
 
 
 class SinglePulseImageView(ImageView):
@@ -349,10 +349,10 @@ class SinglePulseImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        images = data.images
-        threshold_mask = data.threshold_mask
+        images = data.image.images
+        threshold_mask = data.image.threshold_mask
 
-        max_id = len(data.images) - 1
+        max_id = data.image.n_images - 1
         if self.pulse_id <= max_id:
             np.clip(images[self.pulse_id], *threshold_mask,
                     images[self.pulse_id])
@@ -391,7 +391,7 @@ class RoiImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        image = data.image_mean
+        image = data.image.mean_image
 
         if self._is_roi1:
             if data.roi.roi1 is None:

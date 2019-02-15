@@ -161,7 +161,7 @@ class SinglePulseAiWidget(PlotWidget):
 
         if intensities.ndim == 2:
             # pulse resolved data
-            max_id = len(data.images) - 1
+            max_id = data.image.n_images - 1
             if self.pulse_id <= max_id:
                 self._pulse_plot.setData(momentum,
                                          intensities[self.pulse_id])

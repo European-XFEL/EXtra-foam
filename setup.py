@@ -47,6 +47,7 @@ setup(
         'karabo-bridge>=0.2.0',
         'toolz',
         'silx>=0.9.0',
+        'cached-property>=1.5.1',
     ],
     extras_require={
         'docs': [
