@@ -153,7 +153,7 @@ class Config(dict):
         "CENTER_X": 590,
         "PIXEL_SIZE": 0.2e-3,
         "COLOR_MAP": 'flame',
-        "MASK_RANGE": (0, 2500)
+        "MASK_RANGE": (0, 10000)
     }
 
     _default_lpd_config = {
@@ -180,7 +180,7 @@ class Config(dict):
         "CENTER_X": 580,
         "PIXEL_SIZE": 0.5e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 2500)
+        "MASK_RANGE": (0, 10000)
     }
 
     _default_jfrau_config = {
@@ -207,7 +207,7 @@ class Config(dict):
         "CENTER_X": 1400,
         "PIXEL_SIZE": 0.075e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 2500)
+        "MASK_RANGE": (0, 10000)
     }
 
     _default_fastccd_config = {
@@ -235,7 +235,7 @@ class Config(dict):
         "CENTER_X": 480,
         "PIXEL_SIZE": 0.030e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 2500)
+        "MASK_RANGE": (0, 10000)
     }
 
     _default_detector_configs = {
