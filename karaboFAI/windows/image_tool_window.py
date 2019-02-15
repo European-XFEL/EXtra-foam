@@ -190,10 +190,13 @@ class MaskCtrlWidget(QtGui.QWidget):
 
         self._min_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][0]))
         self._min_pixel_le.setValidator(self._double_validator)
-        self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
-        self._max_pixel_le.setValidator(self._double_validator)
+        # avoid collapse on online and maxwell clusters
+        self._min_pixel_le.setMinimumWidth(60)
         self._min_pixel_le.returnPressed.connect(
             self.thresholdMaskChangedEvent)
+        self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
+        self._max_pixel_le.setValidator(self._double_validator)
+        self._max_pixel_le.setMinimumWidth(60)
         self._max_pixel_le.returnPressed.connect(
             self.thresholdMaskChangedEvent)
 
