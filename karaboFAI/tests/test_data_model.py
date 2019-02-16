@@ -129,6 +129,19 @@ class TestImageData(unittest.TestCase):
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
+    def test_poni(self):
+        imgs = np.arange(20, dtype=np.float).reshape(5, 4)
+
+        img_data = ImageData(np.copy(imgs))
+
+        self.assertTupleEqual((0, 0), img_data.poni)
+        img_data.crop_area = (3, 2, 0, 1)
+        self.assertTupleEqual((-2, 0), img_data.poni)
+
+        img_data.crop_area = (3, 2, 1, 2)
+        img_data.poni = (-2, 12)
+        self.assertTupleEqual((-3, 11), img_data.poni)
+
 
 class TestTrainData(unittest.TestCase):
     def test_general(self):

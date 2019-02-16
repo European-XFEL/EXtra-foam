@@ -356,7 +356,7 @@ class DataProcessor(Worker):
         sample_distance_sp (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
-        center_coordinate_sp (tuple): (Cx, Cy), where Cx is the
+        poni_sp (tuple): (Cx, Cy), where Cx is the
             coordinate of the point of normal incidence along the
             detector's second dimension, in pixels, and Cy is the
             coordinate of the point of normal incidence along the
@@ -398,7 +398,7 @@ class DataProcessor(Worker):
         self.geom_sp = None
         self.wavelength_sp = None
         self.sample_distance_sp = None
-        self.center_coordinate_sp = None
+        self.poni_sp = None
         self.integration_method_sp = None
         self.integration_range_sp = None
         self.integration_points_sp = None
@@ -493,9 +493,8 @@ class DataProcessor(Worker):
         self.sample_distance_sp = value
 
     @QtCore.pyqtSlot(int, int)
-    def onCenterCoordinateChanged(self, cx, cy):
-        self.center_coordinate_sp = (cx * config["PIXEL_SIZE"],
-                                     cy * config["PIXEL_SIZE"])
+    def onPoniChange(self, cx, cy):
+        self.poni_sp = (cy, cx)  # be careful with the sequence
 
     @QtCore.pyqtSlot(str)
     def onIntegrationMethodChanged(self, value):
@@ -625,13 +624,15 @@ class DataProcessor(Worker):
         """
         assembled = data.image.images
         image_mask = data.image.image_mask
+        pixel_size = data.image.pixel_size
+        poni = data.image.poni
         mask_min, mask_max = data.image.threshold_mask
 
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
-                                       poni1=self.center_coordinate_sp[1],
-                                       poni2=self.center_coordinate_sp[0],
-                                       pixel1=config["PIXEL_SIZE"],
-                                       pixel2=config["PIXEL_SIZE"],
+                                       poni1=poni[0] * pixel_size,
+                                       poni2=poni[1] * pixel_size,
+                                       pixel1=pixel_size,
+                                       pixel2=pixel_size,
                                        rot1=0,
                                        rot2=0,
                                        rot3=0,
@@ -894,7 +895,9 @@ class DataProcessor(Worker):
                                   threshold_mask=self.threshold_mask_sp,
                                   image_mask=self._image_mask,
                                   background=self._bkg,
-                                  crop_area=self._crop_area)
+                                  crop_area=self._crop_area,
+                                  pixel_size=config["PIXEL_SIZE"],
+                                  poni=self.poni_sp)
 
         self.process_roi(proc_data)
 

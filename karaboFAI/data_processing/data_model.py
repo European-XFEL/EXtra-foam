@@ -166,12 +166,20 @@ class ImageData:
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
         _crop_area (tuple): (w, h, x, y) of the cropped image.
+        pixel_size (float): detector pixel size.
+        _poni (tuple): (Cx, Cy), where Cx is the coordinate of the point
+            of normal incidence along the detector's second dimension,
+            in pixels, and Cy is the coordinate of the point of normal
+            incidence along the detector's first dimension, in pixels.
+            default = (0, 0)
     """
     def __init__(self, images, *,
                  threshold_mask=None,
                  image_mask=None,
                  background=0.0,
-                 crop_area=None):
+                 crop_area=None,
+                 pixel_size=None,
+                 poni=None):
         """Initialization."""
         if not isinstance(images, np.ndarray):
             raise TypeError(r"Images must be numpy.ndarray!")
@@ -190,6 +198,10 @@ class ImageData:
         # processing and visualization can use the same mask
         self._threshold_mask = threshold_mask
         self._image_mask = image_mask
+
+        self.pixel_size = pixel_size
+
+        self._poni = (0, 0) if poni is None else poni
 
     @cached_property
     def n_images(self):
@@ -300,6 +312,21 @@ class ImageData:
         self._images -= v - self._bkg
         self._bkg = v
         self._reset_all_caches()
+
+    @property
+    def poni(self):
+        poni1 = self._poni[0]
+        poni2 = self._poni[1]
+        if self._crop_area is not None:
+            _, h, x, y = self._crop_area
+            poni1 -= self.shape[0] - y - h
+            poni2 -= x
+
+        return poni1, poni2
+
+    @poni.setter
+    def poni(self, v):
+        self._poni = v
 
     def _reset_all_caches(self):
         for key in ('masked_mean', 'mean', 'images'):
