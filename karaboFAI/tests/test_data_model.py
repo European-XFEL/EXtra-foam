@@ -1,12 +1,137 @@
 import unittest
 
+import numpy as np
+
 from karaboFAI.data_processing.data_model import (
-    AbstractData, ProcessedData, TrainData
+    AbstractData, ImageData, ProcessedData, TrainData
 )
 
 
-class TestDataModel(unittest.TestCase):
-    def test_TrainData(self):
+class TestImageData(unittest.TestCase):
+    def test_invalidInput(self):
+        with self.assertRaises(TypeError):
+            ImageData([1, 2, 3])
+
+        with self.assertRaises(ValueError):
+            ImageData(np.arange(2))
+
+        with self.assertRaises(ValueError):
+            ImageData(np.arange(16).reshape(2, 2, 2, 2))
+
+    def test_trainresolved(self):
+        imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
+
+        img_data = ImageData(np.copy(imgs_orig))
+        mask = (1, 4)
+        img_data.threshold_mask = mask
+        bkg = 1.0
+        crop_area = (3, 2, 0, 1)
+        img_data.background = bkg
+        img_data.crop_area = crop_area
+
+        # calculate the ground truth
+        w, h, x, y = crop_area
+        imgs = np.copy(imgs_orig)[y:y+h, x:x+w]
+        imgs -= bkg
+
+        self.assertEqual(1, img_data.n_images)
+
+        np.testing.assert_array_equal(imgs, img_data.images)
+
+        np.testing.assert_array_equal(imgs, img_data.mean)
+
+        # test threshold mask
+        masked_imgs = np.copy(imgs)
+        masked_imgs[(masked_imgs < mask[0])] = mask[0]
+        masked_imgs[(masked_imgs > mask[1])] = mask[1]
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change threshold mask
+        img_data.threshold_mask = None
+
+        imgs = np.copy(imgs_orig)[y:y+h, x:x+w]  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = imgs
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change crop
+        img_data.crop_area = None
+
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = np.copy(imgs)
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change background
+        bkg = 0
+        img_data.background = bkg
+
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = np.copy(imgs)
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+    def test_pulseresolved(self):
+        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.threshold_mask = (1, 4)
+        bkg = 1.0
+        crop_area = (3, 2, 0, 1)
+        img_data.background = bkg
+        img_data.crop_area = crop_area
+
+        # calculate the ground truth
+        w, h, x, y = crop_area
+        imgs = np.copy(imgs_orig)[:, y:y + h, x:x + w]
+        imgs -= bkg
+
+        self.assertEqual(2, img_data.n_images)
+
+        np.testing.assert_array_equal(imgs, img_data.images)
+
+        np.testing.assert_array_equal(imgs.mean(axis=0), img_data.mean)
+
+        # test threshold mask
+        masked_imgs = imgs.mean(axis=0)
+        masked_imgs[(masked_imgs < 1)] = 1.0
+        masked_imgs[(masked_imgs > 4)] = 4.0
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change threshold mask
+        mask = (2, 12)
+        img_data.threshold_mask = mask
+
+        imgs = np.copy(imgs_orig)[:, y:y+h, x:x+w]  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = np.copy(imgs.mean(axis=0))
+        masked_imgs[(masked_imgs < mask[0])] = mask[0]
+        masked_imgs[(masked_imgs > mask[1])] = mask[1]
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change crop
+        img_data.crop_area = None
+
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = imgs.mean(axis=0)
+        masked_imgs[(masked_imgs < mask[0])] = mask[0]
+        masked_imgs[(masked_imgs > mask[1])] = mask[1]
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+        # change background
+        bkg = 0
+        img_data.background = bkg
+
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
+        imgs -= bkg
+        masked_imgs = imgs.mean(axis=0)
+        masked_imgs[(masked_imgs < mask[0])] = mask[0]
+        masked_imgs[(masked_imgs > mask[1])] = mask[1]
+        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+
+class TestTrainData(unittest.TestCase):
+    def test_general(self):
         class Dummy(AbstractData):
             values = TrainData()
 
@@ -33,7 +158,9 @@ class TestDataModel(unittest.TestCase):
         self.assertListEqual([], tids)
         self.assertListEqual([], values)
 
-    def test_ProcessedData(self):
+
+class TestProcessedData(unittest.TestCase):
+    def test_general(self):
         data = ProcessedData(1234)
         self.assertEqual(1234, data.tid)
 

@@ -173,8 +173,15 @@ class ImageData:
                  background=0.0,
                  crop_area=None):
         """Initialization."""
+        if not isinstance(images, np.ndarray):
+            raise TypeError(r"Images must be numpy.ndarray!")
+
+        if images.ndim <= 1 or images.ndim > 3:
+            raise ValueError(
+                f"The shape of images must be (y, x) or (n_pulses, y, x)!")
         self._images = images
         self._bkg = background
+        self._images -= background
         # difference between the current background and the previous one
         self._bkg_diff = background
         self._crop_area = crop_area
@@ -186,8 +193,6 @@ class ImageData:
 
     @cached_property
     def n_images(self):
-        if self._images is None:
-            return 0
         if self._images.ndim == 3:
             return self._images.shape[0]
         return 1
@@ -222,17 +227,10 @@ class ImageData:
         Warning: it shares the memory space with self._images
         """
         if self._crop_area is None:
-            imgs = self._images
-        else:
-            w, h, x, y = self._crop_area
-            imgs = self._images[..., y:y+h, x:x+w]
+            return self._images
 
-        if not self._bkg:
-            return imgs
-
-        # inplace operation
-        imgs -= self._bkg_diff
-        return imgs
+        w, h, x, y = self._crop_area
+        return self._images[..., y:y+h, x:x+w]
 
     @cached_property
     def mean(self):
@@ -261,7 +259,8 @@ class ImageData:
         mean_image[np.isnan(mean_image)] = -np.inf
         # clip the array, which now will contain only numerical values
         # within the mask range
-        np.clip(mean_image, *self._threshold_mask, out=mean_image)
+        if self._threshold_mask is not None:
+            np.clip(mean_image, *self._threshold_mask, out=mean_image)
         return mean_image
 
     @property
@@ -273,7 +272,10 @@ class ImageData:
         if self._threshold_mask == v:
             return
         self._threshold_mask = v
-        del self.__dict__['masked_mean']
+        try:
+            del self.__dict__['masked_mean']
+        except KeyError:
+            pass
 
     @property
     def crop_area(self):
@@ -284,9 +286,7 @@ class ImageData:
         if self._crop_area == v:
             return
         self._crop_area = v
-        del self.__dict__['masked_mean']
-        del self.__dict__['mean']
-        del self.__dict__['images']
+        self._reset_all_caches()
 
     @property
     def background(self):
@@ -296,11 +296,17 @@ class ImageData:
     def background(self, v):
         if self._bkg == v:
             return
-        self._bkg_diff = v - self._bkg
+
+        self._images -= v - self._bkg
         self._bkg = v
-        del self.__dict__['masked_mean']
-        del self.__dict__['mean']
-        del self.__dict__['images']
+        self._reset_all_caches()
+
+    def _reset_all_caches(self):
+        for key in ('masked_mean', 'mean', 'images'):
+            try:
+                del self.__dict__[key]
+            except KeyError:
+                pass
 
 
 class ProcessedData:
