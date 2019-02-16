@@ -297,7 +297,16 @@ class ImageData:
     def crop_area(self, v):
         if self._crop_area == v:
             return
-        self._crop_area = v
+
+        if self._crop_area is None or v is None:
+            self._crop_area = v
+        else:
+            # the new crop area is in the coordinate system of the
+            # previous one, which could already be cropped
+            _, _, x0, y0 = self._crop_area
+            w, h, x, y = v
+            self._crop_area = (w, h, x0 + x, y0 + y)
+
         self._reset_all_caches()
 
     @property

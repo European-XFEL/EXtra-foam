@@ -18,6 +18,33 @@ class TestImageData(unittest.TestCase):
         with self.assertRaises(ValueError):
             ImageData(np.arange(16).reshape(2, 2, 2, 2))
 
+    def test_cropping(self):
+        imgs = np.arange(100, dtype=np.float).reshape(10, 10)
+        img_data = ImageData(imgs)
+
+        img_data.crop_area = (6, 7, 1, 2)
+        self.assertTupleEqual(img_data.mean.shape, (7, 6))
+        self.assertTupleEqual((1, 2), img_data.pos(0, 0))
+
+        # in the coordinate system of the cropped area
+        img_data.crop_area = (3, 4, 0, 1)
+        self.assertTupleEqual(img_data.mean.shape, (4, 3))
+        self.assertTupleEqual((1, 3), img_data.pos(0, 0))
+
+    def test_poni(self):
+        imgs = np.arange(20, dtype=np.float).reshape(5, 4)
+
+        img_data = ImageData(np.copy(imgs))
+
+        self.assertTupleEqual((0, 0), img_data.poni)
+        img_data.crop_area = (3, 2, 0, 1)
+        self.assertTupleEqual((-2, 0), img_data.poni)
+
+        img_data.crop_area = None  # reset first
+        img_data.crop_area = (3, 2, 1, 2)
+        img_data.poni = (-2, 12)
+        self.assertTupleEqual((-3, 11), img_data.poni)
+
     def test_trainresolved(self):
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
 
@@ -128,19 +155,6 @@ class TestImageData(unittest.TestCase):
         masked_imgs[(masked_imgs < mask[0])] = mask[0]
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-    def test_poni(self):
-        imgs = np.arange(20, dtype=np.float).reshape(5, 4)
-
-        img_data = ImageData(np.copy(imgs))
-
-        self.assertTupleEqual((0, 0), img_data.poni)
-        img_data.crop_area = (3, 2, 0, 1)
-        self.assertTupleEqual((-2, 0), img_data.poni)
-
-        img_data.crop_area = (3, 2, 1, 2)
-        img_data.poni = (-2, 12)
-        self.assertTupleEqual((-3, 11), img_data.poni)
 
 
 class TestTrainData(unittest.TestCase):
