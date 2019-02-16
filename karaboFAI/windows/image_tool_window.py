@@ -306,9 +306,7 @@ class ImageAnalysis(ImageView):
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
-            self._plot_widget.setTitle(
-                f'x={x}, y={y} ({self._image_data.shape[0] - y - 1}), '
-                f'value={round(v, 1)}')
+            self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
     def onCropToggle(self):
         if self.crop.isVisible():
