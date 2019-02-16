@@ -411,7 +411,7 @@ class DataProcessor(Worker):
 
         self.roi1 = None
         self.roi2 = None
-        self._bkg = 0
+        self._bkg = 0.0
         self._roi_value_type = None
 
         self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
@@ -538,7 +538,7 @@ class DataProcessor(Worker):
         else:
             self.roi2 = None
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.pyqtSlot(float)
     def onBkgChange(self, v):
         self._bkg = v
 
@@ -731,7 +731,7 @@ class DataProcessor(Worker):
 
         tid = data.tid
         if tid > 0:
-            img = data.image.masked_mean_image
+            img = data.image.masked_mean
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
@@ -893,7 +893,7 @@ class DataProcessor(Worker):
         proc_data = ProcessedData(tid, assembled,
                                   threshold_mask=self.threshold_mask_sp,
                                   image_mask=self._image_mask,
-                                  background_level=self._bkg,
+                                  background=self._bkg,
                                   crop_area=self._crop_area)
 
         self.process_roi(proc_data)

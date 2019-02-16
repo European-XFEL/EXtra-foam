@@ -207,9 +207,9 @@ class MaskCtrlWidget(QtGui.QWidget):
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
-        layout.addWidget(QtGui.QLabel("Min. val: "))
+        layout.addWidget(QtGui.QLabel("Min. mask: "))
         layout.addWidget(self._min_pixel_le)
-        layout.addWidget(QtGui.QLabel("Max. val: "))
+        layout.addWidget(QtGui.QLabel("Max. mask: "))
         layout.addWidget(self._max_pixel_le)
 
         self.setLayout(layout)
@@ -298,7 +298,7 @@ class ImageAnalysis(ImageView):
         """
         self._image_data = image_data
         if image_data is not None:
-            self.setImage(image_data.masked_mean_image)
+            self.setImage(image_data.masked_mean)
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
@@ -345,14 +345,18 @@ class ImageAnalysis(ImageView):
 
         self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
         self._image_data.crop_area = None
-        self.setImage(self._image_data.masked_mean_image)
+        self.setImage(self._image_data.masked_mean)
+
+    @QtCore.pyqtSlot()
+    def onBkgChange(self):
+        self._image_data.background = float(self.sender().text())
+        self.setImage(self._image_data.masked_mean)
 
     @QtCore.pyqtSlot(float, float)
     def onImageMaskChange(self, v0, v1):
         # recalculate the unmasked mean image
-        del self._image_data.__dict__['masked_mean_image']
         self._image_data.threshold_mask = (v0, v1)
-        self.setImage(self._image_data.masked_mean_image)
+        self.setImage(self._image_data.masked_mean)
 
 
 @SingletonWindow
@@ -400,9 +404,10 @@ class ImageToolWindow(AbstractWindow):
         self._roi_value_type_cb.currentTextChanged.emit(
             self._roi_value_type_cb.currentText())
 
-        self._bkg_le = QtGui.QLineEdit(str(0))
-        self._bkg_le.setValidator(QtGui.QIntValidator())
+        self._bkg_le = QtGui.QLineEdit(str(0.0))
+        self._bkg_le.setValidator(QtGui.QDoubleValidator())
         self._bkg_le.editingFinished.connect(self._mediator.onBkgChange)
+        self._bkg_le.editingFinished.connect(self._image_view.onBkgChange)
 
         self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
         self._lock_bkg_cb.stateChanged.connect(

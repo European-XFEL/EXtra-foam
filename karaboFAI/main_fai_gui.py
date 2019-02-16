@@ -43,7 +43,7 @@ class Mediator(QtCore.QObject):
     roi_value_tyoe_change_sgn = QtCore.pyqtSignal(object)
     roi1_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
     roi2_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    bkg_change_sgn = QtCore.pyqtSignal(int)
+    bkg_change_sgn = QtCore.pyqtSignal(float)
 
     crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
@@ -72,7 +72,7 @@ class Mediator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def onBkgChange(self):
-        self.bkg_change_sgn.emit(int(self.sender().text()))
+        self.bkg_change_sgn.emit(float(self.sender().text()))
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onCropAreaChange(self, restore, w, h, px, py):

@@ -136,7 +136,7 @@ class ImageView(QtGui.QWidget):
 
     def update(self, data):
         """karaboFAI interface."""
-        self.setImage(data.image.masked_mean_image,
+        self.setImage(data.image.masked_mean,
                       auto_range=False,
                       auto_levels=(not self._is_initialized))
 
@@ -276,7 +276,7 @@ class RoiImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        image = data.image.mean_image
+        image = data.image.masked_mean
 
         if self._is_roi1:
             if data.roi.roi1 is None:
@@ -287,9 +287,4 @@ class RoiImageView(ImageView):
                 return
             w, h, px, py = data.roi.roi2
 
-        self.setImage(image[py:py+h, px:px+w],
-                      auto_range=False,
-                      auto_levels=(not self._is_initialized))
-
-        if not self._is_initialized:
-            self._is_initialized = True
+        self.setImage(image[py:py+h, px:px+w])

@@ -153,11 +153,15 @@ class CorrelationData(AbstractData):
 class ImageData:
     """A class that manages the detector images.
 
+    Operation flow:
+
+    cropping -> remove background -> calculate mean image -> apply mask
+
     Attributes:
         _images (numpy.ndarray): detector images for all the pulses in
             a train. shape = (pulse_id, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
-        _bkg (int): background level of the detector image.
+        _bkg (float): background level of the detector image.
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
@@ -166,13 +170,13 @@ class ImageData:
     def __init__(self, images, *,
                  threshold_mask=None,
                  image_mask=None,
-                 background_level=None,
+                 background=0.0,
                  crop_area=None):
         """Initialization."""
         self._images = images
-        self._bkg = background_level
-        if images is not None:
-            self._images -= background_level
+        self._bkg = background
+        # difference between the current background and the previous one
+        self._bkg_diff = background
         self._crop_area = crop_area
 
         # the mask information is stored in the data so that all the
@@ -200,20 +204,38 @@ class ImageData:
 
     @cached_property
     def image_mask(self):
+        ref = self.mean
         if self._image_mask is None:
-            image_mask = np.zeros_like(self.mean_image, dtype=np.uint8)
-        else:
-            if self.image_mask.shape != self.mean_image.shape:
-                raise ValueError(
-                    "Invalid mask shape {} for image with shape {}".
-                    format(self._image_mask.shape, self.mean_image.shape))
+            return np.zeros_like(ref, dtype=np.uint8)
 
-            image_mask = self.image_mask
+        if self.image_mask.shape != ref.shape:
+            raise ValueError(
+                "Invalid mask shape {} for image with shape {}".
+                format(self._image_mask.shape, ref.shape))
 
-        return image_mask
+        return self.image_mask
 
     @cached_property
-    def mean_image(self):
+    def images(self):
+        """Return the cropped, background-subtracted image.
+
+        Warning: it shares the memory space with self._images
+        """
+        if self._crop_area is None:
+            imgs = self._images
+        else:
+            w, h, x, y = self._crop_area
+            imgs = self._images[..., y:y+h, x:x+w]
+
+        if not self._bkg:
+            return imgs
+
+        # inplace operation
+        imgs -= self._bkg_diff
+        return imgs
+
+    @cached_property
+    def mean(self):
         """Average of the detector images over pulses in a train.
 
         :return numpy.ndarray: a single image, shape = (y, x)
@@ -226,10 +248,10 @@ class ImageData:
         return self.images
 
     @cached_property
-    def masked_mean_image(self):
+    def masked_mean(self):
         # keep both mean image and masked mean image so that we can
         # recalculate the masked image
-        mean_image = np.copy(self.mean_image)
+        mean_image = np.copy(self.mean)
 
         # Convert 'nan' to '-inf' and it will later be converted to the
         # lower range of mask, which is usually 0.
@@ -242,25 +264,16 @@ class ImageData:
         np.clip(mean_image, *self._threshold_mask, out=mean_image)
         return mean_image
 
-    @cached_property
-    def images(self):
-        """Return the cropped image.
-
-        Warning: it shares the memory space with self._images
-        """
-        if self._crop_area is None:
-            return self._images
-
-        w, h, x, y = self._crop_area
-        return self._images[..., y:y+h, x:x+w]
-
     @property
     def threshold_mask(self):
         return self._threshold_mask
 
     @threshold_mask.setter
     def threshold_mask(self, v):
+        if self._threshold_mask == v:
+            return
         self._threshold_mask = v
+        del self.__dict__['masked_mean']
 
     @property
     def crop_area(self):
@@ -268,7 +281,26 @@ class ImageData:
 
     @crop_area.setter
     def crop_area(self, v):
+        if self._crop_area == v:
+            return
         self._crop_area = v
+        del self.__dict__['masked_mean']
+        del self.__dict__['mean']
+        del self.__dict__['images']
+
+    @property
+    def background(self):
+        return self._bkg
+
+    @background.setter
+    def background(self, v):
+        if self._bkg == v:
+            return
+        self._bkg_diff = v - self._bkg
+        self._bkg = v
+        del self.__dict__['masked_mean']
+        del self.__dict__['mean']
+        del self.__dict__['images']
 
 
 class ProcessedData:
