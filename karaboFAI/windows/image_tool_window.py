@@ -14,9 +14,10 @@ from collections import OrderedDict
 
 from .base_window import AbstractWindow, SingletonWindow
 
-from ..widgets.pyqtgraph import QtCore, QtGui
-from ..data_processing import RoiValueType
-from ..widgets import ImageView
+from ..widgets.pyqtgraph import QtCore, QtGui, ROI
+from ..widgets import pyqtgraph as pg
+from ..data_processing import RoiValueType, intersection
+from ..widgets import colorMapFactory, ImageView, make_pen
 from ..config import config
 
 
@@ -219,6 +220,141 @@ class MaskCtrlWidget(QtGui.QWidget):
                                      float(self._max_pixel_le.text()))
 
 
+class CropROI(ROI):
+    """Rectangular cropping widget."""
+    def __init__(self, pos, size):
+        """Initialization."""
+        super().__init__(pos, size,
+                         translateSnap=True,
+                         scaleSnap=True,
+                         pen=make_pen('y', width=1, style=QtCore.Qt.DashDotLine))
+
+        self._add_handles()
+
+    def _add_handles(self):
+        # position, scaling center
+        self.addScaleHandle([1, 1], [0, 0])
+        self.addScaleHandle([1, 0.5], [0, 0.5])
+        self.addScaleHandle([0.5, 1], [0.5, 0])
+        self.addScaleHandle([0, 0.5], [1, 0.5])
+        self.addScaleHandle([0.5, 0], [0.5, 1])
+
+
+class ImageItem(pg.ImageItem):
+    """ImageItem with mouseHover event."""
+    mouse_moved_sgn = QtCore.pyqtSignal(int, int, float)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def hoverEvent(self, event):
+        """Override."""
+        if event.isExit():
+            x = -1  # out of image
+            y = -1  # out of image
+            value = 0.0
+        else:
+            pos = event.pos()
+            x = int(pos.x())
+            y = int(pos.y())
+            value = self.image[y, x]
+
+        self.mouse_moved_sgn.emit(x, y, value)
+
+
+class ImageAnalysis(ImageView):
+    """ImageAnalysis widget.
+
+    Advance image analysis widget built on top of ImageView widget.
+    It provides tools like masking, cropping, etc.
+    """
+    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+
+    def __init__(self, *args, **kwargs):
+        """Initialization."""
+        super().__init__(*args, **kwargs)
+
+        self._plot_widget.setTitle('')  # reserve space for displaying
+
+        # set the customized ImageItem
+        self._image_item = ImageItem(border='w')
+        self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
+        self._plot_widget.addItem(self._image_item)
+        self.invertY(True)
+        self.setAspectLocked(True)
+        self._hist_widget.setImageItem(self._image_item)
+
+        # add cropping widget
+        self.crop = CropROI((0, 0), (100, 100))
+        self.crop.hide()
+        self._plot_widget.addItem(self.crop)
+
+        self._image_data = None
+
+    def setImageData(self, image_data):
+        """Set the ImageData.
+
+        :param ImageData image_data: ImageData instance
+        """
+        self._image_data = image_data
+        if image_data is not None:
+            self.setImage(image_data.masked_mean_image)
+
+    @QtCore.pyqtSlot(int, int, float)
+    def onMouseMoved(self, x, y, v):
+        x, y = self._image_data.pos(x, y)
+        if x < 0 or y < 0:
+            self._plot_widget.setTitle('')
+        else:
+            self._plot_widget.setTitle(
+                f'x={x}, y={y} ({self._image_data.shape[0] - y - 1}), '
+                f'value={round(v, 1)}')
+
+    def onCropToggle(self):
+        if self.crop.isVisible():
+            self.crop.hide()
+        else:
+            if self._image is not None:
+                self.crop.setPos(0, 0)
+                self.crop.setSize(self._image.shape[::-1])
+            self.crop.show()
+
+    def onCropConfirmed(self):
+        if not self.crop.isVisible():
+            return
+
+        if self._image is None:
+            return
+
+        x, y = self.crop.pos()
+        w, h = self.crop.size()
+        h0, w0 = self._image.shape
+
+        w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
+        if w > 0 and h > 0:
+            # there is intersection
+            self.crop_area_change_sgn.emit(False, w, h, x, y)
+            self._image_data.crop_area = (w, h, x, y)
+            self.setImage(self._image[y:y+h, x:x+w])
+
+        self.crop.hide()
+
+    def onRestoreImage(self):
+        if self._image_data is None:
+            return
+
+        self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
+        self._image_data.crop_area = None
+        self.setImage(self._image_data.masked_mean_image)
+
+    @QtCore.pyqtSlot(float, float)
+    def onImageMaskChange(self, v0, v1):
+        # recalculate the unmasked mean image
+        del self._image_data.__dict__['masked_mean_image']
+        self._image_data.threshold_mask = (v0, v1)
+        self.setImage(self._image_data.masked_mean_image)
+
+
 @SingletonWindow
 class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
@@ -239,8 +375,7 @@ class ImageToolWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageView(
-            lock_roi=False, hide_axis=False, enable_hover=True)
+        self._image_view = ImageAnalysis(lock_roi=False, hide_axis=False)
         self._image_view.crop_area_change_sgn.connect(
             self._mediator.onCropAreaChange)
 
@@ -372,7 +507,7 @@ class ImageToolWindow(AbstractWindow):
     def updateImage(self):
         """Update the current image.
 
-        It is used for updating the image manually.
+        It is only used for updating the image manually.
         """
         data = self._data.get()
         if data.image is None:
