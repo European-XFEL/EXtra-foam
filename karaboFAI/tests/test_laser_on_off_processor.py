@@ -22,9 +22,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
                               [0, 1, 0, 1, 0],
                               [1, 0, 1, 0, 1]])
         for i in range(10):
-            self._data.append(ProcessedData(i,
-                                            momentum=np.linspace(1, 5, 5),
-                                            intensities=(i+1)*intensity))
+            self._data.append(ProcessedData(i))
+            self._data[i].momentum = np.linspace(1, 5, 5)
+            self._data[i].intensities = (i+1)*intensity
 
     def testNormalMode(self):
         self._proc.laser_mode = OpLaserMode.NORMAL
