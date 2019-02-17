@@ -246,14 +246,9 @@ class SinglePulseImageView(ImageView):
                          "pulse ID ({})".format(self.pulse_id, max_id))
             return
 
-        self.setImage(images[self.pulse_id],
-                      auto_range=False,
-                      auto_levels=(not self._is_initialized))
+        self.setImage(images[self.pulse_id])
 
         self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
 
 
 class RoiImageView(ImageView):
