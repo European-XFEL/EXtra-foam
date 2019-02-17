@@ -13,10 +13,10 @@ All rights reserved.
 from ..widgets.pyqtgraph import QtCore
 from ..widgets.pyqtgraph.dockarea import Dock
 
-from .base_window import DockerWindow, SingletonWindow
+from .base_window import DockerWindow
 from ..logger import logger
 from ..widgets import (
-    BulletinWidget, ImageView, LaserOnOffAiWidget, LaserOnOffFomWidget,
+    BulletinWidget, AssembledImageView, LaserOnOffAiWidget, LaserOnOffFomWidget,
     make_pen, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
@@ -48,7 +48,7 @@ class OverviewWindow(DockerWindow):
         super().__init__(*args, **kwargs)
 
         self._bulletin_widget = BulletinWidget(parent=self)
-        self._assembled_image = ImageView(parent=self)
+        self._assembled_image = AssembledImageView(parent=self)
         self._multi_pulse_ai = MultiPulseAiWidget(parent=self)
 
         self._sample_degradation = SampleDegradationWidget(parent=self)
@@ -194,7 +194,7 @@ class OverviewWindowTrainResolved(DockerWindow):
 
         self._bulletin_widget = BulletinWidget(pulse_resolved=False,
                                                parent=self)
-        self._assembled_image = ImageView(parent=self)
+        self._assembled_image = AssembledImageView(parent=self)
         self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
 
         self._roi1_image = RoiImageView(parent=self)

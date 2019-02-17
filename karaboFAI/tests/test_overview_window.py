@@ -2,7 +2,7 @@ import unittest
 from collections import Counter
 
 from karaboFAI.widgets import (
-    BulletinWidget, ImageView, MultiPulseAiWidget,
+    BulletinWidget, AssembledImageView, MultiPulseAiWidget,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.main_fai_gui import MainGUI
@@ -23,7 +23,7 @@ class TestOverviewWindow(unittest.TestCase):
             counter[key.__class__] += 1
 
         self.assertEqual(counter[BulletinWidget], 1)
-        self.assertEqual(counter[ImageView], 1)
+        self.assertEqual(counter[AssembledImageView], 1)
         self.assertEqual(counter[MultiPulseAiWidget], 1)
         self.assertEqual(counter[SampleDegradationWidget], 1)
         self.assertEqual(counter[SinglePulseAiWidget], 2)

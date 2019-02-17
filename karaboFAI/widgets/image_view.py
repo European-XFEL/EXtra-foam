@@ -136,14 +136,7 @@ class ImageView(QtGui.QWidget):
 
     def update(self, data):
         """karaboFAI interface."""
-        self.setImage(data.image.masked_mean,
-                      auto_range=False,
-                      auto_levels=(not self._is_initialized))
-
-        self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
+        pass
 
     def updateROI(self, data):
         if data.roi.roi1 is not None:
@@ -219,6 +212,37 @@ class ImageView(QtGui.QWidget):
         super().close()
 
 
+class AssembledImageView(ImageView):
+    """AssembledImageView class.
+
+    Widget for displaying the assembled image of the average of all pulses
+    in a train.
+    """
+    def __init__(self, *, pulse_id=0, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self._threshold_mask = None  # current threshold mask
+
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+
+    def update(self, data):
+        """Override."""
+        threshold_mask = data.image.threshold_mask
+        if threshold_mask != self._threshold_mask:
+            self._is_initialized = False
+            self._threshold_mask = threshold_mask
+
+        self.setImage(data.image.masked_mean,
+                      auto_range=False,
+                      auto_levels=(not self._is_initialized))
+
+        self.updateROI(data)
+
+        if not self._is_initialized:
+            self._is_initialized = True
+
+
 class SinglePulseImageView(ImageView):
     """SinglePulseImageView class.
 
@@ -229,8 +253,6 @@ class SinglePulseImageView(ImageView):
         super().__init__(parent=parent)
 
         self.pulse_id = pulse_id
-
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
@@ -267,7 +289,6 @@ class RoiImageView(ImageView):
 
         self.roi1.hide()
         self.roi2.hide()
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""

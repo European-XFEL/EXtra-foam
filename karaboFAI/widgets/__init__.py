@@ -10,7 +10,9 @@ from .misc_widgets import (
     colorMapFactory, GuiLogger, InputDialogWithCheckBox, make_brush, make_pen
 )
 
-from .image_view import ImageView, RoiImageView, SinglePulseImageView
+from .image_view import (
+    AssembledImageView, ImageView, RoiImageView, SinglePulseImageView
+)
 from .plot_widget import (
     CorrelationWidget, LaserOnOffAiWidget, LaserOnOffFomWidget,
     MultiPulseAiWidget, RoiValueMonitor, SampleDegradationWidget,
@@ -44,6 +46,7 @@ __all__.extend([
 
 # add image widgets
 __all__.extend([
+    "AssembledImageView",
     "ImageView",
     "RoiImageView",
     "SinglePulseImageView",
