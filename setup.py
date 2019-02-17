@@ -41,7 +41,7 @@ setup(
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
-        'pyFAI>=0.17.0',
+        'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
         'karabo-data>=0.2.0',
         'karabo-bridge>=0.2.0',

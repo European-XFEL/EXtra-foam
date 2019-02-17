@@ -678,6 +678,15 @@ class DataProcessor(Worker):
         poni = data.image.poni
         mask_min, mask_max = data.image.threshold_mask
 
+        # instantiate a AzimuthalIntegrator object causes the following
+        # warning message since pyFAI version 0.16.0:
+        #
+        # QObject::connect: Cannot queue arguments of type 'QTextBlock'
+        # (Make sure 'QTextBlock' is registered using qRegisterMetaType().)
+        # QObject::connect: Cannot queue arguments of type 'QTextCursor'
+        # (Make sure 'QTextCursor' is registered using qRegisterMetaType().)
+        #
+        # which may cause segmentation fault!!!
         ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
                                        poni1=poni[0] * pixel_size,
                                        poni2=poni[1] * pixel_size,
