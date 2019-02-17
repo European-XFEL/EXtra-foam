@@ -27,8 +27,7 @@ from .widgets import (
     GeometryCtrlWidget, GuiLogger, PumpProbeCtrlWidget
 )
 from .windows import (
-    CorrelationWindow, DrawMaskWindow, ImageToolWindow,
-    OverviewWindow, OverviewWindowTrainResolved
+    CorrelationWindow, DrawMaskWindow, ImageToolWindow, OverviewWindow
 )
 from .file_server import FileServer
 from .config import config
@@ -38,6 +37,9 @@ from . import __version__
 
 
 class Mediator(QtCore.QObject):
+    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
+    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
+
     roi_displayed_range_sgn = QtCore.pyqtSignal(int)
     roi_hist_clear_sgn = QtCore.pyqtSignal()
     roi_value_tyoe_change_sgn = QtCore.pyqtSignal(object)
@@ -48,6 +50,14 @@ class Mediator(QtCore.QObject):
     crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
     threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
+
+    @QtCore.pyqtSlot(int)
+    def onPulseID1Updated(self, v):
+        self.vip_pulse_id1_sgn.emit(v)
+
+    @QtCore.pyqtSlot(int)
+    def onPulseID2Updated(self, v):
+        self.vip_pulse_id2_sgn.emit(v)
 
     @QtCore.pyqtSlot()
     def onRoiDisplayedRangeChange(self):
@@ -168,14 +178,11 @@ class MainGUI(QtGui.QMainWindow):
             QtGui.QIcon(os.path.join(self._root_dir, "icons/overview.png")),
             "Overview",
             self)
-        if self._pulse_resolved:
-            open_overview_window_at.triggered.connect(
-                lambda: OverviewWindow(self._data, parent=self))
-        else:
-            open_overview_window_at.triggered.connect(
-                lambda: OverviewWindowTrainResolved(
-                    self._data, mediator=self._mediator, parent=self))
-
+        open_overview_window_at.triggered.connect(
+            lambda: OverviewWindow(self._data,
+                                   mediator=self._mediator,
+                                   pulse_resolved=self._pulse_resolved,
+                                   parent=self))
         self._tool_bar.addAction(open_overview_window_at)
 
         #
@@ -185,8 +192,8 @@ class MainGUI(QtGui.QMainWindow):
             self)
         open_correlation_window_at.triggered.connect(
             lambda: CorrelationWindow(self._data,
-                                      parent=self,
-                                      pulse_resolved=self._pulse_resolved))
+                                      pulse_resolved=self._pulse_resolved,
+                                      parent=self))
         self._tool_bar.addAction(open_correlation_window_at)
 
         # *************************************************************
@@ -298,6 +305,10 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onNormalizationRangeChange)
         self.analysis_ctrl_widget.integration_range_sgn.connect(
             self._proc_worker.onFomIntegrationRangeChange)
+        self.analysis_ctrl_widget.vip_pulse_id1_sgn.connect(
+            self._mediator.onPulseID1Updated)
+        self.analysis_ctrl_widget.vip_pulse_id2_sgn.connect(
+            self._mediator.onPulseID2Updated)
 
         self._mediator.roi_hist_clear_sgn.connect(
             self._proc_worker.onRoiHistClear)

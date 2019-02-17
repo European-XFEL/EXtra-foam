@@ -2,7 +2,7 @@ from .bragg_spot_window import BraggSpotsWindow
 from .correlation_window import CorrelationWindow
 from .draw_mask_window import DrawMaskWindow
 from .image_tool_window import ImageToolWindow
-from .overview_window import OverviewWindow, OverviewWindowTrainResolved
+from .overview_window import OverviewWindow
 
 
 __all__ = [
@@ -11,5 +11,4 @@ __all__ = [
     "DrawMaskWindow",
     "ImageToolWindow",
     "OverviewWindow",
-    "OverviewWindowTrainResolved"
 ]

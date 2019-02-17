@@ -50,7 +50,8 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *, mediator=None, pulse_resolved=True, parent=None):
+    def __init__(self, data, *,
+                 mediator=None, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
