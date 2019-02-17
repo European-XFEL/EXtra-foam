@@ -37,11 +37,11 @@ class TestImageData(unittest.TestCase):
 
         self.assertTupleEqual((0, 0), img_data.poni)
         img_data.crop_area = (3, 2, 0, 1)
-        self.assertTupleEqual((-2, 0), img_data.poni)
+        self.assertTupleEqual((-1, 0), img_data.poni)
 
         img_data.crop_area = (3, 2, 1, 2)
         img_data.poni = (-2, 12)
-        self.assertTupleEqual((-3, 11), img_data.poni)
+        self.assertTupleEqual((-4, 11), img_data.poni)
 
     def test_trainresolved(self):
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)

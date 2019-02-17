@@ -319,8 +319,8 @@ class ImageData:
         poni1 = self._poni[0]
         poni2 = self._poni[1]
         if self._crop_area is not None:
-            _, h, x, y = self._crop_area
-            poni1 -= self.shape[0] - y - h
+            _, _, x, y = self._crop_area
+            poni1 -= y
             poni2 -= x
 
         return poni1, poni2
