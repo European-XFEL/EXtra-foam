@@ -130,8 +130,7 @@ class CorrelationProcessor(AbstractProcessor):
             _, _, info = getattr(proc_data.correlation, param)
             if info['device_id'] == "Any":
                 # orig_data cannot be empty here
-                tid = next(iter(orig_data.values()))['metadata']["timestamp.tid"]
-                setattr(proc_data.correlation, param, (fom, tid))
+                setattr(proc_data.correlation, param, (fom, proc_data.tid))
             else:
                 try:
                     device_data = orig_data[info['device_id']]
