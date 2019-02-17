@@ -295,7 +295,7 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onIntegrationPointsChanged)
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
+            self._proc_worker.onPulseIdRangeChange)
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
             self._proc_worker.onEnableAiStateChange)
         self.analysis_ctrl_widget.enable_ai_cb.setChecked(True)

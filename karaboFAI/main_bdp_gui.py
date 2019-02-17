@@ -158,7 +158,7 @@ class MainGUI(QtGui.QMainWindow):
             self._daq_worker.onServerTcpChanged)
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
+            self._proc_worker.onPulseIdRangeChange)
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
@@ -353,7 +353,7 @@ class MainBdpGUI(MainGUI):
             self._proc_worker.onGeometryChanged)
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._proc_worker.onPulseRangeChanged)
+            self._proc_worker.onPulseIdRangeChange)
 
     def initUI(self):
         layout = QtGui.QVBoxLayout()

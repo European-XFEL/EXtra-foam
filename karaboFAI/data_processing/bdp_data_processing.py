@@ -104,7 +104,7 @@ class BdpDataProcessor(Worker):
         pass
 
     @QtCore.pyqtSlot(int, int)
-    def onPulseRangeChanged(self, lb, ub):
+    def onPulseIdRangeChange(self, lb, ub):
         self.pulse_range_sp = (lb, ub)
 
     def run(self):

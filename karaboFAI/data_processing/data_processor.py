@@ -396,7 +396,7 @@ class DataProcessor(Worker):
     Attributes:
         source_type_sp (DataSource): type of the data source.
         source_name_sp (str): source name of the detector
-        pulse_range_sp (tuple): (min, max) pulse ID to be processed.
+        pulse_id_range_sp (tuple): (min, max) pulse ID to be processed.
             (int, int)
         geom_sp (LPDGeometry): geometry.
         wavelength_sp (float): photon wavelength in meter.
@@ -441,7 +441,7 @@ class DataProcessor(Worker):
 
         self.source_type_sp = None
         self.source_name_sp = None
-        self.pulse_range_sp = None
+        self.pulse_id_range_sp = None
         self.geom_sp = None
         self.wavelength_sp = None
         self.sample_distance_sp = None
@@ -570,8 +570,8 @@ class DataProcessor(Worker):
         self.wavelength_sp = HC_E / photon_energy
 
     @QtCore.pyqtSlot(int, int)
-    def onPulseRangeChanged(self, lb, ub):
-        self.pulse_range_sp = (lb, ub)
+    def onPulseIdRangeChange(self, lb, ub):
+        self.pulse_id_range_sp = (lb, ub)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Change(self, activated, w, h, px, py):
@@ -934,6 +934,9 @@ class DataProcessor(Worker):
             self.log("Bad shape {} in assembled image of train {}".
                      format(assembled.shape, tid))
             return ProcessedData(tid)
+
+        if assembled.ndim == 3:
+            assembled = assembled[slice(*self.pulse_id_range_sp)]
 
         # data processing work flow:
         #
