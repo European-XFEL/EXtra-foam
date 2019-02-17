@@ -160,8 +160,21 @@ class TestDataProcessor(unittest.TestCase):
 
         self.assertEqual((0, 9), quick_min_max(np.arange(10).reshape(2, 5)))
 
-        x = np.arange(1e6).reshape(1000, 1000)
-        self.assertEqual((0, 996996), quick_min_max(x))
+        x = np.arange(4e6).reshape(4000, 1000)
+        self.assertEqual((0, 3984996), quick_min_max(x))
+
+        # test speed
+
+        t0 = time.time()
+        quick_min_max(x)
+        dt_new = time.time() - t0
+
+        t0 = time.time()
+        x.min(), x.max()
+        dt_normal = time.time() - t0
+
+        # 5 is conservative
+        self.assertLess(5*dt_new, dt_normal)
 
     def test_interaction(self):
         # one contains the other

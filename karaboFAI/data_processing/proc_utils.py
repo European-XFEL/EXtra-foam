@@ -222,7 +222,7 @@ def quick_min_max(x):
     while x.size > 1e5:
         sl = [slice(None)] * x.ndim
         sl[np.argmax(x.shape)] = slice(None, None, 2)
-        x = x[sl]
+        x = x[tuple(sl)]
 
     return float(np.nanmin(x)), float(np.nanmax(x))
 
