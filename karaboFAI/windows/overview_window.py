@@ -77,11 +77,6 @@ class OverviewWindow(DockerWindow):
 
         self.resize(self._TOTAL_W, self._TOTAL_W)
 
-        # tell MainGUI to emit signals in order to update shared parameters
-        # Note: must be called after all the Widgets which own shared
-        # parameters have been initialized
-        parent.updateSharedParameters()
-
         self.update()
 
         logger.info("Open {}".format(self.__class__.__name__))
@@ -214,11 +209,6 @@ class OverviewWindowTrainResolved(DockerWindow):
         self.initUI()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
-
-        # tell MainGUI to emit signals in order to update shared parameters
-        # Note: must be called after all the Widgets which own shared
-        # parameters have been initialized
-        self.parent().updateSharedParameters()
 
         self.update()
 

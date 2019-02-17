@@ -379,6 +379,8 @@ class ProcessedData:
         self.intensities = None
         self.intensity_mean = None
 
+        self.sample_degradation_foms = None
+
         self.roi = RoiData()
         self.on_off = LaserOnOffData()
         self.correlation = CorrelationData()
@@ -390,6 +392,13 @@ class ProcessedData:
     @property
     def image(self):
         return self._image_data
+
+    @property
+    def n_pulses(self):
+        if self._image_data is None:
+            return 0
+
+        return self._image_data.n_images
 
     @classmethod
     def clear_roi_hist(cls):
@@ -422,7 +431,7 @@ class ProcessedData:
 
     def empty(self):
         """Check the goodness of the data."""
-        logger.debug("Deprecated! Check the specific data!")
+        logger.debug("Deprecated! use self.n_pulses!")
         if self.image is None:
             return True
         return False

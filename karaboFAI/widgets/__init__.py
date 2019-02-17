@@ -10,11 +10,11 @@ from .misc_widgets import (
     colorMapFactory, GuiLogger, InputDialogWithCheckBox, make_brush, make_pen
 )
 
-from .sample_degradation_widget import SampleDegradationWidget
 from .image_view import ImageView, RoiImageView, SinglePulseImageView
 from .plot_widget import (
     CorrelationWidget, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    MultiPulseAiWidget, SinglePulseAiWidget, RoiValueMonitor
+    MultiPulseAiWidget, RoiValueMonitor, SampleDegradationWidget,
+    SinglePulseAiWidget
 )
 from .bulletin_widget import BulletinWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget

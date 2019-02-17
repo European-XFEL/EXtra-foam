@@ -10,7 +10,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .pyqtgraph import (
-    GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui, ScatterPlotItem
+    BarGraphItem, GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
+    ScatterPlotItem
 )
 from .misc_widgets import make_brush, make_pen
 from ..logger import logger
@@ -161,7 +162,7 @@ class SinglePulseAiWidget(PlotWidget):
 
         if intensities.ndim == 2:
             # pulse resolved data
-            max_id = data.image.n_images - 1
+            max_id = data.n_pulses - 1
             if self.pulse_id <= max_id:
                 self._pulse_plot.setData(momentum,
                                          intensities[self.pulse_id])
@@ -220,6 +221,40 @@ class MultiPulseAiWidget(PlotWidget):
         else:
             for item, intensity in zip(self.plotItem.items, intensities):
                 item.setData(momentum, intensity)
+
+
+class SampleDegradationWidget(PlotWidget):
+    """SampleDegradationWindow class.
+
+    A widget which allows users to monitor the degradation of the sample
+    within a train.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self._plot = BarGraphItem(x=[], height=[], width=0.6, brush='b')
+        self.addItem(self._plot)
+
+        self.setLabel('left', "Integrated difference (arb.)")
+        self.setLabel('bottom', "Pulse ID")
+        self.setTitle('FOM with respect to the first pulse')
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._plot.setOpts(x=[], height=[])
+
+    def update(self, data):
+        """Override."""
+        foms = data.sample_degradation_foms
+        if foms is None:
+            return
+
+        self._plot.setOpts(x=range(len(foms)), height=foms)
 
 
 class RoiValueMonitor(PlotWidget):

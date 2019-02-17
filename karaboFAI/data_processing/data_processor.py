@@ -146,6 +146,54 @@ class CorrelationProcessor(AbstractProcessor):
                              f"'{info['property']}'")
 
 
+class SampleDegradationProcessor(AbstractProcessor):
+    """Process the data.
+
+    Note: only for pulse-resolved detectors.
+
+    :param ProcessedData proc_data: data after the assembling and
+        azimuthal integration for individual pulses.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.normalization_range = None
+        self.integration_range = None
+
+    def process(self, proc_data):
+        """Process the proc_data.
+
+        :param ProcessedData proc_data: data after the assembling and
+            azimuthal integration for individual pulses.
+        """
+        if proc_data.n_pulses == 1:
+            # train-resolved
+            return
+
+        momentum = proc_data.momentum
+        intensities = proc_data.intensities
+
+        # normalize azimuthal integration curves for each pulse
+        normalized_pulse_intensities = []
+        for pulse_intensity in intensities:
+            normalized = normalize_curve(
+                pulse_intensity, momentum, *self.normalization_range)
+            normalized_pulse_intensities.append(normalized)
+
+        # calculate the different between each pulse and the first one
+        diffs = [p - normalized_pulse_intensities[0]
+                 for p in normalized_pulse_intensities]
+
+        # calculate the figure of merit for each pulse
+        foms = []
+        for diff in diffs:
+            fom = slice_curve(diff, momentum, *self.integration_range)[0]
+            foms.append(np.sum(np.abs(fom)))
+
+        proc_data.sample_degradation_foms = foms
+
+
 class LaserOnOffProcessor(AbstractProcessor):
     """LaserOnOffProcessor class.
 
@@ -187,7 +235,7 @@ class LaserOnOffProcessor(AbstractProcessor):
         self._off_pulses_hist = deque()
 
     def process(self, proc_data):
-        """Process the data
+        """Process the data.
 
         :param ProcessedData proc_data: data after the assembling and
             azimuthal integration for individual pulses.
@@ -413,8 +461,9 @@ class DataProcessor(Worker):
         self._bkg = 0.0
         self._roi_value_type = None
 
-        self._laser_on_off_processor = LaserOnOffProcessor(parent=self)
-        self._correlation_processor = CorrelationProcessor(parent=self)
+        self._laser_on_off_proc = LaserOnOffProcessor(parent=self)
+        self._sample_degradation_proc = SampleDegradationProcessor(parent=self)
+        self._correlation_proc = CorrelationProcessor(parent=self)
 
     @QtCore.pyqtSlot(str)
     def onMessageReceived(self, msg):
@@ -456,36 +505,38 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        if mode != self._laser_on_off_processor.laser_mode:
-            self._laser_on_off_processor.laser_mode = mode
-            self._laser_on_off_processor.reset()
+        if mode != self._laser_on_off_proc.laser_mode:
+            self._laser_on_off_proc.laser_mode = mode
+            self._laser_on_off_proc.reset()
             ProcessedData.clear_onoff_hist()
 
-        self._laser_on_off_processor.on_pulse_ids = on_pulse_ids
-        self._laser_on_off_processor.off_pulse_ids = off_pulse_ids
+        self._laser_on_off_proc.on_pulse_ids = on_pulse_ids
+        self._laser_on_off_proc.off_pulse_ids = off_pulse_ids
 
     @QtCore.pyqtSlot(int)
     def onAbsDifferenceStateChange(self, state):
-        self._laser_on_off_processor.abs_difference = state == QtCore.Qt.Checked
+        self._laser_on_off_proc.abs_difference = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):
-        self._laser_on_off_processor.moving_avg_window = value
+        self._laser_on_off_proc.moving_avg_window = value
 
     @QtCore.pyqtSlot(float, float)
     def onNormalizationRangeChange(self, lb, ub):
-        self._laser_on_off_processor.normalization_range = (lb, ub)
-        self._correlation_processor.normalization_range = (lb, ub)
+        self._laser_on_off_proc.normalization_range = (lb, ub)
+        self._sample_degradation_proc.normalization_range = (lb, ub)
+        self._correlation_proc.normalization_range = (lb, ub)
 
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
-        self._laser_on_off_processor.integration_range = (lb, ub)
-        self._correlation_processor.integration_range = (lb, ub)
+        self._laser_on_off_proc.integration_range = (lb, ub)
+        self._sample_degradation_proc.integration_range = (lb, ub)
+        self._correlation_proc.integration_range = (lb, ub)
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
-        self._laser_on_off_processor.normalizer = normalizer
-        self._correlation_processor.normalizer = normalizer
+        self._laser_on_off_proc.normalizer = normalizer
+        self._correlation_proc.normalizer = normalizer
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChanged(self, value):
@@ -561,7 +612,7 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
-        self._laser_on_off_processor.reset()
+        self._laser_on_off_proc.reset()
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
@@ -573,7 +624,7 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(object)
     def onCorrelationFomChange(self, fom):
-        self._correlation_processor.fom_name = fom
+        self._correlation_proc.fom_name = fom
 
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)
@@ -902,10 +953,11 @@ class DataProcessor(Worker):
 
         if self._enable_ai:
             self.perform_azimuthal_integration(proc_data)
-            self._laser_on_off_processor.process(proc_data)
+            self._sample_degradation_proc.process(proc_data)
+            self._laser_on_off_proc.process(proc_data)
 
         # Process correlation after laser-on-off since correlation may
         # requires the laser-on-off result
-        self._correlation_processor.process((proc_data, data))
+        self._correlation_proc.process((proc_data, data))
 
         return proc_data
