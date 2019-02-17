@@ -331,9 +331,11 @@ class ImageAnalysis(ImageView):
         w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
         if w > 0 and h > 0:
             # there is intersection
+            self.setImage(self._image[y:y+h, x:x+w])
+            # convert x, y to position at the original image
+            x, y = self._image_data.pos(x, y)
             self.crop_area_change_sgn.emit(False, w, h, x, y)
             self._image_data.crop_area = (w, h, x, y)
-            self.setImage(self._image[y:y+h, x:x+w])
 
         self.crop.hide()
 

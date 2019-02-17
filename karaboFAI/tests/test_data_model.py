@@ -26,10 +26,9 @@ class TestImageData(unittest.TestCase):
         self.assertTupleEqual(img_data.mean.shape, (7, 6))
         self.assertTupleEqual((1, 2), img_data.pos(0, 0))
 
-        # in the coordinate system of the cropped area
         img_data.crop_area = (3, 4, 0, 1)
         self.assertTupleEqual(img_data.mean.shape, (4, 3))
-        self.assertTupleEqual((1, 3), img_data.pos(0, 0))
+        self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
     def test_poni(self):
         imgs = np.arange(20, dtype=np.float).reshape(5, 4)
@@ -40,7 +39,6 @@ class TestImageData(unittest.TestCase):
         img_data.crop_area = (3, 2, 0, 1)
         self.assertTupleEqual((-2, 0), img_data.poni)
 
-        img_data.crop_area = None  # reset first
         img_data.crop_area = (3, 2, 1, 2)
         img_data.poni = (-2, 12)
         self.assertTupleEqual((-3, 11), img_data.poni)
