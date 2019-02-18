@@ -312,8 +312,8 @@ class CorrelationWidget(PlotWidget):
     Widget for displaying correlations between FOM and different parameters.
     """
 
-    MIN_W = 600
-    MIN_H = 450
+    MIN_W = 720
+    MIN_H = 540
 
     _brushes = {
         0: make_brush('g', 120),
@@ -322,7 +322,7 @@ class CorrelationWidget(PlotWidget):
         3: make_brush('p', 120)
     }
 
-    _brush_size = 10
+    _brush_size = 14
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
@@ -371,7 +371,7 @@ class LaserOnOffFomWidget(PlotWidget):
     Widget for displaying the evolution of FOM in the Laser On-off analysis.
     """
 
-    _brush_size = 10
+    _brush_size = 14
 
     def __init__(self, *, parent=None):
         """Initialization."""
