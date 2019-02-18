@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 def find_version():
     with open(os.path.join('karaboFAI', '__init__.py')) as fp:
         for line in fp:
-            m = re.search(r'__version__ = "(\d+\.\d+\.\d+[a-z]?\d+)"', line, re.M)
+            m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
             if m is not None:
                 return m.group(1)
         raise RuntimeError("Unable to find version string.")
