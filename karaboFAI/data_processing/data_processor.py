@@ -673,7 +673,12 @@ class DataProcessor(Worker):
         :param ProcessedData data: data after pre-processing.
         """
         assembled = data.image.images
-        image_mask = data.image.image_mask
+        try:
+            image_mask = data.image.image_mask
+        except ValueError as e:
+            self.log(str(e) + "\nInvalid mask has been removed!")
+            self._image_mask = None
+            raise
         pixel_size = data.image.pixel_size
         poni = data.image.poni
         mask_min, mask_max = data.image.threshold_mask

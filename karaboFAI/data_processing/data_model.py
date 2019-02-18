@@ -219,18 +219,26 @@ class ImageData:
     def shape(self):
         return self._images.shape[-2:]
 
-    @cached_property
+    @property
     def image_mask(self):
-        ref = self.mean
+        # shape of the original image
+        expected_shape = self._images.shape[-2:]
         if self._image_mask is None:
-            return np.zeros_like(ref, dtype=np.uint8)
+            mask = np.zeros(expected_shape, dtype=np.uint8)
 
-        if self.image_mask.shape != ref.shape:
+        elif self._image_mask.shape != expected_shape:
             raise ValueError(
-                "Invalid mask shape {} for image with shape {}".
-                format(self._image_mask.shape, ref.shape))
+                "Invalid mask shape {} for image with shape {}! Please"
+                "draw mask on the original image!".
+                format(self._image_mask.shape, expected_shape))
+        else:
+            mask = self._image_mask
 
-        return self.image_mask
+        if self._crop_area is not None:
+            w, h, x, y = self._crop_area
+            return mask[y:y+h, x:x+w]
+
+        return mask
 
     @cached_property
     def images(self):
