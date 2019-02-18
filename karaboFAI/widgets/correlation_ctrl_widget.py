@@ -63,6 +63,13 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             ],
             properties=["actualEnergy"],
         ),
+        "Digitizer": CorrelationParam(
+            device_ids=[
+                "",
+                "SCS_UTC1_ADQ/ADC/1"
+            ],
+            properties=["MCP1", "MCP2", "MCP3", "MCP4"],
+        ),
         "Motor": CorrelationParam(
             device_ids=[
                 ""
