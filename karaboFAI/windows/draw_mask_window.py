@@ -85,4 +85,4 @@ class DrawMaskWindow(AbstractWindow):
         # TODO: apply the mask to data processing on the fly!
         # self._mask_panel.getSelectionMask()
 
-        self._image.addImage(data.image.masked_mean_image)
+        self._image.addImage(data.image.masked_mean)
