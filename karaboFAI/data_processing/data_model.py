@@ -39,6 +39,8 @@ class FomName(IntEnum):
     # Calculate the FOM based on the difference between the azimuthal
     # integration result between the laser on/off pulse(s).
     LASER_ON_OFF = 2
+    # Calculate the FOM based on the integration of ROI(s).
+    ROI = 3
 
 
 class AiNormalizer(IntEnum):

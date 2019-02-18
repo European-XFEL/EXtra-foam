@@ -38,6 +38,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     _available_foms = OrderedDict({
         "assembled mean": FomName.ASSEMBLED_MEAN,
         "on-off": FomName.LASER_ON_OFF,
+        "ROI": FomName.ROI,
     })
 
     # Leave the default device ID empty since the available devices
