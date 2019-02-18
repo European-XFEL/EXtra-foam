@@ -17,7 +17,7 @@ from .base_window import AbstractWindow, SingletonWindow
 from ..widgets.pyqtgraph import QtCore, QtGui, ROI
 from ..widgets import pyqtgraph as pg
 from ..data_processing import RoiValueType, intersection
-from ..widgets import colorMapFactory, ImageView, make_pen
+from ..widgets import ImageView, make_pen
 from ..config import config
 
 
@@ -368,7 +368,7 @@ class ImageToolWindow(AbstractWindow):
     title = "Image tool"
 
     _available_roi_value_types = OrderedDict({
-        "integration": RoiValueType.INTEGRATION,
+        "sum": RoiValueType.SUM,
         "mean": RoiValueType.MEAN,
     })
 

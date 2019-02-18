@@ -44,16 +44,16 @@ class FomName(IntEnum):
 
 
 class AiNormalizer(IntEnum):
-    # Normalize the azimuthal integration curve by integration of the
+    # Normalize the azimuthal integration curve by the integral of the
     # curve itself.
-    CURVE = 1
+    INTEGRAL = 1
     # Normalize the azimuthal integration curve by the sum of the
     # integrations of the ROI(s).
     ROI = 2
 
 
 class RoiValueType(IntEnum):
-    INTEGRATION = 1  # monitor integration of ROI
+    SUM = 1  # monitor sum of ROI
     MEAN = 2  # monitor mean of ROI
 
 

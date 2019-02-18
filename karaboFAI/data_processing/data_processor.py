@@ -87,7 +87,7 @@ class CorrelationProcessor(AbstractProcessor):
                 return
             intensity = proc_data.intensity_mean
 
-            if self.normalizer == AiNormalizer.CURVE:
+            if self.normalizer == AiNormalizer.INTEGRAL:
                 normalized_intensity = normalize_curve(
                     intensity, momentum, *self.normalization_range)
             elif self.normalizer == AiNormalizer.ROI:
@@ -786,7 +786,7 @@ class DataProcessor(Worker):
         def get_roi_value(roi_param, full_image):
             w, h, px, py = roi_param
             roi_img = full_image[py:py + h, px:px + w]
-            if self._roi_value_type == RoiValueType.INTEGRATION:
+            if self._roi_value_type == RoiValueType.SUM:
                 ret = np.sum(roi_img)
             elif self._roi_value_type == RoiValueType.MEAN:
                 ret = np.mean(roi_img)

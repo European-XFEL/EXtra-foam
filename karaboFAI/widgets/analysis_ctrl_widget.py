@@ -23,7 +23,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
 
     _available_normalizers = OrderedDict({
-        "curve": AiNormalizer.CURVE,
+        "Integral A.I.": AiNormalizer.INTEGRAL,
         "ROI": AiNormalizer.ROI
     })
 
