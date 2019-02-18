@@ -218,7 +218,7 @@ class Config(dict):
         "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
                         "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",),
         "SERVER_ADDR": "10.253.0.140",
-        "SERVER_PORT": 4501,
+        "SERVER_PORT": 4502,
         "SOURCE_TYPE": 1,
         "DATA_FOLDER": "",
         "GEOMETRY_FILE": "",
