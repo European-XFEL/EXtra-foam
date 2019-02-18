@@ -80,7 +80,7 @@ class CorrelationProcessor(AbstractProcessor):
         if self.fom_name is None:
             return
 
-        if self.fom_name == FomName.ASSEMBLED_MEAN:
+        if self.fom_name == FomName.AI_MEAN:
             momentum = proc_data.momentum
             if momentum is None:
                 self.log("Azimuthal integration result is not available!")
@@ -115,7 +115,7 @@ class CorrelationProcessor(AbstractProcessor):
                 normalized_intensity, momentum, *self.integration_range)[0]
             fom = np.sum(np.abs(fom))
 
-        elif self.fom_name == FomName.LASER_ON_OFF:
+        elif self.fom_name == FomName.AI_ON_OFF:
             _, foms, _ = proc_data.on_off.foms
             if not foms:
                 self.log("Laser on-off result is not available!")

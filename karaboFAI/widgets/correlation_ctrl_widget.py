@@ -36,8 +36,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     _n_params = 4  # maximum number of correlated parameters
 
     _available_foms = OrderedDict({
-        "assembled mean": FomName.ASSEMBLED_MEAN,
-        "on-off": FomName.LASER_ON_OFF,
+        "A.I. mean": FomName.AI_MEAN,
+        "A.I. on-off": FomName.AI_ON_OFF,
         "ROI": FomName.ROI,
     })
 
