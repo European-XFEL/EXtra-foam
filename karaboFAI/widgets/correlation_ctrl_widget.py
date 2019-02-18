@@ -59,7 +59,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "MonoChromator": CorrelationParam(
             device_ids=[
                 "",
-                "SCS_XTD10_MONO/MDL/PHOTON_ENERGY"
+                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
             ],
             properties=["actualEnergy"],
         ),
