@@ -630,6 +630,8 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(object)
     def onCorrelationFomChange(self, fom):
         self._correlation_proc.fom_name = fom
+        # clear all correlation data
+        ProcessedData.clear_correlation_hist()
 
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)
