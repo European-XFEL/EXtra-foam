@@ -93,13 +93,12 @@ class TrainData:
 
 
 class AbstractData(abc.ABC):
-
     @classmethod
     def clear(cls):
-        for kls in cls.__dict__:
-            if isinstance(cls.__dict__[kls], TrainData):
+        for attr in cls.__dict__.values():
+            if isinstance(attr, TrainData):
                 # descriptor protocol will not be triggered here
-                cls.__dict__[kls].clear()
+                attr.clear()
 
 
 class RoiData(AbstractData):
