@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import argparse
-import os
+import os.path as osp
 import sys
 import time
 from queue import Queue, Empty
@@ -96,7 +96,7 @@ class Mediator(QtCore.QObject):
 class MainGUI(QtGui.QMainWindow):
     """The main GUI for azimuthal integration."""
 
-    _root_dir = os.path.dirname(os.path.abspath(__file__))
+    _root_dir = osp.dirname(osp.abspath(__file__))
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
@@ -131,53 +131,41 @@ class MainGUI(QtGui.QMainWindow):
         self._tool_bar = self.addToolBar("Control")
 
         #
-        self._start_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/start.png")),
-            "Start DAQ",
-            self)
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/start.png"))
+        self._start_at = QtGui.QAction(icon, "Start DAQ", self)
         self._tool_bar.addAction(self._start_at)
         self._start_at.triggered.connect(self.onStartDAQ)
 
         #
-        self._stop_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/stop.png")),
-            "Stop DAQ",
-            self)
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/stop.png"))
+        self._stop_at = QtGui.QAction(icon, "Stop DAQ", self)
         self._tool_bar.addAction(self._stop_at)
         self._stop_at.triggered.connect(self.onStopDAQ)
         self._stop_at.setEnabled(False)
 
         #
-        self._draw_mask_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/draw_mask.png")),
-            "Draw mask",
-            self)
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/draw_mask.png"))
+        self._draw_mask_at = QtGui.QAction(icon, "Draw mask", self)
         self._draw_mask_at.triggered.connect(
             lambda: DrawMaskWindow(self._data, parent=self))
         self._tool_bar.addAction(self._draw_mask_at)
 
         #
-        load_mask_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/load_mask.png")),
-            "Load mask",
-            self)
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/load_mask.png"))
+        load_mask_at = QtGui.QAction(icon, "Load mask", self)
         load_mask_at.triggered.connect(self.loadMaskImage)
         self._tool_bar.addAction(load_mask_at)
 
         #
-        image_tool_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/image_tool.png")),
-            "Image tool",
-            self)
-        image_tool_at.triggered.connect(
-            lambda: ImageToolWindow(
-                self._data, mediator=self._mediator, parent=self))
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/image_tool.png"))
+        image_tool_at = QtGui.QAction(icon, "Image tool", self)
+        image_tool_at.triggered.connect(lambda: ImageToolWindow(
+            self._data, mediator=self._mediator, parent=self))
         self._tool_bar.addAction(image_tool_at)
 
-        open_overview_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/overview.png")),
-            "Overview",
-            self)
+        #
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/overview.png"))
+        open_overview_window_at = QtGui.QAction(icon, "Overview", self)
         open_overview_window_at.triggered.connect(
             lambda: OverviewWindow(self._data,
                                    mediator=self._mediator,
@@ -186,10 +174,8 @@ class MainGUI(QtGui.QMainWindow):
         self._tool_bar.addAction(open_overview_window_at)
 
         #
-        open_correlation_window_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/scatter.png")),
-            "Correlations",
-            self)
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/scatter.png"))
+        open_correlation_window_at = QtGui.QAction(icon, "Correlations", self)
         open_correlation_window_at.triggered.connect(
             lambda: CorrelationWindow(self._data,
                                       pulse_resolved=self._pulse_resolved,

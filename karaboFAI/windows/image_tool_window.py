@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import os
+import os.path as osp
 from collections import OrderedDict
 
 from .base_window import AbstractWindow, SingletonWindow
@@ -374,7 +374,7 @@ class ImageToolWindow(AbstractWindow):
 
     roi_value_type_sgn = QtCore.pyqtSignal(object)
 
-    _root_dir = os.path.dirname(os.path.abspath(__file__))
+    _root_dir = osp.dirname(osp.abspath(__file__))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -430,26 +430,23 @@ class ImageToolWindow(AbstractWindow):
         #
         self._tool_bar = self.addToolBar("Control")
 
-        self._crop_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir,
-                                     "icons/crop_selection.png")),
-            "Crop",
-            self)
+        #
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/crop_selection.png"))
+        self._crop_at = QtGui.QAction(icon, "Crop", self)
         self._tool_bar.addAction(self._crop_at)
         self._crop_at.triggered.connect(self._image_view.onCropToggle)
 
+        #
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/crop.png"))
         self._crop_to_selection_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/crop.png")),
-            "Crop to selection",
-            self)
+            icon, "Crop to selection", self)
         self._tool_bar.addAction(self._crop_to_selection_at)
         self._crop_to_selection_at.triggered.connect(
             self._image_view.onCropConfirmed)
 
-        self._restore_image_at = QtGui.QAction(
-            QtGui.QIcon(os.path.join(self._root_dir, "icons/restore.png")),
-            "Restore image",
-            self)
+        #
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/restore.png"))
+        self._restore_image_at = QtGui.QAction(icon, "Restore image", self)
         self._tool_bar.addAction(self._restore_image_at)
         self._restore_image_at.triggered.connect(
             self._image_view.onRestoreImage)
