@@ -191,8 +191,6 @@ class ImageData:
         self._images = images
         self._bkg = background
         self._images -= background
-        # difference between the current background and the previous one
-        self._bkg_diff = background
         self._crop_area = crop_area
 
         # the mask information is stored in the data so that all the
