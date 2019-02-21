@@ -58,15 +58,21 @@ class RoiValueType(IntEnum):
 
 
 class TrainData:
+    """Store the history train data.
+
+    Each data point is pair of data: (x, value), where x can be a
+    train ID for time series analysis or a correlated data for
+    correlation analysis.
+    """
     MAX_LENGTH = 1000000
 
     def __init__(self, **kwargs):
-        # x can be tid or a correlated param
-
         # We need to have a 'x' for each sub-dataset due to the
         # concurrency of data processing.
         self._x = []
         self._values = []
+        # for now it is used in CorrelationData to store device ID and
+        # property information
         self._info = kwargs
 
     def __get__(self, instance, instance_type):
@@ -90,6 +96,7 @@ class TrainData:
     def clear(self):
         self._x.clear()
         self._values.clear()
+        # do not clear _info here!
 
 
 class AbstractData(abc.ABC):
