@@ -16,7 +16,8 @@ from collections import deque
 
 import numpy as np
 from scipy import constants
-import pyFAI
+from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
+
 from h5py import File
 import fabio
 
@@ -703,15 +704,15 @@ class DataProcessor(Worker):
         # (Make sure 'QTextCursor' is registered using qRegisterMetaType().)
         #
         # which may cause segmentation fault!!!
-        ai = pyFAI.AzimuthalIntegrator(dist=self.sample_distance_sp,
-                                       poni1=poni[0] * pixel_size,
-                                       poni2=poni[1] * pixel_size,
-                                       pixel1=pixel_size,
-                                       pixel2=pixel_size,
-                                       rot1=0,
-                                       rot2=0,
-                                       rot3=0,
-                                       wavelength=self.wavelength_sp)
+        ai = AzimuthalIntegrator(dist=self.sample_distance_sp,
+                                 poni1=poni[0] * pixel_size,
+                                 poni2=poni[1] * pixel_size,
+                                 pixel1=pixel_size,
+                                 pixel2=pixel_size,
+                                 rot1=0,
+                                 rot2=0,
+                                 rot3=0,
+                                 wavelength=self.wavelength_sp)
 
         t0 = time.perf_counter()
 
