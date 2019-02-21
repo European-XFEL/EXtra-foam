@@ -174,6 +174,10 @@ class ImageData:
             incidence along the detector's first dimension, in pixels.
             default = (0, 0)
     """
+    _images = None  # moving average of original images
+    _ma_window = 1
+    _ma_count = 0
+
     def __init__(self, images, *,
                  threshold_mask=None,
                  image_mask=None,
@@ -188,9 +192,10 @@ class ImageData:
         if images.ndim <= 1 or images.ndim > 3:
             raise ValueError(
                 f"The shape of images must be (y, x) or (n_pulses, y, x)!")
-        self._images = images
+
+        self._compute_moving_average(images, background)
+
         self._bkg = background
-        self._images -= background
         self._crop_area = crop_area
 
         # the mask information is stored in the data so that all the
@@ -201,6 +206,31 @@ class ImageData:
         self.pixel_size = pixel_size
 
         self._poni = (0, 0) if poni is None else poni
+
+    @classmethod
+    def _compute_moving_average(cls, imgs, bkg):
+        """Compute the new moving average of the original images."""
+        # automatically reset if source changes, e.g. number of pulses
+        # per train changes for pulse-resolved data
+        if cls._images is not None and imgs.shape != cls._images.shape:
+            cls._ma_count = 0
+
+        if cls._ma_count == 0:
+            cls._images = None
+
+        if cls._ma_window > 1 and cls._images is not None:
+            if cls._ma_count < cls._ma_window:
+                cls._ma_count += 1
+                cls._images += (imgs - bkg - cls._images) / cls._ma_count
+            elif cls._ma_count == cls._ma_window:
+                # here is an approximation
+                cls._images += (imgs - bkg - cls._images) / cls._ma_window
+            else:
+                # should never reach here
+                raise ValueError
+        else:
+            cls._images = imgs - bkg
+            cls._ma_count = 1
 
     @cached_property
     def n_images(self):
@@ -317,7 +347,7 @@ class ImageData:
         if self._bkg == v:
             return
 
-        self._images -= v - self._bkg
+        self.__class__._images -= v - self._bkg
         self._bkg = v
         self._reset_all_caches()
 
@@ -335,6 +365,18 @@ class ImageData:
     @poni.setter
     def poni(self, v):
         self._poni = v
+
+    @classmethod
+    def set_moving_average_window(cls, v):
+        if not isinstance(v, int) or v < 0:
+            v = 1
+
+        if v < cls._ma_window:
+            # if the new window size is smaller than the current one,
+            # we reset the original image sum and count
+            cls._ma_count = 0  # a flag which indicates reset
+
+        cls._ma_window = v
 
     def _reset_all_caches(self):
         for key in ('masked_mean', 'mean', 'images'):
@@ -398,6 +440,10 @@ class ProcessedData:
             return 0
 
         return self._image_data.n_images
+
+    @classmethod
+    def set_moving_average_window(cls, v):
+        ImageData.set_moving_average_window(v)
 
     @classmethod
     def clear_roi_hist(cls):

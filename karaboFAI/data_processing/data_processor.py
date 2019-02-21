@@ -592,6 +592,10 @@ class DataProcessor(Worker):
         else:
             self.roi2 = None
 
+    @QtCore.pyqtSlot(int)
+    def onMovingAvgWindowChange(self, v):
+        ProcessedData.set_moving_average_window(v)
+
     @QtCore.pyqtSlot(float)
     def onBkgChange(self, v):
         self._bkg = v

@@ -51,6 +51,8 @@ class Mediator(QtCore.QObject):
 
     threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
 
+    moving_avg_window_sgn = QtCore.pyqtSignal(int)
+
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, v):
         self.vip_pulse_id1_sgn.emit(v)
@@ -91,6 +93,10 @@ class Mediator(QtCore.QObject):
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
         self.threshold_mask_change_sgn.emit(lb, ub)
+
+    @QtCore.pyqtSlot(int)
+    def onMovingAvgWindowChange(self, v):
+        self.moving_avg_window_sgn.emit(v)
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -310,6 +316,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onThresholdMaskChange)
         self._mediator.crop_area_change_sgn.connect(
             self._proc_worker.onCropAreaChange)
+        self._mediator.moving_avg_window_sgn.connect(
+            self._proc_worker.onMovingAvgWindowChange)
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)

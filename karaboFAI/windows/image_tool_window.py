@@ -220,6 +220,34 @@ class MaskCtrlWidget(QtGui.QWidget):
                                      float(self._max_pixel_le.text()))
 
 
+class ImageCtrlWidget(QtGui.QWidget):
+    """Widget inside the action bar for masking image."""
+
+    moving_avg_window_sgn = QtCore.pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        """Initialization"""
+        super().__init__(parent=parent)
+
+        self._moving_avg_le = QtGui.QLineEdit(str(1))
+        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 1000000))
+        self._moving_avg_le.setMinimumWidth(60)
+        self._moving_avg_le.returnPressed.connect(lambda:
+            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
+
+        self.initUI()
+
+        self.setFixedSize(self.minimumSizeHint())
+
+    def initUI(self):
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Moving average: "))
+        layout.addWidget(self._moving_avg_le)
+
+        self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
+
+
 class CropROI(ROI):
     """Rectangular cropping widget."""
     def __init__(self, pos, size):
@@ -290,6 +318,7 @@ class ImageAnalysis(ImageView):
         self._plot_widget.addItem(self.crop)
 
         self._image_data = None
+        self._moving_average_window = 1
 
     def setImageData(self, image_data):
         """Set the ImageData.
@@ -466,6 +495,15 @@ class ImageToolWindow(AbstractWindow):
         self._update_image_at = QtGui.QWidgetAction(self._tool_bar)
         self._update_image_at.setDefaultWidget(self._update_image_btn)
         self._tool_bar.addAction(self._update_image_at)
+
+        self._image_ctrl = ImageCtrlWidget()
+        self._image_ctrl.moving_avg_window_sgn.connect(
+            self._mediator.onMovingAvgWindowChange)
+        self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar)
+        self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
+        self._tool_bar.addAction(self._image_ctrl_at)
+
+        self._n_images_btn = QtGui.QPushButton("")
 
         self.initUI()
         self.resize(800, 800)
