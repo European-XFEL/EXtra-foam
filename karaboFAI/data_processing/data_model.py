@@ -163,7 +163,7 @@ class ImageData:
 
     Operation flow:
 
-    cropping -> remove background -> calculate mean image -> apply mask
+    remove background -> cropping -> calculate mean image -> apply mask
 
     Attributes:
         _images (numpy.ndarray): detector images for all the pulses in

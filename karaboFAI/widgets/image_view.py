@@ -10,10 +10,9 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
-import weakref
 
 from ..widgets.pyqtgraph import (
-    HistogramLUTWidget, ImageItem, QtCore, QtGui, ROI
+    HistogramLUTWidget, ImageItem, QtGui, ROI
 )
 from .misc_widgets import colorMapFactory, make_pen
 from .plot_widget import PlotWidget
@@ -65,10 +64,8 @@ class RectROI(ROI):
 class ImageView(QtGui.QWidget):
     """ImageView class.
 
-    A widget used for displaying and analyzing a single image. ROI widgets
-    , which are synchronized with the ROIs in the ImageToolWindow, are
-    embedded in this widget. However, the embedded ROI widgets are only
-    used for visualization and not manipulable.
+    A widget used for displaying a single image. Two ROI widgets are
+    embedded in this widget.
 
     Note: it is different from the ImageView in pyqtgraph!
     """
@@ -218,7 +215,7 @@ class AssembledImageView(ImageView):
     Widget for displaying the assembled image of the average of all pulses
     in a train.
     """
-    def __init__(self, *, pulse_id=0, parent=None):
+    def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
@@ -278,7 +275,7 @@ class RoiImageView(ImageView):
 
     Widget for displaying the ROI for the assembled image.
     """
-    def __init__(self, roi1=True, *args, **kwargs):
+    def __init__(self, roi1=True, **kwargs):
         """Initialization.
 
         :param bool roi1: True for displaying ROI1 and False for ROI2.

@@ -11,7 +11,7 @@ All rights reserved.
 """
 from ..widgets.pyqtgraph.dockarea import Dock
 
-from .base_window import DockerWindow, SingletonWindow
+from .base_window import DockerWindow
 from ..logger import logger
 from ..widgets import CorrelationWidget
 
