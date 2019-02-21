@@ -248,21 +248,22 @@ class ImageData:
 
         cls._bkg = bkg
 
-    @cached_property
+    @property
     def n_images(self):
         if self._images.ndim == 3:
             return self._images.shape[0]
         return 1
 
+    @property
+    def shape(self):
+        return self._images.shape[-2:]
+
     def pos(self, x, y):
+        """Return the position in the original image."""
         if self._crop_area is None:
             return x, y
         _, _, x0, y0 = self._crop_area
         return x + x0, y + y0
-
-    @cached_property
-    def shape(self):
-        return self._images.shape[-2:]
 
     @property
     def image_mask(self):
@@ -287,7 +288,7 @@ class ImageData:
 
     @cached_property
     def images(self):
-        """Return the cropped, background-subtracted image.
+        """Return the cropped, background-subtracted images.
 
         Warning: it shares the memory space with self._images
         """
@@ -299,7 +300,9 @@ class ImageData:
 
     @cached_property
     def mean(self):
-        """Average of the detector images over pulses in a train.
+        """Return the average of images over pulses in a train.
+
+        The image is cropped and background-subtracted.
 
         :return numpy.ndarray: a single image, shape = (y, x)
         """
@@ -312,6 +315,11 @@ class ImageData:
 
     @cached_property
     def masked_mean(self):
+        """Return the masked average image.
+
+        The image is cropped and background-subtracted before applying
+        the mask.
+        """
         # keep both mean image and masked mean image so that we can
         # recalculate the masked image
         mean_image = np.copy(self.mean)
@@ -369,6 +377,7 @@ class ImageData:
 
     @property
     def poni(self):
+        """Return the PONI in the original image."""
         poni1 = self._poni[0]
         poni2 = self._poni[1]
         if self._crop_area is not None:
@@ -407,6 +416,7 @@ class ImageData:
 
     @classmethod
     def reset(cls):
+        """Reset all the class attributes."""
         cls._images = None  # moving average of original images
         cls._bkg = 0  # background
         cls._ma_window = 1

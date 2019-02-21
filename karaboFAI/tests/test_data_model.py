@@ -54,12 +54,13 @@ class TestImageData(unittest.TestCase):
         img_data.background = bkg
         img_data.crop_area = crop_area
 
+        self.assertEqual(imgs_orig.shape, img_data.shape)
+        self.assertEqual(1, img_data.n_images)
+
         # calculate the ground truth
         w, h, x, y = crop_area
         imgs = np.copy(imgs_orig)[y:y+h, x:x+w]
         imgs -= bkg
-
-        self.assertEqual(1, img_data.n_images)
 
         np.testing.assert_array_equal(imgs, img_data.images)
 
@@ -133,18 +134,20 @@ class TestImageData(unittest.TestCase):
     def test_pulseresolved(self):
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
         img_data = ImageData(np.copy(imgs_orig))
+
         img_data.threshold_mask = (1, 4)
         bkg = 1.0
         crop_area = (3, 2, 0, 1)
         img_data.background = bkg
         img_data.crop_area = crop_area
 
+        self.assertEqual(imgs_orig.shape[1:], img_data.shape)
+        self.assertEqual(imgs_orig.shape[0], img_data.n_images)
+
         # calculate the ground truth
         w, h, x, y = crop_area
         imgs = np.copy(imgs_orig)[:, y:y + h, x:x + w]
         imgs -= bkg
-
-        self.assertEqual(2, img_data.n_images)
 
         np.testing.assert_array_equal(imgs, img_data.images)
 
