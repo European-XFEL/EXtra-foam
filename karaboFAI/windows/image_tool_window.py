@@ -296,7 +296,7 @@ class ImageAnalysis(ImageView):
     Advance image analysis widget built on top of ImageView widget.
     It provides tools like masking, cropping, etc.
     """
-    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    crop_area_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -363,7 +363,7 @@ class ImageAnalysis(ImageView):
             self.setImage(self._image[y:y+h, x:x+w])
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
-            self.crop_area_change_sgn.emit(False, w, h, x, y)
+            self.crop_area_sgn.emit(False, w, h, x, y)
             self._image_data.crop_area = (w, h, x, y)
 
         self.crop.hide()
@@ -372,7 +372,7 @@ class ImageAnalysis(ImageView):
         if self._image_data is None:
             return
 
-        self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
+        self.crop_area_sgn.emit(True, 0, 0, 0, 0)
         self._image_data.crop_area = None
         self.setImage(self._image_data.masked_mean)
 
@@ -409,7 +409,7 @@ class ImageToolWindow(AbstractWindow):
         super().__init__(*args, **kwargs)
 
         self._image_view = ImageAnalysis(lock_roi=False, hide_axis=False)
-        self._image_view.crop_area_change_sgn.connect(
+        self._image_view.crop_area_sgn.connect(
             self._mediator.onCropAreaChange)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")

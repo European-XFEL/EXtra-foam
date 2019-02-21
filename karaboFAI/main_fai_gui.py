@@ -42,14 +42,14 @@ class Mediator(QtCore.QObject):
 
     roi_displayed_range_sgn = QtCore.pyqtSignal(int)
     roi_hist_clear_sgn = QtCore.pyqtSignal()
-    roi_value_type_change_sgn = QtCore.pyqtSignal(object)
-    roi1_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    roi2_region_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    roi_value_type_sgn = QtCore.pyqtSignal(object)
+    roi1_region_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    roi2_region_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
     bkg_change_sgn = QtCore.pyqtSignal(float)
 
-    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    crop_area_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
-    threshold_mask_change_sgn = QtCore.pyqtSignal(float, float)
+    threshold_mask_sgn = QtCore.pyqtSignal(float, float)
 
     moving_avg_window_sgn = QtCore.pyqtSignal(int)
 
@@ -72,15 +72,15 @@ class Mediator(QtCore.QObject):
 
     @QtCore.pyqtSlot(object)
     def onRoiValueTypeChange(self, state):
-        self.roi_value_type_change_sgn.emit(state)
+        self.roi_value_type_sgn.emit(state)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi1Change(self, activated, w, h, px, py):
-        self.roi1_region_change_sgn.emit(activated, w, h, px, py)
+        self.roi1_region_sgn.emit(activated, w, h, px, py)
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi2Change(self, activated, w, h, px, py):
-        self.roi2_region_change_sgn.emit(activated, w, h, px, py)
+        self.roi2_region_sgn.emit(activated, w, h, px, py)
 
     @QtCore.pyqtSlot()
     def onBkgChange(self):
@@ -88,11 +88,11 @@ class Mediator(QtCore.QObject):
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onCropAreaChange(self, restore, w, h, px, py):
-        self.crop_area_change_sgn.emit(restore, w, h, px, py)
+        self.crop_area_sgn.emit(restore, w, h, px, py)
 
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
-        self.threshold_mask_change_sgn.emit(lb, ub)
+        self.threshold_mask_sgn.emit(lb, ub)
 
     @QtCore.pyqtSlot(int)
     def onMovingAvgWindowChange(self, v):
@@ -267,24 +267,24 @@ class MainGUI(QtGui.QMainWindow):
 
         self._proc_worker.message.connect(self.onMessageReceived)
 
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
+        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChange)
 
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget.geometry_sgn.connect(
-                self._proc_worker.onGeometryChanged)
+                self._proc_worker.onGeometryChange)
 
         self.ai_ctrl_widget.photon_energy_sgn.connect(
-            self._proc_worker.onPhotonEnergyChanged)
+            self._proc_worker.onPhotonEnergyChange)
         self.ai_ctrl_widget.sample_distance_sgn.connect(
-            self._proc_worker.onSampleDistanceChanged)
+            self._proc_worker.onSampleDistanceChange)
         self.ai_ctrl_widget.poni_sgn.connect(
             self._proc_worker.onPoniChange)
         self.ai_ctrl_widget.integration_method_sgn.connect(
-            self._proc_worker.onIntegrationMethodChanged)
+            self._proc_worker.onIntegrationMethodChange)
         self.ai_ctrl_widget.integration_range_sgn.connect(
-            self._proc_worker.onIntegrationRangeChanged)
+            self._proc_worker.onIntegrationRangeChange)
         self.ai_ctrl_widget.integration_points_sgn.connect(
-            self._proc_worker.onIntegrationPointsChanged)
+            self._proc_worker.onIntegrationPointsChange)
 
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._proc_worker.onPulseIdRangeChange)
@@ -304,17 +304,17 @@ class MainGUI(QtGui.QMainWindow):
 
         self._mediator.roi_hist_clear_sgn.connect(
             self._proc_worker.onRoiHistClear)
-        self._mediator.roi1_region_change_sgn.connect(
+        self._mediator.roi1_region_sgn.connect(
             self._proc_worker.onRoi1Change)
-        self._mediator.roi_value_type_change_sgn.connect(
+        self._mediator.roi_value_type_sgn.connect(
             self._proc_worker.onRoiValueTypeChange)
-        self._mediator.roi2_region_change_sgn.connect(
+        self._mediator.roi2_region_sgn.connect(
             self._proc_worker.onRoi2Change)
         self._mediator.bkg_change_sgn.connect(
             self._proc_worker.onBkgChange)
-        self._mediator.threshold_mask_change_sgn.connect(
+        self._mediator.threshold_mask_sgn.connect(
             self._proc_worker.onThresholdMaskChange)
-        self._mediator.crop_area_change_sgn.connect(
+        self._mediator.crop_area_sgn.connect(
             self._proc_worker.onCropAreaChange)
         self._mediator.moving_avg_window_sgn.connect(
             self._proc_worker.onMovingAvgWindowChange)

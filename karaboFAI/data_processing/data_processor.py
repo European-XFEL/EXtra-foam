@@ -306,7 +306,8 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         if self._on_train_received:
             # update on-pulse
-            if self.laser_mode == OpLaserMode.NORMAL or not self._off_train_received:
+            if self.laser_mode == OpLaserMode.NORMAL or \
+                    not self._off_train_received:
 
                 this_on_pulses = intensities[self.on_pulse_ids].mean(axis=0)
 
@@ -476,7 +477,7 @@ class DataProcessor(Worker):
         self.log(msg)
 
     @QtCore.pyqtSlot(str)
-    def onImageMaskChanged(self, filename):
+    def onImageMaskChange(self, filename):
         try:
             self._image_mask = fabio.open(filename).data
             msg = "Image mask {} loaded!".format(filename)
@@ -494,7 +495,7 @@ class DataProcessor(Worker):
         self.source_name_sp = value
 
     @QtCore.pyqtSlot(str, list)
-    def onGeometryChanged(self, filename, quad_positions):
+    def onGeometryChange(self, filename, quad_positions):
         if self._detector == 'LPD':
             with File(filename, 'r') as f:
                 self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
@@ -545,7 +546,7 @@ class DataProcessor(Worker):
         self._correlation_proc.normalizer = normalizer
 
     @QtCore.pyqtSlot(float)
-    def onSampleDistanceChanged(self, value):
+    def onSampleDistanceChange(self, value):
         self.sample_distance_sp = value
 
     @QtCore.pyqtSlot(int, int)
@@ -553,15 +554,15 @@ class DataProcessor(Worker):
         self.poni_sp = (cy, cx)  # be careful with the sequence
 
     @QtCore.pyqtSlot(str)
-    def onIntegrationMethodChanged(self, value):
+    def onIntegrationMethodChange(self, value):
         self.integration_method_sp = value
 
     @QtCore.pyqtSlot(float, float)
-    def onIntegrationRangeChanged(self, lb, ub):
+    def onIntegrationRangeChange(self, lb, ub):
         self.integration_range_sp = (lb, ub)
 
     @QtCore.pyqtSlot(int)
-    def onIntegrationPointsChanged(self, value):
+    def onIntegrationPointsChange(self, value):
         self.integration_points_sp = value
 
     @QtCore.pyqtSlot(float, float)
@@ -569,7 +570,7 @@ class DataProcessor(Worker):
         self.threshold_mask_sp = (lb, ub)
 
     @QtCore.pyqtSlot(float)
-    def onPhotonEnergyChanged(self, photon_energy):
+    def onPhotonEnergyChange(self, photon_energy):
         """Compute photon wavelength (m) from photon energy (keV)."""
         # Plank-einstein relation (E=hv)
         HC_E = 1e-3 * constants.c * constants.h / constants.e
