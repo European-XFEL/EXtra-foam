@@ -400,6 +400,7 @@ class MainGUI(QtGui.QMainWindow):
         filename = QtGui.QFileDialog.getOpenFileName()[0]
         if not filename:
             logger.error("Please specify the image mask file!")
+            return
         self.image_mask_sgn.emit(filename)
 
     def onStartDAQ(self):
