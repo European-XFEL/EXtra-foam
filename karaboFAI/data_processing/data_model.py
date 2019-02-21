@@ -163,6 +163,9 @@ class ImageData:
             a train. shape = (pulse_id, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
         _bkg (float): background level of the detector image.
+        _ma_window (int): moving average window size
+        _ma_count (int): current moving average count
+
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
@@ -174,7 +177,8 @@ class ImageData:
             incidence along the detector's first dimension, in pixels.
             default = (0, 0)
     """
-    _images = None  # moving average of original images
+    _images = None
+    _bkg = 0
     _ma_window = 1
     _ma_count = 0
 
@@ -195,7 +199,6 @@ class ImageData:
 
         self._compute_moving_average(images, background)
 
-        self._bkg = background
         self._crop_area = crop_area
 
         # the mask information is stored in the data so that all the
@@ -221,16 +224,22 @@ class ImageData:
         if cls._ma_window > 1 and cls._images is not None:
             if cls._ma_count < cls._ma_window:
                 cls._ma_count += 1
-                cls._images += (imgs - bkg - cls._images) / cls._ma_count
+                cls._images += (imgs - cls._bkg - cls._images) / cls._ma_count
             elif cls._ma_count == cls._ma_window:
                 # here is an approximation
-                cls._images += (imgs - bkg - cls._images) / cls._ma_window
+                cls._images += (imgs - cls._bkg - cls._images) / cls._ma_window
             else:
                 # should never reach here
                 raise ValueError
+
+            cls._images -= bkg - cls._bkg
         else:
+            # For the single image case, we do not care about the old
+            # background
             cls._images = imgs - bkg
             cls._ma_count = 1
+
+        cls._bkg = bkg
 
     @cached_property
     def n_images(self):
@@ -348,7 +357,7 @@ class ImageData:
             return
 
         self.__class__._images -= v - self._bkg
-        self._bkg = v
+        self.__class__._bkg = v
         self._reset_all_caches()
 
     @property
@@ -378,12 +387,23 @@ class ImageData:
 
         cls._ma_window = v
 
+    @property
+    def moving_average_count(self):
+        return self.__class__._ma_count
+
     def _reset_all_caches(self):
         for key in ('masked_mean', 'mean', 'images'):
             try:
                 del self.__dict__[key]
             except KeyError:
                 pass
+
+    @classmethod
+    def reset(cls):
+        cls._images = None  # moving average of original images
+        cls._bkg = 0  # background
+        cls._ma_window = 1
+        cls._ma_count = 0
 
 
 class ProcessedData:

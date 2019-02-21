@@ -96,6 +96,40 @@ class TestImageData(unittest.TestCase):
         masked_imgs = np.copy(imgs)
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
+    def test_trainresolved_ma(self):
+        """Test the case with moving average of image."""
+        ImageData.reset()  # clear the data from test_trainresolved
+
+        imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
+
+        img_data = ImageData(np.copy(imgs_orig))
+        ImageData.set_moving_average_window(3)
+        img_data = ImageData(imgs_orig - 2)
+        self.assertEqual(2, img_data.moving_average_count)
+        np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
+        img_data = ImageData(imgs_orig + 2)
+        self.assertEqual(3, img_data.moving_average_count)
+        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
+        img_data = ImageData(np.copy(imgs_orig))
+        self.assertEqual(3, img_data.moving_average_count)
+        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
+
+        # with background
+        img_data = ImageData(np.copy(imgs_orig), background=1)
+        np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
+
+        img_data.background = 2
+        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
+
+        ImageData.set_moving_average_window(4)
+        img_data = ImageData(imgs_orig - 4, background=1)
+        self.assertEqual(4, img_data.moving_average_count)
+        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
+
+        # the moving average implementation does not affect the cropping
+        # and masking implementation which was first done without moving
+        # average
+
     def test_pulseresolved(self):
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
         img_data = ImageData(np.copy(imgs_orig))
@@ -153,6 +187,41 @@ class TestImageData(unittest.TestCase):
         masked_imgs[(masked_imgs < mask[0])] = mask[0]
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
+
+    def test_pulseresolved_ma(self):
+        ImageData.reset()
+
+        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
+        mean_orig = np.mean(imgs_orig, axis=0)
+
+        img_data = ImageData(np.copy(imgs_orig[0, ...]))
+        img_data = ImageData(np.copy(imgs_orig))
+        # test automatic reset if the new images have different shape
+        self.assertEqual(1, img_data.moving_average_count)
+        self.assertEqual(1, img_data.moving_average_count)
+
+        ImageData.set_moving_average_window(3)
+        img_data = ImageData(imgs_orig - 2)
+        self.assertEqual(2, img_data.moving_average_count)
+        np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
+        img_data = ImageData(imgs_orig + 2)
+        self.assertEqual(3, img_data.moving_average_count)
+        np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
+        img_data = ImageData(np.copy(imgs_orig))
+        self.assertEqual(3, img_data.moving_average_count)
+        np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
+
+        # with background
+        img_data = ImageData(np.copy(imgs_orig), background=1)
+        np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
+
+        img_data.background = 2
+        np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
+
+        ImageData.set_moving_average_window(4)
+        img_data = ImageData(imgs_orig - 4, background=1)
+        self.assertEqual(4, img_data.moving_average_count)
+        np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
 
 
 class TestTrainData(unittest.TestCase):
