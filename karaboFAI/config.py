@@ -11,6 +11,45 @@ All rights reserved.
 """
 import os
 import configparser
+from enum import IntEnum
+
+
+class DataSource(IntEnum):
+    CALIBRATED_FILE = 0  # calibrated data from files
+    CALIBRATED = 1  # calibrated data from Karabo-bridge
+    PROCESSED = 2  # processed data from the Middle-layer device
+
+
+class OpLaserMode(IntEnum):
+    INACTIVE = 0  # not perform any relevant calculation
+    NORMAL = 1  # on-/off- pulses in the same train
+    EVEN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
+
+
+class FomName(IntEnum):
+    # Calculate the FOM based on the azimuthal integration of the mean
+    # of the assembled image(s).
+    AI_MEAN = 1
+    # Calculate the FOM based on the difference between the azimuthal
+    # integration result between the laser on/off pulse(s).
+    AI_ON_OFF = 2
+    # Calculate the FOM based on the integration of ROI(s).
+    ROI = 3
+
+
+class AiNormalizer(IntEnum):
+    # Normalize the azimuthal integration curve by the integral of the
+    # curve itself.
+    INTEGRAL = 1
+    # Normalize the azimuthal integration curve by the sum of the
+    # integrations of the ROI(s).
+    ROI = 2
+
+
+class RoiValueType(IntEnum):
+    SUM = 1  # monitor sum of ROI
+    MEAN = 2  # monitor mean of ROI
 
 
 # root path for storing config and log files
