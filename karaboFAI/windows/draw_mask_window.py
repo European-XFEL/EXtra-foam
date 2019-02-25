@@ -79,10 +79,10 @@ class DrawMaskWindow(AbstractWindow):
     def _updateImage(self):
         """For updating image manually."""
         data = self._data.get()
-        if data.empty():
+        if data.image is None:
             return
 
         # TODO: apply the mask to data processing on the fly!
         # self._mask_panel.getSelectionMask()
 
-        self._image.addImage(data.image_mean)
+        self._image.addImage(data.image.masked_mean)

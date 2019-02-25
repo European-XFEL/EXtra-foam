@@ -1,9 +1,11 @@
 import unittest
+import time
 
 import numpy as np
 
 from karaboFAI.data_processing import (
-    down_sample, nanmean_axis0_para, normalize_curve, slice_curve, up_sample
+    down_sample, intersection, nanmean_axis0_para, normalize_curve,
+    quick_min_max, slice_curve, up_sample
 )
 
 
@@ -149,3 +151,43 @@ class TestDataProcessor(unittest.TestCase):
 
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., 1.]])
         np.testing.assert_array_almost_equal(expected, ret)
+
+    def test_quickminmax(self):
+        with self.assertRaises(ValueError):
+            quick_min_max(np.arange(8).reshape(2, 2, 2))
+        with self.assertRaises(TypeError):
+            quick_min_max([])
+
+        self.assertEqual((0, 9), quick_min_max(np.arange(10).reshape(2, 5)))
+
+        x = np.arange(4e6).reshape(4000, 1000)
+        self.assertEqual((0, 3984996), quick_min_max(x))
+
+        # test speed
+
+        t0 = time.time()
+        quick_min_max(x)
+        dt_new = time.time() - t0
+
+        t0 = time.time()
+        x.min(), x.max()
+        dt_normal = time.time() - t0
+
+        # 5 is conservative
+        self.assertLess(5*dt_new, dt_normal)
+
+    def test_interaction(self):
+        # one contains the other
+        self.assertListEqual(list(intersection(100, 80, 0, 0, 50, 30, 0, 0)),
+                             [50, 30, 0, 0])
+        self.assertListEqual(list(intersection(10, 5, 5, 2, 50, 50, 0, 0)),
+                             [10, 5, 5, 2])
+        # no interaction
+        self.assertListEqual(list(intersection(100, 100, 0, 0, 5, 5, -10, -10)),
+                             [-5, -5, 0, 0])
+
+        # partially intersect
+        self.assertListEqual(list(intersection(10, 10, 0, 0, 15, 15, -10, -10)),
+                             [5, 5, 0, 0])
+        self.assertListEqual(list(intersection(10, 10, 1, 1, 15, 15, 5, 10)),
+                             [6, 1, 5, 10])

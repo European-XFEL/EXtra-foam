@@ -56,16 +56,10 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Update shared parameters for control widget.
 
-        :params bool log: True for logging shared parameters and False
-            for not.
-
-        Returns bool: True if all shared parameters successfully parsed
-            and emitted, otherwise False.
-
-        Return True: If method not implemented in the inherited widget
-                     class
+        :return: None if any of the parameters is invalid. Otherwise, a
+            string of to be logged information.
         """
         raise NotImplementedError

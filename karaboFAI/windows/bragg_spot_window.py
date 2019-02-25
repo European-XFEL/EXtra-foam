@@ -24,7 +24,7 @@ from ..widgets.pyqtgraph.dockarea import DockArea, Dock
 
 from .base_window import PlotWindow
 from ..logger import logger
-from ..widgets.misc_widgets import PenFactory, lookupTableFactory
+from ..widgets.misc_widgets import lookupTableFactory, make_pen
 from ..config import config
 
 
@@ -74,11 +74,9 @@ class BraggSpotsWindow(PlotWindow):
         # -------------------------------------------------------------
         # connect signal and slot
         # -------------------------------------------------------------
-        self.parent().analysis_ctrl_widget.mask_range_sgn.connect(
-            self.onMaskRangeChanged)
-        self.parent().analysis_ctrl_widget.on_off_pulse_ids_sgn.connect(
+        self.parent().pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self.onOffPulseIdChanged)
-        self.parent().analysis_ctrl_widget.ma_window_size_sgn.connect(
+        self.parent().pump_probe_ctrl_widget.moving_avg_window_sgn.connect(
             self.onMAWindowSizeChanged)
 
         # tell MainGUI to emit signals in order to update shared parameters
@@ -124,7 +122,7 @@ class BraggSpotsWindow(PlotWindow):
         ])
 
         self._pro_params.addChildren([
-            self.ma_window_size_param,
+            self.moving_avg_window_param,
             self.mask_range_param
 
         ])
@@ -284,6 +282,7 @@ class BraggSpotsWindow(PlotWindow):
         p.setTitle(' ')
 
     def _update(self, data):
+        self.mask_range_sp = (0, 2500)
 
         # Same logic as LaserOnOffWindow.
         available_modes = list(self.available_modes.keys())
@@ -323,9 +322,9 @@ class BraggSpotsWindow(PlotWindow):
                 # Collects centre of mass for each pulse in
                 # this_on_pulses list
                 for pid in self.on_pulse_ids_sp:
-                    if pid >= data.image.shape[0]:
+                    if pid >= data.images.shape[0]:
                         logger.error("Pulse ID {} out of range (0 - {})!".
-                                     format(pid, data.image.shape[0] - 1))
+                                     format(pid, data.images.shape[0] - 1))
                         continue
 
                     for index, key in enumerate(slices):
@@ -337,12 +336,11 @@ class BraggSpotsWindow(PlotWindow):
                         #       around background ROI
 
                         slices[key] = self._rois[index].getArrayRegion(
-                            data.image[pid], self._image_items[0])
+                            data.images[pid], self._image_items[0])
                         # convert nan to -inf so that we can clip
                         # negatives and values above mask range.
                         # np.clip will not clip NaNs.
                         (slices[key])[np.isnan(slices[key])] = - np.inf
-
                         np.clip(slices[key], self.mask_range_sp[0],
                                 self.mask_range_sp[1], out=slices[key])
                         # clip to restrict between mask values 0-2500
@@ -375,14 +373,14 @@ class BraggSpotsWindow(PlotWindow):
                 else:
                     if self._on_pulses_ma is None:
                         self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) < self.moving_avg_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_ma) \
                             / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.ma_window_size_sp:
+                    elif len(self._on_pulses_hist) == self.moving_avg_window_sp:
                         self._on_pulses_ma += \
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.ma_window_size_sp
+                            / self.moving_avg_window_sp
                     else:
                         raise ValueError
 
@@ -401,9 +399,9 @@ class BraggSpotsWindow(PlotWindow):
 
             this_off_pulses = []
             for pid in self.off_pulse_ids_sp:
-                if pid > data.image.shape[0]-1:
+                if pid > data.images.shape[0]-1:
                     logger.error("Pulse ID {} out of range (0 - {})!".
-                                 format(pid, data.image.shape[0] - 1))
+                                 format(pid, data.images.shape[0] - 1))
                     continue
 
                 for index, key in enumerate(slices):
@@ -414,7 +412,7 @@ class BraggSpotsWindow(PlotWindow):
                     # key : background stores array region around
                     #       background ROI
                     slices[key] = self._rois[index].getArrayRegion(
-                        data.image[pid], self._image_items[0])
+                        data.images[pid], self._image_items[0])
                     # convert nan to -inf so that we can clip
                     # negatives and values above mask range.
                     # np.clip will not clip NaNs.
@@ -448,14 +446,14 @@ class BraggSpotsWindow(PlotWindow):
             # trains.
             if self._off_pulses_ma is None:
                 self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.ma_window_size_sp:
+            elif len(self._off_pulses_hist) <= self.moving_avg_window_sp:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_ma) \
                     / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.ma_window_size_sp + 1:
+            elif len(self._off_pulses_hist) == self.moving_avg_window_sp + 1:
                 self._off_pulses_ma += \
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.ma_window_size_sp
+                    / self.moving_avg_window_sp
             else:
                 raise ValueError
 
@@ -533,12 +531,12 @@ class BraggSpotsWindow(PlotWindow):
                 p.setTitle(' TrainId :: {}'.format(data.tid))
             if com_on is not None:
                 p.plot(self.on_pulse_ids_sp[0:com_on.shape[0]],
-                       com_on[:, index], name='On', pen=PenFactory.green,
+                       com_on[:, index], name='On', pen=make_pen("green"),
                        symbol='o', symbolBrush=mkBrush(0, 255, 0, 255))
             if com_off is not None:
                 p.plot(self.off_pulse_ids_sp[0:com_off.shape[0]],
                        com_off[:, index], name="Off",
-                       pen=PenFactory.purple, symbol='o',
+                       pen=make_pen("purple"), symbol='o',
                        symbolBrush=mkBrush(255, 0, 255, 255))
 
         for idx, p in enumerate(self._plot_items[-2:]):
@@ -554,7 +552,7 @@ class BraggSpotsWindow(PlotWindow):
                 p.addItem(s)
                 p.plot(self._hist_train_off_id,
                        np.array(self._hist_com_off)[:, idx],
-                       pen=PenFactory.purple, name='Off')
+                       pen=make_pen("purple"), name='Off')
             if self._hist_com_on:
                 s = ScatterPlotItem(size=10,
                                     pen=mkPen(None),
@@ -567,7 +565,7 @@ class BraggSpotsWindow(PlotWindow):
 
                 p.plot(self._hist_train_on_id,
                        np.array(self._hist_com_on)[:, idx],
-                       pen=PenFactory.green, name='On')
+                       pen=make_pen("green"), name='On')
                 p.addLegend()
 
 

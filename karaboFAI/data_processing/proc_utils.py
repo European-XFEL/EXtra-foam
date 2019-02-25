@@ -204,3 +204,45 @@ def nanmean_axis0_para(data, *, chunk_size=10, max_workers=4):
             start += chunk_size
 
     return ret
+
+
+def quick_min_max(x):
+    """Estimate the min/max values of input by down-sampling.
+
+    :param numpy.ndarray x: data, 2D array for now.
+
+    :return tuple: (min, max)
+    """
+    if not isinstance(x, np.ndarray):
+        raise TypeError("Input must be a numpy.ndarray!")
+
+    if x.ndim != 2:
+        raise ValueError("Input must be a 2D array!")
+
+    while x.size > 1e5:
+        sl = [slice(None)] * x.ndim
+        sl[np.argmax(x.shape)] = slice(None, None, 2)
+        x = x[tuple(sl)]
+
+    return float(np.nanmin(x)), float(np.nanmax(x))
+
+
+def intersection(w1, h1, x1, y1, w2, h2, x2, y2):
+    """Calculate the intersection area of two rectangles.
+
+    :param: float w1, w2: width
+    :param: float h1, h2: height
+    :param: float x1, x2: x coordinate of the closest corner to the origin.
+    :param: float y1, y2: y coordinate of the closest corner to the origin.
+
+    :returns tuple: (w, h, x, y) of the intersection area.
+    """
+    x = max(x1, x2)
+    xx = min(x1 + w1, x2 + w2)
+    y = max(y1, y2)
+    yy = min(y1 + h1, y2 + h2)
+
+    w = xx - x
+    h = yy - y
+
+    return w, h, x, y

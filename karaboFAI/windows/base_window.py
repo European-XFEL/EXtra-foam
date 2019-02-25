@@ -15,6 +15,7 @@ from weakref import WeakKeyDictionary
 from ..widgets.pyqtgraph import GraphicsLayoutWidget, QtCore, QtGui
 from ..widgets.pyqtgraph import parametertree as ptree
 from ..widgets.pyqtgraph.dockarea import DockArea
+from ..data_processing import OpLaserMode
 
 
 class SingletonWindow:
@@ -30,14 +31,14 @@ class SingletonWindow:
         if self.instance is None:
             self.instance = self.instance_type(*args, **kwargs)
         else:
-            if isinstance(self.instance, PlotWindow) \
-                    or isinstance(self.instance, DockerWindow):
+            if isinstance(self.instance, AbstractWindow):
                 parent = self.instance.parent()
                 if parent is not None:
-                    parent.registerPlotWindow(self.instance)
+                    parent.registerWindow(self.instance)
                 self.instance.update()
 
         self.instance.show()
+        self.instance.activateWindow()
         return self.instance
 
 
@@ -49,7 +50,8 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *, parent=None, pulse_resolved=True):
+    def __init__(self, data, *,
+                 mediator=None, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -58,8 +60,12 @@ class AbstractWindow(QtGui.QMainWindow):
             pulse-resolved or not.
         """
         super().__init__(parent=parent)
+        if parent is not None:
+            parent.registerWindow(self)
+
         self._data = data
         self._pulse_resolved = pulse_resolved
+        self._mediator = mediator
 
         try:
             if self.title:
@@ -98,15 +104,32 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
+    def clear(self):
+        """Clear widgets.
+
+        This method is called by the main GUI.
+        """
+        pass
+
+    def update(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        pass
+
+    def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterWindow(self)
+        super().closeEvent(QCloseEvent)
+
 
 class DockerWindow(AbstractWindow):
     """QMainWindow displaying a single DockArea."""
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        parent = kwargs.get("parent", None)
-        if parent is not None:
-            parent.registerPlotWindow(self)
 
         self._plot_widgets = WeakKeyDictionary()  # book-keeping opened windows
 
@@ -126,7 +149,7 @@ class DockerWindow(AbstractWindow):
         This method is called by the main GUI.
         """
         data = self._data.get()
-        if data.empty():
+        if data.image is None:
             return
 
         for widget in self._plot_widgets:
@@ -146,28 +169,21 @@ class DockerWindow(AbstractWindow):
     def unregisterPlotWidget(self, instance):
         del self._plot_widgets[instance]
 
-    def closeEvent(self, QCloseEvent):
-        parent = self.parent()
-        if parent is not None:
-            parent.unregisterPlotWindow(self)
-        super().closeEvent(QCloseEvent)
-
 
 class PlotWindow(AbstractWindow):
-    """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree."""
+    """QMainWindow consists of a GraphicsLayoutWidget and a ParameterTree.
 
+    DEPRECATED!
+    """
     available_modes = OrderedDict({
-        "normal": "Laser-on/off pulses in the same train",
-        "even/odd": "Laser-on/off pulses in even/odd train",
-        "odd/even": "Laser-on/off pulses in odd/even train"
+        OpLaserMode.NORMAL: "Laser-on/off pulses in the same train",
+        OpLaserMode.EVEN_ON: "Laser-on/off pulses in even/odd train",
+        OpLaserMode.ODD_ON: "Laser-on/off pulses in odd/even train"
     })
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-        parent = kwargs.get("parent", None)
-        if parent is not None:
-            parent.registerPlotWindow(self)
 
         self._gl_widget = GraphicsLayoutWidget()
         self._ctrl_widget = None
@@ -230,13 +246,13 @@ class PlotWindow(AbstractWindow):
             name="Normalization range", type='str', readonly=True
         )
 
-        self.diff_integration_range_sp = None
-        self.diff_integration_range_param = ptree.Parameter.create(
+        self.integration_range_sp = None
+        self.integration_range_param = ptree.Parameter.create(
             name="Diff integration range", type='str', readonly=True
         )
 
-        self.ma_window_size_sp = None
-        self.ma_window_size_param = ptree.Parameter.create(
+        self.moving_avg_window_sp = None
+        self.moving_avg_window_param = ptree.Parameter.create(
             name='M.A. window size', type='int', readonly=True
         )
 
@@ -276,19 +292,11 @@ class PlotWindow(AbstractWindow):
         for item in self._image_items:
             item.clear()
 
-    @QtCore.pyqtSlot(str, list, list)
+    @QtCore.pyqtSlot(object, list, list)
     def onOffPulseIdChanged(self, mode, on_pulse_ids, off_pulse_ids):
         self.laser_mode_sp = mode
         self.on_pulse_ids_sp = on_pulse_ids
         self.off_pulse_ids_sp = off_pulse_ids
-
-        # then update the parameter tree
-        self._exp_params.child('Optical laser mode').setValue(
-            self.available_modes[mode])
-        self._exp_params.child('Laser-on pulse ID(s)').setValue(
-            ', '.join([str(x) for x in on_pulse_ids]))
-        self._exp_params.child('Laser-off pulse ID(s)').setValue(
-            ', '.join([str(x) for x in off_pulse_ids]))
 
     @QtCore.pyqtSlot(float, float)
     def onMaskRangeChanged(self, lb, ub):
@@ -308,7 +316,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(float, float)
     def onDiffIntegrationRangeChanged(self, lb, ub):
-        self.diff_integration_range_sp = (lb, ub)
+        self.integration_range_sp = (lb, ub)
 
         # then update the parameter tree
         self._pro_params.child("Diff integration range").setValue(
@@ -316,7 +324,7 @@ class PlotWindow(AbstractWindow):
 
     @QtCore.pyqtSlot(int)
     def onMAWindowSizeChanged(self, value):
-        self.ma_window_size_sp = value
+        self.moving_avg_window_sp = value
 
         # then update the parameter tree
         self._pro_params.child('M.A. window size').setValue(str(value))
@@ -347,9 +355,3 @@ class PlotWindow(AbstractWindow):
     def _reset(self):
         """Reset all internal states/histories."""
         pass
-
-    def closeEvent(self, QCloseEvent):
-        parent = self.parent()
-        if parent is not None:
-            parent.unregisterPlotWindow(self)
-        super().closeEvent(QCloseEvent)

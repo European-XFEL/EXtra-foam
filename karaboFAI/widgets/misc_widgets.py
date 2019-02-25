@@ -11,19 +11,27 @@ All rights reserved.
 """
 import logging
 
-from .pyqtgraph import ColorMap, mkPen, QtCore, QtGui
+from .pyqtgraph import ColorMap, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
-# TODO: improve
-class PenFactory:
-    _w = 3
-    red = mkPen((255, 0, 0), width=_w)
-    green = mkPen((0, 255, 0), width=_w)
-    blue = mkPen((0, 0, 255), width=_w)
-    cyan = mkPen((0, 255, 255), width=_w)
-    purple = mkPen((255, 0, 255), width=_w)
-    yellow = mkPen((255, 255, 0), width=_w)
+class Colors:
+    def __init__(self, alpha):
+        self.r = (255, 0, 0, alpha)  # red
+        self.g = (0, 255, 0, alpha)  # green
+        self.b = (0, 0, 255, alpha)  # blue
+        self.c = (0, 255, 255, alpha)  # cyan
+        self.p = (255, 0, 255, alpha)  # purple
+        self.y = (255, 255, 0, alpha)  # yellow
+
+
+def make_pen(color, width=2, alpha=255, **kwargs):
+    """Convenient function for making QPen."""
+    return mkPen(getattr(Colors(alpha=alpha), color[0]), width=width, **kwargs)
+
+
+def make_brush(color, alpha=255):
+    return mkBrush(getattr(Colors(alpha=alpha), color[0]))
 
 
 # Valid keys: thermal, flame, yellowy, bipolar, spectrum, cyclic, greyclip, grey

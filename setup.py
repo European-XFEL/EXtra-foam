@@ -1,9 +1,20 @@
+import os
+import re
 from setuptools import setup, find_packages
+
+
+def find_version():
+    with open(os.path.join('karaboFAI', '__init__.py')) as fp:
+        for line in fp:
+            m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
+            if m is not None:
+                return m.group(1)
+        raise RuntimeError("Unable to find version string.")
 
 
 setup(
     name='karaboFAI',
-    version="0.2.0",
+    version=find_version(),
     author='Jun Zhu',
     author_email='cas-support@xfel.eu',
     description='Azimuthal integration tool',
@@ -14,23 +25,29 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.main_fai_gui:main_fai_gui',
+            'karaboFAI=karaboFAI.main_fai_gui:start',
             'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
         ],
     },
-    package_data={},
+    package_data={
+        'karaboFAI': [
+            'icons/*.png',
+            'windows/icons/*.png'
+        ]
+    },
     install_requires=[
-        'numpy>=1.14.5',
+        'numpy>=1.16.1',
         'scipy>=1.1.0',
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
-        'PyQt5>=5.11.0',
+        'PyQt5>=5.12.0',
         'karabo-data>=0.2.0',
         'karabo-bridge>=0.2.0',
         'toolz',
-        'silx>=0.8.0',
+        'silx>=0.9.0',
+        'cached-property>=1.5.1',
     ],
     extras_require={
         'docs': [

@@ -7,38 +7,57 @@ from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 
 from .misc_widgets import (
-    colorMapFactory, GuiLogger, InputDialogWithCheckBox
+    colorMapFactory, GuiLogger, InputDialogWithCheckBox, make_brush, make_pen
 )
 
-from .sample_degradation_widget import SampleDegradationWidget
-from .image_analysis_widget import ImageAnalysisWidget, SinglePulseImageWidget
-from .single_pulse_ai_widget import SinglePulseAiWidget
-from .multi_pulse_ai_widget import MultiPulseAiWidget
+from .image_view import (
+    AssembledImageView, ImageView, RoiImageView, SinglePulseImageView
+)
+from .plot_widget import (
+    CorrelationWidget, LaserOnOffAiWidget, LaserOnOffFomWidget,
+    MultiPulseAiWidget, RoiValueMonitor, SampleDegradationWidget,
+    SinglePulseAiWidget
+)
 from .bulletin_widget import BulletinWidget
+from .correlation_ctrl_widget import CorrelationCtrlWidget
+from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 
 
+# miscellaneous
 __all__ = [
-    "colorMapFactory",
     "BulletinWidget",
-    "ImageAnalysisWidget",
+    "colorMapFactory",
+    "GuiLogger",
+    "InputDialogWithCheckBox",
+    "make_brush",
+    "make_pen"
+]
+
+# add plot widgets
+__all__.extend([
+    "CorrelationWidget",
+    "LaserOnOffAiWidget",
+    "LaserOnOffFomWidget",
     "MultiPulseAiWidget",
+    "RoiValueMonitor",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
-    "SinglePulseImageWidget",
-]
+])
+
+# add image widgets
+__all__.extend([
+    "AssembledImageView",
+    "ImageView",
+    "RoiImageView",
+    "SinglePulseImageView",
+])
 
 # add control widgets
 __all__.extend([
     "AiCtrlWidget",
     "AnalysisCtrlWidget",
+    "CorrelationCtrlWidget",
     "DataCtrlWidget",
     "GeometryCtrlWidget",
-])
-
-# miscellaneous
-__all__.extend([
-    "CustomGroupBox",
-    "FixedWidthLineEdit",
-    "GuiLogger",
-    "InputDialogWithCheckBox",
+    "PumpProbeCtrlWidget"
 ])

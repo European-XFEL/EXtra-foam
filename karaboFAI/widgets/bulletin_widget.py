@@ -14,7 +14,7 @@ from .pyqtgraph import QtGui
 
 class BulletinWidget(QtGui.QWidget):
     """BulletinWidget class."""
-    def __init__(self, *, parent=None, pulse_resolved=True):
+    def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is
@@ -39,13 +39,13 @@ class BulletinWidget(QtGui.QWidget):
         self.clear()
 
     def clear(self):
-        self._trainid_lb.setText("Train ID: ")
-        if self._pulse_resolved:
-            self._npulses_lb.setText("Number of pulses per train: ")
+        self._set_text()
 
     def update(self, data):
         """Override."""
-        self._trainid_lb.setText("Train ID: {}".format(data.tid))
+        self._set_text(data.tid, data.image.n_images)
+
+    def _set_text(self, tid="", n=""):
+        self._trainid_lb.setText("Train ID: {}".format(tid))
         if self._pulse_resolved:
-            self._npulses_lb.setText(
-                "Number of pulses per train: {}".format(len(data.intensity)))
+            self._npulses_lb.setText(f"Number of images per train: {n}")

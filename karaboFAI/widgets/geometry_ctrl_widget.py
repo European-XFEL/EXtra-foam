@@ -26,7 +26,8 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
-        self._geom_file_open_btn = QtGui.QPushButton("...")
+        self._geom_file_le.setMinimumWidth(180)
+        self._geom_file_open_btn = QtGui.QPushButton("Select")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._disabled_widgets_during_daq = [
@@ -39,18 +40,15 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
     def initUI(self):
         """Override."""
-        geom_file_lb = QtGui.QLabel("Geometry file:")
-        quad_positions_lb = QtGui.QLabel("Quadrant positions:")
-
         self.initQuadTable()
 
         layout = QtGui.QVBoxLayout()
-        layout.addWidget(geom_file_lb)
+        layout.addWidget(QtGui.QLabel("Geometry file:"))
         sub_layout = QtGui.QHBoxLayout()
         sub_layout.addWidget(self._geom_file_le)
         sub_layout.addWidget(self._geom_file_open_btn)
         layout.addLayout(sub_layout)
-        layout.addWidget(quad_positions_lb)
+        layout.addWidget(QtGui.QLabel("Quadrant positions:"))
         layout.addWidget(self._quad_positions_tb)
 
         self.setLayout(layout)
@@ -86,21 +84,22 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         if filename:
             self._geom_file_le.setText(filename)
 
-    def updateSharedParameters(self, log=False):
+    def updateSharedParameters(self):
         """Override"""
-
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
             self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + str(e))
-            return False
+            return None
 
-        if log:
-            logger.info("<Geometry file>: {}".format(geom_file))
-            logger.info("<Quadrant positions>: [{}]".format(
+        if config["REQUIRE_GEOMETRY"]:
+            info = "\n<Geometry file>: {}".format(geom_file)
+            info += ("\n<Quadrant positions>: [{}]".format(
                 ", ".join(["[{}, {}]".format(p[0], p[1])
                            for p in quad_positions])))
+        else:
+            info = ""
 
-        return True
+        return info

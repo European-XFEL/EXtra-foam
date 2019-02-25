@@ -47,7 +47,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         # now we change the content of the file
         with open(Config._filename) as fp:
             lines = fp.readlines()
-            lines[3] = 'SOURCE_NAME = changed\n'
+            lines[3] = 'DATA_FOLDER = changed\n'
             lines[4] = 'SOURCE_TYPE = also changed\n'
 
         with open(Config._filename, 'w') as fp:
@@ -61,7 +61,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
 
         # test values which should be overwritten by new values in the file
         self.assertEqual(config["DETECTOR"], detector)
-        self.assertEqual(config["SOURCE_NAME"], "changed")
+        self.assertEqual(config["DATA_FOLDER"], "changed")
         self.assertEqual(config["SOURCE_TYPE"], "also changed")
 
         # *************************************************************
