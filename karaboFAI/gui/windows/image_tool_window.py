@@ -92,13 +92,14 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar = self.addToolBar("Control")
 
         #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/crop_selection.png"))
+        icon = QtGui.QIcon(osp.join(self._root_dir,
+                                    "../icons/crop_selection.png"))
         self._crop_at = QtGui.QAction(icon, "Crop", self)
         self._tool_bar.addAction(self._crop_at)
         self._crop_at.triggered.connect(self._image_view.onCropToggle)
 
         #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/crop.png"))
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/crop.png"))
         self._crop_to_selection_at = QtGui.QAction(
             icon, "Crop to selection", self)
         self._tool_bar.addAction(self._crop_to_selection_at)
@@ -106,7 +107,7 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.onCropConfirmed)
 
         #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/restore.png"))
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/restore.png"))
         self._restore_image_at = QtGui.QAction(icon, "Restore image", self)
         self._tool_bar.addAction(self._restore_image_at)
         self._restore_image_at.triggered.connect(
