@@ -1,8 +1,8 @@
-from .bragg_spot_window import BraggSpotsWindow
-from .correlation_window import CorrelationWindow
-from .draw_mask_window import DrawMaskWindow
-from .image_tool_window import ImageToolWindow
-from .overview_window import OverviewWindow
+from .bragg_spot import BraggSpotsWindow
+from .correlation import CorrelationWindow
+from .draw_mask import DrawMaskWindow
+from .image_tool import ImageToolWindow
+from .overview import OverviewWindow
 
 
 __all__ = [
