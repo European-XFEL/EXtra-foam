@@ -128,6 +128,11 @@ class ImageToolWindow(AbstractWindow):
         self._mask_at.setDefaultWidget(self._mask_ctrl)
         self._tool_bar_mask.addAction(self._mask_at)
 
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/draw_mask.png"))
+        self._draw_mask_at = QtGui.QAction(icon, "Draw mask", self)
+        self._tool_bar_mask.addAction(self._draw_mask_at)
+        # self._draw_mask_at.triggered.connect()
+
         #
         # image tool bar
         #
