@@ -11,7 +11,7 @@ All rights reserved.
 """
 import logging
 
-from .pyqtgraph import ColorMap, mkPen, mkBrush, QtCore, QtGui
+from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
@@ -27,6 +27,12 @@ class Colors:
 
 def make_pen(color, width=2, alpha=255, **kwargs):
     """Convenient function for making QPen."""
+    if color is None:
+        return mkPen(None)
+
+    if isinstance(color, int):
+        return mkPen(intColor(color, **kwargs), width=width)
+
     return mkPen(getattr(Colors(alpha=alpha), color[0]), width=width, **kwargs)
 
 

@@ -10,8 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from ..pyqtgraph import (
-    BarGraphItem, GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
-    ScatterPlotItem
+    BarGraphItem, GraphicsView, PlotItem, QtCore, QtGui, ScatterPlotItem
 )
 from ..misc_widgets import make_brush, make_pen
 from ...logger import logger
@@ -216,8 +215,7 @@ class MultiPulseAiWidget(PlotWidget):
             # re-plot if number of pulses change
             self.clear()
             for i, intensity in enumerate(intensities):
-                self.plot(momentum, intensity,
-                          pen=mkPen(intColor(i, hues=9, values=5), width=2))
+                self.plot(momentum, intensity, pen=make_pen(i, hues=9, values=5))
         else:
             for item, intensity in zip(self.plotItem.items, intensities):
                 item.setData(momentum, intensity)
@@ -336,7 +334,7 @@ class CorrelationWidget(PlotWidget):
         self.setTitle(' ')
 
         self._plot = ScatterPlotItem(size=self._brush_size,
-                                     pen=mkPen(None),
+                                     pen=make_pen(None),
                                      brush=self._brushes[self._idx])
         self.addItem(self._plot)
 
@@ -382,7 +380,7 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setTitle(' ')
 
         self._plot = ScatterPlotItem(
-            size=self._brush_size, pen=mkPen(None), brush=make_brush('c'))
+            size=self._brush_size, pen=make_pen(None), brush=make_brush('c'))
         self.addItem(self._plot)
 
     def clear(self):
