@@ -71,6 +71,9 @@ class PlotWidget(GraphicsView):
         """
         self.plotItem.addItem(*args, **kwargs)
 
+    def removeItem(self, *args, **kwargs):
+        self.plotItem.removeItem(*args, **kwargs)
+
     def plot(self, *args, **kwargs):
         return self.plotItem.plot(*args, **kwargs)
 

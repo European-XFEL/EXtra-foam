@@ -52,6 +52,12 @@ class RoiValueType(IntEnum):
     MEAN = 2  # monitor mean of ROI
 
 
+class ImageMaskChange(IntEnum):
+    MASK = 0  # mask an area
+    UNMASK = 1  # unmask an area
+    CLEAR = 2  # remove all the mask areas
+
+
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")
 if not os.path.isdir(ROOT_PATH):

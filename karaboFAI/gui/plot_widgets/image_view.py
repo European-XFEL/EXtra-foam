@@ -11,11 +11,14 @@ All rights reserved.
 """
 import numpy as np
 
-from ..pyqtgraph import HistogramLUTWidget, ImageItem, QtCore, QtGui
+from .. import pyqtgraph as pg
+from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 
 from .plot_widget import PlotWidget
+from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
-from ..misc_widgets import colorMapFactory, make_pen
+from ..misc_widgets import colorMapFactory, make_brush, make_pen
+from ..mediator import Mediator
 from ...algorithms import intersection, quick_min_max
 from ...config import config
 from ...logger import logger
@@ -64,8 +67,11 @@ class ImageView(QtGui.QWidget):
         if hide_axis:
             self._plot_widget.hideAxis()
 
-        self._image_item = ImageItem(border='w')
+        self._image_item = pg.ImageItem(border='w')
+        self._mask_item = MaskItem(self._image_item)
+
         self._plot_widget.addItem(self._image_item)
+        self._plot_widget.addItem(self._mask_item)
         self._plot_widget.addItem(self.roi1)
         self._plot_widget.addItem(self.roi2)
         self.invertY(True)
@@ -127,6 +133,7 @@ class ImageView(QtGui.QWidget):
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
+        self._mask_item.set()
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -164,6 +171,9 @@ class ImageView(QtGui.QWidget):
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)
 
+    def removeItem(self, *args, **kwargs):
+        self._plot_widget.removeItem(*args, **kwargs)
+
     def close(self):
         self.parent().unregisterPlotWidget(self)
         super().close()
@@ -176,27 +186,6 @@ class ImageAnalysis(ImageView):
     It provides tools like masking, cropping, etc.
     """
 
-    class _ImageItem(ImageItem):
-        """ImageItem with mouseHover event."""
-        mouse_moved_sgn = QtCore.pyqtSignal(int, int, float)
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-
-        def hoverEvent(self, event):
-            """Override."""
-            if event.isExit():
-                x = -1  # out of image
-                y = -1  # out of image
-                value = 0.0
-            else:
-                pos = event.pos()
-                x = int(pos.x())
-                y = int(pos.y())
-                value = self.image[y, x]
-
-            self.mouse_moved_sgn.emit(x, y, value)
-
     crop_area_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
@@ -205,10 +194,22 @@ class ImageAnalysis(ImageView):
 
         self._plot_widget.setTitle('')  # reserve space for displaying
 
+        mediator = Mediator()
+
         # set the customized ImageItem
-        self._image_item = self._ImageItem(border='w')
+        self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
+        self._mask_item = MaskItem(self._image_item)
+        self._mask_item.image_mask_change_sgn.connect(
+            mediator.onImageMaskChange)
+
+        # re-add items to keep the order
+        self._plot_widget.clear()
         self._plot_widget.addItem(self._image_item)
+        self._plot_widget.addItem(self._mask_item)
+        self._plot_widget.addItem(self.roi1)
+        self._plot_widget.addItem(self.roi2)
+
         self.invertY(True)
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
@@ -287,6 +288,14 @@ class ImageAnalysis(ImageView):
         # recalculate the unmasked mean image
         self._image_data.threshold_mask = (v0, v1)
         self.setImage(self._image_data.masked_mean)
+
+    @QtCore.pyqtSlot(bool)
+    def onDrawToggled(self, draw_type, checked):
+        self._mask_item.draw_type = draw_type
+        self._image_item.drawing = checked
+
+    def clearMask(self):
+        self._mask_item.clear()
 
 
 class AssembledImageView(ImageView):

@@ -21,82 +21,20 @@ import zmq
 
 from .pyqtgraph import QtCore, QtGui
 
+from .mediator import Mediator
 from .ctrl_widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
     GeometryCtrlWidget, PumpProbeCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    CorrelationWindow, DrawMaskWindow, ImageToolWindow, OverviewWindow
+    CorrelationWindow, ImageToolWindow, OverviewWindow
 )
 from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..offline import FileServer
 from ..pipeline import DataAcquisition, DataProcessor, Data4Visualization
-
-
-class Mediator(QtCore.QObject):
-    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
-    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
-
-    roi_displayed_range_sgn = QtCore.pyqtSignal(int)
-    roi_hist_clear_sgn = QtCore.pyqtSignal()
-    roi_value_type_sgn = QtCore.pyqtSignal(object)
-    roi1_region_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    roi2_region_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    bkg_change_sgn = QtCore.pyqtSignal(float)
-
-    crop_area_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-
-    threshold_mask_sgn = QtCore.pyqtSignal(float, float)
-
-    moving_avg_window_sgn = QtCore.pyqtSignal(int)
-
-    @QtCore.pyqtSlot(int)
-    def onPulseID1Updated(self, v):
-        self.vip_pulse_id1_sgn.emit(v)
-
-    @QtCore.pyqtSlot(int)
-    def onPulseID2Updated(self, v):
-        self.vip_pulse_id2_sgn.emit(v)
-
-    @QtCore.pyqtSlot()
-    def onRoiDisplayedRangeChange(self):
-        v = int(self.sender().text())
-        self.roi_displayed_range_sgn.emit(v)
-
-    @QtCore.pyqtSlot()
-    def onRoiHistClear(self):
-        self.roi_hist_clear_sgn.emit()
-
-    @QtCore.pyqtSlot(object)
-    def onRoiValueTypeChange(self, state):
-        self.roi_value_type_sgn.emit(state)
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi1Change(self, activated, w, h, px, py):
-        self.roi1_region_sgn.emit(activated, w, h, px, py)
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi2Change(self, activated, w, h, px, py):
-        self.roi2_region_sgn.emit(activated, w, h, px, py)
-
-    @QtCore.pyqtSlot()
-    def onBkgChange(self):
-        self.bkg_change_sgn.emit(float(self.sender().text()))
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onCropAreaChange(self, restore, w, h, px, py):
-        self.crop_area_sgn.emit(restore, w, h, px, py)
-
-    @QtCore.pyqtSlot(float, float)
-    def onThresholdMaskChange(self, lb, ub):
-        self.threshold_mask_sgn.emit(lb, ub)
-
-    @QtCore.pyqtSlot(int)
-    def onMovingAvgWindowChange(self, v):
-        self.moving_avg_window_sgn.emit(v)
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -114,8 +52,6 @@ class MainGUI(QtGui.QMainWindow):
     def __init__(self, detector):
         """Initialization."""
         super().__init__()
-
-        self._mediator = Mediator()
 
         # update global configuration
         config.load(detector)
@@ -150,23 +86,10 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.setEnabled(False)
 
         #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/draw_mask.png"))
-        self._draw_mask_at = QtGui.QAction(icon, "Draw mask", self)
-        self._draw_mask_at.triggered.connect(
-            lambda: DrawMaskWindow(self._data, parent=self))
-        self._tool_bar.addAction(self._draw_mask_at)
-
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/load_mask.png"))
-        load_mask_at = QtGui.QAction(icon, "Load mask", self)
-        load_mask_at.triggered.connect(self.loadMaskImage)
-        self._tool_bar.addAction(load_mask_at)
-
-        #
         icon = QtGui.QIcon(osp.join(self._root_dir, "icons/image_tool.png"))
         image_tool_at = QtGui.QAction(icon, "Image tool", self)
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
-            self._data, mediator=self._mediator, parent=self))
+            self._data, parent=self))
         self._tool_bar.addAction(image_tool_at)
 
         #
@@ -174,7 +97,6 @@ class MainGUI(QtGui.QMainWindow):
         open_overview_window_at = QtGui.QAction(icon, "Overview", self)
         open_overview_window_at.triggered.connect(
             lambda: OverviewWindow(self._data,
-                                   mediator=self._mediator,
                                    pulse_resolved=self._pulse_resolved,
                                    parent=self))
         self._tool_bar.addAction(open_overview_window_at)
@@ -202,10 +124,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self._mask_image = None
 
-        self._disabled_widgets_during_daq = [
-            load_mask_at,
-        ]
-
         self._logger = GuiLogger(self)
         logging.getLogger().addHandler(self._logger)
 
@@ -217,7 +135,9 @@ class MainGUI(QtGui.QMainWindow):
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._proc_worker = None
+        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+        # initializing mediator
+        Mediator(self._proc_worker)
 
         # For real time plot
         self._running = False
@@ -245,8 +165,6 @@ class MainGUI(QtGui.QMainWindow):
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
-        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
-
         self.initUI()
         self.initConnection()
 
@@ -266,8 +184,6 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onSourceNameChange)
 
         self._proc_worker.message.connect(self.onMessageReceived)
-
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChange)
 
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget.geometry_sgn.connect(
@@ -297,27 +213,6 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onNormalizationRangeChange)
         self.analysis_ctrl_widget.integration_range_sgn.connect(
             self._proc_worker.onFomIntegrationRangeChange)
-        self.analysis_ctrl_widget.vip_pulse_id1_sgn.connect(
-            self._mediator.onPulseID1Updated)
-        self.analysis_ctrl_widget.vip_pulse_id2_sgn.connect(
-            self._mediator.onPulseID2Updated)
-
-        self._mediator.roi_hist_clear_sgn.connect(
-            self._proc_worker.onRoiHistClear)
-        self._mediator.roi1_region_sgn.connect(
-            self._proc_worker.onRoi1Change)
-        self._mediator.roi_value_type_sgn.connect(
-            self._proc_worker.onRoiValueTypeChange)
-        self._mediator.roi2_region_sgn.connect(
-            self._proc_worker.onRoi2Change)
-        self._mediator.bkg_change_sgn.connect(
-            self._proc_worker.onBkgChange)
-        self._mediator.threshold_mask_sgn.connect(
-            self._proc_worker.onThresholdMaskChange)
-        self._mediator.crop_area_sgn.connect(
-            self._proc_worker.onCropAreaChange)
-        self._mediator.moving_avg_window_sgn.connect(
-            self._proc_worker.onMovingAvgWindowChange)
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)
@@ -415,8 +310,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
-        for widget in self._disabled_widgets_during_daq:
-            widget.setEnabled(False)
+
         self.daq_started_sgn.emit()
 
     def onStopDAQ(self):
@@ -428,8 +322,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
-        for widget in self._disabled_widgets_during_daq:
-            widget.setEnabled(True)
+
         self.daq_stopped_sgn.emit()
 
     def clearWorkers(self):

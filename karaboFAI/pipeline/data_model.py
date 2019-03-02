@@ -17,6 +17,7 @@ from cached_property import cached_property
 
 from ..algorithms import nanmean_axis0_para
 from ..logger import logger
+from ..config import ImageMaskChange
 
 
 class TrainData:
@@ -120,6 +121,37 @@ class CorrelationData(AbstractData):
         return params
 
 
+class ImageMaskData:
+    def __init__(self, shape):
+        """Initialization.
+
+        :param shape: shape of the mask.
+        """
+        self._assembled = np.zeros(shape, dtype=bool)
+
+    @cached_property
+    def mask(self):
+        """Return the assembled mask.
+
+        The owner of the ImageMaskData takes the responsibility of
+        invalidating the cache when appropriate.
+        """
+        return self._assembled
+
+    def update(self, rect, masking):
+        """Add a new area.
+
+        :param tuple rect: (x1, y1, x2, y2) where (x1, y1) and (x2, y2)
+            are coordinates of the two diagnal corners of the rectangle.
+        """
+        x1, y1, x2, y2 = rect
+        self._assembled[y1:y2, x1:x2] = masking
+
+    def clear(self):
+        """Remove all the masking areas."""
+        self._assembled[:] = False
+
+
 class ImageData:
     """A class that manages the detector images.
 
@@ -151,9 +183,10 @@ class ImageData:
     _ma_window = 1
     _ma_count = 0
 
+    __image_mask_data = None
+
     def __init__(self, images, *,
                  threshold_mask=None,
-                 image_mask=None,
                  background=0.0,
                  crop_area=None,
                  pixel_size=None,
@@ -168,12 +201,22 @@ class ImageData:
 
         self._compute_moving_average(images, background)
 
+        if self.__image_mask_data is None:
+            self.__class__.__image_mask_data = ImageMaskData(self.shape)
+
+        # An ImageData instance should have one unique mask. For now, the
+        # mask should not change during the life time of the instance.
+        try:
+            del self.__image_mask_data.__dict__['mask']
+        except KeyError:
+            pass
+        self._image_mask = np.copy(self.__image_mask_data.mask)
+
         self._crop_area = crop_area
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
         self._threshold_mask = threshold_mask
-        self._image_mask = image_mask
 
         self.pixel_size = pixel_size
 
@@ -227,26 +270,22 @@ class ImageData:
         _, _, x0, y0 = self._crop_area
         return x + x0, y + y0
 
+    @classmethod
+    def update_image_mask(cls, tp, x1, y1, x2, y2):
+        if tp == ImageMaskChange.MASK:
+            cls.__image_mask_data.update((x1, y1, x2, y2), True)
+        elif tp == ImageMaskChange.UNMASK:
+            cls.__image_mask_data.update((x1, y1, x2, y2), False)
+        elif tp == ImageMaskChange.CLEAR:
+            cls.__image_mask_data.clear()
+
     @property
     def image_mask(self):
-        # shape of the original image
-        expected_shape = self._images.shape[-2:]
-        if self._image_mask is None:
-            mask = np.zeros(expected_shape, dtype=np.uint8)
-
-        elif self._image_mask.shape != expected_shape:
-            raise ValueError(
-                "Invalid mask shape {} for image with shape {}! Please"
-                "draw mask on the original image!".
-                format(self._image_mask.shape, expected_shape))
-        else:
-            mask = self._image_mask
-
         if self._crop_area is not None:
             w, h, x, y = self._crop_area
-            return mask[y:y+h, x:x+w]
+            return self._image_mask[y:y+h, x:x+w]
 
-        return mask
+        return self._image_mask
 
     @cached_property
     def images(self):
@@ -378,11 +417,15 @@ class ImageData:
 
     @classmethod
     def reset(cls):
-        """Reset all the class attributes."""
+        """Reset all the class attributes.
+
+        Used in unittest only.
+        """
         cls._images = None  # moving average of original images
         cls._bkg = 0  # background
         cls._ma_window = 1
         cls._ma_count = 0
+        cls.__image_mask_data = None
 
 
 class ProcessedData:
@@ -443,6 +486,10 @@ class ProcessedData:
     @classmethod
     def set_moving_average_window(cls, v):
         ImageData.set_moving_average_window(v)
+
+    @classmethod
+    def update_image_mask(cls, tp, x1, y1, x2, y2):
+        ImageData.update_image_mask(tp, x1, y1, x2, y2)
 
     @classmethod
     def clear_roi_hist(cls):

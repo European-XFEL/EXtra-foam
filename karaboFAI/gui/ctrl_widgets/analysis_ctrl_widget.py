@@ -14,6 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..mediator import Mediator
 from ..gui_helpers import parse_boundary
 from ...config import AiNormalizer, config
 from ...logger import logger
@@ -91,6 +92,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         ]
 
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -118,6 +120,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             layout.addRow(pid_layout)
 
         self.setLayout(layout)
+
+    def initConnections(self):
+        mediator = Mediator()
+        self.vip_pulse_id1_sgn.connect(mediator.onPulseID1Updated)
+        self.vip_pulse_id2_sgn.connect(mediator.onPulseID2Updated)
 
     def updateSharedParameters(self):
         """Override"""

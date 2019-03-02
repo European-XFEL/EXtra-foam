@@ -11,13 +11,15 @@ All rights reserved.
 """
 import os.path as osp
 from collections import OrderedDict
+import functools
 
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_window import AbstractWindow, SingletonWindow
+from ..mediator import Mediator
 from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget, RoiCtrlWidget
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiValueType
+from ...config import config, RoiValueType, ImageMaskChange
 
 
 @SingletonWindow
@@ -40,20 +42,21 @@ class ImageToolWindow(AbstractWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageAnalysis(lock_roi=False, hide_axis=False)
-        self._image_view.crop_area_sgn.connect(
-            self._mediator.onCropAreaChange)
+        mediator = Mediator()
+
+        self._image_view = ImageAnalysis(
+            lock_roi=False, hide_axis=False, parent=self)
+        self._image_view.crop_area_sgn.connect(mediator.onCropAreaChange)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
-        self._clear_roi_hist_btn.clicked.connect(
-            self._mediator.onRoiHistClear)
+        self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
 
         self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
         validator = QtGui.QIntValidator()
         validator.setBottom(1)
         self._roi_displayed_range_le.setValidator(validator)
         self._roi_displayed_range_le.editingFinished.connect(
-            self._mediator.onRoiDisplayedRangeChange)
+            mediator.onRoiDisplayedRangeChange)
 
         self._roi_value_type_cb = QtGui.QComboBox()
         for v in self._available_roi_value_types:
@@ -61,13 +64,13 @@ class ImageToolWindow(AbstractWindow):
         self._roi_value_type_cb.currentTextChanged.connect(
             lambda x: self.roi_value_type_sgn.emit(
                 self._available_roi_value_types[x]))
-        self.roi_value_type_sgn.connect(self._mediator.onRoiValueTypeChange)
+        self.roi_value_type_sgn.connect(mediator.onRoiValueTypeChange)
         self._roi_value_type_cb.currentTextChanged.emit(
             self._roi_value_type_cb.currentText())
 
         self._bkg_le = QtGui.QLineEdit(str(0.0))
         self._bkg_le.setValidator(QtGui.QDoubleValidator())
-        self._bkg_le.editingFinished.connect(self._mediator.onBkgChange)
+        self._bkg_le.editingFinished.connect(mediator.onBkgChange)
         self._bkg_le.editingFinished.connect(self._image_view.onBkgChange)
 
         self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
@@ -81,10 +84,8 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.roi2,
             title="ROI 2 ({})".format(config['ROI_COLORS'][1]))
 
-        self._roi1_ctrl.roi_region_change_sgn.connect(
-            self._mediator.onRoi1Change)
-        self._roi2_ctrl.roi_region_change_sgn.connect(
-            self._mediator.onRoi2Change)
+        self._roi1_ctrl.roi_region_change_sgn.connect(mediator.onRoi1Change)
+        self._roi2_ctrl.roi_region_change_sgn.connect(mediator.onRoi2Change)
 
         #
         # crop tool bar
@@ -121,17 +122,35 @@ class ImageToolWindow(AbstractWindow):
 
         self._mask_ctrl = MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
-            self._mediator.onThresholdMaskChange)
+            mediator.onThresholdMaskChange)
         self._mask_ctrl.threshold_mask_sgn.connect(
             self._image_view.onImageMaskChange)
-        self._mask_at = QtGui.QWidgetAction(self._tool_bar_mask)
-        self._mask_at.setDefaultWidget(self._mask_ctrl)
-        self._tool_bar_mask.addAction(self._mask_at)
+        self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
+        self._masking_at.setDefaultWidget(self._mask_ctrl)
+        self._tool_bar_mask.addAction(self._masking_at)
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/draw_mask.png"))
-        self._draw_mask_at = QtGui.QAction(icon, "Draw mask", self)
-        self._tool_bar_mask.addAction(self._draw_mask_at)
-        # self._draw_mask_at.triggered.connect()
+        mask_act_group = QtGui.QActionGroup(self)
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/mask.png"))
+        self._mask_at = QtGui.QAction(icon, "Mask", self)
+        self._mask_at.setCheckable(True)
+        mask_act_group.addAction(self._mask_at)
+        self._mask_at.toggled.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.MASK))
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
+        self._un_mask_at = QtGui.QAction(icon, "Unmask", self)
+        self._un_mask_at.setCheckable(True)
+        mask_act_group.addAction(self._un_mask_at)
+        self._un_mask_at.triggered.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
+
+        self._tool_bar_mask.addActions(mask_act_group.actions())
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
+        self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
+        self._tool_bar_mask.addAction(self._clear_mask_at)
+        self._clear_mask_at.triggered.connect(self._image_view.clearMask)
 
         #
         # image tool bar
@@ -148,7 +167,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_ctrl = ImageCtrlWidget()
         self._image_ctrl.moving_avg_window_sgn.connect(
-            self._mediator.onMovingAvgWindowChange)
+            mediator.onMovingAvgWindowChange)
         self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
         self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
         self._tool_bar_image.addAction(self._image_ctrl_at)

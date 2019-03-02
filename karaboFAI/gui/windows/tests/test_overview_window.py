@@ -18,7 +18,6 @@ class TestOverviewWindow(unittest.TestCase):
         main_gui = MainGUI('LPD')
 
         self._win = OverviewWindow(Data4Visualization(),
-                                   mediator=main_gui._mediator,
                                    pulse_resolved=True,
                                    parent=main_gui)
 
@@ -41,7 +40,6 @@ class TestOverviewWindow(unittest.TestCase):
         main_gui = MainGUI('JungFrau')
 
         self._win = OverviewWindow(Data4Visualization(),
-                                   mediator=main_gui._mediator,
                                    pulse_resolved=False,
                                    parent=main_gui)
 

@@ -14,6 +14,7 @@ from ..pyqtgraph import QtCore
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
+from ..mediator import Mediator
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
@@ -58,6 +59,8 @@ class OverviewWindow(DockerWindow):
         self._bulletin = BulletinWidget(parent=self)
         self._assembled = AssembledImageView(parent=self)
 
+        mediator = Mediator()
+
         if self._pulse_resolved:
             self._ai = MultiPulseAiWidget(parent=self)
 
@@ -73,8 +76,8 @@ class OverviewWindow(DockerWindow):
             self._vip2_ai = SinglePulseAiWidget(parent=self)
             self._vip2_img = SinglePulseImageView(parent=self)
 
-            self._mediator.vip_pulse_id1_sgn.connect(self.onPulseID1Updated)
-            self._mediator.vip_pulse_id2_sgn.connect(self.onPulseID2Updated)
+            mediator.vip_pulse_id1_sgn.connect(self.onPulseID1Updated)
+            mediator.vip_pulse_id2_sgn.connect(self.onPulseID2Updated)
         else:
             self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
 
@@ -84,7 +87,7 @@ class OverviewWindow(DockerWindow):
         self._roi2_image.setBorder(make_pen(config["ROI_COLORS"][1]))
 
         self._roi_intensity = RoiValueMonitor(parent=self)
-        self._mediator.roi_displayed_range_sgn.connect(
+        mediator.roi_displayed_range_sgn.connect(
             self._roi_intensity.onDisplayRangeChange)
 
         self._on_off_fom = LaserOnOffFomWidget(parent=self)

@@ -19,7 +19,6 @@ from scipy import constants
 from h5py import File
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
-import fabio
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
@@ -422,7 +421,6 @@ class DataProcessor(Worker):
             integration output pattern.
         threshold_mask_sp (tuple): (min, max), the pixel value outside
             the range will be clipped to the corresponding edge.
-        image_mask (numpy.ndarray): a 2D mask.
         roi1 (tuple): (w, h, px, py) of the current ROI1.
         roi2 (tuple): (w, h, px, py) of the current ROI2.
     """
@@ -458,8 +456,6 @@ class DataProcessor(Worker):
         self.threshold_mask_sp = (config["MASK_RANGE"][0],
                                   config["MASK_RANGE"][1])
 
-        self._image_mask = None
-
         self._crop_area = None
 
         self.roi1 = None
@@ -474,16 +470,6 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(str)
     def onMessageReceived(self, msg):
         self.log(msg)
-
-    @QtCore.pyqtSlot(str)
-    def onImageMaskChange(self, filename):
-        try:
-            self._image_mask = fabio.open(filename).data
-            msg = "Image mask {} loaded!".format(filename)
-        except (IOError, OSError) as e:
-            msg = str(e)
-        finally:
-            self.log(msg)
 
     @QtCore.pyqtSlot(object)
     def onSourceTypeChange(self, value):
@@ -564,10 +550,6 @@ class DataProcessor(Worker):
     def onIntegrationPointsChange(self, value):
         self.integration_points_sp = value
 
-    @QtCore.pyqtSlot(float, float)
-    def onThresholdMaskChange(self, lb, ub):
-        self.threshold_mask_sp = (lb, ub)
-
     @QtCore.pyqtSlot(float)
     def onPhotonEnergyChange(self, photon_energy):
         """Compute photon wavelength (m) from photon energy (keV)."""
@@ -578,46 +560,6 @@ class DataProcessor(Worker):
     @QtCore.pyqtSlot(int, int)
     def onPulseIdRangeChange(self, lb, ub):
         self.pulse_id_range_sp = (lb, ub)
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi1Change(self, activated, w, h, px, py):
-        if activated:
-            self.roi1 = (w, h, px, py)
-        else:
-            self.roi1 = None
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi2Change(self, activated, w, h, px, py):
-        if activated:
-            self.roi2 = (w, h, px, py)
-        else:
-            self.roi2 = None
-
-    @QtCore.pyqtSlot(int)
-    def onMovingAvgWindowChange(self, v):
-        ProcessedData.set_moving_average_window(v)
-
-    @QtCore.pyqtSlot(float)
-    def onBkgChange(self, v):
-        self._bkg = v
-
-    @QtCore.pyqtSlot()
-    def onRoiHistClear(self):
-        ProcessedData.clear_roi_hist()
-
-    @QtCore.pyqtSlot(object)
-    def onRoiValueTypeChange(self, value):
-        self._roi_value_type = value
-        ProcessedData.clear_roi_hist()
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onCropAreaChange(self, restore, w, h, px, py):
-        if restore:
-            self._crop_area = None
-            self.log("Restore the original image.")
-        else:
-            self._crop_area = (w, h, px, py)
-            self.log(f"Crop area: w = {w}, h = {h}, px = {px}, py = {py}")
 
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
@@ -637,6 +579,45 @@ class DataProcessor(Worker):
         self._correlation_proc.fom_name = fom
         # clear all correlation data
         ProcessedData.clear_correlation_hist()
+
+    def update_roi1_region(self, activated, w, h, px, py):
+        if activated:
+            self.roi1 = (w, h, px, py)
+        else:
+            self.roi1 = None
+
+    def update_roi2_region(self, activated, w, h, px, py):
+        if activated:
+            self.roi2 = (w, h, px, py)
+        else:
+            self.roi2 = None
+
+    def clear_roi_hist(self):
+        ProcessedData.clear_roi_hist()
+
+    def update_roi_value_type(self, value):
+        self._roi_value_type = value
+        ProcessedData.clear_roi_hist()
+
+    def update_background(self, v):
+        self._bkg = v
+
+    def update_crop_area(self, restore, w, h, px, py):
+        if restore:
+            self._crop_area = None
+            self.log("Restore the original image.")
+        else:
+            self._crop_area = (w, h, px, py)
+            self.log(f"Crop area: w = {w}, h = {h}, px = {px}, py = {py}")
+
+    def update_moving_avg_window(self, v):
+        ProcessedData.set_moving_average_window(v)
+
+    def update_threshold_mask(self, lb, ub):
+        self.threshold_mask_sp = (lb, ub)
+
+    def update_image_mask(self, tp, x1, y1, x2, y2):
+        ProcessedData.update_image_mask(tp, x1, y1, x2, y2)
 
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)
@@ -688,22 +669,12 @@ class DataProcessor(Worker):
         try:
             image_mask = data.image.image_mask
         except ValueError as e:
-            self.log(str(e) + "\nInvalid mask has been removed!")
-            self._image_mask = None
+            self.log(str(e) + "\nInvalid image mask!")
             raise
         pixel_size = data.image.pixel_size
         poni = data.image.poni
         mask_min, mask_max = data.image.threshold_mask
 
-        # instantiate a AzimuthalIntegrator object causes the following
-        # warning message since pyFAI version 0.16.0:
-        #
-        # QObject::connect: Cannot queue arguments of type 'QTextBlock'
-        # (Make sure 'QTextBlock' is registered using qRegisterMetaType().)
-        # QObject::connect: Cannot queue arguments of type 'QTextCursor'
-        # (Make sure 'QTextCursor' is registered using qRegisterMetaType().)
-        #
-        # which may cause segmentation fault!!!
         ai = AzimuthalIntegrator(dist=self.sample_distance_sp,
                                  poni1=poni[0] * pixel_size,
                                  poni2=poni[1] * pixel_size,
@@ -752,7 +723,7 @@ class DataProcessor(Worker):
         else:
             # train-resolved
 
-            mask = np.copy(image_mask)
+            mask = image_mask != 0
             # merge image mask and threshold mask
             mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
@@ -972,7 +943,6 @@ class DataProcessor(Worker):
 
         proc_data = ProcessedData(tid, assembled,
                                   threshold_mask=self.threshold_mask_sp,
-                                  image_mask=self._image_mask,
                                   background=self._bkg,
                                   crop_area=self._crop_area,
                                   pixel_size=config["PIXEL_SIZE"],
