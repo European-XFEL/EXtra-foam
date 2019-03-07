@@ -40,6 +40,9 @@ class PlotWidget(GraphicsView):
     sigRangeChanged = QtCore.Signal(object, object)
     sigTransformChanged = QtCore.Signal(object)
 
+    _pen = mkPen(None)
+    _brush_size = 12
+
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
@@ -92,7 +95,9 @@ class PlotWidget(GraphicsView):
 
     def plotScatter(self, *args, **kwargs):
         """Add and return a new scatter plot."""
-        item = pg.ScatterPlotItem(*args, **kwargs)
+        item = pg.ScatterPlotItem(*args,
+                                  pen=self._pen,
+                                  size=self._brush_size, **kwargs)
         self.plotItem.addItem(item)
         return item
 
@@ -323,8 +328,6 @@ class CorrelationWidget(PlotWidget):
         3: make_brush('p', 120)
     }
 
-    _brush_size = 14
-
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
@@ -336,9 +339,7 @@ class CorrelationWidget(PlotWidget):
         self.setLabel('bottom', "Correlator (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(size=self._brush_size,
-                                      pen=mkPen(None),
-                                      brush=self._brushes[self._idx])
+        self._plot = self.plotScatter(brush=self._brushes[self._idx])
         self.addItem(self._plot)
 
         self.setMinimumSize(self.MIN_W, self.MIN_H)
@@ -364,8 +365,6 @@ class LaserOnOffFomWidget(PlotWidget):
     Widget for displaying the evolution of FOM in the Laser On-off analysis.
     """
 
-    _brush_size = 14
-
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
@@ -374,8 +373,7 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setLabel('left', "ROI (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(
-            size=self._brush_size, pen=mkPen(None), brush=make_brush('c'))
+        self._plot = self.plotScatter(brush=make_brush('c'))
         self.addItem(self._plot)
 
     def update(self, data):
