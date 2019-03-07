@@ -9,13 +9,23 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from .. import pyqtgraph as pg
 from ..pyqtgraph import (
-    BarGraphItem, GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
-    ScatterPlotItem
+    GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
 )
 from ..misc_widgets import make_brush, make_pen
 from ...logger import logger
 from ...config import config
+
+
+# TODO: move to plot_items.py when the other branch is merged
+class BarGraphItem(pg.BarGraphItem):
+    def setData(self, x, height):
+        """PlotItem interface.
+
+        TODO: maybe provide a richer interface.
+        """
+        self.setOpts(x=x, height=height)
 
 
 class PlotWidget(GraphicsView):
@@ -54,7 +64,8 @@ class PlotWidget(GraphicsView):
 
     def reset(self):
         """Clear the data of all the items in the PlotItem object."""
-        pass
+        for item in self.plotItem.items:
+            item.setData([], [])
 
     def update(self, data):
         raise NotImplemented
@@ -68,12 +79,37 @@ class PlotWidget(GraphicsView):
     def addItem(self, *args, **kwargs):
         """Explicitly call PlotItem.addItem.
 
-        GraphicsView also has the addItem method.
+        This method must be here to override the addItem method in
+        GraphicsView. Otherwise, people may misuse the addItem method.
         """
         self.plotItem.addItem(*args, **kwargs)
 
-    def plot(self, *args, **kwargs):
-        return self.plotItem.plot(*args, **kwargs)
+    def plotCurve(self, *args, **kwargs):
+        """Add and return a new curve plot."""
+        item = pg.PlotCurveItem(*args, **kwargs)
+        self.plotItem.addItem(item)
+        return item
+
+    def plotScatter(self, *args, **kwargs):
+        """Add and return a new scatter plot."""
+        item = pg.ScatterPlotItem(*args, **kwargs)
+        self.plotItem.addItem(item)
+        return item
+
+    def plotBar(self, *args, **kwargs):
+        """Add and return a new bar plot."""
+        if not kwargs:
+            kwargs['x'] = []
+            kwargs['height'] = []
+            kwargs['width'] = 1.0
+        item = BarGraphItem(**kwargs)
+        self.plotItem.addItem(item)
+        return item
+
+    def plotImage(self, *args, **kargs):
+        """Add and return a image item."""
+        # TODO: this will be done when another branch is merged
+        raise NotImplemented
 
     def setAspectLocked(self, *args, **kwargs):
         self.plotItem.setAspectLocked(*args, **kwargs)
@@ -135,22 +171,12 @@ class SinglePulseAiWidget(PlotWidget):
         if plot_mean:
             self.addLegend(offset=(-40, 20))
 
-        self._pulse_plot = self.plot(name="pulse_plot", pen=make_pen("y"))
+        self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("y"))
 
         if plot_mean:
-            self._mean_plot = self.plot(name="mean", pen=make_pen("c"))
+            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("c"))
         else:
             self._mean_plot = None
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._pulse_plot.setData([], [])
-        if self._mean_plot is not None:
-            self._mean_plot.setData([], [])
 
     def update(self, data):
         """Override."""
@@ -193,15 +219,6 @@ class MultiPulseAiWidget(PlotWidget):
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setTitle(' ')
 
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        for item in self.plotItem.items:
-            item.setData([], [])
-
     def update(self, data):
         """Override."""
         momentum = data.momentum
@@ -216,8 +233,9 @@ class MultiPulseAiWidget(PlotWidget):
             # re-plot if number of pulses change
             self.clear()
             for i, intensity in enumerate(intensities):
-                self.plot(momentum, intensity,
-                          pen=mkPen(intColor(i, hues=9, values=5), width=2))
+                self.plotCurve(momentum, intensity,
+                               pen=mkPen(intColor(i, hues=9, values=5),
+                                         width=2))
         else:
             for item, intensity in zip(self.plotItem.items, intensities):
                 item.setData(momentum, intensity)
@@ -233,20 +251,12 @@ class SampleDegradationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._plot = BarGraphItem(x=[], height=[], width=0.6, brush='b')
+        self._plot = self.plotBar(x=[], height=[], width=0.6, brush='b')
         self.addItem(self._plot)
 
         self.setLabel('left', "Integrated difference (arb.)")
         self.setLabel('bottom', "Pulse ID")
         self.setTitle('FOM with respect to the first pulse')
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._plot.setOpts(x=[], height=[])
 
     def update(self, data):
         """Override."""
@@ -254,7 +264,7 @@ class SampleDegradationWidget(PlotWidget):
         if foms is None:
             return
 
-        self._plot.setOpts(x=range(len(foms)), height=foms)
+        self._plot.setData(range(len(foms)), foms)
 
 
 class RoiValueMonitor(PlotWidget):
@@ -278,19 +288,10 @@ class RoiValueMonitor(PlotWidget):
         self.setTitle(' ')
         self.addLegend(offset=(-40, 20))
 
-        self._roi1_plot = self.plot(
+        self._roi1_plot = self.plotCurve(
             name="ROI 1", pen=make_pen(config["ROI_COLORS"][0]))
-        self._roi2_plot = self.plot(
+        self._roi2_plot = self.plotCurve(
             name="ROI 2", pen=make_pen(config["ROI_COLORS"][1]))
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._roi1_plot.setData([], [])
-        self._roi2_plot.setData([], [])
 
     def update(self, data):
         """Override."""
@@ -335,20 +336,12 @@ class CorrelationWidget(PlotWidget):
         self.setLabel('bottom', "Correlator (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = ScatterPlotItem(size=self._brush_size,
-                                     pen=mkPen(None),
-                                     brush=self._brushes[self._idx])
+        self._plot = self.plotScatter(size=self._brush_size,
+                                      pen=mkPen(None),
+                                      brush=self._brushes[self._idx])
         self.addItem(self._plot)
 
         self.setMinimumSize(self.MIN_W, self.MIN_H)
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._plot.setData([], [])
 
     def update(self, data):
         """Override."""
@@ -381,17 +374,9 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setLabel('left', "ROI (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = ScatterPlotItem(
+        self._plot = self.plotScatter(
             size=self._brush_size, pen=mkPen(None), brush=make_brush('c'))
         self.addItem(self._plot)
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._plot.setData([], [])
 
     def update(self, data):
         """Override."""
@@ -414,19 +399,9 @@ class LaserOnOffAiWidget(PlotWidget):
         self.setTitle('Moving average of on- and off- pulses')
         self.addLegend(offset=(-60, 20))
 
-        self._on_pulse = self.plot(name="Laser-on", pen=make_pen("p"))
-        self._off_pulse = self.plot(name="Laser-off", pen=make_pen("g"))
-        self._diff = self.plot(name="On - Off x 20", pen=make_pen("y"))
-
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._on_pulse.setData([], [])
-        self._off_pulse.setData([], [])
-        self._diff.setData([], [])
+        self._on_pulse = self.plotCurve(name="Laser-on", pen=make_pen("p"))
+        self._off_pulse = self.plotCurve(name="Laser-off", pen=make_pen("g"))
+        self._diff = self.plotCurve(name="On - Off x 20", pen=make_pen("y"))
 
     def update(self, data):
         """Override."""
