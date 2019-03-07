@@ -25,15 +25,12 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.main_fai_gui:start',
-            'karaboBDP=karaboFAI.main_bdp_gui:main_bdp_gui'
+            'karaboFAI=karaboFAI.gui.main_fai_gui:start',
+            'karaboBDP=karaboFAI.gui.main_bdp_gui:main_bdp_gui'
         ],
     },
     package_data={
-        'karaboFAI': [
-            'icons/*.png',
-            'windows/icons/*.png'
-        ]
+        'karaboFAI': ['gui/icons/*.png']
     },
     install_requires=[
         'numpy>=1.16.1',
