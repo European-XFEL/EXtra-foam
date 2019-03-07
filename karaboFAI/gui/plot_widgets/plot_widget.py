@@ -101,13 +101,11 @@ class PlotWidget(GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotBar(self, *args, **kwargs):
+    def plotBar(self, x=None, height=None, width=1.0, **kwargs):
         """Add and return a new bar plot."""
-        if not kwargs:
-            kwargs['x'] = []
-            kwargs['height'] = []
-            kwargs['width'] = 1.0
-        item = BarGraphItem(**kwargs)
+        x = [] if x is None else x
+        height = [] if height is None else height
+        item = BarGraphItem(x=x, height=height, width=width, **kwargs)
         self.plotItem.addItem(item)
         return item
 
@@ -256,7 +254,7 @@ class SampleDegradationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._plot = self.plotBar(x=[], height=[], width=0.6, brush='b')
+        self._plot = self.plotBar(width=0.6, brush='b')
         self.addItem(self._plot)
 
         self.setLabel('left', "Integrated difference (arb.)")
