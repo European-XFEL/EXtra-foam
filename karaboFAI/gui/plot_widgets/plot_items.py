@@ -34,16 +34,6 @@ class ImageItem(pg.ImageItem):
 
     def hoverEvent(self, ev):
         """Override."""
-        if self.drawing or \
-                (not ev.isExit() and ev.acceptDrags(QtCore.Qt.LeftButton)):
-            # block events from other items
-            ev.acceptClicks(QtCore.Qt.LeftButton)
-            ev.acceptClicks(QtCore.Qt.RightButton)
-
-        elif not ev.isExit() and self.removable:
-            # accept context menu clicks
-            ev.acceptClicks(QtCore.Qt.RightButton)
-
         if ev.isExit():
             x = -1  # out of image
             y = -1  # out of image
