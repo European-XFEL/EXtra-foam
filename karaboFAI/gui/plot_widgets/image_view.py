@@ -262,7 +262,7 @@ class ImageAnalysis(ImageView):
         w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
         if w > 0 and h > 0:
             # there is intersection
-            self.setImage(self._image[y:y+h, x:x+w])
+            self.setImage(self._image[y:y+h, x:x+w], auto_levels=False)
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
             self.crop_area_sgn.emit(False, w, h, x, y)
@@ -276,12 +276,13 @@ class ImageAnalysis(ImageView):
 
         self.crop_area_sgn.emit(True, 0, 0, 0, 0)
         self._image_data.crop_area = None
-        self.setImage(self._image_data.masked_mean)
+        self.setImage(self._image_data.masked_mean, auto_levels=False)
 
     @QtCore.pyqtSlot()
     def onBkgChange(self):
         self._image_data.background = float(self.sender().text())
-        self.setImage(self._image_data.masked_mean)
+        self.setImage(self._image_data.masked_mean,
+                      auto_levels=False, auto_range=False)
 
     @QtCore.pyqtSlot(float, float)
     def onImageMaskChange(self, v0, v1):
