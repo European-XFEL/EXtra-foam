@@ -88,6 +88,63 @@ class ImageToolWindow(AbstractWindow):
         self._roi2_ctrl.roi_region_change_sgn.connect(mediator.onRoi2Change)
 
         #
+        # image tool bar
+        #
+
+        self._tool_bar_image = self.addToolBar("image")
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/update_image.png"))
+        self._update_image_at = QtGui.QAction(icon, "Update image", self)
+        self._tool_bar_image.addAction(self._update_image_at)
+        self._update_image_at.triggered.connect(self.updateImage)
+
+        self._image_ctrl = ImageCtrlWidget()
+        self._image_ctrl.moving_avg_window_sgn.connect(
+            mediator.onMovingAvgWindowChange)
+        self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
+        self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
+        self._tool_bar_image.addAction(self._image_ctrl_at)
+
+        #
+        # mask tool bar
+        #
+        self._tool_bar_mask = self.addToolBar("mask")
+
+        mask_act_group = QtGui.QActionGroup(self)
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/mask.png"))
+        self._mask_at = QtGui.QAction(icon, "Mask", self)
+        self._mask_at.setCheckable(True)
+        mask_act_group.addAction(self._mask_at)
+        self._mask_at.toggled.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.MASK))
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
+        self._un_mask_at = QtGui.QAction(icon, "Unmask", self)
+        self._un_mask_at.setCheckable(True)
+        mask_act_group.addAction(self._un_mask_at)
+        self._un_mask_at.triggered.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
+
+        self._tool_bar_mask.addActions(mask_act_group.actions())
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
+        self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
+        self._tool_bar_mask.addAction(self._clear_mask_at)
+        self._clear_mask_at.triggered.connect(self._image_view.clearMask)
+
+        self._mask_ctrl = MaskCtrlWidget()
+        self._mask_ctrl.threshold_mask_sgn.connect(
+            mediator.onThresholdMaskChange)
+        self._mask_ctrl.threshold_mask_sgn.connect(
+            self._image_view.onImageMaskChange)
+        self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
+        self._masking_at.setDefaultWidget(self._mask_ctrl)
+        self._tool_bar_mask.addAction(self._masking_at)
+
+        self.addToolBarBreak()
+
+        #
         # crop tool bar
         #
         self._tool_bar_crop = self.addToolBar("crop")
@@ -113,66 +170,6 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar_crop.addAction(self._restore_image_at)
         self._restore_image_at.triggered.connect(
             self._image_view.onRestoreImage)
-
-        #
-        # mask tool bar
-        #
-
-        self._tool_bar_mask = self.addToolBar("mask")
-
-        self._mask_ctrl = MaskCtrlWidget()
-        self._mask_ctrl.threshold_mask_sgn.connect(
-            mediator.onThresholdMaskChange)
-        self._mask_ctrl.threshold_mask_sgn.connect(
-            self._image_view.onImageMaskChange)
-        self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
-        self._masking_at.setDefaultWidget(self._mask_ctrl)
-        self._tool_bar_mask.addAction(self._masking_at)
-
-        mask_act_group = QtGui.QActionGroup(self)
-
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/mask.png"))
-        self._mask_at = QtGui.QAction(icon, "Mask", self)
-        self._mask_at.setCheckable(True)
-        mask_act_group.addAction(self._mask_at)
-        self._mask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.MASK))
-
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
-        self._un_mask_at = QtGui.QAction(icon, "Unmask", self)
-        self._un_mask_at.setCheckable(True)
-        mask_act_group.addAction(self._un_mask_at)
-        self._un_mask_at.triggered.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
-
-        self._tool_bar_mask.addActions(mask_act_group.actions())
-
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
-        self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
-        self._tool_bar_mask.addAction(self._clear_mask_at)
-        self._clear_mask_at.triggered.connect(self._image_view.clearMask)
-
-        #
-        # image tool bar
-        #
-
-        self._tool_bar_image = self.addToolBar("image")
-
-        self._update_image_btn = QtGui.QPushButton("Update image")
-        self._update_image_btn.setStyleSheet('background-color: green')
-        self._update_image_btn.clicked.connect(self.updateImage)
-        self._update_image_at = QtGui.QWidgetAction(self._tool_bar_image)
-        self._update_image_at.setDefaultWidget(self._update_image_btn)
-        self._tool_bar_image.addAction(self._update_image_at)
-
-        self._image_ctrl = ImageCtrlWidget()
-        self._image_ctrl.moving_avg_window_sgn.connect(
-            mediator.onMovingAvgWindowChange)
-        self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
-        self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
-        self._tool_bar_image.addAction(self._image_ctrl_at)
-
-        self._n_images_btn = QtGui.QPushButton("")
 
         self.initUI()
         self.resize(800, 800)
