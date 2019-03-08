@@ -93,7 +93,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._tool_bar_image = self.addToolBar("image")
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/update_image.png"))
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/sync.png"))
         self._update_image_at = QtGui.QAction(icon, "Update image", self)
         self._tool_bar_image.addAction(self._update_image_at)
         self._update_image_at.triggered.connect(self.updateImage)
