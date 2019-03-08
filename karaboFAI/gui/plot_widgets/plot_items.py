@@ -34,8 +34,8 @@ class ImageItem(pg.ImageItem):
 
     def hoverEvent(self, ev):
         """Override."""
-        if not ev.isExit() and self.drawing and ev.acceptDrags(
-                QtCore.Qt.LeftButton):
+        if self.drawing or \
+                (not ev.isExit() and ev.acceptDrags(QtCore.Qt.LeftButton)):
             # block events from other items
             ev.acceptClicks(QtCore.Qt.LeftButton)
             ev.acceptClicks(QtCore.Qt.RightButton)
@@ -117,8 +117,14 @@ class MaskItem(GraphicsObject):
         """Override."""
         if self._first_corner is None or self._second_corner is None:
             return QtCore.QRectF(0, 0, 0, 0)
-        return QtCore.QRectF(QtCore.QPoint(*self._first_corner),
+
+        rect = QtCore.QRectF(QtCore.QPoint(*self._first_corner),
                              QtCore.QPoint(*self._second_corner)).normalized()
+        if self._mask is None:
+            return rect
+
+        s = self._mask.size()
+        return rect.intersected(QtCore.QRectF(0, 0, s.width(), s.height()))
 
     @QtCore.pyqtSlot(int, int)
     def onDrawStarted(self, x, y):
@@ -131,11 +137,12 @@ class MaskItem(GraphicsObject):
 
     @QtCore.pyqtSlot()
     def onDrawFinished(self):
-        self.image_mask_change_sgn.emit(
-            self.draw_type, *self._first_corner, *self._second_corner)
-
-        x1, y1 = self._first_corner
-        x2, y2 = self._second_corner
+        rect = self.boundingRect()
+        x1 = int(rect.x())
+        y1 = int(rect.y())
+        x2 = int(rect.x() + rect.width())
+        y2 = int(rect.y() + rect.height())
+        self.image_mask_change_sgn.emit(self.draw_type, x1, y1, x2, y2)
 
         self._first_corner = None
         self._second_corner = None
@@ -157,7 +164,6 @@ class MaskItem(GraphicsObject):
         self.image_mask_change_sgn.emit(ImageMaskChange.CLEAR, 0, 0, 0, 0)
 
         self._mask.fill(self._TRANSPARENT)
-        # TODO: why?
         self._image_item.update()
 
     def set(self):
@@ -172,7 +178,7 @@ class MaskItem(GraphicsObject):
             return
 
         p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setPen(make_pen('g', width=4))
+        p.setPen(make_pen('c', width=4))
 
         s = self._mask.size()
         p.drawImage(QtCore.QRectF(0, 0, s.width(), s.height()), self._mask)
