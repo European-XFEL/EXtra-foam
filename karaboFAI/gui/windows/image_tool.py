@@ -110,23 +110,21 @@ class ImageToolWindow(AbstractWindow):
         #
         self._tool_bar_mask = self.addToolBar("mask")
 
-        mask_act_group = QtGui.QActionGroup(self)
-
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/mask.png"))
         self._mask_at = QtGui.QAction(icon, "Mask", self)
         self._mask_at.setCheckable(True)
-        mask_act_group.addAction(self._mask_at)
-        self._mask_at.toggled.connect(functools.partial(
+        self._tool_bar_mask.addAction(self._mask_at)
+        self._mask_at.triggered.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.MASK))
+        self._mask_at.triggered.connect(self._exclusive_mask_unmask)
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
-        self._un_mask_at = QtGui.QAction(icon, "Unmask", self)
-        self._un_mask_at.setCheckable(True)
-        mask_act_group.addAction(self._un_mask_at)
-        self._un_mask_at.triggered.connect(functools.partial(
+        self._unmask_at = QtGui.QAction(icon, "Unmask", self)
+        self._unmask_at.setCheckable(True)
+        self._tool_bar_mask.addAction(self._unmask_at)
+        self._unmask_at.triggered.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
-
-        self._tool_bar_mask.addActions(mask_act_group.actions())
+        self._unmask_at.triggered.connect(self._exclusive_mask_unmask)
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
         self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
@@ -220,3 +218,10 @@ class ImageToolWindow(AbstractWindow):
             return
 
         self._image_view.setImageData(data.image)
+
+    @QtCore.pyqtSlot()
+    def _exclusive_mask_unmask(self):
+        if self.sender() is self._mask_at:
+            self._unmask_at.setChecked(False)
+        elif self.sender() is self._unmask_at:
+            self._mask_at.setChecked(False)
