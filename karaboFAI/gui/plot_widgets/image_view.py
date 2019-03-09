@@ -200,8 +200,8 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.image_mask_change_sgn.connect(
-            mediator.onImageMaskChange)
+        self._mask_item.mask_region_change_sgn.connect(
+            mediator.onMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()

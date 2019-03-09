@@ -75,9 +75,10 @@ class ImageItem(pg.ImageItem):
 
 class MaskItem(GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
-    image_mask_change_sgn = QtCore.Signal(object, int, int, int, int)
+    mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
     _mask = None
+    _mask_rect = QtCore.QRectF(0, 0, 0, 0)
 
     _TRANSPARENT = QtGui.QColor(0, 0, 0, 0)
     _OPAQUE = QtGui.QColor(0, 0, 0, 255)
@@ -100,42 +101,40 @@ class MaskItem(GraphicsObject):
 
         self.draw_type = None
 
-        self._first_corner = None
-        self._second_corner = None
+        self._p1 = None
+        self._p2 = None
 
     def boundingRect(self):
         """Override."""
-        if self._first_corner is None or self._second_corner is None:
-            return QtCore.QRectF(0, 0, 0, 0)
-
-        rect = QtCore.QRectF(QtCore.QPoint(*self._first_corner),
-                             QtCore.QPoint(*self._second_corner)).normalized()
-        if self._mask is None:
-            return rect
-
-        s = self._mask.size()
-        return rect.intersected(QtCore.QRectF(0, 0, s.width(), s.height()))
+        return self._mask_rect
 
     @QtCore.pyqtSlot(int, int)
     def onDrawStarted(self, x, y):
-        self._first_corner = (x, y)
+        self._p1 = (x, y)
 
     @QtCore.pyqtSlot(int, int)
     def onDrawRegionChanged(self, x, y):
         self.prepareGeometryChange()
-        self._second_corner = (x, y)
+        self._p2 = (x, y)
+
+    def _selectedRect(self):
+        if self._p1 is None or self._p2 is None:
+            return QtCore.QRectF(0, 0, 0, 0)
+
+        rect = QtCore.QRectF(QtCore.QPoint(*self._p1), QtCore.QPoint(*self._p2))
+        return rect.intersected(self._mask_rect)
 
     @QtCore.pyqtSlot()
     def onDrawFinished(self):
-        rect = self.boundingRect()
+        rect = self._selectedRect()
         x1 = int(rect.x())
         y1 = int(rect.y())
         x2 = int(rect.x() + rect.width())
         y2 = int(rect.y() + rect.height())
-        self.image_mask_change_sgn.emit(self.draw_type, x1, y1, x2, y2)
+        self.mask_region_change_sgn.emit(self.draw_type, x1, y1, x2, y2)
 
-        self._first_corner = None
-        self._second_corner = None
+        self._p1 = None
+        self._p2 = None
 
         # TODO: use C code
         for i in range(x1, x2):
@@ -151,7 +150,7 @@ class MaskItem(GraphicsObject):
         if self._mask is None:
             return
 
-        self.image_mask_change_sgn.emit(ImageMaskChange.CLEAR, 0, 0, 0, 0)
+        self.mask_region_change_sgn.emit(ImageMaskChange.CLEAR, 0, 0, 0, 0)
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
@@ -159,9 +158,11 @@ class MaskItem(GraphicsObject):
     def set(self):
         image = self._image_item.image
         if self._mask is None:
-            self.__class__._mask = QtGui.QImage(*image.shape[::-1],
+            h, w = image.shape
+            self.__class__._mask = QtGui.QImage(w, h,
                                                 QtGui.QImage.Format_Alpha8)
             self._mask.fill(self._TRANSPARENT)
+            self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
 
     def paint(self, p, *args):
         if self._mask is None:
@@ -170,7 +171,5 @@ class MaskItem(GraphicsObject):
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         p.setPen(make_pen('c', width=4))
 
-        s = self._mask.size()
-        p.drawImage(QtCore.QRectF(0, 0, s.width(), s.height()), self._mask)
-
-        p.drawRect(self.boundingRect())
+        p.drawImage(self.boundingRect(), self._mask)
+        p.drawRect(self._selectedRect())
