@@ -11,6 +11,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .. import pyqtgraph as pg
 from ..pyqtgraph import GraphicsObject, QtCore, QtGui
 
@@ -78,7 +80,7 @@ class MaskItem(GraphicsObject):
     # ImageMaskChange, x, y, w, h
     mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
-    _mask = None
+    _mask = None  # QImage
     _mask_rect = QtCore.QRectF(0, 0, 0, 0)
 
     _TRANSPARENT = QtGui.QColor(0, 0, 0, 0)
@@ -137,7 +139,7 @@ class MaskItem(GraphicsObject):
         self._p1 = None
         self._p2 = None
 
-        # TODO: use C code
+        # TODO: use C++ code
         for i in range(x, x+w):
             for j in range(y, y+h):
                 if self.draw_type == ImageMaskChange.MASK:
@@ -164,6 +166,7 @@ class MaskItem(GraphicsObject):
             self._mask.fill(self._TRANSPARENT)
             self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
         else:
+            # image is cropped
             if w != self._mask_rect.width() or h != self._mask_rect.height():
                 self.__class__._mask = QtGui.QImage(w, h,
                                                     QtGui.QImage.Format_Alpha8)
@@ -178,3 +181,31 @@ class MaskItem(GraphicsObject):
 
         p.drawImage(self.boundingRect(), self._mask)
         p.drawRect(self._selectedRect())
+
+    def toNDArray(self):
+        w = self._mask.width()
+        h = self._mask.height()
+
+        # TODO: to C++
+        mask_array = np.zeros((h, w), dtype=bool)
+        for i in range(w):
+            for j in range(h):
+                mask_array[j, i] = self._mask.pixelColor(i, j) == self._OPAQUE
+
+        return mask_array
+
+    def updateMask(self, mask):
+        """Update the image mask.
+
+        :param np.ndarray mask: mask in ndarray. shape = (h, w)
+        """
+        h, w = mask.shape
+        self.__class__._mask = QtGui.QImage(
+            mask.data, w, h, QtGui.QImage.Format_Alpha8)
+        # TODO: to C++ code
+        for i in range(w):
+            for j in range(h):
+                if mask[j, i]:
+                    self._mask.setPixelColor(i, j, self._OPAQUE)
+        self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
+        self._image_item.update()

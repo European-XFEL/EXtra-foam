@@ -37,7 +37,7 @@ class ImageView(QtGui.QWidget):
     ROI_SIZE0 = (100, 100)
 
     def __init__(self, *, level_mode='mono',
-                 lock_roi=True, hide_axis=True, parent=None):
+                 lock_roi=True, hide_axis=True, color_map=None, parent=None):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
@@ -81,7 +81,10 @@ class ImageView(QtGui.QWidget):
         self._hist_widget.setLevelMode(level_mode)
         self._hist_widget.setImageItem(self._image_item)
 
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        if color_map is None:
+            self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        else:
+            self.setColorMap(colorMapFactory["thermal"])
 
         self._is_initialized = False
         self._image = None
@@ -187,8 +190,6 @@ class ImageAnalysis(ImageView):
     """
     # restore_flag, x, y, w, h
     crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    # ImageMaskChange, x, y, w, h
-    mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -196,14 +197,11 @@ class ImageAnalysis(ImageView):
 
         self._plot_widget.setTitle('')  # reserve space for displaying
 
-        mediator = Mediator()
-
         # set the customized ImageItem
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
         self._mask_item.mask_region_change_sgn.connect(self.onMaskRegionChange)
-        self.mask_region_change_sgn.connect(mediator.onMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -295,7 +293,7 @@ class ImageAnalysis(ImageView):
     @QtCore.pyqtSlot(object, int, int, int, int)
     def onMaskRegionChange(self, tp, x, y, w, h):
         x, y = self._image_data.pos(x, y)
-        self.mask_region_change_sgn.emit(tp, x, y, w, h)
+        self._image_data.update_image_mask(tp, x, y, w, h)
 
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):
@@ -304,6 +302,50 @@ class ImageAnalysis(ImageView):
 
     def clearMask(self):
         self._mask_item.clear()
+
+    def saveImageMask(self):
+        file_path = QtGui.QFileDialog.getSaveFileName()[0]
+        if not file_path:
+            logger.error("Please specify the image mask file!")
+            return
+
+        self._saveImageMaskImp(file_path)
+
+    def _saveImageMaskImp(self, file_path):
+        if self._image_data is None:
+            logger.error("Image is not found!")
+            return
+
+        np.save(file_path, self._mask_item.toNDArray())
+        logger.info(f"Image mask saved in {file_path}.npy!")
+
+    def loadImageMask(self):
+        file_path = QtGui.QFileDialog.getOpenFileName()[0]
+        if not file_path:
+            logger.error("Please specify the image mask file!")
+            return
+
+        self._loadImageMaskImp(file_path)
+
+    def _loadImageMaskImp(self, file_path):
+        if self._image_data is None:
+            logger.error("Cannot load image mask without image!")
+            return
+
+        try:
+            image_mask = np.load(file_path)
+            if image_mask.shape != self._image_data.shape:
+                msg = "The shape of image mask is different from the image!"
+                logger.error(msg)
+                return
+
+            logger.info(f"Image mask loaded from {file_path}!")
+
+            self._image_data.replace_image_mask(image_mask)
+            self._mask_item.updateMask(image_mask)
+
+        except (IOError, OSError) as e:
+            logger.error(f"Cannot load mask from {file_path}")
 
 
 class AssembledImageView(ImageView):

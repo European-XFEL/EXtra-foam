@@ -129,7 +129,7 @@ class ImageMaskData:
         """
         self._assembled = np.zeros(shape, dtype=bool)
 
-    @cached_property
+    @property
     def mask(self):
         """Return the assembled mask.
 
@@ -138,8 +138,12 @@ class ImageMaskData:
         """
         return self._assembled
 
+    def replace(self, mask):
+        """Replace the current mask."""
+        self._assembled[:] = mask
+
     def update(self, rect, masking):
-        """Add a new area.
+        """Update an area in the mask.
 
         :param tuple rect: (x, y, w, h) of the rectangle.
         """
@@ -203,12 +207,8 @@ class ImageData:
         if self.__image_mask_data is None:
             self.__class__.__image_mask_data = ImageMaskData(self.shape)
 
-        # An ImageData instance should have one unique mask. For now, the
-        # mask should not change during the life time of the instance.
-        try:
-            del self.__image_mask_data.__dict__['mask']
-        except KeyError:
-            pass
+        # An ImageData instance should have a mask which will not change
+        # during the life time of the instance.
         self._image_mask = np.copy(self.__image_mask_data.mask)
 
         self._crop_area = crop_area
@@ -269,14 +269,16 @@ class ImageData:
         x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
 
-    @classmethod
-    def update_image_mask(cls, tp, x, y, w, h):
+    def update_image_mask(self, tp, x, y, w, h):
         if tp == ImageMaskChange.MASK:
-            cls.__image_mask_data.update((x, y, w, h), True)
+            self.__image_mask_data.update((x, y, w, h), True)
         elif tp == ImageMaskChange.UNMASK:
-            cls.__image_mask_data.update((x, y, w, h), False)
+            self.__image_mask_data.update((x, y, w, h), False)
         elif tp == ImageMaskChange.CLEAR:
-            cls.__image_mask_data.clear()
+            self.__image_mask_data.clear()
+
+    def replace_image_mask(self, mask):
+        self.__image_mask_data.replace(mask)
 
     @property
     def image_mask(self):
@@ -485,10 +487,6 @@ class ProcessedData:
     @classmethod
     def set_moving_average_window(cls, v):
         ImageData.set_moving_average_window(v)
-
-    @classmethod
-    def update_image_mask(cls, tp, x, y, w, h):
-        ImageData.update_image_mask(tp, x, y, w, h)
 
     @classmethod
     def clear_roi_hist(cls):

@@ -80,7 +80,3 @@ class Mediator(QtCore.QObject):
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
         self._proc.update_threshold_mask(lb, ub)
-
-    @QtCore.pyqtSlot(object, int, int, int, int)
-    def onMaskRegionChange(self, tp, x, y, w, h):
-        self._proc.update_image_mask(tp, x, y, w, h)

@@ -291,13 +291,6 @@ class MainGUI(QtGui.QMainWindow):
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)
 
-    def loadMaskImage(self):
-        filename = QtGui.QFileDialog.getOpenFileName()[0]
-        if not filename:
-            logger.error("Please specify the image mask file!")
-            return
-        self.image_mask_sgn.emit(filename)
-
     def onStartDAQ(self):
         """Actions taken before the start of a 'run'."""
         self.clearQueues()

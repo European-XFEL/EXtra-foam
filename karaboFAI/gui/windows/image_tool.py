@@ -20,6 +20,7 @@ from ..mediator import Mediator
 from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget, RoiCtrlWidget
 from ..plot_widgets import ImageAnalysis
 from ...config import config, RoiValueType, ImageMaskChange
+from ...logger import logger
 
 
 @SingletonWindow
@@ -130,6 +131,18 @@ class ImageToolWindow(AbstractWindow):
         self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
         self._tool_bar_mask.addAction(self._clear_mask_at)
         self._clear_mask_at.triggered.connect(self._image_view.clearMask)
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/save_mask.png"))
+        self._save_image_mask_at = QtGui.QAction(icon, "Save image mask", self)
+        self._tool_bar_mask.addAction(self._save_image_mask_at)
+        self._save_image_mask_at.triggered.connect(
+            self._image_view.saveImageMask)
+
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/load_mask.png"))
+        self._load_image_mask_at = QtGui.QAction(icon, "Load image mask", self)
+        self._tool_bar_mask.addAction(self._load_image_mask_at)
+        self._load_image_mask_at.triggered.connect(
+            self._image_view.loadImageMask)
 
         self._mask_ctrl = MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
