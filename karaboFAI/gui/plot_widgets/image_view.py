@@ -187,7 +187,7 @@ class ImageAnalysis(ImageView):
     """
     # restore?, w, h, x, y
     crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
-    # ImageMaskChange, x1, y1, x2, y2
+    # ImageMaskChange, x, y, w, h
     mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
@@ -293,10 +293,9 @@ class ImageAnalysis(ImageView):
         self.setImage(self._image_data.masked_mean)
 
     @QtCore.pyqtSlot(object, int, int, int, int)
-    def onMaskRegionChange(self, tp, x1, y1, x2, y2):
-        x1, y1 = self._image_data.pos(x1, y1)
-        x2, y2 = self._image_data.pos(x2, y2)
-        self.mask_region_change_sgn.emit(tp, x1, y1, x2, y2)
+    def onMaskRegionChange(self, tp, x, y, w, h):
+        x, y = self._image_data.pos(x, y)
+        self.mask_region_change_sgn.emit(tp, x, y, w, h)
 
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):

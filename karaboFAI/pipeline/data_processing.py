@@ -616,8 +616,8 @@ class DataProcessor(Worker):
     def update_threshold_mask(self, lb, ub):
         self.threshold_mask_sp = (lb, ub)
 
-    def update_image_mask(self, tp, x1, y1, x2, y2):
-        ProcessedData.update_image_mask(tp, x1, y1, x2, y2)
+    def update_image_mask(self, tp, x, y, w, h):
+        ProcessedData.update_image_mask(tp, x, y, w, h)
 
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)

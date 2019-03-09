@@ -75,6 +75,7 @@ class ImageItem(pg.ImageItem):
 
 class MaskItem(GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
+    # ImageMaskChange, x, y, w, h
     mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
     _mask = None
@@ -127,18 +128,18 @@ class MaskItem(GraphicsObject):
     @QtCore.pyqtSlot()
     def onDrawFinished(self):
         rect = self._selectedRect()
-        x1 = int(rect.x())
-        y1 = int(rect.y())
-        x2 = int(rect.x() + rect.width())
-        y2 = int(rect.y() + rect.height())
-        self.mask_region_change_sgn.emit(self.draw_type, x1, y1, x2, y2)
+        x = int(rect.x())
+        y = int(rect.y())
+        w = int(rect.width())
+        h = int(rect.height())
+        self.mask_region_change_sgn.emit(self.draw_type, x, y, w, h)
 
         self._p1 = None
         self._p2 = None
 
         # TODO: use C code
-        for i in range(x1, x2):
-            for j in range(y1, y2):
+        for i in range(x, x+w):
+            for j in range(y, y+h):
                 if self.draw_type == ImageMaskChange.MASK:
                     self._mask.setPixelColor(i, j, self._OPAQUE)
                 else:

@@ -141,11 +141,10 @@ class ImageMaskData:
     def update(self, rect, masking):
         """Add a new area.
 
-        :param tuple rect: (x1, y1, x2, y2) where (x1, y1) and (x2, y2)
-            are coordinates of the two diagnal corners of the rectangle.
+        :param tuple rect: (x, y, w, h) of the rectangle.
         """
-        x1, y1, x2, y2 = rect
-        self._assembled[y1:y2, x1:x2] = masking
+        x, y, w, h = rect
+        self._assembled[y:y+h, x:x+w] = masking
 
     def clear(self):
         """Remove all the masking areas."""
@@ -271,11 +270,11 @@ class ImageData:
         return x + x0, y + y0
 
     @classmethod
-    def update_image_mask(cls, tp, x1, y1, x2, y2):
+    def update_image_mask(cls, tp, x, y, w, h):
         if tp == ImageMaskChange.MASK:
-            cls.__image_mask_data.update((x1, y1, x2, y2), True)
+            cls.__image_mask_data.update((x, y, w, h), True)
         elif tp == ImageMaskChange.UNMASK:
-            cls.__image_mask_data.update((x1, y1, x2, y2), False)
+            cls.__image_mask_data.update((x, y, w, h), False)
         elif tp == ImageMaskChange.CLEAR:
             cls.__image_mask_data.clear()
 
@@ -488,8 +487,8 @@ class ProcessedData:
         ImageData.set_moving_average_window(v)
 
     @classmethod
-    def update_image_mask(cls, tp, x1, y1, x2, y2):
-        ImageData.update_image_mask(tp, x1, y1, x2, y2)
+    def update_image_mask(cls, tp, x, y, w, h):
+        ImageData.update_image_mask(tp, x, y, w, h)
 
     @classmethod
     def clear_roi_hist(cls):
