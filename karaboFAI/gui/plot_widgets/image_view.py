@@ -187,6 +187,7 @@ class ImageAnalysis(ImageView):
     """
 
     crop_area_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
+    mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -200,8 +201,8 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(
-            mediator.onMaskRegionChange)
+        self._mask_item.mask_region_change_sgn.connect(self.onMaskRegionChange)
+        self.mask_region_change_sgn.connect(mediator.onMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -289,6 +290,12 @@ class ImageAnalysis(ImageView):
         # recalculate the unmasked mean image
         self._image_data.threshold_mask = (v0, v1)
         self.setImage(self._image_data.masked_mean)
+
+    @QtCore.pyqtSlot(object, int, int, int, int)
+    def onMaskRegionChange(self, tp, x1, y1, x2, y2):
+        x1, y1 = self._image_data.pos(x1, y1)
+        x2, y2 = self._image_data.pos(x2, y2)
+        self.mask_region_change_sgn.emit(tp, x1, y1, x2, y2)
 
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):
