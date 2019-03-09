@@ -38,8 +38,6 @@ class MainGUI(QtGui.QMainWindow):
     """Abstract main GUI."""
     _root_dir = os.path.dirname(os.path.abspath(__file__))
 
-    image_mask_sgn = QtCore.pyqtSignal(str)  # filename
-
     daq_started_sgn = QtCore.pyqtSignal()
     daq_stopped_sgn = QtCore.pyqtSignal()
     file_server_started_sgn = QtCore.pyqtSignal()
@@ -161,8 +159,6 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onPulseIdRangeChange)
 
         self._proc_worker.message.connect(self.onMessageReceived)
-
-        self.image_mask_sgn.connect(self._proc_worker.onImageMaskChanged)
 
     def initUI(self):
         raise NotImplementedError

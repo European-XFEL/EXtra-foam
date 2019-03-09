@@ -135,7 +135,7 @@ class ImageToolWindow(AbstractWindow):
         self._mask_ctrl.threshold_mask_sgn.connect(
             mediator.onThresholdMaskChange)
         self._mask_ctrl.threshold_mask_sgn.connect(
-            self._image_view.onImageMaskChange)
+            self._image_view.onThresholdMaskChange)
         self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
         self._masking_at.setDefaultWidget(self._mask_ctrl)
         self._tool_bar_mask.addAction(self._masking_at)

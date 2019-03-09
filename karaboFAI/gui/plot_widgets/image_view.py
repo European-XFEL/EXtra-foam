@@ -287,7 +287,7 @@ class ImageAnalysis(ImageView):
                       auto_levels=False, auto_range=False)
 
     @QtCore.pyqtSlot(float, float)
-    def onImageMaskChange(self, v0, v1):
+    def onThresholdMaskChange(self, v0, v1):
         # recalculate the unmasked mean image
         self._image_data.threshold_mask = (v0, v1)
         self.setImage(self._image_data.masked_mean)
