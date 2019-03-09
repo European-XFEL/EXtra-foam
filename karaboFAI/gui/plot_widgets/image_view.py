@@ -133,7 +133,7 @@ class ImageView(QtGui.QWidget):
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        self._mask_item.set()
+        self._mask_item.updateImage()
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)

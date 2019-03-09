@@ -16,6 +16,7 @@ from ..pyqtgraph import GraphicsObject, QtCore, QtGui
 
 from ..misc_widgets import make_pen, make_brush
 from ...config import ImageMaskChange
+from ...logger import logger
 
 
 class ImageItem(pg.ImageItem):
@@ -155,14 +156,17 @@ class MaskItem(GraphicsObject):
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
 
-    def set(self):
-        image = self._image_item.image
+    def updateImage(self):
+        h, w = self._image_item.image.shape
         if self._mask is None:
-            h, w = image.shape
             self.__class__._mask = QtGui.QImage(w, h,
                                                 QtGui.QImage.Format_Alpha8)
             self._mask.fill(self._TRANSPARENT)
             self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
+        else:
+            if w != self._mask_rect.width() or h != self._mask_rect.height():
+                logger.error("Image shape changed!")
+                raise RuntimeError("Image shape changed!")
 
     def paint(self, p, *args):
         if self._mask is None:
