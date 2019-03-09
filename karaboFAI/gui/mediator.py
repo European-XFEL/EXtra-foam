@@ -70,8 +70,8 @@ class Mediator(QtCore.QObject):
         self._proc.update_background(float(self.sender().text()))
 
     @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onCropAreaChange(self, restore, w, h, px, py):
-        self._proc.update_crop_area(restore, w, h, px, py)
+    def onCropAreaChange(self, restore, x, y, w, h):
+        self._proc.update_crop_area(restore, x, y, w, h)
 
     @QtCore.pyqtSlot(int)
     def onMovingAvgWindowChange(self, v):

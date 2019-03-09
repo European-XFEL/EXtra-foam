@@ -602,13 +602,13 @@ class DataProcessor(Worker):
     def update_background(self, v):
         self._bkg = v
 
-    def update_crop_area(self, restore, w, h, px, py):
+    def update_crop_area(self, restore, x, y, w, h):
         if restore:
             self._crop_area = None
             self.log("Restore the original image.")
         else:
-            self._crop_area = (w, h, px, py)
-            self.log(f"Crop area: w = {w}, h = {h}, px = {px}, py = {py}")
+            self._crop_area = (x, y, w, h)
+            self.log(f"Crop area: x = {x}, y = {y}, w = {w}, h = {h}")
 
     def update_moving_avg_window(self, v):
         ProcessedData.set_moving_average_window(v)

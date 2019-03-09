@@ -266,7 +266,7 @@ class ImageData:
         """Return the position in the original image."""
         if self._crop_area is None:
             return x, y
-        _, _, x0, y0 = self._crop_area
+        x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
 
     @classmethod
@@ -281,7 +281,7 @@ class ImageData:
     @property
     def image_mask(self):
         if self._crop_area is not None:
-            w, h, x, y = self._crop_area
+            x, y, w, h = self._crop_area
             return self._image_mask[y:y+h, x:x+w]
 
         return self._image_mask
@@ -295,7 +295,7 @@ class ImageData:
         if self._crop_area is None:
             return self._images
 
-        w, h, x, y = self._crop_area
+        x, y, w, h = self._crop_area
         return self._images[..., y:y+h, x:x+w]
 
     @cached_property
@@ -381,7 +381,7 @@ class ImageData:
         poni1 = self._poni[0]
         poni2 = self._poni[1]
         if self._crop_area is not None:
-            _, _, x, y = self._crop_area
+            x, y, _, _ = self._crop_area
             poni1 -= y
             poni2 -= x
 

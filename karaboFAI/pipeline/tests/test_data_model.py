@@ -22,11 +22,11 @@ class TestImageData(unittest.TestCase):
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         img_data = ImageData(imgs)
 
-        img_data.crop_area = (6, 7, 1, 2)
+        img_data.crop_area = (1, 2, 6, 7)
         self.assertTupleEqual(img_data.mean.shape, (7, 6))
         self.assertTupleEqual((1, 2), img_data.pos(0, 0))
 
-        img_data.crop_area = (3, 4, 0, 1)
+        img_data.crop_area = (0, 1, 3, 4)
         self.assertTupleEqual(img_data.mean.shape, (4, 3))
         self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
@@ -36,10 +36,10 @@ class TestImageData(unittest.TestCase):
         img_data = ImageData(np.copy(imgs))
 
         self.assertTupleEqual((0, 0), img_data.poni)
-        img_data.crop_area = (3, 2, 0, 1)
+        img_data.crop_area = (0, 1, 3, 2)
         self.assertTupleEqual((-1, 0), img_data.poni)
 
-        img_data.crop_area = (3, 2, 1, 2)
+        img_data.crop_area = (1, 2, 3, 2)
         img_data.poni = (-2, 12)
         self.assertTupleEqual((-4, 11), img_data.poni)
 
@@ -50,7 +50,7 @@ class TestImageData(unittest.TestCase):
         mask = (1, 4)
         img_data.threshold_mask = mask
         bkg = 1.0
-        crop_area = (3, 2, 0, 1)
+        crop_area = (0, 1, 3, 2)
         img_data.background = bkg
         img_data.crop_area = crop_area
 
@@ -58,7 +58,7 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(1, img_data.n_images)
 
         # calculate the ground truth
-        w, h, x, y = crop_area
+        x, y, w, h = crop_area
         imgs = np.copy(imgs_orig)[y:y+h, x:x+w]
         imgs -= bkg
 
@@ -137,7 +137,7 @@ class TestImageData(unittest.TestCase):
 
         img_data.threshold_mask = (1, 4)
         bkg = 1.0
-        crop_area = (3, 2, 0, 1)
+        crop_area = (0, 1, 3, 2)
         img_data.background = bkg
         img_data.crop_area = crop_area
 
@@ -145,7 +145,7 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(imgs_orig.shape[0], img_data.n_images)
 
         # calculate the ground truth
-        w, h, x, y = crop_area
+        x, y, w, h = crop_area
         imgs = np.copy(imgs_orig)[:, y:y + h, x:x + w]
         imgs -= bkg
 

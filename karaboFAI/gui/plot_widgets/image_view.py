@@ -185,7 +185,7 @@ class ImageAnalysis(ImageView):
     Advance image analysis widget built on top of ImageView widget.
     It provides tools like masking, cropping, etc.
     """
-    # restore?, w, h, x, y
+    # restore_flag, x, y, w, h
     crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
     # ImageMaskChange, x, y, w, h
     mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
@@ -267,8 +267,8 @@ class ImageAnalysis(ImageView):
             self.setImage(self._image[y:y+h, x:x+w], auto_levels=False)
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
-            self.crop_area_change_sgn.emit(False, w, h, x, y)
-            self._image_data.crop_area = (w, h, x, y)
+            self.crop_area_change_sgn.emit(False, x, y, w, h)
+            self._image_data.crop_area = (x, y, w, h)
 
         self.crop.hide()
 
