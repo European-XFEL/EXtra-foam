@@ -46,7 +46,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageAnalysis(
             lock_roi=False, hide_axis=False, parent=self)
-        self._image_view.crop_area_sgn.connect(mediator.onCropAreaChange)
+        self._image_view.crop_area_change_sgn.connect(mediator.onCropAreaChange)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
