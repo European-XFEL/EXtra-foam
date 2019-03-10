@@ -456,8 +456,6 @@ class DataProcessor(Worker):
         self.threshold_mask_sp = (config["MASK_RANGE"][0],
                                   config["MASK_RANGE"][1])
 
-        self._crop_area = None
-
         self.roi1 = None
         self.roi2 = None
         self._bkg = 0.0
@@ -601,14 +599,6 @@ class DataProcessor(Worker):
 
     def update_background(self, v):
         self._bkg = v
-
-    def update_crop_area(self, restore, x, y, w, h):
-        if restore:
-            self._crop_area = None
-            self.log("Restore the original image.")
-        else:
-            self._crop_area = (x, y, w, h)
-            self.log(f"Crop area: x = {x}, y = {y}, w = {w}, h = {h}")
 
     def update_moving_avg_window(self, v):
         ProcessedData.set_moving_average_window(v)
@@ -941,7 +931,6 @@ class DataProcessor(Worker):
         proc_data = ProcessedData(tid, assembled,
                                   threshold_mask=self.threshold_mask_sp,
                                   background=self._bkg,
-                                  crop_area=self._crop_area,
                                   pixel_size=config["PIXEL_SIZE"],
                                   poni=self.poni_sp)
 

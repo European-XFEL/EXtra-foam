@@ -32,8 +32,6 @@ class ImageItem(pg.ImageItem):
 
         self.drawing = False
 
-        self.image_mask = None
-
     def hoverEvent(self, ev):
         """Override."""
         if ev.isExit():
@@ -165,12 +163,6 @@ class MaskItem(GraphicsObject):
                                                 QtGui.QImage.Format_Alpha8)
             self._mask.fill(self._TRANSPARENT)
             self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
-        else:
-            # image is cropped
-            if w != self._mask_rect.width() or h != self._mask_rect.height():
-                self.__class__._mask = QtGui.QImage(w, h,
-                                                    QtGui.QImage.Format_Alpha8)
-                self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
 
     def paint(self, p, *args):
         if self._mask is None:
@@ -200,12 +192,13 @@ class MaskItem(GraphicsObject):
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
         h, w = mask.shape
-        self.__class__._mask = QtGui.QImage(
-            mask.data, w, h, QtGui.QImage.Format_Alpha8)
+        self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
         # TODO: to C++ code
         for i in range(w):
             for j in range(h):
                 if mask[j, i]:
                     self._mask.setPixelColor(i, j, self._OPAQUE)
+                else:
+                    self._mask.setPixelColor(i, j, self._TRANSPARENT)
         self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
         self._image_item.update()

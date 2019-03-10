@@ -155,6 +155,24 @@ class ImageMaskData:
         self._assembled[:] = False
 
 
+class CropAreaData:
+    def __init__(self):
+        self._rect = None
+
+    @property
+    def rect(self):
+        return self._rect
+
+    @rect.setter
+    def rect(self, v):
+        if not isinstance(v, tuple) or len(v) != 4:
+            raise ValueError("Input must be a tuple of (x, y, w, h)!")
+        self._rect = v
+
+    def reset(self):
+        self._rect = None
+
+
 class ImageData:
     """A class that manages the detector images.
 
@@ -173,7 +191,7 @@ class ImageData:
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
-        _crop_area (tuple): (w, h, x, y) of the cropped image.
+        _crop_area (tuple): (x, y, w, h) of the cropped image.
         pixel_size (float): detector pixel size.
         _poni (tuple): (Cx, Cy), where Cx is the coordinate of the point
             of normal incidence along the detector's second dimension,
@@ -187,11 +205,11 @@ class ImageData:
     _ma_count = 0
 
     __image_mask_data = None
+    __crop_area_data = CropAreaData()
 
     def __init__(self, images, *,
                  threshold_mask=None,
                  background=0.0,
-                 crop_area=None,
                  pixel_size=None,
                  poni=None):
         """Initialization."""
@@ -207,11 +225,10 @@ class ImageData:
         if self.__image_mask_data is None:
             self.__class__.__image_mask_data = ImageMaskData(self.shape)
 
-        # An ImageData instance should have a mask which will not change
-        # during the life time of the instance.
+        # image_mask and crop_area will not change unless "update" method is
+        # called
         self._image_mask = np.copy(self.__image_mask_data.mask)
-
-        self._crop_area = crop_area
+        self._crop_area = self.__crop_area_data.rect
 
         # the mask information is stored in the data so that all the
         # processing and visualization can use the same mask
@@ -268,6 +285,12 @@ class ImageData:
             return x, y
         x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
+
+    def update_crop_area(self, x, y, w, h):
+        self.__crop_area_data.rect = (x, y, w, h)
+
+    def reset_crop_area(self):
+        self.__crop_area_data.reset()
 
     def update_image_mask(self, tp, x, y, w, h):
         if tp == ImageMaskChange.MASK:
@@ -356,14 +379,6 @@ class ImageData:
     def crop_area(self):
         return self._crop_area
 
-    @crop_area.setter
-    def crop_area(self, v):
-        if self._crop_area == v:
-            return
-
-        self._crop_area = v
-        self._reset_all_caches()
-
     @property
     def background(self):
         return self._bkg
@@ -416,6 +431,11 @@ class ImageData:
             except KeyError:
                 pass
 
+    def update(self):
+        self._image_mask = np.copy(self.__image_mask_data.mask)
+        self._crop_area = self.__crop_area_data.rect
+        self._reset_all_caches()
+
     @classmethod
     def reset(cls):
         """Reset all the class attributes.
@@ -427,6 +447,7 @@ class ImageData:
         cls._ma_window = 1
         cls._ma_count = 0
         cls.__image_mask_data = None
+        cls.__crop_area_data = CropAreaData()
 
 
 class ProcessedData:

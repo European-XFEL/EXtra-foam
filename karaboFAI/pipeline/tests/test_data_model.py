@@ -8,6 +8,10 @@ from karaboFAI.pipeline.data_model import (
 
 
 class TestImageData(unittest.TestCase):
+
+    def setUp(self):
+        ImageData.reset()
+
     def test_invalidInput(self):
         with self.assertRaises(TypeError):
             ImageData([1, 2, 3])
@@ -22,13 +26,13 @@ class TestImageData(unittest.TestCase):
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         img_data = ImageData(imgs)
 
-        img_data.crop_area = (1, 2, 6, 7)
-        self.assertTupleEqual(img_data.mean.shape, (7, 6))
-        self.assertTupleEqual((1, 2), img_data.pos(0, 0))
+        img_data.update_crop_area(1, 2, 6, 7)
+        self.assertTupleEqual(ImageData(imgs).mean.shape, (7, 6))
+        self.assertTupleEqual((1, 2), ImageData(imgs).pos(0, 0))
 
-        img_data.crop_area = (0, 1, 3, 4)
-        self.assertTupleEqual(img_data.mean.shape, (4, 3))
-        self.assertTupleEqual((0, 1), img_data.pos(0, 0))
+        img_data.update_crop_area(0, 1, 3, 4)
+        self.assertTupleEqual(ImageData(imgs).mean.shape, (4, 3))
+        self.assertTupleEqual((0, 1), ImageData(imgs).pos(0, 0))
 
     def test_poni(self):
         imgs = np.arange(20, dtype=np.float).reshape(5, 4)
@@ -36,12 +40,12 @@ class TestImageData(unittest.TestCase):
         img_data = ImageData(np.copy(imgs))
 
         self.assertTupleEqual((0, 0), img_data.poni)
-        img_data.crop_area = (0, 1, 3, 2)
-        self.assertTupleEqual((-1, 0), img_data.poni)
+        img_data.update_crop_area(0, 1, 3, 2)
+        self.assertTupleEqual((-1, 0), ImageData(np.copy(imgs)).poni)
 
-        img_data.crop_area = (1, 2, 3, 2)
+        img_data.update_crop_area(1, 2, 3, 2)
         img_data.poni = (-2, 12)
-        self.assertTupleEqual((-4, 11), img_data.poni)
+        self.assertTupleEqual((-4, 11), ImageData(np.copy(imgs)).poni)
 
     def test_trainresolved(self):
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
@@ -52,7 +56,7 @@ class TestImageData(unittest.TestCase):
         bkg = 1.0
         crop_area = (0, 1, 3, 2)
         img_data.background = bkg
-        img_data.crop_area = crop_area
+        img_data.update_crop_area(*crop_area)
 
         self.assertEqual(imgs_orig.shape, img_data.shape)
         self.assertEqual(1, img_data.n_images)
@@ -81,7 +85,7 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
         # change crop
-        img_data.crop_area = None
+        img_data.reset_crop_area()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
@@ -139,7 +143,7 @@ class TestImageData(unittest.TestCase):
         bkg = 1.0
         crop_area = (0, 1, 3, 2)
         img_data.background = bkg
-        img_data.crop_area = crop_area
+        img_data.update_crop_area(*crop_area)
 
         self.assertEqual(imgs_orig.shape[1:], img_data.shape)
         self.assertEqual(imgs_orig.shape[0], img_data.n_images)

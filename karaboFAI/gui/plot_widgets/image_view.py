@@ -18,7 +18,6 @@ from .plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory, make_brush, make_pen
-from ..mediator import Mediator
 from ...algorithms import intersection, quick_min_max
 from ...config import config
 from ...logger import logger
@@ -188,8 +187,6 @@ class ImageAnalysis(ImageView):
     Advance image analysis widget built on top of ImageView widget.
     It provides tools like masking, cropping, etc.
     """
-    # restore_flag, x, y, w, h
-    crop_area_change_sgn = QtCore.pyqtSignal(bool, int, int, int, int)
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -261,12 +258,12 @@ class ImageAnalysis(ImageView):
 
         w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
         if w > 0 and h > 0:
-            # there is intersection
             self.setImage(self._image[y:y+h, x:x+w], auto_levels=False)
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
-            self.crop_area_change_sgn.emit(False, x, y, w, h)
-            self._image_data.crop_area = (x, y, w, h)
+            self._image_data.update_crop_area(x, y, w, h)
+            self._image_data.update()
+            self._mask_item.updateMask(self._image_data.image_mask)
 
         self.crop.hide()
 
@@ -274,9 +271,10 @@ class ImageAnalysis(ImageView):
         if self._image_data is None:
             return
 
-        self.crop_area_change_sgn.emit(True, 0, 0, 0, 0)
-        self._image_data.crop_area = None
+        self._image_data.reset_crop_area()
+        self._image_data.update()
         self.setImage(self._image_data.masked_mean, auto_levels=False)
+        self._mask_item.updateMask(self._image_data.image_mask)
 
     @QtCore.pyqtSlot()
     def onBkgChange(self):
