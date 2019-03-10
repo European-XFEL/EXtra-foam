@@ -173,6 +173,8 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar_crop.addAction(self._crop_to_selection_at)
         self._crop_to_selection_at.triggered.connect(
             self._image_view.onCropConfirmed)
+        self._crop_to_selection_at.triggered.connect(functools.partial(
+            self._crop_at.setChecked, False))
 
         #
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/restore.png"))
