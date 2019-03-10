@@ -115,7 +115,7 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar_mask.addAction(self._mask_at)
         self._mask_at.triggered.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.MASK))
-        self._mask_at.triggered.connect(self._exclusive_mask_unmask)
+        self._mask_at.toggled.connect(self._exclude_actions)
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
         self._unmask_at = QtGui.QAction(icon, "Unmask", self)
@@ -123,7 +123,7 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar_mask.addAction(self._unmask_at)
         self._unmask_at.triggered.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
-        self._unmask_at.triggered.connect(self._exclusive_mask_unmask)
+        self._unmask_at.toggled.connect(self._exclude_actions)
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
         self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
@@ -146,9 +146,9 @@ class ImageToolWindow(AbstractWindow):
         self._mask_ctrl.threshold_mask_sgn.connect(
             self._image_view.onThresholdMaskChange)
 
-        self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
-        self._masking_at.setDefaultWidget(self._mask_ctrl)
-        self._tool_bar_mask.addAction(self._masking_at)
+        mask_widget = QtGui.QWidgetAction(self._tool_bar_mask)
+        mask_widget.setDefaultWidget(self._mask_ctrl)
+        self._tool_bar_mask.addAction(mask_widget)
 
         self.addToolBarBreak()
 
@@ -161,8 +161,10 @@ class ImageToolWindow(AbstractWindow):
         icon = QtGui.QIcon(osp.join(self._root_dir,
                                     "../icons/crop_selection.png"))
         self._crop_at = QtGui.QAction(icon, "Crop", self)
+        self._crop_at.setCheckable(True)
         self._tool_bar_crop.addAction(self._crop_at)
-        self._crop_at.triggered.connect(self._image_view.onCropToggle)
+        self._crop_at.toggled.connect(self._image_view.onCropToggle)
+        self._crop_at.toggled.connect(self._exclude_actions)
 
         #
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/crop.png"))
@@ -178,6 +180,12 @@ class ImageToolWindow(AbstractWindow):
         self._tool_bar_crop.addAction(self._restore_image_at)
         self._restore_image_at.triggered.connect(
             self._image_view.onRestoreImage)
+
+        self._exclusive_actions = {
+            self._mask_at,
+            self._unmask_at,
+            self._crop_at
+        }
 
         self.initUI()
         self.resize(800, 800)
@@ -229,9 +237,9 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view.setImageData(data.image)
 
-    @QtCore.pyqtSlot()
-    def _exclusive_mask_unmask(self):
-        if self.sender() is self._mask_at:
-            self._unmask_at.setChecked(False)
-        elif self.sender() is self._unmask_at:
-            self._mask_at.setChecked(False)
+    @QtCore.pyqtSlot(bool)
+    def _exclude_actions(self, checked):
+        if checked:
+            for at in self._exclusive_actions:
+                if at != self.sender():
+                    at.setChecked(False)

@@ -236,15 +236,15 @@ class ImageAnalysis(ImageView):
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
-    @QtCore.pyqtSlot()
-    def onCropToggle(self):
-        if self.crop.isVisible():
-            self.crop.hide()
-        else:
+    @QtCore.pyqtSlot(bool)
+    def onCropToggle(self, checked):
+        if checked:
             if self._image is not None:
                 self.crop.setPos(0, 0)
                 self.crop.setSize(self._image.shape[::-1])
             self.crop.show()
+        else:
+            self.crop.hide()
 
     @QtCore.pyqtSlot()
     def onCropConfirmed(self):
