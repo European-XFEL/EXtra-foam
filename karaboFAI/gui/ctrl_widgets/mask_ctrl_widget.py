@@ -30,12 +30,12 @@ class MaskCtrlWidget(QtGui.QWidget):
         # avoid collapse on online and maxwell clusters
         self._min_pixel_le.setMinimumWidth(60)
         self._min_pixel_le.returnPressed.connect(
-            self.thresholdMaskChangedEvent)
+            self.onThresholdMaskChanged)
         self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
         self._max_pixel_le.setValidator(self._double_validator)
         self._max_pixel_le.setMinimumWidth(60)
         self._max_pixel_le.returnPressed.connect(
-            self.thresholdMaskChangedEvent)
+            self.onThresholdMaskChanged)
 
         self.initUI()
 
@@ -51,6 +51,6 @@ class MaskCtrlWidget(QtGui.QWidget):
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
 
-    def thresholdMaskChangedEvent(self):
+    def onThresholdMaskChanged(self):
         self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
                                      float(self._max_pixel_le.text()))

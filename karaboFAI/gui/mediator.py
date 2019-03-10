@@ -64,15 +64,3 @@ class Mediator(QtCore.QObject):
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi2Change(self, activated, w, h, px, py):
         self._proc.update_roi2_region(activated, w, h, px, py)
-
-    @QtCore.pyqtSlot()
-    def onBkgChange(self):
-        self._proc.update_background(float(self.sender().text()))
-
-    @QtCore.pyqtSlot(int)
-    def onMovingAvgWindowChange(self, v):
-        self._proc.update_moving_avg_window(v)
-
-    @QtCore.pyqtSlot(float, float)
-    def onThresholdMaskChange(self, lb, ub):
-        self._proc.update_threshold_mask(lb, ub)

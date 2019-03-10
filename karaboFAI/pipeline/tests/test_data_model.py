@@ -5,6 +5,9 @@ import numpy as np
 from karaboFAI.pipeline.data_model import (
     AbstractData, ImageData, ProcessedData, TrainData
 )
+from karaboFAI.logger import logger
+from karaboFAI.config import config, ImageMaskChange
+config["PIXEL_SIZE"] = 1e-6
 
 
 class TestImageData(unittest.TestCase):
@@ -26,13 +29,15 @@ class TestImageData(unittest.TestCase):
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         img_data = ImageData(imgs)
 
-        img_data.update_crop_area(1, 2, 6, 7)
-        self.assertTupleEqual(ImageData(imgs).mean.shape, (7, 6))
-        self.assertTupleEqual((1, 2), ImageData(imgs).pos(0, 0))
+        img_data.set_crop_area(True, 1, 2, 6, 7)
+        img_data.update()
+        self.assertTupleEqual(img_data.mean.shape, (7, 6))
+        self.assertTupleEqual((1, 2), img_data.pos(0, 0))
 
-        img_data.update_crop_area(0, 1, 3, 4)
-        self.assertTupleEqual(ImageData(imgs).mean.shape, (4, 3))
-        self.assertTupleEqual((0, 1), ImageData(imgs).pos(0, 0))
+        img_data.set_crop_area(True, 0, 1, 3, 4)
+        img_data.update()
+        self.assertTupleEqual(img_data.mean.shape, (4, 3))
+        self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
     def test_poni(self):
         imgs = np.arange(20, dtype=np.float).reshape(5, 4)
@@ -40,25 +45,88 @@ class TestImageData(unittest.TestCase):
         img_data = ImageData(np.copy(imgs))
 
         self.assertTupleEqual((0, 0), img_data.poni)
-        img_data.update_crop_area(0, 1, 3, 2)
-        self.assertTupleEqual((-1, 0), ImageData(np.copy(imgs)).poni)
+        img_data.set_crop_area(True, 0, 1, 3, 2)
+        img_data.update()
+        self.assertTupleEqual((-1, 0), img_data.poni)
 
-        img_data.update_crop_area(1, 2, 3, 2)
+        img_data.set_crop_area(True, 1, 2, 3, 2)
+        img_data.update()
         img_data.poni = (-2, 12)
-        self.assertTupleEqual((-4, 11), ImageData(np.copy(imgs)).poni)
+        self.assertTupleEqual((-4, 11), img_data.poni)
+
+    def test_imagemask(self):
+        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
+        mask = np.zeros_like(imgs_orig, dtype=bool)
+
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_image_mask(ImageMaskChange.MASK, 1, 1, 2, 2)
+        img_data.update()
+        mask[1:3, 1:3] = True
+        np.testing.assert_array_equal(mask, img_data.image_mask)
+
+        img_data.set_image_mask(ImageMaskChange.UNMASK, 2, 2, 4, 4)
+        img_data.update()
+        mask[2:4, 2:4] = False
+        np.testing.assert_array_equal(mask, img_data.image_mask)
+
+        img_data.set_image_mask(ImageMaskChange.CLEAR, 0, 0, 0, 0)
+        img_data.update()
+        mask[:] = False
+        np.testing.assert_array_equal(mask, img_data.image_mask)
+
+        mask[3:, 3:] = True
+        img_data.set_image_mask(ImageMaskChange.REPLACE, mask, 0, 0, 0)
+        img_data.update()
+        np.testing.assert_array_equal(mask, img_data.image_mask)
+
+        # image mask changes as crop area changes
+        img_data.set_crop_area(True, 1, 1, 3, 3)
+        img_data.update()
+        np.testing.assert_array_equal(mask[1:4, 1:4], img_data.image_mask)
+
+    def test_thresholdmask(self):
+        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
+        img_data = ImageData(np.copy(imgs_orig))
+
+        self.assertTupleEqual((-np.inf, np.inf), img_data.threshold_mask)
+        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
+
+        img_data.set_threshold_mask(None, 5)
+        img_data.update()
+        self.assertTupleEqual((-np.inf, 5), img_data.threshold_mask)
+        imgs = np.copy(imgs_orig)
+        imgs[imgs > 5] = 5
+        np.testing.assert_array_equal(imgs, img_data.masked_mean)
+
+        img_data.set_threshold_mask(1, None)
+        img_data.update()
+        self.assertTupleEqual((1, np.inf), img_data.threshold_mask)
+        imgs = np.copy(imgs_orig)
+        imgs[imgs < 1] = 1
+        np.testing.assert_array_equal(imgs, img_data.masked_mean)
+
+        img_data.set_threshold_mask(3, 8)
+        img_data.update()
+        self.assertTupleEqual((3, 8), img_data.threshold_mask)
+        imgs = np.copy(imgs_orig)
+        imgs[imgs < 3] = 3
+        imgs[imgs > 8] = 8
+        np.testing.assert_array_equal(imgs, img_data.masked_mean)
 
     def test_trainresolved(self):
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
 
         img_data = ImageData(np.copy(imgs_orig))
         mask = (1, 4)
-        img_data.threshold_mask = mask
+        img_data.set_threshold_mask(*mask)
         bkg = 1.0
         crop_area = (0, 1, 3, 2)
-        img_data.background = bkg
-        img_data.update_crop_area(*crop_area)
+        img_data.set_background(bkg)
+        img_data.set_crop_area(True, *crop_area)
+        img_data.update()
 
         self.assertEqual(imgs_orig.shape, img_data.shape)
+        self.assertEqual(bkg, img_data.background)
         self.assertEqual(1, img_data.n_images)
 
         # calculate the ground truth
@@ -67,7 +135,6 @@ class TestImageData(unittest.TestCase):
         imgs -= bkg
 
         np.testing.assert_array_equal(imgs, img_data.images)
-
         np.testing.assert_array_equal(imgs, img_data.mean)
 
         # test threshold mask
@@ -76,16 +143,18 @@ class TestImageData(unittest.TestCase):
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
-        # change threshold mask
-        img_data.threshold_mask = None
+        # clear threshold mask
+        img_data.set_threshold_mask(None, None)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)[y:y+h, x:x+w]  # recalculate the ground truth
         imgs -= bkg
         masked_imgs = imgs
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
-        # change crop
-        img_data.reset_crop_area()
+        # clear crop
+        img_data.set_crop_area(False, 0, 0, 0, 0)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
@@ -93,8 +162,9 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
         # change background
-        bkg = 0
-        img_data.background = bkg
+        bkg = -1.0
+        img_data.set_background(bkg)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
@@ -103,33 +173,55 @@ class TestImageData(unittest.TestCase):
 
     def test_trainresolved_ma(self):
         """Test the case with moving average of image."""
-        ImageData.reset()  # clear the data from test_trainresolved
-
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
 
         img_data = ImageData(np.copy(imgs_orig))
-        ImageData.set_moving_average_window(3)
+        img_data.set_ma_window(3)
         img_data = ImageData(imgs_orig - 2)
-        self.assertEqual(2, img_data.moving_average_count)
+        self.assertEqual(2, img_data.ma_count)
         np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
         img_data = ImageData(imgs_orig + 2)
-        self.assertEqual(3, img_data.moving_average_count)
+        self.assertEqual(3, img_data.ma_count)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
         img_data = ImageData(np.copy(imgs_orig))
-        self.assertEqual(3, img_data.moving_average_count)
+        self.assertEqual(3, img_data.ma_count)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
 
         # with background
-        img_data = ImageData(np.copy(imgs_orig), background=1)
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_background(1.0)
+        img_data.update()
         np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
 
-        img_data.background = 2
+        img_data.set_background(2.0)
+        img_data.update()
         np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
 
-        ImageData.set_moving_average_window(4)
-        img_data = ImageData(imgs_orig - 4, background=1)
-        self.assertEqual(4, img_data.moving_average_count)
+        # test moving average window size change
+        img_data.set_ma_window(4)
+        img_data = ImageData(imgs_orig - 4)
+        img_data.set_background(1.0)
+        img_data.update()
+        self.assertEqual(4, img_data.ma_count)
         np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
+
+        img_data.set_ma_window(2)
+        self.assertEqual(4, img_data.ma_window)
+        self.assertEqual(4, img_data.ma_count)
+        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
+        img_data.update()
+        # ma_window and ma_count should not be updated even if "update"
+        # method is called
+        self.assertEqual(4, img_data.ma_window)
+        self.assertEqual(4, img_data.ma_count)
+        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
+        # we will see the change when new data is received
+        img_data = ImageData(np.copy(imgs_orig))
+        self.assertEqual(2, img_data.ma_window)
+        self.assertEqual(1, img_data.ma_count)
+        img_data.set_background(0)
+        img_data.update()
+        np.testing.assert_array_equal(imgs_orig, img_data.images)
 
         # the moving average implementation does not affect the cropping
         # and masking implementation which was first done without moving
@@ -139,11 +231,12 @@ class TestImageData(unittest.TestCase):
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
         img_data = ImageData(np.copy(imgs_orig))
 
-        img_data.threshold_mask = (1, 4)
+        img_data.set_threshold_mask(1, 4)
         bkg = 1.0
         crop_area = (0, 1, 3, 2)
-        img_data.background = bkg
-        img_data.update_crop_area(*crop_area)
+        img_data.set_background(bkg)
+        img_data.set_crop_area(True, *crop_area)
+        img_data.update()
 
         self.assertEqual(imgs_orig.shape[1:], img_data.shape)
         self.assertEqual(imgs_orig.shape[0], img_data.n_images)
@@ -154,7 +247,6 @@ class TestImageData(unittest.TestCase):
         imgs -= bkg
 
         np.testing.assert_array_equal(imgs, img_data.images)
-
         np.testing.assert_array_equal(imgs.mean(axis=0), img_data.mean)
 
         # test threshold mask
@@ -165,7 +257,8 @@ class TestImageData(unittest.TestCase):
 
         # change threshold mask
         mask = (2, 12)
-        img_data.threshold_mask = mask
+        img_data.set_threshold_mask(*mask)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)[:, y:y+h, x:x+w]  # recalculate the ground truth
         imgs -= bkg
@@ -174,8 +267,9 @@ class TestImageData(unittest.TestCase):
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
-        # change crop
-        img_data.crop_area = None
+        # clear crop
+        img_data.set_crop_area(False, 0, 0, 0, 0)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
@@ -186,7 +280,8 @@ class TestImageData(unittest.TestCase):
 
         # change background
         bkg = 0
-        img_data.background = bkg
+        img_data.set_background(bkg)
+        img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
@@ -196,38 +291,42 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
     def test_pulseresolved_ma(self):
-        ImageData.reset()
-
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
         mean_orig = np.mean(imgs_orig, axis=0)
 
         img_data = ImageData(np.copy(imgs_orig[0, ...]))
-        img_data = ImageData(np.copy(imgs_orig))
-        # test automatic reset if the new images have different shape
-        self.assertEqual(1, img_data.moving_average_count)
-        self.assertEqual(1, img_data.moving_average_count)
+        img_data.set_ma_window(10)
+        with self.assertLogs(logger, "ERROR"):
+            ImageData(np.copy(imgs_orig))
 
-        ImageData.set_moving_average_window(3)
+        ImageData.reset()
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_ma_window(3)
         img_data = ImageData(imgs_orig - 2)
-        self.assertEqual(2, img_data.moving_average_count)
+        self.assertEqual(2, img_data.ma_count)
         np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
         img_data = ImageData(imgs_orig + 2)
-        self.assertEqual(3, img_data.moving_average_count)
+        self.assertEqual(3, img_data.ma_count)
         np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
         img_data = ImageData(np.copy(imgs_orig))
-        self.assertEqual(3, img_data.moving_average_count)
+        self.assertEqual(3, img_data.ma_count)
         np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
 
         # with background
-        img_data = ImageData(np.copy(imgs_orig), background=1)
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_background(1)
+        img_data.update()
         np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
 
-        img_data.background = 2
+        img_data.set_background(2)
+        img_data.update()
         np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
 
-        ImageData.set_moving_average_window(4)
-        img_data = ImageData(imgs_orig - 4, background=1)
-        self.assertEqual(4, img_data.moving_average_count)
+        img_data.set_ma_window(4)
+        img_data = ImageData(imgs_orig - 4)
+        img_data.set_background(1)
+        img_data.update()
+        self.assertEqual(4, img_data.ma_count)
         np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
 
 

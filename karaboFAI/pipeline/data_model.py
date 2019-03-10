@@ -17,7 +17,7 @@ from cached_property import cached_property
 
 from ..algorithms import nanmean_axis0_para
 from ..logger import logger
-from ..config import ImageMaskChange
+from ..config import config, ImageMaskChange
 
 
 class TrainData:
@@ -121,58 +121,6 @@ class CorrelationData(AbstractData):
         return params
 
 
-class ImageMaskData:
-    def __init__(self, shape):
-        """Initialization.
-
-        :param shape: shape of the mask.
-        """
-        self._assembled = np.zeros(shape, dtype=bool)
-
-    @property
-    def mask(self):
-        """Return the assembled mask.
-
-        The owner of the ImageMaskData takes the responsibility of
-        invalidating the cache when appropriate.
-        """
-        return self._assembled
-
-    def replace(self, mask):
-        """Replace the current mask."""
-        self._assembled[:] = mask
-
-    def update(self, rect, masking):
-        """Update an area in the mask.
-
-        :param tuple rect: (x, y, w, h) of the rectangle.
-        """
-        x, y, w, h = rect
-        self._assembled[y:y+h, x:x+w] = masking
-
-    def clear(self):
-        """Remove all the masking areas."""
-        self._assembled[:] = False
-
-
-class CropAreaData:
-    def __init__(self):
-        self._rect = None
-
-    @property
-    def rect(self):
-        return self._rect
-
-    @rect.setter
-    def rect(self, v):
-        if not isinstance(v, tuple) or len(v) != 4:
-            raise ValueError("Input must be a tuple of (x, y, w, h)!")
-        self._rect = v
-
-    def reset(self):
-        self._rect = None
-
-
 class ImageData:
     """A class that manages the detector images.
 
@@ -181,38 +129,167 @@ class ImageData:
     remove background -> cropping -> calculate mean image -> apply mask
 
     Attributes:
+        pixel_size (float): detector pixel size.
         _images (numpy.ndarray): detector images for all the pulses in
             a train. shape = (pulse_id, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
-        _bkg (float): background level of the detector image.
-        _ma_window (int): moving average window size
-        _ma_count (int): current moving average count
-
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
         _crop_area (tuple): (x, y, w, h) of the cropped image.
-        pixel_size (float): detector pixel size.
         _poni (tuple): (Cx, Cy), where Cx is the coordinate of the point
             of normal incidence along the detector's second dimension,
             in pixels, and Cy is the coordinate of the point of normal
             incidence along the detector's first dimension, in pixels.
             default = (0, 0)
     """
-    _images = None
-    _bkg = 0
-    _ma_window = 1
-    _ma_count = 0
+    class RawImageData:
+        def __init__(self):
+            self._images = None  # moving average (original data)
+            self._ma_window = 1
+            self._ma_count = 0
 
-    __image_mask_data = None
-    __crop_area_data = CropAreaData()
+            self._bkg = 0.0  # current background value
 
-    def __init__(self, images, *,
-                 threshold_mask=None,
-                 background=0.0,
-                 pixel_size=None,
-                 poni=None):
+        def _invalid_image_cached(self):
+            try:
+                del self.__dict__['images']
+            except KeyError:
+                pass
+
+        @property
+        def background(self):
+            return self._bkg
+
+        @background.setter
+        def background(self, v):
+            if self._bkg != v:
+                self._bkg = v
+                self._invalid_image_cached()
+
+        @cached_property
+        def images(self):
+            if self._images is None:
+                return None
+            # return a new constructed array
+            return self._images - self._bkg
+
+        def set(self, imgs):
+            """Set new image train data."""
+            if self._images is None:
+                self._images = imgs
+                self._ma_count = 1
+            else:
+                if imgs.shape != self._images.shape:
+                    logger.error(f"The shape {imgs.shape} of the new image is "
+                                 f"different from the current one "
+                                 f"{self._images.shape}!")
+                    return
+
+                elif self._ma_window > 1:
+                    if self._ma_count < self._ma_window:
+                        self._ma_count += 1
+                        self._images += (imgs - self._images) / self._ma_count
+                    else:  # self._ma_count == self._ma_window
+                        # here is an approximation
+                        self._images += (imgs - self._images) / self._ma_window
+
+                else:  # self._ma_window == 1
+                    self._images = imgs
+                    self._ma_count = 1
+
+            self._invalid_image_cached()
+
+        @property
+        def moving_average_window(self):
+            return self._ma_window
+
+        @moving_average_window.setter
+        def moving_average_window(self, v):
+            if not isinstance(v, int) or v < 0:
+                v = 1
+
+            if v < self._ma_window:
+                # if the new window size is smaller than the current one,
+                # we reset the original image sum and count
+                self._ma_window = v
+                self._ma_count = 0
+                self._images = None
+                self._invalid_image_cached()
+
+            self._ma_window = v
+
+        @property
+        def moving_average_count(self):
+            return self._ma_count
+
+    class ImageMaskData:
+        def __init__(self, shape):
+            """Initialization.
+
+            :param shape: shape of the mask.
+            """
+            self._assembled = np.zeros(shape, dtype=bool)
+
+        def get(self):
+            """Return the assembled mask."""
+            return self._assembled
+
+        def set(self, mask):
+            """Set the current mask."""
+            self._assembled[:] = mask
+
+        def add(self, x, y, w, h, flag):
+            """Update an area in the mask.
+
+            :param bool flag: True for masking the new area and False for
+                unmasking.
+            """
+            self._assembled[y:y + h, x:x + w] = flag
+
+        def clear(self):
+            """Unmask all."""
+            self._assembled[:] = False
+
+    class ThresholdMaskData:
+        def __init__(self, lb=None, ub=None):
+            self._lower = lb
+            self._upper = ub
+
+        def get(self):
+            lower = -np.inf if self._lower is None else self._lower
+            upper = np.inf if self._upper is None else self._upper
+            return lower, upper
+
+        def set(self, lb, ub):
+            self._lower = lb
+            self._upper = ub
+
+    class CropAreaData:
+        def __init__(self):
+            self._rect = None
+
+        def get(self):
+            return self._rect
+
+        def set(self, x, y, w, h):
+            self._rect = (x, y, w, h)
+
+        def clear(self):
+            self._rect = None
+
+    __raw = RawImageData()
+    __threshold_mask = None
+    __image_mask = None
+    __crop_area = CropAreaData()
+
+    pixel_size = None
+
+    def __init__(self, images, *, poni=None):
         """Initialization."""
+        if self.pixel_size is None:
+            self.__class__.pixel_size = config["PIXEL_SIZE"]
+
         if not isinstance(images, np.ndarray):
             raise TypeError(r"Images must be numpy.ndarray!")
 
@@ -220,54 +297,29 @@ class ImageData:
             raise ValueError(
                 f"The shape of images must be (y, x) or (n_pulses, y, x)!")
 
-        self._compute_moving_average(images, background)
+        if self.__image_mask is None:
+            self.__class__.__image_mask = self.ImageMaskData(images.shape[-2:])
+        if self.__threshold_mask is None:
+            self.__threshold_mask = self.ThresholdMaskData(
+                *config['MASK_RANGE'])
 
-        if self.__image_mask_data is None:
-            self.__class__.__image_mask_data = ImageMaskData(self.shape)
+        # update moving average
+        self._set_images(images)
 
-        # image_mask and crop_area will not change unless "update" method is
-        # called
-        self._image_mask = np.copy(self.__image_mask_data.mask)
-        self._crop_area = self.__crop_area_data.rect
-
-        # the mask information is stored in the data so that all the
-        # processing and visualization can use the same mask
-        self._threshold_mask = threshold_mask
-
-        self.pixel_size = pixel_size
+        # Instance attributes should be "frozen" after created. Otherwise,
+        # the data used in different plot widgets could be different.
+        self._images = self.__raw.images
+        self._image_mask = np.copy(self.__image_mask.get())
+        self._threshold_mask = self.__threshold_mask.get()
+        self._crop_area = self.__crop_area.get()
 
         self._poni = (0, 0) if poni is None else poni
 
-    @classmethod
-    def _compute_moving_average(cls, imgs, bkg):
-        """Compute the new moving average of the original images."""
-        # automatically reset if source changes, e.g. number of pulses
-        # per train changes for pulse-resolved data
-        if cls._images is not None and imgs.shape != cls._images.shape:
-            cls._ma_count = 0
+        # cache these two properties
+        self.ma_window
+        self.ma_count
 
-        if cls._ma_count == 0:
-            cls._images = None
-
-        if cls._ma_window > 1 and cls._images is not None:
-            if cls._ma_count < cls._ma_window:
-                cls._ma_count += 1
-                cls._images += (imgs - cls._bkg - cls._images) / cls._ma_count
-            elif cls._ma_count == cls._ma_window:
-                # here is an approximation
-                cls._images += (imgs - cls._bkg - cls._images) / cls._ma_window
-            else:
-                # should never reach here
-                raise ValueError
-
-            cls._images -= bkg - cls._bkg
-        else:
-            # For the single image case, we do not care about the old
-            # background
-            cls._images = imgs - bkg
-            cls._ma_count = 1
-
-        cls._bkg = bkg
+        self._registered_ops = set()
 
     @property
     def n_images(self):
@@ -279,6 +331,27 @@ class ImageData:
     def shape(self):
         return self._images.shape[-2:]
 
+    @property
+    def background(self):
+        return self.__raw.background
+
+    @property
+    def threshold_mask(self):
+        return self._threshold_mask
+
+    @cached_property
+    def ma_window(self):
+        # Updating ma_window could set __raw._images to None. Since there
+        # is no cache being deleted. '_images' in this instance will not
+        # be set to None. Note: '_images' is not allowed to be None.
+        return self.__raw.moving_average_window
+
+    @cached_property
+    def ma_count(self):
+        # Updating ma_window could reset ma_count. Therefore, 'ma_count'
+        # should both be a cached property
+        return self.__raw.moving_average_count
+
     def pos(self, x, y):
         """Return the position in the original image."""
         if self._crop_area is None:
@@ -286,24 +359,41 @@ class ImageData:
         x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
 
-    def update_crop_area(self, x, y, w, h):
-        self.__crop_area_data.rect = (x, y, w, h)
+    def _set_images(self, imgs):
+        self.__raw.set(imgs)
 
-    def reset_crop_area(self):
-        self.__crop_area_data.reset()
+    def set_ma_window(self, v):
+        self.__raw.moving_average_window = v
 
-    def update_image_mask(self, tp, x, y, w, h):
-        if tp == ImageMaskChange.MASK:
-            self.__image_mask_data.update((x, y, w, h), True)
-        elif tp == ImageMaskChange.UNMASK:
-            self.__image_mask_data.update((x, y, w, h), False)
-        elif tp == ImageMaskChange.CLEAR:
-            self.__image_mask_data.clear()
+    def set_background(self, v):
+        self.__raw.background = v
+        self._registered_ops.add("background")
 
-    def replace_image_mask(self, mask):
-        self.__image_mask_data.replace(mask)
+    def set_crop_area(self, flag, x, y, w, h):
+        if flag:
+            self.__crop_area.set(x, y, w, h)
+        else:
+            self.__crop_area.clear()
 
-    @property
+        self._registered_ops.add("crop")
+
+    def set_image_mask(self, flag, x, y, w, h):
+        if flag == ImageMaskChange.MASK:
+            self.__image_mask.add(x, y, w, h, True)
+        elif flag == ImageMaskChange.UNMASK:
+            self.__image_mask.add(x, y, w, h, False)
+        elif flag == ImageMaskChange.CLEAR:
+            self.__image_mask.clear()
+        elif flag == ImageMaskChange.REPLACE:
+            self.__image_mask.set(x)
+
+        self._registered_ops.add("image_mask")
+
+    def set_threshold_mask(self, lb, ub):
+        self.__threshold_mask.set(lb, ub)
+        self._registered_ops.add("threshold_mask")
+
+    @cached_property
     def image_mask(self):
         if self._crop_area is not None:
             x, y, w, h = self._crop_area
@@ -357,40 +447,9 @@ class ImageData:
         mean_image[np.isnan(mean_image)] = -np.inf
         # clip the array, which now will contain only numerical values
         # within the mask range
-        if self._threshold_mask is not None:
-            np.clip(mean_image, *self._threshold_mask, out=mean_image)
+        np.clip(mean_image, *self._threshold_mask, out=mean_image)
+
         return mean_image
-
-    @property
-    def threshold_mask(self):
-        return self._threshold_mask
-
-    @threshold_mask.setter
-    def threshold_mask(self, v):
-        if self._threshold_mask == v:
-            return
-        self._threshold_mask = v
-        try:
-            del self.__dict__['masked_mean']
-        except KeyError:
-            pass
-
-    @property
-    def crop_area(self):
-        return self._crop_area
-
-    @property
-    def background(self):
-        return self._bkg
-
-    @background.setter
-    def background(self, v):
-        if self._bkg == v:
-            return
-
-        self.__class__._images -= v - self._bkg
-        self.__class__._bkg = v
-        self._reset_all_caches()
 
     @property
     def poni(self):
@@ -408,33 +467,29 @@ class ImageData:
     def poni(self, v):
         self._poni = v
 
-    @classmethod
-    def set_moving_average_window(cls, v):
-        if not isinstance(v, int) or v < 0:
-            v = 1
+    def update(self):
+        invalid_caches = set()
+        if "background" in self._registered_ops:
+            self._images = self.__raw.images
+            invalid_caches.update({"images", "mean", "masked_mean"})
+        if "crop" in self._registered_ops:
+            self._crop_area = self.__crop_area.get()
+            invalid_caches.update(
+                {"images", "mean", "masked_mean", "image_mask"})
+        if "image_mask" in self._registered_ops:
+            self._image_mask = np.copy(self.__image_mask.get())
+            invalid_caches.add("image_mask")
+        if "threshold_mask" in self._registered_ops:
+            self._threshold_mask = self.__threshold_mask.get()
+            invalid_caches.add("masked_mean")
 
-        if v < cls._ma_window:
-            # if the new window size is smaller than the current one,
-            # we reset the original image sum and count
-            cls._ma_count = 0  # a flag which indicates reset
-
-        cls._ma_window = v
-
-    @property
-    def moving_average_count(self):
-        return self.__class__._ma_count
-
-    def _reset_all_caches(self):
-        for key in ('masked_mean', 'mean', 'images'):
+        for cache in invalid_caches:
             try:
-                del self.__dict__[key]
+                del self.__dict__[cache]
             except KeyError:
                 pass
 
-    def update(self):
-        self._image_mask = np.copy(self.__image_mask_data.mask)
-        self._crop_area = self.__crop_area_data.rect
-        self._reset_all_caches()
+        self._registered_ops.clear()
 
     @classmethod
     def reset(cls):
@@ -442,12 +497,10 @@ class ImageData:
 
         Used in unittest only.
         """
-        cls._images = None  # moving average of original images
-        cls._bkg = 0  # background
-        cls._ma_window = 1
-        cls._ma_count = 0
-        cls.__image_mask_data = None
-        cls.__crop_area_data = CropAreaData()
+        cls.__raw = cls.RawImageData()
+        cls.__threshold_mask = cls.ThresholdMaskData()
+        cls.__image_mask = None
+        cls.__crop_area = cls.CropAreaData()
 
 
 class ProcessedData:
@@ -504,10 +557,6 @@ class ProcessedData:
             return 0
 
         return self._image_data.n_images
-
-    @classmethod
-    def set_moving_average_window(cls, v):
-        ImageData.set_moving_average_window(v)
 
     @classmethod
     def clear_roi_hist(cls):

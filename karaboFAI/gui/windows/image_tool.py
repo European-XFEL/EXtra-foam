@@ -70,7 +70,6 @@ class ImageToolWindow(AbstractWindow):
 
         self._bkg_le = QtGui.QLineEdit(str(0.0))
         self._bkg_le.setValidator(QtGui.QDoubleValidator())
-        self._bkg_le.editingFinished.connect(mediator.onBkgChange)
         self._bkg_le.editingFinished.connect(self._image_view.onBkgChange)
 
         self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
@@ -100,7 +99,7 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_ctrl = ImageCtrlWidget()
         self._image_ctrl.moving_avg_window_sgn.connect(
-            mediator.onMovingAvgWindowChange)
+            self._image_view.onMovingAverageWindowChange)
         self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
         self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
         self._tool_bar_image.addAction(self._image_ctrl_at)
@@ -129,7 +128,7 @@ class ImageToolWindow(AbstractWindow):
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
         self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
         self._tool_bar_mask.addAction(self._clear_mask_at)
-        self._clear_mask_at.triggered.connect(self._image_view.clearMask)
+        self._clear_mask_at.triggered.connect(self._image_view.onClearMask)
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/save_mask.png"))
         self._save_image_mask_at = QtGui.QAction(icon, "Save image mask", self)
@@ -145,9 +144,8 @@ class ImageToolWindow(AbstractWindow):
 
         self._mask_ctrl = MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
-            mediator.onThresholdMaskChange)
-        self._mask_ctrl.threshold_mask_sgn.connect(
             self._image_view.onThresholdMaskChange)
+
         self._masking_at = QtGui.QWidgetAction(self._tool_bar_mask)
         self._masking_at.setDefaultWidget(self._mask_ctrl)
         self._tool_bar_mask.addAction(self._masking_at)

@@ -19,7 +19,7 @@ from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory, make_brush, make_pen
 from ...algorithms import intersection, quick_min_max
-from ...config import config
+from ...config import config, ImageMaskChange
 from ...logger import logger
 
 
@@ -236,6 +236,7 @@ class ImageAnalysis(ImageView):
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
+    @QtCore.pyqtSlot()
     def onCropToggle(self):
         if self.crop.isVisible():
             self.crop.hide()
@@ -245,6 +246,7 @@ class ImageAnalysis(ImageView):
                 self.crop.setSize(self._image.shape[::-1])
             self.crop.show()
 
+    @QtCore.pyqtSlot()
     def onCropConfirmed(self):
         if not self.crop.isVisible():
             return
@@ -261,44 +263,64 @@ class ImageAnalysis(ImageView):
             self.setImage(self._image[y:y+h, x:x+w], auto_levels=False)
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
-            self._image_data.update_crop_area(x, y, w, h)
+            self._image_data.set_crop_area(True, x, y, w, h)
             self._image_data.update()
             self._mask_item.updateMask(self._image_data.image_mask)
 
         self.crop.hide()
 
+    @QtCore.pyqtSlot()
     def onRestoreImage(self):
         if self._image_data is None:
             return
 
-        self._image_data.reset_crop_area()
+        self._image_data.set_crop_area(False, 0, 0, 0, 0)
         self._image_data.update()
         self.setImage(self._image_data.masked_mean, auto_levels=False)
         self._mask_item.updateMask(self._image_data.image_mask)
 
+    @QtCore.pyqtSlot(int)
+    def onMovingAverageWindowChange(self, v):
+        if self._image_data is None:
+            return
+
+        self._image_data.set_ma_window(v)
+        # this change does not affect the displayed image in ImageToolWindow
+
     @QtCore.pyqtSlot()
     def onBkgChange(self):
-        self._image_data.background = float(self.sender().text())
+        if self._image_data is None:
+            return
+
+        self._image_data.set_background(float(self.sender().text()))
+        self._image_data.update()
         self.setImage(self._image_data.masked_mean,
                       auto_levels=False, auto_range=False)
 
     @QtCore.pyqtSlot(float, float)
-    def onThresholdMaskChange(self, v0, v1):
-        # recalculate the unmasked mean image
-        self._image_data.threshold_mask = (v0, v1)
-        self.setImage(self._image_data.masked_mean)
+    def onThresholdMaskChange(self, lb, ub):
+        if self._image_data is None:
+            return
+
+        self._image_data.set_threshold_mask(lb, ub)
+        self._image_data.update()
+        self.setImage(self._image_data.masked_mean, auto_range=False)
 
     @QtCore.pyqtSlot(object, int, int, int, int)
-    def onMaskRegionChange(self, tp, x, y, w, h):
+    def onMaskRegionChange(self, flag, x, y, w, h):
+        if self._image_data is None:
+            return
+
         x, y = self._image_data.pos(x, y)
-        self._image_data.update_image_mask(tp, x, y, w, h)
+        self._image_data.set_image_mask(flag, x, y, w, h)
 
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):
         self._mask_item.draw_type = draw_type
         self._image_item.drawing = checked
 
-    def clearMask(self):
+    @QtCore.pyqtSlot()
+    def onClearMask(self):
         self._mask_item.clear()
 
     def saveImageMask(self):
@@ -339,7 +361,8 @@ class ImageAnalysis(ImageView):
 
             logger.info(f"Image mask loaded from {file_path}!")
 
-            self._image_data.replace_image_mask(image_mask)
+            self._image_data.set_image_mask(
+                ImageMaskChange.REPLACE, image_mask, 0, 0, 0)
             self._mask_item.updateMask(image_mask)
 
         except (IOError, OSError) as e:

@@ -6,6 +6,9 @@ import numpy as np
 from karaboFAI.gui.plot_widgets.image_view import ImageAnalysis
 from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.logger import logger
+from karaboFAI.config import config
+
+config['PIXEL_SIZE'] = 1e-6
 
 
 class TestPlotWidget(unittest.TestCase):

@@ -419,8 +419,6 @@ class DataProcessor(Worker):
             the integration radial unit. (float, float)
         integration_points_sp (int): number of points in the
             integration output pattern.
-        threshold_mask_sp (tuple): (min, max), the pixel value outside
-            the range will be clipped to the corresponding edge.
         roi1 (tuple): (w, h, px, py) of the current ROI1.
         roi2 (tuple): (w, h, px, py) of the current ROI2.
     """
@@ -453,12 +451,9 @@ class DataProcessor(Worker):
         self.integration_method_sp = None
         self.integration_range_sp = None
         self.integration_points_sp = None
-        self.threshold_mask_sp = (config["MASK_RANGE"][0],
-                                  config["MASK_RANGE"][1])
 
         self.roi1 = None
         self.roi2 = None
-        self._bkg = 0.0
         self._roi_value_type = None
 
         self._laser_on_off_proc = LaserOnOffProcessor(parent=self)
@@ -596,15 +591,6 @@ class DataProcessor(Worker):
     def update_roi_value_type(self, value):
         self._roi_value_type = value
         ProcessedData.clear_roi_hist()
-
-    def update_background(self, v):
-        self._bkg = v
-
-    def update_moving_avg_window(self, v):
-        ProcessedData.set_moving_average_window(v)
-
-    def update_threshold_mask(self, lb, ub):
-        self.threshold_mask_sp = (lb, ub)
 
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)
@@ -928,11 +914,7 @@ class DataProcessor(Worker):
         # integration -> perform laser on-off analysis -> add correlation
         # information
 
-        proc_data = ProcessedData(tid, assembled,
-                                  threshold_mask=self.threshold_mask_sp,
-                                  background=self._bkg,
-                                  pixel_size=config["PIXEL_SIZE"],
-                                  poni=self.poni_sp)
+        proc_data = ProcessedData(tid, assembled, poni=self.poni_sp)
 
         self.process_roi(proc_data)
 

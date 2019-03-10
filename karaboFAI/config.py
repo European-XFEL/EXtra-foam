@@ -56,6 +56,7 @@ class ImageMaskChange(IntEnum):
     MASK = 0  # mask an area
     UNMASK = 1  # unmask an area
     CLEAR = 2  # remove all the mask areas
+    REPLACE = 3  # replace the whole current mask
 
 
 # root path for storing config and log files
