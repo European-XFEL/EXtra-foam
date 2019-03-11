@@ -7,14 +7,14 @@ for experiments at European XFEL that require azimuthal integration
 of diffraction data acquired with 2D detectors. It is now working with
 AGIPD, LPD and JungFrau detectors.
 
-.. image:: karaboFAI-0.2.0-control-panel.png
+.. image:: karaboFAI-GUI.png
    :width: 800
 
-.. image:: karaboFAI-0.2.0-overview-window.png
+.. image:: karaboFAI-ImageTool.png
    :width: 800
 
-.. image:: karaboFAI-0.2.0-optical-laser-on-off-window.png
+.. image:: karaboFAI-LPD_azimuthal_integration.png
    :width: 800
 
-.. image:: karaboFAI-0.2.0-integrated-masking-tool-frompyFAI.png
+.. image:: karaboFAI-ROI.png
    :width: 800
