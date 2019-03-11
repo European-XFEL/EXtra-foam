@@ -124,14 +124,14 @@ class ImageView(QtGui.QWidget):
     def image(self):
         return self._image
 
-    def setImage(self, img, *, auto_range=True, auto_levels=True):
+    def setImage(self, img, *, auto_range=False, auto_levels=False):
         """Set the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
         :param bool auto_range: whether to scale/pan the view to fit
-            the image.
+            the image. defaut = False
         :param bool auto_levels: whether to update the white/black levels
-            to fit the image.
+            to fit the image. default = False
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
@@ -219,14 +219,14 @@ class ImageAnalysis(ImageView):
         self._image_data = None
         self._moving_average_window = 1
 
-    def setImageData(self, image_data):
+    def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
 
         :param ImageData image_data: ImageData instance
         """
         self._image_data = image_data
         if image_data is not None:
-            self.setImage(image_data.masked_mean)
+            self.setImage(image_data.masked_mean, **kwargs)
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
@@ -260,7 +260,7 @@ class ImageAnalysis(ImageView):
 
         w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
         if w > 0 and h > 0:
-            self.setImage(self._image[y:y+h, x:x+w], auto_levels=False)
+            self.setImage(self._image[y:y+h, x:x+w], auto_range=True)
             # convert x, y to position at the original image
             x, y = self._image_data.pos(x, y)
             self._image_data.set_crop_area(True, x, y, w, h)
@@ -276,7 +276,7 @@ class ImageAnalysis(ImageView):
 
         self._image_data.set_crop_area(False, 0, 0, 0, 0)
         self._image_data.update()
-        self.setImage(self._image_data.masked_mean, auto_levels=False)
+        self.setImage(self._image_data.masked_mean, auto_range=True)
         self._mask_item.updateMask(self._image_data.image_mask)
 
     @QtCore.pyqtSlot(int)
@@ -294,8 +294,7 @@ class ImageAnalysis(ImageView):
 
         self._image_data.set_background(float(self.sender().text()))
         self._image_data.update()
-        self.setImage(self._image_data.masked_mean,
-                      auto_levels=False, auto_range=False)
+        self.setImage(self._image_data.masked_mean)
 
     @QtCore.pyqtSlot(float, float)
     def onThresholdMaskChange(self, lb, ub):
@@ -304,7 +303,7 @@ class ImageAnalysis(ImageView):
 
         self._image_data.set_threshold_mask(lb, ub)
         self._image_data.update()
-        self.setImage(self._image_data.masked_mean, auto_range=False)
+        self.setImage(self._image_data.masked_mean)
 
     @QtCore.pyqtSlot(object, int, int, int, int)
     def onMaskRegionChange(self, flag, x, y, w, h):
@@ -391,7 +390,6 @@ class AssembledImageView(ImageView):
             self._threshold_mask = threshold_mask
 
         self.setImage(data.image.masked_mean,
-                      auto_range=False,
                       auto_levels=(not self._is_initialized))
 
         self.updateROI(data)
@@ -425,9 +423,13 @@ class SinglePulseImageView(ImageView):
                          "pulse ID ({})".format(self.pulse_id, max_id))
             return
 
-        self.setImage(images[self.pulse_id])
+        self.setImage(images[self.pulse_id],
+                      auto_levels=(not self._is_initialized))
 
         self.updateROI(data)
+
+        if not self._is_initialized:
+            self._is_initialized = True
 
 
 class RoiImageView(ImageView):
@@ -441,6 +443,8 @@ class RoiImageView(ImageView):
         :param bool roi1: True for displaying ROI1 and False for ROI2.
         """
         super().__init__(**kwargs)
+
+        self._plot_widget.removeItem(self._mask_item)
 
         self._is_roi1 = roi1
 
@@ -460,4 +464,5 @@ class RoiImageView(ImageView):
                 return
             w, h, px, py = data.roi.roi2
 
-        self.setImage(image[py:py+h, px:px+w])
+        self.setImage(image[py:py+h, px:px+w],
+                      auto_range=True, auto_levels=True)

@@ -228,10 +228,12 @@ class ImageToolWindow(AbstractWindow):
         if self._image_view.image is not None:
             return
 
-        self.updateImage()
+        self.updateImage(auto_range=True, auto_levels=True)
 
-    def updateImage(self):
+    def updateImage(self, **kwargs):
         """Update the current image.
+
+        :param kwargs: forward to ImageView.setImage().
 
         It is only used for updating the image manually.
         """
@@ -239,7 +241,7 @@ class ImageToolWindow(AbstractWindow):
         if data.image is None:
             return
 
-        self._image_view.setImageData(data.image)
+        self._image_view.setImageData(data.image, **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):
