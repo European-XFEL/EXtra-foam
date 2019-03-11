@@ -407,12 +407,17 @@ class SinglePulseImageView(ImageView):
         """Initialization."""
         super().__init__(parent=parent)
 
+        self._threshold_mask = None  # current threshold mask
+
         self.pulse_id = pulse_id
 
     def update(self, data):
         """Override."""
         images = data.image.images
         threshold_mask = data.image.threshold_mask
+        if threshold_mask != self._threshold_mask:
+            self._is_initialized = False
+            self._threshold_mask = threshold_mask
 
         max_id = data.n_pulses - 1
         if self.pulse_id <= max_id:
