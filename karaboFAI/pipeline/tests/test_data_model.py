@@ -7,13 +7,15 @@ from karaboFAI.pipeline.data_model import (
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config, ImageMaskChange
-config["PIXEL_SIZE"] = 1e-6
 
 
 class TestImageData(unittest.TestCase):
 
     def setUp(self):
         ImageData.reset()
+        # otherwise the config could be modified by other test files
+        config["PIXEL_SIZE"] = 1e-6
+        config["MASK_RANGE"] = (None, None)
 
     def test_invalidInput(self):
         with self.assertRaises(TypeError):
@@ -31,12 +33,15 @@ class TestImageData(unittest.TestCase):
 
         img_data.set_crop_area(True, 1, 2, 6, 7)
         img_data.update()
-        self.assertTupleEqual(img_data.mean.shape, (7, 6))
+        self.assertTupleEqual((7, 6), img_data.mean.shape)
         self.assertTupleEqual((1, 2), img_data.pos(0, 0))
+        # test the change can be seen by the new instance
+        self.assertTupleEqual((7, 6), ImageData(imgs).mean.shape)
+        self.assertTupleEqual((1, 2), ImageData(imgs).pos(0, 0))
 
         img_data.set_crop_area(True, 0, 1, 3, 4)
         img_data.update()
-        self.assertTupleEqual(img_data.mean.shape, (4, 3))
+        self.assertTupleEqual((4, 3), img_data.mean.shape)
         self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
     def test_poni(self):
@@ -48,6 +53,8 @@ class TestImageData(unittest.TestCase):
         img_data.set_crop_area(True, 0, 1, 3, 2)
         img_data.update()
         self.assertTupleEqual((-1, 0), img_data.poni)
+        # test the change can be seen by the new instance
+        self.assertTupleEqual((-1, 0), ImageData(imgs).poni)
 
         img_data.set_crop_area(True, 1, 2, 3, 2)
         img_data.update()
@@ -63,6 +70,8 @@ class TestImageData(unittest.TestCase):
         img_data.update()
         mask[1:3, 1:3] = True
         np.testing.assert_array_equal(mask, img_data.image_mask)
+        # test the change can be seen by the new instance
+        np.testing.assert_array_equal(mask, ImageData(imgs_orig).image_mask)
 
         img_data.set_image_mask(ImageMaskChange.UNMASK, 2, 2, 4, 4)
         img_data.update()
@@ -87,13 +96,15 @@ class TestImageData(unittest.TestCase):
     def test_thresholdmask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
         img_data = ImageData(np.copy(imgs_orig))
-
         self.assertTupleEqual((-np.inf, np.inf), img_data.threshold_mask)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
 
         img_data.set_threshold_mask(None, 5)
         img_data.update()
         self.assertTupleEqual((-np.inf, 5), img_data.threshold_mask)
+        # test the change can be seen by the new instance
+        self.assertTupleEqual((-np.inf, 5),
+                              ImageData(imgs_orig).threshold_mask)
         imgs = np.copy(imgs_orig)
         imgs[imgs > 5] = 5
         np.testing.assert_array_equal(imgs, img_data.masked_mean)
@@ -127,6 +138,8 @@ class TestImageData(unittest.TestCase):
 
         self.assertEqual(imgs_orig.shape, img_data.shape)
         self.assertEqual(bkg, img_data.background)
+        # test the change can be seen by the new instance
+        self.assertEqual(bkg, ImageData(imgs_orig).background)
         self.assertEqual(1, img_data.n_images)
 
         # calculate the ground truth
@@ -248,6 +261,8 @@ class TestImageData(unittest.TestCase):
 
         np.testing.assert_array_equal(imgs, img_data.images)
         np.testing.assert_array_equal(imgs.mean(axis=0), img_data.mean)
+        # test the change can be seen by the new instance
+        np.testing.assert_array_equal(imgs, ImageData(imgs_orig).images)
 
         # test threshold mask
         masked_imgs = imgs.mean(axis=0)

@@ -300,7 +300,7 @@ class ImageData:
         if self.__image_mask is None:
             self.__class__.__image_mask = self.ImageMaskData(images.shape[-2:])
         if self.__threshold_mask is None:
-            self.__threshold_mask = self.ThresholdMaskData(
+            self.__class__.__threshold_mask = self.ThresholdMaskData(
                 *config['MASK_RANGE'])
 
         # update moving average
@@ -498,7 +498,7 @@ class ImageData:
         Used in unittest only.
         """
         cls.__raw = cls.RawImageData()
-        cls.__threshold_mask = cls.ThresholdMaskData()
+        cls.__threshold_mask = None
         cls.__image_mask = None
         cls.__crop_area = cls.CropAreaData()
 
