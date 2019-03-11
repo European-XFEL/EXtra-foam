@@ -113,17 +113,19 @@ class ImageToolWindow(AbstractWindow):
         self._mask_at = QtGui.QAction(icon, "Mask", self)
         self._mask_at.setCheckable(True)
         self._tool_bar_mask.addAction(self._mask_at)
-        self._mask_at.triggered.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.MASK))
+        # Note: the sequence of the following two 'connect'
         self._mask_at.toggled.connect(self._exclude_actions)
+        self._mask_at.toggled.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.MASK))
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
         self._unmask_at = QtGui.QAction(icon, "Unmask", self)
         self._unmask_at.setCheckable(True)
         self._tool_bar_mask.addAction(self._unmask_at)
-        self._unmask_at.triggered.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
+        # Note: the sequence of the following two 'connect'
         self._unmask_at.toggled.connect(self._exclude_actions)
+        self._unmask_at.toggled.connect(functools.partial(
+            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
 
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
         self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
@@ -163,8 +165,8 @@ class ImageToolWindow(AbstractWindow):
         self._crop_at = QtGui.QAction(icon, "Crop", self)
         self._crop_at.setCheckable(True)
         self._tool_bar_crop.addAction(self._crop_at)
-        self._crop_at.toggled.connect(self._image_view.onCropToggle)
         self._crop_at.toggled.connect(self._exclude_actions)
+        self._crop_at.toggled.connect(self._image_view.onCropToggle)
 
         #
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/crop.png"))
