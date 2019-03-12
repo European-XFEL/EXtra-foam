@@ -370,7 +370,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # clear the previous plots no matter what comes next
         for w in self._windows.keys():
-            w.clear()
+            w.reset()
 
         if self._data.get().image is None:
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
