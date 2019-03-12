@@ -84,7 +84,7 @@ the user needs to specify the full path of the directory which contains the
      - File directory
 
    * - AGIPD
-     - /gpfs/exfel/exp/XMPL/201750/p700000/proc/r0273
+     - /gpfs/exfel/exp/XMPL/201750/p700000/proc/r0006
    * - LPD
      - /gpfs/exfel/exp/FXE/201701/p002026/proc/r0078
    * - JungFrau
