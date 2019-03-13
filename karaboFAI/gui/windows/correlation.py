@@ -35,6 +35,9 @@ class CorrelationWindow(DockerWindow):
 
         self.initUI()
 
+        self.resize(1200, 900)
+        self.setMinimumSize(800, 600)
+
         self.update()
 
         logger.info("Open {}".format(self.__class__.__name__))

@@ -313,9 +313,6 @@ class CorrelationWidget(PlotWidget):
     Widget for displaying correlations between FOM and different parameters.
     """
 
-    MIN_W = 720
-    MIN_H = 540
-
     _brushes = {
         0: make_brush('g', 120),
         1: make_brush('c', 120),
@@ -340,8 +337,6 @@ class CorrelationWidget(PlotWidget):
                                      pen=make_pen(None),
                                      brush=self._brushes[self._idx])
         self.addItem(self._plot)
-
-        self.setMinimumSize(self.MIN_W, self.MIN_H)
 
     def clear(self):
         """Override."""
