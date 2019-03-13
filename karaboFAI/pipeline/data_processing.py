@@ -804,10 +804,20 @@ class DataProcessor(Worker):
                     # -> (memory cells, modules, y, x)
                     modules_data = np.moveaxis(
                         np.moveaxis(modules_data, 3, 0), 3, 2)
+
+            elif detector == "JungFrau":
+                # (y, x, modules)
+                modules_data = det_data["data.adc"]
+                if modules_data.shape[-1] == 1:
+                    modules_data = modules_data.squeeze(axis=-1)
+                else:
+                    raise NotImplementedError
+
             elif detector == "FastCCD":
-                modules_data = det_data["data.image"]
                 # (y, x, 1)
+                modules_data = det_data["data.image"]
                 modules_data = modules_data.squeeze(axis=-1)
+
             else:
                 raise NotImplementedError
 
@@ -850,6 +860,10 @@ class DataProcessor(Worker):
                     try:
                         # (modules, y, x)
                         modules_data = data[self.source_name_sp]['data.adc']
+                        if modules_data.shape[0] == 1:
+                            modules_data = modules_data.squeeze(axis=0)
+                        else:
+                            raise NotImplementedError
                     except KeyError:
                         raise
 
@@ -884,14 +898,15 @@ class DataProcessor(Worker):
         # AGIPD, LPD
         if detector in ('AGIPD', 'LPD'):
             assembled, centre = self.geom_sp.position_all_modules(modules_data)
+
         # JungFrau
         elif detector == 'JungFrau':
-            # In the future, we may need a position_all_modules for JungFrau
-            # or we can simply stack the image.
-            assembled = np.copy(modules_data.squeeze(axis=0))
+            assembled = np.copy(modules_data)
+
         # FastCCD
         elif detector == 'FastCCD':
             assembled = np.copy(modules_data)
+
         else:
             raise NotImplementedError
 
