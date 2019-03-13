@@ -436,7 +436,7 @@ class DataProcessor(Worker):
         self._detector = config['DETECTOR']
 
         # whether to turn azimuthal integration on
-        self._enable_ai = True
+        self._enable_ai = False
 
         # shared parameters are updated by signal-slot
         # Note: shared parameters should end with '_sp'
