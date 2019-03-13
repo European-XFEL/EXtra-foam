@@ -18,8 +18,8 @@ from ..mediator import Mediator
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
-    AssembledImageView, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
+    AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
+    LaserOnOffFomWidget, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
@@ -85,6 +85,7 @@ class OverviewWindow(DockerWindow):
 
         self._on_off_fom = LaserOnOffFomWidget(parent=self)
         self._on_off_ai = LaserOnOffAiWidget(parent=self)
+        self._on_off_diff = LaserOnOffDiffWidget(parent=self)
 
         self.initUI()
 
@@ -156,9 +157,15 @@ class OverviewWindow(DockerWindow):
         # -----------
 
         #
-        on_off_ai_dock = Dock("Laser On-Off Azimuthal Integration",
+        on_off_diff_dock = Dock("Laser On-Off Azimuthal Integration",
+                                size=(self._RW, self._RH1))
+        self._docker_area.addDock(on_off_diff_dock, 'right')
+        on_off_diff_dock.addWidget(self._on_off_diff)
+
+        #
+        on_off_ai_dock = Dock("Laser On/Off Azimuthal Integration",
                               size=(self._RW, self._RH1))
-        self._docker_area.addDock(on_off_ai_dock, 'right')
+        self._docker_area.addDock(on_off_ai_dock, 'above', on_off_diff_dock)
         on_off_ai_dock.addWidget(self._on_off_ai)
 
         #

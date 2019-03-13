@@ -412,7 +412,6 @@ class LaserOnOffAiWidget(PlotWidget):
 
         self._on_pulse = self.plot(name="Laser-on", pen=make_pen("p"))
         self._off_pulse = self.plot(name="Laser-off", pen=make_pen("g"))
-        self._diff = self.plot(name="On - Off x 20", pen=make_pen("y"))
 
     def clear(self):
         """Override."""
@@ -422,7 +421,51 @@ class LaserOnOffAiWidget(PlotWidget):
         """Override."""
         self._on_pulse.setData([], [])
         self._off_pulse.setData([], [])
-        self._diff.setData([], [])
+
+    def update(self, data):
+        """Override."""
+        momentum = data.momentum
+        on_pulse = data.on_off.on_pulse
+        off_pulse = data.on_off.off_pulse
+
+        if on_pulse is None:
+            self._data = None
+        else:
+            if off_pulse is None:
+                if self._data is None:
+                    return
+                # on-pulse arrives but off-pulse does not
+                momentum, on_pulse, off_pulse = self._data
+            else:
+                self._data = (momentum, on_pulse, off_pulse)
+
+            self._on_pulse.setData(momentum, on_pulse)
+            self._off_pulse.setData(momentum, off_pulse)
+
+
+class LaserOnOffDiffWidget(PlotWidget):
+    """LaserOnOffDiffWidget class.
+
+    Widget for displaying the difference of the average of the azimuthal
+    integrations of laser-on/off pulses.
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('left', "Scattering signal (arb. u.)")
+        self.setLabel('bottom', "Momentum transfer (1/A)")
+        self.setTitle('Moving average of on-off')
+
+        self._plot = self.plot(name="On - Off", pen=make_pen("y"))
+
+    def clear(self):
+        """Override."""
+        self.reset()
+
+    def reset(self):
+        """Override."""
+        self._plot.setData([], [])
 
     def update(self, data):
         """Override."""
@@ -438,10 +481,8 @@ class LaserOnOffAiWidget(PlotWidget):
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
-                momentum, on_pulse, off_pulse, diff = self._data
+                diff = self._data
             else:
-                self._data = (momentum, on_pulse, off_pulse, diff)
+                self._data = diff
 
-            self._on_pulse.setData(momentum, on_pulse)
-            self._off_pulse.setData(momentum, off_pulse)
-            self._diff.setData(momentum, 20 * diff)
+            self._plot.setData(momentum, diff)

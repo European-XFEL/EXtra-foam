@@ -2,9 +2,9 @@ import unittest
 from collections import Counter
 
 from karaboFAI.gui.plot_widgets import (
-    AssembledImageView, MultiPulseAiWidget, RoiImageView,
-    RoiValueMonitor, SampleDegradationWidget, SinglePulseAiWidget,
-    SinglePulseImageView
+    AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
+    LaserOnOffFomWidget, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
+    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.main_fai_gui import MainGUI
@@ -21,7 +21,7 @@ class TestOverviewWindow(unittest.TestCase):
                                    pulse_resolved=True,
                                    parent=main_gui)
 
-        self.assertEqual(len(self._win._plot_widgets), 13)
+        self.assertEqual(len(self._win._plot_widgets), 14)
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
@@ -29,6 +29,8 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[BulletinWidget], 1)
         self.assertEqual(counter[AssembledImageView], 1)
         self.assertEqual(counter[MultiPulseAiWidget], 1)
+        self.assertEqual(counter[LaserOnOffAiWidget], 1)
+        self.assertEqual(counter[LaserOnOffDiffWidget], 1)
         self.assertEqual(counter[SampleDegradationWidget], 1)
         self.assertEqual(counter[SinglePulseAiWidget], 2)
         self.assertEqual(counter[SinglePulseImageView], 2)
@@ -43,7 +45,7 @@ class TestOverviewWindow(unittest.TestCase):
                                    pulse_resolved=False,
                                    parent=main_gui)
 
-        self.assertEqual(len(self._win._plot_widgets), 8)
+        self.assertEqual(len(self._win._plot_widgets), 9)
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
@@ -51,6 +53,8 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[BulletinWidget], 1)
         self.assertEqual(counter[AssembledImageView], 1)
         self.assertEqual(counter[SinglePulseAiWidget], 1)
+        self.assertEqual(counter[LaserOnOffAiWidget], 1)
+        self.assertEqual(counter[LaserOnOffDiffWidget], 1)
         self.assertEqual(counter[RoiImageView], 2)
         self.assertEqual(counter[RoiImageView], 2)
         self.assertEqual(counter[RoiValueMonitor], 1)
