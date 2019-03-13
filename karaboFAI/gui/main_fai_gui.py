@@ -206,7 +206,6 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onPulseIdRangeChange)
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
             self._proc_worker.onEnableAiStateChange)
-        self.analysis_ctrl_widget.enable_ai_cb.setChecked(True)
         self.analysis_ctrl_widget.ai_normalizer_sgn.connect(
             self._proc_worker.onAiNormalizeChange)
         self.analysis_ctrl_widget.normalization_range_sgn.connect(

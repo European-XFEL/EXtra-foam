@@ -18,8 +18,8 @@ from ..mediator import Mediator
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
-    AssembledImageView, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
+    AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
+    LaserOnOffFomWidget, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
@@ -30,33 +30,26 @@ class OverviewWindow(DockerWindow):
     """OverviewWindow class."""
     title = "overview"
 
-    _ASSEMBLED_W = 600
-    _ASSEMBLED_H = 500
-    _AI_W = 900
-    _AI_H = _ASSEMBLED_H
-    _ON_OFF_AI_W = _AI_W
-    _ON_OFF_AI_H = _AI_H
-    _SP_W = _ASSEMBLED_W
-    _SP_H = 250
-    _ROI_W = _SP_W
-    _ROI_H = _SP_H
-    _BULLETIN_W = _AI_W
-    _BULLETIN_H = 100
-    _SAMPLE_W = _AI_W
-    _SAMPLE_H = 2 * _SP_H - _BULLETIN_H
-    _ON_OFF_W = _SAMPLE_W
-    _ON_OFF_H = _SAMPLE_H
-    _ROI_IT_W = _SAMPLE_W
-    _ROI_IT_H = _SAMPLE_H
+    _TOTAL_W = 1500
+    _TOTAL_H = 1000
 
-    _TOTAL_W = _ASSEMBLED_W + _AI_W
-    _TOTAL_H = _ASSEMBLED_H + 2 * _SP_H
+    # There are two columns of plots in the OverviewWindow. They are
+    # numbered at 1, 2, ... from top to bottom.
+    _LW = 0.4 * _TOTAL_W
+    _LH1 = 0.5 * _TOTAL_H
+    _LH2 = 0.25 * _TOTAL_H
+    _LH3 = 0.25 * _TOTAL_H
+    _RW = 0.6 * _TOTAL_W
+    _RH1 = 0.5 * _TOTAL_H - 25
+    _RH2 = 50
+    _RH3 = 0.5 * _TOTAL_H - 25
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
         self._bulletin = BulletinWidget(parent=self)
+        self._bulletin.setMaximumHeight(self._RH2)
         self._assembled = AssembledImageView(parent=self)
 
         mediator = Mediator()
@@ -92,10 +85,11 @@ class OverviewWindow(DockerWindow):
 
         self._on_off_fom = LaserOnOffFomWidget(parent=self)
         self._on_off_ai = LaserOnOffAiWidget(parent=self)
+        self._on_off_diff = LaserOnOffDiffWidget(parent=self)
 
         self.initUI()
 
-        self.resize(self._TOTAL_W, self._TOTAL_W)
+        self.resize(self._TOTAL_W, self._TOTAL_H)
 
         self.update()
 
@@ -112,8 +106,8 @@ class OverviewWindow(DockerWindow):
         # upper left
         # ----------
 
-        assembled_dock = Dock("Mean Assembled Image", size=(
-            self._ASSEMBLED_W, self._ASSEMBLED_H))
+        assembled_dock = Dock("Mean Assembled Image",
+                              size=(self._LW, self._LH1))
         self._docker_area.addDock(assembled_dock, 'left')
         assembled_dock.addWidget(self._assembled)
 
@@ -121,39 +115,39 @@ class OverviewWindow(DockerWindow):
         # lower left
         # -----------
 
-        roi1_image_dock = Dock("ROI1", size=(self._ROI_W, self._ROI_H))
+        roi1_image_dock = Dock("ROI1", size=(self._LW, self._LH2))
         self._docker_area.addDock(roi1_image_dock, 'bottom', assembled_dock)
         roi1_image_dock.addWidget(self._roi1_image)
 
-        roi2_image_dock = Dock("ROI2", size=(self._ROI_W, self._ROI_H))
+        roi2_image_dock = Dock("ROI2", size=(self._LW, self._LH3))
         self._docker_area.addDock(roi2_image_dock, 'bottom', roi1_image_dock)
         roi2_image_dock.addWidget(self._roi2_image)
 
         if self._pulse_resolved:
             #
             self._vip2_ai_dock = Dock("VIP pulse 0000 - AI",
-                                      size=(self._SP_W, self._SP_H))
+                                      size=(self._LW, self._LH3))
             self._docker_area.addDock(
                 self._vip2_ai_dock, 'above', roi2_image_dock)
             self._vip2_ai_dock.addWidget(self._vip2_ai)
 
             #
             self._vip1_ai_dock = Dock("VIP pulse 0000 - AI",
-                                      size=(self._SP_W, self._SP_H))
+                                      size=(self._LW, self._LH2))
             self._docker_area.addDock(
                 self._vip1_ai_dock, 'above', roi1_image_dock)
             self._vip1_ai_dock.addWidget(self._vip1_ai)
 
             #
             self._vip2_img_dock = Dock("VIP pulse 0000",
-                                       size=(self._SP_W, self._SP_H))
+                                       size=(self._LW, self._LH3))
             self._docker_area.addDock(self._vip2_img_dock, 'above',
                                       self._vip2_ai_dock)
             self._vip2_img_dock.addWidget(self._vip2_img)
 
             #
             self._vip1_img_dock = Dock("VIP pulse 0000",
-                                       size=(self._SP_W, self._SP_H))
+                                       size=(self._LW, self._LH2))
             self._docker_area.addDock(self._vip1_img_dock, 'above',
                                       self._vip1_ai_dock)
             self._vip1_img_dock.addWidget(self._vip1_img)
@@ -163,14 +157,20 @@ class OverviewWindow(DockerWindow):
         # -----------
 
         #
-        on_off_ai_dock = Dock("Laser On-Off Azimuthal Integration",
-                              size=(self._ON_OFF_AI_W, self._ON_OFF_AI_H))
-        self._docker_area.addDock(on_off_ai_dock, 'right')
+        on_off_diff_dock = Dock("Laser On-Off Azimuthal Integration",
+                                size=(self._RW, self._RH1))
+        self._docker_area.addDock(on_off_diff_dock, 'right')
+        on_off_diff_dock.addWidget(self._on_off_diff)
+
+        #
+        on_off_ai_dock = Dock("Laser On/Off Azimuthal Integration",
+                              size=(self._RW, self._RH1))
+        self._docker_area.addDock(on_off_ai_dock, 'above', on_off_diff_dock)
         on_off_ai_dock.addWidget(self._on_off_ai)
 
         #
         ai_dock = Dock("Azimuthal Integration Overview",
-                       size=(self._AI_W, self._AI_H))
+                       size=(self._RW, self._RH1))
         self._docker_area.addDock(ai_dock, 'above', on_off_ai_dock)
         ai_dock.addWidget(self._ai)
 
@@ -179,8 +179,7 @@ class OverviewWindow(DockerWindow):
         # -----------
 
         #
-        bulletin_dock = Dock("Bulletin",
-                             size=(self._BULLETIN_W, self._BULLETIN_H))
+        bulletin_dock = Dock("Bulletin", size=(self._RW, self._RH2))
         self._docker_area.addDock(bulletin_dock, 'bottom', ai_dock)
         bulletin_dock.addWidget(self._bulletin)
         bulletin_dock.hideTitleBar()
@@ -191,20 +190,19 @@ class OverviewWindow(DockerWindow):
 
         #
         on_off_fom_dock = Dock("Laser On-Off Azimuthal Integration",
-                               size=(self._ON_OFF_W, self._ON_OFF_H))
+                               size=(self._RW, self._RH3))
         self._docker_area.addDock(on_off_fom_dock, 'bottom', bulletin_dock)
         on_off_fom_dock.addWidget(self._on_off_fom)
 
         #
-        roi_intensity_dock = Dock("ROI intensity",
-                                  size=(self._ROI_IT_W, self._ROI_IT_H))
+        roi_intensity_dock = Dock("ROI intensity", size=(self._RW, self._RH3))
         self._docker_area.addDock(roi_intensity_dock, 'above', on_off_fom_dock)
         roi_intensity_dock.addWidget(self._roi_intensity)
 
         #
         if self._pulse_resolved:
             sample_degradation_dock = Dock(
-                "Sample Degradation", size=(self._SAMPLE_W, self._SAMPLE_H))
+                "Sample Degradation", size=(self._RW, self._RH3))
             self._docker_area.addDock(
                 sample_degradation_dock, 'above', roi_intensity_dock)
             sample_degradation_dock.addWidget(self._sample_degradation)

@@ -2,9 +2,9 @@ from .image_view import (
     AssembledImageView, ImageAnalysis, RoiImageView, SinglePulseImageView
 )
 from .plot_widget import (
-    CorrelationWidget, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    MultiPulseAiWidget, RoiValueMonitor, SampleDegradationWidget,
-    SinglePulseAiWidget
+    CorrelationWidget, LaserOnOffAiWidget, LaserOnOffDiffWidget,
+    LaserOnOffFomWidget, MultiPulseAiWidget, RoiValueMonitor,
+    SampleDegradationWidget, SinglePulseAiWidget
 )
 from .roi import CropROI, RectROI
 
@@ -20,6 +20,7 @@ __all__ = ([
 __all__.extend([
     "CorrelationWidget",
     "LaserOnOffAiWidget",
+    "LaserOnOffDiffWidget",
     "LaserOnOffFomWidget",
     "MultiPulseAiWidget",
     "RoiValueMonitor",

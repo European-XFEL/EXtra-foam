@@ -71,6 +71,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
+        # default state is unchecked
         self.enable_ai_cb = QtGui.QCheckBox("Azimuthal integration")
 
         self._normalizers_cb = QtGui.QComboBox()
