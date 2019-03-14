@@ -37,8 +37,11 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     _available_foms = OrderedDict({
         "A.I. mean": FomName.AI_MEAN,
-        "A.I. on-off": FomName.AI_ON_OFF,
-        "ROI": FomName.ROI,
+        "A.I. on - A.I. off": FomName.AI_ON_OFF,
+        "ROI1": FomName.ROI1,
+        "ROI2": FomName.ROI2,
+        "ROI1 + ROI2": FomName.ROI_SUM,
+        "ROI1 - ROI2": FomName.ROI_SUB
     })
 
     # Leave the default device ID empty since the available devices

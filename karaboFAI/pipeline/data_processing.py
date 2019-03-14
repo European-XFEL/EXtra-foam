@@ -121,10 +121,23 @@ class CorrelationProcessor(AbstractProcessor):
                 return
             fom = foms[-1]
 
-        elif self.fom_name == FomName.ROI:
+        elif self.fom_name == FomName.ROI1:
+            _, values, _ = proc_data.roi.values1
+            fom = values[-1]
+
+        elif self.fom_name == FomName.ROI2:
+            _, values, _ = proc_data.roi.values2
+            fom = values[-1]
+
+        elif self.fom_name == FomName.ROI_SUM:
             _, values1, _ = proc_data.roi.values1
             _, values2, _ = proc_data.roi.values2
             fom = values1[-1] + values2[-1]
+
+        elif self.fom_name == FomName.ROI_SUB:
+            _, values1, _ = proc_data.roi.values1
+            _, values2, _ = proc_data.roi.values2
+            fom = values1[-1] - values2[-1]
 
         else:
             self.log("Unexpected FOM name!")
