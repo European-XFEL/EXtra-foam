@@ -69,7 +69,10 @@ class FileServer(Process):
         else:
             devices = None
 
-        serve_files(self._folder, self._port, devices=devices, require_all=True)
+        # [motor]
+        devices.extend([("*", "actualPosition"),])
+        serve_files(self._folder, self._port,
+                    devices=devices, require_all=True)
 
     def terminate(self):
         """Override."""
