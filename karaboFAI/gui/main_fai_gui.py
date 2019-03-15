@@ -226,6 +226,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onCorrelationParamChange)
         self.correlation_ctrl_widget.correlation_fom_sgn.connect(
             self._proc_worker.onCorrelationFomChange)
+        self.correlation_ctrl_widget.clear_btn.clicked.connect(
+            self._proc_worker.onCorrelationClear)
 
     def initUI(self):
         misc_layout = QtGui.QHBoxLayout()

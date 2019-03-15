@@ -576,6 +576,10 @@ class DataProcessor(Worker):
     def onEnableAiStateChange(self, state):
         self._enable_ai = state == QtCore.Qt.Checked
 
+    @QtCore.pyqtSlot()
+    def onCorrelationClear(self):
+        ProcessedData.clear_correlation_hist()
+
     @QtCore.pyqtSlot(int, str, str)
     def onCorrelationParamChange(self, idx, device_id, ppt):
         ProcessedData.add_correlator(idx, device_id, ppt)

@@ -106,6 +106,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self._figure_of_merit_cb.currentTextChanged.connect(
             lambda x: self.correlation_fom_sgn.emit(self._available_foms[x]))
 
+        self.clear_btn = QtGui.QPushButton("Clear history")
+
         self._table = QtGui.QTableWidget()
 
         self._disabled_widgets_during_daq = [
@@ -122,6 +124,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         # correlation
         layout.addRow("Figure of merit (FOM): ", self._figure_of_merit_cb)
         layout.addRow(self._table)
+        layout.addRow(self.clear_btn)
 
         self.setLayout(layout)
 
