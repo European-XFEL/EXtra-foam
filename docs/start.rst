@@ -6,15 +6,20 @@ To start **karaboFAI** on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    source /gpfs/exfel/sw/software/modules
-    module load exfel_anaconda3
+    # stable version
+    module load exfel exfel_anaconda3
     karaboFAI DETECTOR_NAME
 
-    # or a fallback solution
-    /gpfs/exfel/sw/software/karaboFAI/env/bin/karaboFAI DETECTOR_NAME
-
-
 Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
+
+You are also encouraged to try the latest version (more features). However, the
+latest version is **not** supported by OCD.
+
+.. code-block:: bash
+
+    # latest version
+    module load exfel exfel_anaconda3/beta
+    karaboFAI DETECTOR_NAME
 
 .. note::
     It usually takes some time to start **karaboFAI** for the first time! This
