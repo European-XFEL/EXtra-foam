@@ -28,20 +28,20 @@ class OpLaserMode(IntEnum):
 
 
 class FomName(IntEnum):
-    # Calculate the FOM based on the azimuthal integration of the mean
-    # of the assembled image(s).
-    AI_MEAN = 1
     # Calculate the FOM based on the difference between the azimuthal
     # integration result between the laser on/off pulse(s).
-    AI_ON_OFF = 2
-    # ROI1
-    ROI1 = 3
-    # ROI2
-    ROI2 = 4
-    # ROI1 + ROI2
-    ROI_SUM = 5
+    AI_ON_OFF = 1
+    # Calculate the FOM based on the azimuthal integration of the mean
+    # of the assembled image(s).
+    AI_MEAN = 2
     # ROI1 - ROI2
-    ROI_SUB = 6
+    ROI_SUB = 3
+    # ROI1 + ROI2
+    ROI_SUM = 4
+    # ROI1
+    ROI1 = 5
+    # ROI2
+    ROI2 = 6
 
 
 class AiNormalizer(IntEnum):

@@ -36,12 +36,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     _n_params = 4  # maximum number of correlated parameters
 
     _available_foms = OrderedDict({
-        "A.I. mean": FomName.AI_MEAN,
         "A.I. on - A.I. off": FomName.AI_ON_OFF,
+        "A.I. mean": FomName.AI_MEAN,
+        "ROI1 - ROI2": FomName.ROI_SUB,
+        "ROI1 + ROI2": FomName.ROI_SUM,
         "ROI1": FomName.ROI1,
         "ROI2": FomName.ROI2,
-        "ROI1 + ROI2": FomName.ROI_SUM,
-        "ROI1 - ROI2": FomName.ROI_SUB
     })
 
     # Leave the default device ID empty since the available devices
