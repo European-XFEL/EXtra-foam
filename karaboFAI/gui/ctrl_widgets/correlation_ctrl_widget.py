@@ -76,7 +76,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         ),
         "Motor": CorrelationParam(
             device_ids=[
-                ""
+                "",
+                "FXE_SMS_USR/MOTOR/UM01",
+                "FXE_SMS_USR/MOTOR/UM02",
+                "FXE_SMS_USR/MOTOR/UM04",
+                "FXE_SMS_USR/MOTOR/UM05",
+                "FXE_SMS_USR/MOTOR/UM13",
             ],
             properties=["actualPosition"],
         ),
