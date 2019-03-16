@@ -141,6 +141,6 @@ def parse_table_widget(widget):
     """
     n_row, n_col = widget.rowCount(), widget.columnCount()
     ret = []
-    for i in range(n_row):
-        ret.append([float(widget.item(i, j).text()) for j in range(n_col)])
+    for i in range(n_col):
+        ret.append([float(widget.item(j, i).text()) for j in range(n_row)])
     return ret

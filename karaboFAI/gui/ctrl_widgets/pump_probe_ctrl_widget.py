@@ -78,19 +78,25 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self.initUI()
 
+        self.setFixedHeight(self.minimumSizeHint().height())
+
     def initUI(self):
         """Overload."""
-        layout = QtGui.QFormLayout()
-        layout.setLabelAlignment(QtCore.Qt.AlignRight)
+        layout = QtGui.QGridLayout()
+        AR = QtCore.Qt.AlignRight
 
-        layout.addRow("Laser on/off mode: ", self._laser_mode_cb)
-        layout.addRow(self.abs_difference_cb)
+        layout.addWidget(QtGui.QLabel("Laser on/off mode: "), 0, 0, AR)
+        layout.addWidget(self._laser_mode_cb, 0, 1)
         if self._pulse_resolved:
-            layout.addRow("On-pulse IDs: ", self._on_pulse_le)
-            layout.addRow("Off-pulse IDs: ", self._off_pulse_le)
-        layout.addRow("Moving average window: ",
-                      self._moving_avg_window_le)
-        layout.addRow(self.reset_btn)
+            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 1, 0, AR)
+            layout.addWidget(self._on_pulse_le, 1, 1)
+            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 2, 0, AR)
+            layout.addWidget(self._off_pulse_le, 2, 1)
+
+        layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 0, AR)
+        layout.addWidget(self._moving_avg_window_le, 3, 1)
+        layout.addWidget(self.abs_difference_cb, 4, 1)
+        layout.addWidget(self.reset_btn, 5, 1)
 
         self.setLayout(layout)
 
@@ -112,12 +118,12 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                     if common:
                         logger.error("Pulse IDs {} are found in both on- and "
                                      "off- pulses.".format(','.join([str(v) for v in common])))
-                        return None
+                        return False
 
             except ValueError:
                 logger.error("Invalid input! Enter on/off pulse IDs separated "
                              "by ',' and/or use the range operator ':'!")
-                return None
+                return False
         else:
             on_pulse_ids = []
             off_pulse_ids = []
@@ -130,16 +136,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         window_size = int(self._moving_avg_window_le.text())
         if window_size < 1:
             logger.error("Moving average window < 1!")
-            return None
+            return False
         self.moving_avg_window_sgn.emit(window_size)
 
-        info = "\n<Optical laser mode>: {}".format(mode_description)
-        if on_pulse_ids and off_pulse_ids:
-            if self._pulse_resolved:
-                info += "\n<On-pulse IDs>: {}".format(on_pulse_ids)
-                info += "\n<Off-pulse IDs>: {}".format(off_pulse_ids)
-            info += "\n<Moving average window>: {}".format(window_size)
-
-        info += "\n<Use absolute difference>: {}".format(bool(abs_diff_state))
-
-        return info
+        return True

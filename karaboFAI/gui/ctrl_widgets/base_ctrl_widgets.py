@@ -13,7 +13,8 @@ from ..pyqtgraph import QtCore, QtGui
 
 
 class AbstractCtrlWidget(QtGui.QGroupBox):
-    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
+    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
+                            'color: #8B008B;' \
                             'border: 1px;' \
                             'subcontrol-origin: margin;' \
                             'subcontrol-position: top left;' \

@@ -15,6 +15,7 @@ from .pyqtgraph import QtCore
 class Mediator(QtCore.QObject):
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
     vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
+    update_vip_pulse_ids_sgn = QtCore.pyqtSignal()
 
     roi_displayed_range_sgn = QtCore.pyqtSignal(int)
 
@@ -64,3 +65,6 @@ class Mediator(QtCore.QObject):
     @QtCore.pyqtSlot(bool, int, int, int, int)
     def onRoi2Change(self, activated, w, h, px, py):
         self._proc.update_roi2_region(activated, w, h, px, py)
+
+    def updateVipPulseIds(self):
+        self.update_vip_pulse_ids_sgn.emit()

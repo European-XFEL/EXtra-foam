@@ -168,7 +168,7 @@ class MainGUI(QtGui.QMainWindow):
         self.initUI()
         self.initConnection()
 
-        self.setFixedSize(self.minimumSizeHint())
+        self.setFixedHeight(self.minimumSizeHint().height())
 
         self.show()
 
@@ -201,17 +201,17 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onIntegrationRangeChange)
         self.ai_ctrl_widget.integration_points_sgn.connect(
             self._proc_worker.onIntegrationPointsChange)
+        self.ai_ctrl_widget.ai_normalizer_sgn.connect(
+            self._proc_worker.onAiNormalizeChange)
+        self.ai_ctrl_widget.auc_x_range_sgn.connect(
+            self._proc_worker.onAucXRangeChange)
+        self.ai_ctrl_widget.fom_integration_range_sgn.connect(
+            self._proc_worker.onFomIntegrationRangeChange)
 
-        self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._proc_worker.onPulseIdRangeChange)
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
             self._proc_worker.onEnableAiStateChange)
-        self.analysis_ctrl_widget.ai_normalizer_sgn.connect(
-            self._proc_worker.onAiNormalizeChange)
-        self.analysis_ctrl_widget.normalization_range_sgn.connect(
-            self._proc_worker.onNormalizationRangeChange)
-        self.analysis_ctrl_widget.integration_range_sgn.connect(
-            self._proc_worker.onFomIntegrationRangeChange)
+        self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
+            self._proc_worker.onPulseIdRangeChange)
 
         self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)
@@ -222,32 +222,29 @@ class MainGUI(QtGui.QMainWindow):
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._proc_worker.onLaserOnOffClear)
 
-        self.correlation_ctrl_widget.correlation_param_sgn.connect(
-            self._proc_worker.onCorrelationParamChange)
-        self.correlation_ctrl_widget.correlation_fom_sgn.connect(
+        self.correlation_ctrl_widget.correlation_fom_change_sgn.connect(
             self._proc_worker.onCorrelationFomChange)
+        self.correlation_ctrl_widget.correlation_param_change_sgn.connect(
+            self._proc_worker.onCorrelationParamChange)
         self.correlation_ctrl_widget.clear_btn.clicked.connect(
             self._proc_worker.onCorrelationClear)
 
     def initUI(self):
-        misc_layout = QtGui.QHBoxLayout()
-        misc_layout.addWidget(self.ai_ctrl_widget)
-        if config['REQUIRE_GEOMETRY']:
-            misc_layout.addWidget(self.geometry_ctrl_widget)
-        misc_layout.addWidget(self.data_ctrl_widget)
-
-        right_layout = QtGui.QVBoxLayout()
-        right_layout.addLayout(misc_layout)
-        right_layout.addWidget(self._logger.widget)
-
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
-        analysis_layout.addWidget(self.correlation_ctrl_widget)
+        analysis_layout.addWidget(self.ai_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
 
+        misc_layout = QtGui.QVBoxLayout()
+        misc_layout.addWidget(self.data_ctrl_widget)
+        misc_layout.addWidget(self.correlation_ctrl_widget)
+        if config['REQUIRE_GEOMETRY']:
+            misc_layout.addWidget(self.geometry_ctrl_widget)
+        misc_layout.addWidget(self._logger.widget)
+
         layout = QtGui.QHBoxLayout()
-        layout.addLayout(analysis_layout)
-        layout.addLayout(right_layout)
+        layout.addLayout(analysis_layout, 1)
+        layout.addLayout(misc_layout, 3)
         self._cw.setLayout(layout)
 
     def updateAll(self):
@@ -362,14 +359,10 @@ class MainGUI(QtGui.QMainWindow):
         :returns bool: True if all shared parameters successfully parsed
             and emitted, otherwise False.
         """
-        total_info = ""
         for widget in self._ctrl_widgets:
             info = widget.updateSharedParameters()
-            if info is None:
+            if not info:
                 return False
-            total_info += info
-
-        logger.info(total_info)
         return True
 
     @QtCore.pyqtSlot(str)

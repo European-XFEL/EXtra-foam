@@ -64,8 +64,8 @@ class CorrelationProcessor(AbstractProcessor):
         self.fom_name = None
 
         self.normalizer = None
-        self.normalization_range = None
-        self.integration_range = None
+        self.auc_x_range = None
+        self.fom_integration_range = None
 
     def process(self, data):
         """Process the data
@@ -86,9 +86,9 @@ class CorrelationProcessor(AbstractProcessor):
                 return
             intensity = proc_data.intensity_mean
 
-            if self.normalizer == AiNormalizer.INTEGRAL:
+            if self.normalizer == AiNormalizer.AUC:
                 normalized_intensity = normalize_curve(
-                    intensity, momentum, *self.normalization_range)
+                    intensity, momentum, *self.auc_x_range)
             elif self.normalizer == AiNormalizer.ROI:
                 _, values1, _ = proc_data.roi.values1
                 _, values2, _ = proc_data.roi.values2
@@ -111,7 +111,7 @@ class CorrelationProcessor(AbstractProcessor):
 
             # calculate figure-of-merit
             fom = slice_curve(
-                normalized_intensity, momentum, *self.integration_range)[0]
+                normalized_intensity, momentum, *self.fom_integration_range)[0]
             fom = np.sum(np.abs(fom))
 
         elif self.fom_name == FomName.AI_ON_OFF:
@@ -175,8 +175,8 @@ class SampleDegradationProcessor(AbstractProcessor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.normalization_range = None
-        self.integration_range = None
+        self.auc_x_range = None
+        self.fom_integration_range = None
 
     def process(self, proc_data):
         """Process the proc_data.
@@ -195,7 +195,7 @@ class SampleDegradationProcessor(AbstractProcessor):
         normalized_pulse_intensities = []
         for pulse_intensity in intensities:
             normalized = normalize_curve(
-                pulse_intensity, momentum, *self.normalization_range)
+                pulse_intensity, momentum, *self.auc_x_range)
             normalized_pulse_intensities.append(normalized)
 
         # calculate the different between each pulse and the first one
@@ -205,7 +205,7 @@ class SampleDegradationProcessor(AbstractProcessor):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.integration_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_integration_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         proc_data.sample_degradation_foms = foms
@@ -234,8 +234,8 @@ class LaserOnOffProcessor(AbstractProcessor):
         self.moving_avg_window = 1
 
         self.normalizer = None
-        self.normalization_range = None
-        self.integration_range = None
+        self.auc_x_range = None
+        self.fom_integration_range = None
 
         self._on_train_received = False
         self._off_train_received = False
@@ -344,7 +344,7 @@ class LaserOnOffProcessor(AbstractProcessor):
                 self._on_pulses_hist.append(this_on_pulses)
 
             normalized_on_pulse = normalize_curve(
-                self._on_pulses_ma, momentum, *self.normalization_range)
+                self._on_pulses_ma, momentum, *self.auc_x_range)
 
         diff = None
         fom = None
@@ -369,12 +369,12 @@ class LaserOnOffProcessor(AbstractProcessor):
                 raise ValueError  # should never reach here
 
             normalized_off_pulse = normalize_curve(
-                self._off_pulses_ma, momentum, *self.normalization_range)
+                self._off_pulses_ma, momentum, *self.auc_x_range)
 
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit and update history
-            fom = slice_curve(diff, momentum, *self.integration_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_integration_range)[0]
             if self.abs_difference:
                 fom = np.sum(np.abs(fom))
             else:
@@ -520,16 +520,16 @@ class DataProcessor(Worker):
         self._laser_on_off_proc.moving_avg_window = value
 
     @QtCore.pyqtSlot(float, float)
-    def onNormalizationRangeChange(self, lb, ub):
-        self._laser_on_off_proc.normalization_range = (lb, ub)
-        self._sample_degradation_proc.normalization_range = (lb, ub)
-        self._correlation_proc.normalization_range = (lb, ub)
+    def onAucXRangeChange(self, lb, ub):
+        self._laser_on_off_proc.auc_x_range = (lb, ub)
+        self._sample_degradation_proc.auc_x_range = (lb, ub)
+        self._correlation_proc.auc_x_range = (lb, ub)
 
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
-        self._laser_on_off_proc.integration_range = (lb, ub)
-        self._sample_degradation_proc.integration_range = (lb, ub)
-        self._correlation_proc.integration_range = (lb, ub)
+        self._laser_on_off_proc.fom_integration_range = (lb, ub)
+        self._sample_degradation_proc.fom_integration_range = (lb, ub)
+        self._correlation_proc.fom_integration_range = (lb, ub)
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
@@ -806,13 +806,14 @@ class DataProcessor(Worker):
         data, metadata = calibrated_data
 
         detector = self._detector
+        src_name = self.source_name_sp
 
         t0 = time.perf_counter()
 
         if not from_file:
-            tid = metadata[self.source_name_sp]["timestamp.tid"]
+            tid = metadata[src_name]["timestamp.tid"]
 
-            det_data = data[self.source_name_sp]
+            det_data = data[src_name]
 
             if detector in ('AGIPD', 'LPD'):
                 modules_data = det_data["image.data"]
@@ -869,14 +870,14 @@ class DataProcessor(Worker):
                     return ProcessedData(tid)
 
             elif detector == 'JungFrau':
-                if self.source_name_sp not in data:
-                    self.log(f"Source [{self.source_name_sp}] is not in "
+                if src_name not in data:
+                    self.log(f"Source [{src_name}] is not in "
                              f"the received data!")
                     return ProcessedData(tid)
                 else:
                     try:
                         # (modules, y, x)
-                        modules_data = data[self.source_name_sp]['data.adc']
+                        modules_data = data[src_name]['data.adc']
                         if modules_data.shape[0] == 1:
                             modules_data = modules_data.squeeze(axis=0)
                         else:
@@ -885,14 +886,14 @@ class DataProcessor(Worker):
                         raise
 
             elif detector == "FastCCD":
-                if self.source_name_sp not in data:
-                    self.log(f"Source [{self.source_name_sp}] is not in "
+                if src_name not in data:
+                    self.log(f"Source [{src_name}] is not in "
                              f"the received data!")
                     return ProcessedData(tid)
                 else:
                     try:
                         # (y, x)
-                        modules_data = data[self.source_name_sp][
+                        modules_data = data[src_name][
                             'data.image.pixels']
                     except KeyError:
                         raise

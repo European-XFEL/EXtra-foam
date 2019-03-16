@@ -27,15 +27,20 @@ class DataCtrlWidget(AbstractCtrlWidget):
         super().__init__("Data source", *args, **kwargs)
 
         self._hostname_le = QtGui.QLineEdit(config["SERVER_ADDR"])
+        self._hostname_le.setMinimumWidth(120)
         self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
+        self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
+
         self._source_name_cb = QtGui.QComboBox()
         for src in config["SOURCE_NAME"]:
             self._source_name_cb.addItem(src)
+        self._source_name_cb.currentIndexChanged.connect(
+            lambda i: self.source_name_sgn.emit(config["SOURCE_NAME"][i]))
 
         self._source_type_rbts = []
         # the order must match the definition in the DataSource class
         self._source_type_rbts.append(
-            QtGui.QRadioButton("Calibrated data@folder"))
+            QtGui.QRadioButton("Calibrated data@files"))
         self._source_type_rbts.append(
             QtGui.QRadioButton("Calibrated data@ZMQ bridge"))
         self._source_type_rbts.append(
@@ -60,7 +65,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._disabled_widgets_during_daq = [
             self._hostname_le,
             self._port_le,
-            self._source_name_cb,
         ]
         self._disabled_widgets_during_daq.extend(self._source_type_rbts)
 
@@ -75,27 +79,25 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         src_layout = QtGui.QGridLayout()
         src_layout.addWidget(QtGui.QLabel("Hostname: "), 0, 0, AR)
+        src_layout.addWidget(self._hostname_le, 0, 1)
+        src_layout.addWidget(QtGui.QLabel("Port: "), 0, 2, AR)
+        src_layout.addWidget(self._port_le, 0, 3)
+        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
+        src_layout.addWidget(self._source_name_cb, 1, 1, 1, 3)
 
-        sub_layout = QtGui.QHBoxLayout()
-        sub_layout.addWidget(self._hostname_le)
-        sub_layout.addWidget(QtGui.QLabel("Port: "))
-        sub_layout.addWidget(self._port_le)
+        src_type_layout = QtGui.QHBoxLayout()
+        src_type_layout.addWidget(self._source_type_rbts[0])
+        src_type_layout.addWidget(self._source_type_rbts[1])
+        src_type_layout.addWidget(self._source_type_rbts[2])
 
-        src_layout.addLayout(sub_layout, 0, 1)
-        src_layout.addWidget(QtGui.QLabel("Source: "), 1, 0, AR)
-        src_layout.addWidget(self._source_name_cb, 1, 1)
+        serve_file_layout = QtGui.QHBoxLayout()
+        serve_file_layout.addWidget(self._serve_start_btn)
+        serve_file_layout.addWidget(self._serve_terminate_btn)
+        serve_file_layout.addWidget(self._data_folder_le)
+
         layout.addLayout(src_layout)
-
-        sub_layout2 = QtGui.QHBoxLayout()
-        sub_layout2.addWidget(self._serve_start_btn)
-        sub_layout2.addWidget(self._serve_terminate_btn)
-        layout.addLayout(sub_layout2)
-
-        layout.addWidget(self._source_type_rbts[0])
-        layout.addWidget(self._data_folder_le)
-        layout.addWidget(self._source_type_rbts[1])
-        layout.addWidget(self._source_type_rbts[2])
-
+        layout.addLayout(src_type_layout)
+        layout.addLayout(serve_file_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
@@ -109,18 +111,13 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self.source_type_sgn.emit(source_type)
 
-        source_name = self._source_name_cb.currentText()
-        self.source_name_sgn.emit(source_name)
+        self.source_name_sgn.emit(self._source_name_cb.currentText())
 
         server_hostname = self._hostname_le.text().strip()
         server_port = self._port_le.text().strip()
         self.server_tcp_sgn.emit(server_hostname, server_port)
 
-        info = "\n<Host name>, <Port>: {}, {}".format(
-            server_hostname, server_port)
-        info += "\n<Source>: {}".format(source_name)
-
-        return info
+        return True
 
     @property
     def file_server(self):

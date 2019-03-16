@@ -23,7 +23,6 @@ from ..plot_widgets import (
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
-from ...logger import logger
 
 
 class OverviewWindow(DockerWindow):
@@ -89,11 +88,11 @@ class OverviewWindow(DockerWindow):
 
         self.initUI()
 
+        mediator.updateVipPulseIds()
+
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
         self.update()
-
-        logger.info("Open {}".format(self.__class__.__name__))
 
     def initUI(self):
         """Override."""

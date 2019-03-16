@@ -40,8 +40,6 @@ class CorrelationWindow(DockerWindow):
 
         self.update()
 
-        logger.info("Open {}".format(self.__class__.__name__))
-
     def initUI(self):
         """Override."""
         super().initUI()
