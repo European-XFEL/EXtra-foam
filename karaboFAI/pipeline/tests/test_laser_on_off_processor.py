@@ -7,7 +7,7 @@ from karaboFAI.pipeline.data_model import LaserOnOffData, ProcessedData
 from karaboFAI.pipeline.data_processing import LaserOnOffProcessor
 
 
-class TestLaserOnOffWindow(unittest.TestCase):
+class TestLaserOnOffProcessor(unittest.TestCase):
     def setUp(self):
         self._proc = LaserOnOffProcessor()
         LaserOnOffData.clear()
