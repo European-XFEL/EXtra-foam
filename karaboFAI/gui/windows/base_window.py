@@ -99,8 +99,8 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
-    def clear(self):
-        """Clear widgets.
+    def reset(self):
+        """Reset data in widgets.
 
         This method is called by the main GUI.
         """
@@ -150,13 +150,13 @@ class DockerWindow(AbstractWindow):
         for widget in self._plot_widgets:
             widget.update(data)
 
-    def clear(self):
-        """Clear widgets.
+    def reset(self):
+        """Reset data in widgets.
 
         This method is called by the main GUI.
         """
         for widget in self._plot_widgets:
-            widget.clear()
+            widget.reset()
 
     def registerPlotWidget(self, instance):
         self._plot_widgets[instance] = 1

@@ -36,9 +36,9 @@ class BulletinWidget(QtGui.QWidget):
         layout.addWidget(self._npulses_lb)
         self.setLayout(layout)
 
-        self.clear()
+        self.reset()
 
-    def clear(self):
+    def reset(self):
         self._set_text()
 
     def update(self, data):

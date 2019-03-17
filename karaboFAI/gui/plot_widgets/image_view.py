@@ -99,6 +99,10 @@ class ImageView(QtGui.QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
 
+    def reset(self):
+        # TODO: check
+        self._image_item.clear()
+
     def update(self, data):
         """karaboFAI interface."""
         pass
@@ -150,9 +154,6 @@ class ImageView(QtGui.QWidget):
         See HistogramLUTItem.setLevels.
         """
         self._hist_widget.setLevels(*args, **kwargs)
-
-    def clear(self):
-        self._image_item.clear()
 
     def setColorMap(self, cm):
         """Set colormap for the displayed image.

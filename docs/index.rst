@@ -10,9 +10,10 @@ Contents:
 
    introduction
    deployment
-   analysis
-   detectors
-   tutorial
+   start
+   gui
+   windows
+   ai
 
 
 Indices and tables
