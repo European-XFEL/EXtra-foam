@@ -9,11 +9,16 @@ from karaboFAI.logger import logger
 from karaboFAI.config import config
 
 config['PIXEL_SIZE'] = 1e-6
+config["MASK_RANGE"] = (None, None)
 
 
 class TestPlotWidget(unittest.TestCase):
-    def setUp(self):
-        self._widget = ImageAnalysis(color_map="thermal")
+    @classmethod
+    def setUpClass(cls):
+        config["PIXEL_SIZE"] = 1e-6
+        config["MASK_RANGE"] = (None, None)
+
+        cls._widget = ImageAnalysis(color_map="thermal")
 
     def testSaveLoadImageMask(self):
         fp = tempfile.TemporaryFile()

@@ -10,12 +10,13 @@ from karaboFAI.config import config, ImageMaskChange
 
 
 class TestImageData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config["PIXEL_SIZE"] = 1e-6
+        config["MASK_RANGE"] = (None, None)
 
     def setUp(self):
         ImageData.reset()
-        # otherwise the config could be modified by other test files
-        config["PIXEL_SIZE"] = 1e-6
-        config["MASK_RANGE"] = (None, None)
 
     def test_invalidInput(self):
         with self.assertRaises(TypeError):
