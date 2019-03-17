@@ -25,7 +25,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.gui.main_fai_gui:start',
+            'karaboFAI=karaboFAI.gui.main_gui:start',
             'karaboBDP=karaboFAI.gui.main_bdp_gui:main_bdp_gui'
         ],
     },

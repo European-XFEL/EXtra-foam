@@ -4,7 +4,7 @@ from enum import IntEnum
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
-from karaboFAI.gui.main_fai_gui import MainGUI
+from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.config import OpLaserMode
 
 

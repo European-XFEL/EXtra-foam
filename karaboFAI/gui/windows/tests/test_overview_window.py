@@ -7,7 +7,7 @@ from karaboFAI.gui.plot_widgets import (
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
-from karaboFAI.gui.main_fai_gui import MainGUI
+from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui.windows import OverviewWindow
 from karaboFAI.pipeline import Data4Visualization
 

@@ -1,6 +1,6 @@
 import unittest
 
-from karaboFAI.gui.main_fai_gui import Mediator
+from karaboFAI.gui.main_gui import Mediator
 
 
 class TestMediator(unittest.TestCase):
