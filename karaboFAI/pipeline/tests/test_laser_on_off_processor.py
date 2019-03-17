@@ -13,7 +13,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
         LaserOnOffData.clear()
 
         self._proc.auc_x_range = (1, 5)
-        self._proc.fom_integration_range = (1, 5)
+        self._proc.fom_itgt_range = (1, 5)
         self._proc.moving_avg_window = 100
         
         self._data = []

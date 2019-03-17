@@ -65,7 +65,7 @@ class CorrelationProcessor(AbstractProcessor):
 
         self.normalizer = None
         self.auc_x_range = None
-        self.fom_integration_range = None
+        self.fom_itgt_range = None
 
     def process(self, data):
         """Process the data
@@ -111,7 +111,7 @@ class CorrelationProcessor(AbstractProcessor):
 
             # calculate figure-of-merit
             fom = slice_curve(
-                normalized_intensity, momentum, *self.fom_integration_range)[0]
+                normalized_intensity, momentum, *self.fom_itgt_range)[0]
             fom = np.sum(np.abs(fom))
 
         elif self.fom_name == FomName.AI_ON_OFF:
@@ -176,7 +176,7 @@ class SampleDegradationProcessor(AbstractProcessor):
         super().__init__(**kwargs)
 
         self.auc_x_range = None
-        self.fom_integration_range = None
+        self.fom_itgt_range = None
 
     def process(self, proc_data):
         """Process the proc_data.
@@ -205,7 +205,7 @@ class SampleDegradationProcessor(AbstractProcessor):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.fom_integration_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         proc_data.sample_degradation_foms = foms
@@ -235,7 +235,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         self.normalizer = None
         self.auc_x_range = None
-        self.fom_integration_range = None
+        self.fom_itgt_range = None
 
         self._on_train_received = False
         self._off_train_received = False
@@ -374,7 +374,7 @@ class LaserOnOffProcessor(AbstractProcessor):
             diff = normalized_on_pulse - normalized_off_pulse
 
             # calculate figure-of-merit and update history
-            fom = slice_curve(diff, momentum, *self.fom_integration_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             if self.abs_difference:
                 fom = np.sum(np.abs(fom))
             else:
@@ -527,9 +527,9 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
-        self._laser_on_off_proc.fom_integration_range = (lb, ub)
-        self._sample_degradation_proc.fom_integration_range = (lb, ub)
-        self._correlation_proc.fom_integration_range = (lb, ub)
+        self._laser_on_off_proc.fom_itgt_range = (lb, ub)
+        self._sample_degradation_proc.fom_itgt_range = (lb, ub)
+        self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
