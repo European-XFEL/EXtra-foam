@@ -380,15 +380,15 @@ class TestProcessedData(unittest.TestCase):
         data = ProcessedData(1234)
         self.assertEqual(1234, data.tid)
 
-        data.roi.values1 = (1234, None)
-        tids, values, _ = data.roi.values1
+        data.roi.roi1_hist = (1234, None)
+        tids, roi1_hist, _ = data.roi.roi1_hist
         self.assertListEqual([1234], tids)
-        self.assertListEqual([None], values)
+        self.assertListEqual([None], roi1_hist)
 
-        data.roi.values1 = (1235, 2.0)
-        tids, values, _ = data.roi.values1
+        data.roi.roi1_hist = (1235, 2.0)
+        tids, roi1_hist, _ = data.roi.roi1_hist
         self.assertListEqual([1234, 1235], tids)
-        self.assertListEqual([None, 2.0], values)
+        self.assertListEqual([None, 2.0], roi1_hist)
 
     def test_CorrelationData(self):
         data = ProcessedData(-1)

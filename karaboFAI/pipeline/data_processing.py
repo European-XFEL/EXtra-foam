@@ -90,11 +90,11 @@ class CorrelationProcessor(AbstractProcessor):
                 normalized_intensity = normalize_curve(
                     intensity, momentum, *self.auc_x_range)
             elif self.normalizer == AiNormalizer.ROI:
-                _, values1, _ = proc_data.roi.values1
-                _, values2, _ = proc_data.roi.values2
+                _, roi1_hist, _ = proc_data.roi.roi1_hist
+                _, roi2_hist, _ = proc_data.roi.roi2_hist
 
                 try:
-                    denominator = (values1[-1] + values2[-1])/2.
+                    denominator = (roi1_hist[-1] + roi2_hist[-1])/2.
                 except IndexError:
                     # this could happen if the history is clear just now
                     # TODO: we may need to improve here
@@ -122,22 +122,22 @@ class CorrelationProcessor(AbstractProcessor):
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
-            _, values, _ = proc_data.roi.values1
-            fom = values[-1]
+            _, roi1_hist, _ = proc_data.roi.roi1_hist
+            fom = roi1_hist[-1]
 
         elif self.fom_name == FomName.ROI2:
-            _, values, _ = proc_data.roi.values2
-            fom = values[-1]
+            _, roi2_hist, _ = proc_data.roi.roi2_hist
+            fom = roi2_hist[-1]
 
         elif self.fom_name == FomName.ROI_SUM:
-            _, values1, _ = proc_data.roi.values1
-            _, values2, _ = proc_data.roi.values2
-            fom = values1[-1] + values2[-1]
+            _, roi1_hist, _ = proc_data.roi.roi1_hist
+            _, roi2_hist, _ = proc_data.roi.roi2_hist
+            fom = roi1_hist[-1] + roi2_hist[-1]
 
         elif self.fom_name == FomName.ROI_SUB:
-            _, values1, _ = proc_data.roi.values1
-            _, values2, _ = proc_data.roi.values2
-            fom = values1[-1] - values2[-1]
+            _, roi1_hist, _ = proc_data.roi.roi1_hist
+            _, roi2_hist, _ = proc_data.roi.roi2_hist
+            fom = roi1_hist[-1] - roi2_hist[-1]
 
         else:
             self.log("Unexpected FOM name!")
@@ -773,24 +773,24 @@ class DataProcessor(Worker):
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
-            values1 = 0
+            roi1_value = 0
             if self.roi1 is not None:
                 if not validate_roi(*self.roi1, *img.shape):
                     self.roi1 = None
                 else:
                     data.roi.roi1 = self.roi1
-                    values1 = get_roi_value(self.roi1, img)
+                    roi1_value = get_roi_value(self.roi1, img)
 
-            values2 = 0
+            roi2_value = 0
             if self.roi2 is not None:
                 if not validate_roi(*self.roi2, *img.shape):
                     self.roi2 = None
                 else:
                     data.roi.roi2 = self.roi2
-                    values2 = get_roi_value(self.roi2, img)
+                    roi2_value = get_roi_value(self.roi2, img)
 
-            data.roi.values1 = (tid, values1)
-            data.roi.values2 = (tid, values2)
+            data.roi.roi1_hist = (tid, roi1_value)
+            data.roi.roi2_hist = (tid, roi2_value)
 
     def process_calibrated_data(self, calibrated_data, *, from_file=False):
         """Process the calibrated data.

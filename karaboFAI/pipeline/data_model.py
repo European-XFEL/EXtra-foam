@@ -74,9 +74,9 @@ class AbstractData(abc.ABC):
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
-    # value (integration/mean/median) histories of ROI1 and ROI2
-    values1 = TrainData()
-    values2 = TrainData()
+    # (sum/mean) histories of ROI1 and ROI2
+    roi1_hist = TrainData()
+    roi2_hist = TrainData()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -295,12 +295,12 @@ class RoiValueMonitor(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids1, values1, _ = data.roi.values1
+        tids1, roi1_hist, _ = data.roi.roi1_hist
         self._roi1_plot.setData(
-            tids1[-self._window:], values1[-self._window:])
-        tids2, values2, _ = data.roi.values2
+            tids1[-self._window:], roi1_hist[-self._window:])
+        tids2, roi2_hist, _ = data.roi.roi2_hist
         self._roi2_plot.setData(
-            tids2[-self._window:], values2[-self._window:])
+            tids2[-self._window:], roi2_hist[-self._window:])
 
     @QtCore.pyqtSlot(int)
     def onDisplayRangeChange(self, v):
