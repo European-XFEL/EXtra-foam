@@ -4,8 +4,10 @@ from enum import IntEnum
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
+from karabo_data.geometry import LPDGeometry
+
 from karaboFAI.gui.main_gui import MainGUI
-from karaboFAI.config import OpLaserMode
+from karaboFAI.config import config, FomName, OpLaserMode
 
 
 class Win(IntEnum):
@@ -14,7 +16,7 @@ class Win(IntEnum):
     Correlation = 4
 
 
-class TestMainFaiGui(unittest.TestCase):
+class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = MainGUI('LPD')
@@ -122,3 +124,38 @@ class TestMainFaiGui(unittest.TestCase):
         self.assertEqual(moving_average,
                          worker._laser_on_off_proc.moving_avg_window)
         self.assertFalse(worker._laser_on_off_proc.abs_difference)
+
+    def testDataCtrlWidget(self):
+        widget = self.gui.data_ctrl_widget
+        daq = self.gui._daq_worker
+
+        tcp_addr = "localhost:56565"
+
+        widget._hostname_le.setText(tcp_addr.split(":")[0])
+        widget._port_le.setText(tcp_addr.split(":")[1])
+
+        self.assertTrue(self.gui.updateSharedParameters())
+
+        self.assertEqual(daq.server_tcp_sp, "tcp://" + tcp_addr)
+
+    def testGeometryCtrlWidget(self):
+        widget = self.gui.geometry_ctrl_widget
+        worker = self.gui._proc_worker
+
+        widget._geom_file_le.setText(config["GEOMETRY_FILE"])
+
+        self.assertTrue(self.gui.updateSharedParameters())
+
+        self.assertIsInstance(worker.geom_sp, LPDGeometry)
+
+    def testCorrelationCtrlWidget(self):
+        widget =self.gui.correlation_ctrl_widget
+        worker = self.gui._proc_worker
+
+        fom = FomName.ROI1
+
+        widget._figure_of_merit_cb.setCurrentIndex(fom)
+
+        self.assertTrue(self.gui.updateSharedParameters())
+
+        self.assertEqual(fom, worker._correlation_proc.fom_name)
