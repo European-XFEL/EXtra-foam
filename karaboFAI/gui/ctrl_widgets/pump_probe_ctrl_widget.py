@@ -23,7 +23,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
-        "inactive": OpLaserMode.INACTIVE,
+        "": OpLaserMode.INACTIVE,
         "normal": OpLaserMode.NORMAL,
         "even/odd": OpLaserMode.EVEN_ON,
         "odd/even": OpLaserMode.ODD_ON
