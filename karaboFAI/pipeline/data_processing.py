@@ -594,9 +594,9 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(object)
     def onCorrelationFomChange(self, fom):
-        self._correlation_proc.fom_name = fom
-        # clear all correlation data
-        ProcessedData.clear_correlation_hist()
+        if self._correlation_proc.fom_name != fom:
+            self._correlation_proc.fom_name = fom
+            ProcessedData.clear_correlation_hist()
 
     def update_roi1_region(self, activated, w, h, px, py):
         if activated:
