@@ -56,7 +56,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 "",
                 "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
             ],
-            properties=["actualEnergy.value"],
+            properties=["actualEnergy"],
         ),
         "Digitizer": CorrelationParam(
             device_ids=[
@@ -74,7 +74,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 "FXE_SMS_USR/MOTOR/UM05",
                 "FXE_SMS_USR/MOTOR/UM13",
             ],
-            properties=["actualPosition.value"],
+            properties=["actualPosition"],
         ),
         "Train ID": CorrelationParam(
             device_ids=["", "Any"],

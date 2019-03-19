@@ -164,8 +164,14 @@ class CorrelationProcessor(AbstractProcessor):
                     continue
 
                 try:
+                    if info['property'] in device_data:
+                        ppt = info['property']
+                    else:
+                        # From the file
+                        ppt = info['property'] + '.value'
+
                     setattr(proc_data.correlation, param,
-                            (fom, device_data[info['property']]))
+                            (fom, device_data[ppt]))
                 except KeyError:
                     self.log(f"{info['device_id']} does not have property "
                              f"'{info['property']}'")
