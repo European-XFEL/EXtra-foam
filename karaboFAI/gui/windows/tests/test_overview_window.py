@@ -3,7 +3,7 @@ from collections import Counter
 
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
-    LaserOnOffFomWidget, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
+    MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget

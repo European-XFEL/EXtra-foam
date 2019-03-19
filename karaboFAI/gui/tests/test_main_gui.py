@@ -25,6 +25,8 @@ class TestMainGui(unittest.TestCase):
 
     def setUp(self):
         self._actions = self.gui._tool_bar.actions()
+        self._imagetool_action = self._actions[2]
+        self._overview_action = self._actions[3]
         self._correlation_action = self._actions[4]
 
     def testAnalysisCtrlWidget(self):
@@ -176,6 +178,52 @@ class TestMainGui(unittest.TestCase):
                     info['resolution']
 
                 self.assertEqual(None, window._plots[i]._bar)
+
+        # test unregister
+        window.close()
+        self.assertEqual(n_registered, len(self.gui._windows))
+
+    def test_overviewwindow(self):
+        widget = self.gui.analysis_ctrl_widget
+
+        n_registered = len(self.gui._windows)
+        self._overview_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
+        self.assertEqual(n_registered + 1, len(self.gui._windows))
+
+        # --------------------------
+        # test setting VIP pulse IDs
+        # --------------------------
+
+        vip_pulse_id1 = int(widget._vip_pulse_id1_le.text())
+        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
+        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+        vip_pulse_id2 = int(widget._vip_pulse_id2_le.text())
+        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
+        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+
+        vip_pulse_id1 = 10
+        widget._vip_pulse_id1_le.setText(str(vip_pulse_id1))
+        widget._vip_pulse_id1_le.returnPressed.emit()
+        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
+        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+        vip_pulse_id2 = 20
+        widget._vip_pulse_id2_le.setText(str(vip_pulse_id2))
+        widget._vip_pulse_id2_le.returnPressed.emit()
+        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
+        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+
+        # --------------------------
+        # test setting max pulse ID
+        # --------------------------
+        worker = self.gui._proc_worker
+
+        widget.updateSharedParameters()
+        self.assertEqual((0, 2700), worker.pulse_id_range_sp)
+
+        widget._max_pulse_id_le.setText("1000")
+        widget.updateSharedParameters()
+        self.assertEqual((0, 1001), worker.pulse_id_range_sp)
 
         # test unregister
         window.close()
