@@ -23,6 +23,8 @@ class Colors:
         self.c = (0, 255, 255, alpha)  # cyan
         self.p = (255, 0, 255, alpha)  # purple
         self.y = (255, 255, 0, alpha)  # yellow
+        self.w = (248, 249, 249, alpha)  # white
+        self.e = (169, 169, 169, alpha)  # dark grey
 
 
 def make_pen(color, width=2, alpha=255, **kwargs):

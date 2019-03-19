@@ -12,9 +12,9 @@ All rights reserved.
 import numpy as np
 
 from .. import pyqtgraph as pg
-from ..pyqtgraph import (
-    GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
-)
+
+from ..pyqtgraph import GraphicsView, PlotItem, QtCore, QtGui
+
 from ..misc_widgets import make_brush, make_pen
 from ...logger import logger
 from ...config import config
@@ -33,38 +33,94 @@ class PlotWidget(GraphicsView):
             """PlotItem interface."""
             self.setOpts(x=x, height=height)
 
-    class ErrorBarItem(pg.ErrorBarItem):
-        def setData(self, x, y, **opts):
-            """PlotItem interface.
+    class ErrorBarItem(pg.GraphicsObject):
+        """ErrorBarItem.
 
-            It should be able to set an empty data set by using
-            setData([], []).
+        This is a re-implementation of pg.ErrorBarItem. It is supposed
+        to be much faster.
+        """
+        def __init__(self, x=None, y=None, y_min=None, y_max=None, beam=None,
+                     pen=None):
+            """Initialization.
+
+            Note: y is not used for now.
             """
-            # Expansive code in Python
-            keys = ['height', 'width', 'top', 'bottom', 'left', 'right']
-            for key in keys:
-                opts.setdefault(key)
-                if isinstance(opts[key], list):
-                    opts[key] = np.array(opts[key])
+            super().__init__()
 
-            if isinstance(x, list):
-                x = np.array(x)
-            if isinstance(y, list):
-                y = np.array(y)
-            opts['x'] = x
-            opts['y'] = y
+            self._path = None
 
-            self.opts.update(opts)
-            self.path = None
+            self._x = None
+            self._y = None
+            self._y_min = None
+            self._y_max = None
+
+            self._beam = 0.0 if beam is None else beam
+            self._pen = make_pen('e') if pen is None else pen
+
+            self.setData(x, y, y_min=y_min, y_max=y_max)
+
+        def setData(self, x, y, y_min=None, y_max=None, beam=None, pen=None):
+            """PlotItem interface."""
+            self._x = [] if x is None else x
+            self._y = [] if y is None else y
+
+            self._y_min = self._y if y_min is None else y_min
+            self._y_max = self._y if y_max is None else y_max
+
+            if len(self._x) != len(self._y):
+                raise ValueError("'x' and 'y' data have different lengths!")
+            if not len(self._y) == len(self._y_min) == len(self._y_max):
+                raise ValueError(
+                    "'y_min' and 'y_max' data have different lengths!")
+
+            if beam is not None and beam >= 0.0:
+                self._beam = beam
+            if pen is not None:
+                self._pen = pen
+
+            self._path = None
             self.update()
             self.prepareGeometryChange()
             self.informViewBoundsChanged()
+
+        def drawPath(self):
+            p = QtGui.QPainterPath()
+
+            x = self._x
+
+            # plot the vertical line
+            for i in range(len(x)):
+                p.moveTo(x[i], self._y_min[i])
+                p.lineTo(x[i], self._y_max[i])
+
+            # plot the two horizontal lines
+            for i in range(len(x)):
+                p.moveTo(x[i] - self._beam / 2., self._y_min[i])
+                p.lineTo(x[i] + self._beam / 2., self._y_min[i])
+            for i in range(len(x)):
+                p.moveTo(x[i] - self._beam / 2., self._y_max[i])
+                p.lineTo(x[i] + self._beam / 2., self._y_max[i])
+
+            self._path = p
+            self.prepareGeometryChange()
+
+        def paint(self, p, *args):
+            if self._path is None:
+                self.drawPath()
+
+            p.setPen(self._pen)
+            p.drawPath(self._path)
+
+        def boundingRect(self):
+            if self._path is None:
+                self.drawPath()
+            return self._path.boundingRect()
 
     # signals wrapped from PlotItem / ViewBox
     sigRangeChanged = QtCore.Signal(object, object)
     sigTransformChanged = QtCore.Signal(object)
 
-    _pen = mkPen(None)
+    _pen = make_pen(None)
     _brush_size = 12
 
     def __init__(self, parent=None, background='default', **kargs):
@@ -137,11 +193,8 @@ class PlotWidget(GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotErrorBar(self, x=None, y=None, top=None, bottom=None, beam=0.5):
-        if x is None:
-            x = []
-            y = []
-        item = self.ErrorBarItem(x=x, y=y, top=top, bottom=bottom, beam=beam)
+    def plotErrorBar(self, x=None, y=None, y_min=None, y_max=None, beam=0.5):
+        item = self.ErrorBarItem(x=x, y=y, y_min=y_min, y_max=y_max, beam=beam)
         self.plotItem.addItem(item)
         return item
 
@@ -390,8 +443,8 @@ class CorrelationWidget(PlotWidget):
         else:
             self._plot.setData(correlator, foms.avg)
             if self._bar is not None:
-                self._bar.setData(x=correlator, y=foms.avg,
-                                  top=foms.min, bottom=foms.max)
+                self._bar.setData(x=correlator,
+                                  y=foms.avg, y_min=foms.min, y_max=foms.max)
 
     def updatePlotType(self, device_id, ppt, resolution):
         self.setLabel('bottom', f"{device_id + ' | ' + ppt} (arb. u.)")
