@@ -15,6 +15,7 @@ import functools
 from ..pyqtgraph import Qt, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..mediator import Mediator
 from ...config import FomName
 
 
@@ -40,7 +41,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     #
     # TODO: move this to a separate config file
     _available_categories = OrderedDict({
-        "User defined": CorrelationParam(),
+        "": CorrelationParam(),
         "XGM": CorrelationParam(
             device_ids=[
                 "",
@@ -80,6 +81,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             device_ids=["", "Any"],
             properties=["timestamp.tid"]
         ),
+        "User defined": CorrelationParam()
     })
 
     _available_foms = OrderedDict({
@@ -91,8 +93,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "A.I. mean": FomName.AI_MEAN,
     })
 
-    # index, device ID, property name
-    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str)
+    # index, device ID, property name, resolution
+    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
 
     correlation_fom_change_sgn = QtCore.pyqtSignal(object)
 
@@ -104,6 +106,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self._figure_of_merit_cb.addItem(v)
         self._figure_of_merit_cb.currentTextChanged.connect(
             lambda x: self.correlation_fom_change_sgn.emit(self._available_foms[x]))
+
+        mediator = Mediator()
+        self.correlation_param_change_sgn.connect(
+            mediator.correlation_param_change_sgn)
 
         self.clear_btn = QtGui.QPushButton("Clear history")
 
@@ -136,12 +142,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         table = self._table
 
         n_row = self._n_params
-        n_col = 3
+        n_col = 4
 
         table.setColumnCount(n_col)
         table.setRowCount(n_row)
         table.setHorizontalHeaderLabels([
-            'Category', 'Karabo Device ID', 'Property Name'])
+            'Category', 'Karabo Device ID', 'Property Name', 'Resolution'])
         table.setVerticalHeaderLabels(['1', '2', '3', '4'])
         for i_row in range(self._n_params):
             combo = QtGui.QComboBox()
@@ -151,10 +157,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             combo.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            table.setCellWidget(i_row, 1, QtGui.QLineEdit())
-            table.cellWidget(i_row, 1).setReadOnly(True)
-            table.setCellWidget(i_row, 2, QtGui.QLineEdit())
-            table.cellWidget(i_row, 2).setReadOnly(True)
+            for i_col in range(1, n_col):
+                widget = QtGui.QLineEdit()
+                table.setCellWidget(i_row, i_col, widget)
+                widget.setReadOnly(True)
 
         header = table.horizontalHeader()
         header.setSectionResizeMode(0, Qt.QtWidgets.QHeaderView.ResizeToContents)
@@ -177,6 +183,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):
+        resolution_le = QtGui.QLineEdit("0.0")
+        resolution_le.setValidator(QtGui.QDoubleValidator(0.0, 1000.0, 6))
         # i_row is the row number in the QTableWidget
         if not text or text == "User defined":
             # '' or 'User defined'
@@ -186,54 +194,53 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             if not text:
                 device_id_le.setReadOnly(True)
                 property_le.setReadOnly(True)
+                resolution_le.setReadOnly(True)
+                resolution_le.setText("")
             else:
                 device_id_le.editingFinished.connect(functools.partial(
-                    self.onCorrelationParamChangeLe, i_row, 1))
+                    self.onCorrelationParamChangeLe, i_row))
                 property_le.editingFinished.connect(functools.partial(
-                    self.onCorrelationParamChangeLe, i_row, 2))
+                    self.onCorrelationParamChangeLe, i_row))
+                resolution_le.editingFinished.connect(functools.partial(
+                    self.onCorrelationParamChangeLe, i_row))
 
             self._table.setCellWidget(i_row, 1, device_id_le)
             self._table.setCellWidget(i_row, 2, property_le)
+            self._table.setCellWidget(i_row, 3, resolution_le)
         else:
             combo_device_ids = QtGui.QComboBox()
             for device_id in self._available_categories[text].device_ids:
                 combo_device_ids.addItem(device_id)
             combo_device_ids.currentTextChanged.connect(functools.partial(
-                self.onCorrelationParamChangeCb, i_row, 1))
+                self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
             combo_properties = QtGui.QComboBox()
             for ppt in self._available_categories[text].properties:
                 combo_properties.addItem(ppt)
             combo_properties.currentTextChanged.connect(functools.partial(
-                self.onCorrelationParamChangeCb, i_row, 2))
+                self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 2, combo_properties)
 
+            resolution_le.editingFinished.connect(functools.partial(
+                self.onCorrelationParamChangeCb, i_row))
+            self._table.setCellWidget(i_row, 3, resolution_le)
+
         # we always have invalid (empty) input when the category changes
-        self.correlation_param_change_sgn.emit(i_row, '', '')
+        self.correlation_param_change_sgn.emit(i_row, '', '', 0.0)
 
     @QtCore.pyqtSlot()
-    def onCorrelationParamChangeLe(self, i_row, i_col):
-        if i_col == 1:
-            # device ID changed
-            device_id = self.sender().text()
-            ppt = self._table.cellWidget(i_row, 2).text()
-        elif i_col == 2:
-            # property changed
-            device_id = self._table.cellWidget(i_row, 1).text()
-            ppt = self.sender().text()
+    def onCorrelationParamChangeLe(self, i_row):
+        device_id = self._table.cellWidget(i_row, 1).text()
+        ppt = self._table.cellWidget(i_row, 2).text()
+        res = float(self._table.cellWidget(i_row, 3).text())
 
-        self.correlation_param_change_sgn.emit(i_row, device_id, ppt)
+        self.correlation_param_change_sgn.emit(i_row, device_id, ppt, res)
 
     @QtCore.pyqtSlot(str)
-    def onCorrelationParamChangeCb(self, i_row, i_col, text):
-        if i_col == 1:
-            # device ID changed
-            device_id = text
-            ppt = self._table.cellWidget(i_row, 2).currentText()
-        elif i_col == 2:
-            # property changed
-            device_id = self._table.cellWidget(i_row, 1).currentText()
-            ppt = text
+    def onCorrelationParamChangeCb(self, i_row):
+        device_id = self._table.cellWidget(i_row, 1).currentText()
+        ppt = self._table.cellWidget(i_row, 2).currentText()
+        res = float(self._table.cellWidget(i_row, 3).text())
 
-        self.correlation_param_change_sgn.emit(i_row, device_id, ppt)
+        self.correlation_param_change_sgn.emit(i_row, device_id, ppt, res)

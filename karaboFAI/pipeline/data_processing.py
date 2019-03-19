@@ -155,7 +155,7 @@ class CorrelationProcessor(AbstractProcessor):
             _, _, info = getattr(proc_data.correlation, param)
             if info['device_id'] == "Any":
                 # orig_data cannot be empty here
-                setattr(proc_data.correlation, param, (fom, proc_data.tid))
+                setattr(proc_data.correlation, param, (proc_data.tid, fom))
             else:
                 try:
                     device_data = orig_data[info['device_id']]
@@ -171,7 +171,8 @@ class CorrelationProcessor(AbstractProcessor):
                         ppt = info['property'] + '.value'
 
                     setattr(proc_data.correlation, param,
-                            (fom, device_data[ppt]))
+                            (device_data[ppt], fom))
+
                 except KeyError:
                     self.log(f"{info['device_id']} does not have property "
                              f"'{info['property']}'")
@@ -594,9 +595,9 @@ class DataProcessor(Worker):
     def onCorrelationClear(self):
         ProcessedData.clear_correlation_hist()
 
-    @QtCore.pyqtSlot(int, str, str)
-    def onCorrelationParamChange(self, idx, device_id, ppt):
-        ProcessedData.add_correlator(idx, device_id, ppt)
+    @QtCore.pyqtSlot(int, str, str, float)
+    def onCorrelationParamChange(self, idx, device_id, ppt, resolution):
+        ProcessedData.add_correlator(idx, device_id, ppt, resolution)
 
     @QtCore.pyqtSlot(object)
     def onCorrelationFomChange(self, fom):

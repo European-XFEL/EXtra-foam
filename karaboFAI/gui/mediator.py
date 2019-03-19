@@ -19,6 +19,9 @@ class Mediator(QtCore.QObject):
 
     roi_displayed_range_sgn = QtCore.pyqtSignal(int)
 
+    # index, device ID, property name, resolution
+    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
+
     __instance = None
 
     def __new__(cls, *args, **kwargs):

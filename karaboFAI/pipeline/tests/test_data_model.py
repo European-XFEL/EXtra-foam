@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AbstractData, ImageData, ProcessedData, TrainData
+    AbstractData, AccumulatedTrainData, CorrelationData, ImageData,
+    ProcessedData, TrainData
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config, ImageMaskChange
@@ -375,6 +376,126 @@ class TestTrainData(unittest.TestCase):
         self.assertListEqual([], values)
 
 
+class TestCorrelationData(unittest.TestCase):
+    def setUp(self):
+        CorrelationData.remove_params()
+
+    def test_traindata(self):
+        data = ProcessedData(-1)
+
+        data.add_correlator(0, "device1", "property1")
+        data.correlation.param0 = (1, 0.5)
+        data.correlation.param0 = (2, 0.6)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([1, 2], corr)
+        self.assertListEqual([0.5, 0.6], fom)
+        self.assertEqual("device1", info["device_id"])
+        self.assertEqual("property1", info["property"])
+
+        data.add_correlator(1, "device2", "property2")
+        data.correlation.param1 = (3, 200)
+        data.correlation.param1 = (4, 220)
+        corr, fom, info = data.correlation.param1
+        self.assertListEqual([3, 4], corr)
+        self.assertListEqual([200, 220], fom)
+        self.assertEqual("device2", info["device_id"])
+        self.assertEqual("property2", info["property"])
+        # check that param0 remains unchanged
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([1, 2], corr)
+        self.assertListEqual([0.5, 0.6], fom)
+        self.assertEqual("device1", info["device_id"])
+        self.assertEqual("property1", info["property"])
+
+        # test clear history
+        ProcessedData.clear_correlation_hist()
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([], corr)
+        self.assertListEqual([], fom)
+        self.assertEqual("device1", info["device_id"])
+        self.assertEqual("property1", info["property"])
+        corr, fom, info = data.correlation.param1
+        self.assertListEqual([], corr)
+        self.assertListEqual([], fom)
+        self.assertEqual("device2", info["device_id"])
+        self.assertEqual("property2", info["property"])
+
+        # when device_id or property is empty, the corresponding 'param'
+        # will be removed
+        data.add_correlator(0, "", "property2")
+        with self.assertRaises(AttributeError):
+            data.correlation.param0
+
+        data.add_correlator(1, "device2", "")
+        with self.assertRaises(AttributeError):
+            data.correlation.param1
+
+        # test CorrelationData.remove_params()
+        data.add_correlator(0, "device1", "property1")
+        data.add_correlator(1, "device1", "property1")
+        self.assertListEqual(['param0', 'param1'], data.get_correlators())
+        ProcessedData.remove_correlators()
+        self.assertListEqual([], data.get_correlators())
+
+        # test when resolution becomes non-zero
+        data.add_correlator(0, "device1", "property1", 0.2)
+        self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
+                              AccumulatedTrainData)
+
+    def test_accumulatedtraindata(self):
+        data = ProcessedData(-1)
+
+        self.assertEqual(2, AccumulatedTrainData._min_count)
+
+        data.add_correlator(0, "device1", "property1", 0.1)
+        data.correlation.param0 = (1, 0.3)
+        data.correlation.param0 = (2, 0.4)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([], corr)
+        self.assertListEqual([], fom.count)
+        self.assertListEqual([], fom.avg)
+        self.assertListEqual([], fom.min)
+        self.assertListEqual([], fom.max)
+
+        data.correlation.param0 = (2.02, 0.5)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([2.01], corr)
+        self.assertListEqual([2], fom.count)
+        self.assertListEqual([0.4], fom.min)
+        self.assertListEqual([0.5], fom.max)
+        self.assertListEqual([0.45], fom.avg)
+
+        data.correlation.param0 = (2.11, 0.6)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([3], fom.count)
+        self.assertListEqual([0.4], fom.min)
+        self.assertListEqual([0.6], fom.max)
+        self.assertListEqual([0.5], fom.avg)
+
+        # new point
+        data.correlation.param0 = (2.31, 1)
+        data.correlation.param0 = (2.41, 2)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([3, 2], fom.count)
+        self.assertListEqual([0.4, 1], fom.min)
+        self.assertListEqual([0.6, 2], fom.max)
+        self.assertListEqual([0.5, 1.5], fom.avg)
+
+        # test when resolution changes
+        data.add_correlator(0, "device1", "property1", 0.2)
+        corr, fom, info = data.correlation.param0
+        self.assertListEqual([], corr)
+        self.assertListEqual([], fom.count)
+        self.assertListEqual([], fom.min)
+        self.assertListEqual([], fom.max)
+        self.assertListEqual([], fom.avg)
+
+        # test when resolution becomes 0
+        data.add_correlator(0, "device1", "property1")
+        self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
+                              TrainData)
+
+
 class TestProcessedData(unittest.TestCase):
     def test_general(self):
         data = ProcessedData(1234)
@@ -389,53 +510,3 @@ class TestProcessedData(unittest.TestCase):
         tids, roi1_hist, _ = data.roi.roi1_hist
         self.assertListEqual([1234, 1235], tids)
         self.assertListEqual([None, 2.0], roi1_hist)
-
-    def test_CorrelationData(self):
-        data = ProcessedData(-1)
-
-        data.add_correlator(0, "device1", "property1")
-        data.correlation.param0 = (10, 20)
-        data.correlation.param0 = (11, 22)
-        fom, corr, info = data.correlation.param0
-        self.assertListEqual([10, 11], fom)
-        self.assertListEqual([20, 22], corr)
-        self.assertEqual("device1", info["device_id"])
-        self.assertEqual("property1", info["property"])
-
-        data.add_correlator(1, "device2", "property2")
-        data.correlation.param1 = (100, 200)
-        data.correlation.param1 = (110, 220)
-        fom, corr, info = data.correlation.param1
-        self.assertListEqual([100, 110], fom)
-        self.assertListEqual([200, 220], corr)
-        self.assertEqual("device2", info["device_id"])
-        self.assertEqual("property2", info["property"])
-        # check that param0 remains unchanged
-        fom, corr, info = data.correlation.param0
-        self.assertListEqual([10, 11], fom)
-        self.assertListEqual([20, 22], corr)
-        self.assertEqual("device1", info["device_id"])
-        self.assertEqual("property1", info["property"])
-
-        # test clear history
-        ProcessedData.clear_correlation_hist()
-        fom, corr, info = data.correlation.param0
-        self.assertListEqual([], fom)
-        self.assertListEqual([], corr)
-        self.assertEqual("device1", info["device_id"])
-        self.assertEqual("property1", info["property"])
-        fom, corr, info = data.correlation.param1
-        self.assertListEqual([], fom)
-        self.assertListEqual([], corr)
-        self.assertEqual("device2", info["device_id"])
-        self.assertEqual("property2", info["property"])
-
-        # when device_id or property is empty, the corresponding 'param'
-        # will be removed
-        data.add_correlator(0, "", "property2")
-        with self.assertRaises(AttributeError):
-            data.correlation.param0
-
-        data.add_correlator(1, "device2", "")
-        with self.assertRaises(AttributeError):
-            data.correlation.param1

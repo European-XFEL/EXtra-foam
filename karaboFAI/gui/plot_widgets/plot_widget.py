@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .. import pyqtgraph as pg
 from ..pyqtgraph import (
     GraphicsView, intColor, mkPen, PlotItem, QtCore, QtGui,
@@ -30,6 +32,33 @@ class PlotWidget(GraphicsView):
         def setData(self, x, height):
             """PlotItem interface."""
             self.setOpts(x=x, height=height)
+
+    class ErrorBarItem(pg.ErrorBarItem):
+        def setData(self, x, y, **opts):
+            """PlotItem interface.
+
+            It should be able to set an empty data set by using
+            setData([], []).
+            """
+            # Expansive code in Python
+            keys = ['height', 'width', 'top', 'bottom', 'left', 'right']
+            for key in keys:
+                opts.setdefault(key)
+                if isinstance(opts[key], list):
+                    opts[key] = np.array(opts[key])
+
+            if isinstance(x, list):
+                x = np.array(x)
+            if isinstance(y, list):
+                y = np.array(y)
+            opts['x'] = x
+            opts['y'] = y
+
+            self.opts.update(opts)
+            self.path = None
+            self.update()
+            self.prepareGeometryChange()
+            self.informViewBoundsChanged()
 
     # signals wrapped from PlotItem / ViewBox
     sigRangeChanged = QtCore.Signal(object, object)
@@ -101,9 +130,18 @@ class PlotWidget(GraphicsView):
 
     def plotBar(self, x=None, height=None, width=1.0, **kwargs):
         """Add and return a new bar plot."""
-        x = [] if x is None else x
-        height = [] if height is None else height
+        if x is None:
+            x = []
+            height = []
         item = self.BarGraphItem(x=x, height=height, width=width, **kwargs)
+        self.plotItem.addItem(item)
+        return item
+
+    def plotErrorBar(self, x=None, y=None, top=None, bottom=None, beam=0.5):
+        if x is None:
+            x = []
+            y = []
+        item = self.ErrorBarItem(x=x, y=y, top=top, bottom=bottom, beam=beam)
         self.plotItem.addItem(item)
         return item
 
@@ -312,12 +350,18 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-
+    _colors = ['g', 'c', 'y', 'p']
     _brushes = {
-        0: make_brush('g', 120),
-        1: make_brush('c', 120),
-        2: make_brush('y', 120),
-        3: make_brush('p', 120)
+        0: make_brush(_colors[0], 120),
+        1: make_brush(_colors[1], 120),
+        2: make_brush(_colors[2], 120),
+        3: make_brush(_colors[3], 120)
+    }
+    _opaque_brushes = {
+        0: make_brush(_colors[0]),
+        1: make_brush(_colors[1]),
+        2: make_brush(_colors[2]),
+        3: make_brush(_colors[3])
     }
 
     def __init__(self, idx, *, parent=None):
@@ -325,27 +369,40 @@ class CorrelationWidget(PlotWidget):
         super().__init__(parent=parent)
 
         self._idx = idx
-        self._correlator_name = None
 
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
         self.setTitle(' ')
 
         self._plot = self.plotScatter(brush=self._brushes[self._idx])
+        self._bar = None
 
     def update(self, data):
         """Override."""
         try:
-            foms, correlator, info = getattr(data.correlation,
+            correlator, foms, info = getattr(data.correlation,
                                              f'param{self._idx}')
         except AttributeError:
             return
 
-        self._plot.setData(correlator, foms)
-        name = info['device_id'] + " | " + info['property']
-        if name != self._correlator_name:
-            self.setLabel('bottom', f"{name} (arb. u.)")
-            self._correlator_name = name
+        if isinstance(foms, list):
+            self._plot.setData(correlator, foms)
+        else:
+            self._plot.setData(correlator, foms.avg)
+            if self._bar is not None:
+                self._bar.setData(x=correlator, y=foms.avg,
+                                  top=foms.min, bottom=foms.max)
+
+    def updatePlotType(self, device_id, ppt, resolution):
+        self.setLabel('bottom', f"{device_id + ' | ' + ppt} (arb. u.)")
+
+        self.removeItem(self._bar)
+        if resolution > 0:
+            self._bar = self.plotErrorBar(beam=resolution)
+            self._plot.setBrush(self._opaque_brushes[self._idx])
+        else:
+            self._bar = None
+            self._plot.setBrush(self._brushes[self._idx])
 
 
 class LaserOnOffFomWidget(PlotWidget):

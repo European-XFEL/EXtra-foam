@@ -1,19 +1,16 @@
 import unittest
-from enum import IntEnum
+
+import numpy as np
 
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
+from karaboFAI.gui.plot_widgets.plot_widget import PlotWidget
 from karaboFAI.gui.main_gui import MainGUI
+from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import config, FomName, OpLaserMode
-
-
-class Win(IntEnum):
-    ImageTool = 2
-    Overview = 3
-    Correlation = 4
 
 
 class TestMainGui(unittest.TestCase):
@@ -26,22 +23,9 @@ class TestMainGui(unittest.TestCase):
     def tearDownClass(cls):
         cls.gui.close()
 
-    def testOpenCloseWindows(self):
-        actions = self.gui._tool_bar.actions()
-
-        count = 0
-        for idx in (Win.ImageTool, Win.Overview, Win.Correlation):
-            count += 1
-            actions[idx].trigger()
-            self.assertEqual(count, len(self.gui._windows))
-
-        # test Window instances will be unregistered after being closed
-        with self.assertRaises(StopIteration):
-            i = 0
-            while i < 100 and self.gui._windows.keys():
-                key = next(self.gui._windows.keys())
-                key.close()
-                i += 1
+    def setUp(self):
+        self._actions = self.gui._tool_bar.actions()
+        self._correlation_action = self._actions[4]
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
@@ -152,6 +136,11 @@ class TestMainGui(unittest.TestCase):
         widget =self.gui.correlation_ctrl_widget
         worker = self.gui._proc_worker
 
+        n_registered = len(self.gui._windows)
+        self._correlation_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
+        self.assertEqual(n_registered + 1, len(self.gui._windows))
+
         fom = FomName.ROI1
 
         widget._figure_of_merit_cb.setCurrentIndex(fom)
@@ -159,3 +148,35 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertEqual(fom, worker._correlation_proc.fom_name)
+
+        # test the correlation param table
+        expected_params = []
+        for i in range(widget._n_params):
+            widget._table.cellWidget(i, 0).setCurrentIndex(1)
+            self.assertListEqual(expected_params,
+                                 ProcessedData(1).correlation.get_params())
+            widget._table.cellWidget(i, 1).setCurrentIndex(1)
+            param = f'param{i}'
+            expected_params.append(param)
+
+            resolution = np.random.rand() if i < 2 else 0.0
+            resolution_le = widget._table.cellWidget(i, 3)
+            resolution_le.setText(str(resolution))
+            resolution_le.editingFinished.emit()
+
+            if resolution > 0:
+                _, _, info = getattr(ProcessedData(1).correlation, param)
+                self.assertEqual(resolution, info['resolution'])
+
+                self.assertIsInstance(window._plots[i]._bar,
+                                      PlotWidget.ErrorBarItem)
+            else:
+                with self.assertRaises(KeyError):
+                    _, _, info = getattr(ProcessedData(1).correlation, param)
+                    info['resolution']
+
+                self.assertEqual(None, window._plots[i]._bar)
+
+        # test unregister
+        window.close()
+        self.assertEqual(n_registered, len(self.gui._windows))

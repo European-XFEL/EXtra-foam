@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import abc
+import copy
 
 import numpy as np
 
@@ -23,17 +24,18 @@ from ..config import config, ImageMaskChange
 class TrainData:
     """Store the history train data.
 
-    Each data point is pair of data: (x, value), where x can be a
-    train ID for time series analysis or a correlated data for
-    correlation analysis.
+    Each data point is pair of data: (x, y).
+
+    For correlation plots: x can be a train ID or a motor position,
+    and y is the figure of merit (FOM).
     """
-    MAX_LENGTH = 1000000
+    MAX_LENGTH = 100000
 
     def __init__(self, **kwargs):
         # We need to have a 'x' for each sub-dataset due to the
         # concurrency of data processing.
         self._x = []
-        self._values = []
+        self._y = []
         # for now it is used in CorrelationData to store device ID and
         # property information
         self._info = kwargs
@@ -41,12 +43,12 @@ class TrainData:
     def __get__(self, instance, instance_type):
         if instance is None:
             return self
-        return self._x, self._values, self._info
+        return self._x, self._y, copy.copy(self._info)
 
     def __set__(self, instance, pair):
-        x, value = pair
-        self._x.append(x)
-        self._values.append(value)
+        this_x, this_y = pair
+        self._x.append(this_x)
+        self._y.append(this_y)
 
         # TODO: improve, e.g., cache
         if len(self._x) > self.MAX_LENGTH:
@@ -54,12 +56,106 @@ class TrainData:
 
     def __delete__(self, instance):
         del self._x[0]
-        del self._values[0]
+        del self._y[0]
 
     def clear(self):
         self._x.clear()
-        self._values.clear()
+        self._y.clear()
         # do not clear _info here!
+
+
+class AccumulatedTrainData(TrainData):
+    """Store the history accumulated train data.
+
+    Each data point is pair of data: (x, DataStat).
+
+    The data is collected in a stop-and-collected way. A motor,
+    for example, will stop in a location and collect data for a
+    period of time. Then,  each data point in the accumulated
+    train data is the average of the data during this period.
+    """
+    MAX_LENGTH = 10000
+
+    class DataStat:
+        """Statistic of data."""
+        def __init__(self):
+            self.count = []
+            self.avg = []
+            self.min = []
+            self.max = []
+
+        def add(self, v):
+            self.count[-1] += 1
+            self.avg[-1] += (v - self.avg[-1]) / self.count[-1]
+            if v < self.min[-1]:
+                self.min[-1] = v
+            elif v > self.max[-1]:
+                self.max[-1] = v
+
+        def pop(self):
+            self.count.pop()
+            self.avg.pop()
+            self.min.pop()
+            self.max.pop()
+
+        def append(self, v):
+            self.count.append(1)
+            self.avg.append(v)
+            self.min.append(v)
+            self.max.append(v)
+
+        def clear(self):
+            self.count.clear()
+            self.avg.clear()
+            self.min.clear()
+            self.max.clear()
+
+    _min_count = 2
+    _epsilon = 1e-9
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if 'resolution' not in kwargs:
+            raise ValueError("'resolution' is required!")
+        resolution = kwargs['resolution']
+        if resolution <= 0:
+            raise ValueError("'resolution must be positive!")
+        self._resolution = resolution
+
+        self._y = self.DataStat()
+
+    def __set__(self, instance, pair):
+        this_x, this_y = pair
+        if self._x:
+            if abs(this_x - self._x[-1]) - self._resolution < self._epsilon:
+                self._y.add(this_y)  # self._y.count will be updated
+                self._x[-1] += (this_x - self._x[-1]) / self._y.count[-1]
+            else:
+                # If the number of data at a location is less than _min_count,
+                # the data at this location will be discarded.
+                if self._y.count[-1] < self._min_count:
+                    self._x.pop()
+                    self._y.pop()
+                self._x.append(this_x)
+                self._y.append(this_y)
+        else:
+            self._x.append(this_x)
+            self._y.append(this_y)
+
+        # TODO: improve
+        if len(self._y.count) > self.MAX_LENGTH:
+            self.__delete__(instance)
+
+    def __get__(self, instance, instance_type):
+        if instance is None:
+            return self
+
+        x = copy.copy(self._x)
+        y = copy.deepcopy(self._y)
+        if y.count and y.count[-1] < self._min_count:
+            x.pop()
+            y.pop()
+        return x, y, copy.copy(self._info)
 
 
 class AbstractData(abc.ABC):
@@ -101,9 +197,13 @@ class CorrelationData(AbstractData):
     """A class which stores Laser on-off data."""
 
     @classmethod
-    def add_param(cls, idx, device_id, ppt):
-        setattr(cls, f'param{idx}', TrainData(device_id=device_id,
-                                              property=ppt))
+    def add_param(cls, idx, device_id, ppt, resolution=0.0):
+        param = f'param{idx}'
+        if resolution:
+            setattr(cls, param, AccumulatedTrainData(
+                device_id=device_id, property=ppt, resolution=resolution))
+        else:
+            setattr(cls, param, TrainData(device_id=device_id, property=ppt))
 
     @classmethod
     def remove_param(cls, idx):
@@ -119,6 +219,16 @@ class CorrelationData(AbstractData):
                 params.append(kls)
 
         return params
+
+    @classmethod
+    def remove_params(cls):
+        params = []
+        for kls in cls.__dict__:
+            if isinstance(cls.__dict__[kls], TrainData):
+                params.append(kls)
+
+        for param in params:
+            delattr(cls, param)
 
 
 class ImageData:
@@ -571,21 +681,33 @@ class ProcessedData:
         CorrelationData.clear()
 
     @staticmethod
-    def add_correlator(idx, device_id, ppt):
+    def add_correlator(idx, device_id, ppt, resolution=0.0):
         """Add a correlated parameter.
 
         :param int idx: index
         :param str device_id: device ID
         :param str ppt: property
+        :param float resolution: resolution. Default = 0.0
         """
         if device_id and ppt:
-            CorrelationData.add_param(idx, device_id, ppt)
+            if resolution:
+                CorrelationData.add_param(idx, device_id, ppt, resolution)
+            else:
+                CorrelationData.add_param(idx, device_id, ppt)
         else:
             CorrelationData.remove_param(idx)
 
     @staticmethod
     def get_correlators():
         return CorrelationData.get_params()
+
+    @staticmethod
+    def remove_correlators():
+        CorrelationData.remove_params()
+
+    @staticmethod
+    def update_correlator_resolution(idx, resolution):
+        CorrelationData.update_resolution(idx, resolution)
 
     def empty(self):
         """Check the goodness of the data."""
