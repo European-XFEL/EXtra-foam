@@ -43,6 +43,7 @@ class TrainData:
     def __get__(self, instance, instance_type):
         if instance is None:
             return self
+        # Note: here we must ensure that the data is not copied
         return self._x, self._y, copy.copy(self._info)
 
     def __set__(self, instance, pair):
@@ -50,7 +51,8 @@ class TrainData:
         self._x.append(this_x)
         self._y.append(this_y)
 
-        # TODO: improve, e.g., cache
+        # This is a reasonable choice since we always wants to return a
+        # reference in __get__!
         if len(self._x) > self.MAX_LENGTH:
             self.__delete__(instance)
 
@@ -74,8 +76,6 @@ class AccumulatedTrainData(TrainData):
     period of time. Then,  each data point in the accumulated
     train data is the average of the data during this period.
     """
-    MAX_LENGTH = 10000
-
     class DataStat:
         """Statistic of data."""
         def __init__(self):
@@ -92,11 +92,17 @@ class AccumulatedTrainData(TrainData):
             elif v > self.max[-1]:
                 self.max[-1] = v
 
-        def pop(self):
-            self.count.pop()
-            self.avg.pop()
-            self.min.pop()
-            self.max.pop()
+        def pop_last(self):
+            del self.count[-1]
+            del self.avg[-1]
+            del self.min[-1]
+            del self.max[-1]
+
+        def pop_first(self):
+            del self.count[0]
+            del self.avg[0]
+            del self.min[0]
+            del self.max[0]
 
         def append(self, v):
             self.count.append(1)
@@ -109,6 +115,8 @@ class AccumulatedTrainData(TrainData):
             self.avg.clear()
             self.min.clear()
             self.max.clear()
+
+    MAX_LENGTH = 5000
 
     _min_count = 2
     _epsilon = 1e-9
@@ -134,15 +142,14 @@ class AccumulatedTrainData(TrainData):
                 # If the number of data at a location is less than _min_count,
                 # the data at this location will be discarded.
                 if self._y.count[-1] < self._min_count:
-                    self._x.pop()
-                    self._y.pop()
+                    del self._x[-1]
+                    self._y.pop_last()
                 self._x.append(this_x)
                 self._y.append(this_y)
         else:
             self._x.append(this_x)
             self._y.append(this_y)
 
-        # TODO: improve
         if len(self._y.count) > self.MAX_LENGTH:
             self.__delete__(instance)
 
@@ -150,12 +157,18 @@ class AccumulatedTrainData(TrainData):
         if instance is None:
             return self
 
+        # Note: the cost of copy is acceptable as long as 'MAX_LENGTH'
+        #       is 5000.
         x = copy.copy(self._x)
         y = copy.deepcopy(self._y)
         if y.count and y.count[-1] < self._min_count:
-            x.pop()
-            y.pop()
+            del x[-1]
+            y.pop_last()
         return x, y, copy.copy(self._info)
+
+    def __delete__(self, instance):
+        del self._x[0]
+        self._y.pop_first()
 
 
 class AbstractData(abc.ABC):

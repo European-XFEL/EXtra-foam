@@ -442,6 +442,25 @@ class TestCorrelationData(unittest.TestCase):
         self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
                               AccumulatedTrainData)
 
+        # ----------------------------
+        # test when max length reached
+        # ----------------------------
+
+        data.add_correlator(0, "device1", "property1")
+        # override the class attribute
+        max_len = 1000
+        data.correlation.__class__.__dict__['param0'].MAX_LENGTH = max_len
+        overflow = 10
+        for i in range(max_len + overflow):
+            data.correlation.param0 = (i, i)
+        corr, fom, _ = data.correlation.param0
+        self.assertEqual(max_len, len(corr))
+        self.assertEqual(max_len, len(fom))
+        self.assertEqual(overflow, corr[0])
+        self.assertEqual(overflow, fom[0])
+        self.assertEqual(max_len + overflow - 1, corr[-1])
+        self.assertEqual(max_len + overflow - 1, fom[-1])
+
     def test_accumulatedtraindata(self):
         data = ProcessedData(-1)
 
@@ -494,6 +513,27 @@ class TestCorrelationData(unittest.TestCase):
         data.add_correlator(0, "device1", "property1")
         self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
                               TrainData)
+
+        # ----------------------------
+        # test when max length reached
+        # ----------------------------
+
+        data.add_correlator(0, "device1", "property1", 1.0)
+        # override the class attribute
+        max_len = 1000
+        data.correlation.__class__.__dict__['param0'].MAX_LENGTH = max_len
+        overflow = 10
+        for i in range(2*max_len + 2*overflow):
+            # two adjacent data point will be grouped together since
+            # resolution is 1.0
+            data.correlation.param0 = (i, i)
+        corr, fom, _ = data.correlation.param0
+        self.assertEqual(max_len, len(corr))
+        self.assertEqual(max_len, len(fom.avg))
+        self.assertEqual(2*overflow + 0.5, corr[0])
+        self.assertEqual(2*overflow + 0.5, fom.avg[0])
+        self.assertEqual(2*(max_len + overflow - 1) + 0.5, corr[-1])
+        self.assertEqual(2*(max_len + overflow - 1) + 0.5, fom.avg[-1])
 
 
 class TestProcessedData(unittest.TestCase):
