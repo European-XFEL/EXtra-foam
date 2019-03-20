@@ -9,8 +9,11 @@ from karabo_data.geometry import LPDGeometry
 
 from karaboFAI.gui.plot_widgets.plot_widget import PlotWidget
 from karaboFAI.gui.main_gui import MainGUI
-from karaboFAI.pipeline.data_model import ProcessedData
+from karaboFAI.pipeline.data_model import ProcessedData, ImageData
 from karaboFAI.config import config, FomName, OpLaserMode
+
+from . import mkQApp
+app = mkQApp()
 
 
 class TestMainGui(unittest.TestCase):
@@ -28,6 +31,8 @@ class TestMainGui(unittest.TestCase):
         self._imagetool_action = self._actions[2]
         self._overview_action = self._actions[3]
         self._correlation_action = self._actions[4]
+
+        ImageData.reset()
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
@@ -134,7 +139,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertIsInstance(worker.geom_sp, LPDGeometry)
 
-    def testCorrelationCtrlWidget(self):
+    def testCorrelation(self):
         widget =self.gui.correlation_ctrl_widget
         worker = self.gui._proc_worker
 
@@ -161,7 +166,7 @@ class TestMainGui(unittest.TestCase):
             param = f'param{i}'
             expected_params.append(param)
 
-            resolution = np.random.rand() if i < 2 else 0.0
+            resolution = (i+1)*5 if i < 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
             resolution_le.editingFinished.emit()
@@ -169,15 +174,39 @@ class TestMainGui(unittest.TestCase):
             if resolution > 0:
                 _, _, info = getattr(ProcessedData(1).correlation, param)
                 self.assertEqual(resolution, info['resolution'])
-
-                self.assertIsInstance(window._plots[i]._bar,
-                                      PlotWidget.ErrorBarItem)
             else:
-                with self.assertRaises(KeyError):
-                    _, _, info = getattr(ProcessedData(1).correlation, param)
-                    info['resolution']
+                _, _, info = getattr(ProcessedData(1).correlation, param)
+                self.assertNotIn('resolution', info)
 
-                self.assertEqual(None, window._plots[i]._bar)
+        # test data visualization
+        # the upper two plots have error bars
+        data = ProcessedData(1, images=np.arange(480).reshape(120, 2, 2))
+        for i in range(1000):
+            data.correlation.param0 = (int(i/5), 100*i)
+            data.correlation.param1 = (int(i/5), -100*i)
+            data.correlation.param2 = (i, i+1)
+            data.correlation.param3 = (i, -i)
+        self.gui._data.set(data)
+        window.update()
+        app.processEvents()
+
+        # change the resolutions
+        for i in range(widget._n_params):
+            resolution = (i+1)*5 if i >= 2 else 0.0
+            resolution_le = widget._table.cellWidget(i, 3)
+            resolution_le.setText(str(resolution))
+            resolution_le.editingFinished.emit()
+
+        # the data is cleared after the resolutions were changed
+        # now the lower two plots have error bars but the upper ones do not
+        for i in range(1000):
+            data.correlation.param2 = (int(i/5), 100*i)
+            data.correlation.param3 = (int(i/5), -100*i)
+            data.correlation.param0 = (i, i+1)
+            data.correlation.param1 = (i, -i)
+        self.gui._data.set(data)
+        window.update()
+        app.processEvents()
 
         # test unregister
         window.close()

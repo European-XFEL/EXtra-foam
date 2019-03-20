@@ -88,16 +88,16 @@ class PlotWidget(GraphicsView):
 
             x = self._x
 
-            # plot the vertical line
             for i in range(len(x)):
+                # plot the lower horizontal lines
+                p.moveTo(x[i] - self._beam / 2., self._y_min[i])
+                p.lineTo(x[i] + self._beam / 2., self._y_min[i])
+
+                # plot the vertical line
                 p.moveTo(x[i], self._y_min[i])
                 p.lineTo(x[i], self._y_max[i])
 
-            # plot the two horizontal lines
-            for i in range(len(x)):
-                p.moveTo(x[i] - self._beam / 2., self._y_min[i])
-                p.lineTo(x[i] + self._beam / 2., self._y_min[i])
-            for i in range(len(x)):
+                # plot the upper horizontal line
                 p.moveTo(x[i] - self._beam / 2., self._y_max[i])
                 p.lineTo(x[i] + self._beam / 2., self._y_max[i])
 
@@ -121,7 +121,7 @@ class PlotWidget(GraphicsView):
     sigTransformChanged = QtCore.Signal(object)
 
     _pen = make_pen(None)
-    _brush_size = 12
+    _brush_size = 10
 
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
@@ -193,7 +193,7 @@ class PlotWidget(GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotErrorBar(self, x=None, y=None, y_min=None, y_max=None, beam=0.5):
+    def plotErrorBar(self, x=None, y=None, y_min=None, y_max=None, beam=None):
         item = self.ErrorBarItem(x=x, y=y, y_min=y_min, y_max=y_max, beam=beam)
         self.plotItem.addItem(item)
         return item
@@ -427,8 +427,12 @@ class CorrelationWidget(PlotWidget):
         self.setLabel('bottom', "Correlator (arb. u.)")
         self.setTitle(' ')
 
+        self._bar = self.plotErrorBar()
         self._plot = self.plotScatter(brush=self._brushes[self._idx])
-        self._bar = None
+
+        self._device_id = None
+        self._ppt = None
+        self._resolution = 0.0
 
     def update(self, data):
         """Override."""
@@ -438,24 +442,33 @@ class CorrelationWidget(PlotWidget):
         except AttributeError:
             return
 
+        device_id = info['device_id']
+        ppt = info['property']
+        if self._device_id != device_id or self._ppt != ppt:
+            self.setLabel('bottom', f"{device_id + ' | ' + ppt} (arb. u.)")
+            self._device_id = device_id
+            self._ppt = ppt
+
         if isinstance(foms, list):
+            if self._resolution != 0.0:
+                self._resolution = 0.0
+                self._bar.setData([], [], beam=0.0)
+                self._plot.setBrush(self._brushes[self._idx])
+
             self._plot.setData(correlator, foms)
+            # make auto-range of the viewbox work correctly
+            self._bar.setData(correlator[:1], foms[:1])
         else:
+            resolution = info['resolution']
+
+            if self._resolution != resolution:
+                self._resolution = resolution
+                self._bar.setData([], [], beam=resolution)
+                self._plot.setBrush(self._opaque_brushes[self._idx])
+
+            self._bar.setData(x=correlator,
+                              y=foms.avg, y_min=foms.min, y_max=foms.max)
             self._plot.setData(correlator, foms.avg)
-            if self._bar is not None:
-                self._bar.setData(x=correlator,
-                                  y=foms.avg, y_min=foms.min, y_max=foms.max)
-
-    def updatePlotType(self, device_id, ppt, resolution):
-        self.setLabel('bottom', f"{device_id + ' | ' + ppt} (arb. u.)")
-
-        self.removeItem(self._bar)
-        if resolution > 0:
-            self._bar = self.plotErrorBar(beam=resolution)
-            self._plot.setBrush(self._opaque_brushes[self._idx])
-        else:
-            self._bar = None
-            self._plot.setBrush(self._brushes[self._idx])
 
 
 class LaserOnOffFomWidget(PlotWidget):

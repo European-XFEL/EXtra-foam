@@ -15,7 +15,6 @@ import functools
 from ..pyqtgraph import Qt, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 from ...config import FomName
 
 
@@ -106,10 +105,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self._figure_of_merit_cb.addItem(v)
         self._figure_of_merit_cb.currentTextChanged.connect(
             lambda x: self.correlation_fom_change_sgn.emit(self._available_foms[x]))
-
-        mediator = Mediator()
-        self.correlation_param_change_sgn.connect(
-            mediator.correlation_param_change_sgn)
 
         self.clear_btn = QtGui.QPushButton("Clear history")
 

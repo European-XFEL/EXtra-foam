@@ -13,7 +13,6 @@ from ..pyqtgraph import QtCore
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..mediator import Mediator
 from ..plot_widgets import CorrelationWidget
 
 
@@ -33,10 +32,6 @@ class CorrelationWindow(DockerWindow):
         self._plots = []
         for i in range(self.N_PLOTS):
             self._plots.append(CorrelationWidget(i, parent=self))
-
-        mediator = Mediator()
-        mediator.correlation_param_change_sgn.connect(
-            self.onCorrelationParamChange)
 
         self.initUI()
 
@@ -61,7 +56,3 @@ class CorrelationWindow(DockerWindow):
 
         self._docker_area.moveDock(docks[2], 'bottom', docks[0])
         self._docker_area.moveDock(docks[3], 'bottom', docks[1])
-
-    @QtCore.pyqtSlot(int, str, str, float)
-    def onCorrelationParamChange(self, idx, device_id, ppt, resolution):
-        self._plots[idx].updatePlotType(device_id, ppt, resolution)
