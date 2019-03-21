@@ -72,43 +72,28 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/start.png"))
-        self._start_at = QtGui.QAction(icon, "Start DAQ", self)
-        self._tool_bar.addAction(self._start_at)
+        self._start_at = self._addAction("Start DAQ", "start.png")
         self._start_at.triggered.connect(self.onStartDAQ)
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/stop.png"))
-        self._stop_at = QtGui.QAction(icon, "Stop DAQ", self)
-        self._tool_bar.addAction(self._stop_at)
+        self._stop_at = self._addAction("Stop DAQ", "stop.png")
         self._stop_at.triggered.connect(self.onStopDAQ)
         self._stop_at.setEnabled(False)
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/image_tool.png"))
-        image_tool_at = QtGui.QAction(icon, "Image tool", self)
+        image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
-        self._tool_bar.addAction(image_tool_at)
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/overview.png"))
-        open_overview_window_at = QtGui.QAction(icon, "Overview", self)
+        open_overview_window_at = self._addAction("Overview", "overview.png")
         open_overview_window_at.triggered.connect(
             lambda: OverviewWindow(self._data,
                                    pulse_resolved=self._pulse_resolved,
                                    parent=self))
-        self._tool_bar.addAction(open_overview_window_at)
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/scatter.png"))
-        open_correlation_window_at = QtGui.QAction(icon, "Correlations", self)
-        open_correlation_window_at.triggered.connect(
+        open_corr_window_at = self._addAction("Correlations", "scatter.png")
+        open_corr_window_at.triggered.connect(
             lambda: CorrelationWindow(self._data,
                                       pulse_resolved=self._pulse_resolved,
                                       parent=self))
-        self._tool_bar.addAction(open_correlation_window_at)
 
         # *************************************************************
         # Miscellaneous
@@ -279,6 +264,12 @@ class MainGUI(QtGui.QMainWindow):
                      .format(1000 * (time.perf_counter() - t0)))
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
+
+    def _addAction(self, description, filename):
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
+        action = QtGui.QAction(icon, description, self)
+        self._tool_bar.addAction(action)
+        return action
 
     def registerWindow(self, instance):
         self._windows[instance] = 1

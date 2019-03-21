@@ -92,9 +92,8 @@ class ImageToolWindow(AbstractWindow):
 
         self._tool_bar_image = self.addToolBar("image")
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/sync.png"))
-        self._update_image_at = QtGui.QAction(icon, "Update image", self)
-        self._tool_bar_image.addAction(self._update_image_at)
+        self._update_image_at = self._addAction(
+            self._tool_bar_image, "Update image", "sync.png")
         self._update_image_at.triggered.connect(self.updateImage)
 
         self._image_ctrl = ImageCtrlWidget()
@@ -107,42 +106,35 @@ class ImageToolWindow(AbstractWindow):
         #
         # mask tool bar
         #
+
         self._tool_bar_mask = self.addToolBar("mask")
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/mask.png"))
-        self._mask_at = QtGui.QAction(icon, "Mask", self)
-        self._mask_at.setCheckable(True)
-        self._tool_bar_mask.addAction(self._mask_at)
+        mask_at = self._addAction(self._tool_bar_mask, "Mask", "mask.png")
+        mask_at.setCheckable(True)
         # Note: the sequence of the following two 'connect'
-        self._mask_at.toggled.connect(self._exclude_actions)
-        self._mask_at.toggled.connect(functools.partial(
+        mask_at.toggled.connect(self._exclude_actions)
+        mask_at.toggled.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.MASK))
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/un_mask.png"))
-        self._unmask_at = QtGui.QAction(icon, "Unmask", self)
-        self._unmask_at.setCheckable(True)
-        self._tool_bar_mask.addAction(self._unmask_at)
+        unmask_at = self._addAction(
+            self._tool_bar_mask, "Unmask", "un_mask.png")
+        unmask_at.setCheckable(True)
         # Note: the sequence of the following two 'connect'
-        self._unmask_at.toggled.connect(self._exclude_actions)
-        self._unmask_at.toggled.connect(functools.partial(
+        unmask_at.toggled.connect(self._exclude_actions)
+        unmask_at.toggled.connect(functools.partial(
             self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/trash_mask.png"))
-        self._clear_mask_at = QtGui.QAction(icon, "Trash mask", self)
-        self._tool_bar_mask.addAction(self._clear_mask_at)
-        self._clear_mask_at.triggered.connect(self._image_view.onClearMask)
+        clear_mask_at = self._addAction(
+            self._tool_bar_mask, "Trash mask", "trash_mask.png")
+        clear_mask_at.triggered.connect(self._image_view.onClearMask)
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/save_mask.png"))
-        self._save_image_mask_at = QtGui.QAction(icon, "Save image mask", self)
-        self._tool_bar_mask.addAction(self._save_image_mask_at)
-        self._save_image_mask_at.triggered.connect(
-            self._image_view.saveImageMask)
+        save_img_mask_at = self._addAction(
+            self._tool_bar_mask, "Save image mask", "save_mask.png")
+        save_img_mask_at.triggered.connect(self._image_view.saveImageMask)
 
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/load_mask.png"))
-        self._load_image_mask_at = QtGui.QAction(icon, "Load image mask", self)
-        self._tool_bar_mask.addAction(self._load_image_mask_at)
-        self._load_image_mask_at.triggered.connect(
-            self._image_view.loadImageMask)
+        load_img_mask_at = self._addAction(
+            self._tool_bar_mask, "Load image mask", "load_mask.png")
+        load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
 
         self._mask_ctrl = MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
@@ -157,39 +149,27 @@ class ImageToolWindow(AbstractWindow):
         #
         # crop tool bar
         #
+
         self._tool_bar_crop = self.addToolBar("crop")
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir,
-                                    "../icons/crop_selection.png"))
-        self._crop_at = QtGui.QAction(icon, "Crop", self)
-        self._crop_at.setCheckable(True)
-        self._tool_bar_crop.addAction(self._crop_at)
-        self._crop_at.toggled.connect(self._exclude_actions)
-        self._crop_at.toggled.connect(self._image_view.onCropToggle)
+        crop_at = self._addAction(
+            self._tool_bar_crop, "Crop", "crop_selection.png")
+        crop_at.setCheckable(True)
+        crop_at.toggled.connect(self._exclude_actions)
+        crop_at.toggled.connect(self._image_view.onCropToggle)
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/crop.png"))
-        self._crop_to_selection_at = QtGui.QAction(
-            icon, "Crop to selection", self)
-        self._tool_bar_crop.addAction(self._crop_to_selection_at)
-        self._crop_to_selection_at.triggered.connect(
+        crop_to_selection_at = self._addAction(
+            self._tool_bar_crop, "Crop to selection", "crop.png")
+        crop_to_selection_at.triggered.connect(
             self._image_view.onCropConfirmed)
-        self._crop_to_selection_at.triggered.connect(functools.partial(
-            self._crop_at.setChecked, False))
+        crop_to_selection_at.triggered.connect(functools.partial(
+            crop_at.setChecked, False))
 
-        #
-        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/restore.png"))
-        self._restore_image_at = QtGui.QAction(icon, "Restore image", self)
-        self._tool_bar_crop.addAction(self._restore_image_at)
-        self._restore_image_at.triggered.connect(
-            self._image_view.onRestoreImage)
+        restore_image_at = self._addAction(
+            self._tool_bar_crop, "Restore image", "restore.png")
+        restore_image_at.triggered.connect(self._image_view.onRestoreImage)
 
-        self._exclusive_actions = {
-            self._mask_at,
-            self._unmask_at,
-            self._crop_at
-        }
+        self._exclusive_actions = {mask_at, unmask_at, crop_at}
 
         self.initUI()
         self.resize(800, 800)
@@ -249,3 +229,9 @@ class ImageToolWindow(AbstractWindow):
             for at in self._exclusive_actions:
                 if at != self.sender():
                     at.setChecked(False)
+
+    def _addAction(self, tool_bar, description, filename):
+        icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/" + filename))
+        action = QtGui.QAction(icon, description, self)
+        tool_bar.addAction(action)
+        return action
