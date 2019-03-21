@@ -15,9 +15,10 @@ from enum import IntEnum
 
 
 class DataSource(IntEnum):
-    CALIBRATED_FILE = 0  # calibrated data from files
-    CALIBRATED = 1  # calibrated data from Karabo-bridge
-    PROCESSED = 2  # processed data from the Middle-layer device
+    CALIBRATED_FILES = 0  # calibrated data from files
+    CALIBRATED_BRIDGE = 1  # calibrated data from Karabo bridge
+    RAW_FILES = 2  # raw data from files
+    RAW_BRIDGE = 3  # raw data from Karabo bridge
 
 
 class OpLaserMode(IntEnum):

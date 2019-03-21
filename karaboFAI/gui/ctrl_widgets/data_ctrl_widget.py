@@ -9,14 +9,24 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ...config import config, DataSource
+from ...logger import logger
 
 
 class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
+
+    _available_sources = OrderedDict({
+        "calibrated data@files": DataSource.CALIBRATED_FILES,
+        "calibrated data@bridge": DataSource.CALIBRATED_BRIDGE,
+        "raw data@files": DataSource.RAW_FILES,
+        "raw data@bridge": DataSource.RAW_BRIDGE
+    })
 
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
     source_type_sgn = QtCore.pyqtSignal(object)
@@ -38,13 +48,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
             lambda i: self.source_name_sgn.emit(config["SOURCE_NAME"][i]))
 
         self._source_type_rbts = []
-        # the order must match the definition in the DataSource class
-        self._source_type_rbts.append(
-            QtGui.QRadioButton("Calibrated data@files"))
-        self._source_type_rbts.append(
-            QtGui.QRadioButton("Calibrated data@ZMQ bridge"))
-        self._source_type_rbts.append(
-            QtGui.QRadioButton("Processed data@ZMQ bridge"))
+        for key in self._available_sources:
+            self._source_type_rbts.append(QtGui.QRadioButton(key))
 
         source_type = int(config["SOURCE_TYPE"])
         self._source_type_rbts[source_type].setChecked(True)
@@ -83,12 +88,11 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(QtGui.QLabel("Port: "), 0, 2, AR)
         src_layout.addWidget(self._port_le, 0, 3)
         src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
-        src_layout.addWidget(self._source_name_cb, 1, 1, 1, 3)
-
-        src_type_layout = QtGui.QHBoxLayout()
-        src_type_layout.addWidget(self._source_type_rbts[0])
-        src_type_layout.addWidget(self._source_type_rbts[1])
-        src_type_layout.addWidget(self._source_type_rbts[2])
+        src_layout.addWidget(self._source_name_cb, 1, 1, 1, 4)
+        src_layout.addWidget(self._source_type_rbts[0], 2, 0)
+        src_layout.addWidget(self._source_type_rbts[1], 2, 1)
+        src_layout.addWidget(self._source_type_rbts[2], 2, 2)
+        src_layout.addWidget(self._source_type_rbts[3], 2, 3)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)
@@ -96,19 +100,21 @@ class DataCtrlWidget(AbstractCtrlWidget):
         serve_file_layout.addWidget(self._data_folder_le)
 
         layout.addLayout(src_layout)
-        layout.addLayout(src_type_layout)
         layout.addLayout(serve_file_layout)
         self.setLayout(layout)
 
     def updateSharedParameters(self, log=False):
         """Override"""
-        if self._source_type_rbts[DataSource.CALIBRATED_FILE].isChecked():
-            source_type = DataSource.CALIBRATED_FILE
-        elif self._source_type_rbts[DataSource.CALIBRATED].isChecked():
-            source_type = DataSource.CALIBRATED
-        else:
-            source_type = DataSource.PROCESSED
-
+        for btn in self._source_type_rbts:
+            if btn.isChecked():
+                source_type = self._available_sources[btn.text()]
+                break
+        if source_type == DataSource.RAW_FILES:
+            logger.error("Streaming raw data from files is not implemented!")
+            return False
+        if source_type == DataSource.RAW_BRIDGE:
+            logger.error("Streaming raw data from bridge is not implemented!")
+            return False
         self.source_type_sgn.emit(source_type)
 
         self.source_name_sgn.emit(self._source_name_cb.currentText())

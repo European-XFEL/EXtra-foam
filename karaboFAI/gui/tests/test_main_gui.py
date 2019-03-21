@@ -7,10 +7,9 @@ from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
-from karaboFAI.gui.plot_widgets.plot_widget import PlotWidget
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.pipeline.data_model import ProcessedData, ImageData
-from karaboFAI.config import config, FomName, OpLaserMode
+from karaboFAI.config import config, DataSource, FomName, OpLaserMode
 
 from . import mkQApp
 app = mkQApp()
@@ -118,8 +117,10 @@ class TestMainGui(unittest.TestCase):
 
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
+        worker = self.gui._proc_worker
         daq = self.gui._daq_worker
 
+        # test passing tcp hostname and port
         tcp_addr = "localhost:56565"
 
         widget._hostname_le.setText(tcp_addr.split(":")[0])
@@ -128,6 +129,19 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertEqual(daq.server_tcp_sp, "tcp://" + tcp_addr)
+
+        # test passing data source types
+        for rbt in widget._source_type_rbts:
+            QTest.mouseClick(rbt, Qt.LeftButton)
+            if widget._available_sources[rbt.text()] in \
+                    (DataSource.RAW_FILES, DataSource.RAW_BRIDGE):
+                self.assertFalse(self.gui.updateSharedParameters())
+            else:
+                self.assertTrue(self.gui.updateSharedParameters())
+                self.assertEqual(worker.source_type_sp,
+                                 widget._available_sources[rbt.text()])
+        # make source type available
+        QTest.mouseClick(widget._source_type_rbts[0], Qt.LeftButton)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget

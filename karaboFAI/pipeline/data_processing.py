@@ -650,13 +650,15 @@ class DataProcessor(Worker):
 
             t0 = time.perf_counter()
 
-            if self.source_type_sp == DataSource.CALIBRATED_FILE:
+            if self.source_type_sp == DataSource.CALIBRATED_FILES:
                 processed_data = self.process_calibrated_data(
                     data, from_file=True)
-            elif self.source_type_sp == DataSource.CALIBRATED:
+            elif self.source_type_sp == DataSource.CALIBRATED_BRIDGE:
                 processed_data = self.process_calibrated_data(data)
-            elif self.source_type_sp == DataSource.PROCESSED:
-                processed_data = data[0]
+            elif self.source_type_sp == DataSource.RAW_FILES:
+                raise NotImplementedError
+            elif self.source_type_sp == DataSource.RAW_BRIDGE:
+                raise NotImplementedError
             else:
                 self.log("Unknown data source!")
 
