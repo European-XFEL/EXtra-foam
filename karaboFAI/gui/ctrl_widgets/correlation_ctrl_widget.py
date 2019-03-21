@@ -192,11 +192,11 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 resolution_le.setReadOnly(True)
                 resolution_le.setText("")
             else:
-                device_id_le.editingFinished.connect(functools.partial(
+                device_id_le.returnPressed.connect(functools.partial(
                     self.onCorrelationParamChangeLe, i_row))
-                property_le.editingFinished.connect(functools.partial(
+                property_le.returnPressed.connect(functools.partial(
                     self.onCorrelationParamChangeLe, i_row))
-                resolution_le.editingFinished.connect(functools.partial(
+                resolution_le.returnPressed.connect(functools.partial(
                     self.onCorrelationParamChangeLe, i_row))
 
             self._table.setCellWidget(i_row, 1, device_id_le)
@@ -217,7 +217,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 2, combo_properties)
 
-            resolution_le.editingFinished.connect(functools.partial(
+            resolution_le.returnPressed.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 3, resolution_le)
 

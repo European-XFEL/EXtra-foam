@@ -169,7 +169,7 @@ class TestMainGui(unittest.TestCase):
             resolution = (i+1)*5 if i < 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
-            resolution_le.editingFinished.emit()
+            resolution_le.returnPressed.emit()
 
             if resolution > 0:
                 _, _, info = getattr(ProcessedData(1).correlation, param)
@@ -195,7 +195,7 @@ class TestMainGui(unittest.TestCase):
             resolution = (i+1)*5 if i >= 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
-            resolution_le.editingFinished.emit()
+            resolution_le.returnPressed.emit()
 
         # the data is cleared after the resolutions were changed
         # now the lower two plots have error bars but the upper ones do not
