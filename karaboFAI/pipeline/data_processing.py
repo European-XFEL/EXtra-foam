@@ -502,19 +502,30 @@ class DataProcessor(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChange(self, filename, quad_positions):
-        if self._detector == 'LPD':
-            with File(filename, 'r') as f:
-                self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
-                    f, quad_positions)
-        elif self._detector == 'AGIPD':
-            try:
-                from karabo_data.geometry2 import AGIPD_1MGeometry
-            except (ImportError, ModuleNotFoundError):
-                self.log(
-                    "You are not in the correct branch for SPB experiment!")
-                raise
+        try:
+            if self._detector == 'LPD':
+                with File(filename, 'r') as f:
+                    self.geom_sp = LPDGeometry.from_h5_file_and_quad_positions(
+                        f, quad_positions)
+            elif self._detector == 'AGIPD':
+                try:
+                    from karabo_data.geometry2 import AGIPD_1MGeometry
+                except (ImportError, ModuleNotFoundError):
+                    self.log(
+                        "You are not in the correct branch for SPB experiment!")
+                    raise
 
-            self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
+                self.geom_sp = AGIPD_1MGeometry.from_crystfel_geom(filename)
+
+        except OSError as e:
+            self.log(f"Unable to generate Geometry from '{filename}'\n"
+                     + str(e))
+            # TODO: Improve
+            # "raise" may not be a good idea here. At least, in the unittest
+            # self.assertRaises cannot capture the Exception. Maybe we should
+            # consider to send a signal back to prevent the "start" state from
+            # being confirmed
+            raise
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
