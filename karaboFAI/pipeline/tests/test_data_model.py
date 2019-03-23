@@ -51,17 +51,15 @@ class TestImageData(unittest.TestCase):
 
         img_data = ImageData(np.copy(imgs))
 
-        self.assertTupleEqual((0, 0), img_data.poni)
+        self.assertTupleEqual((0, 0), img_data.poni(0, 0))
+
         img_data.set_crop_area(True, 0, 1, 3, 2)
         img_data.update()
-        self.assertTupleEqual((-1, 0), img_data.poni)
-        # test the change can be seen by the new instance
-        self.assertTupleEqual((-1, 0), ImageData(imgs).poni)
+        self.assertTupleEqual((-1, 0), img_data.poni(0, 0))
 
         img_data.set_crop_area(True, 1, 2, 3, 2)
         img_data.update()
-        img_data.poni = (-2, 12)
-        self.assertTupleEqual((-4, 11), img_data.poni)
+        self.assertTupleEqual((-4, 11), img_data.poni(-2, 12))
 
     def test_imagemask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)

@@ -70,11 +70,11 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertAlmostEqual(worker.wavelength_sp, photon_wavelength, 13)
-        self.assertAlmostEqual(worker.sample_distance_sp, sample_dist)
-        self.assertTupleEqual(worker.poni_sp, (cy, cx))
-        self.assertEqual(worker.integration_points_sp, itgt_pts)
-        # self.assertTupleEqual(worker.integration_range_sp, itgt_range)
+        self.assertAlmostEqual(worker._ai_proc.wavelength, photon_wavelength, 13)
+        self.assertAlmostEqual(worker._ai_proc.sample_distance, sample_dist)
+        self.assertTupleEqual(worker._ai_proc.poni, (cy, cx))
+        self.assertEqual(worker._ai_proc.integration_points, itgt_pts)
+        self.assertTupleEqual(worker._ai_proc.integration_range, itgt_range)
         self.assertTupleEqual(worker._correlation_proc.auc_x_range,
                               aux_x_range)
         self.assertTupleEqual(worker._sample_degradation_proc.auc_x_range,
@@ -138,7 +138,7 @@ class TestMainGui(unittest.TestCase):
                 self.assertFalse(self.gui.updateSharedParameters())
             else:
                 self.assertTrue(self.gui.updateSharedParameters())
-                self.assertEqual(worker.source_type_sp,
+                self.assertEqual(worker._image_assembler._source_type,
                                  widget._available_sources[rbt.text()])
         # make source type available
         QTest.mouseClick(widget._source_type_rbts[0], Qt.LeftButton)
@@ -151,7 +151,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertIsInstance(worker.geom_sp, LPDGeometry)
+        self.assertIsInstance(worker._image_assembler._geom, LPDGeometry)
 
     def testCorrelation(self):
         widget =self.gui.correlation_ctrl_widget
@@ -262,11 +262,11 @@ class TestMainGui(unittest.TestCase):
         worker = self.gui._proc_worker
 
         widget.updateSharedParameters()
-        self.assertEqual((0, 2700), worker.pulse_id_range_sp)
+        self.assertEqual((0, 2700), worker._image_assembler.pulse_id_range)
 
         widget._max_pulse_id_le.setText("1000")
         widget.updateSharedParameters()
-        self.assertEqual((0, 1001), worker.pulse_id_range_sp)
+        self.assertEqual((0, 1001), worker._image_assembler.pulse_id_range)
 
         # test unregister
         window.close()

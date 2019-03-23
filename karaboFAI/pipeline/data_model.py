@@ -408,7 +408,7 @@ class ImageData:
 
     pixel_size = None
 
-    def __init__(self, images, *, poni=None):
+    def __init__(self, images):
         """Initialization."""
         if self.pixel_size is None:
             self.__class__.pixel_size = config["PIXEL_SIZE"]
@@ -435,8 +435,6 @@ class ImageData:
         self._image_mask = np.copy(self.__image_mask.get())
         self._threshold_mask = self.__threshold_mask.get()
         self._crop_area = self.__crop_area.get()
-
-        self._poni = (0, 0) if poni is None else poni
 
         # cache these two properties
         self.ma_window
@@ -481,6 +479,15 @@ class ImageData:
             return x, y
         x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
+
+    def poni(self, poni1, poni2):
+        """Return the PONI in the original image."""
+        if self._crop_area is not None:
+            x, y, _, _ = self._crop_area
+            poni1 -= y
+            poni2 -= x
+
+        return poni1, poni2
 
     def _set_images(self, imgs):
         self.__raw.set(imgs)
@@ -573,22 +580,6 @@ class ImageData:
         np.clip(mean_image, *self._threshold_mask, out=mean_image)
 
         return mean_image
-
-    @property
-    def poni(self):
-        """Return the PONI in the original image."""
-        poni1 = self._poni[0]
-        poni2 = self._poni[1]
-        if self._crop_area is not None:
-            x, y, _, _ = self._crop_area
-            poni1 -= y
-            poni2 -= x
-
-        return poni1, poni2
-
-    @poni.setter
-    def poni(self, v):
-        self._poni = v
 
     def update(self):
         invalid_caches = set()

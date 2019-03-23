@@ -34,7 +34,7 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..offline import FileServer
-from ..pipeline import DataAcquisition, DataProcessor, Data4Visualization
+from ..pipeline import DataAcquisition, PipelineLauncher, Data4Visualization
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -120,7 +120,7 @@ class MainGUI(QtGui.QMainWindow):
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._proc_worker = DataProcessor(self._daq_queue, self._proc_queue)
+        self._proc_worker = PipelineLauncher(self._daq_queue, self._proc_queue)
         # initializing mediator
         Mediator(self._proc_worker)
 
