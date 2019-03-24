@@ -638,10 +638,8 @@ class ProcessedData:
 
     def __init__(self, tid, images=None, **kwargs):
         """Initialization."""
-        if not isinstance(tid, int):
-            raise ValueError("Train ID must be an integer!")
-
         self._tid = tid  # current Train ID
+
         if images is None:
             self._image_data = None
         else:

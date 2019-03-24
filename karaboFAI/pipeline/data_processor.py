@@ -19,28 +19,16 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .data_model import ProcessedData
 from ..algorithms import normalize_curve, slice_curve
 from ..config import AiNormalizer, FomName, OpLaserMode, RoiValueType
-from ..gui import QtCore
 from ..logger import logger
 
 
-class AbstractProcessor(QtCore.QObject):
+class AbstractProcessor:
     """Base class for specific data processor."""
 
-    message_sgn = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-
+    def __init__(self):
         self.__enabled = True
 
         self.next = None  # next processor in the pipeline
-
-        if parent is not None:
-            parent.register_processor(self)
-
-    def log(self, msg):
-        """Log information in the main GUI."""
-        self.message_sgn.emit(msg)
 
     def setEnabled(self, state):
         self.__enabled = state
@@ -53,6 +41,8 @@ class AbstractProcessor(QtCore.QObject):
 
         :param ProcessedData proc_data: processed data.
         :param dict raw_data: raw data received from the bridge.
+
+        :return str: error message.
         """
         raise NotImplementedError
 
@@ -60,7 +50,7 @@ class AbstractProcessor(QtCore.QObject):
 class HeadProcessor(AbstractProcessor):
     """Head node of a processor graph."""
     def process(self, proc_data, raw_data=None):
-        pass
+        return ''
 
 
 class CorrelationProcessor(AbstractProcessor):
@@ -74,8 +64,8 @@ class CorrelationProcessor(AbstractProcessor):
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.fom_name = None
 
@@ -91,8 +81,7 @@ class CorrelationProcessor(AbstractProcessor):
         if self.fom_name == FomName.AI_MEAN:
             momentum = proc_data.momentum
             if momentum is None:
-                self.log("Azimuthal integration result is not available!")
-                return
+                return "Azimuthal integration result is not available!"
             intensity = proc_data.intensity_mean
 
             if self.normalizer == AiNormalizer.AUC:
@@ -104,19 +93,16 @@ class CorrelationProcessor(AbstractProcessor):
 
                 try:
                     denominator = (roi1_hist[-1] + roi2_hist[-1])/2.
-                except IndexError:
+                except IndexError as e:
                     # this could happen if the history is clear just now
-                    # TODO: we may need to improve here
-                    return
+                    return str(e)
 
                 if denominator == 0:
-                    self.log("ROI value is zero!")
-                    return
+                    return "ROI value is zero!"
                 normalized_intensity = intensity / denominator
 
             else:
-                self.log("Unexpected normalizer!")
-                return
+                return f"Unknown normalizer: {self.normalizer}!"
 
             # calculate figure-of-merit
             fom = slice_curve(
@@ -126,8 +112,7 @@ class CorrelationProcessor(AbstractProcessor):
         elif self.fom_name == FomName.AI_ON_OFF:
             _, foms, _ = proc_data.on_off.foms
             if not foms:
-                self.log("Laser on-off result is not available!")
-                return
+                return "Laser on-off result is not available!"
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
@@ -157,8 +142,7 @@ class CorrelationProcessor(AbstractProcessor):
             fom = roi1_hist[-1] - roi2_hist[-1]
 
         else:
-            self.log("Unexpected FOM name!")
-            return
+            return f"Unknown FOM name: {self.fom_name}!"
 
         for param in ProcessedData.get_correlators():
             _, _, info = getattr(proc_data.correlation, param)
@@ -169,8 +153,7 @@ class CorrelationProcessor(AbstractProcessor):
                 try:
                     device_data = raw_data[info['device_id']]
                 except KeyError:
-                    self.log(f"Device '{info['device_id']}' is not in the data!")
-                    continue
+                    return f"Device '{info['device_id']}' is not in the data!"
 
                 try:
                     if info['property'] in device_data:
@@ -183,8 +166,8 @@ class CorrelationProcessor(AbstractProcessor):
                             (device_data[ppt], fom))
 
                 except KeyError:
-                    self.log(f"{info['device_id']} does not have property "
-                             f"'{info['property']}'")
+                    return f"'{info['device_id']}'' does not have property " \
+                           f"'{info['property']}'"
 
 
 class SampleDegradationProcessor(AbstractProcessor):
@@ -198,8 +181,8 @@ class SampleDegradationProcessor(AbstractProcessor):
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.auc_x_range = None
         self.fom_itgt_range = None
@@ -241,8 +224,8 @@ class RegionOfInterestProcessor(AbstractProcessor):
         roi2 (tuple): (w, h, px, py) of the current ROI2.
         roi_value_type (int): type of ROI value.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.roi1 = None
         self.roi2 = None
@@ -325,8 +308,8 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         integration_points (int): number of points in the
             integration output pattern.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.sample_distance = None
         self.wavelength = None
@@ -346,9 +329,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         assembled = proc_data.image.images
         try:
             image_mask = proc_data.image.image_mask
+        # TODO: check! why ValueError?
         except ValueError as e:
-            self.log(str(e) + "\nInvalid image mask!")
-            raise
+            return str(e) + ": Invalid image mask!"
+
         pixel_size = proc_data.image.pixel_size
         poni1, poni2 = proc_data.image.poni(poni1, poni2)
         mask_min, mask_max = proc_data.image.threshold_mask
@@ -450,8 +434,8 @@ class LaserOnOffProcessor(AbstractProcessor):
             the normalized azimuthal integration.
     """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.laser_mode = None
         self.on_pulse_ids = None
@@ -489,15 +473,13 @@ class LaserOnOffProcessor(AbstractProcessor):
         n_pulses = intensities.shape[0]
         max_on_pulse_id = max(self.on_pulse_ids)
         if max_on_pulse_id >= n_pulses:
-            self.log(f"On-pulse ID {max_on_pulse_id} out of range "
-                     f"(0 - {n_pulses - 1})")
-            return
+            return f"On-pulse ID {max_on_pulse_id} out of range " \
+                   f"(0 - {n_pulses - 1})"
 
         max_off_pulse_id = max(self.off_pulse_ids)
         if max_off_pulse_id >= n_pulses:
-            self.log(f"Off-pulse ID {max_off_pulse_id} out of range "
-                     f"(0 - {n_pulses - 1})")
-            return
+            return f"Off-pulse ID {max_off_pulse_id} out of range " \
+                   f"(0 - {n_pulses - 1})"
 
         if self.laser_mode == OpLaserMode.NORMAL:
             # compare laser-on/off pulses in the same train
@@ -510,8 +492,7 @@ class LaserOnOffProcessor(AbstractProcessor):
             elif self.laser_mode == OpLaserMode.ODD_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                self.log(f"Unexpected laser mode! {self.laser_mode}")
-                return
+                return f"Unknown laser mode: {self.laser_mode}"
 
             # Off-train will only be acknowledged when an on-train
             # was received! This ensures that in the visualization
@@ -562,7 +543,7 @@ class LaserOnOffProcessor(AbstractProcessor):
                             (this_on_pulses - self._on_pulses_hist.popleft()) \
                             / self.moving_avg_window
                     else:
-                        raise ValueError  # should never reach here
+                        raise ValueError("Unexpected code reached!")
 
                 self._on_pulses_hist.append(this_on_pulses)
 
@@ -589,7 +570,7 @@ class LaserOnOffProcessor(AbstractProcessor):
                     (this_off_pulses - self._off_pulses_hist.popleft()) \
                     / self.moving_avg_window
             else:
-                raise ValueError  # should never reach here
+                raise ValueError("Unexpected code reached!")
 
             normalized_off_pulse = normalize_curve(
                 self._off_pulses_ma, momentum, *self.auc_x_range)
@@ -602,14 +583,6 @@ class LaserOnOffProcessor(AbstractProcessor):
                 fom = np.sum(np.abs(fom))
             else:
                 fom = np.sum(fom)
-
-            # an extra check
-            # TODO: check whether it is necessary
-            if len(self._on_pulses_hist) != len(self._off_pulses_hist):
-                raise ValueError("Length of on-pulse history {} != length "
-                                 "of off-pulse history {}".
-                                 format(len(self._on_pulses_hist),
-                                        len(self._off_pulses_hist)))
 
             # reset flags
             self._on_train_received = False

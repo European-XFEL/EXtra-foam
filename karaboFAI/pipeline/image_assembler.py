@@ -110,26 +110,30 @@ class ImageAssemblerFactory(ABC):
             return np.copy(modules)
 
         def assemble(self, data):
+            """Assembled the image data.
+
+            :returns assembled: assembled detector image data.
+            """
             src_name = self._source_name
             from_file = self._from_file
             calibrated = self._calibrated
 
-            data, meta = data
+            try:
+                if from_file:
+                    modules_data = self._get_modules_file(data, src_name)
+                else:
+                    modules_data = self._get_modules_bridge(data, src_name)
+            except (ValueError, IndexError, KeyError):
+                raise
 
-            if from_file:
-                # get the train ID of the first metadata
-                tid = next(iter(meta.values()))["timestamp.tid"]
-                modules_data = self._get_modules_file(data, src_name)
-            else:
-                tid = meta[src_name]["timestamp.tid"]
-                modules_data = self._get_modules_bridge(data, src_name)
+            if not modules_data.shape[0]:
+                raise ValueError("Number of memory cells is zero!")
 
             assembled = self._modules_to_assembled(modules_data)
-
-            if assembled is not None and assembled.ndim == 3:
+            if assembled.ndim == 3:
                 assembled = assembled[slice(*self.pulse_id_range)]
 
-            return tid, assembled
+            return assembled
 
     class AgipdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src_name):

@@ -41,18 +41,14 @@ class PipelineLauncher(Worker):
 
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
 
-        self._roi_proc = RegionOfInterestProcessor(parent=self)
-        self._correlation_proc = CorrelationProcessor(parent=self)
+        self._roi_proc = RegionOfInterestProcessor()
+        self._correlation_proc = CorrelationProcessor()
 
-        self._ai_proc = AzimuthalIntegrationProcessor(parent=self)
-        self._laser_on_off_proc = LaserOnOffProcessor(parent=self)
-        self._sample_degradation_proc = SampleDegradationProcessor(parent=self)
+        self._ai_proc = AzimuthalIntegrationProcessor()
+        self._laser_on_off_proc = LaserOnOffProcessor()
+        self._sample_degradation_proc = SampleDegradationProcessor()
 
         self._head = HeadProcessor()
-
-    @QtCore.pyqtSlot(str)
-    def onMessageReceived(self, msg):
-        self.log(msg)
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChange(self, filename, quad_positions):
@@ -179,9 +175,6 @@ class PipelineLauncher(Worker):
     def clear_roi_hist(self):
         ProcessedData.clear_roi_hist()
 
-    def register_processor(self, processor):
-        processor.message_sgn.connect(self.onMessageReceived)
-
     def _build_graph(self):
         # TODO: define different graphs for different pipelines
         self._head.next = self._roi_proc
@@ -203,6 +196,8 @@ class PipelineLauncher(Worker):
 
             t0 = time.perf_counter()
             processed_data = self._process(data)
+            if processed_data is None:
+                continue
             logger.debug("Time for data processing: {:.1f} ms in total!\n"
                          .format(1000 * (time.perf_counter() - t0)))
 
@@ -221,21 +216,43 @@ class PipelineLauncher(Worker):
 
     def _process(self, data):
         """Process data received from the bridge."""
-        tid, assembled = self._image_assembler.assemble(data)
+        data, meta = data
 
-        if assembled is None:
-            return ProcessedData(tid, assembled)
+        # get the train ID of the first metadata
+        # Note: this is better than meta[src_name] because:
+        #       1. For streaming AGIPD/LPD data from files, 'src_name' does
+        #          not work;
+        #       2. Prepare for the scenario where a 2D detector is not
+        #          mandatory.
+        tid = next(iter(meta.values()))["timestamp.tid"]
 
-        processed_data = ProcessedData(tid, assembled)
+        try:
+            assembled = self._image_assembler.assemble(data)
+            processed_data = ProcessedData(tid, assembled)
+        # Exception:
+        #   - ValueError, IndexError, KeyError: raised by 'assemble'
+        #   - ValueError, TypeError: raised by initialization of ProcessedData
+        except (ValueError, IndexError, KeyError, TypeError) as e:
+            self.log(f"Train ID: {tid}: " + str(e))
+            return None
+        except Exception as e:
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + str(e))
+            return None
 
-        proc = self._head
-        while True:
-            if proc is None:
-                break
+        try:
+            proc = self._head
+            while True:
+                if proc is None:
+                    break
 
-            if proc.isEnabled():
-                proc.process(processed_data, data)
+                if proc.isEnabled():
+                    error_msg = proc.process(processed_data, data)
+                    if error_msg:
+                        self.log(f"Train ID: {tid}: " + error_msg)
 
-            proc = proc.next
+                proc = proc.next
+        except Exception as e:
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + str(e))
+            return None
 
         return processed_data
