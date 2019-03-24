@@ -2,7 +2,7 @@ import unittest
 
 from karaboFAI.config import FomName
 from karaboFAI.pipeline.data_model import ProcessedData
-from karaboFAI.pipeline.data_processing import CorrelationProcessor
+from karaboFAI.pipeline.pipeline_launcher import CorrelationProcessor
 
 
 class TestCorrelationProcessor(unittest.TestCase):
@@ -13,4 +13,4 @@ class TestCorrelationProcessor(unittest.TestCase):
         # test not raise if the ProcessedData history is empty
         for fom in FomName:
             self._proc.fom_name = fom
-            self._proc.process((ProcessedData(-1), dict()))
+            self._proc.process(ProcessedData(-1))

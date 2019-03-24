@@ -97,6 +97,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
+        self.enable_ai_cb.stateChanged.emit(self.enable_ai_cb.checkState())
+
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)

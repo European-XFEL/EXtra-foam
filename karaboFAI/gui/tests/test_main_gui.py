@@ -9,7 +9,9 @@ from karabo_data.geometry import LPDGeometry
 
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.pipeline.data_model import ProcessedData, ImageData
-from karaboFAI.config import config, DataSource, FomName, OpLaserMode
+from karaboFAI.config import (
+    config, DataSource, FomName, AiNormalizer, OpLaserMode
+)
 
 from . import mkQApp
 app = mkQApp()
@@ -37,10 +39,18 @@ class TestMainGui(unittest.TestCase):
         widget = self.gui.analysis_ctrl_widget
         worker = self.gui._proc_worker
 
-        self.assertFalse(worker._enable_ai)
+        self.assertTrue(self.gui.updateSharedParameters())
+
+        self.assertFalse(worker._ai_proc.isEnabled())
+        self.assertFalse(worker._sample_degradation_proc.isEnabled())
+        self.assertFalse(worker._laser_on_off_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton)
-        self.assertTrue(worker._enable_ai)
+        self.assertTrue(self.gui.updateSharedParameters())
+
+        self.assertTrue(worker._ai_proc.isEnabled())
+        self.assertTrue(worker._sample_degradation_proc.isEnabled())
+        self.assertTrue(worker._laser_on_off_proc.isEnabled())
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
@@ -51,10 +61,10 @@ class TestMainGui(unittest.TestCase):
         sample_dist = 0.3
         cx = 1024
         cy = 512
-        # TODO: test integration method
+        itgt_method = 'nosplit_csr'
         itgt_pts = 1024
         itgt_range = (0.1, 0.2)
-        # TODO: test normalizer
+        ai_normalizer = AiNormalizer.ROI
         aux_x_range = (0.2, 0.3)
         fom_itgt_range = (0.3, 0.4)
 
@@ -62,8 +72,10 @@ class TestMainGui(unittest.TestCase):
         widget._sample_dist_le.setText(str(sample_dist))
         widget._cx_le.setText(str(cx))
         widget._cy_le.setText(str(cy))
+        widget._itgt_method_cb.setCurrentText(itgt_method)
         widget._itgt_points_le.setText(str(itgt_pts))
         widget._itgt_range_le.setText(','.join([str(x) for x in itgt_range]))
+        widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._auc_x_range_le.setText(','.join([str(x) for x in aux_x_range]))
         widget._fom_itgt_range_le.setText(
             ','.join([str(x) for x in fom_itgt_range]))
@@ -73,18 +85,23 @@ class TestMainGui(unittest.TestCase):
         self.assertAlmostEqual(worker._ai_proc.wavelength, photon_wavelength, 13)
         self.assertAlmostEqual(worker._ai_proc.sample_distance, sample_dist)
         self.assertTupleEqual(worker._ai_proc.poni, (cy, cx))
+        self.assertEqual(worker._ai_proc.integration_method, itgt_method)
         self.assertEqual(worker._ai_proc.integration_points, itgt_pts)
         self.assertTupleEqual(worker._ai_proc.integration_range, itgt_range)
+
+        self.assertEqual(worker._correlation_proc.normalizer, ai_normalizer)
         self.assertTupleEqual(worker._correlation_proc.auc_x_range,
-                              aux_x_range)
-        self.assertTupleEqual(worker._sample_degradation_proc.auc_x_range,
-                              aux_x_range)
-        self.assertTupleEqual(worker._laser_on_off_proc.auc_x_range,
                               aux_x_range)
         self.assertTupleEqual(worker._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
+
+        self.assertTupleEqual(worker._sample_degradation_proc.auc_x_range,
+                              aux_x_range)
         self.assertTupleEqual(worker._sample_degradation_proc.fom_itgt_range,
                               fom_itgt_range)
+
+        self.assertTupleEqual(worker._laser_on_off_proc.auc_x_range,
+                              aux_x_range)
         self.assertTupleEqual(worker._laser_on_off_proc.fom_itgt_range,
                               fom_itgt_range)
 
@@ -153,7 +170,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertIsInstance(worker._image_assembler._geom, LPDGeometry)
 
-    def testCorrelation(self):
+    def testCorrelationCtrlWidget(self):
         widget =self.gui.correlation_ctrl_widget
         worker = self.gui._proc_worker
 
@@ -162,8 +179,8 @@ class TestMainGui(unittest.TestCase):
         window = list(self.gui._windows.keys())[-1]
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
+        # test FOM name
         fom = FomName.ROI1
-
         widget._figure_of_merit_cb.setCurrentIndex(fom)
 
         self.assertTrue(self.gui.updateSharedParameters())

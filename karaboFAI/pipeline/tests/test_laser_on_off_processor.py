@@ -4,7 +4,7 @@ import numpy as np
 
 from karaboFAI.config import OpLaserMode
 from karaboFAI.pipeline.data_model import LaserOnOffData, ProcessedData
-from karaboFAI.pipeline.data_processing import LaserOnOffProcessor
+from karaboFAI.pipeline.pipeline_launcher import LaserOnOffProcessor
 
 
 class TestLaserOnOffProcessor(unittest.TestCase):

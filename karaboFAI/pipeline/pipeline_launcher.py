@@ -18,8 +18,8 @@ from .image_assembler import ImageAssemblerFactory
 from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
-    RegionOfInterestProcessor, AzimuthalIntegrationProcessor,
-    LaserOnOffProcessor, SampleDegradationProcessor, CorrelationProcessor
+    AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
+    LaserOnOffProcessor, RegionOfInterestProcessor, SampleDegradationProcessor
 )
 from ..config import config
 from ..gui import QtCore
@@ -39,16 +39,16 @@ class PipelineLauncher(Worker):
         self._in_queue = in_queue
         self._out_queue = out_queue
 
-        # whether to turn azimuthal integration on
-        self._enable_ai = False
-
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
 
         self._roi_proc = RegionOfInterestProcessor(parent=self)
+        self._correlation_proc = CorrelationProcessor(parent=self)
+
         self._ai_proc = AzimuthalIntegrationProcessor(parent=self)
         self._laser_on_off_proc = LaserOnOffProcessor(parent=self)
         self._sample_degradation_proc = SampleDegradationProcessor(parent=self)
-        self._correlation_proc = CorrelationProcessor(parent=self)
+
+        self._head = HeadProcessor()
 
     @QtCore.pyqtSlot(str)
     def onMessageReceived(self, msg):
@@ -105,7 +105,6 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
-        self._laser_on_off_proc.normalizer = normalizer
         self._correlation_proc.normalizer = normalizer
 
     @QtCore.pyqtSlot(float)
@@ -142,7 +141,10 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
-        self._enable_ai = state == QtCore.Qt.Checked
+        enabled = state == QtCore.Qt.Checked
+        self._ai_proc.setEnabled(enabled)
+        self._sample_degradation_proc.setEnabled(enabled)
+        self._laser_on_off_proc.setEnabled(enabled)
 
     @QtCore.pyqtSlot()
     def onCorrelationClear(self):
@@ -180,8 +182,17 @@ class PipelineLauncher(Worker):
     def register_processor(self, processor):
         processor.message_sgn.connect(self.onMessageReceived)
 
+    def _build_graph(self):
+        # TODO: define different graphs for different pipelines
+        self._head.next = self._roi_proc
+        self._roi_proc.next = self._ai_proc
+        self._ai_proc.next = self._sample_degradation_proc
+        self._sample_degradation_proc.next = self._laser_on_off_proc
+        self._laser_on_off_proc.next = self._correlation_proc
+
     def run(self):
         """Run the data processor."""
+        self._build_graph()
         self._running = True
         self.log("Data processor started!")
         while self._running:
@@ -209,14 +220,7 @@ class PipelineLauncher(Worker):
         self.log("Data processor stopped!")
 
     def _process(self, data):
-        """Process data received from the bridge.
-
-        data processing work flow:
-
-        pre-processing -> retrieve ROI information -> perform azimuthal
-        integration -> perform laser on-off analysis -> add correlation
-        information
-        """
+        """Process data received from the bridge."""
         tid, assembled = self._image_assembler.assemble(data)
 
         if assembled is None:
@@ -224,15 +228,14 @@ class PipelineLauncher(Worker):
 
         processed_data = ProcessedData(tid, assembled)
 
-        self._roi_proc.process(processed_data)
+        proc = self._head
+        while True:
+            if proc is None:
+                break
 
-        if self._enable_ai:
-            self._ai_proc.process(processed_data)
-            self._sample_degradation_proc.process(processed_data)
-            self._laser_on_off_proc.process(processed_data)
+            if proc.isEnabled():
+                proc.process(processed_data, data)
 
-        # Process correlation after laser-on-off since correlation may
-        # requires the laser-on-off result
-        self._correlation_proc.process((processed_data, data))
+            proc = proc.next
 
         return processed_data

@@ -31,6 +31,10 @@ class AbstractProcessor(QtCore.QObject):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
+        self.__enabled = True
+
+        self.next = None  # next processor in the pipeline
+
         if parent is not None:
             parent.register_processor(self)
 
@@ -38,14 +42,37 @@ class AbstractProcessor(QtCore.QObject):
         """Log information in the main GUI."""
         self.message_sgn.emit(msg)
 
-    def process(self, data):
+    def setEnabled(self, state):
+        self.__enabled = state
+
+    def isEnabled(self):
+        return self.__enabled
+
+    def process(self, proc_data, raw_data=None):
+        """Process data.
+
+        :param ProcessedData proc_data: processed data.
+        :param dict raw_data: raw data received from the bridge.
+        """
         raise NotImplementedError
 
 
-class CorrelationProcessor(AbstractProcessor):
-    """CorrelationProcessor class.
+class HeadProcessor(AbstractProcessor):
+    """Head node of a processor graph."""
+    def process(self, proc_data, raw_data=None):
+        pass
 
-    Add correlation information into processed data.
+
+class CorrelationProcessor(AbstractProcessor):
+    """Add correlation information into processed data.
+
+    Attributes:
+        normalizer (int): normalizer type for calculating FOM from
+            azimuthal integration result.
+        auc_x_range (tuple): x range for calculating AUC, which is used as
+            a normalizer of the azimuthal integration.
+        fom_itgt_range (tuple): integration range for calculating FOM from
+            the normalized azimuthal integration.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -56,15 +83,8 @@ class CorrelationProcessor(AbstractProcessor):
         self.auc_x_range = None
         self.fom_itgt_range = None
 
-    def process(self, data):
-        """Process the data
-
-        :param tuple data: (ProcessedData, dict) where the former should
-            contain azimuthal integration information while the later is
-            a reference to the original data received from the bridge.
-        """
-        proc_data, orig_data = data
-
+    def process(self, proc_data, raw_data=None):
+        """Override."""
         if self.fom_name is None:
             return
 
@@ -147,7 +167,7 @@ class CorrelationProcessor(AbstractProcessor):
                 setattr(proc_data.correlation, param, (proc_data.tid, fom))
             else:
                 try:
-                    device_data = orig_data[info['device_id']]
+                    device_data = raw_data[info['device_id']]
                 except KeyError:
                     self.log(f"Device '{info['device_id']}' is not in the data!")
                     continue
@@ -168,26 +188,24 @@ class CorrelationProcessor(AbstractProcessor):
 
 
 class SampleDegradationProcessor(AbstractProcessor):
-    """Process the data.
+    """SampleDegradationProcessor.
 
-    Note: only for pulse-resolved detectors.
+    Only for pulse-resolved detectors.
 
-    :param ProcessedData proc_data: data after the assembling and
-        azimuthal integration for individual pulses.
+    Attributes:
+        auc_x_range (tuple): x range for calculating AUC, which is used as
+            a normalizer of the azimuthal integration.
+        fom_itgt_range (tuple): integration range for calculating FOM from
+            the normalized azimuthal integration.
     """
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.auc_x_range = None
         self.fom_itgt_range = None
 
-    def process(self, proc_data):
-        """Process the proc_data.
-
-        :param ProcessedData proc_data: data after the assembling and
-            azimuthal integration for individual pulses.
-        """
+    def process(self, proc_data, raw_data=None):
+        """Override."""
         if proc_data.n_pulses == 1:
             # train-resolved
             return
@@ -221,6 +239,7 @@ class RegionOfInterestProcessor(AbstractProcessor):
     Attributes:
         roi1 (tuple): (w, h, px, py) of the current ROI1.
         roi2 (tuple): (w, h, px, py) of the current ROI2.
+        roi_value_type (int): type of ROI value.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -229,22 +248,20 @@ class RegionOfInterestProcessor(AbstractProcessor):
         self.roi2 = None
         self.roi_value_type = None
 
-    def process(self, data):
-        """Add ROI information into the processed data.
+    def process(self, proc_data, raw_data=None):
+        """Override.
 
         Note: We need to put some data in the history, even if ROI is not
         activated. This is required for the case that ROI1 and ROI2 were
         activate at different times.
-
-        :param ProcessedData data: data after preprocessing.
         """
         roi1 = self.roi1
         roi2 = self.roi2
         roi_value_type = self.roi_value_type
 
-        tid = data.tid
+        tid = proc_data.tid
         if tid > 0:
-            img = data.image.masked_mean
+            img = proc_data.image.masked_mean
 
             # it should be valid to set ROI intensity to zero if the data
             # is not available
@@ -253,7 +270,7 @@ class RegionOfInterestProcessor(AbstractProcessor):
                 if not self._validate_roi(*roi1, *img.shape):
                     self.roi1 = None
                 else:
-                    data.roi.roi1 = roi1
+                    proc_data.roi.roi1 = roi1
                     roi1_value = self._get_roi_value(roi1, roi_value_type, img)
 
             roi2_value = 0
@@ -261,11 +278,11 @@ class RegionOfInterestProcessor(AbstractProcessor):
                 if not self._validate_roi(*roi2, *img.shape):
                     self.roi2 = None
                 else:
-                    data.roi.roi2 = roi2
+                    proc_data.roi.roi2 = roi2
                     roi2_value = self._get_roi_value(roi2, roi_value_type, img)
 
-            data.roi.roi1_hist = (tid, roi1_value)
-            data.roi.roi2_hist = (tid, roi2_value)
+            proc_data.roi.roi1_hist = (tid, roi1_value)
+            proc_data.roi.roi2_hist = (tid, roi2_value)
 
     @staticmethod
     def _get_roi_value(roi_param, roi_value_type, full_image):
@@ -318,10 +335,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         self.integration_range = None
         self.integration_points = None
 
-        self.auc_x_range = None
-        self.fom_itgt_range = None
-
-    def process(self, data):
+    def process(self, proc_data, raw_data=None):
         sample_distance = self.sample_distance
         wavelength = self.wavelength
         poni1, poni2 = self.poni
@@ -329,15 +343,15 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         integration_method = self.integration_method
         integration_range = self.integration_range
 
-        assembled = data.image.images
+        assembled = proc_data.image.images
         try:
-            image_mask = data.image.image_mask
+            image_mask = proc_data.image.image_mask
         except ValueError as e:
             self.log(str(e) + "\nInvalid image mask!")
             raise
-        pixel_size = data.image.pixel_size
-        poni1, poni2 = data.image.poni(poni1, poni2)
-        mask_min, mask_max = data.image.threshold_mask
+        pixel_size = proc_data.image.pixel_size
+        poni1, poni2 = proc_data.image.poni(poni1, poni2)
+        mask_min, mask_max = proc_data.image.threshold_mask
 
         ai = AzimuthalIntegrator(dist=sample_distance,
                                  poni1=poni1 * pixel_size,
@@ -410,9 +424,9 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
-        data.momentum = momentum
-        data.intensities = intensities
-        data.intensity_mean = intensities_mean
+        proc_data.momentum = momentum
+        proc_data.intensities = intensities
+        proc_data.intensity_mean = intensities_mean
 
 
 class LaserOnOffProcessor(AbstractProcessor):
@@ -422,9 +436,19 @@ class LaserOnOffProcessor(AbstractProcessor):
     azimuthal integration of all laser-on and laser-off pulses, as well
     as their difference. It also calculates the the figure of merit (FOM),
     which is integration of the absolute aforementioned difference.
-    """
 
-    message_sgn = QtCore.pyqtSignal(str)
+    Attributes:
+        laser_mode (int): Laser on/off mode.
+        on_pulse_ids (list): a list of laser-on pulse IDs.
+        off_pulse_ids (list): a list of laser-off pulse IDs.
+        abs_difference (bool): True for calculating the absolute value of
+            difference between laser-on and laser-off.
+        moving_avg_window (int): moving average window size.
+        auc_x_range (tuple): x range for calculating AUC, which is used as
+            a normalizer of the azimuthal integration.
+        fom_itgt_range (tuple): integration range for calculating FOM from
+            the normalized azimuthal integration.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -437,7 +461,6 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         self.moving_avg_window = 1
 
-        self.normalizer = None
         self.auc_x_range = None
         self.fom_itgt_range = None
 
@@ -455,12 +478,8 @@ class LaserOnOffProcessor(AbstractProcessor):
         self._on_pulses_hist = deque()
         self._off_pulses_hist = deque()
 
-    def process(self, proc_data):
-        """Process the data.
-
-        :param ProcessedData proc_data: data after the assembling and
-            azimuthal integration for individual pulses.
-        """
+    def process(self, proc_data, raw_data=None):
+        """Override."""
         if self.laser_mode == OpLaserMode.INACTIVE:
             return
 
