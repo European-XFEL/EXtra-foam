@@ -114,7 +114,7 @@ class ImageAssemblerFactory(ABC):
                 self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
                 return True, f"Created Geometry from '{filename}'"
             except (ImportError, ModuleNotFoundError, OSError) as e:
-                info = f"Failed to create Geometry from '{filename}'\n" + str(e)
+                info = f"Failed to create Geometry from '{filename}'\n" + repr(e)
                 return False, info
 
     class LpdImageAssembler(BaseAssembler):
@@ -136,7 +136,7 @@ class ImageAssemblerFactory(ABC):
                         f, quad_positions)
                 return True, f"Created Geometry from '{filename}'"
             except OSError as e:
-                info = f"Failed to create Geometry from '{filename}'\n" + str(e)
+                info = f"Failed to create Geometry from '{filename}'\n" + repr(e)
                 return False, info
 
     class JungFrauImageAssembler(BaseAssembler):

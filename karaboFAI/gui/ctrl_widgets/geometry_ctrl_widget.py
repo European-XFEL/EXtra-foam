@@ -96,7 +96,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
             quad_positions = parse_table_widget(self._quad_positions_tb)
             self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
-            logger.error("<Quadrant positions>: " + str(e))
+            logger.error("<Quadrant positions>: " + repr(e))
             return False
 
         return True

@@ -95,7 +95,7 @@ class CorrelationProcessor(AbstractProcessor):
                     denominator = (roi1_hist[-1] + roi2_hist[-1])/2.
                 except IndexError as e:
                     # this could happen if the history is clear just now
-                    return str(e)
+                    return repr(e)
 
                 if denominator == 0:
                     return "ROI value is zero!"
@@ -331,7 +331,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             image_mask = proc_data.image.image_mask
         # TODO: check! why ValueError?
         except ValueError as e:
-            return str(e) + ": Invalid image mask!"
+            return repr(e) + ": Invalid image mask!"
 
         pixel_size = proc_data.image.pixel_size
         poni1, poni2 = proc_data.image.poni(poni1, poni2)

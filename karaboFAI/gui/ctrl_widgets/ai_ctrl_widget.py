@@ -148,7 +148,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             integration_range = parse_boundary(self._itgt_range_le.text())
             self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
+            logger.error("<Integration range>: " + repr(e))
             return False
 
         self._normalizers_cb.currentTextChanged.emit(
@@ -158,7 +158,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             auc_x_range = parse_boundary(self._auc_x_range_le.text())
             self.auc_x_range_sgn.emit(*auc_x_range)
         except ValueError as e:
-            logger.error("<AUC x range>: " + str(e))
+            logger.error("<AUC x range>: " + repr(e))
             return False
 
         try:
@@ -166,7 +166,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
                 self._fom_itgt_range_le.text())
             self.fom_integration_range_sgn.emit(*fom_integration_range)
         except ValueError as e:
-            logger.error("<FOM integration range>: " + str(e))
+            logger.error("<FOM integration range>: " + repr(e))
             return False
 
         return True
