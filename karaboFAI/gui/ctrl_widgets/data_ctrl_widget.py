@@ -15,17 +15,14 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ...config import config, DataSource
-from ...logger import logger
 
 
 class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
 
     _available_sources = OrderedDict({
-        "calibrated data@files": DataSource.CALIBRATED_FILES,
-        "calibrated data@bridge": DataSource.CALIBRATED_BRIDGE,
-        "raw data@files": DataSource.RAW_FILES,
-        "raw data@bridge": DataSource.RAW_BRIDGE
+        "stream data from files": DataSource.FILES,
+        "stream data from bridge": DataSource.BRIDGE,
     })
 
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
@@ -90,9 +87,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
         src_layout.addWidget(self._source_name_cb, 1, 1, 1, 4)
         src_layout.addWidget(self._source_type_rbts[0], 2, 0)
-        src_layout.addWidget(self._source_type_rbts[1], 2, 1)
-        src_layout.addWidget(self._source_type_rbts[2], 2, 2)
-        src_layout.addWidget(self._source_type_rbts[3], 2, 3)
+        src_layout.addWidget(self._source_type_rbts[1], 2, 2)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)
@@ -109,12 +104,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
             if btn.isChecked():
                 source_type = self._available_sources[btn.text()]
                 break
-        if source_type == DataSource.RAW_FILES:
-            logger.error("Streaming raw data from files is not implemented!")
-            return False
-        if source_type == DataSource.RAW_BRIDGE:
-            logger.error("Streaming raw data from bridge is not implemented!")
-            return False
+
         self.source_type_sgn.emit(source_type)
 
         self.source_name_sgn.emit(self._source_name_cb.currentText())

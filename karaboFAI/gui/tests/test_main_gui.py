@@ -150,13 +150,9 @@ class TestMainGui(unittest.TestCase):
         # test passing data source types
         for rbt in widget._source_type_rbts:
             QTest.mouseClick(rbt, Qt.LeftButton)
-            if widget._available_sources[rbt.text()] in \
-                    (DataSource.RAW_FILES, DataSource.RAW_BRIDGE):
-                self.assertFalse(self.gui.updateSharedParameters())
-            else:
-                self.assertTrue(self.gui.updateSharedParameters())
-                self.assertEqual(worker._image_assembler._source_type,
-                                 widget._available_sources[rbt.text()])
+            self.assertTrue(self.gui.updateSharedParameters())
+            self.assertEqual(worker._image_assembler.source_type,
+                             widget._available_sources[rbt.text()])
         # make source type available
         QTest.mouseClick(widget._source_type_rbts[0], Qt.LeftButton)
 

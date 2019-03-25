@@ -26,56 +26,19 @@ class ImageAssemblerFactory(ABC):
         """Abstract ImageAssembler class
 
         Attributes:
-            _source_name (str): detector data source name.
-            _source_type (DataSource): detector data source type.
-            _calibrated (bool): True for calibrated data and False for
-                raw data.
-            _from_file (bool): True for data streamed from files and
-                False for data from the online ZMQ bridge.
+            source_name (str): detector data source name.
+            source_type (DataSource): detector data source type.
             pulse_id_range (tuple): (min, max) pulse ID to be processed.
                 (int, int)
         """
         def __init__(self):
             """Initialization."""
-            self._source_name = None
-
-            self._source_type = None
-            self._from_file = None
-            self._calibrated = None
+            self.source_name = None
+            self.source_type = None
 
             self._geom = None
 
             self.pulse_id_range = None
-
-        @property
-        def source_name(self):
-            return self._source_name
-
-        @source_name.setter
-        def source_name(self, name):
-            self._source_name = name
-
-        @property
-        def source_type(self):
-            return self._source_type
-
-        @source_type.setter
-        def source_type(self, v):
-            self._source_type = v
-            if v == DataSource.CALIBRATED_FILES:
-                self._from_file = True
-                self._calibrated = True
-            elif v == DataSource.CALIBRATED_BRIDGE:
-                self._from_file = False
-                self._calibrated = True
-            elif v == DataSource.RAW_FILES:
-                self._from_file = True
-                self._calibrated = False
-            elif v == DataSource.RAW_BRIDGE:
-                self._from_file = False
-                self._calibrated = False
-            else:
-                raise ValueError("Unknown data source type!")
 
         @abstractmethod
         def _get_modules_bridge(self, data, src_name):
@@ -114,15 +77,16 @@ class ImageAssemblerFactory(ABC):
 
             :returns assembled: assembled detector image data.
             """
-            src_name = self._source_name
-            from_file = self._from_file
-            calibrated = self._calibrated
+            src_name = self.source_name
+            src_type = self.source_type
 
             try:
-                if from_file:
+                if src_type == DataSource.FILES:
                     modules_data = self._get_modules_file(data, src_name)
-                else:
+                elif src_type == DataSource.BRIDGE:
                     modules_data = self._get_modules_bridge(data, src_name)
+                else:
+                    raise ValueError(f"Unknown source type: {src_type}")
             except (ValueError, IndexError, KeyError):
                 raise
 

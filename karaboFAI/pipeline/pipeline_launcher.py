@@ -50,6 +50,14 @@ class PipelineLauncher(Worker):
 
         self._head = HeadProcessor()
 
+    @QtCore.pyqtSlot(str)
+    def onSourceNameChange(self, name):
+        self._image_assembler.source_name = name
+
+    @QtCore.pyqtSlot(object)
+    def onSourceTypeChange(self, value):
+        self._image_assembler.source_type = value
+
     @QtCore.pyqtSlot(str, list)
     def onGeometryChange(self, filename, quad_positions):
         success, info = self._image_assembler.load_geometry(
@@ -60,14 +68,6 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(int, int)
     def onPulseIdRangeChange(self, lb, ub):
         self._image_assembler.pulse_id_range = (lb, ub)
-
-    @QtCore.pyqtSlot(object)
-    def onSourceTypeChange(self, value):
-        self._image_assembler.source_type = value
-
-    @QtCore.pyqtSlot(str)
-    def onSourceNameChange(self, name):
-        self._image_assembler.source_name = name
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
@@ -233,10 +233,10 @@ class PipelineLauncher(Worker):
         #   - ValueError, IndexError, KeyError: raised by 'assemble'
         #   - ValueError, TypeError: raised by initialization of ProcessedData
         except (ValueError, IndexError, KeyError, TypeError) as e:
-            self.log(f"Train ID: {tid}: " + str(e))
+            self.log(f"Train ID: {tid}: " + repr(e))
             return None
         except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + str(e))
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             return None
 
         try:
@@ -252,7 +252,7 @@ class PipelineLauncher(Worker):
 
                 proc = proc.next
         except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + str(e))
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             return None
 
         return processed_data
