@@ -21,8 +21,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
 
     _available_sources = OrderedDict({
-        "stream data from files": DataSource.FILES,
-        "stream data from bridge": DataSource.BRIDGE,
+        "Stream data from run directory": DataSource.FILES,
+        "Stream data from bridge": DataSource.BRIDGE,
     })
 
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
