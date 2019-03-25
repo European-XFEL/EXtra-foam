@@ -110,8 +110,6 @@ class Config(dict):
     #
     # azimuthal integration
     # ---------------------
-    # EXPECTED_SHAPE tuple: shape (modules, y, x) of the detector image data
-    #                       (readonly)
     # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
     #                         detector (readonly)
     # GEOMETRY_FILE str: path of the geometry file of the detector
@@ -150,7 +148,6 @@ class Config(dict):
     _detector_readonly_config_keys = (
         "PULSE_RESOLVED",
         "REQUIRE_GEOMETRY",
-        "EXPECTED_SHAPE",
         "SOURCE_NAME",
     )
 
@@ -181,7 +178,6 @@ class Config(dict):
     _default_agipd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "EXPECTED_SHAPE": (16, 512, 128),
         "SOURCE_NAME": ('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',),
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
@@ -208,7 +204,6 @@ class Config(dict):
     _default_lpd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "EXPECTED_SHAPE": (16, 256, 256),
         "SOURCE_NAME": ("FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
@@ -235,7 +230,6 @@ class Config(dict):
     _default_jfrau_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "EXPECTED_SHAPE": (1, 512, 1024),
         "SOURCE_NAME": ("FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
                         "FXE_XAD_JF500K/DET/RECEIVER:display",
                         "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",),
@@ -266,7 +260,6 @@ class Config(dict):
     _default_fastccd_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "EXPECTED_SHAPE": (1934, 960),
         "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
                         "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",),
         "SERVER_ADDR": "10.253.0.140",

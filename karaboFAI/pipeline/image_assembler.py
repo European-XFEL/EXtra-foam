@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageAssembler.
+ImageAssemblers for different detectors.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -23,7 +23,7 @@ from ..config import DataSource
 
 class ImageAssemblerFactory(ABC):
     class BaseAssembler:
-        """Abstract ImageAssembler class
+        """Abstract ImageAssembler class.
 
         Attributes:
             source_name (str): detector data source name.
@@ -31,6 +31,9 @@ class ImageAssemblerFactory(ABC):
             pulse_id_range (tuple): (min, max) pulse ID to be processed.
                 (int, int)
         """
+        _modules = 1
+        _module_shape = None
+
         def __init__(self):
             """Initialization."""
             self.source_name = None
@@ -38,7 +41,7 @@ class ImageAssemblerFactory(ABC):
 
             self._geom = None
 
-            self.pulse_id_range = None
+            self.pulse_id_range = (None, None)
 
         @abstractmethod
         def _get_modules_bridge(self, data, src_name):
@@ -90,7 +93,15 @@ class ImageAssemblerFactory(ABC):
             except (ValueError, IndexError, KeyError):
                 raise
 
-            if not modules_data.shape[0]:
+            shape = modules_data.shape
+            ndim = len(shape)
+            if shape[-2:] != self._module_shape:
+                raise ValueError(f"Expected module shape {self._module_shape}, "
+                                 f"but get {shape[-2:]} instead!")
+            elif ndim >= 3 and shape[-3] != self._modules:
+                raise ValueError(f"Expected {self._modules} modules, but get"
+                                 f"{shape[0]} instead!")
+            elif ndim == 4 and not shape[0]:
                 raise ValueError("Number of memory cells is zero!")
 
             assembled = self._modules_to_assembled(modules_data)
@@ -100,12 +111,17 @@ class ImageAssemblerFactory(ABC):
             return assembled
 
     class AgipdImageAssembler(BaseAssembler):
+        _modules = 16
+        _module_shape = (512, 128)
+
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
+            # (memory cells, modules, y, x)
             return data[src_name]["image.data"]
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
+            # (memory cells, modules, y, x)
             return stack_detector_data(data, "image.data", only="AGIPD")
 
         def load_geometry(self, filename, quad_positions):
@@ -118,6 +134,9 @@ class ImageAssemblerFactory(ABC):
                 return False, info
 
     class LpdImageAssembler(BaseAssembler):
+        _modules = 16
+        _module_shape = (256, 256)
+
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
@@ -126,6 +145,7 @@ class ImageAssemblerFactory(ABC):
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
+            # (memory cells, modules, y, x)
             return stack_detector_data(data, "image.data", only="LPD")
 
         def load_geometry(self, filename, quad_positions):
@@ -140,25 +160,31 @@ class ImageAssemblerFactory(ABC):
                 return False, info
 
     class JungFrauImageAssembler(BaseAssembler):
+        _modules = 1
+        _module_shape = (512, 1024)
+
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
-            # (y, x, modules) -> (y, x)
             modules_data = data[src_name]["data.adc"]
             if modules_data.shape[-1] == 1:
+                # (y, x, modules) -> (y, x)
                 return modules_data.squeeze(axis=-1)
             else:
-                raise NotImplementedError
+                raise NotImplementedError("Number of modules > 1")
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
-            # (modules, y, x) -> (y, x)
             modules_data = data[src_name]['data.adc']
             if modules_data.shape[0] == 1:
+                # (modules, y, x) -> (y, x)
                 return modules_data.squeeze(axis=0)
             else:
-                raise NotImplementedError
+                raise NotImplementedError("Number of modules > 1")
 
     class FastCCDImageAssembler(BaseAssembler):
+        _modules = 1
+        _module_shape = (1934, 960)
+
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (y, x, 1) -> (y, x)
@@ -183,4 +209,4 @@ class ImageAssemblerFactory(ABC):
         if detector == 'FastCCD':
             return cls.FastCCDImageAssembler()
 
-        raise NotImplementedError
+        raise NotImplementedError(f"Unknown detector type {detector}!")
