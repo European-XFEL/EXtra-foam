@@ -122,7 +122,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertEqual(OpLaserMode.NORMAL,
+        self.assertEqual(OpLaserMode.SAME_TRAIN,
                          worker._laser_on_off_proc.laser_mode)
         self.assertListEqual(on_pulse_ids,
                              worker._laser_on_off_proc.on_pulse_ids)

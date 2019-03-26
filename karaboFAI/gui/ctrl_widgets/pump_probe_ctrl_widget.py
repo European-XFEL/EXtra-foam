@@ -23,10 +23,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
-        "": OpLaserMode.INACTIVE,
-        "normal": OpLaserMode.NORMAL,
-        "even/odd": OpLaserMode.EVEN_ON,
-        "odd/even": OpLaserMode.ODD_ON
+        "pre-defined off": OpLaserMode.PRE_DEFINED_OFF,
+        "same train": OpLaserMode.SAME_TRAIN,
+        "even/odd train": OpLaserMode.EVEN_TRAIN_ON,
+        "odd/even train": OpLaserMode.ODD_TRAIN_ON
     })
 
     # (mode, on-pulse ids, off-pulse ids)
@@ -51,7 +51,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             on_pulse_ids = "0:8:2"
             off_pulse_ids = "1:8:2"
         else:
-            all_keys.remove("normal")
+            all_keys.remove("same train")
             self._laser_mode_cb.addItems(all_keys)
             on_pulse_ids = "0"
             off_pulse_ids = "0"
@@ -105,7 +105,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         mode_description = self._laser_mode_cb.currentText()
         mode = self._available_modes[mode_description]
 
-        if mode != OpLaserMode.INACTIVE:
+        if mode != OpLaserMode.PRE_DEFINED_OFF:
             try:
                 # check pulse ID only when laser on/off pulses are in the same
                 # train (the "normal" mode)
@@ -113,7 +113,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                 off_pulse_ids = parse_ids(self._off_pulse_le.text())
                 if not on_pulse_ids or not off_pulse_ids:
                     raise ValueError
-                if mode == OpLaserMode.NORMAL and self._pulse_resolved:
+                if mode == OpLaserMode.SAME_TRAIN and self._pulse_resolved:
                     common = set(on_pulse_ids).intersection(off_pulse_ids)
                     if common:
                         logger.error("Pulse IDs {} are found in both on- and "

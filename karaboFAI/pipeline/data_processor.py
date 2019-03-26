@@ -460,7 +460,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
     def process(self, proc_data, raw_data=None):
         """Override."""
-        if self.laser_mode == OpLaserMode.INACTIVE:
+        if self.laser_mode == OpLaserMode.PRE_DEFINED_OFF:
             return
 
         momentum = proc_data.momentum
@@ -477,15 +477,15 @@ class LaserOnOffProcessor(AbstractProcessor):
             return f"Off-pulse ID {max_off_pulse_id} out of range " \
                    f"(0 - {n_pulses - 1})"
 
-        if self.laser_mode == OpLaserMode.NORMAL:
+        if self.laser_mode == OpLaserMode.SAME_TRAIN:
             # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
-            if self.laser_mode == OpLaserMode.NORMAL.EVEN_ON:
+            if self.laser_mode == OpLaserMode.EVEN_TRAIN_ON:
                 flag = 0  # on-train has even train ID
-            elif self.laser_mode == OpLaserMode.ODD_ON:
+            elif self.laser_mode == OpLaserMode.ODD_TRAIN_ON:
                 flag = 1  # on-train has odd train ID
             else:
                 return f"Unknown laser mode: {self.laser_mode}"
@@ -517,7 +517,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         if self._on_train_received:
             # update on-pulse
-            if self.laser_mode == OpLaserMode.NORMAL or \
+            if self.laser_mode == OpLaserMode.SAME_TRAIN or \
                     not self._off_train_received:
 
                 this_on_pulses = intensities[self.on_pulse_ids].mean(axis=0)

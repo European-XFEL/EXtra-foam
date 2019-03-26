@@ -27,7 +27,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
             self._data[i].intensities = (i+1)*intensity
 
     def testNormalMode(self):
-        self._proc.laser_mode = OpLaserMode.NORMAL
+        self._proc.laser_mode = OpLaserMode.SAME_TRAIN
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 
@@ -90,7 +90,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        self._proc.laser_mode = OpLaserMode.EVEN_ON
+        self._proc.laser_mode = OpLaserMode.EVEN_TRAIN_ON
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 
@@ -257,7 +257,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        self._proc.laser_mode = OpLaserMode.ODD_ON
+        self._proc.laser_mode = OpLaserMode.ODD_TRAIN_ON
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 

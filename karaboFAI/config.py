@@ -20,10 +20,10 @@ class DataSource(IntEnum):
 
 
 class OpLaserMode(IntEnum):
-    INACTIVE = 0  # not perform any relevant calculation
-    NORMAL = 1  # on-/off- pulses in the same train
-    EVEN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
+    PRE_DEFINED_OFF = 0  # use pre-defined off-pulse image
+    SAME_TRAIN = 1  # on-/off- pulses in the same train
+    EVEN_TRAIN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_TRAIN_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class FomName(IntEnum):
