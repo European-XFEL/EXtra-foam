@@ -260,11 +260,6 @@ class ImageData:
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
         _crop_area (tuple): (x, y, w, h) of the cropped image.
-        _poni (tuple): (Cx, Cy), where Cx is the coordinate of the point
-            of normal incidence along the detector's second dimension,
-            in pixels, and Cy is the coordinate of the point of normal
-            incidence along the detector's first dimension, in pixels.
-            default = (0, 0)
     """
     class RawImageData:
         def __init__(self):
@@ -474,20 +469,18 @@ class ImageData:
         return self.__raw.moving_average_count
 
     def pos(self, x, y):
-        """Return the position in the original image."""
+        """current image -> original image."""
         if self._crop_area is None:
             return x, y
         x0, y0, _, _, = self._crop_area
         return x + x0, y + y0
 
-    def poni(self, poni1, poni2):
-        """Return the PONI in the original image."""
-        if self._crop_area is not None:
-            x, y, _, _ = self._crop_area
-            poni1 -= y
-            poni2 -= x
-
-        return poni1, poni2
+    def pos_inv(self, x, y):
+        """original image -> current image."""
+        if self._crop_area is None:
+            return x, y
+        x0, y0, _, _, = self._crop_area
+        return x - x0, y - y0
 
     def _set_images(self, imgs):
         self.__raw.set(imgs)

@@ -108,8 +108,8 @@ class PipelineLauncher(Worker):
         self._ai_proc.sample_distance = value
 
     @QtCore.pyqtSlot(int, int)
-    def onPoniChange(self, cy, cx):
-        self._ai_proc.poni = (cy, cx)
+    def onIntegrationCenterChange(self, cx, cy):
+        self._ai_proc.integration_center = (cx, cy)
 
     @QtCore.pyqtSlot(str)
     def onIntegrationMethodChange(self, value):

@@ -296,11 +296,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         sample_distance (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
-        poni (tuple): (Cy, Cx), where Cy is the coordinate of the
-            point of normal incidence along the detector's first
-            dimension, in pixels, and Cx is the coordinate of the
-            point of normal incidence along the detector's second
-            dimension, in pixels. (int, int)
+        integration_center (tuple): (Cx, Cy) in pixels. (int, int)
         integration_method (string): the azimuthal integration
             method supported by pyFAI.
         integration_range (tuple): the lower and upper range of
@@ -313,7 +309,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
 
         self.sample_distance = None
         self.wavelength = None
-        self.poni = None
+        self.integration_center = None
         self.integration_method = None
         self.integration_range = None
         self.integration_points = None
@@ -321,7 +317,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
     def process(self, proc_data, raw_data=None):
         sample_distance = self.sample_distance
         wavelength = self.wavelength
-        poni1, poni2 = self.poni
+        cx, cy = self.integration_center
         integration_points = self.integration_points
         integration_method = self.integration_method
         integration_range = self.integration_range
@@ -334,7 +330,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             return repr(e) + ": Invalid image mask!"
 
         pixel_size = proc_data.image.pixel_size
-        poni1, poni2 = proc_data.image.poni(poni1, poni2)
+        poni2, poni1 = proc_data.image.pos_inv(cx, cy)
         mask_min, mask_max = proc_data.image.threshold_mask
 
         ai = AzimuthalIntegrator(dist=sample_distance,

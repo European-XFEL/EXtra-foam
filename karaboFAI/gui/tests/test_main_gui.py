@@ -84,7 +84,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertAlmostEqual(worker._ai_proc.wavelength, photon_wavelength, 13)
         self.assertAlmostEqual(worker._ai_proc.sample_distance, sample_dist)
-        self.assertTupleEqual(worker._ai_proc.poni, (cy, cx))
+        self.assertTupleEqual(worker._ai_proc.integration_center, (cx, cy))
         self.assertEqual(worker._ai_proc.integration_method, itgt_method)
         self.assertEqual(worker._ai_proc.integration_points, itgt_pts)
         self.assertTupleEqual(worker._ai_proc.integration_range, itgt_range)

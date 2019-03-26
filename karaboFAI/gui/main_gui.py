@@ -178,8 +178,8 @@ class MainGUI(QtGui.QMainWindow):
             self._proc_worker.onPhotonEnergyChange)
         self.ai_ctrl_widget.sample_distance_sgn.connect(
             self._proc_worker.onSampleDistanceChange)
-        self.ai_ctrl_widget.poni_sgn.connect(
-            self._proc_worker.onPoniChange)
+        self.ai_ctrl_widget.integration_center_sgn.connect(
+            self._proc_worker.onIntegrationCenterChange)
         self.ai_ctrl_widget.integration_method_sgn.connect(
             self._proc_worker.onIntegrationMethodChange)
         self.ai_ctrl_widget.integration_range_sgn.connect(

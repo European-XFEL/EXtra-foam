@@ -47,19 +47,21 @@ class TestImageData(unittest.TestCase):
         self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
     def test_poni(self):
-        imgs = np.arange(20, dtype=np.float).reshape(5, 4)
+        imgs = np.ones((100, 80))
 
         img_data = ImageData(np.copy(imgs))
 
-        self.assertTupleEqual((0, 0), img_data.poni(0, 0))
+        self.assertTupleEqual((0, 0), img_data.pos_inv(0, 0))
 
-        img_data.set_crop_area(True, 0, 1, 3, 2)
+        img_data.set_crop_area(True, 0, 10, 30, 20)
         img_data.update()
-        self.assertTupleEqual((-1, 0), img_data.poni(0, 0))
+        self.assertTupleEqual((0, -10), img_data.pos_inv(0, 0))
 
-        img_data.set_crop_area(True, 1, 2, 3, 2)
+        # The crop area is not calculate based on the previous crop but
+        # on the original image.
+        img_data.set_crop_area(True, 10, 20, 60, 80)
         img_data.update()
-        self.assertTupleEqual((-4, 11), img_data.poni(-2, 12))
+        self.assertTupleEqual((-12, -8), img_data.pos_inv(-2, 12))
 
     def test_imagemask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)

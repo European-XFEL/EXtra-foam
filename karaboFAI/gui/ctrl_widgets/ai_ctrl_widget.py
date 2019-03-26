@@ -23,7 +23,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
     photon_energy_sgn = QtCore.pyqtSignal(float)
     sample_distance_sgn = QtCore.pyqtSignal(float)
-    poni_sgn = QtCore.pyqtSignal(int, int)  # (cy, cx)
+    integration_center_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
@@ -46,7 +46,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
         self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
         self._cx_le.setValidator(QtGui.QIntValidator())
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
-        self._cx_le.setValidator(QtGui.QIntValidator())
+        self._cy_le.setValidator(QtGui.QIntValidator())
         self._itgt_method_cb = QtGui.QComboBox()
         for method in config["INTEGRATION_METHODS"]:
             self._itgt_method_cb.addItem(method)
@@ -131,7 +131,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
-        self.poni_sgn.emit(center_y, center_x)
+        self.integration_center_sgn.emit(center_x, center_y)
 
         integration_method = self._itgt_method_cb.currentText()
         self.integration_method_sgn.emit(integration_method)

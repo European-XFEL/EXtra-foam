@@ -128,9 +128,9 @@ class Config(dict):
     # DISTANCE float: distance from sample - detector plan (orthogonal
     #                 distance, not along the beam), in meter
     # CENTER_Y int: coordinate of the point of normal incidence along the
-    #               detector's first dimension, in pixels
+    #               detector's first dimension, in pixels, PONI1 in pyFAI
     # CENTER_X int: coordinate of the point of normal incidence along the
-    #               detector's second dimension, in pixels
+    #               detector's second dimension, in pixels, PONI2 in pyFAI
     # PIXEL_SIZE float: detector pixel size, in meter
 
     # system config
@@ -221,7 +221,7 @@ class Config(dict):
         "PHOTON_ENERGY": 9.3,
         "DISTANCE": 0.2,
         "CENTER_Y": 620,
-        "CENTER_X": 580,
+        "CENTER_X": 570,
         "PIXEL_SIZE": 0.5e-3,
         "COLOR_MAP": 'thermal',
         "MASK_RANGE": (0, 10000)
