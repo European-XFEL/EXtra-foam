@@ -1,5 +1,6 @@
 from .image_view import (
-    AssembledImageView, ImageAnalysis, RoiImageView, SinglePulseImageView
+    AssembledImageView, ImageAnalysis, ReferenceImageView, RoiImageView,
+    SinglePulseImageView
 )
 from .plot_widget import (
     CorrelationWidget, LaserOnOffAiWidget, LaserOnOffDiffWidget,
@@ -13,6 +14,7 @@ __all__ = ([
     "AssembledImageView",
     "ImageAnalysis",
     "RoiImageView",
+    "ReferenceImageView",
     "SinglePulseImageView",
 ])
 

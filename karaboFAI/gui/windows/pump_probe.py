@@ -15,7 +15,7 @@ from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..plot_widgets import (
     AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
-    LaserOnOffFomWidget
+    LaserOnOffFomWidget, ReferenceImageView
 )
 
 
@@ -42,7 +42,7 @@ class PumpProbeWindow(DockerWindow):
         super().__init__(*args, **kwargs)
 
         self._on_image = AssembledImageView(parent=self)
-        self._off_image = AssembledImageView(parent=self)
+        self._off_image = ReferenceImageView(parent=self)
 
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)

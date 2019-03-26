@@ -438,6 +438,23 @@ class SinglePulseImageView(ImageView):
             self._is_initialized = True
 
 
+class ReferenceImageView(ImageView):
+    """ReferenceImageView class.
+
+    Widget for displaying the reference image, which is used as:
+    1. a pre-defined laser-off image in pump-probe experiment;
+    """
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+
+    def update(self, data):
+        """Override."""
+        return
+
+
 class RoiImageView(ImageView):
     """RoiImageView class.
 
