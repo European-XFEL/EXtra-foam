@@ -510,7 +510,6 @@ class LaserOnOffAiWidget(PlotWidget):
 
         self._on_pulse = self.plotCurve(name="Laser-on", pen=make_pen("p"))
         self._off_pulse = self.plotCurve(name="Laser-off", pen=make_pen("g"))
-        self._diff = self.plotCurve(name="On - Off x 20", pen=make_pen("y"))
 
     def update(self, data):
         """Override."""

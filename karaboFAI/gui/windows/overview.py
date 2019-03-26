@@ -3,8 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-OverviewWindow for pulse-resolved detectors.
-OverviewWindowTrainResolved for train-resolved detectors.
+OverviewWindow.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -18,8 +17,7 @@ from ..mediator import Mediator
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
-    AssembledImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
-    LaserOnOffFomWidget, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
+    AssembledImageView, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
@@ -82,10 +80,6 @@ class OverviewWindow(DockerWindow):
         mediator.roi_displayed_range_sgn.connect(
             self._roi_intensity.onDisplayRangeChange)
 
-        self._on_off_fom = LaserOnOffFomWidget(parent=self)
-        self._on_off_ai = LaserOnOffAiWidget(parent=self)
-        self._on_off_diff = LaserOnOffDiffWidget(parent=self)
-
         self.initUI()
 
         mediator.updateVipPulseIds()
@@ -123,28 +117,24 @@ class OverviewWindow(DockerWindow):
         roi2_image_dock.addWidget(self._roi2_image)
 
         if self._pulse_resolved:
-            #
             self._vip2_ai_dock = Dock("VIP pulse 0000 - AI",
                                       size=(self._LW, self._LH3))
             self._docker_area.addDock(
                 self._vip2_ai_dock, 'above', roi2_image_dock)
             self._vip2_ai_dock.addWidget(self._vip2_ai)
 
-            #
             self._vip1_ai_dock = Dock("VIP pulse 0000 - AI",
                                       size=(self._LW, self._LH2))
             self._docker_area.addDock(
                 self._vip1_ai_dock, 'above', roi1_image_dock)
             self._vip1_ai_dock.addWidget(self._vip1_ai)
 
-            #
             self._vip2_img_dock = Dock("VIP pulse 0000",
                                        size=(self._LW, self._LH3))
             self._docker_area.addDock(self._vip2_img_dock, 'above',
                                       self._vip2_ai_dock)
             self._vip2_img_dock.addWidget(self._vip2_img)
 
-            #
             self._vip1_img_dock = Dock("VIP pulse 0000",
                                        size=(self._LW, self._LH2))
             self._docker_area.addDock(self._vip1_img_dock, 'above',
@@ -155,29 +145,15 @@ class OverviewWindow(DockerWindow):
         # upper right
         # -----------
 
-        #
-        on_off_diff_dock = Dock("Laser On-Off Azimuthal Integration",
-                                size=(self._RW, self._RH1))
-        self._docker_area.addDock(on_off_diff_dock, 'right')
-        on_off_diff_dock.addWidget(self._on_off_diff)
-
-        #
-        on_off_ai_dock = Dock("Laser On/Off Azimuthal Integration",
-                              size=(self._RW, self._RH1))
-        self._docker_area.addDock(on_off_ai_dock, 'above', on_off_diff_dock)
-        on_off_ai_dock.addWidget(self._on_off_ai)
-
-        #
         ai_dock = Dock("Azimuthal Integration Overview",
                        size=(self._RW, self._RH1))
-        self._docker_area.addDock(ai_dock, 'above', on_off_ai_dock)
+        self._docker_area.addDock(ai_dock, 'right')
         ai_dock.addWidget(self._ai)
 
         # -----------
         # middle right
         # -----------
 
-        #
         bulletin_dock = Dock("Bulletin", size=(self._RW, self._RH2))
         self._docker_area.addDock(bulletin_dock, 'bottom', ai_dock)
         bulletin_dock.addWidget(self._bulletin)
@@ -187,18 +163,10 @@ class OverviewWindow(DockerWindow):
         # lower right
         # -----------
 
-        #
-        on_off_fom_dock = Dock("Laser On-Off Azimuthal Integration",
-                               size=(self._RW, self._RH3))
-        self._docker_area.addDock(on_off_fom_dock, 'bottom', bulletin_dock)
-        on_off_fom_dock.addWidget(self._on_off_fom)
-
-        #
         roi_intensity_dock = Dock("ROI intensity", size=(self._RW, self._RH3))
-        self._docker_area.addDock(roi_intensity_dock, 'above', on_off_fom_dock)
+        self._docker_area.addDock(roi_intensity_dock, 'bottom', bulletin_dock)
         roi_intensity_dock.addWidget(self._roi_intensity)
 
-        #
         if self._pulse_resolved:
             sample_degradation_dock = Dock(
                 "Sample Degradation", size=(self._RW, self._RH3))

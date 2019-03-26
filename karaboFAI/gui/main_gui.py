@@ -28,7 +28,7 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    CorrelationWindow, ImageToolWindow, OverviewWindow
+    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow
 )
 from .. import __version__
 from ..config import config
@@ -88,6 +88,12 @@ class MainGUI(QtGui.QMainWindow):
             lambda: OverviewWindow(self._data,
                                    pulse_resolved=self._pulse_resolved,
                                    parent=self))
+
+        pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
+        pump_probe_window_at.triggered.connect(
+            lambda: PumpProbeWindow(self._data,
+                                    pulse_resolved=self._pulse_resolved,
+                                    parent=self))
 
         open_corr_window_at = self._addAction("Correlations", "scatter.png")
         open_corr_window_at.triggered.connect(
