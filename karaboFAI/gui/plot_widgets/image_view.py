@@ -459,7 +459,10 @@ class ReferenceImageView(ImageView):
         """Override."""
         ref = data.image.ref
         if ref is not None:
-            self.setImage(ref, auto_levels=True)
+            self.setImage(ref, auto_levels=(not self._is_initialized))
+
+            if not self._is_initialized:
+                self._is_initialized = True
 
 
 class RoiImageView(ImageView):

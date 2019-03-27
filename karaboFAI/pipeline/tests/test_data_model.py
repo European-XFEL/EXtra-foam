@@ -34,6 +34,8 @@ class TestImageData(unittest.TestCase):
         img_data = ImageData(imgs)
         img_data.set_reference()
 
+        self.assertEqual(None, img_data.ref)
+
         img_data.set_crop_area(True, 1, 2, 6, 7)
         img_data.update()
         self.assertTupleEqual((7, 6), img_data.mean.shape)
@@ -49,6 +51,13 @@ class TestImageData(unittest.TestCase):
         self.assertTupleEqual((4, 3), img_data.mean.shape)
         self.assertTupleEqual((4, 3), img_data.ref.shape)
         self.assertTupleEqual((0, 1), img_data.pos(0, 0))
+
+        # Now we have a cropped image, set_reference should set the uncropped
+        # image as the reference
+        img_data.set_reference()
+        img_data.set_crop_area(False, 0, 0, 0, 0)
+        img_data.update()
+        self.assertTupleEqual((10, 10), img_data.ref.shape)
 
     def test_poni(self):
         imgs = np.ones((100, 80))

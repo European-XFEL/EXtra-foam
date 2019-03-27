@@ -531,7 +531,13 @@ class ImageData:
         self._registered_ops.add("threshold_mask")
 
     def set_reference(self):
-        self.__ref = self.masked_mean
+        if self._crop_area is None:
+            self.__ref = self.masked_mean
+        else:
+            # recalculate the uncropped image
+            self.__ref = self._masked_mean_imp(
+                np.copy(self._mean_imp(self._images)))
+
         self._registered_ops.add("reference")
 
     @cached_property
@@ -573,12 +579,14 @@ class ImageData:
 
         :return numpy.ndarray: a single image, shape = (y, x)
         """
-        if self._images.ndim == 3:
+        return self._mean_imp(self.images)
+
+    def _mean_imp(self, imgs):
+        if imgs.ndim == 3:
             # pulse resolved
-            return nanmean_axis0_para(self.images,
-                                      max_workers=8, chunk_size=20)
+            return nanmean_axis0_para(imgs, max_workers=8, chunk_size=20)
         # train resolved
-        return self.images
+        return imgs
 
     @cached_property
     def masked_mean(self):
@@ -589,8 +597,9 @@ class ImageData:
         """
         # keep both mean image and masked mean image so that we can
         # recalculate the masked image
-        mean_image = np.copy(self.mean)
+        return self._masked_mean_imp(np.copy(self.mean))
 
+    def _masked_mean_imp(self, mean_image):
         # Convert 'nan' to '-inf' and it will later be converted to the
         # lower range of mask, which is usually 0.
         # We do not convert 'nan' to 0 because: if the lower range of
@@ -620,7 +629,7 @@ class ImageData:
             invalid_caches.add("masked_mean")
         if "reference" in self._registered_ops:
             self._image_ref = self.__ref
-            invalid_caches.add("reference")
+            invalid_caches.add("ref")
 
         for cache in invalid_caches:
             try:
