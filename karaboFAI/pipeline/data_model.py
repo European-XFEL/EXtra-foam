@@ -341,6 +341,18 @@ class ImageData:
         def moving_average_count(self):
             return self._ma_count
 
+    class ImageRefData:
+        def __init__(self):
+            self._image = None
+
+        def __get__(self, instance, instance_type):
+            if instance is None:
+                return self
+            return self._image
+
+        def __set__(self, instance, value):
+            self._image = value
+
     class ImageMaskData:
         def __init__(self, shape):
             """Initialization.
@@ -397,6 +409,7 @@ class ImageData:
             self._rect = None
 
     __raw = RawImageData()
+    __ref = ImageRefData()
     __threshold_mask = None
     __image_mask = None
     __crop_area = CropAreaData()
@@ -427,8 +440,9 @@ class ImageData:
         # Instance attributes should be "frozen" after created. Otherwise,
         # the data used in different plot widgets could be different.
         self._images = self.__raw.images
-        self._image_mask = np.copy(self.__image_mask.get())
+        self._image_ref = self.__ref
         self._threshold_mask = self.__threshold_mask.get()
+        self._image_mask = np.copy(self.__image_mask.get())
         self._crop_area = self.__crop_area.get()
 
         # cache these two properties
@@ -516,6 +530,10 @@ class ImageData:
         self.__threshold_mask.set(lb, ub)
         self._registered_ops.add("threshold_mask")
 
+    def set_reference(self):
+        self.__ref = self.masked_mean
+        self._registered_ops.add("reference")
+
     @cached_property
     def image_mask(self):
         if self._crop_area is not None:
@@ -535,6 +553,17 @@ class ImageData:
 
         x, y, w, h = self._crop_area
         return self._images[..., y:y+h, x:x+w]
+
+    @cached_property
+    def ref(self):
+        if self._image_ref is None:
+            return None
+
+        if self._crop_area is None:
+            return self._image_ref
+
+        x, y, w, h = self._crop_area
+        return self._image_ref[..., y:y+h, x:x+w]
 
     @cached_property
     def mean(self):
@@ -582,13 +611,16 @@ class ImageData:
         if "crop" in self._registered_ops:
             self._crop_area = self.__crop_area.get()
             invalid_caches.update(
-                {"images", "mean", "masked_mean", "image_mask"})
+                {"images", "ref", "mean", "masked_mean", "image_mask"})
         if "image_mask" in self._registered_ops:
             self._image_mask = np.copy(self.__image_mask.get())
             invalid_caches.add("image_mask")
         if "threshold_mask" in self._registered_ops:
             self._threshold_mask = self.__threshold_mask.get()
             invalid_caches.add("masked_mean")
+        if "reference" in self._registered_ops:
+            self._image_ref = self.__ref
+            invalid_caches.add("reference")
 
         for cache in invalid_caches:
             try:
@@ -605,6 +637,7 @@ class ImageData:
         Used in unittest only.
         """
         cls.__raw = cls.RawImageData()
+        cls.__ref = cls.ImageRefData()
         cls.__threshold_mask = None
         cls.__image_mask = None
         cls.__crop_area = cls.CropAreaData()

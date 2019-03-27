@@ -229,6 +229,11 @@ class ImageAnalysis(ImageView):
         if image_data is not None:
             self.setImage(image_data.masked_mean, **kwargs)
 
+    def setImageRef(self):
+        """Set the displayed image as reference image."""
+        if self._image_data is not None:
+            self._image_data.set_reference()
+
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
         x, y = self._image_data.pos(x, y)
@@ -452,7 +457,9 @@ class ReferenceImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        return
+        ref = data.image.ref
+        if ref is not None:
+            self.setImage(ref, auto_levels=True)
 
 
 class RoiImageView(ImageView):

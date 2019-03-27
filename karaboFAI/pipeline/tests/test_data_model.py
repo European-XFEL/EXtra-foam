@@ -32,18 +32,22 @@ class TestImageData(unittest.TestCase):
     def test_cropping(self):
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         img_data = ImageData(imgs)
+        img_data.set_reference()
 
         img_data.set_crop_area(True, 1, 2, 6, 7)
         img_data.update()
         self.assertTupleEqual((7, 6), img_data.mean.shape)
+        self.assertTupleEqual((7, 6), img_data.ref.shape)
         self.assertTupleEqual((1, 2), img_data.pos(0, 0))
         # test the change can be seen by the new instance
         self.assertTupleEqual((7, 6), ImageData(imgs).mean.shape)
+        self.assertTupleEqual((7, 6), ImageData(imgs).ref.shape)
         self.assertTupleEqual((1, 2), ImageData(imgs).pos(0, 0))
 
         img_data.set_crop_area(True, 0, 1, 3, 4)
         img_data.update()
         self.assertTupleEqual((4, 3), img_data.mean.shape)
+        self.assertTupleEqual((4, 3), img_data.ref.shape)
         self.assertTupleEqual((0, 1), img_data.pos(0, 0))
 
     def test_poni(self):

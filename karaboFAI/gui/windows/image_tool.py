@@ -76,6 +76,9 @@ class ImageToolWindow(AbstractWindow):
         self._lock_bkg_cb.stateChanged.connect(
             lambda x: self._bkg_le.setEnabled(x != QtCore.Qt.Checked))
 
+        self._set_ref_btn = QtGui.QPushButton("Set reference image")
+        self._set_ref_btn.clicked.connect(self._image_view.setImageRef)
+
         self._roi1_ctrl = RoiCtrlWidget(
             self._image_view.roi1,
             title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
@@ -186,6 +189,7 @@ class ImageToolWindow(AbstractWindow):
         roi_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 1, 0)
         roi_ctrl_layout.addWidget(self._bkg_le, 1, 1)
         roi_ctrl_layout.addWidget(self._lock_bkg_cb, 1, 2)
+        roi_ctrl_layout.addWidget(self._set_ref_btn, 1, 3, 1, 2)
 
         tool_layout = QtGui.QVBoxLayout()
         tool_layout.addLayout(roi_ctrl_layout)
