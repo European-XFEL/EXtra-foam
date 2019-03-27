@@ -8,6 +8,11 @@ from PyQt5.QtCore import Qt
 from karabo_data.geometry import LPDGeometry
 
 from karaboFAI.gui.main_gui import MainGUI
+from karaboFAI.gui.windows import (
+    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
+    XasWindow
+)
+
 from karaboFAI.pipeline.data_model import ProcessedData, ImageData
 from karaboFAI.config import (
     config, DataSource, FomName, AiNormalizer, OpLaserMode
@@ -31,7 +36,9 @@ class TestMainGui(unittest.TestCase):
         self._actions = self.gui._tool_bar.actions()
         self._imagetool_action = self._actions[2]
         self._overview_action = self._actions[3]
-        self._correlation_action = self._actions[4]
+        self._pumpprobe_action = self._actions[4]
+        self._correlation_action = self._actions[5]
+        self._xas_action = self._actions[6]
 
         ImageData.reset()
 
@@ -173,6 +180,7 @@ class TestMainGui(unittest.TestCase):
         n_registered = len(self.gui._windows)
         self._correlation_action.trigger()
         window = list(self.gui._windows.keys())[-1]
+        self.assertIsInstance(window, CorrelationWindow)
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
         # test FOM name
@@ -239,12 +247,21 @@ class TestMainGui(unittest.TestCase):
         window.close()
         self.assertEqual(n_registered, len(self.gui._windows))
 
+    def test_imagetoolwindow(self):
+        n_registered = len(self.gui._windows)
+        self._imagetool_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
+        # TODO: ImageToolWindow is a SingletonWindow
+        # self.assertIsInstance(window, ImageToolWindow)
+        self.assertEqual(n_registered + 1, len(self.gui._windows))
+
     def test_overviewwindow(self):
         widget = self.gui.analysis_ctrl_widget
 
         n_registered = len(self.gui._windows)
         self._overview_action.trigger()
         window = list(self.gui._windows.keys())[-1]
+        self.assertIsInstance(window, OverviewWindow)
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
         # --------------------------
@@ -284,3 +301,17 @@ class TestMainGui(unittest.TestCase):
         # test unregister
         window.close()
         self.assertEqual(n_registered, len(self.gui._windows))
+
+    def test_pumpprobewindow(self):
+        n_registered = len(self.gui._windows)
+        self._pumpprobe_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
+        self.assertIsInstance(window, PumpProbeWindow)
+        self.assertEqual(n_registered + 1, len(self.gui._windows))
+
+    def test_xaswindow(self):
+        n_registered = len(self.gui._windows)
+        self._xas_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
+        self.assertIsInstance(window, XasWindow)
+        self.assertEqual(n_registered + 1, len(self.gui._windows))

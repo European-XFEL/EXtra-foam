@@ -54,6 +54,7 @@ class PumpProbeWindow(DockerWindow):
         self.initUI()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
+        self.setMinimumSize(800, 600)
 
         self.update()
 

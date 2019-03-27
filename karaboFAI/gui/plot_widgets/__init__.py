@@ -5,7 +5,8 @@ from .image_view import (
 from .plot_widget import (
     CorrelationWidget, LaserOnOffAiWidget, LaserOnOffDiffWidget,
     LaserOnOffFomWidget, MultiPulseAiWidget, RoiValueMonitor,
-    SampleDegradationWidget, SinglePulseAiWidget
+    SampleDegradationWidget, SinglePulseAiWidget, XasSpectrumWidget,
+    XasSpectrumDiffWidget
 )
 from .roi import CropROI, RectROI
 
@@ -28,6 +29,8 @@ __all__.extend([
     "RoiValueMonitor",
     "SampleDegradationWidget",
     "SinglePulseAiWidget",
+    "XasSpectrumWidget",
+    "XasSpectrumDiffWidget"
 ])
 
 # add ROI widgets

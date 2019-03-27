@@ -28,7 +28,8 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow
+    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
+    XasWindow
 )
 from .. import __version__
 from ..config import config
@@ -100,6 +101,12 @@ class MainGUI(QtGui.QMainWindow):
             lambda: CorrelationWindow(self._data,
                                       pulse_resolved=self._pulse_resolved,
                                       parent=self))
+
+        open_xas_window_at = self._addAction("XAS", "xas.png")
+        open_xas_window_at.triggered.connect(
+            lambda: XasWindow(self._data,
+                              pulse_resolved=self._pulse_resolved,
+                              parent=self))
 
         # *************************************************************
         # Miscellaneous

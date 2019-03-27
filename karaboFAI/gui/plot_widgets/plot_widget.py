@@ -575,3 +575,45 @@ class LaserOnOffDiffWidget(PlotWidget):
                 self._data = diff
 
             self._plot.setData(momentum, diff)
+
+
+class XasSpectrumWidget(PlotWidget):
+    """XasSpectrumWidget class.
+
+    Widget for displaying the XAS spectrum.
+    """
+
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "Energy (eV)")
+        self.setLabel('left', "Absorption")
+        self.setTitle(' ')
+
+        self._plot = self.plotScatter(brush=make_brush('c'))
+
+    def update(self, data):
+        """Override."""
+        pass
+
+
+class XasSpectrumDiffWidget(PlotWidget):
+    """XasSpectrumDiffWidget class.
+
+    Widget for displaying the difference of two XAS spectra.
+    """
+
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "Energy (eV)")
+        self.setLabel('left', "Absorption")
+        self.setTitle(' ')
+
+        self._plot = self.plotScatter(brush=make_brush('c'))
+
+    def update(self, data):
+        """Override."""
+        pass
