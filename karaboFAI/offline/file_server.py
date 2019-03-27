@@ -70,7 +70,7 @@ class FileServer(Process):
             devices = None
 
         # [motor]
-        devices.extend([("*", "actualPosition"),])
+        # devices.extend([("*", "actualPosition"),])
         serve_files(self._folder, self._port,
                     devices=devices, require_all=True)
 

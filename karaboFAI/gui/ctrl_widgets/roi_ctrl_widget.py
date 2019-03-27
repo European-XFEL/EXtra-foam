@@ -68,25 +68,18 @@ class RoiCtrlWidget(QtGui.QGroupBox):
         self.lock_aspect_cb.stateChanged.connect(self.onLockAspect)
 
     def initUI(self):
-        le_layout = QtGui.QHBoxLayout()
-        le_layout.addWidget(QtGui.QLabel("w: "))
-        le_layout.addWidget(self._width_le)
-        le_layout.addWidget(QtGui.QLabel("h: "))
-        le_layout.addWidget(self._height_le)
-        le_layout.addWidget(QtGui.QLabel("x0: "))
-        le_layout.addWidget(self._px_le)
-        le_layout.addWidget(QtGui.QLabel("y0: "))
-        le_layout.addWidget(self._py_le)
-
-        cb_layout = QtGui.QHBoxLayout()
-        cb_layout.addWidget(self.activate_cb)
-        cb_layout.addWidget(self.lock_cb)
-        cb_layout.addWidget(self.lock_aspect_cb)
-
-        layout = QtGui.QVBoxLayout()
-
-        layout.addLayout(cb_layout)
-        layout.addLayout(le_layout)
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(self.activate_cb)
+        layout.addWidget(QtGui.QLabel("w: "))
+        layout.addWidget(self._width_le)
+        layout.addWidget(QtGui.QLabel("h: "))
+        layout.addWidget(self._height_le)
+        layout.addWidget(QtGui.QLabel("x0: "))
+        layout.addWidget(self._px_le)
+        layout.addWidget(QtGui.QLabel("y0: "))
+        layout.addWidget(self._py_le)
+        layout.addWidget(self.lock_aspect_cb)
+        layout.addWidget(self.lock_cb)
 
         self.setLayout(layout)
         # left, top, right, bottom
