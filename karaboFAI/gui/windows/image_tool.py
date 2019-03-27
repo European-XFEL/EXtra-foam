@@ -79,6 +79,10 @@ class ImageToolWindow(AbstractWindow):
         self._normalizer_cb = QtGui.QComboBox()
         for v in self._available_img_normalizers:
             self._normalizer_cb.addItem(v)
+        self._normalizer_cb.currentTextChanged.connect(
+            self.onImageNormalizerChange)
+        self._normalizer_cb.currentTextChanged.emit(
+            self._normalizer_cb.currentText())
 
         self._set_ref_btn = QtGui.QPushButton("Set reference image")
         self._set_ref_btn.clicked.connect(self._image_view.setImageRef)
@@ -244,3 +248,11 @@ class ImageToolWindow(AbstractWindow):
         action = QtGui.QAction(icon, description, self)
         tool_bar.addAction(action)
         return action
+
+    @QtCore.pyqtSlot(str)
+    def onImageNormalizerChange(self, text):
+        normalizer = self._available_img_normalizers[text]
+        if normalizer == ImageNormalizer.ROI_SUM:
+            self._image_view.normalization_roi.show()
+        else:
+            self._image_view.normalization_roi.hide()

@@ -212,6 +212,13 @@ class ImageAnalysis(ImageView):
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
+        # add normalization widget
+        self.normalization_roi = RectROI(self.ROI1_POS0, self.ROI_SIZE0,
+                                         lock=False,
+                                         pen=make_pen(config["ROI_COLORS"][2]))
+        self.normalization_roi.hide()
+        self._plot_widget.addItem(self.normalization_roi)
+
         # add cropping widget
         self.crop = CropROI((0, 0), (100, 100))
         self.crop.hide()
