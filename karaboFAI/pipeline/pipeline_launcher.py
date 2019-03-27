@@ -156,17 +156,11 @@ class PipelineLauncher(Worker):
             self._correlation_proc.fom_name = fom
             ProcessedData.clear_correlation_hist()
 
-    def update_roi1_region(self, activated, w, h, px, py):
+    def update_roi_region(self, rank, activated, w, h, px, py):
         if activated:
-            self._roi_proc.roi1 = (w, h, px, py)
+            self._roi_proc.set_roi(rank, (w, h, px, py))
         else:
-            self._roi_proc.roi1 = None
-
-    def update_roi2_region(self, activated, w, h, px, py):
-        if activated:
-            self._roi_proc.roi2 = (w, h, px, py)
-        else:
-            self._roi_proc.roi2 = None
+            self._roi_proc.set_roi(rank, None)
 
     def update_roi_value_type(self, value):
         self._roi_proc.roi_value_type = value
@@ -237,7 +231,7 @@ class PipelineLauncher(Worker):
             return None
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            return None
+            raise
 
         try:
             proc = self._head
@@ -253,6 +247,6 @@ class PipelineLauncher(Worker):
                 proc = proc.next
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            return None
+            raise
 
         return processed_data

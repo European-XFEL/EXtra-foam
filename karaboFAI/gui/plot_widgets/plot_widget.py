@@ -266,7 +266,7 @@ class SinglePulseAiWidget(PlotWidget):
         self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("y"))
 
         if plot_mean:
-            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("c"))
+            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("b"))
         else:
             self._mean_plot = None
 
@@ -379,19 +379,15 @@ class RoiValueMonitor(PlotWidget):
         self.setTitle(' ')
         self.addLegend(offset=(-40, 20))
 
-        self._roi1_plot = self.plotCurve(
-            name="ROI 1", pen=make_pen(config["ROI_COLORS"][0]))
-        self._roi2_plot = self.plotCurve(
-            name="ROI 2", pen=make_pen(config["ROI_COLORS"][1]))
+        self._plots = []
+        for i, c in enumerate(config["ROI_COLORS"], 1):
+            self._plots.append(self.plotCurve(name=f"ROI {i}", pen=make_pen(c)))
 
     def update(self, data):
         """Override."""
-        tids1, roi1_hist, _ = data.roi.roi1_hist
-        self._roi1_plot.setData(
-            tids1[-self._window:], roi1_hist[-self._window:])
-        tids2, roi2_hist, _ = data.roi.roi2_hist
-        self._roi2_plot.setData(
-            tids2[-self._window:], roi2_hist[-self._window:])
+        for i, plot in enumerate(self._plots, 1):
+            tids, roi_hist, _ = getattr(data.roi, f"roi{i}_hist")
+            plot.setData(tids[-self._window:], roi_hist[-self._window:])
 
     @QtCore.pyqtSlot(int)
     def onDisplayRangeChange(self, v):
@@ -403,7 +399,7 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = ['g', 'c', 'y', 'p']
+    _colors = ['g', 'b', 'y', 'p']
     _brushes = {
         0: make_brush(_colors[0], 120),
         1: make_brush(_colors[1], 120),
@@ -485,7 +481,7 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setLabel('left', "ROI (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(brush=make_brush('c'))
+        self._plot = self.plotScatter(brush=make_brush('p'))
 
     def update(self, data):
         """Override."""
@@ -591,7 +587,7 @@ class XasSpectrumWidget(PlotWidget):
         self.setLabel('left', "Absorption")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(brush=make_brush('c'))
+        self._plot = self.plotScatter(brush=make_brush('b'))
 
     def update(self, data):
         """Override."""
@@ -612,7 +608,7 @@ class XasSpectrumDiffWidget(PlotWidget):
         self.setLabel('left', "Absorption")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(brush=make_brush('c'))
+        self._plot = self.plotScatter(brush=make_brush('b'))
 
     def update(self, data):
         """Override."""

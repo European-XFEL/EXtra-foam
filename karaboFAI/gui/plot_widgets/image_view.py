@@ -17,7 +17,7 @@ from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 from .plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
-from ..misc_widgets import colorMapFactory, make_brush, make_pen
+from ..misc_widgets import colorMapFactory
 from ...algorithms import intersection, quick_min_max
 from ...config import config, ImageMaskChange
 from ...logger import logger
@@ -31,20 +31,18 @@ class ImageView(QtGui.QWidget):
 
     Note: it is different from the ImageView in pyqtgraph!
     """
-    ROI1_POS0 = (50, 50)
-    ROI2_POS0 = (60, 60)
+    ROI_X0 = 50
+    ROI_Y0 = 50
     ROI_SIZE0 = (100, 100)
 
     def __init__(self, *, level_mode='mono',
-                 lock_roi=True, hide_axis=True, color_map=None, parent=None):
+                 hide_axis=True, color_map=None, parent=None):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
-        :param bool lock_roi: True for non-movable/non-translatable ROI.
-            This is used in ImageView with passive ROI.
         :param bool hide_axis: True for hiding left and bottom axes.
         """
         super().__init__(parent=parent)
@@ -53,14 +51,8 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
-        self.roi1 = RectROI(self.ROI1_POS0, self.ROI_SIZE0,
-                            lock=lock_roi,
-                            pen=make_pen(config["ROI_COLORS"][0]))
-        self.roi2 = RectROI(self.ROI2_POS0, self.ROI_SIZE0,
-                            lock=lock_roi,
-                            pen=make_pen(config["ROI_COLORS"][1]))
-        self.roi1.hide()
-        self.roi2.hide()
+        self._rois = []
+        self._initializeROIs()
 
         self._plot_widget = PlotWidget()
         if hide_axis:
@@ -71,8 +63,8 @@ class ImageView(QtGui.QWidget):
 
         self._plot_widget.addItem(self._image_item)
         self._plot_widget.addItem(self._mask_item)
-        self._plot_widget.addItem(self.roi1)
-        self._plot_widget.addItem(self.roi2)
+        for roi in self._rois:
+            self._plot_widget.addItem(roi)
         self.invertY(True)
         self.setAspectLocked(True)
 
@@ -107,22 +99,26 @@ class ImageView(QtGui.QWidget):
         """karaboFAI interface."""
         pass
 
-    def updateROI(self, data):
-        if data.roi.roi1 is not None:
-            self.roi1.show()
-            w, h, px, py = data.roi.roi1
-            self.roi1.setSize((w, h), update=False)
-            self.roi1.setPos((px, py), update=False)
-        else:
-            self.roi1.hide()
+    def _initializeROIs(self):
+        for i, color in enumerate(config["ROI_COLORS"], 1):
+            roi = f"roi{i}"
+            setattr(self, roi, RectROI(i, color,
+                                       (self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
+                                       self.ROI_SIZE0))
+            roi_ = getattr(self, roi)
+            roi_.hide()
+            self._rois.append(roi_)
 
-        if data.roi.roi2 is not None:
-            self.roi2.show()
-            w, h, px, py = data.roi.roi2
-            self.roi2.setSize((w, h), update=False)
-            self.roi2.setPos((px, py), update=False)
-        else:
-            self.roi2.hide()
+    def updateROI(self, data):
+        for i, roi in enumerate(self._rois, 1):
+            roi_area = getattr(data.roi, f"roi{i}")
+            if roi_area is not None:
+                roi.show()
+                w, h, px, py = roi_area
+                roi.setSize((w, h), update=False)
+                roi.setPos((px, py), update=False)
+            else:
+                roi.hide()
 
     @property
     def image(self):
@@ -205,19 +201,13 @@ class ImageAnalysis(ImageView):
         self._plot_widget.clear()
         self._plot_widget.addItem(self._image_item)
         self._plot_widget.addItem(self._mask_item)
-        self._plot_widget.addItem(self.roi1)
-        self._plot_widget.addItem(self.roi2)
+        for roi in self._rois:
+            roi.setLocked(False)
+            self._plot_widget.addItem(roi)
 
         self.invertY(True)
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
-
-        # add normalization widget
-        self.normalization_roi = RectROI(self.ROI1_POS0, self.ROI_SIZE0,
-                                         lock=False,
-                                         pen=make_pen(config["ROI_COLORS"][2]))
-        self.normalization_roi.hide()
-        self._plot_widget.addItem(self.normalization_roi)
 
         # add cropping widget
         self.crop = CropROI((0, 0), (100, 100))

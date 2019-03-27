@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import time
+import copy
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
@@ -18,7 +19,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
 from ..algorithms import normalize_curve, slice_curve
-from ..config import AiNormalizer, FomName, OpLaserMode, RoiValueType
+from ..config import config, AiNormalizer, FomName, OpLaserMode, RoiValueType
 from ..logger import logger
 
 
@@ -220,16 +221,20 @@ class RegionOfInterestProcessor(AbstractProcessor):
     """Process region of interest.
 
     Attributes:
-        roi1 (tuple): (w, h, px, py) of the current ROI1.
-        roi2 (tuple): (w, h, px, py) of the current ROI2.
         roi_value_type (int): type of ROI value.
     """
     def __init__(self):
         super().__init__()
 
-        self.roi1 = None
-        self.roi2 = None
+        self._rois = [None] * len(config["ROI_COLORS"])
+
         self.roi_value_type = None
+
+    def get_roi(self, rank):
+        return self._rois[rank-1]
+
+    def set_roi(self, rank, value):
+        self._rois[rank-1] = value
 
     def process(self, proc_data, raw_data=None):
         """Override.
@@ -238,34 +243,25 @@ class RegionOfInterestProcessor(AbstractProcessor):
         activated. This is required for the case that ROI1 and ROI2 were
         activate at different times.
         """
-        roi1 = self.roi1
-        roi2 = self.roi2
+        rois = copy.copy(self._rois)
         roi_value_type = self.roi_value_type
 
         tid = proc_data.tid
         if tid > 0:
             img = proc_data.image.masked_mean
 
-            # it should be valid to set ROI intensity to zero if the data
-            # is not available
-            roi1_value = 0
-            if roi1 is not None:
-                if not self._validate_roi(*roi1, *img.shape):
-                    self.roi1 = None
-                else:
-                    proc_data.roi.roi1 = roi1
-                    roi1_value = self._get_roi_value(roi1, roi_value_type, img)
+            for i, roi in enumerate(rois):
+                # it should be valid to set ROI intensity to zero if the data
+                # is not available
+                value = 0
+                if roi is not None:
+                    if not self._validate_roi(*roi, *img.shape):
+                        self._rois[i] = None
+                    else:
+                        setattr(proc_data.roi, f"roi{i+1}", roi)
+                        value = self._get_roi_value(roi, roi_value_type, img)
 
-            roi2_value = 0
-            if roi2 is not None:
-                if not self._validate_roi(*roi2, *img.shape):
-                    self.roi2 = None
-                else:
-                    proc_data.roi.roi2 = roi2
-                    roi2_value = self._get_roi_value(roi2, roi_value_type, img)
-
-            proc_data.roi.roi1_hist = (tid, roi1_value)
-            proc_data.roi.roi2_hist = (tid, roi2_value)
+                setattr(proc_data.roi, f"roi{i+1}_hist", (tid, value))
 
     @staticmethod
     def _get_roi_value(roi_param, roi_value_type, full_image):

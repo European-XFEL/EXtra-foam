@@ -171,7 +171,7 @@ class AccumulatedTrainData(TrainData):
         self._y.pop_first()
 
 
-class AbstractData(abc.ABC):
+class AbstractData:
     @classmethod
     def clear(cls):
         for attr in cls.__dict__.values():
@@ -183,14 +183,21 @@ class AbstractData(abc.ABC):
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
-    # (sum/mean) histories of ROI1 and ROI2
-    roi1_hist = TrainData()
-    roi2_hist = TrainData()
+    __initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls, *args, **kwargs)
+        # (sum/mean) histories of ROIs
+        if not cls.__initialized:
+            for i, _ in enumerate(config["ROI_COLORS"], 1):
+                setattr(cls, f"roi{i}_hist", TrainData())
+            cls.__initialized = True
+        return instance
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.roi1 = None  # (w, h, px, py)
-        self.roi2 = None  # (w, h, px, py)
+        for i, _ in enumerate(config["ROI_COLORS"], 1):
+            setattr(self, f"roi{i}", None)   # (w, h, px, py)
 
 
 class LaserOnOffData(AbstractData):

@@ -49,8 +49,7 @@ class ImageToolWindow(AbstractWindow):
 
         mediator = Mediator()
 
-        self._image_view = ImageAnalysis(
-            lock_roi=False, hide_axis=False, parent=self)
+        self._image_view = ImageAnalysis(hide_axis=False, parent=self)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
@@ -87,15 +86,12 @@ class ImageToolWindow(AbstractWindow):
         self._set_ref_btn = QtGui.QPushButton("Set reference image")
         self._set_ref_btn.clicked.connect(self._image_view.setImageRef)
 
-        self._roi1_ctrl = RoiCtrlWidget(
-            self._image_view.roi1,
-            title="ROI 1 ({})".format(config['ROI_COLORS'][0]))
-        self._roi2_ctrl = RoiCtrlWidget(
-            self._image_view.roi2,
-            title="ROI 2 ({})".format(config['ROI_COLORS'][1]))
-
-        self._roi1_ctrl.roi_region_change_sgn.connect(mediator.onRoi1Change)
-        self._roi2_ctrl.roi_region_change_sgn.connect(mediator.onRoi2Change)
+        self._roi_ctrls = []
+        roi_colors = config['ROI_COLORS']
+        for i, color in enumerate(roi_colors, 1):
+            widget = RoiCtrlWidget(getattr(self._image_view, f"roi{i}"))
+            self._roi_ctrls.append(widget)
+            widget.roi_region_change_sgn.connect(mediator.onRoiChange)
 
         #
         # image tool bar
@@ -188,26 +184,26 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
+        general_ctrl_layout = QtGui.QGridLayout()
+        general_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 0, 0)
+        general_ctrl_layout.addWidget(self._bkg_le, 0, 1)
+        general_ctrl_layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0)
+        general_ctrl_layout.addWidget(self._normalizer_cb, 1, 1)
+        general_ctrl_layout.addWidget(self._set_ref_btn, 2, 0, 3, 2)
+
         roi_ctrl_layout = QtGui.QGridLayout()
         roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
         roi_ctrl_layout.addWidget(self._roi_value_type_cb, 0, 1)
         roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
         roi_ctrl_layout.addWidget(self._roi_displayed_range_le, 0, 3)
         roi_ctrl_layout.addWidget(self._clear_roi_hist_btn, 0, 4)
-        roi_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 1, 0)
-        roi_ctrl_layout.addWidget(self._bkg_le, 1, 1)
-        roi_ctrl_layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 2)
-        roi_ctrl_layout.addWidget(self._normalizer_cb, 1, 3)
-        roi_ctrl_layout.addWidget(self._set_ref_btn, 1, 4)
+        for i, roi_ctrl in enumerate(self._roi_ctrls, 1):
+            roi_ctrl_layout.addWidget(roi_ctrl, i, 0, 1, 5)
 
-        tool_layout = QtGui.QVBoxLayout()
-        tool_layout.addLayout(roi_ctrl_layout)
-        tool_layout.addWidget(self._roi1_ctrl)
-        tool_layout.addWidget(self._roi2_ctrl)
-
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._image_view)
-        layout.addLayout(tool_layout)
+        layout = QtGui.QGridLayout()
+        layout.addWidget(self._image_view, 0, 0, 1, 3)
+        layout.addLayout(roi_ctrl_layout, 1, 0, 1, 2)
+        layout.addLayout(general_ctrl_layout, 1, 2, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -252,7 +248,7 @@ class ImageToolWindow(AbstractWindow):
     @QtCore.pyqtSlot(str)
     def onImageNormalizerChange(self, text):
         normalizer = self._available_img_normalizers[text]
-        if normalizer == ImageNormalizer.ROI_SUM:
-            self._image_view.normalization_roi.show()
-        else:
-            self._image_view.normalization_roi.hide()
+        # if normalizer == ImageNormalizer.ROI_SUM:
+        #     self._image_view.normalization_roi.show()
+        # else:
+        #     self._image_view.normalization_roi.hide()

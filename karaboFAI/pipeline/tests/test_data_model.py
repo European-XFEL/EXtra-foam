@@ -4,10 +4,27 @@ import numpy as np
 
 from karaboFAI.pipeline.data_model import (
     AbstractData, AccumulatedTrainData, CorrelationData, ImageData,
-    ProcessedData, TrainData
+    ProcessedData, RoiData, TrainData
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config, ImageMaskChange
+
+
+class TestRoiData(unittest.TestCase):
+    def test_general(self):
+        data = RoiData()
+
+        n_rois = len(config["ROI_COLORS"])
+        for i in range(1, n_rois+1):
+            self.assertTrue(hasattr(RoiData, f"roi{i}_hist"))
+            self.assertIsInstance(getattr(RoiData, f"roi{i}_hist"), TrainData)
+            self.assertTrue(hasattr(data, f"roi{i}"))
+
+        with self.assertRaises(AttributeError):
+            getattr(RoiData, f"roi{n_rois+1}_hist")
+
+        with self.assertRaises(AttributeError):
+            getattr(data, f"roi{n_rois+1}")
 
 
 class TestImageData(unittest.TestCase):

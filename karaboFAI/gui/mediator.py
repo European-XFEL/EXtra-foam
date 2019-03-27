@@ -61,13 +61,9 @@ class Mediator(QtCore.QObject):
     def onRoiValueTypeChange(self, state):
         self._proc.update_roi_value_type(state)
 
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi1Change(self, activated, w, h, px, py):
-        self._proc.update_roi1_region(activated, w, h, px, py)
-
-    @QtCore.pyqtSlot(bool, int, int, int, int)
-    def onRoi2Change(self, activated, w, h, px, py):
-        self._proc.update_roi2_region(activated, w, h, px, py)
+    @QtCore.pyqtSlot(int, bool, int, int, int, int)
+    def onRoiChange(self, rank, activated, w, h, px, py):
+        self._proc.update_roi_region(rank, activated, w, h, px, py)
 
     def updateVipPulseIds(self):
         self.update_vip_pulse_ids_sgn.emit()
