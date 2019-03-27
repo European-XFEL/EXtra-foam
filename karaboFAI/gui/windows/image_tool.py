@@ -19,8 +19,7 @@ from .base_window import AbstractWindow, SingletonWindow
 from ..mediator import Mediator
 from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget, RoiCtrlWidget
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiValueType, ImageMaskChange
-from ...logger import logger
+from ...config import config, RoiValueType, ImageMaskChange, ImageNormalizer
 
 
 @SingletonWindow
@@ -34,6 +33,11 @@ class ImageToolWindow(AbstractWindow):
     _available_roi_value_types = OrderedDict({
         "sum": RoiValueType.SUM,
         "mean": RoiValueType.MEAN,
+    })
+
+    _available_img_normalizers = OrderedDict({
+        "None": ImageNormalizer.NONE,
+        "ROI_SUM": ImageNormalizer.ROI_SUM
     })
 
     roi_value_type_sgn = QtCore.pyqtSignal(object)
@@ -72,9 +76,9 @@ class ImageToolWindow(AbstractWindow):
         self._bkg_le.setValidator(QtGui.QDoubleValidator())
         self._bkg_le.editingFinished.connect(self._image_view.onBkgChange)
 
-        self._lock_bkg_cb = QtGui.QCheckBox("Lock background")
-        self._lock_bkg_cb.stateChanged.connect(
-            lambda x: self._bkg_le.setEnabled(x != QtCore.Qt.Checked))
+        self._normalizer_cb = QtGui.QComboBox()
+        for v in self._available_img_normalizers:
+            self._normalizer_cb.addItem(v)
 
         self._set_ref_btn = QtGui.QPushButton("Set reference image")
         self._set_ref_btn.clicked.connect(self._image_view.setImageRef)
@@ -188,8 +192,9 @@ class ImageToolWindow(AbstractWindow):
         roi_ctrl_layout.addWidget(self._clear_roi_hist_btn, 0, 4)
         roi_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 1, 0)
         roi_ctrl_layout.addWidget(self._bkg_le, 1, 1)
-        roi_ctrl_layout.addWidget(self._lock_bkg_cb, 1, 2)
-        roi_ctrl_layout.addWidget(self._set_ref_btn, 1, 3, 1, 2)
+        roi_ctrl_layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 2)
+        roi_ctrl_layout.addWidget(self._normalizer_cb, 1, 3)
+        roi_ctrl_layout.addWidget(self._set_ref_btn, 1, 4)
 
         tool_layout = QtGui.QVBoxLayout()
         tool_layout.addLayout(roi_ctrl_layout)
