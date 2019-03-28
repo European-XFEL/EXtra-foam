@@ -17,13 +17,15 @@ from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 class Colors:
     def __init__(self, alpha):
-        self.r = (240, 59, 32, alpha)  # red
-        self.g = (49, 163, 84, alpha)  # green
-        self.b = (49, 130, 189, alpha)  # blue
-        self.p = (117, 107, 177, alpha)  # purple
-        self.y = (247, 252, 185, alpha)  # yellow
-        self.w = (248, 249, 249, alpha)  # white
-        self.e = (169, 169, 169, alpha)  # dark grey
+        self.r = (215, 25, 28, alpha)  # red
+        self.o = (253, 174, 97, alpha)  # orange
+        self.y = (255, 255, 191, alpha)  # yellow
+        self.c = (171, 217, 233, alpha)  # cyan
+        self.b = (44, 123, 182, alpha)  # blue
+        self.g = (26, 150, 65, alpha)  # green
+        self.p = (94, 60, 153, alpha)  # purple
+        self.w = (247, 247, 247, alpha)  # white
+        self.e = (186, 186, 186, alpha)  # dark grey
 
 
 def make_pen(color, width=2, alpha=255, **kwargs):

@@ -19,7 +19,7 @@ class RectROI(ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, rank, color, pos, size):
+    def __init__(self, rank, color, pos, size, *, style=QtCore.Qt.SolidLine):
         """Initialization.
 
         :param int rank: rank of the ROI.
@@ -28,7 +28,7 @@ class RectROI(ROI):
         super().__init__(pos, size,
                          translateSnap=True,
                          scaleSnap=True,
-                         pen=make_pen(color))
+                         pen=make_pen(color, style=style))
 
         self.rank = rank
         self.color = color

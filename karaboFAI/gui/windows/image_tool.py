@@ -28,16 +28,71 @@ class ImageToolWindow(AbstractWindow):
 
     This tool provides selecting of ROI and image masking.
     """
+    class ImageProcWidget(QtGui.QGroupBox):
+
+        _available_img_normalizers = OrderedDict({
+            "None": ImageNormalizer.NONE,
+            "ROI_SUM": ImageNormalizer.ROI_SUM
+        })
+
+        _pos_validator = QtGui.QIntValidator(-10000, 10000)
+        _size_validator = QtGui.QIntValidator(0, 10000)
+
+        image_normalizer_change_sgn = QtCore.pyqtSignal(int)
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+            self.bkg_le = QtGui.QLineEdit(str(0.0))
+            self.bkg_le.setValidator(QtGui.QDoubleValidator())
+
+            self._normalizer_cb = QtGui.QComboBox()
+            for v in self._available_img_normalizers:
+                self._normalizer_cb.addItem(v)
+            self._normalizer_cb.currentTextChanged.emit(
+                self._normalizer_cb.currentText())
+            self._normalizer_cb.currentTextChanged.connect(
+                lambda x: self.image_normalizer_change_sgn.emit(
+                    self._available_img_normalizers[x]))
+
+            self._width_le = QtGui.QLineEdit()
+            self._width_le.setValidator(self._size_validator)
+            self._height_le = QtGui.QLineEdit()
+            self._height_le.setValidator(self._size_validator)
+            self._px_le = QtGui.QLineEdit()
+            self._px_le.setValidator(self._pos_validator)
+            self._py_le = QtGui.QLineEdit()
+            self._py_le.setValidator(self._pos_validator)
+
+            self.set_ref_btn = QtGui.QPushButton("Set reference image")
+
+            self.initUI()
+
+        def initUI(self):
+            """Override."""
+            AR = QtCore.Qt.AlignRight
+
+            layout = QtGui.QGridLayout()
+            layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
+            layout.addWidget(self.bkg_le, 0, 2, 1, 2)
+            layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
+            layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
+            layout.addWidget(QtGui.QLabel("w: "), 2, 0)
+            layout.addWidget(self._width_le, 2, 1)
+            layout.addWidget(QtGui.QLabel("h: "), 2, 2)
+            layout.addWidget(self._height_le, 2, 3)
+            layout.addWidget(QtGui.QLabel("x: "), 3, 0)
+            layout.addWidget(self._px_le, 3, 1)
+            layout.addWidget(QtGui.QLabel("y: "), 3, 2)
+            layout.addWidget(self._py_le, 3, 3)
+            layout.addWidget(self.set_ref_btn, 4, 0, 1, 4)
+            self.setLayout(layout)
+
     title = "Image tool"
 
     _available_roi_value_types = OrderedDict({
         "sum": RoiValueType.SUM,
         "mean": RoiValueType.MEAN,
-    })
-
-    _available_img_normalizers = OrderedDict({
-        "None": ImageNormalizer.NONE,
-        "ROI_SUM": ImageNormalizer.ROI_SUM
     })
 
     roi_value_type_sgn = QtCore.pyqtSignal(object)
@@ -71,20 +126,14 @@ class ImageToolWindow(AbstractWindow):
         self._roi_value_type_cb.currentTextChanged.emit(
             self._roi_value_type_cb.currentText())
 
-        self._bkg_le = QtGui.QLineEdit(str(0.0))
-        self._bkg_le.setValidator(QtGui.QDoubleValidator())
-        self._bkg_le.editingFinished.connect(self._image_view.onBkgChange)
+        self._image_proc_widget = self.ImageProcWidget(parent=self)
 
-        self._normalizer_cb = QtGui.QComboBox()
-        for v in self._available_img_normalizers:
-            self._normalizer_cb.addItem(v)
-        self._normalizer_cb.currentTextChanged.connect(
-            self.onImageNormalizerChange)
-        self._normalizer_cb.currentTextChanged.emit(
-            self._normalizer_cb.currentText())
-
-        self._set_ref_btn = QtGui.QPushButton("Set reference image")
-        self._set_ref_btn.clicked.connect(self._image_view.setImageRef)
+        self._image_proc_widget.bkg_le.editingFinished.connect(
+            self._image_view.onBkgChange)
+        self._image_proc_widget.set_ref_btn.clicked.connect(
+            self._image_view.setImageRef)
+        self._image_proc_widget.image_normalizer_change_sgn.connect(
+            self._image_view.onImageNormalizerChange)
 
         self._roi_ctrls = []
         roi_colors = config['ROI_COLORS']
@@ -184,13 +233,6 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
-        general_ctrl_layout = QtGui.QGridLayout()
-        general_ctrl_layout.addWidget(QtGui.QLabel("Background level: "), 0, 0)
-        general_ctrl_layout.addWidget(self._bkg_le, 0, 1)
-        general_ctrl_layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0)
-        general_ctrl_layout.addWidget(self._normalizer_cb, 1, 1)
-        general_ctrl_layout.addWidget(self._set_ref_btn, 2, 0, 3, 2)
-
         roi_ctrl_layout = QtGui.QGridLayout()
         roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
         roi_ctrl_layout.addWidget(self._roi_value_type_cb, 0, 1)
@@ -203,7 +245,7 @@ class ImageToolWindow(AbstractWindow):
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 3)
         layout.addLayout(roi_ctrl_layout, 1, 0, 1, 2)
-        layout.addLayout(general_ctrl_layout, 1, 2, 1, 1)
+        layout.addWidget(self._image_proc_widget, 1, 2, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -244,11 +286,3 @@ class ImageToolWindow(AbstractWindow):
         action = QtGui.QAction(icon, description, self)
         tool_bar.addAction(action)
         return action
-
-    @QtCore.pyqtSlot(str)
-    def onImageNormalizerChange(self, text):
-        normalizer = self._available_img_normalizers[text]
-        # if normalizer == ImageNormalizer.ROI_SUM:
-        #     self._image_view.normalization_roi.show()
-        # else:
-        #     self._image_view.normalization_roi.hide()

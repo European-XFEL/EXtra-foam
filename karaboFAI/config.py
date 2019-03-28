@@ -147,7 +147,7 @@ class Config(dict):
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
-        "ROI_COLORS": ('purple', 'green', 'red', 'blue')
+        "ROI_COLORS": ('r', 'b', 'c', 'o')
     }
 
     _detector_readonly_config_keys = (
