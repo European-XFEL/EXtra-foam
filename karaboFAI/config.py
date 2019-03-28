@@ -51,7 +51,7 @@ class AiNormalizer(IntEnum):
     ROI = 1
 
 
-class RoiValueType(IntEnum):
+class RoiFom(IntEnum):
     SUM = 0  # monitor sum of ROI
     MEAN = 1  # monitor mean of ROI
 

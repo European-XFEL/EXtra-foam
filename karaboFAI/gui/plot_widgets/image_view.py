@@ -101,13 +101,11 @@ class ImageView(QtGui.QWidget):
 
     def _initializeROIs(self):
         for i, color in enumerate(config["ROI_COLORS"], 1):
-            roi = f"roi{i}"
-            setattr(self, roi, RectROI(i, color,
-                                       (self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
-                                       self.ROI_SIZE0))
-            roi_ = getattr(self, roi)
-            roi_.hide()
-            self._rois.append(roi_)
+            roi = RectROI(i, color,
+                          (self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
+                          self.ROI_SIZE0)
+            roi.hide()
+            self._rois.append(roi)
 
     def updateROI(self, data):
         for i, roi in enumerate(self._rois, 1):
@@ -123,6 +121,10 @@ class ImageView(QtGui.QWidget):
     @property
     def image(self):
         return self._image
+
+    @property
+    def rois(self):
+        return self._rois
 
     def setImage(self, img, *, auto_range=False, auto_levels=False):
         """Set the current displayed image.
@@ -210,11 +212,11 @@ class ImageAnalysis(ImageView):
         self._hist_widget.setImageItem(self._image_item)
 
         # add ROI for image normalization
-        self._normalization = RectROI(99, 'g', (0, 0), (100, 100),
+        self.normalization = RectROI(99, 'g', (0, 0), (100, 100),
                                       style=QtCore.Qt.DotLine)
-        self._normalization.setLocked(False)
-        self._normalization.hide()
-        self._plot_widget.addItem(self._normalization)
+        self.normalization.setLocked(False)
+        self.normalization.hide()
+        self._plot_widget.addItem(self.normalization)
 
         # add cropping widget
         self.crop = CropROI((0, 0), (100, 100))
@@ -282,9 +284,9 @@ class ImageAnalysis(ImageView):
     @QtCore.pyqtSlot(int)
     def onImageNormalizerChange(self, value):
         if value == ImageNormalizer.ROI_SUM:
-            self._normalization.show()
+            self.normalization.show()
         else:
-            self._normalization.hide()
+            self.normalization.hide()
 
     @QtCore.pyqtSlot()
     def onRestoreImage(self):

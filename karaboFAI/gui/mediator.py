@@ -58,8 +58,8 @@ class Mediator(QtCore.QObject):
         self._proc.clear_roi_hist()
 
     @QtCore.pyqtSlot(object)
-    def onRoiValueTypeChange(self, state):
-        self._proc.update_roi_value_type(state)
+    def onRoiFomChange(self, state):
+        self._proc.update_roi_fom(state)
 
     @QtCore.pyqtSlot(int, bool, int, int, int, int)
     def onRoiChange(self, rank, activated, w, h, px, py):

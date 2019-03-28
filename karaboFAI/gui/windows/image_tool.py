@@ -17,94 +17,163 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_window import AbstractWindow, SingletonWindow
 from ..mediator import Mediator
-from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget, RoiCtrlWidget
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiValueType, ImageMaskChange, ImageNormalizer
+from ...config import config, RoiFom, ImageMaskChange, ImageNormalizer
 
 
-@SingletonWindow
-class ImageToolWindow(AbstractWindow):
-    """ImageToolWindow class.
+class _RoiCtrlWidgetBase(QtGui.QWidget):
+    """Base class for RoiCtrlWidget.
 
-    This tool provides selecting of ROI and image masking.
+    Implemented four QLineEdits (w, h, x, y) and their connection to the
+    corresponding ROI.
     """
-    class ImageProcWidget(QtGui.QGroupBox):
+    # rank, activated, w, h, px, py
+    roi_region_change_sgn = QtCore.Signal(int, bool, int, int, int, int)
 
-        _available_img_normalizers = OrderedDict({
-            "None": ImageNormalizer.NONE,
-            "ROI_SUM": ImageNormalizer.ROI_SUM
-        })
+    _pos_validator = QtGui.QIntValidator(-10000, 10000)
+    _size_validator = QtGui.QIntValidator(0, 10000)
 
-        _pos_validator = QtGui.QIntValidator(-10000, 10000)
-        _size_validator = QtGui.QIntValidator(0, 10000)
+    def __init__(self, roi, *, parent=None):
+        super().__init__(parent=parent)
+        self._roi = roi
 
-        image_normalizer_change_sgn = QtCore.pyqtSignal(int)
+        self._width_le = QtGui.QLineEdit()
+        self._width_le.setValidator(self._size_validator)
+        self._height_le = QtGui.QLineEdit()
+        self._height_le.setValidator(self._size_validator)
+        self._px_le = QtGui.QLineEdit()
+        self._px_le.setValidator(self._pos_validator)
+        self._py_le = QtGui.QLineEdit()
+        self._py_le.setValidator(self._pos_validator)
+        self._width_le.editingFinished.connect(self.onRoiRegionEdited)
+        self._height_le.editingFinished.connect(self.onRoiRegionEdited)
+        self._px_le.editingFinished.connect(self.onRoiRegionEdited)
+        self._py_le.editingFinished.connect(self.onRoiRegionEdited)
 
-        def __init__(self, parent=None):
-            super().__init__(parent)
+        self._line_edits = (self._width_le, self._height_le,
+                            self._px_le, self._py_le)
 
-            self.bkg_le = QtGui.QLineEdit(str(0.0))
-            self.bkg_le.setValidator(QtGui.QDoubleValidator())
+        roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
+        roi.sigRegionChangeFinished.emit(roi)  # fill the QLineEdit(s)
 
-            self._normalizer_cb = QtGui.QComboBox()
-            for v in self._available_img_normalizers:
-                self._normalizer_cb.addItem(v)
-            self._normalizer_cb.currentTextChanged.emit(
-                self._normalizer_cb.currentText())
-            self._normalizer_cb.currentTextChanged.connect(
-                lambda x: self.image_normalizer_change_sgn.emit(
-                    self._available_img_normalizers[x]))
+    @QtCore.pyqtSlot()
+    def onRoiRegionEdited(self):
+        w = int(self._width_le.text())
+        h = int(self._height_le.text())
+        px = int(self._px_le.text())
+        py = int(self._py_le.text())
 
-            self._width_le = QtGui.QLineEdit()
-            self._width_le.setValidator(self._size_validator)
-            self._height_le = QtGui.QLineEdit()
-            self._height_le.setValidator(self._size_validator)
-            self._px_le = QtGui.QLineEdit()
-            self._px_le.setValidator(self._pos_validator)
-            self._py_le = QtGui.QLineEdit()
-            self._py_le.setValidator(self._pos_validator)
+        # If 'update' == False, the state change will be remembered
+        # but not processed and no signals will be emitted.
+        self._roi.setSize((w, h), update=False)
+        self._roi.setPos((px, py), update=False)
+        self._roi.stateChanged(finish=False)
+        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
 
-            self.set_ref_btn = QtGui.QPushButton("Set reference image")
+    @QtCore.pyqtSlot(object)
+    def onRoiRegionChangeFinished(self, roi):
+        """Connect to the signal from an ROI object."""
+        w, h = [int(v) for v in self._roi.size()]
+        px, py = [int(v) for v in self._roi.pos()]
+        self.updateParameters(w, h, px, py)
+        # inform widgets outside this window
+        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
 
-            self.initUI()
+    def updateParameters(self, w, h, px, py):
+        self._width_le.setText(str(w))
+        self._height_le.setText(str(h))
+        self._px_le.setText(str(px))
+        self._py_le.setText(str(py))
 
-        def initUI(self):
-            """Override."""
-            AR = QtCore.Qt.AlignRight
+    @property
+    def line_edits(self):
+        return self._line_edits
 
-            layout = QtGui.QGridLayout()
-            layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
-            layout.addWidget(self.bkg_le, 0, 2, 1, 2)
-            layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
-            layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
-            layout.addWidget(QtGui.QLabel("w: "), 2, 0)
-            layout.addWidget(self._width_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("h: "), 2, 2)
-            layout.addWidget(self._height_le, 2, 3)
-            layout.addWidget(QtGui.QLabel("x: "), 3, 0)
-            layout.addWidget(self._px_le, 3, 1)
-            layout.addWidget(QtGui.QLabel("y: "), 3, 2)
-            layout.addWidget(self._py_le, 3, 3)
-            layout.addWidget(self.set_ref_btn, 4, 0, 1, 4)
-            self.setLayout(layout)
 
-    title = "Image tool"
+class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
+    """Widget for controlling of a single ROI."""
 
-    _available_roi_value_types = OrderedDict({
-        "sum": RoiValueType.SUM,
-        "mean": RoiValueType.MEAN,
+    def __init__(self, roi, *, parent=None):
+        """Initialization.
+
+        :param RectROI roi: RectROI object.
+        """
+        super().__init__(roi, parent=parent)
+
+        self.activate_cb = QtGui.QCheckBox("On")
+        self.lock_cb = QtGui.QCheckBox("Lock")
+
+        self.initUI()
+
+        self.disableAllEdit()
+
+        self.activate_cb.stateChanged.connect(self.onToggleRoiActivation)
+        self.lock_cb.stateChanged.connect(self.onLock)
+
+    def initUI(self):
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel(
+            f"ROI{self._roi.rank} ({self._roi.color[0]}): "))
+        layout.addWidget(self.activate_cb)
+        layout.addWidget(self.lock_cb)
+        layout.addWidget(QtGui.QLabel("w: "))
+        layout.addWidget(self._width_le)
+        layout.addWidget(QtGui.QLabel("h: "))
+        layout.addWidget(self._height_le)
+        layout.addWidget(QtGui.QLabel("x: "))
+        layout.addWidget(self._px_le)
+        layout.addWidget(QtGui.QLabel("y: "))
+        layout.addWidget(self._py_le)
+
+        self.setLayout(layout)
+        # left, top, right, bottom
+        self.layout().setContentsMargins(2, 1, 2, 1)
+
+    @QtCore.pyqtSlot(int)
+    def onToggleRoiActivation(self, state):
+        if state == QtCore.Qt.Checked:
+            self._roi.show()
+            self.enableAllEdit()
+            self.roi_region_change_sgn.emit(
+                self._roi.rank, True, *self._roi.size(), *self._roi.pos())
+        else:
+            self._roi.hide()
+            self.disableAllEdit()
+            self.roi_region_change_sgn.emit(
+                self._roi.rank, False, *self._roi.size(), *self._roi.pos())
+
+    @QtCore.pyqtSlot(int)
+    def onLock(self, state):
+        self._roi.setLocked(state == QtCore.Qt.Checked)
+        self._setEditable(not state == QtCore.Qt.Checked)
+
+    def _setEditable(self, editable):
+        for w in self._line_edits:
+            w.setDisabled(not editable)
+
+    def disableAllEdit(self):
+        self._setEditable(False)
+        self.lock_cb.setDisabled(True)
+
+    def enableAllEdit(self):
+        self.lock_cb.setDisabled(False)
+        self._setEditable(True)
+
+
+class _RoisCtrlWidget(QtGui.QGroupBox):
+    """Widget for controlling of a group of ROIs."""
+
+    _available_roi_foms = OrderedDict({
+        "sum": RoiFom.SUM,
+        "mean": RoiFom.MEAN,
     })
 
-    roi_value_type_sgn = QtCore.pyqtSignal(object)
+    roi_fom_sgn = QtCore.pyqtSignal(object)
 
-    _root_dir = osp.dirname(osp.abspath(__file__))
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, rois, *, parent=None):
+        super().__init__(parent)
 
         mediator = Mediator()
-
-        self._image_view = ImageAnalysis(hide_axis=False, parent=self)
 
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
@@ -116,17 +185,202 @@ class ImageToolWindow(AbstractWindow):
         self._roi_displayed_range_le.editingFinished.connect(
             mediator.onRoiDisplayedRangeChange)
 
-        self._roi_value_type_cb = QtGui.QComboBox()
-        for v in self._available_roi_value_types:
-            self._roi_value_type_cb.addItem(v)
-        self._roi_value_type_cb.currentTextChanged.connect(
-            lambda x: self.roi_value_type_sgn.emit(
-                self._available_roi_value_types[x]))
-        self.roi_value_type_sgn.connect(mediator.onRoiValueTypeChange)
-        self._roi_value_type_cb.currentTextChanged.emit(
-            self._roi_value_type_cb.currentText())
+        self._roi_fom_cb = QtGui.QComboBox()
+        for v in self._available_roi_foms:
+            self._roi_fom_cb.addItem(v)
+        self._roi_fom_cb.currentTextChanged.connect(
+            lambda x: self.roi_fom_sgn.emit(
+                self._available_roi_foms[x]))
+        self.roi_fom_sgn.connect(mediator.onRoiFomChange)
+        self._roi_fom_cb.currentTextChanged.emit(
+            self._roi_fom_cb.currentText())
 
-        self._image_proc_widget = self.ImageProcWidget(parent=self)
+        self._roi_ctrls = []
+        for roi in rois:
+            widget = _SingleRoiCtrlWidget(roi)
+            self._roi_ctrls.append(widget)
+            widget.roi_region_change_sgn.connect(mediator.onRoiChange)
+
+        self.initUI()
+
+    def initUI(self):
+        layout = QtGui.QGridLayout()
+        layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
+        layout.addWidget(self._roi_fom_cb, 0, 1)
+        layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
+        layout.addWidget(self._roi_displayed_range_le, 0, 3)
+        layout.addWidget(self._clear_roi_hist_btn, 0, 4)
+        for i, roi_ctrl in enumerate(self._roi_ctrls, 1):
+            layout.addWidget(roi_ctrl, i, 0, 1, 5)
+        self.setLayout(layout)
+
+
+class _ImageCtrlWidget(QtGui.QWidget):
+    """Widget inside the action bar for masking image."""
+
+    moving_avg_window_sgn = QtCore.pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        """Initialization"""
+        super().__init__(parent=parent)
+
+        self._moving_avg_le = QtGui.QLineEdit(str(1))
+        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 1000000))
+        self._moving_avg_le.setMinimumWidth(60)
+        self._moving_avg_le.returnPressed.connect(lambda:
+            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
+
+        self.initUI()
+
+        self.setFixedSize(self.minimumSizeHint())
+
+    def initUI(self):
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Moving average: "))
+        layout.addWidget(self._moving_avg_le)
+
+        self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
+
+
+class _MaskCtrlWidget(QtGui.QWidget):
+    """Widget inside the action bar for masking image."""
+
+    threshold_mask_sgn = QtCore.pyqtSignal(float, float)
+
+    _double_validator = QtGui.QDoubleValidator()
+
+    def __init__(self, parent=None):
+        """Initialization"""
+        super().__init__(parent=parent)
+
+        self._min_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][0]))
+        self._min_pixel_le.setValidator(self._double_validator)
+        # avoid collapse on online and maxwell clusters
+        self._min_pixel_le.setMinimumWidth(60)
+        self._min_pixel_le.returnPressed.connect(
+            self.onThresholdMaskChanged)
+        self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
+        self._max_pixel_le.setValidator(self._double_validator)
+        self._max_pixel_le.setMinimumWidth(60)
+        self._max_pixel_le.returnPressed.connect(
+            self.onThresholdMaskChanged)
+
+        self.initUI()
+
+        self.setFixedSize(self.minimumSizeHint())
+
+    def initUI(self):
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Min. mask: "))
+        layout.addWidget(self._min_pixel_le)
+        layout.addWidget(QtGui.QLabel("Max. mask: "))
+        layout.addWidget(self._max_pixel_le)
+
+        self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
+
+    def onThresholdMaskChanged(self):
+        self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
+                                     float(self._max_pixel_le.text()))
+
+
+class _ImageProcWidget(QtGui.QGroupBox):
+
+    class RoiWidget(_RoiCtrlWidgetBase):
+        def __init__(self, roi, *, parent=None):
+            super().__init__(roi, parent=parent)
+
+            self.initUI()
+
+        def initUI(self):
+            """Override."""
+            layout = QtGui.QGridLayout()
+            layout.addWidget(QtGui.QLabel("w: "), 2, 0)
+            layout.addWidget(self._width_le, 2, 1)
+            layout.addWidget(QtGui.QLabel("h: "), 2, 2)
+            layout.addWidget(self._height_le, 2, 3)
+            layout.addWidget(QtGui.QLabel("x: "), 3, 0)
+            layout.addWidget(self._px_le, 3, 1)
+            layout.addWidget(QtGui.QLabel("y: "), 3, 2)
+            layout.addWidget(self._py_le, 3, 3)
+            self.setLayout(layout)
+
+    _available_img_normalizers = OrderedDict({
+        "None": ImageNormalizer.NONE,
+        "ROI sum": ImageNormalizer.ROI_SUM
+    })
+
+    image_normalizer_change_sgn = QtCore.pyqtSignal(int)
+
+    def __init__(self, roi, *, parent=None):
+        super().__init__(parent)
+
+        self.bkg_le = QtGui.QLineEdit(str(0.0))
+        self.bkg_le.setValidator(QtGui.QDoubleValidator())
+
+        self._normalizer_cb = QtGui.QComboBox()
+        for v in self._available_img_normalizers:
+            self._normalizer_cb.addItem(v)
+        self._normalizer_cb.currentTextChanged.connect(
+            lambda x: self.image_normalizer_change_sgn.emit(
+                self._available_img_normalizers[x]))
+
+        self.roi_ctrl = self.RoiWidget(roi)
+
+        self.set_ref_btn = QtGui.QPushButton("Set reference image")
+
+        self.initUI()
+
+        self.image_normalizer_change_sgn.connect(self.onImageNormalizerChange)
+
+        self._normalizer_cb.currentTextChanged.emit(
+            self._normalizer_cb.currentText())
+
+    def initUI(self):
+        """Override."""
+        AR = QtCore.Qt.AlignRight
+
+        layout = QtGui.QGridLayout()
+        layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
+        layout.addWidget(self.bkg_le, 0, 2, 1, 2)
+        layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
+        layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
+        layout.addWidget(self.roi_ctrl, 2, 0, 2, 4)
+        layout.addWidget(self.set_ref_btn, 4, 0, 1, 4)
+        self.setLayout(layout)
+
+    @QtCore.pyqtSlot(int)
+    def onImageNormalizerChange(self, value):
+        if value == ImageNormalizer.ROI_SUM:
+            for widget in self.roi_ctrl.line_edits:
+                widget.setEnabled(True)
+        else:
+            for widget in self.roi_ctrl.line_edits:
+                widget.setEnabled(False)
+
+@SingletonWindow
+class ImageToolWindow(AbstractWindow):
+    """ImageToolWindow class.
+
+    This is the second Main GUI which focuses on manipulating the image
+    , e.g. selecting ROI, masking, cropping, normalization, for different
+    data analysis scenarios.
+    """
+
+    title = "Image tool"
+
+    _root_dir = osp.dirname(osp.abspath(__file__))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._image_view = ImageAnalysis(hide_axis=False, parent=self)
+
+        self._roi_ctrl_widget = _RoisCtrlWidget(
+            self._image_view.rois, parent=self)
+        self._image_proc_widget = _ImageProcWidget(
+            self._image_view.normalization, parent=self)
 
         self._image_proc_widget.bkg_le.editingFinished.connect(
             self._image_view.onBkgChange)
@@ -134,13 +388,6 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.setImageRef)
         self._image_proc_widget.image_normalizer_change_sgn.connect(
             self._image_view.onImageNormalizerChange)
-
-        self._roi_ctrls = []
-        roi_colors = config['ROI_COLORS']
-        for i, color in enumerate(roi_colors, 1):
-            widget = RoiCtrlWidget(getattr(self._image_view, f"roi{i}"))
-            self._roi_ctrls.append(widget)
-            widget.roi_region_change_sgn.connect(mediator.onRoiChange)
 
         #
         # image tool bar
@@ -152,7 +399,7 @@ class ImageToolWindow(AbstractWindow):
             self._tool_bar_image, "Update image", "sync.png")
         self._update_image_at.triggered.connect(self.updateImage)
 
-        self._image_ctrl = ImageCtrlWidget()
+        self._image_ctrl = _ImageCtrlWidget()
         self._image_ctrl.moving_avg_window_sgn.connect(
             self._image_view.onMovingAverageWindowChange)
         self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
@@ -192,7 +439,7 @@ class ImageToolWindow(AbstractWindow):
             self._tool_bar_mask, "Load image mask", "load_mask.png")
         load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
 
-        self._mask_ctrl = MaskCtrlWidget()
+        self._mask_ctrl = _MaskCtrlWidget()
         self._mask_ctrl.threshold_mask_sgn.connect(
             self._image_view.onThresholdMaskChange)
 
@@ -233,18 +480,9 @@ class ImageToolWindow(AbstractWindow):
 
     def initUI(self):
         """Override."""
-        roi_ctrl_layout = QtGui.QGridLayout()
-        roi_ctrl_layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
-        roi_ctrl_layout.addWidget(self._roi_value_type_cb, 0, 1)
-        roi_ctrl_layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
-        roi_ctrl_layout.addWidget(self._roi_displayed_range_le, 0, 3)
-        roi_ctrl_layout.addWidget(self._clear_roi_hist_btn, 0, 4)
-        for i, roi_ctrl in enumerate(self._roi_ctrls, 1):
-            roi_ctrl_layout.addWidget(roi_ctrl, i, 0, 1, 5)
-
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 3)
-        layout.addLayout(roi_ctrl_layout, 1, 0, 1, 2)
+        layout.addWidget(self._roi_ctrl_widget, 1, 0, 1, 2)
         layout.addWidget(self._image_proc_widget, 1, 2, 1, 1)
 
         self._cw.setLayout(layout)

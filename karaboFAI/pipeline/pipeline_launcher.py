@@ -162,8 +162,8 @@ class PipelineLauncher(Worker):
         else:
             self._roi_proc.set_roi(rank, None)
 
-    def update_roi_value_type(self, value):
-        self._roi_proc.roi_value_type = value
+    def update_roi_fom(self, value):
+        self._roi_proc.roi_fom = value
         ProcessedData.clear_roi_hist()
 
     def clear_roi_hist(self):

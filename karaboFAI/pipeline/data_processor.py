@@ -19,7 +19,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
 from ..algorithms import normalize_curve, slice_curve
-from ..config import config, AiNormalizer, FomName, OpLaserMode, RoiValueType
+from ..config import config, AiNormalizer, FomName, OpLaserMode, RoiFom
 from ..logger import logger
 
 
@@ -221,14 +221,14 @@ class RegionOfInterestProcessor(AbstractProcessor):
     """Process region of interest.
 
     Attributes:
-        roi_value_type (int): type of ROI value.
+        roi_fom (int): type of ROI FOM.
     """
     def __init__(self):
         super().__init__()
 
         self._rois = [None] * len(config["ROI_COLORS"])
 
-        self.roi_value_type = None
+        self.roi_fom = None
 
     def get_roi(self, rank):
         return self._rois[rank-1]
@@ -244,7 +244,7 @@ class RegionOfInterestProcessor(AbstractProcessor):
         activate at different times.
         """
         rois = copy.copy(self._rois)
-        roi_value_type = self.roi_value_type
+        roi_fom = self.roi_fom
 
         tid = proc_data.tid
         if tid > 0:
@@ -259,17 +259,16 @@ class RegionOfInterestProcessor(AbstractProcessor):
                         self._rois[i] = None
                     else:
                         setattr(proc_data.roi, f"roi{i+1}", roi)
-                        value = self._get_roi_value(roi, roi_value_type, img)
-
+                        value = self._get_roi_value(roi, roi_fom, img)
                 setattr(proc_data.roi, f"roi{i+1}_hist", (tid, value))
 
     @staticmethod
-    def _get_roi_value(roi_param, roi_value_type, full_image):
+    def _get_roi_value(roi_param, roi_fom, full_image):
         w, h, px, py = roi_param
         roi_img = full_image[py:py + h, px:px + w]
-        if roi_value_type == RoiValueType.SUM:
+        if roi_fom == RoiFom.SUM:
             ret = np.sum(roi_img)
-        elif roi_value_type == RoiValueType.MEAN:
+        elif roi_fom == RoiFom.MEAN:
             ret = np.mean(roi_img)
         else:
             ret = 0
