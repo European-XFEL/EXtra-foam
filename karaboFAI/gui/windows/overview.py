@@ -71,9 +71,9 @@ class OverviewWindow(DockerWindow):
         else:
             self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
 
-        self._roi1_image = RoiImageView(parent=self)
+        self._roi1_image = RoiImageView(1, parent=self)
         self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
-        self._roi2_image = RoiImageView(roi1=False, parent=self)
+        self._roi2_image = RoiImageView(2, parent=self)
         self._roi2_image.setBorder(make_pen(config["ROI_COLORS"][1]))
 
         self._roi_intensity = RoiValueMonitor(parent=self)

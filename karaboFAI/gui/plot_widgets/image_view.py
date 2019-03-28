@@ -467,32 +467,23 @@ class RoiImageView(ImageView):
 
     Widget for displaying the ROI for the assembled image.
     """
-    def __init__(self, roi1=True, **kwargs):
-        """Initialization.
-
-        :param bool roi1: True for displaying ROI1 and False for ROI2.
-        """
+    def __init__(self, rank, **kwargs):
+        """Initialization."""
         super().__init__(**kwargs)
 
         self._plot_widget.removeItem(self._mask_item)
 
-        self._is_roi1 = roi1
-
-        self.roi1.hide()
-        self.roi2.hide()
+        self._rank = rank
 
     def update(self, data):
         """Override."""
         image = data.image.masked_mean
 
-        if self._is_roi1:
-            if data.roi.roi1 is None:
-                return
-            w, h, px, py = data.roi.roi1
-        else:
-            if data.roi.roi2 is None:
-                return
-            w, h, px, py = data.roi.roi2
+        roi = getattr(data.roi, f"roi{self._rank}")
+
+        if roi is None:
+            return
+        w, h, px, py = roi
 
         self.setImage(image[py:py+h, px:px+w],
                       auto_range=True, auto_levels=True)

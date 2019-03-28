@@ -15,7 +15,7 @@ from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
-    AssembledImageView, RoiImageView, XasSpectrumWidget, XasSpectrumDiffWidget
+    RoiImageView, XasSpectrumWidget, XasSpectrumDiffWidget
 )
 from ...config import config
 
@@ -30,9 +30,7 @@ class XasWindow(DockerWindow):
     # There are two columns of plots in the PumpProbeWindow. They are
     # numbered at 1, 2, ... from top to bottom.
     _LW = 0.4 * _TOTAL_W
-    _LH1 = 0.5 * _TOTAL_H
-    _LH2 = 0.25 * _TOTAL_H
-    _LH3 = 0.25 * _TOTAL_H
+    _LH = _TOTAL_H / len(config["ROI_COLORS"])
     _RW = 0.6 * _TOTAL_W
     _RH1 = 0.5 * _TOTAL_H - 25
     _RH2 = 50
@@ -42,12 +40,11 @@ class XasWindow(DockerWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._assembled = AssembledImageView(parent=self)
-
-        self._roi1_image = RoiImageView(parent=self)
-        self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
-        self._roi2_image = RoiImageView(roi1=False, parent=self)
-        self._roi2_image.setBorder(make_pen(config["ROI_COLORS"][1]))
+        self._roi_images = []
+        for i, color in enumerate(config["ROI_COLORS"], 1):
+            view = RoiImageView(i, parent=self)
+            view.setBorder(make_pen(color))
+            self._roi_images.append(view)
 
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)
@@ -71,18 +68,16 @@ class XasWindow(DockerWindow):
         # -----------
         # left
         # -----------
-
-        assembled_dock = Dock("Assembled Image", size=(self._LW, self._LH1))
-        self._docker_area.addDock(assembled_dock, "left")
-        assembled_dock.addWidget(self._assembled)
-
-        roi1_image_dock = Dock("ROI1", size=(self._LW, self._LH2))
-        self._docker_area.addDock(roi1_image_dock, 'bottom', assembled_dock)
-        roi1_image_dock.addWidget(self._roi1_image)
-
-        roi2_image_dock = Dock("ROI2", size=(self._LW, self._LH3))
-        self._docker_area.addDock(roi2_image_dock, 'bottom', roi1_image_dock)
-        roi2_image_dock.addWidget(self._roi2_image)
+        prev_roi_image_dock = None
+        for i, image in enumerate(self._roi_images, 1):
+            roi_image_dock = Dock(f"ROI{i}", size=(self._LW, self._LH))
+            if prev_roi_image_dock is None:
+                self._docker_area.addDock(roi_image_dock, 'left')
+            else:
+                self._docker_area.addDock(
+                    roi_image_dock, 'bottom', prev_roi_image_dock)
+            prev_roi_image_dock = roi_image_dock
+            roi_image_dock.addWidget(image)
 
         # -----------
         # right
