@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import os.path as osp
 from weakref import WeakKeyDictionary
 
 from ..pyqtgraph import QtGui
@@ -48,7 +47,7 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *, pulse_resolved=True, parent=None):
+    def __init__(self, data=None, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -144,6 +143,9 @@ class DockerWindow(AbstractWindow):
 
         This method is called by the main GUI.
         """
+        if self._data is None:
+            return
+
         data = self._data.get()
         if data.image is None:
             return
