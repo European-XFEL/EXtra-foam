@@ -23,6 +23,8 @@ from ...algorithms import intersection, quick_min_max
 from ...config import config, ImageMaskChange, ImageNormalizer
 from ...logger import logger
 
+mediator = Mediator()
+
 
 class ImageView(QtGui.QWidget):
     """ImageView class.
@@ -51,7 +53,6 @@ class ImageView(QtGui.QWidget):
             parent.registerPlotWidget(self)
         except AttributeError:
             pass
-        mediator = Mediator()
 
         self._rois = []
         self._initializeROIs()

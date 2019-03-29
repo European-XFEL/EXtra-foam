@@ -33,14 +33,17 @@ class Mediator(QtCore.QObject):
             cls.__instance.__initialized = False
         return cls.__instance
 
-    def __init__(self, processor=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         if self.__initialized:
             return
         self.__initialized = True
 
         super().__init__(*args, **kwargs)
 
-        self._proc = processor
+        self._proc = None
+
+    def setProcessor(self, proc):
+        self._proc = proc
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, v):

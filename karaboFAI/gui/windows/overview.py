@@ -22,6 +22,8 @@ from ..plot_widgets import (
 )
 from ...config import config
 
+mediator = Mediator()
+
 
 class OverviewWindow(DockerWindow):
     """OverviewWindow class."""
@@ -48,8 +50,6 @@ class OverviewWindow(DockerWindow):
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)
         self._assembled = AssembledImageView(parent=self)
-
-        mediator = Mediator()
 
         if self._pulse_resolved:
             self._ai = MultiPulseAiWidget(parent=self)

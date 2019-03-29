@@ -134,8 +134,10 @@ class MainGUI(QtGui.QMainWindow):
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
         self._proc_worker = PipelineLauncher(self._daq_queue, self._proc_queue)
+
         # initializing mediator
-        Mediator(self._proc_worker)
+        mediator = Mediator()
+        mediator.setProcessor(self._proc_worker)
 
         # For real time plot
         self._running = False

@@ -20,6 +20,8 @@ from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
 from ...config import config, RoiFom, ImageMaskChange, ImageNormalizer
 
+mediator = Mediator()
+
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
@@ -169,8 +171,6 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
     def __init__(self, rois, *, parent=None):
         super().__init__(parent)
 
-        mediator = Mediator()
-
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
         self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
 
@@ -311,7 +311,6 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
     def __init__(self, roi, *, parent=None):
         super().__init__(parent)
-        mediator = Mediator()
 
         self.bkg_le = QtGui.QLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
@@ -331,7 +330,7 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
         self._auto_level_btn = QtGui.QPushButton("Auto level")
         self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
-        self.set_ref_btn = QtGui.QPushButton("Set reference image")
+        self.set_ref_btn = QtGui.QPushButton("Set reference")
 
         self.initUI()
 
@@ -345,8 +344,8 @@ class _ImageProcWidget(QtGui.QGroupBox):
         layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
         layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
         layout.addWidget(self.roi_ctrl, 2, 0, 2, 4)
-        layout.addWidget(self._auto_level_btn, 4, 0, 1, 4)
-        layout.addWidget(self.set_ref_btn, 5, 0, 1, 4)
+        layout.addWidget(self._auto_level_btn, 4, 0, 1, 2)
+        layout.addWidget(self.set_ref_btn, 4, 2, 1, 2)
         self.setLayout(layout)
 
     @QtCore.pyqtSlot(int)
