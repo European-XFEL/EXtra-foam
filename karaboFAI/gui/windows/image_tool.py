@@ -311,6 +311,7 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
     def __init__(self, roi, *, parent=None):
         super().__init__(parent)
+        mediator = Mediator()
 
         self.bkg_le = QtGui.QLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
@@ -324,14 +325,15 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
         self.roi_ctrl = self.RoiWidget(roi)
 
+        self.image_normalizer_change_sgn.connect(self.onImageNormalizerChange)
+        self._normalizer_cb.currentTextChanged.emit(
+            self._normalizer_cb.currentText())
+
+        self._auto_level_btn = QtGui.QPushButton("Auto level")
+        self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
         self.set_ref_btn = QtGui.QPushButton("Set reference image")
 
         self.initUI()
-
-        self.image_normalizer_change_sgn.connect(self.onImageNormalizerChange)
-
-        self._normalizer_cb.currentTextChanged.emit(
-            self._normalizer_cb.currentText())
 
     def initUI(self):
         """Override."""
@@ -343,7 +345,8 @@ class _ImageProcWidget(QtGui.QGroupBox):
         layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
         layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
         layout.addWidget(self.roi_ctrl, 2, 0, 2, 4)
-        layout.addWidget(self.set_ref_btn, 4, 0, 1, 4)
+        layout.addWidget(self._auto_level_btn, 4, 0, 1, 4)
+        layout.addWidget(self.set_ref_btn, 5, 0, 1, 4)
         self.setLayout(layout)
 
     @QtCore.pyqtSlot(int)

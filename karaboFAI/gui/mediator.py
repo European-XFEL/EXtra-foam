@@ -22,6 +22,8 @@ class Mediator(QtCore.QObject):
     # index, device ID, property name, resolution
     correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
 
+    reset_image_level_sgn = QtCore.pyqtSignal()
+
     __instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -67,3 +69,6 @@ class Mediator(QtCore.QObject):
 
     def updateVipPulseIds(self):
         self.update_vip_pulse_ids_sgn.emit()
+
+    def onAutoLevel(self):
+        self.reset_image_level_sgn.emit()

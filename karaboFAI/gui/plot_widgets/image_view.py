@@ -18,6 +18,7 @@ from .plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory
+from ..mediator import Mediator
 from ...algorithms import intersection, quick_min_max
 from ...config import config, ImageMaskChange, ImageNormalizer
 from ...logger import logger
@@ -50,6 +51,7 @@ class ImageView(QtGui.QWidget):
             parent.registerPlotWidget(self)
         except AttributeError:
             pass
+        mediator = Mediator()
 
         self._rois = []
         self._initializeROIs()
@@ -82,6 +84,8 @@ class ImageView(QtGui.QWidget):
         self._image_levels = None
 
         self.initUI()
+
+        mediator.reset_image_level_sgn.connect(self._updateImage)
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
@@ -145,6 +149,12 @@ class ImageView(QtGui.QWidget):
 
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
+
+    def _updateImage(self):
+        """Re-display the current image with auto_levels."""
+        if self._image is None:
+            return
+        self.setImage(self._image, auto_levels=True)
 
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
