@@ -89,19 +89,11 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot(float, float)
     def onAucXRangeChange(self, lb, ub):
-        self._laser_on_off_proc.auc_x_range = (lb, ub)
-        self._sample_degradation_proc.auc_x_range = (lb, ub)
-        self._correlation_proc.auc_x_range = (lb, ub)
-
-    @QtCore.pyqtSlot(float, float)
-    def onFomIntegrationRangeChange(self, lb, ub):
-        self._laser_on_off_proc.fom_itgt_range = (lb, ub)
-        self._sample_degradation_proc.fom_itgt_range = (lb, ub)
-        self._correlation_proc.fom_itgt_range = (lb, ub)
+        self._ai_proc.auc_x_range = (lb, ub)
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
-        self._correlation_proc.normalizer = normalizer
+        self._ai_proc.normalizer = normalizer
 
     @QtCore.pyqtSlot(float)
     def onSampleDistanceChange(self, value):
@@ -129,6 +121,12 @@ class PipelineLauncher(Worker):
         # Plank-einstein relation (E=hv)
         HC_E = 1e-3 * constants.c * constants.h / constants.e
         self._ai_proc.wavelength = HC_E / photon_energy
+
+    @QtCore.pyqtSlot(float, float)
+    def onFomIntegrationRangeChange(self, lb, ub):
+        self._laser_on_off_proc.fom_itgt_range = (lb, ub)
+        self._sample_degradation_proc.fom_itgt_range = (lb, ub)
+        self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
@@ -243,6 +241,7 @@ class PipelineLauncher(Worker):
                     error_msg = proc.process(processed_data, data)
                     if error_msg:
                         self.log(f"Train ID: {tid}: " + error_msg)
+                        break
 
                 proc = proc.next
         except Exception as e:

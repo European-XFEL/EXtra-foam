@@ -4,7 +4,7 @@ import numpy as np
 
 from karaboFAI.config import OpLaserMode
 from karaboFAI.pipeline.data_model import LaserOnOffData, ProcessedData
-from karaboFAI.pipeline.pipeline_launcher import LaserOnOffProcessor
+from karaboFAI.pipeline.data_processor import LaserOnOffProcessor
 
 
 class TestLaserOnOffProcessor(unittest.TestCase):
@@ -12,7 +12,6 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         self._proc = LaserOnOffProcessor()
         LaserOnOffData.clear()
 
-        self._proc.auc_x_range = (1, 5)
         self._proc.fom_itgt_range = (1, 5)
         self._proc.moving_avg_window = 100
         
@@ -38,15 +37,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[0]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 1, 0, 1, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [1, 0, 1, 0, 1]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 1, 0, 1, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([1, 0, 1, 0, 1])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(5)
         train_ids_gt.append(0)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -56,15 +51,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 1.5, 0, 1.5, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [1.5, 0, 1.5, 0, 1.5]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 1.5, 0, 1.5, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([1.5, 0, 1.5, 0, 1.5])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(7.5)
         train_ids_gt.append(1)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -74,15 +65,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 2, 0, 2, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [2, 0, 2, 0, 2]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([2, 0, 2, 0, 2])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(10)
         train_ids_gt.append(2)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -101,12 +88,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[0]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 1, 0, 1, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 1, 0, 1, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
         tids, foms, _ = data.on_off.foms
@@ -117,15 +101,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 1, 0, 1, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [2, 0, 2, 0, 2]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 1, 0, 1, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([2, 0, 2, 0, 2])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(8)
         train_ids_gt.append(1)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -135,13 +115,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 2, 0, 2, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
         off_ma_gt = [2, 0, 2, 0, 2]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
+        np.testing.assert_array_almost_equal(off_ma_gt, self._proc._off_pulses_ma)
         fom_hist_gt.append(None)
         train_ids_gt.append(2)
         tids, foms, _ = data.on_off.foms
@@ -152,15 +130,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 2, 0, 2, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([3, 0, 3, 0, 3])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(13)
         train_ids_gt.append(3)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -188,13 +162,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = [0, 3.666667, 0, 3.666667, 0]  # (1 + 3 + 7) / 3
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 3.666667, 0, 3.666667, 0]  # (1 + 3 + 7) / 3
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
         tids, foms, _ = data.on_off.foms
@@ -205,13 +175,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 3.666667, 0, 3.666667, 0])  # unchanged
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 3.666667, 0, 3.666667, 0]  # should be unchanged
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
         tids, foms, _ = data.on_off.foms
@@ -224,13 +190,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[8]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 4.333333, 0, 4.333333, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 4.333333, 0, 4.333333, 0]  # (1 + 3 + 9)/3
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(8)
         tids, foms, _ = data.on_off.foms
@@ -241,15 +203,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[9]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
+        on_pulse_gt = np.array([0, 4.333333, 0, 4.333333, 0])
         np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
+        off_pulse_gt = np.array([5.333333, 0, 5.333333, 0, 5.333333])
         np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 4.333333, 0, 4.333333, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [5.333333, 0, 5.333333, 0, 5.333333]  # (2 + 4 + 10)/3
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        fom_hist_gt.append(24.66666666666667)
         train_ids_gt.append(9)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -270,8 +228,6 @@ class TestLaserOnOffProcessor(unittest.TestCase):
 
         self.assertTrue(data.on_off.on_pulse is None)
         self.assertTrue(data.on_off.off_pulse is None)
-        self.assertTrue(self._proc._on_pulses_ma is None)
-        self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
         tids, foms, _ = data.on_off.foms
@@ -282,12 +238,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 2, 0, 2, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        self.assertTrue(self._proc._off_pulses_ma is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(1)
         tids, foms, _ = data.on_off.foms
@@ -298,15 +251,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 2, 0, 2, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([3, 0, 3, 0, 3])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(13)
         train_ids_gt.append(2)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -316,13 +265,9 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        on_pulse_gt = np.array([0, 3, 0, 3, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
         self.assertTrue(data.on_off.off_pulse is None)
-        on_ma_gt = [0, 3, 0, 3, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [3, 0, 3, 0, 3]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
         fom_hist_gt.append(None)
         train_ids_gt.append(3)
         tids, foms, _ = data.on_off.foms
@@ -333,15 +278,11 @@ class TestLaserOnOffProcessor(unittest.TestCase):
         data = self._data[4]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 0.5, 0, 0.5, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
-        off_pulse_gt = np.array([0.5, 0, 0.5, 0, 0.5])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
-        on_ma_gt = [0, 3, 0, 3, 0]
-        np.testing.assert_array_almost_equal(self._proc._on_pulses_ma, on_ma_gt)
-        off_ma_gt = [4, 0, 4, 0, 4]
-        np.testing.assert_array_almost_equal(self._proc._off_pulses_ma, off_ma_gt)
-        fom_hist_gt.append(2.5)
+        on_pulse_gt = np.array([0, 3, 0, 3, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        off_pulse_gt = np.array([4, 0, 4, 0, 4])
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        fom_hist_gt.append(18)
         train_ids_gt.append(4)
         tids, foms, _ = data.on_off.foms
         np.testing.assert_array_equal(train_ids_gt, tids)

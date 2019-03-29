@@ -33,7 +33,9 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
     _available_normalizers = OrderedDict({
         "AUC": AiNormalizer.AUC,
-        "ROI": AiNormalizer.ROI
+        "ROI1": AiNormalizer.ROI1,
+        "ROI2": AiNormalizer.ROI2,
+        "ROI1 + ROI2": AiNormalizer.ROI12,
     })
 
     def __init__(self, *args, **kwargs):

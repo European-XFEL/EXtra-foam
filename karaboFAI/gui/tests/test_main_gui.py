@@ -71,7 +71,7 @@ class TestMainGui(unittest.TestCase):
         itgt_method = 'nosplit_csr'
         itgt_pts = 1024
         itgt_range = (0.1, 0.2)
-        ai_normalizer = AiNormalizer.ROI
+        ai_normalizer = AiNormalizer.ROI1
         aux_x_range = (0.2, 0.3)
         fom_itgt_range = (0.3, 0.4)
 
@@ -95,20 +95,15 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(worker._ai_proc.integration_method, itgt_method)
         self.assertEqual(worker._ai_proc.integration_points, itgt_pts)
         self.assertTupleEqual(worker._ai_proc.integration_range, itgt_range)
+        self.assertEqual(worker._ai_proc.normalizer, ai_normalizer)
+        self.assertTupleEqual(worker._ai_proc.auc_x_range, aux_x_range)
 
-        self.assertEqual(worker._correlation_proc.normalizer, ai_normalizer)
-        self.assertTupleEqual(worker._correlation_proc.auc_x_range,
-                              aux_x_range)
         self.assertTupleEqual(worker._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._sample_degradation_proc.auc_x_range,
-                              aux_x_range)
         self.assertTupleEqual(worker._sample_degradation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._laser_on_off_proc.auc_x_range,
-                              aux_x_range)
         self.assertTupleEqual(worker._laser_on_off_proc.fom_itgt_range,
                               fom_itgt_range)
 

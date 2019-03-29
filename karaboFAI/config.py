@@ -46,9 +46,10 @@ class FomName(IntEnum):
 class AiNormalizer(IntEnum):
     # Normalize the azimuthal integration curve by the area under the curve.
     AUC = 0
-    # Normalize the azimuthal integration curve by the sum of the
-    # integrations of the ROI(s).
-    ROI = 1
+    # Normalize the azimuthal integration curve by the sum of ROI(s).
+    ROI1 = 1
+    ROI2 = 2
+    ROI12 = 3
 
 
 class RoiFom(IntEnum):

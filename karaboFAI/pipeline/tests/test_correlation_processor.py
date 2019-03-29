@@ -2,7 +2,7 @@ import unittest
 
 from karaboFAI.config import FomName
 from karaboFAI.pipeline.data_model import ProcessedData
-from karaboFAI.pipeline.pipeline_launcher import CorrelationProcessor
+from karaboFAI.pipeline.data_processor import CorrelationProcessor
 
 
 class TestCorrelationProcessor(unittest.TestCase):

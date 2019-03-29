@@ -58,10 +58,6 @@ class CorrelationProcessor(AbstractProcessor):
     """Add correlation information into processed data.
 
     Attributes:
-        normalizer (int): normalizer type for calculating FOM from
-            azimuthal integration result.
-        auc_x_range (tuple): x range for calculating AUC, which is used as
-            a normalizer of the azimuthal integration.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
@@ -69,9 +65,6 @@ class CorrelationProcessor(AbstractProcessor):
         super().__init__()
 
         self.fom_name = None
-
-        self.normalizer = None
-        self.auc_x_range = None
         self.fom_itgt_range = None
 
     def process(self, proc_data, raw_data=None):
@@ -85,29 +78,8 @@ class CorrelationProcessor(AbstractProcessor):
                 return "Azimuthal integration result is not available!"
             intensity = proc_data.intensity_mean
 
-            if self.normalizer == AiNormalizer.AUC:
-                normalized_intensity = normalize_curve(
-                    intensity, momentum, *self.auc_x_range)
-            elif self.normalizer == AiNormalizer.ROI:
-                _, roi1_hist, _ = proc_data.roi.roi1_hist
-                _, roi2_hist, _ = proc_data.roi.roi2_hist
-
-                try:
-                    denominator = (roi1_hist[-1] + roi2_hist[-1])/2.
-                except IndexError as e:
-                    # this could happen if the history is clear just now
-                    return repr(e)
-
-                if denominator == 0:
-                    return "ROI value is zero!"
-                normalized_intensity = intensity / denominator
-
-            else:
-                return f"Unknown normalizer: {self.normalizer}!"
-
             # calculate figure-of-merit
-            fom = slice_curve(
-                normalized_intensity, momentum, *self.fom_itgt_range)[0]
+            fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
             fom = np.sum(np.abs(fom))
 
         elif self.fom_name == FomName.AI_ON_OFF:
@@ -177,15 +149,12 @@ class SampleDegradationProcessor(AbstractProcessor):
     Only for pulse-resolved detectors.
 
     Attributes:
-        auc_x_range (tuple): x range for calculating AUC, which is used as
-            a normalizer of the azimuthal integration.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
     def __init__(self):
         super().__init__()
 
-        self.auc_x_range = None
         self.fom_itgt_range = None
 
     def process(self, proc_data, raw_data=None):
@@ -197,16 +166,8 @@ class SampleDegradationProcessor(AbstractProcessor):
         momentum = proc_data.momentum
         intensities = proc_data.intensities
 
-        # normalize azimuthal integration curves for each pulse
-        normalized_pulse_intensities = []
-        for pulse_intensity in intensities:
-            normalized = normalize_curve(
-                pulse_intensity, momentum, *self.auc_x_range)
-            normalized_pulse_intensities.append(normalized)
-
         # calculate the different between each pulse and the first one
-        diffs = [p - normalized_pulse_intensities[0]
-                 for p in normalized_pulse_intensities]
+        diffs = [p - intensities[0] for p in intensities]
 
         # calculate the figure of merit for each pulse
         foms = []
@@ -298,6 +259,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             the integration radial unit. (float, float)
         integration_points (int): number of points in the
             integration output pattern.
+        normalizer (int): normalizer type for calculating FOM from
+            azimuthal integration result.
+        auc_x_range (tuple): x range for calculating AUC, which is used as
+            a normalizer of the azimuthal integration.
     """
     def __init__(self):
         super().__init__()
@@ -308,6 +273,8 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         self.integration_method = None
         self.integration_range = None
         self.integration_points = None
+        self.normalizer = None
+        self.auc_x_range = None
 
     def process(self, proc_data, raw_data=None):
         sample_distance = self.sample_distance
@@ -393,11 +360,41 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             # There is only one intensity data, but we use plural here to
             # be consistent with pulse-resolved data.
             intensities_mean = ret.intensity
-            # for the convenience of data processing later
-            intensities = np.expand_dims(intensities_mean, axis=0)
+            # for the convenience of data processing later; use copy() here
+            # to avoid to be normalized twice
+            intensities = np.expand_dims(intensities_mean.copy(), axis=0)
 
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
+
+        if self.normalizer == AiNormalizer.AUC:
+            intensities_mean = normalize_curve(
+                intensities_mean, momentum, *self.auc_x_range)
+            # normalize azimuthal integration curves for each pulse
+            for i, intensity in enumerate(intensities):
+                intensities[i][:] = normalize_curve(
+                    intensity, momentum, *self.auc_x_range)
+
+        else:
+            _, roi1_hist, _ = proc_data.roi.roi1_hist
+            _, roi2_hist, _ = proc_data.roi.roi2_hist
+            denominator = 0
+            try:
+                if self.normalizer == AiNormalizer.ROI1:
+                    denominator = roi1_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI2:
+                    denominator = roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI12:
+                    denominator = roi1_hist[-1] + roi2_hist[-1]
+            except IndexError as e:
+                # this could happen if the history is clear just now
+                return repr(e)
+
+            if denominator == 0:
+                return "Invalid normalizer: sum of ROI(s) is zero!"
+
+            intensities_mean /= denominator
+            intensities /= denominator
 
         proc_data.momentum = momentum
         proc_data.intensities = intensities
@@ -419,8 +416,6 @@ class LaserOnOffProcessor(AbstractProcessor):
         abs_difference (bool): True for calculating the absolute value of
             difference between laser-on and laser-off.
         moving_avg_window (int): moving average window size.
-        auc_x_range (tuple): x range for calculating AUC, which is used as
-            a normalizer of the azimuthal integration.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
@@ -436,7 +431,6 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         self.moving_avg_window = 1
 
-        self.auc_x_range = None
         self.fom_itgt_range = None
 
         self._on_train_received = False
@@ -507,8 +501,8 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         # update and plot
 
-        normalized_on_pulse = None
-        normalized_off_pulse = None
+        on_pulse_ma = None
+        off_pulse_ma = None
 
         if self._on_train_received:
             # update on-pulse
@@ -538,8 +532,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
                 self._on_pulses_hist.append(this_on_pulses)
 
-            normalized_on_pulse = normalize_curve(
-                self._on_pulses_ma, momentum, *self.auc_x_range)
+            on_pulse_ma = self._on_pulses_ma
 
         diff = None
         fom = None
@@ -563,10 +556,8 @@ class LaserOnOffProcessor(AbstractProcessor):
             else:
                 raise ValueError("Unexpected code reached!")
 
-            normalized_off_pulse = normalize_curve(
-                self._off_pulses_ma, momentum, *self.auc_x_range)
-
-            diff = normalized_on_pulse - normalized_off_pulse
+            off_pulse_ma = self._off_pulses_ma
+            diff = self._on_pulses_ma - self._off_pulses_ma
 
             # calculate figure-of-merit and update history
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
@@ -579,8 +570,8 @@ class LaserOnOffProcessor(AbstractProcessor):
             self._on_train_received = False
             self._off_train_received = False
 
-        proc_data.on_off.on_pulse = normalized_on_pulse
-        proc_data.on_off.off_pulse = normalized_off_pulse
+        proc_data.on_off.on_pulse = on_pulse_ma
+        proc_data.on_off.off_pulse = off_pulse_ma
         proc_data.on_off.diff = diff
         proc_data.on_off.foms = (proc_data.tid, fom)
 
