@@ -636,6 +636,10 @@ class ImageData:
 
         if self._image_normalizer is not None:
             w, h, x, y = self._image_normalizer
+            s = np.sum(mean_image[y:y+h, x:x+w])
+            if not s:
+                logger.debug("Sum of ROI is zero!")
+                return mean_image
             mean_image /= np.sum(mean_image[y:y+h, x:x+w])
 
         return mean_image
