@@ -85,9 +85,9 @@ class _RoiCtrlWidgetBase(QtGui.QWidget):
         self._px_le.setText(str(px))
         self._py_le.setText(str(py))
 
-    @property
-    def line_edits(self):
-        return self._line_edits
+    def setEditable(self, editable):
+        for w in self._line_edits:
+            w.setDisabled(not editable)
 
 
 class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
@@ -145,19 +145,15 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
     @QtCore.pyqtSlot(int)
     def onLock(self, state):
         self._roi.setLocked(state == QtCore.Qt.Checked)
-        self._setEditable(not state == QtCore.Qt.Checked)
-
-    def _setEditable(self, editable):
-        for w in self._line_edits:
-            w.setDisabled(not editable)
+        self.setEditable(not state == QtCore.Qt.Checked)
 
     def disableAllEdit(self):
-        self._setEditable(False)
+        self.setEditable(False)
         self.lock_cb.setDisabled(True)
 
     def enableAllEdit(self):
         self.lock_cb.setDisabled(False)
-        self._setEditable(True)
+        self.setEditable(True)
 
 
 class _RoisCtrlWidget(QtGui.QGroupBox):
@@ -353,11 +349,12 @@ class _ImageProcWidget(QtGui.QGroupBox):
     @QtCore.pyqtSlot(int)
     def onImageNormalizerChange(self, value):
         if value == ImageNormalizer.ROI_SUM:
-            for widget in self.roi_ctrl.line_edits:
-                widget.setEnabled(True)
+            self.roi_ctrl.setEditable(True)
         else:
-            for widget in self.roi_ctrl.line_edits:
-                widget.setEnabled(False)
+            self.roi_ctrl.setEditable(False)
+            # rank does not matter
+            self.roi_ctrl.roi_region_change_sgn.emit(-1, False, 0, 0, 0, 0)
+
 
 @SingletonWindow
 class ImageToolWindow(AbstractWindow):
@@ -387,7 +384,9 @@ class ImageToolWindow(AbstractWindow):
         self._image_proc_widget.set_ref_btn.clicked.connect(
             self._image_view.setImageRef)
         self._image_proc_widget.image_normalizer_change_sgn.connect(
-            self._image_view.onImageNormalizerChange)
+            self._image_view.onImageNormalizerToggle)
+        self._image_proc_widget.roi_ctrl.roi_region_change_sgn.connect(
+            self._image_view.onImageNormalizerRoiChange)
 
         #
         # image tool bar

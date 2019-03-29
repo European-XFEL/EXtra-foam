@@ -282,11 +282,22 @@ class ImageAnalysis(ImageView):
         self.crop.hide()
 
     @QtCore.pyqtSlot(int)
-    def onImageNormalizerChange(self, value):
+    def onImageNormalizerToggle(self, value):
         if value == ImageNormalizer.ROI_SUM:
             self.normalization.show()
+            self.normalization.sigRegionChangeFinished.emit(self.normalization)
         else:
             self.normalization.hide()
+
+    @QtCore.pyqtSlot(int, bool, int, int, int, int)
+    def onImageNormalizerRoiChange(self, rank, activated, w, h, px, py):
+        if self._image_data is None:
+            return
+
+        if activated:
+            self._image_data.set_normalizer((w, h, px, py))
+        else:
+            self._image_data.set_normalizer(None)
 
     @QtCore.pyqtSlot()
     def onRestoreImage(self):

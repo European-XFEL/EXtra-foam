@@ -388,6 +388,18 @@ class ImageData:
             """Unmask all."""
             self._assembled[:] = False
 
+    class ImageNormalizer:
+        def __init__(self):
+            self._value = None
+
+        def __get__(self, instance, instance_type):
+            if instance is None:
+                return self
+            return self._value
+
+        def __set__(self, instance, value):
+            self._value = value
+
     class ThresholdMaskData:
         def __init__(self, lb=None, ub=None):
             self._lower = lb
@@ -419,6 +431,7 @@ class ImageData:
     __ref = ImageRefData()
     __threshold_mask = None
     __image_mask = None
+    __image_normalizer = ImageNormalizer()
     __crop_area = CropAreaData()
 
     pixel_size = None
@@ -451,6 +464,7 @@ class ImageData:
         self._threshold_mask = self.__threshold_mask.get()
         self._image_mask = np.copy(self.__image_mask.get())
         self._crop_area = self.__crop_area.get()
+        self._image_normalizer = self.__image_normalizer
 
         # cache these two properties
         self.ma_window
@@ -547,6 +561,9 @@ class ImageData:
 
         self._registered_ops.add("reference")
 
+    def set_normalizer(self, value):
+        self.__image_normalizer = value
+
     @cached_property
     def image_mask(self):
         if self._crop_area is not None:
@@ -616,6 +633,10 @@ class ImageData:
         # clip the array, which now will contain only numerical values
         # within the mask range
         np.clip(mean_image, *self._threshold_mask, out=mean_image)
+
+        if self._image_normalizer is not None:
+            w, h, x, y = self._image_normalizer
+            mean_image /= np.sum(mean_image[y:y+h, x:x+w])
 
         return mean_image
 
