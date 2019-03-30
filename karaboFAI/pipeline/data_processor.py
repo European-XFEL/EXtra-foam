@@ -18,7 +18,7 @@ import numpy as np
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
-from ..algorithms import normalize_curve, slice_curve
+from ..algorithms import intersection, normalize_curve, slice_curve
 from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
 from ..logger import logger
 
@@ -218,7 +218,8 @@ class RegionOfInterestProcessor(AbstractProcessor):
                 value = 0
                 value_ref = 0
                 if roi is not None:
-                    if not self._validate_roi(*roi, *img.shape):
+                    roi = intersection(*roi, *img.shape[::-1], 0, 0)
+                    if roi[0] < 0 or roi[1] < 0:
                         self._rois[i] = None
                     else:
                         setattr(proc_data.roi, f"roi{i+1}", roi)
@@ -232,8 +233,8 @@ class RegionOfInterestProcessor(AbstractProcessor):
         if img is None:
             return 0
 
-        w, h, px, py = roi_param
-        roi_img = img[py:py + h, px:px + w]
+        w, h, x, y = roi_param
+        roi_img = img[y:y + h, x:x + w]
         if roi_fom == RoiFom.SUM:
             ret = np.sum(roi_img)
         elif roi_fom == RoiFom.MEAN:
@@ -242,13 +243,6 @@ class RegionOfInterestProcessor(AbstractProcessor):
             ret = 0
 
         return ret
-
-    @staticmethod
-    def _validate_roi(w, h, px, py, img_h, img_w):
-        """Check whether the ROI is within the image."""
-        if px < 0 or py < 0 or px + w > img_w or py + h > img_h:
-            return False
-        return True
 
 
 class AzimuthalIntegrationProcessor(AbstractProcessor):
