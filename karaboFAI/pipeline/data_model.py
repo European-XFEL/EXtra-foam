@@ -433,21 +433,6 @@ class ImageData:
         def initialized(self):
             return self._initialized
 
-    class ImageNormalizer:
-        def __init__(self):
-            self._value = None
-
-        def __get__(self, instance, instance_type):
-            if instance is None:
-                return self
-            return self._value
-
-        def __set__(self, instance, value):
-            self._value = value
-
-        def __delete__(self, instance):
-            self._value = None
-
     class CropArea:
         def __init__(self):
             self._rect = None
@@ -467,7 +452,6 @@ class ImageData:
     __ref = ImageRef()
     __threshold_mask = ThresholdMask()
     __image_mask = ImageMask()
-    __image_normalizer = ImageNormalizer()
     __crop_area = CropArea()
 
     pixel_size = None
@@ -500,7 +484,6 @@ class ImageData:
         self._threshold_mask = self.__threshold_mask
         self._image_mask = np.copy(self.__image_mask)
         self._crop_area = self.__crop_area
-        self._image_normalizer = self.__image_normalizer
 
         # cache these two properties
         self.ma_window
@@ -593,9 +576,6 @@ class ImageData:
 
         self._registered_ops.add("reference")
 
-    def set_normalizer(self, value):
-        self.__image_normalizer = value
-
     @cached_property
     def image_mask(self):
         if self._crop_area is not None:
@@ -666,14 +646,6 @@ class ImageData:
         # within the mask range
         np.clip(mean_image, *self._threshold_mask, out=mean_image)
 
-        if self._image_normalizer is not None:
-            w, h, x, y = self._image_normalizer
-            s = np.sum(mean_image[y:y+h, x:x+w])
-            if not s:
-                logger.debug("Sum of ROI is zero!")
-                return mean_image
-            mean_image /= np.sum(mean_image[y:y+h, x:x+w])
-
         return mean_image
 
     def update(self):
@@ -714,7 +686,6 @@ class ImageData:
         cls.__threshold_mask.__delete__(None)
         cls.__image_mask.__delete__(None)
         cls.__crop_area.__delete__(None)
-        cls.__image_normalizer.__delete__(None)
 
 
 class ProcessedData:

@@ -18,7 +18,7 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_window import AbstractWindow, SingletonWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiFom, ImageMaskChange, ImageNormalizer
+from ...config import config, RoiFom, ImageMaskChange
 
 mediator = Mediator()
 
@@ -300,31 +300,13 @@ class _ImageProcWidget(QtGui.QGroupBox):
             layout.addWidget(self._py_le, 3, 3)
             self.setLayout(layout)
 
-    _available_img_normalizers = OrderedDict({
-        "None": ImageNormalizer.NONE,
-        "ROI sum": ImageNormalizer.ROI_SUM
-    })
-
-    image_normalizer_change_sgn = QtCore.pyqtSignal(int)
-
-    def __init__(self, roi, *, parent=None):
+    def __init__(self, *, parent=None):
         super().__init__(parent)
 
         self.bkg_le = QtGui.QLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
-        self._normalizer_cb = QtGui.QComboBox()
-        for v in self._available_img_normalizers:
-            self._normalizer_cb.addItem(v)
-        self._normalizer_cb.currentTextChanged.connect(
-            lambda x: self.image_normalizer_change_sgn.emit(
-                self._available_img_normalizers[x]))
-
-        self.roi_ctrl = self.RoiWidget(roi)
-
-        self.image_normalizer_change_sgn.connect(self.onImageNormalizerChange)
-        self._normalizer_cb.currentTextChanged.emit(
-            self._normalizer_cb.currentText())
+        self.update_image_btn = QtGui.QPushButton("Update image")
 
         self._auto_level_btn = QtGui.QPushButton("Auto level")
         self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
@@ -339,21 +321,10 @@ class _ImageProcWidget(QtGui.QGroupBox):
         layout = QtGui.QGridLayout()
         layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
         layout.addWidget(self.bkg_le, 0, 2, 1, 2)
-        layout.addWidget(QtGui.QLabel("Normalized by: "), 1, 0, 1, 2, AR)
-        layout.addWidget(self._normalizer_cb, 1, 2, 1, 2)
-        layout.addWidget(self.roi_ctrl, 2, 0, 2, 4)
-        layout.addWidget(self._auto_level_btn, 4, 0, 1, 2)
-        layout.addWidget(self.set_ref_btn, 4, 2, 1, 2)
+        layout.addWidget(self.update_image_btn, 2, 0, 1, 2)
+        layout.addWidget(self._auto_level_btn, 2, 2, 1, 2)
+        layout.addWidget(self.set_ref_btn, 3, 0, 1, 4)
         self.setLayout(layout)
-
-    @QtCore.pyqtSlot(int)
-    def onImageNormalizerChange(self, value):
-        if value == ImageNormalizer.ROI_SUM:
-            self.roi_ctrl.setEditable(True)
-        else:
-            self.roi_ctrl.setEditable(False)
-            # rank does not matter
-            self.roi_ctrl.roi_region_change_sgn.emit(-1, False, 0, 0, 0, 0)
 
 
 @SingletonWindow
@@ -376,27 +347,20 @@ class ImageToolWindow(AbstractWindow):
 
         self._roi_ctrl_widget = _RoisCtrlWidget(
             self._image_view.rois, parent=self)
-        self._image_proc_widget = _ImageProcWidget(
-            self._image_view.normalization, parent=self)
+        self._image_proc_widget = _ImageProcWidget(parent=self)
 
         self._image_proc_widget.bkg_le.editingFinished.connect(
             self._image_view.onBkgChange)
+        self._image_proc_widget.update_image_btn.clicked.connect(
+            self.updateImage)
         self._image_proc_widget.set_ref_btn.clicked.connect(
             self._image_view.setImageRef)
-        self._image_proc_widget.image_normalizer_change_sgn.connect(
-            self._image_view.onImageNormalizerToggle)
-        self._image_proc_widget.roi_ctrl.roi_region_change_sgn.connect(
-            self._image_view.onImageNormalizerRoiChange)
 
         #
         # image tool bar
         #
 
         self._tool_bar_image = self.addToolBar("image")
-
-        self._update_image_at = self._addAction(
-            self._tool_bar_image, "Update image", "sync.png")
-        self._update_image_at.triggered.connect(self.updateImage)
 
         self._image_ctrl = _ImageCtrlWidget()
         self._image_ctrl.moving_avg_window_sgn.connect(

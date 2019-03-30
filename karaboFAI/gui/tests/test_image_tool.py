@@ -40,11 +40,19 @@ class TestImageTool(unittest.TestCase):
         # self.assertIsInstance(window, ImageToolWindow)
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
-        imgs = np.arange(4*128*128).reshape(4, 128, 128)
+        imgs = np.arange(2*128*128).reshape(2, 128, 128)
         img_mean = np.mean(imgs, axis=0)
         proc_data = ProcessedData(self._tid, imgs)
         window._data.set(proc_data)
 
         self.assertEqual(None, view._image)
         window.update()
+        np.testing.assert_array_equal(img_mean, view._image)
+
+        # test 'update_image_btn'
+        imgs = 2 * np.arange(2*128*128).reshape(2, 128, 128)
+        img_mean = np.mean(imgs, axis=0)
+        proc_data = ProcessedData(self._tid, imgs)
+        window._data.set(proc_data)
+        window._image_proc_widget.update_image_btn.clicked.emit()
         np.testing.assert_array_equal(img_mean, view._image)

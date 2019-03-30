@@ -20,7 +20,7 @@ from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory
 from ..mediator import Mediator
 from ...algorithms import intersection, quick_min_max
-from ...config import config, ImageMaskChange, ImageNormalizer
+from ...config import config, ImageMaskChange
 from ...logger import logger
 
 mediator = Mediator()
@@ -222,13 +222,6 @@ class ImageAnalysis(ImageView):
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
-        # add ROI for image normalization
-        self.normalization = RectROI(99, 'g', (0, 0), (100, 100),
-                                      style=QtCore.Qt.DotLine)
-        self.normalization.setLocked(False)
-        self.normalization.hide()
-        self._plot_widget.addItem(self.normalization)
-
         # add cropping widget
         self.crop = CropROI((0, 0), (100, 100))
         self.crop.hide()
@@ -291,24 +284,6 @@ class ImageAnalysis(ImageView):
             self._mask_item.updateMask(self._image_data.image_mask)
 
         self.crop.hide()
-
-    @QtCore.pyqtSlot(int)
-    def onImageNormalizerToggle(self, value):
-        if value == ImageNormalizer.ROI_SUM:
-            self.normalization.show()
-            self.normalization.sigRegionChangeFinished.emit(self.normalization)
-        else:
-            self.normalization.hide()
-
-    @QtCore.pyqtSlot(int, bool, int, int, int, int)
-    def onImageNormalizerRoiChange(self, rank, activated, w, h, px, py):
-        if self._image_data is None:
-            return
-
-        if activated:
-            self._image_data.set_normalizer((w, h, px, py))
-        else:
-            self._image_data.set_normalizer(None)
 
     @QtCore.pyqtSlot()
     def onRestoreImage(self):

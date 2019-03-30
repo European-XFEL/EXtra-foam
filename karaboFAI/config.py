@@ -65,11 +65,6 @@ class ImageMaskChange(IntEnum):
     REPLACE = 3  # replace the whole current mask
 
 
-class ImageNormalizer(IntEnum):
-    NONE = 0  # no normalization
-    ROI_SUM = 1  # by the sum over ROI
-
-
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")
 if not os.path.isdir(ROOT_PATH):
