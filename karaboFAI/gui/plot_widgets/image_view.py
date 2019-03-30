@@ -113,6 +113,11 @@ class ImageView(QtGui.QWidget):
             self._rois.append(roi)
 
     def updateROI(self, data):
+        """Update ROIs.
+
+        Update ROI through data instead of passing signals to ensure that
+        visualization of ROIs and calculation of ROI data are synchronized.
+        """
         for i, roi in enumerate(self._rois, 1):
             roi_area = getattr(data.roi, f"roi{i}")
             if roi_area is not None:

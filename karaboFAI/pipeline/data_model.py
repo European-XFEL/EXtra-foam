@@ -191,6 +191,7 @@ class RoiData(AbstractData):
         if not cls.__initialized:
             for i, _ in enumerate(config["ROI_COLORS"], 1):
                 setattr(cls, f"roi{i}_hist", TrainData())
+                setattr(cls, f"roi{i}_hist_ref", TrainData())
             cls.__initialized = True
         return instance
 
@@ -740,6 +741,7 @@ class ProcessedData:
         self.sample_degradation_foms = None
 
         self.roi = RoiData()
+        self.roi_ref = RoiData()
         self.pp = PumpProbeData()
         self.correlation = CorrelationData()
 

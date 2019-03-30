@@ -210,23 +210,30 @@ class RegionOfInterestProcessor(AbstractProcessor):
         tid = proc_data.tid
         if tid > 0:
             img = proc_data.image.masked_mean
+            img_ref = proc_data.image.masked_ref
 
             for i, roi in enumerate(rois):
                 # it should be valid to set ROI intensity to zero if the data
                 # is not available
                 value = 0
+                value_ref = 0
                 if roi is not None:
                     if not self._validate_roi(*roi, *img.shape):
                         self._rois[i] = None
                     else:
                         setattr(proc_data.roi, f"roi{i+1}", roi)
                         value = self._get_roi_value(roi, roi_fom, img)
+                        value_ref = self._get_roi_value(roi, roi_fom, img_ref)
                 setattr(proc_data.roi, f"roi{i+1}_hist", (tid, value))
+                setattr(proc_data.roi, f"roi{i + 1}_hist_ref", (tid, value_ref))
 
     @staticmethod
-    def _get_roi_value(roi_param, roi_fom, full_image):
+    def _get_roi_value(roi_param, roi_fom, img):
+        if img is None:
+            return 0
+
         w, h, px, py = roi_param
-        roi_img = full_image[py:py + h, px:px + w]
+        roi_img = img[py:py + h, px:px + w]
         if roi_fom == RoiFom.SUM:
             ret = np.sum(roi_img)
         elif roi_fom == RoiFom.MEAN:
@@ -407,27 +414,38 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         else:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
             _, roi2_hist, _ = proc_data.roi.roi2_hist
+            _, roi1_hist_ref, _ = proc_data.roi.roi1_hist_ref
+            _, roi2_hist_ref, _ = proc_data.roi.roi2_hist_ref
+
             denominator = 0
+            denominator_ref = 0
             try:
                 if self.normalizer == AiNormalizer.ROI1:
                     denominator = roi1_hist[-1]
+                    denominator_ref = roi1_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI2:
                     denominator = roi2_hist[-1]
+                    denominator_ref = roi2_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI_SUM:
                     denominator = roi1_hist[-1] + roi2_hist[-1]
+                    denominator_ref = roi1_hist_ref[-1] + roi2_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI_SUB:
                     denominator = roi1_hist[-1] - roi2_hist[-1]
+                    denominator_ref = roi1_hist_ref[-1] - roi2_hist_ref[-1]
+
             except IndexError as e:
                 # this could happen if the history is clear just now
                 return repr(e)
 
             if denominator == 0:
                 return "Invalid normalizer: sum of ROI(s) is zero!"
-
             intensities_mean /= denominator
             intensities /= denominator
+
             if ref_intensity is not None:
-                ref_intensity /= denominator
+                if denominator_ref == 0:
+                    return "Invalid reference normalizer: sum of ROI(s) is zero!"
+                ref_intensity /= denominator_ref
             else:
                 ref_intensity = np.zeros_like(intensities_mean)
 
