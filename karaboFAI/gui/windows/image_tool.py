@@ -242,23 +242,21 @@ class _ImageCtrlWidget(QtGui.QWidget):
 class _MaskCtrlWidget(QtGui.QWidget):
     """Widget inside the action bar for masking image."""
 
-    threshold_mask_sgn = QtCore.pyqtSignal(float, float)
-
-    _double_validator = QtGui.QDoubleValidator()
+    threshold_mask_sgn = QtCore.pyqtSignal(int, int)
 
     def __init__(self, parent=None):
         """Initialization"""
         super().__init__(parent=parent)
 
-        self._min_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][0]))
-        self._min_pixel_le.setValidator(self._double_validator)
+        self._min_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][0])))
+        self._min_pixel_le.setValidator(QtGui.QIntValidator())
         # avoid collapse on online and maxwell clusters
-        self._min_pixel_le.setMinimumWidth(60)
+        self._min_pixel_le.setMinimumWidth(80)
         self._min_pixel_le.returnPressed.connect(
             self.onThresholdMaskChanged)
-        self._max_pixel_le = QtGui.QLineEdit(str(config["MASK_RANGE"][1]))
-        self._max_pixel_le.setValidator(self._double_validator)
-        self._max_pixel_le.setMinimumWidth(60)
+        self._max_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][1])))
+        self._max_pixel_le.setValidator(QtGui.QIntValidator())
+        self._max_pixel_le.setMinimumWidth(80)
         self._max_pixel_le.returnPressed.connect(
             self.onThresholdMaskChanged)
 
@@ -277,8 +275,8 @@ class _MaskCtrlWidget(QtGui.QWidget):
         self.layout().setContentsMargins(2, 1, 2, 1)
 
     def onThresholdMaskChanged(self):
-        self.threshold_mask_sgn.emit(float(self._min_pixel_le.text()),
-                                     float(self._max_pixel_le.text()))
+        self.threshold_mask_sgn.emit(int(self._min_pixel_le.text()),
+                                     int(self._max_pixel_le.text()))
 
 
 class _ImageProcWidget(QtGui.QGroupBox):

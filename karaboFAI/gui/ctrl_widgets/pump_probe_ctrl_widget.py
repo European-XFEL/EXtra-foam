@@ -15,7 +15,7 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_ids
-from ...config import OpLaserMode
+from ...config import PumpProbeMode
 from ...logger import logger
 
 
@@ -23,10 +23,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
-        "pre-defined off": OpLaserMode.PRE_DEFINED_OFF,
-        "same train": OpLaserMode.SAME_TRAIN,
-        "even/odd train": OpLaserMode.EVEN_TRAIN_ON,
-        "odd/even train": OpLaserMode.ODD_TRAIN_ON
+        "pre-defined off": PumpProbeMode.PRE_DEFINED_OFF,
+        "same train": PumpProbeMode.SAME_TRAIN,
+        "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
+        "odd/even train": PumpProbeMode.ODD_TRAIN_ON
     })
 
     # (mode, on-pulse ids, off-pulse ids)
@@ -105,28 +105,26 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         mode_description = self._laser_mode_cb.currentText()
         mode = self._available_modes[mode_description]
 
-        if mode != OpLaserMode.PRE_DEFINED_OFF:
-            try:
-                # check pulse ID only when laser on/off pulses are in the same
-                # train (the "normal" mode)
-                on_pulse_ids = parse_ids(self._on_pulse_le.text())
+        try:
+            # check pulse ID only when laser on/off pulses are in the same
+            # train (the "normal" mode)
+            on_pulse_ids = parse_ids(self._on_pulse_le.text())
+            if mode == PumpProbeMode.PRE_DEFINED_OFF:
+                off_pulse_ids = []
+            else:
                 off_pulse_ids = parse_ids(self._off_pulse_le.text())
-                if not on_pulse_ids or not off_pulse_ids:
-                    raise ValueError
-                if mode == OpLaserMode.SAME_TRAIN and self._pulse_resolved:
-                    common = set(on_pulse_ids).intersection(off_pulse_ids)
-                    if common:
-                        logger.error("Pulse IDs {} are found in both on- and "
-                                     "off- pulses.".format(','.join([str(v) for v in common])))
-                        return False
 
-            except ValueError:
-                logger.error("Invalid input! Enter on/off pulse IDs separated "
-                             "by ',' and/or use the range operator ':'!")
-                return False
-        else:
-            on_pulse_ids = []
-            off_pulse_ids = []
+            if mode == PumpProbeMode.SAME_TRAIN and self._pulse_resolved:
+                common = set(on_pulse_ids).intersection(off_pulse_ids)
+                if common:
+                    logger.error("Pulse IDs {} are found in both on- and "
+                                 "off- pulses.".format(','.join([str(v) for v in common])))
+                    return False
+
+        except ValueError:
+            logger.error("Invalid input! Enter on/off pulse IDs separated "
+                         "by ',' and/or use the range operator ':'!")
+            return False
 
         self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 

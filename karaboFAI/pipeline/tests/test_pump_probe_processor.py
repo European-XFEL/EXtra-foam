@@ -2,19 +2,19 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.config import OpLaserMode
+from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.data_model import LaserOnOffData, ProcessedData
-from karaboFAI.pipeline.data_processor import LaserOnOffProcessor
+from karaboFAI.pipeline.data_processor import PumpProbeProcessor
 
 
 class TestLaserOnOffProcessor(unittest.TestCase):
     def setUp(self):
-        self._proc = LaserOnOffProcessor()
+        self._proc = PumpProbeProcessor()
         LaserOnOffData.clear()
 
         self._proc.fom_itgt_range = (1, 5)
         self._proc.moving_avg_window = 100
-        
+
         self._data = []
         intensity = np.array([[0, 1, 0, 1, 0],
                               [1, 0, 1, 0, 1],
@@ -26,7 +26,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
             self._data[i].intensities = (i+1)*intensity
 
     def testNormalMode(self):
-        self._proc.laser_mode = OpLaserMode.SAME_TRAIN
+        self._proc.mode = PumpProbeMode.SAME_TRAIN
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 
@@ -77,7 +77,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
 
     def testEvenOddMode(self):
         """On-pulse has even id."""
-        self._proc.laser_mode = OpLaserMode.EVEN_TRAIN_ON
+        self._proc.mode = PumpProbeMode.EVEN_TRAIN_ON
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 
@@ -215,7 +215,7 @@ class TestLaserOnOffProcessor(unittest.TestCase):
 
     def testOddEvenMode(self):
         """On-pulse has odd id."""
-        self._proc.laser_mode = OpLaserMode.ODD_TRAIN_ON
+        self._proc.mode = PumpProbeMode.ODD_TRAIN_ON
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 

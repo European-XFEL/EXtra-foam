@@ -19,8 +19,8 @@ class DataSource(IntEnum):
     BRIDGE = 1  # real-time data from the bridge
 
 
-class OpLaserMode(IntEnum):
-    PRE_DEFINED_OFF = 0  # use pre-defined off-pulse image
+class PumpProbeMode(IntEnum):
+    PRE_DEFINED_OFF = 0  # use pre-defined reference image
     SAME_TRAIN = 1  # on-/off- pulses in the same train
     EVEN_TRAIN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
     ODD_TRAIN_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
@@ -47,9 +47,10 @@ class AiNormalizer(IntEnum):
     # Normalize the azimuthal integration curve by the area under the curve.
     AUC = 0
     # Normalize the azimuthal integration curve by the sum of ROI(s).
-    ROI1 = 1
-    ROI2 = 2
-    ROI12 = 3
+    ROI_SUB = 1  # ROI1 - ROI2
+    ROI_SUM = 2  # ROI1 + ROI2
+    ROI1 = 3
+    ROI2 = 4
 
 
 class RoiFom(IntEnum):
@@ -204,7 +205,7 @@ class Config(dict):
         "CENTER_X": 590,
         "PIXEL_SIZE": 0.2e-3,
         "COLOR_MAP": 'flame',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_lpd_config = {
@@ -230,7 +231,7 @@ class Config(dict):
         "CENTER_X": 570,
         "PIXEL_SIZE": 0.5e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_jfrau_config = {
@@ -258,7 +259,7 @@ class Config(dict):
         "CENTER_X": 1400,
         "PIXEL_SIZE": 0.075e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     # For FastCCD at SCS, we have two SOURCE_NAMEs, the first one is for
@@ -287,7 +288,7 @@ class Config(dict):
         "CENTER_X": 480,
         "PIXEL_SIZE": 0.030e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_detector_configs = {

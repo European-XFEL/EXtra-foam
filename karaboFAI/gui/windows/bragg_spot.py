@@ -25,7 +25,7 @@ from ..pyqtgraph.dockarea import DockArea, Dock
 from .base_window import AbstractWindow
 from ...logger import logger
 from ..misc_widgets import lookupTableFactory, make_pen
-from ...config import config, OpLaserMode
+from ...config import config, PumpProbeMode
 
 
 # class PlotWindow(AbstractWindow):
@@ -34,9 +34,9 @@ from ...config import config, OpLaserMode
 #     DEPRECATED!
 #     """
 #     available_modes = OrderedDict({
-#         OpLaserMode.: "Laser-on/off pulses in the same train",
-#         OpLaserMode.EVEN_ON: "Laser-on/off pulses in even/odd train",
-#         OpLaserMode.ODD_ON: "Laser-on/off pulses in odd/even train"
+#         PumpProbeMode.: "Laser-on/off pulses in the same train",
+#         PumpProbeMode.EVEN_ON: "Laser-on/off pulses in even/odd train",
+#         PumpProbeMode.ODD_ON: "Laser-on/off pulses in odd/even train"
 #     })
 #
 #     def __init__(self, *args, **kwargs):

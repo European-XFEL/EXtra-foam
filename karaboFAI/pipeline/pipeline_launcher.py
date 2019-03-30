@@ -19,7 +19,7 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    LaserOnOffProcessor, RegionOfInterestProcessor, SampleDegradationProcessor
+    PumpProbeProcessor, RegionOfInterestProcessor, SampleDegradationProcessor
 )
 from ..config import config
 from ..gui import QtCore
@@ -45,7 +45,7 @@ class PipelineLauncher(Worker):
         self._correlation_proc = CorrelationProcessor()
 
         self._ai_proc = AzimuthalIntegrationProcessor()
-        self._laser_on_off_proc = LaserOnOffProcessor()
+        self._pp_proc = PumpProbeProcessor()
         self._sample_degradation_proc = SampleDegradationProcessor()
 
         self._head = HeadProcessor()
@@ -71,21 +71,21 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot(object, list, list)
     def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        if mode != self._laser_on_off_proc.laser_mode:
-            self._laser_on_off_proc.laser_mode = mode
-            self._laser_on_off_proc.reset()
+        if mode != self._pp_proc.mode:
+            self._pp_proc.mode = mode
+            self._pp_proc.reset()
             ProcessedData.clear_onoff_hist()
 
-        self._laser_on_off_proc.on_pulse_ids = on_pulse_ids
-        self._laser_on_off_proc.off_pulse_ids = off_pulse_ids
+        self._pp_proc.on_pulse_ids = on_pulse_ids
+        self._pp_proc.off_pulse_ids = off_pulse_ids
 
     @QtCore.pyqtSlot(int)
     def onAbsDifferenceStateChange(self, state):
-        self._laser_on_off_proc.abs_difference = state == QtCore.Qt.Checked
+        self._pp_proc.abs_difference = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, value):
-        self._laser_on_off_proc.moving_avg_window = value
+        self._pp_proc.moving_avg_window = value
 
     @QtCore.pyqtSlot(float, float)
     def onAucXRangeChange(self, lb, ub):
@@ -124,21 +124,21 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
-        self._laser_on_off_proc.fom_itgt_range = (lb, ub)
+        self._pp_proc.fom_itgt_range = (lb, ub)
         self._sample_degradation_proc.fom_itgt_range = (lb, ub)
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot()
     def onLaserOnOffClear(self):
         ProcessedData.clear_onoff_hist()
-        self._laser_on_off_proc.reset()
+        self._pp_proc.reset()
 
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
         enabled = state == QtCore.Qt.Checked
         self._ai_proc.setEnabled(enabled)
         self._sample_degradation_proc.setEnabled(enabled)
-        self._laser_on_off_proc.setEnabled(enabled)
+        self._pp_proc.setEnabled(enabled)
 
     @QtCore.pyqtSlot()
     def onCorrelationClear(self):
@@ -172,8 +172,8 @@ class PipelineLauncher(Worker):
         self._head.next = self._roi_proc
         self._roi_proc.next = self._ai_proc
         self._ai_proc.next = self._sample_degradation_proc
-        self._sample_degradation_proc.next = self._laser_on_off_proc
-        self._laser_on_off_proc.next = self._correlation_proc
+        self._sample_degradation_proc.next = self._pp_proc
+        self._pp_proc.next = self._correlation_proc
 
     def run(self):
         """Run the data processor."""

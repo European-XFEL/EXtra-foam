@@ -736,18 +736,19 @@ class ProcessedData:
         correlation (CorrelationData): correlation related data.
     """
 
-    def __init__(self, tid, images=None, **kwargs):
+    def __init__(self, tid, images=None):
         """Initialization."""
         self._tid = tid  # current Train ID
 
         if images is None:
             self._image_data = None
         else:
-            self._image_data = ImageData(images, **kwargs)
+            self._image_data = ImageData(images)
 
         self.momentum = None
         self.intensities = None
         self.intensity_mean = None
+        self.reference_intensity = None
 
         self.sample_degradation_foms = None
 

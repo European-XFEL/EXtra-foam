@@ -337,7 +337,7 @@ class ImageAnalysis(ImageView):
         self._image_data.update()
         self.setImage(self._image_data.masked_mean)
 
-    @QtCore.pyqtSlot(float, float)
+    @QtCore.pyqtSlot(int, int)
     def onThresholdMaskChange(self, lb, ub):
         if self._image_data is None:
             return

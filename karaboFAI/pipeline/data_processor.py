@@ -19,7 +19,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
 from ..algorithms import normalize_curve, slice_curve
-from ..config import config, AiNormalizer, FomName, OpLaserMode, RoiFom
+from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
 from ..logger import logger
 
 
@@ -285,11 +285,8 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         integration_range = self.integration_range
 
         assembled = proc_data.image.images
-        try:
-            image_mask = proc_data.image.image_mask
-        # TODO: check! why ValueError?
-        except ValueError as e:
-            return repr(e) + ": Invalid image mask!"
+        reference = proc_data.image.ref
+        image_mask = proc_data.image.image_mask
 
         pixel_size = proc_data.image.pixel_size
         poni2, poni1 = proc_data.image.pos_inv(cx, cy)
@@ -332,8 +329,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                 return ret.radial, ret.intensity
 
             with ThreadPoolExecutor(max_workers=4) as executor:
-                rets = executor.map(_integrate1d_imp,
-                                    range(assembled.shape[0]))
+                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
 
             momentums, intensities = zip(*rets)
             momentum = momentums[0]
@@ -367,13 +363,46 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         logger.debug("Time for azimuthal integration: {:.1f} ms"
                      .format(1000 * (time.perf_counter() - t0)))
 
+        if reference is not None:
+            mask = image_mask != 0
+            # merge image mask and threshold mask
+            mask[(assembled <= mask_min) | (assembled >= mask_max)] = 1
+
+            ret = ai.integrate1d(reference,
+                                 integration_points,
+                                 method=integration_method,
+                                 mask=mask,
+                                 radial_range=integration_range,
+                                 correctSolidAngle=True,
+                                 polarization_factor=1,
+                                 unit="q_A^-1")
+
+            ref_intensity = ret.intensity
+        else:
+            ref_intensity = None
+
+        return self._normalize(
+            momentum, intensities, intensities_mean, ref_intensity, proc_data)
+
+    def _normalize(self, momentum, intensities, intensities_mean,
+                   ref_intensity, proc_data):
         if self.normalizer == AiNormalizer.AUC:
-            intensities_mean = normalize_curve(
-                intensities_mean, momentum, *self.auc_x_range)
-            # normalize azimuthal integration curves for each pulse
-            for i, intensity in enumerate(intensities):
-                intensities[i][:] = normalize_curve(
-                    intensity, momentum, *self.auc_x_range)
+            try:
+                intensities_mean = normalize_curve(
+                    intensities_mean, momentum, *self.auc_x_range)
+                if ref_intensity is not None:
+                    ref_intensity = normalize_curve(
+                        ref_intensity, momentum, *self.auc_x_range)
+                else:
+                    ref_intensity = np.zeros_like(intensities_mean)
+
+                # normalize azimuthal integration curves for each pulse
+                for i, intensity in enumerate(intensities):
+                    intensities[i][:] = normalize_curve(
+                        intensity, momentum, *self.auc_x_range)
+
+            except ValueError as e:
+                return repr(e)
 
         else:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
@@ -384,8 +413,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                     denominator = roi1_hist[-1]
                 elif self.normalizer == AiNormalizer.ROI2:
                     denominator = roi2_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI12:
+                elif self.normalizer == AiNormalizer.ROI_SUM:
                     denominator = roi1_hist[-1] + roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI_SUB:
+                    denominator = roi1_hist[-1] - roi2_hist[-1]
             except IndexError as e:
                 # this could happen if the history is clear just now
                 return repr(e)
@@ -395,14 +426,19 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
 
             intensities_mean /= denominator
             intensities /= denominator
+            if ref_intensity is not None:
+                ref_intensity /= denominator
+            else:
+                ref_intensity = np.zeros_like(intensities_mean)
 
         proc_data.momentum = momentum
         proc_data.intensities = intensities
         proc_data.intensity_mean = intensities_mean
+        proc_data.reference_intensity = ref_intensity
 
 
-class LaserOnOffProcessor(AbstractProcessor):
-    """LaserOnOffProcessor class.
+class PumpProbeProcessor(AbstractProcessor):
+    """PumpProbeProcessor class.
 
     A processor which calculated the moving average of the average of the
     azimuthal integration of all laser-on and laser-off pulses, as well
@@ -410,7 +446,7 @@ class LaserOnOffProcessor(AbstractProcessor):
     which is integration of the absolute aforementioned difference.
 
     Attributes:
-        laser_mode (int): Laser on/off mode.
+        mode (int): Pump-probe mode.
         on_pulse_ids (list): a list of laser-on pulse IDs.
         off_pulse_ids (list): a list of laser-off pulse IDs.
         abs_difference (bool): True for calculating the absolute value of
@@ -423,7 +459,7 @@ class LaserOnOffProcessor(AbstractProcessor):
     def __init__(self):
         super().__init__()
 
-        self.laser_mode = None
+        self.mode = None
         self.on_pulse_ids = None
         self.off_pulse_ids = None
 
@@ -449,11 +485,9 @@ class LaserOnOffProcessor(AbstractProcessor):
 
     def process(self, proc_data, raw_data=None):
         """Override."""
-        if self.laser_mode == OpLaserMode.PRE_DEFINED_OFF:
-            return
-
         momentum = proc_data.momentum
         intensities = proc_data.intensities
+        ref_intensity = proc_data.reference_intensity
 
         n_pulses = intensities.shape[0]
         max_on_pulse_id = max(self.on_pulse_ids)
@@ -461,23 +495,24 @@ class LaserOnOffProcessor(AbstractProcessor):
             return f"On-pulse ID {max_on_pulse_id} out of range " \
                    f"(0 - {n_pulses - 1})"
 
-        max_off_pulse_id = max(self.off_pulse_ids)
-        if max_off_pulse_id >= n_pulses:
-            return f"Off-pulse ID {max_off_pulse_id} out of range " \
-                   f"(0 - {n_pulses - 1})"
+        if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
+            max_off_pulse_id = max(self.off_pulse_ids)
+            if max_off_pulse_id >= n_pulses:
+                return f"Off-pulse ID {max_off_pulse_id} out of range " \
+                       f"(0 - {n_pulses - 1})"
 
-        if self.laser_mode == OpLaserMode.SAME_TRAIN:
+        if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             # compare laser-on/off pulses in the same train
             self._on_train_received = True
             self._off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
-            if self.laser_mode == OpLaserMode.EVEN_TRAIN_ON:
+            if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
                 flag = 0  # on-train has even train ID
-            elif self.laser_mode == OpLaserMode.ODD_TRAIN_ON:
+            elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                return f"Unknown laser mode: {self.laser_mode}"
+                return f"Unknown laser mode: {self.mode}"
 
             # Off-train will only be acknowledged when an on-train
             # was received! This ensures that in the visualization
@@ -506,7 +541,7 @@ class LaserOnOffProcessor(AbstractProcessor):
 
         if self._on_train_received:
             # update on-pulse
-            if self.laser_mode == OpLaserMode.SAME_TRAIN or \
+            if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN) or \
                     not self._off_train_received:
 
                 this_on_pulses = intensities[self.on_pulse_ids].mean(axis=0)
@@ -538,8 +573,10 @@ class LaserOnOffProcessor(AbstractProcessor):
         fom = None
         if self._off_train_received:
             # update off-pulse
-
-            this_off_pulses = intensities[self.off_pulse_ids].mean(axis=0)
+            if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
+                this_off_pulses = ref_intensity
+            else:
+                this_off_pulses = intensities[self.off_pulse_ids].mean(axis=0)
 
             self._off_pulses_hist.append(this_off_pulses)
 

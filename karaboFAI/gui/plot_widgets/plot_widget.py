@@ -481,7 +481,7 @@ class LaserOnOffFomWidget(PlotWidget):
         self.setLabel('left', "ROI (arb. u.)")
         self.setTitle(' ')
 
-        self._plot = self.plotScatter(brush=make_brush('p'))
+        self._plot = self.plotScatter(brush=make_brush('o'))
 
     def update(self, data):
         """Override."""

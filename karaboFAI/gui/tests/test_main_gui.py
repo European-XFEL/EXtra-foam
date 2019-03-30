@@ -9,14 +9,11 @@ from karabo_data.geometry import LPDGeometry
 
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui.windows import (
-    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
-    XasWindow
+    CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
 )
 
-from karaboFAI.pipeline.data_model import ProcessedData, ImageData
-from karaboFAI.config import (
-    config, DataSource, FomName, AiNormalizer, OpLaserMode
-)
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
+from karaboFAI.config import config, FomName, AiNormalizer, PumpProbeMode
 
 from . import mkQApp
 app = mkQApp()
@@ -28,18 +25,17 @@ class TestMainGui(unittest.TestCase):
         cls.gui = MainGUI('LPD')
         cls.proc = cls.gui._proc_worker
 
+        cls._actions = cls.gui._tool_bar.actions()
+        cls._overview_action = cls._actions[3]
+        cls._pp_action = cls._actions[4]
+        cls._correlation_action = cls._actions[5]
+        cls._xas_action = cls._actions[6]
+
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
 
     def setUp(self):
-        self._actions = self.gui._tool_bar.actions()
-        self._imagetool_action = self._actions[2]
-        self._overview_action = self._actions[3]
-        self._pumpprobe_action = self._actions[4]
-        self._correlation_action = self._actions[5]
-        self._xas_action = self._actions[6]
-
         ImageData.reset()
 
     def testAnalysisCtrlWidget(self):
@@ -50,14 +46,14 @@ class TestMainGui(unittest.TestCase):
 
         self.assertFalse(worker._ai_proc.isEnabled())
         self.assertFalse(worker._sample_degradation_proc.isEnabled())
-        self.assertFalse(worker._laser_on_off_proc.isEnabled())
+        self.assertFalse(worker._pp_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton)
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertTrue(worker._ai_proc.isEnabled())
         self.assertTrue(worker._sample_degradation_proc.isEnabled())
-        self.assertTrue(worker._laser_on_off_proc.isEnabled())
+        self.assertTrue(worker._pp_proc.isEnabled())
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
@@ -71,7 +67,7 @@ class TestMainGui(unittest.TestCase):
         itgt_method = 'nosplit_csr'
         itgt_pts = 1024
         itgt_range = (0.1, 0.2)
-        ai_normalizer = AiNormalizer.ROI1
+        ai_normalizer = AiNormalizer.ROI2
         aux_x_range = (0.2, 0.3)
         fom_itgt_range = (0.3, 0.4)
 
@@ -104,8 +100,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTupleEqual(worker._sample_degradation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._laser_on_off_proc.fom_itgt_range,
-                              fom_itgt_range)
+        self.assertTupleEqual(worker._pp_proc.fom_itgt_range, fom_itgt_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -120,19 +115,15 @@ class TestMainGui(unittest.TestCase):
         widget._off_pulse_le.setText('1:10:2')
         widget._moving_avg_window_le.setText(str(moving_average))
         QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton)
-        self.assertTrue(worker._laser_on_off_proc.abs_difference)
+        self.assertTrue(worker._pp_proc.abs_difference)
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertEqual(OpLaserMode.SAME_TRAIN,
-                         worker._laser_on_off_proc.laser_mode)
-        self.assertListEqual(on_pulse_ids,
-                             worker._laser_on_off_proc.on_pulse_ids)
-        self.assertListEqual(off_pulse_ids,
-                             worker._laser_on_off_proc.off_pulse_ids)
-        self.assertEqual(moving_average,
-                         worker._laser_on_off_proc.moving_avg_window)
-        self.assertFalse(worker._laser_on_off_proc.abs_difference)
+        self.assertEqual(PumpProbeMode.SAME_TRAIN, worker._pp_proc.mode)
+        self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
+        self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
+        self.assertEqual(moving_average, worker._pp_proc.moving_avg_window)
+        self.assertFalse(worker._pp_proc.abs_difference)
 
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
@@ -242,15 +233,7 @@ class TestMainGui(unittest.TestCase):
         window.close()
         self.assertEqual(n_registered, len(self.gui._windows))
 
-    def test_imagetoolwindow(self):
-        n_registered = len(self.gui._windows)
-        self._imagetool_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
-        # TODO: ImageToolWindow is a SingletonWindow
-        # self.assertIsInstance(window, ImageToolWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
-
-    def test_overviewwindow(self):
+    def testOverviewWindow(self):
         widget = self.gui.analysis_ctrl_widget
 
         n_registered = len(self.gui._windows)
@@ -297,14 +280,14 @@ class TestMainGui(unittest.TestCase):
         window.close()
         self.assertEqual(n_registered, len(self.gui._windows))
 
-    def test_pumpprobewindow(self):
+    def testPumpProbeWindow(self):
         n_registered = len(self.gui._windows)
-        self._pumpprobe_action.trigger()
+        self._pp_action.trigger()
         window = list(self.gui._windows.keys())[-1]
         self.assertIsInstance(window, PumpProbeWindow)
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
-    def test_xaswindow(self):
+    def testXasWindow(self):
         n_registered = len(self.gui._windows)
         self._xas_action.trigger()
         window = list(self.gui._windows.keys())[-1]
