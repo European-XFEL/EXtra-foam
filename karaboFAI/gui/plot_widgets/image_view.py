@@ -399,20 +399,12 @@ class AssembledImageView(ImageView):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._threshold_mask = None  # current threshold mask
-
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
-        threshold_mask = data.image.threshold_mask
-        if threshold_mask != self._threshold_mask:
-            self._is_initialized = False
-            self._threshold_mask = threshold_mask
-
         self.setImage(data.image.masked_mean,
                       auto_levels=(not self._is_initialized))
-
         self.updateROI(data)
 
         if not self._is_initialized:
@@ -428,17 +420,12 @@ class SinglePulseImageView(ImageView):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._threshold_mask = None  # current threshold mask
-
         self.pulse_id = pulse_id
 
     def update(self, data):
         """Override."""
         images = data.image.images
         threshold_mask = data.image.threshold_mask
-        if threshold_mask != self._threshold_mask:
-            self._is_initialized = False
-            self._threshold_mask = threshold_mask
 
         max_id = data.n_pulses - 1
         if self.pulse_id <= max_id:
@@ -475,6 +462,7 @@ class ReferenceImageView(ImageView):
         masked_ref = data.image.masked_ref
         if masked_ref is not None:
             self.setImage(masked_ref, auto_levels=(not self._is_initialized))
+            self.updateROI(data)
 
             if not self._is_initialized:
                 self._is_initialized = True
