@@ -485,7 +485,7 @@ class LaserOnOffFomWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         self._plot.setData(tids, foms)
 
 
@@ -510,8 +510,8 @@ class LaserOnOffAiWidget(PlotWidget):
     def update(self, data):
         """Override."""
         momentum = data.momentum
-        on_pulse = data.on_off.on_pulse
-        off_pulse = data.on_off.off_pulse
+        on_pulse = data.pp.on_pulse
+        off_pulse = data.pp.off_pulse
 
         if on_pulse is None:
             self._data = None
@@ -555,9 +555,9 @@ class LaserOnOffDiffWidget(PlotWidget):
     def update(self, data):
         """Override."""
         momentum = data.momentum
-        on_pulse = data.on_off.on_pulse
-        off_pulse = data.on_off.off_pulse
-        diff = data.on_off.diff
+        on_pulse = data.pp.on_pulse
+        off_pulse = data.pp.off_pulse
+        diff = data.pp.diff
 
         if on_pulse is None:
             self._data = None

@@ -47,9 +47,9 @@ class PumpProbeWindow(DockerWindow):
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)
 
-        self._on_off_fom = LaserOnOffFomWidget(parent=self)
-        self._on_off_ai = LaserOnOffAiWidget(parent=self)
-        self._on_off_diff = LaserOnOffDiffWidget(parent=self)
+        self._pp_fom = LaserOnOffFomWidget(parent=self)
+        self._pp_ai = LaserOnOffAiWidget(parent=self)
+        self._pp_diff = LaserOnOffDiffWidget(parent=self)
 
         self.initUI()
 
@@ -80,21 +80,21 @@ class PumpProbeWindow(DockerWindow):
         # right
         # -----------
 
-        on_off_ai_dock = Dock("On&Off Azimuthal Integration",
-                              size=(self._RW, self._RH1))
-        self._docker_area.addDock(on_off_ai_dock, 'right')
-        on_off_ai_dock.addWidget(self._on_off_ai)
+        pp_ai_dock = Dock("Pump-probe Azimuthal Integration",
+                          size=(self._RW, self._RH1))
+        self._docker_area.addDock(pp_ai_dock, 'right')
+        pp_ai_dock.addWidget(self._pp_ai)
 
-        on_off_diff_dock = Dock("On-Off Azimuthal Integration",
-                                size=(self._RW, self._RH1))
-        self._docker_area.addDock(on_off_diff_dock, 'bottom', on_off_ai_dock)
-        on_off_diff_dock.addWidget(self._on_off_diff)
+        pp_diff_dock = Dock("Pump-probe Azimuthal Integration",
+                            size=(self._RW, self._RH1))
+        self._docker_area.addDock(pp_diff_dock, 'bottom', pp_ai_dock)
+        pp_diff_dock.addWidget(self._pp_diff)
 
         bulletin_dock = Dock("Bulletin", size=(self._RW, self._RH2))
-        self._docker_area.addDock(bulletin_dock, 'bottom', on_off_diff_dock)
+        self._docker_area.addDock(bulletin_dock, 'bottom', pp_diff_dock)
         bulletin_dock.addWidget(self._bulletin)
         bulletin_dock.hideTitleBar()
 
-        on_off_fom_dock = Dock("FOM", size=(self._RW, self._RH3))
-        self._docker_area.addDock(on_off_fom_dock, 'bottom', bulletin_dock)
-        on_off_fom_dock.addWidget(self._on_off_fom)
+        pp_fom_dock = Dock("FOM", size=(self._RW, self._RH3))
+        self._docker_area.addDock(pp_fom_dock, 'bottom', bulletin_dock)
+        pp_fom_dock.addWidget(self._pp_fom)

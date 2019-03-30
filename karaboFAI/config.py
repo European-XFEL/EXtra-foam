@@ -37,7 +37,7 @@ class FomName(IntEnum):
     ROI2 = 3
     # Calculate the FOM based on the difference between the azimuthal
     # integration result between the laser on/off pulse(s).
-    AI_ON_OFF = 4
+    AI_PUMP_PROBE = 4
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
     AI_MEAN = 5

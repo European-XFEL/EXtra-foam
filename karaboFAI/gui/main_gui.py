@@ -213,7 +213,7 @@ class MainGUI(QtGui.QMainWindow):
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._proc_worker.onPulseIdRangeChange)
 
-        self.pump_probe_ctrl_widget.on_off_pulse_ids_sgn.connect(
+        self.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
             self._proc_worker.onOffPulseStateChange)
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
             self._proc_worker.onAbsDifferenceStateChange)

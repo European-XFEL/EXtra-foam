@@ -30,7 +30,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     # (mode, on-pulse ids, off-pulse ids)
-    on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
+    pp_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
     abs_difference_sgn = QtCore.pyqtSignal(int)
 
@@ -117,7 +117,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                          "by ',' and/or use the range operator ':'!")
             return False
 
-        self.on_off_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
+        self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
 
         abs_diff_state = self.abs_difference_cb.checkState()
         self.abs_difference_sgn.emit(abs_diff_state)

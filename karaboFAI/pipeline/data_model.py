@@ -200,7 +200,7 @@ class RoiData(AbstractData):
             setattr(self, f"roi{i}", None)   # (w, h, px, py)
 
 
-class LaserOnOffData(AbstractData):
+class PumpProbeData(AbstractData):
     """A class which stores Laser on-off data."""
 
     # FOM history
@@ -721,7 +721,7 @@ class ProcessedData:
     """A class which stores the processed data.
 
     ProcessedData also provide interface for manipulating the other node
-    dataset, e.g. RoiData, CorrelationData, LaserOnOffData.
+    dataset, e.g. RoiData, CorrelationData, PumpProbeData.
 
     Attributes:
         tid (int): train ID.
@@ -732,7 +732,7 @@ class ProcessedData:
         intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
             integration result over pulses. Shape = (intensity,)
         roi (RoiData): stores ROI related data.
-        on_off (LaserOnOffData): stores laser on-off related data.
+        pp (PumpProbeData): stores laser on-off related data.
         correlation (CorrelationData): correlation related data.
     """
 
@@ -753,7 +753,7 @@ class ProcessedData:
         self.sample_degradation_foms = None
 
         self.roi = RoiData()
-        self.on_off = LaserOnOffData()
+        self.pp = PumpProbeData()
         self.correlation = CorrelationData()
 
     @property
@@ -777,7 +777,7 @@ class ProcessedData:
 
     @classmethod
     def clear_onoff_hist(cls):
-        LaserOnOffData.clear()
+        PumpProbeData.clear()
 
     @classmethod
     def clear_correlation_hist(cls):

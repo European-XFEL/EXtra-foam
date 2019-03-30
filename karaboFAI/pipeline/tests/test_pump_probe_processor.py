@@ -3,14 +3,14 @@ import unittest
 import numpy as np
 
 from karaboFAI.config import PumpProbeMode
-from karaboFAI.pipeline.data_model import LaserOnOffData, ProcessedData
+from karaboFAI.pipeline.data_model import PumpProbeData, ProcessedData
 from karaboFAI.pipeline.data_processor import PumpProbeProcessor
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        LaserOnOffData.clear()
+        PumpProbeData.clear()
 
         self._proc.fom_itgt_range = (1, 5)
 
@@ -40,12 +40,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([1, 0, 1, 0, 1])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(5)
         train_ids_gt.append(0)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -54,12 +54,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 2, 0, 2, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([2, 0, 2, 0, 2])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(10)
         train_ids_gt.append(1)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -68,12 +68,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 3, 0, 3, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([3, 0, 3, 0, 3])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(15)
         train_ids_gt.append(2)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -91,11 +91,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -104,12 +104,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([2, 0, 2, 0, 2])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(8)
         train_ids_gt.append(1)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -118,11 +118,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 3, 0, 3, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(2)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -131,12 +131,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 3, 0, 3, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([4, 0, 4, 0, 4])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(18)
         train_ids_gt.append(3)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -146,11 +146,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[5]
         self._proc.process(data)
 
-        self.assertTrue(data.on_off.on_pulse is None)
-        self.assertTrue(data.on_off.off_pulse is None)
+        self.assertTrue(data.pp.on_pulse is None)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(5)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -159,11 +159,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = [0, 7, 0, 7, 0]
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -172,11 +172,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 7, 0, 7, 0])  # unchanged
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(6)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -187,11 +187,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 9, 0, 9, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(8)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -200,12 +200,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 9, 0, 9, 0])
-        np.testing.assert_array_almost_equal(data.on_off.on_pulse, on_pulse_gt)
+        np.testing.assert_array_almost_equal(data.pp.on_pulse, on_pulse_gt)
         off_pulse_gt = np.array([10, 0, 10, 0, 10])
-        np.testing.assert_array_almost_equal(data.on_off.off_pulse, off_pulse_gt)
+        np.testing.assert_array_almost_equal(data.pp.off_pulse, off_pulse_gt)
         fom_hist_gt.append(48)
         train_ids_gt.append(9)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -222,11 +222,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[0]
         self._proc.process(data)
 
-        self.assertTrue(data.on_off.on_pulse is None)
-        self.assertTrue(data.on_off.off_pulse is None)
+        self.assertTrue(data.pp.on_pulse is None)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(0)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -235,11 +235,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 2, 0, 2, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(1)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -248,12 +248,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 2, 0, 2, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([3, 0, 3, 0, 3])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(13)
         train_ids_gt.append(2)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -262,11 +262,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 4, 0, 4, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
-        self.assertTrue(data.on_off.off_pulse is None)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
+        self.assertTrue(data.pp.off_pulse is None)
         fom_hist_gt.append(None)
         train_ids_gt.append(3)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
@@ -275,11 +275,11 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.process(data)
 
         on_pulse_gt = np.array([0, 4, 0, 4, 0])
-        np.testing.assert_array_almost_equal(on_pulse_gt, data.on_off.on_pulse)
+        np.testing.assert_array_almost_equal(on_pulse_gt, data.pp.on_pulse)
         off_pulse_gt = np.array([5, 0, 5, 0, 5])
-        np.testing.assert_array_almost_equal(off_pulse_gt, data.on_off.off_pulse)
+        np.testing.assert_array_almost_equal(off_pulse_gt, data.pp.off_pulse)
         fom_hist_gt.append(23)
         train_ids_gt.append(4)
-        tids, foms, _ = data.on_off.foms
+        tids, foms, _ = data.pp.foms
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)

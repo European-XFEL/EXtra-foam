@@ -88,7 +88,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "ROI1 + ROI2": FomName.ROI_SUM,
         "ROI1": FomName.ROI1,
         "ROI2": FomName.ROI2,
-        "A.I. on - A.I. off": FomName.AI_ON_OFF,
+        "A.I. on - A.I. off": FomName.AI_PUMP_PROBE,
         "A.I. mean": FomName.AI_MEAN,
     })
 

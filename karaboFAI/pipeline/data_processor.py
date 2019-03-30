@@ -82,8 +82,8 @@ class CorrelationProcessor(AbstractProcessor):
             fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
             fom = np.sum(np.abs(fom))
 
-        elif self.fom_name == FomName.AI_ON_OFF:
-            _, foms, _ = proc_data.on_off.foms
+        elif self.fom_name == FomName.AI_PUMP_PROBE:
+            _, foms, _ = proc_data.pp.foms
             if not foms:
                 return "Laser on-off result is not available!"
             fom = foms[-1]
@@ -538,10 +538,10 @@ class PumpProbeProcessor(AbstractProcessor):
             # reset flags
             self._prev_on = None
 
-        proc_data.on_off.on_pulse = on_pulse
-        proc_data.on_off.off_pulse = off_pulse
-        proc_data.on_off.diff = diff
-        proc_data.on_off.foms = (proc_data.tid, fom)
+        proc_data.pp.on_pulse = on_pulse
+        proc_data.pp.off_pulse = off_pulse
+        proc_data.pp.diff = diff
+        proc_data.pp.foms = (proc_data.tid, fom)
 
     def reset(self):
         """Override."""
