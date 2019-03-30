@@ -309,7 +309,6 @@ class MultiPulseAiWidget(PlotWidget):
 
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
-        self.setTitle(' ')
 
     def update(self, data):
         """Override."""
@@ -376,7 +375,6 @@ class RoiValueMonitor(PlotWidget):
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
-        self.setTitle(' ')
         self.addLegend(offset=(-40, 20))
 
         self._plots = []
@@ -399,7 +397,7 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = ['g', 'b', 'y', 'p']
+    _colors = ['c', 'b', 'r', 'o']
     _brushes = {
         0: make_brush(_colors[0], 120),
         1: make_brush(_colors[1], 120),
@@ -421,7 +419,6 @@ class CorrelationWidget(PlotWidget):
 
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
-        self.setTitle(' ')
 
         self._bar = self.plotErrorBar()
         self._plot = self.plotScatter(brush=self._brushes[self._idx])
@@ -479,7 +476,6 @@ class LaserOnOffFomWidget(PlotWidget):
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "ROI (arb. u.)")
-        self.setTitle(' ')
 
         self._plot = self.plotScatter(brush=make_brush('o'))
 
@@ -501,8 +497,7 @@ class LaserOnOffAiWidget(PlotWidget):
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setTitle('Moving average of on- and off- pulses')
-        self.addLegend(offset=(-60, 20))
+        self.addLegend(offset=(-40, 20))
 
         self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
         self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
@@ -540,7 +535,7 @@ class LaserOnOffDiffWidget(PlotWidget):
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setTitle('Moving average of on-off')
+        self.addLegend(offset=(-40, 20))
 
         self._plot = self.plotCurve(name="On - Off", pen=make_pen("y"))
 
@@ -585,7 +580,6 @@ class XasSpectrumWidget(PlotWidget):
 
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Absorption")
-        self.setTitle(' ')
 
         self._plot = self.plotScatter(brush=make_brush('b'))
 
@@ -606,7 +600,6 @@ class XasSpectrumDiffWidget(PlotWidget):
 
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Absorption")
-        self.setTitle(' ')
 
         self._plot = self.plotScatter(brush=make_brush('b'))
 
