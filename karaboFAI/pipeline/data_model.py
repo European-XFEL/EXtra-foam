@@ -576,6 +576,11 @@ class ImageData:
 
         self._registered_ops.add("reference")
 
+    def remove_reference(self):
+        self.__ref = None
+
+        self._registered_ops.add("reference")
+
     @cached_property
     def image_mask(self):
         if self._crop_area is not None:

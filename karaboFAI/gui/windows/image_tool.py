@@ -310,7 +310,9 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
         self._auto_level_btn = QtGui.QPushButton("Auto level")
         self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
+
         self.set_ref_btn = QtGui.QPushButton("Set reference")
+        self.remove_ref_btn = QtGui.QPushButton("Remove reference")
 
         self.initUI()
 
@@ -323,7 +325,8 @@ class _ImageProcWidget(QtGui.QGroupBox):
         layout.addWidget(self.bkg_le, 0, 2, 1, 2)
         layout.addWidget(self.update_image_btn, 2, 0, 1, 2)
         layout.addWidget(self._auto_level_btn, 2, 2, 1, 2)
-        layout.addWidget(self.set_ref_btn, 3, 0, 1, 4)
+        layout.addWidget(self.set_ref_btn, 3, 0, 1, 2)
+        layout.addWidget(self.remove_ref_btn, 3, 2, 1, 2)
         self.setLayout(layout)
 
 
@@ -355,6 +358,8 @@ class ImageToolWindow(AbstractWindow):
             self.updateImage)
         self._image_proc_widget.set_ref_btn.clicked.connect(
             self._image_view.setImageRef)
+        self._image_proc_widget.remove_ref_btn.clicked.connect(
+            self._image_view.removeImageRef)
 
         #
         # image tool bar

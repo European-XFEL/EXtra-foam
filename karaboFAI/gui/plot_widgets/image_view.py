@@ -244,6 +244,11 @@ class ImageAnalysis(ImageView):
         if self._image_data is not None:
             self._image_data.set_reference()
 
+    def removeImageRef(self):
+        """Remove reference image."""
+        if self._image_data is not None:
+            self._image_data.remove_reference()
+
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
         x, y = self._image_data.pos(x, y)
