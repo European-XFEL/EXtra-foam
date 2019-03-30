@@ -70,7 +70,7 @@ class XasWindow(DockerWindow):
         # -----------
         prev_roi_image_dock = None
         for i, image in enumerate(self._roi_images, 1):
-            roi_image_dock = Dock(f"ROI{i}", size=(self._LW, self._LH))
+            roi_image_dock = Dock(f"ROI{i} (I{i-1})", size=(self._LW, self._LH))
             if prev_roi_image_dock is None:
                 self._docker_area.addDock(roi_image_dock, 'left')
             else:

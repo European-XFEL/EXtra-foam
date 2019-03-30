@@ -68,11 +68,11 @@ class PumpProbeWindow(DockerWindow):
         # left
         # -----------
 
-        on_image_dock = Dock("Laser-on Image", size=(self._LW, self._LH1))
+        on_image_dock = Dock("'On' Image", size=(self._LW, self._LH1))
         self._docker_area.addDock(on_image_dock, "left")
         on_image_dock.addWidget(self._on_image)
 
-        off_image_dock = Dock("Laser-off Image", size=(self._LW, self._LH1))
+        off_image_dock = Dock("'Off' Image", size=(self._LW, self._LH1))
         self._docker_area.addDock(off_image_dock, 'bottom', on_image_dock)
         off_image_dock.addWidget(self._off_image)
 
@@ -80,12 +80,12 @@ class PumpProbeWindow(DockerWindow):
         # right
         # -----------
 
-        pp_ai_dock = Dock("Pump-probe Azimuthal Integration",
+        pp_ai_dock = Dock("On&Off Azimuthal Integration",
                           size=(self._RW, self._RH1))
         self._docker_area.addDock(pp_ai_dock, 'right')
         pp_ai_dock.addWidget(self._pp_ai)
 
-        pp_diff_dock = Dock("Pump-probe Azimuthal Integration",
+        pp_diff_dock = Dock("On-Off Azimuthal Integration",
                             size=(self._RW, self._RH1))
         self._docker_area.addDock(pp_diff_dock, 'bottom', pp_ai_dock)
         pp_diff_dock.addWidget(self._pp_diff)
