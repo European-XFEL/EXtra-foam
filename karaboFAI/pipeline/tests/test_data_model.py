@@ -36,6 +36,39 @@ class TestImageData(unittest.TestCase):
     def setUp(self):
         ImageData.reset()
 
+    def test_memoryTrainResolved(self):
+        imgs_orig = np.arange(100, dtype=np.float).reshape(10, 10)
+        img_data = ImageData(imgs_orig)
+        img_data.set_reference()
+        img_data.update()
+
+        imgs = img_data.images
+        img_mean = img_data.mean
+        masked_mean = img_data.masked_mean
+        ref = img_data.ref
+        np.testing.assert_array_equal(imgs, img_mean)
+        imgs[0, 0] = 123456
+        self.assertEqual(img_mean[0, 0], imgs[0, 0])
+        # masked_mean and mean do not share memory space
+        self.assertNotEqual(masked_mean[0, 0], img_mean[0, 0])
+        self.assertNotEqual(ref[0, 0], img_mean[0, 0])
+
+    def test_memoryPulseResolved(self):
+        imgs_orig = np.arange(100, dtype=np.float).reshape(4, 5, 5)
+        img_data = ImageData(imgs_orig)
+        img_data.set_reference()
+        img_data.update()
+
+        img_mean = img_data.mean
+        masked_mean = img_data.masked_mean
+        ref = img_data.ref
+        np.testing.assert_array_equal(img_mean, ref)
+        img_mean[0, 0] = 123456
+        # Note: this is different from train-resolved data!!!
+        # masked_mean and mean do not share memory space
+        self.assertNotEqual(masked_mean[0, 0], img_mean[0, 0])
+        self.assertNotEqual(ref[0, 0], img_mean[0, 0])
+
     def test_invalidInput(self):
         with self.assertRaises(TypeError):
             ImageData([1, 2, 3])
@@ -93,6 +126,51 @@ class TestImageData(unittest.TestCase):
         img_data.update()
         self.assertTupleEqual((-12, -8), img_data.pos_inv(-2, 12))
 
+    def test_referenceTrainResolved(self):
+        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
+
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_threshold_mask(5, 20)
+        img_data.set_reference()
+        img_data.update()
+
+        masked_gt = np.copy(imgs_orig)
+        masked_gt[masked_gt < 5] = 5
+        masked_gt[masked_gt > 20] = 20
+        np.testing.assert_array_equal(imgs_orig, img_data.ref)
+        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
+
+        # test new instance
+        img_data.set_threshold_mask(20, None)
+        img_data = ImageData(np.copy(imgs_orig))
+        masked_gt = np.copy(imgs_orig)
+        masked_gt[masked_gt < 20] = 20
+        np.testing.assert_array_equal(imgs_orig, img_data.ref)
+        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
+
+    def test_referencePulseResolved(self):
+        imgs_orig = np.arange(32, dtype=np.float).reshape(2, 4, 4)
+        imgs_mean = np.mean(imgs_orig, axis=0)
+
+        img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_threshold_mask(5, 20)
+        img_data.set_reference()
+        img_data.update()
+
+        masked_gt = np.copy(imgs_mean)
+        masked_gt[masked_gt < 5] = 5
+        masked_gt[masked_gt > 20] = 20
+        np.testing.assert_array_equal(imgs_mean, img_data.ref)
+        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
+
+        # test new instance
+        img_data.set_threshold_mask(20, None)
+        img_data = ImageData(np.copy(imgs_orig))
+        masked_gt = np.copy(imgs_mean)
+        masked_gt[masked_gt < 20] = 20
+        np.testing.assert_array_equal(imgs_mean, img_data.ref)
+        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
+
     def test_imagemask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
         mask = np.zeros_like(imgs_orig, dtype=bool)
@@ -128,8 +206,12 @@ class TestImageData(unittest.TestCase):
     def test_thresholdmask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
         img_data = ImageData(np.copy(imgs_orig))
+        img_data.set_reference()
+        img_data.update()
+
         self.assertTupleEqual((-np.inf, np.inf), img_data.threshold_mask)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
+        np.testing.assert_array_equal(imgs_orig, img_data.masked_ref)
 
         img_data.set_threshold_mask(None, 5)
         img_data.update()
@@ -140,6 +222,7 @@ class TestImageData(unittest.TestCase):
         imgs = np.copy(imgs_orig)
         imgs[imgs > 5] = 5
         np.testing.assert_array_equal(imgs, img_data.masked_mean)
+        np.testing.assert_array_equal(imgs, img_data.masked_ref)
 
         img_data.set_threshold_mask(1, None)
         img_data.update()
@@ -147,6 +230,7 @@ class TestImageData(unittest.TestCase):
         imgs = np.copy(imgs_orig)
         imgs[imgs < 1] = 1
         np.testing.assert_array_equal(imgs, img_data.masked_mean)
+        np.testing.assert_array_equal(imgs, img_data.masked_ref)
 
         img_data.set_threshold_mask(3, 8)
         img_data.update()
@@ -155,11 +239,13 @@ class TestImageData(unittest.TestCase):
         imgs[imgs < 3] = 3
         imgs[imgs > 8] = 8
         np.testing.assert_array_equal(imgs, img_data.masked_mean)
+        np.testing.assert_array_equal(imgs, img_data.masked_ref)
 
     def test_trainresolved(self):
         imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
 
         img_data = ImageData(np.copy(imgs_orig))
+        self.assertFalse(img_data.pulse_resolved())
         mask = (1, 4)
         img_data.set_threshold_mask(*mask)
         bkg = 1.0
@@ -275,6 +361,7 @@ class TestImageData(unittest.TestCase):
     def test_pulseresolved(self):
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
         img_data = ImageData(np.copy(imgs_orig))
+        self.assertTrue(img_data.pulse_resolved())
 
         img_data.set_threshold_mask(1, 4)
         bkg = 1.0

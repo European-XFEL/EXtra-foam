@@ -472,9 +472,9 @@ class ReferenceImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        ref = data.image.ref
-        if ref is not None:
-            self.setImage(ref, auto_levels=(not self._is_initialized))
+        masked_ref = data.image.masked_ref
+        if masked_ref is not None:
+            self.setImage(masked_ref, auto_levels=(not self._is_initialized))
 
             if not self._is_initialized:
                 self._is_initialized = True

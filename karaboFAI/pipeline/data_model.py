@@ -497,6 +497,9 @@ class ImageData:
             return self._images.shape[0]
         return 1
 
+    def pulse_resolved(self):
+        return self._images.ndim == 3
+
     @property
     def shape(self):
         return self._images.shape[-2:]
@@ -567,12 +570,13 @@ class ImageData:
         self._registered_ops.add("threshold_mask")
 
     def set_reference(self):
+        # Reference should a copy of mean since mean could be modified
+        # after a reference was set.
         if self._crop_area is None:
-            self.__ref = self.masked_mean
+            self.__ref = np.copy(self.mean)
         else:
             # recalculate the uncropped image
-            self.__ref = self._masked_mean_imp(
-                np.copy(self._mean_imp(self._images)))
+            self.__ref = np.copy(self._mean_imp(self._images))
 
         self._registered_ops.add("reference")
 
@@ -610,7 +614,13 @@ class ImageData:
             return self._image_ref
 
         x, y, w, h = self._crop_area
-        return self._image_ref[..., y:y+h, x:x+w]
+        return self._image_ref[y:y+h, x:x+w]
+
+    @cached_property
+    def masked_ref(self):
+        if self.ref is None:
+            return None
+        return self._masked_mean_imp(np.copy(self.ref))
 
     @cached_property
     def mean(self):
@@ -661,16 +671,17 @@ class ImageData:
         if "crop" in self._registered_ops:
             self._crop_area = self.__crop_area
             invalid_caches.update(
-                {"images", "ref", "mean", "masked_mean", "image_mask"})
+                {"images", "ref", "masked_ref",
+                 "mean", "masked_mean", "image_mask"})
         if "image_mask" in self._registered_ops:
             self._image_mask = np.copy(self.__image_mask)
             invalid_caches.add("image_mask")
         if "threshold_mask" in self._registered_ops:
             self._threshold_mask = self.__threshold_mask
-            invalid_caches.add("masked_mean")
+            invalid_caches.update({"masked_mean", "masked_ref"})
         if "reference" in self._registered_ops:
             self._image_ref = self.__ref
-            invalid_caches.add("ref")
+            invalid_caches.update({"ref", "masked_ref"})
 
         for cache in invalid_caches:
             try:
