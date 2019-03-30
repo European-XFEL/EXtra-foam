@@ -504,8 +504,8 @@ class LaserOnOffAiWidget(PlotWidget):
         self.setTitle('Moving average of on- and off- pulses')
         self.addLegend(offset=(-60, 20))
 
-        self._on_pulse = self.plotCurve(name="Laser-on", pen=make_pen("p"))
-        self._off_pulse = self.plotCurve(name="Laser-off", pen=make_pen("g"))
+        self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
+        self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
 
     def update(self, data):
         """Override."""
