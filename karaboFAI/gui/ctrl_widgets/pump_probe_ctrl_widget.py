@@ -32,8 +32,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     # (mode, on-pulse ids, off-pulse ids)
     on_off_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
 
-    moving_avg_window_sgn = QtCore.pyqtSignal(int)
-
     abs_difference_sgn = QtCore.pyqtSignal(int)
 
     def __init__(self, *args, **kwargs):
@@ -62,17 +60,12 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
-        self._moving_avg_window_le = QtGui.QLineEdit("1")
-        self._moving_avg_window_le.setValidator(
-            QtGui.QIntValidator(1, 600))
-
         self.reset_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
             self._laser_mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
-            self._moving_avg_window_le,
             self.abs_difference_cb,
         ]
 
@@ -93,10 +86,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 2, 0, AR)
             layout.addWidget(self._off_pulse_le, 2, 1)
 
-        layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 0, AR)
-        layout.addWidget(self._moving_avg_window_le, 3, 1)
-        layout.addWidget(self.abs_difference_cb, 4, 1)
-        layout.addWidget(self.reset_btn, 5, 1)
+        layout.addWidget(self.abs_difference_cb, 3, 1)
+        layout.addWidget(self.reset_btn, 4, 1)
 
         self.setLayout(layout)
 
@@ -130,11 +121,5 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         abs_diff_state = self.abs_difference_cb.checkState()
         self.abs_difference_sgn.emit(abs_diff_state)
-
-        window_size = int(self._moving_avg_window_le.text())
-        if window_size < 1:
-            logger.error("Moving average window < 1!")
-            return False
-        self.moving_avg_window_sgn.emit(window_size)
 
         return True

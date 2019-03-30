@@ -83,10 +83,6 @@ class PipelineLauncher(Worker):
     def onAbsDifferenceStateChange(self, state):
         self._pp_proc.abs_difference = state == QtCore.Qt.Checked
 
-    @QtCore.pyqtSlot(int)
-    def onMovingAverageWindowChange(self, value):
-        self._pp_proc.moving_avg_window = value
-
     @QtCore.pyqtSlot(float, float)
     def onAucXRangeChange(self, lb, ub):
         self._ai_proc.auc_x_range = (lb, ub)

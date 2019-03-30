@@ -108,12 +108,10 @@ class TestMainGui(unittest.TestCase):
 
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
-        moving_average = 10
 
         widget._laser_mode_cb.setCurrentIndex(1)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-        widget._moving_avg_window_le.setText(str(moving_average))
         QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton)
         self.assertTrue(worker._pp_proc.abs_difference)
 
@@ -122,7 +120,6 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(PumpProbeMode.SAME_TRAIN, worker._pp_proc.mode)
         self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
-        self.assertEqual(moving_average, worker._pp_proc.moving_avg_window)
         self.assertFalse(worker._pp_proc.abs_difference)
 
     def testDataCtrlWidget(self):

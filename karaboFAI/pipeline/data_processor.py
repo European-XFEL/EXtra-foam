@@ -440,10 +440,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
 class PumpProbeProcessor(AbstractProcessor):
     """PumpProbeProcessor class.
 
-    A processor which calculated the moving average of the average of the
-    azimuthal integration of all laser-on and laser-off pulses, as well
-    as their difference. It also calculates the the figure of merit (FOM),
-    which is integration of the absolute aforementioned difference.
+    A processor which calculated the average of the azimuthal integration
+    of all pump/probe (on/off) pulses, as well as their difference.
+    It also calculates the the figure of merit (FOM), which is integration
+    of the absolute aforementioned difference.
 
     Attributes:
         mode (int): Pump-probe mode.
@@ -451,7 +451,6 @@ class PumpProbeProcessor(AbstractProcessor):
         off_pulse_ids (list): a list of laser-off pulse IDs.
         abs_difference (bool): True for calculating the absolute value of
             difference between laser-on and laser-off.
-        moving_avg_window (int): moving average window size.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
@@ -462,49 +461,37 @@ class PumpProbeProcessor(AbstractProcessor):
         self.mode = None
         self.on_pulse_ids = None
         self.off_pulse_ids = None
-
         self.abs_difference = True
-
-        self.moving_avg_window = 1
-
         self.fom_itgt_range = None
 
-        self._on_train_received = False
-        self._off_train_received = False
-
-        # if an on-pulse is followed by an on-pulse, drop the previous one
-        self._drop_last_on_pulse = False
-
-        # moving average
-        self._on_pulses_ma = None
-        self._off_pulses_ma = None
-        # The histories of on/off pulses by train, which are used in
-        # calculating moving average (MA)
-        self._on_pulses_hist = deque()
-        self._off_pulses_hist = deque()
+        self._prev_on = None
 
     def process(self, proc_data, raw_data=None):
         """Override."""
+        on_pulse_ids = self.on_pulse_ids
+        off_pulse_ids = self.off_pulse_ids
         momentum = proc_data.momentum
         intensities = proc_data.intensities
         ref_intensity = proc_data.reference_intensity
 
         n_pulses = intensities.shape[0]
-        max_on_pulse_id = max(self.on_pulse_ids)
+        max_on_pulse_id = max(on_pulse_ids)
         if max_on_pulse_id >= n_pulses:
             return f"On-pulse ID {max_on_pulse_id} out of range " \
                    f"(0 - {n_pulses - 1})"
 
         if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
-            max_off_pulse_id = max(self.off_pulse_ids)
+            max_off_pulse_id = max(off_pulse_ids)
             if max_off_pulse_id >= n_pulses:
                 return f"Off-pulse ID {max_off_pulse_id} out of range " \
                        f"(0 - {n_pulses - 1})"
 
+        on_train_received = False
+        off_train_received = False
         if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             # compare laser-on/off pulses in the same train
-            self._on_train_received = True
-            self._off_train_received = True
+            on_train_received = True
+            off_train_received = True
         else:
             # compare laser-on/off pulses in different trains
             if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
@@ -514,87 +501,32 @@ class PumpProbeProcessor(AbstractProcessor):
             else:
                 return f"Unknown laser mode: {self.mode}"
 
-            # Off-train will only be acknowledged when an on-train
-            # was received! This ensures that in the visualization
-            # it always shows the on-train plot alone first, which
-            # is followed by a combined plots if the next train is
-            # an off-train pulse.
-            #
-            # Note: if this logic changes, one also need to modify
-            #       the visualization part.
-            if self._on_train_received:
-                if proc_data.tid % 2 == 1 ^ flag:
-                    # an on-pulse is followed by an off-pulse
-                    self._off_train_received = True
-                else:
-                    # an on-pulse is followed by an on-pulse
-                    self._drop_last_on_pulse = True
+            if proc_data.tid % 2 == 1 ^ flag:
+                off_train_received = True
             else:
-                # an off-pulse is followed by an on-pulse
-                if proc_data.tid % 2 == flag:
-                    self._on_train_received = True
+                on_train_received = True
 
-        # update and plot
-
-        on_pulse_ma = None
-        off_pulse_ma = None
-
-        if self._on_train_received:
-            # update on-pulse
-            if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN) or \
-                    not self._off_train_received:
-
-                this_on_pulses = intensities[self.on_pulse_ids].mean(axis=0)
-
-                if self._drop_last_on_pulse:
-                    length = len(self._on_pulses_hist)
-                    self._on_pulses_ma += \
-                        (this_on_pulses - self._on_pulses_hist.pop()) / length
-                    self._drop_last_on_pulse = False
-                else:
-                    if self._on_pulses_ma is None:
-                        self._on_pulses_ma = np.copy(this_on_pulses)
-                    elif len(self._on_pulses_hist) < self.moving_avg_window:
-                        self._on_pulses_ma += \
-                                (this_on_pulses - self._on_pulses_ma) \
-                                / (len(self._on_pulses_hist) + 1)
-                    elif len(self._on_pulses_hist) == self.moving_avg_window:
-                        self._on_pulses_ma += \
-                            (this_on_pulses - self._on_pulses_hist.popleft()) \
-                            / self.moving_avg_window
-                    else:
-                        raise ValueError("Unexpected code reached!")
-
-                self._on_pulses_hist.append(this_on_pulses)
-
-            on_pulse_ma = self._on_pulses_ma
+        # Off-train will only be acknowledged when an on-train
+        # was received! This ensures that in the visualization
+        # it always shows the on-train plot alone first, which
+        # is followed by a combined plots if the next train is
+        # an off-train pulse.
 
         diff = None
         fom = None
-        if self._off_train_received:
-            # update off-pulse
+        if on_train_received:
+            self._prev_on = intensities[on_pulse_ids].mean(axis=0)
+
+        on_pulse = self._prev_on
+        off_pulse = None
+
+        if off_train_received and on_pulse is not None:
             if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
-                this_off_pulses = ref_intensity
+                off_pulse = ref_intensity
             else:
-                this_off_pulses = intensities[self.off_pulse_ids].mean(axis=0)
+                off_pulse = intensities[off_pulse_ids].mean(axis=0)
 
-            self._off_pulses_hist.append(this_off_pulses)
-
-            if self._off_pulses_ma is None:
-                self._off_pulses_ma = np.copy(this_off_pulses)
-            elif len(self._off_pulses_hist) <= self.moving_avg_window:
-                self._off_pulses_ma += \
-                        (this_off_pulses - self._off_pulses_ma) \
-                        / len(self._off_pulses_hist)
-            elif len(self._off_pulses_hist) == self.moving_avg_window + 1:
-                self._off_pulses_ma += \
-                    (this_off_pulses - self._off_pulses_hist.popleft()) \
-                    / self.moving_avg_window
-            else:
-                raise ValueError("Unexpected code reached!")
-
-            off_pulse_ma = self._off_pulses_ma
-            diff = self._on_pulses_ma - self._off_pulses_ma
+            diff = on_pulse - off_pulse
 
             # calculate figure-of-merit and update history
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
@@ -604,20 +536,13 @@ class PumpProbeProcessor(AbstractProcessor):
                 fom = np.sum(fom)
 
             # reset flags
-            self._on_train_received = False
-            self._off_train_received = False
+            self._prev_on = None
 
-        proc_data.on_off.on_pulse = on_pulse_ma
-        proc_data.on_off.off_pulse = off_pulse_ma
+        proc_data.on_off.on_pulse = on_pulse
+        proc_data.on_off.off_pulse = off_pulse
         proc_data.on_off.diff = diff
         proc_data.on_off.foms = (proc_data.tid, fom)
 
     def reset(self):
         """Override."""
-        self._on_train_received = False
-        self._off_train_received = False
-        self._drop_last_on_pulse = False
-        self._on_pulses_ma = None
-        self._off_pulses_ma = None
-        self._on_pulses_hist.clear()
-        self._off_pulses_hist.clear()
+        self._prev_on = None
