@@ -366,7 +366,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         if reference is not None:
             mask = image_mask != 0
             # merge image mask and threshold mask
-            mask[(assembled <= mask_min) | (assembled >= mask_max)] = 1
+            mask[(reference < mask_min) | (reference > mask_max)] = 1
 
             ret = ai.integrate1d(reference,
                                  integration_points,
