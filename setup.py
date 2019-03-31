@@ -34,7 +34,7 @@ setup(
     },
     install_requires=[
         'numpy>=1.16.1',
-        'scipy>=1.1.0',
+        'scipy>=1.2.1',
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
