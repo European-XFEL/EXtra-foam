@@ -28,7 +28,7 @@ class TestImageTool(unittest.TestCase):
 
     def setUp(self):
         self.__class__._tid += 1
-        ImageData.reset()
+        ImageData.clear()
 
     def test_imagetoolwindow(self):
         n_registered = len(self.gui._windows)

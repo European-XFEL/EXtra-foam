@@ -15,7 +15,7 @@ class TestCorrelationProcessor(unittest.TestCase):
 
     def setUp(self):
         RoiData.clear()
-        ImageData.reset()
+        ImageData.clear()
 
         self._proc = RoiProcessor()
         self._rois = self._proc._rois

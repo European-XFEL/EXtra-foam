@@ -34,7 +34,7 @@ class TestImageData(unittest.TestCase):
         config["MASK_RANGE"] = (None, None)
 
     def setUp(self):
-        ImageData.reset()
+        ImageData.clear()
 
     def test_memoryTrainResolved(self):
         imgs_orig = np.arange(100, dtype=np.float).reshape(10, 10)
@@ -433,7 +433,7 @@ class TestImageData(unittest.TestCase):
         with self.assertLogs(logger, "ERROR"):
             ImageData(np.copy(imgs_orig))
 
-        ImageData.reset()
+        ImageData.clear()
         img_data = ImageData(np.copy(imgs_orig))
         img_data.set_ma_window(3)
         img_data = ImageData(imgs_orig - 2)

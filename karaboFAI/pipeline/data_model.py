@@ -349,7 +349,7 @@ class ImageData:
         def moving_average_count(self):
             return self._ma_count
 
-        def reset(self):
+        def clear(self):
             self._images = None
             self._ma_window = 1
             self._ma_count = 0
@@ -693,12 +693,12 @@ class ImageData:
         self._registered_ops.clear()
 
     @classmethod
-    def reset(cls):
+    def clear(cls):
         """Reset all the class attributes.
 
         Used in unittest only.
         """
-        cls.__raw.reset()
+        cls.__raw.clear()
         cls.__ref.__delete__(None)
         cls.__threshold_mask.__delete__(None)
         cls.__image_mask.__delete__(None)

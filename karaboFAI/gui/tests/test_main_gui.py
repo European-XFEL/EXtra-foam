@@ -36,7 +36,7 @@ class TestMainGui(unittest.TestCase):
         cls.gui.close()
 
     def setUp(self):
-        ImageData.reset()
+        ImageData.clear()
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
