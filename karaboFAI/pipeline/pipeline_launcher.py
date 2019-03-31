@@ -19,7 +19,7 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    PumpProbeProcessor, RegionOfInterestProcessor, SampleDegradationProcessor
+    PumpProbeProcessor, RoiProcessor, SampleDegradationProcessor
 )
 from ..config import config
 from ..gui import QtCore
@@ -41,7 +41,7 @@ class PipelineLauncher(Worker):
 
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
 
-        self._roi_proc = RegionOfInterestProcessor()
+        self._roi_proc = RoiProcessor()
         self._correlation_proc = CorrelationProcessor()
 
         self._ai_proc = AzimuthalIntegrationProcessor()
@@ -152,9 +152,9 @@ class PipelineLauncher(Worker):
 
     def update_roi_region(self, rank, activated, w, h, px, py):
         if activated:
-            self._roi_proc.set_roi(rank, (w, h, px, py))
+            self._roi_proc.set(rank, (w, h, px, py))
         else:
-            self._roi_proc.set_roi(rank, None)
+            self._roi_proc.set(rank, None)
 
     def update_roi_fom(self, value):
         self._roi_proc.roi_fom = value

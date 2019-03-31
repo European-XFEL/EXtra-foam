@@ -178,7 +178,7 @@ class SampleDegradationProcessor(AbstractProcessor):
         proc_data.sample_degradation_foms = foms
 
 
-class RegionOfInterestProcessor(AbstractProcessor):
+class RoiProcessor(AbstractProcessor):
     """Process region of interest.
 
     Attributes:
@@ -191,10 +191,7 @@ class RegionOfInterestProcessor(AbstractProcessor):
 
         self.roi_fom = None
 
-    def get_roi(self, rank):
-        return self._rois[rank-1]
-
-    def set_roi(self, rank, value):
+    def set(self, rank, value):
         self._rois[rank-1] = value
 
     def process(self, proc_data, raw_data=None):
@@ -223,14 +220,14 @@ class RegionOfInterestProcessor(AbstractProcessor):
                         self._rois[i] = None
                     else:
                         setattr(proc_data.roi, f"roi{i+1}", roi)
-                        value = self._get_roi_value(roi, roi_fom, img)
-                        value_ref = self._get_roi_value(roi, roi_fom, img_ref)
+                        value = self._get_roi_fom(roi, roi_fom, img)
+                        value_ref = self._get_roi_fom(roi, roi_fom, img_ref)
                 setattr(proc_data.roi, f"roi{i+1}_hist", (tid, value))
                 setattr(proc_data.roi, f"roi{i + 1}_hist_ref", (tid, value_ref))
 
     @staticmethod
-    def _get_roi_value(roi_param, roi_fom, img):
-        if img is None:
+    def _get_roi_fom(roi_param, roi_fom, img):
+        if roi_fom is None or img is None:
             return 0
 
         w, h, x, y = roi_param
