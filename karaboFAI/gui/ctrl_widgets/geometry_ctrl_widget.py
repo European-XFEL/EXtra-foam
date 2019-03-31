@@ -45,13 +45,14 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         self.initQuadTable()
 
         layout = QtGui.QVBoxLayout()
-        sub_layout = QtGui.QHBoxLayout()
-        sub_layout.addWidget(self._geom_file_open_btn)
-        sub_layout.addWidget(self._geom_file_le)
-        layout.addLayout(sub_layout)
-        layout.addWidget(QtGui.QLabel("Quadrant positions:"))
-        layout.addWidget(self._quad_positions_tb)
-
+        sub_layout1 = QtGui.QHBoxLayout()
+        sub_layout1.addWidget(self._geom_file_open_btn)
+        sub_layout1.addWidget(self._geom_file_le)
+        sub_layout2 = QtGui.QHBoxLayout()
+        sub_layout2.addWidget(QtGui.QLabel("Quadrant positions:"))
+        sub_layout2.addWidget(self._quad_positions_tb)
+        layout.addLayout(sub_layout1)
+        layout.addLayout(sub_layout2)
         self.setLayout(layout)
 
     def initQuadTable(self):

@@ -145,7 +145,7 @@ class OverviewWindow(DockerWindow):
         # upper right
         # -----------
 
-        ai_dock = Dock("Azimuthal Integration Overview",
+        ai_dock = Dock("Normalized azimuthal Integration",
                        size=(self._RW, self._RH1))
         self._docker_area.addDock(ai_dock, 'right')
         ai_dock.addWidget(self._ai)
