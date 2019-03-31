@@ -22,6 +22,7 @@ from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
     PumpProbeProcessor, RoiProcessor, SampleDegradationProcessor
 )
+from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
 from ..gui import QtCore
 from ..logger import logger
@@ -227,13 +228,20 @@ class PipelineLauncher(Worker):
         try:
             assembled = self._image_assembler.assemble(data)
             processed_data = ProcessedData(tid, assembled)
-            self._data_aggregator.aggregate(processed_data, data)
         # Exception:
         #   - ValueError, IndexError, KeyError: raised by 'assemble'
         #   - ValueError, TypeError: raised by initialization of ProcessedData
         except (ValueError, IndexError, KeyError, TypeError) as e:
             self.log(f"Train ID: {tid}: " + repr(e))
             return None
+        except Exception as e:
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            raise
+
+        try:
+            self._data_aggregator.aggregate(processed_data, data)
+        except AggregatingError as e:
+            self.log(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise

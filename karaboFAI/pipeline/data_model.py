@@ -180,6 +180,22 @@ class AbstractData:
                 attr.clear()
 
 
+class XgmData(AbstractData):
+    pulse_energy = TrainData()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source = None
+
+
+class MonoData(AbstractData):
+    energy = TrainData()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source = None
+
+
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
@@ -740,6 +756,8 @@ class ProcessedData:
 
         self.sample_degradation_foms = None
 
+        self.xgm = XgmData()
+        self.mono = MonoData()
         self.roi = RoiData()
         self.roi_ref = RoiData()
         self.pp = PumpProbeData()
