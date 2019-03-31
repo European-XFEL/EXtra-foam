@@ -16,7 +16,7 @@ from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
 class Colors:
-    def __init__(self, alpha):
+    def __init__(self, alpha=255):
         self.r = (215, 25, 28, alpha)  # red
         self.o = (253, 174, 97, alpha)  # orange
         self.y = (255, 255, 191, alpha)  # yellow
