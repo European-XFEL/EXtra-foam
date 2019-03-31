@@ -24,6 +24,9 @@ class Mediator(QtCore.QObject):
 
     reset_image_level_sgn = QtCore.pyqtSignal()
 
+    xgm_source_change_sgn = QtCore.pyqtSignal(str)
+    mono_source_change_sgn = QtCore.pyqtSignal(str)
+
     __instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -44,6 +47,11 @@ class Mediator(QtCore.QObject):
 
     def setProcessor(self, proc):
         self._proc = proc
+        self.initConnections()
+
+    def initConnections(self):
+        self.xgm_source_change_sgn.connect(self._proc.onXgmSourceChange)
+        self.mono_source_change_sgn.connect(self._proc.onMonoSourceChange)
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, v):

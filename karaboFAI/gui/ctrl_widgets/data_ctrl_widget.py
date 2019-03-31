@@ -14,7 +14,10 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..mediator import Mediator
 from ...config import config, DataSource
+
+mediator = Mediator()
 
 
 class DataCtrlWidget(AbstractCtrlWidget):
@@ -25,10 +28,25 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "Stream data from bridge": DataSource.BRIDGE,
     })
 
+    _mono_chromators = [
+        "",
+        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
+    ]
+
+    _xgms = [
+        "",
+        "SA1_XTD2_XGM/DOOCS/MAIN",
+        "SPB_XTD9_XGM/DOOCS/MAIN",
+        "SA3_XTD10_XGM/XGM/DOOCS",
+        "SCS_BLU_XGM/XGM/DOOCS",
+    ]
+
     server_tcp_sgn = QtCore.pyqtSignal(str, str)
     source_type_sgn = QtCore.pyqtSignal(object)
 
     source_name_sgn = QtCore.pyqtSignal(str)
+    xgm_source_change_sgn = QtCore.pyqtSignal(str)
+    mono_source_change_sgn = QtCore.pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Data source", *args, **kwargs)
@@ -43,6 +61,18 @@ class DataCtrlWidget(AbstractCtrlWidget):
             self._source_name_cb.addItem(src)
         self._source_name_cb.currentIndexChanged.connect(
             lambda i: self.source_name_sgn.emit(config["SOURCE_NAME"][i]))
+
+        self._mono_src_name_cb = QtGui.QComboBox()
+        for src in self._mono_chromators:
+            self._mono_src_name_cb.addItem(src)
+        self._mono_src_name_cb.currentTextChanged.connect(
+            lambda x: self.mono_source_change_sgn.emit(x))
+
+        self._xgm_src_name_cb = QtGui.QComboBox()
+        for src in self._xgms:
+            self._xgm_src_name_cb.addItem(src)
+        self._xgm_src_name_cb.currentTextChanged.connect(
+            lambda x: self.xgm_source_change_sgn.emit(x))
 
         self._source_type_rbts = []
         for key in self._available_sources:
@@ -75,6 +105,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self.parent().file_server_started_sgn.connect(self.onFileServerStarted)
         self.parent().file_server_stopped_sgn.connect(self.onFileServerStopped)
 
+        self.xgm_source_change_sgn.connect(mediator.xgm_source_change_sgn)
+        self.xgm_source_change_sgn.emit(self._xgm_src_name_cb.currentText())
+
+        self.mono_source_change_sgn.connect(mediator.mono_source_change_sgn)
+        self.mono_source_change_sgn.emit(self._mono_src_name_cb.currentText())
+
     def initUI(self):
         layout = QtGui.QVBoxLayout()
         AR = QtCore.Qt.AlignRight
@@ -86,8 +122,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(self._port_le, 0, 3)
         src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
         src_layout.addWidget(self._source_name_cb, 1, 1, 1, 4)
-        src_layout.addWidget(self._source_type_rbts[0], 2, 0)
-        src_layout.addWidget(self._source_type_rbts[1], 2, 2)
+        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 2, 0, AR)
+        src_layout.addWidget(self._mono_src_name_cb, 2, 1, 1, 4)
+        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 3, 0, AR)
+        src_layout.addWidget(self._xgm_src_name_cb, 3, 1, 1, 4)
+        src_layout.addWidget(self._source_type_rbts[0], 4, 0)
+        src_layout.addWidget(self._source_type_rbts[1], 4, 2)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)

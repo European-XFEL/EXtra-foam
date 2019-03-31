@@ -137,6 +137,25 @@ class TestMainGui(unittest.TestCase):
 
         self.assertEqual(daq.server_tcp_sp, "tcp://" + tcp_addr)
 
+        # test detector source name
+        src_name_cb = widget._source_name_cb
+        self.assertEqual(src_name_cb.currentText(),
+                         worker._image_assembler.source_name)
+
+        # test mono source name
+        mono_src_cb = widget._mono_src_name_cb
+        # test default value is set
+        self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
+        mono_src_cb.setCurrentIndex(1)
+        self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
+
+        # test xgm source name
+        xgm_src_cb = widget._xgm_src_name_cb
+        # test default value is set
+        self.assertEqual(xgm_src_cb.currentText(), worker._data_aggregator.xgm_src)
+        xgm_src_cb.setCurrentIndex(1)
+        self.assertEqual(xgm_src_cb.currentText(), worker._data_aggregator.xgm_src)
+
         # test passing data source types
         for rbt in widget._source_type_rbts:
             QTest.mouseClick(rbt, Qt.LeftButton)

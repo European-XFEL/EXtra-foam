@@ -15,6 +15,7 @@ import queue
 from scipy import constants
 
 from .image_assembler import ImageAssemblerFactory
+from .data_aggregator import DataAggregator
 from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
@@ -40,6 +41,7 @@ class PipelineLauncher(Worker):
         self._out_queue = out_queue
 
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
+        self._data_aggregator = DataAggregator()
 
         self._roi_proc = RoiProcessor()
         self._correlation_proc = CorrelationProcessor()
@@ -57,6 +59,14 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(object)
     def onSourceTypeChange(self, value):
         self._image_assembler.source_type = value
+
+    @QtCore.pyqtSlot(str)
+    def onXgmSourceChange(self, name):
+        self._data_aggregator.xgm_src = name
+
+    @QtCore.pyqtSlot(str)
+    def onMonoSourceChange(self, name):
+        self._data_aggregator.mono_src = name
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChange(self, filename, quad_positions):
@@ -217,6 +227,7 @@ class PipelineLauncher(Worker):
         try:
             assembled = self._image_assembler.assemble(data)
             processed_data = ProcessedData(tid, assembled)
+            self._data_aggregator.aggregate(processed_data, data)
         # Exception:
         #   - ValueError, IndexError, KeyError: raised by 'assemble'
         #   - ValueError, TypeError: raised by initialization of ProcessedData
