@@ -227,13 +227,15 @@ class PipelineLauncher(Worker):
 
         try:
             assembled = self._image_assembler.assemble(data)
-            processed_data = ProcessedData(tid, assembled)
-        # Exception:
-        #   - ValueError, IndexError, KeyError: raised by 'assemble'
-        #   - ValueError, TypeError: raised by initialization of ProcessedData
-        except (ValueError, IndexError, KeyError, TypeError) as e:
+        except AssemblingError as e:
             self.log(f"Train ID: {tid}: " + repr(e))
             return None
+        except Exception as e:
+            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            raise
+
+        try:
+            processed_data = ProcessedData(tid, assembled)
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
@@ -253,12 +255,10 @@ class PipelineLauncher(Worker):
                     break
 
                 if proc.isEnabled():
-                    error_msg = proc.process(processed_data, data)
-                    if error_msg:
-                        self.log(f"Train ID: {tid}: " + error_msg)
-                        break
-
+                    proc.process(processed_data, data)
                 proc = proc.next
+        except ProcessingError as e:
+            self.log(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise

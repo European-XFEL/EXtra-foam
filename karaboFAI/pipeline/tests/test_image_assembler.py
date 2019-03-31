@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.image_assembler import ImageAssemblerFactory
+from karaboFAI.pipeline.exceptions import AssemblingError
 from karaboFAI.config import DataSource
 
 
@@ -20,15 +21,15 @@ class TestAgipdAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((4, 16, 512, 128))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((4, 16, 100, 100))}}
             self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'modules, but'):
+        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
             data = {src_name: {key_name: np.ones((4, 12, 512, 128))}}
             self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Number of memory cells'):
+        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
             data = {src_name: {key_name: np.ones((0, 16, 512, 128))}}
             self._assembler.assemble(data)
 
@@ -48,15 +49,15 @@ class TestLpdAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((16, 256, 256, 4))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((16, 100, 100, 4))}}
             self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'modules, but'):
+        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
             data = {src_name: {key_name: np.ones((15, 256, 256, 4))}}
             self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Number of memory cells'):
+        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
             data = {src_name: {key_name: np.ones((16, 256, 256, 0))}}
             self._assembler.assemble(data)
 
@@ -73,7 +74,7 @@ class TestJungfrauAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((1, 512, 1024))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((1, 100, 100))}}
             self._assembler.assemble(data)
 
@@ -89,7 +90,7 @@ class TestJungfrauAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((512, 1024, 1))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((100, 100, 1))}}
             self._assembler.assemble(data)
 
@@ -110,7 +111,7 @@ class TestFastccdAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((1934, 960))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((100, 100))}}
             self._assembler.assemble(data)
 
@@ -122,6 +123,6 @@ class TestFastccdAssembler(unittest.TestCase):
         data = {src_name: {key_name: np.ones((1934, 960, 1))}}
         self._assembler.assemble(data)
 
-        with self.assertRaisesRegex(ValueError, 'Expected module shape'):
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {src_name: {key_name: np.ones((100, 100, 1))}}
             self._assembler.assemble(data)

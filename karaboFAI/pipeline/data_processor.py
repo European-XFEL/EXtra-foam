@@ -18,6 +18,7 @@ import numpy as np
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
+from .exceptions import ProcessingError
 from ..algorithms import intersection, normalize_curve, slice_curve
 from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
 from ..logger import logger
@@ -51,7 +52,7 @@ class AbstractProcessor:
 class HeadProcessor(AbstractProcessor):
     """Head node of a processor graph."""
     def process(self, proc_data, raw_data=None):
-        return ''
+        pass
 
 
 class CorrelationProcessor(AbstractProcessor):
@@ -75,7 +76,8 @@ class CorrelationProcessor(AbstractProcessor):
         if self.fom_name == FomName.AI_MEAN:
             momentum = proc_data.momentum
             if momentum is None:
-                return "Azimuthal integration result is not available!"
+                raise ProcessingError(
+                    "Azimuthal integration result is not available!")
             intensity = proc_data.intensity_mean
 
             # calculate figure-of-merit
@@ -85,7 +87,7 @@ class CorrelationProcessor(AbstractProcessor):
         elif self.fom_name == FomName.AI_PUMP_PROBE:
             _, foms, _ = proc_data.pp.foms
             if not foms:
-                return "Laser on-off result is not available!"
+                raise ProcessingError("Laser on-off result is not available!")
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
@@ -115,7 +117,7 @@ class CorrelationProcessor(AbstractProcessor):
             fom = roi1_hist[-1] - roi2_hist[-1]
 
         else:
-            return f"Unknown FOM name: {self.fom_name}!"
+            raise ProcessingError(f"Unknown FOM name: {self.fom_name}!")
 
         for param in ProcessedData.get_correlators():
             _, _, info = getattr(proc_data.correlation, param)
@@ -126,7 +128,8 @@ class CorrelationProcessor(AbstractProcessor):
                 try:
                     device_data = raw_data[info['device_id']]
                 except KeyError:
-                    return f"Device '{info['device_id']}' is not in the data!"
+                    raise ProcessingError(
+                        f"Device '{info['device_id']}' is not in the data!")
 
                 try:
                     if info['property'] in device_data:
@@ -139,8 +142,9 @@ class CorrelationProcessor(AbstractProcessor):
                             (device_data[ppt], fom))
 
                 except KeyError:
-                    return f"'{info['device_id']}'' does not have property " \
-                           f"'{info['property']}'"
+                    raise ProcessingError(
+                        f"'{info['device_id']}'' does not have property "
+                        f"'{info['property']}'")
 
 
 class SampleDegradationProcessor(AbstractProcessor):
@@ -379,7 +383,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         else:
             ref_intensity = None
 
-        return self._normalize(
+        self._normalize(
             momentum, intensities, intensities_mean, ref_intensity, proc_data)
 
     def _normalize(self, momentum, intensities, intensities_mean,
@@ -400,7 +404,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                         intensity, momentum, *self.auc_x_range)
 
             except ValueError as e:
-                return repr(e)
+                raise ProcessingError(e)
 
         else:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
@@ -426,16 +430,18 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
 
             except IndexError as e:
                 # this could happen if the history is clear just now
-                return repr(e)
+                raise ProcessingError(e)
 
             if denominator == 0:
-                return "Invalid normalizer: sum of ROI(s) is zero!"
+                raise ProcessingError(
+                    "Invalid normalizer: sum of ROI(s) is zero!")
             intensities_mean /= denominator
             intensities /= denominator
 
             if ref_intensity is not None:
                 if denominator_ref == 0:
-                    return "Invalid reference normalizer: sum of ROI(s) is zero!"
+                    raise ProcessingError(
+                        "Invalid reference normalizer: sum of ROI(s) is zero!")
                 ref_intensity /= denominator_ref
             else:
                 ref_intensity = np.zeros_like(intensities_mean)
@@ -486,14 +492,14 @@ class PumpProbeProcessor(AbstractProcessor):
         n_pulses = intensities.shape[0]
         max_on_pulse_id = max(on_pulse_ids)
         if max_on_pulse_id >= n_pulses:
-            return f"On-pulse ID {max_on_pulse_id} out of range " \
-                   f"(0 - {n_pulses - 1})"
+            raise ProcessingError(f"On-pulse ID {max_on_pulse_id} out of range "
+                                  f"(0 - {n_pulses - 1})")
 
         if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
             max_off_pulse_id = max(off_pulse_ids)
             if max_off_pulse_id >= n_pulses:
-                return f"Off-pulse ID {max_off_pulse_id} out of range " \
-                       f"(0 - {n_pulses - 1})"
+                raise ProcessingError(f"Off-pulse ID {max_off_pulse_id} out of "
+                                      f"range (0 - {n_pulses - 1})")
 
         on_train_received = False
         off_train_received = False
@@ -508,7 +514,7 @@ class PumpProbeProcessor(AbstractProcessor):
             elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                return f"Unknown laser mode: {self.mode}"
+                raise ProcessingError(f"Unknown laser mode: {self.mode}")
 
             if proc_data.tid % 2 == 1 ^ flag:
                 off_train_received = True

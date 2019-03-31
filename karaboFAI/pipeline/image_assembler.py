@@ -18,6 +18,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
+from .exceptions import AssemblingError
 from ..config import DataSource
 
 
@@ -90,19 +91,22 @@ class ImageAssemblerFactory(ABC):
                     modules_data = self._get_modules_bridge(data, src_name)
                 else:
                     raise ValueError(f"Unknown source type: {src_type}")
-            except (ValueError, IndexError, KeyError):
-                raise
+            except (ValueError, IndexError, KeyError) as e:
+                raise AssemblingError(e)
 
             shape = modules_data.shape
             ndim = len(shape)
-            if shape[-2:] != self._module_shape:
-                raise ValueError(f"Expected module shape {self._module_shape}, "
-                                 f"but get {shape[-2:]} instead!")
-            elif ndim >= 3 and shape[-3] != self._modules:
-                raise ValueError(f"Expected {self._modules} modules, but get"
-                                 f"{shape[0]} instead!")
-            elif ndim == 4 and not shape[0]:
-                raise ValueError("Number of memory cells is zero!")
+            try:
+                if shape[-2:] != self._module_shape:
+                    raise ValueError(f"Expected module shape {self._module_shape}, "
+                                     f"but get {shape[-2:]} instead!")
+                elif ndim >= 3 and shape[-3] != self._modules:
+                    raise ValueError(f"Expected {self._modules} modules, but get "
+                                     f"{shape[0]} instead!")
+                elif ndim == 4 and not shape[0]:
+                    raise ValueError("Number of memory cells is zero!")
+            except ValueError as e:
+                raise AssemblingError(e)
 
             assembled = self._modules_to_assembled(modules_data)
             if assembled.ndim == 3:
