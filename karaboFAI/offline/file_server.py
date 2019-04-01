@@ -66,13 +66,16 @@ class FileServer(Process):
             devices = [("*DET/*CH0:xtdf", "image.data")]
         elif config["DETECTOR"] == "JungFrau":
             devices = [("*/DET/*:daqOutput", "data.adc")]
+        elif config["DETECTOR"] == "FastCCD":
+            devices = [("*/DAQ/*:daqOutput", "data.image.pixels")]
         else:
             devices = None
 
         # [motor]
         # devices.extend([("*", "actualPosition"),])
-        serve_files(self._folder, self._port,
-                    devices=devices, require_all=True)
+        # devices.extend([("*XGM*", "*"),])
+        # devices.extend([("*MONO*", "actualEnergy"), ])
+        serve_files(self._folder, self._port, devices=devices, require_all=True)
 
     def terminate(self):
         """Override."""
