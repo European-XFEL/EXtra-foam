@@ -176,11 +176,14 @@ class PlotWidget(GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotScatter(self, *args, **kwargs):
+    def plotScatter(self, *args, pen=None, size=None, **kwargs):
         """Add and return a new scatter plot."""
-        item = pg.ScatterPlotItem(*args,
-                                  pen=self._pen,
-                                  size=self._brush_size, **kwargs)
+        if pen is None:
+            pen = self._pen
+        if size is None:
+            size = self._brush_size
+
+        item = pg.ScatterPlotItem(*args, pen=pen, size=size, **kwargs)
         self.plotItem.addItem(item)
         return item
 
@@ -571,7 +574,7 @@ class LaserOnOffDiffWidget(PlotWidget):
 class XasSpectrumWidget(PlotWidget):
     """XasSpectrumWidget class.
 
-    Widget for displaying the XAS spectrum.
+    Widget for displaying the XAS spectra.
     """
 
     def __init__(self, *, parent=None):
@@ -581,11 +584,21 @@ class XasSpectrumWidget(PlotWidget):
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Absorption")
 
-        self._plot = self.plotScatter(brush=make_brush('b'))
+        self._spectrum1 = self.plotScatter(
+            name="ROI2/ROI1", brush=make_brush('p'), size=12)
+        self._spectrum2 = self.plotScatter(
+            name="ROI3/ROI1", brush=make_brush('g'), size=12)
+
+        self.addLegend(offset=(-40, 20))
 
     def update(self, data):
         """Override."""
-        pass
+        bin_center = data.xas.bin_center
+        bin_count = data.xas.bin_count
+        absorptions = data.xas.absorptions
+
+        self._spectrum1.setData(bin_center, absorptions[0])
+        self._spectrum2.setData(bin_center, absorptions[1])
 
 
 class XasSpectrumDiffWidget(PlotWidget):
@@ -601,8 +614,12 @@ class XasSpectrumDiffWidget(PlotWidget):
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Absorption")
 
-        self._plot = self.plotScatter(brush=make_brush('b'))
+        self._plot = self.plotScatter(brush=make_brush('b'), size=12)
 
     def update(self, data):
         """Override."""
-        pass
+        bin_center = data.xas.bin_center
+        bin_count = data.xas.bin_count
+        absorptions = data.xas.absorptions
+
+        self._plot.setData(bin_center, absorptions[1] - absorptions[0])

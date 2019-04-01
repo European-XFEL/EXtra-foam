@@ -207,7 +207,6 @@ class RoiProcessor(AbstractProcessor):
         activated. This is required for the case that ROI1 and ROI2 were
         activate at different times.
         """
-        rois = copy.copy(self._rois)
         roi_fom = self.roi_fom
 
         tid = proc_data.tid
@@ -215,6 +214,7 @@ class RoiProcessor(AbstractProcessor):
             img = proc_data.image.masked_mean
             img_ref = proc_data.image.masked_ref
 
+            rois = copy.copy(self._rois)
             for i, roi in enumerate(rois):
                 # it should be valid to set ROI intensity to zero if the data
                 # is not available
@@ -573,6 +573,36 @@ class XasProcessor(AbstractProcessor):
 
         self.n_bins = None
 
+        self._energies = []
+        self._xgm = []
+        self._I0 = []
+        self._I1 = []
+        self._I2 = []
+
     def process(self, proc_data, raw_data=None):
         """Override."""
-        energy = proc_data.mono.energy
+        xgm = proc_data.xgm
+        mono = proc_data.mono
+        _, roi1_hist, _ = proc_data.roi.roi1_hist
+        _, roi2_hist, _ = proc_data.roi.roi2_hist
+        _, roi3_hist, _ = proc_data.roi.roi3_hist
+
+        self._energies.append(mono.energy)
+        self._xgm.append(xgm.intensity)
+        self._I0.append(roi1_hist[-1])
+        self._I1.append(roi2_hist[-1])
+        self._I2.append(roi3_hist[-1])
+
+        bin_center, absorptions, bin_count = compute_spectrum(
+            self._energies, self._I0, [self._I1, self._I2], self.n_bins)
+
+        proc_data.xas.bin_center = bin_center
+        proc_data.xas.absorptions = absorptions
+        proc_data.xas_bin_count = bin_count
+
+    def reset(self):
+        self._energies.clear()
+        self._xgm.clear()
+        self._I0.clear()
+        self._I1.clear()
+        self._I2.clear()

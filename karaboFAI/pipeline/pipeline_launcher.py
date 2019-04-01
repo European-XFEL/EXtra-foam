@@ -174,7 +174,7 @@ class PipelineLauncher(Worker):
 
     @QtCore.pyqtSlot()
     def onXasClear(self):
-        ProcessedData.clear_xas_hist()
+        self._xas_proc.reset()
 
     def update_roi_region(self, rank, activated, w, h, px, py):
         if activated:
@@ -190,9 +190,10 @@ class PipelineLauncher(Worker):
         ProcessedData.clear_roi_hist()
 
     def _build_graph(self):
-        # TODO: define different graphs for different pipelines
+        # TODO: implement the Graph!!! Now it is simply a linked list :(
         self._head.next = self._roi_proc
-        self._roi_proc.next = self._ai_proc
+        self._roi_proc.next = self._xas_proc
+        self._xas_proc.next = self._ai_proc
         self._ai_proc.next = self._sample_degradation_proc
         self._sample_degradation_proc.next = self._pp_proc
         self._pp_proc.next = self._correlation_proc

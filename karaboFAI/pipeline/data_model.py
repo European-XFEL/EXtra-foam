@@ -181,25 +181,28 @@ class AbstractData:
 
 
 class XgmData(AbstractData):
-    pulse_energy = TrainData()
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.source = None
+        self.intensity = 0.0
 
 
 class MonoData(AbstractData):
-    energy = TrainData()
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.source = None
+        self.energy = 0.0
 
 
 class XasData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.source = None
+
+        # show the expected data type
+        self.bin_center = np.array([])
+        self.bin_count = np.array([])
+        self.xgm = np.array([])
+        self.absorptions = [np.array([]), np.array([])]
 
 
 class RoiData(AbstractData):
@@ -792,10 +795,6 @@ class ProcessedData:
     @classmethod
     def clear_onoff_hist(cls):
         PumpProbeData.clear()
-
-    @classmethod
-    def clear_xas_hist(cls):
-        XasData.clear()
 
     @classmethod
     def clear_correlation_hist(cls):

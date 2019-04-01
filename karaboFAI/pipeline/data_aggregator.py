@@ -34,11 +34,10 @@ class DataAggregator:
 
     @staticmethod
     def _aggregate_xgm(src_name, proc_data, raw_data):
-        tid = proc_data.tid
 
         if not src_name:
             proc_data.xgm.source = None
-            proc_data.xgm.pulse_energy = (tid, 0)
+            proc_data.xgm.intensity = 0
             return
 
         if src_name not in raw_data:
@@ -51,15 +50,13 @@ class DataAggregator:
             ppt = f"{ppt}.value"  # From the file
 
         proc_data.xgm.source = src_name
-        proc_data.xgm.energy = tid, xgm_data[ppt]
+        proc_data.xgm.intensity = xgm_data[ppt]
 
     @staticmethod
     def _aggregate_mono(src_name, proc_data, raw_data):
-        tid = proc_data.tid
-
         if not src_name:
             proc_data.mono.source = None
-            proc_data.mono.energy = (tid, 0)
+            proc_data.mono.energy = 0
             return
 
         if src_name not in raw_data:
@@ -71,4 +68,4 @@ class DataAggregator:
             ppt = f"{ppt}.value"  # From the file
 
         proc_data.mono.source = src_name
-        proc_data.mono.energy = tid, mono_data[ppt]
+        proc_data.mono.energy = mono_data[ppt]

@@ -26,7 +26,7 @@ class XasCtrlWidget(AbstractCtrlWidget):
         self._enable_cb = QtGui.QCheckBox("Enable")
         self._reset_btn = QtGui.QPushButton("Reset")
 
-        self._nbins_le = QtGui.QLineEdit("30")
+        self._nbins_le = QtGui.QLineEdit("60")
         self._nbins_le.setValidator(QtGui.QIntValidator(0, 200))
 
         self._disabled_widgets_during_daq = [
