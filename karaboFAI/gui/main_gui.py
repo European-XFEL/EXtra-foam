@@ -24,7 +24,7 @@ from .pyqtgraph import QtCore, QtGui
 from .mediator import Mediator
 from .ctrl_widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
-    GeometryCtrlWidget, PumpProbeCtrlWidget
+    GeometryCtrlWidget, PumpProbeCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
@@ -133,11 +133,12 @@ class MainGUI(QtGui.QMainWindow):
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._proc_worker = PipelineLauncher(self._daq_queue, self._proc_queue)
+        self._pipe_worker = PipelineLauncher(self._daq_queue, self._proc_queue)
 
         # initializing mediator
         mediator = Mediator()
-        mediator.setProcessor(self._proc_worker)
+        mediator.setPipeline(self._pipe_worker)
+        mediator.setDaq(self._daq_worker)
 
         # For real time plot
         self._running = False
@@ -162,6 +163,9 @@ class MainGUI(QtGui.QMainWindow):
         self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
+        self.xas_ctrl_widget = XasCtrlWidget(
+            pulse_resolved=self._pulse_resolved, parent=self)
+
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -176,62 +180,56 @@ class MainGUI(QtGui.QMainWindow):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self.data_ctrl_widget.source_type_sgn.connect(
-            self._proc_worker.onSourceTypeChange)
-        self.data_ctrl_widget.server_tcp_sgn.connect(
-            self._daq_worker.onServerTcpChanged)
-        self.data_ctrl_widget.source_name_sgn.connect(
-            self._proc_worker.onSourceNameChange)
-
-        self._proc_worker.message.connect(self.onMessageReceived)
+        self._pipe_worker.message.connect(self.onMessageReceived)
 
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget.geometry_sgn.connect(
-                self._proc_worker.onGeometryChange)
+                self._pipe_worker.onGeometryChange)
 
         self.ai_ctrl_widget.photon_energy_sgn.connect(
-            self._proc_worker.onPhotonEnergyChange)
+            self._pipe_worker.onPhotonEnergyChange)
         self.ai_ctrl_widget.sample_distance_sgn.connect(
-            self._proc_worker.onSampleDistanceChange)
+            self._pipe_worker.onSampleDistanceChange)
         self.ai_ctrl_widget.integration_center_sgn.connect(
-            self._proc_worker.onIntegrationCenterChange)
+            self._pipe_worker.onIntegrationCenterChange)
         self.ai_ctrl_widget.integration_method_sgn.connect(
-            self._proc_worker.onIntegrationMethodChange)
+            self._pipe_worker.onIntegrationMethodChange)
         self.ai_ctrl_widget.integration_range_sgn.connect(
-            self._proc_worker.onIntegrationRangeChange)
+            self._pipe_worker.onIntegrationRangeChange)
         self.ai_ctrl_widget.integration_points_sgn.connect(
-            self._proc_worker.onIntegrationPointsChange)
+            self._pipe_worker.onIntegrationPointsChange)
         self.ai_ctrl_widget.ai_normalizer_sgn.connect(
-            self._proc_worker.onAiNormalizeChange)
+            self._pipe_worker.onAiNormalizeChange)
         self.ai_ctrl_widget.auc_x_range_sgn.connect(
-            self._proc_worker.onAucXRangeChange)
+            self._pipe_worker.onAucXRangeChange)
         self.ai_ctrl_widget.fom_integration_range_sgn.connect(
-            self._proc_worker.onFomIntegrationRangeChange)
+            self._pipe_worker.onFomIntegrationRangeChange)
 
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
-            self._proc_worker.onEnableAiStateChange)
+            self._pipe_worker.onEnableAiStateChange)
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._proc_worker.onPulseIdRangeChange)
+            self._pipe_worker.onPulseIdRangeChange)
 
         self.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
-            self._proc_worker.onOffPulseStateChange)
+            self._pipe_worker.onOffPulseStateChange)
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
-            self._proc_worker.onAbsDifferenceStateChange)
+            self._pipe_worker.onAbsDifferenceStateChange)
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
-            self._proc_worker.onLaserOnOffClear)
+            self._pipe_worker.onLaserOnOffClear)
 
         self.correlation_ctrl_widget.correlation_fom_change_sgn.connect(
-            self._proc_worker.onCorrelationFomChange)
+            self._pipe_worker.onCorrelationFomChange)
         self.correlation_ctrl_widget.correlation_param_change_sgn.connect(
-            self._proc_worker.onCorrelationParamChange)
+            self._pipe_worker.onCorrelationParamChange)
         self.correlation_ctrl_widget.clear_btn.clicked.connect(
-            self._proc_worker.onCorrelationClear)
+            self._pipe_worker.onCorrelationClear)
 
     def initUI(self):
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
         analysis_layout.addWidget(self.ai_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
+        analysis_layout.addWidget(self.xas_ctrl_widget)
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
@@ -300,7 +298,7 @@ class MainGUI(QtGui.QMainWindow):
 
         if not self.updateSharedParameters():
             return
-        self._proc_worker.start()
+        self._pipe_worker.start()
         self._daq_worker.start()
 
         self._start_at.setEnabled(False)
@@ -321,9 +319,9 @@ class MainGUI(QtGui.QMainWindow):
         self.daq_stopped_sgn.emit()
 
     def clearWorkers(self):
-        self._proc_worker.terminate()
+        self._pipe_worker.terminate()
         self._daq_worker.terminate()
-        self._proc_worker.wait()
+        self._pipe_worker.wait()
         self._daq_worker.wait()
 
     def clearQueues(self):

@@ -47,19 +47,26 @@ class DataAcquisition(Worker):
         """Initialization."""
         super().__init__()
 
-        self.server_tcp_sp = None
+        self._tcp_host = None
+        self._tcp_port = None
 
         self._out_queue = out_queue
 
-    @QtCore.pyqtSlot(str, str)
-    def onServerTcpChanged(self, address, port):
-        self.server_tcp_sp = "tcp://" + address + ":" + port
+    @QtCore.pyqtSlot(str)
+    def onTcpHostChange(self, hostname):
+        self._tcp_host = hostname
+
+    @QtCore.pyqtSlot(int)
+    def onTcpPortChange(self, port):
+        self._tcp_port = port
 
     def run(self):
         """Override."""
+        end_point = f"tcp://{self._tcp_host}:{self._tcp_port}"
+        print(end_point)
         self._running = True
-        with TimeoutClient(self.server_tcp_sp, timeout=1) as client:
-            self.log("Bind to server {}!".format(self.server_tcp_sp))
+        with TimeoutClient(end_point, timeout=1) as client:
+            self.log("Bind to server {}!".format(end_point))
             while self._running:
                 t0 = time.perf_counter()
 

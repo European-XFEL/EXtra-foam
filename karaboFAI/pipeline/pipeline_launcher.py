@@ -20,7 +20,7 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    PumpProbeProcessor, RoiProcessor, SampleDegradationProcessor
+    PumpProbeProcessor, RoiProcessor, SampleDegradationProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
@@ -51,13 +51,15 @@ class PipelineLauncher(Worker):
         self._pp_proc = PumpProbeProcessor()
         self._sample_degradation_proc = SampleDegradationProcessor()
 
+        self._xas_proc = XasProcessor()
+
         self._head = HeadProcessor()
 
     @QtCore.pyqtSlot(str)
-    def onSourceNameChange(self, name):
-        self._image_assembler.source_name = name
+    def onDetectorSourceChange(self, src):
+        self._image_assembler.source_name = src
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.pyqtSlot(int)
     def onSourceTypeChange(self, value):
         self._image_assembler.source_type = value
 
@@ -160,6 +162,19 @@ class PipelineLauncher(Worker):
         if self._correlation_proc.fom_name != fom:
             self._correlation_proc.fom_name = fom
             ProcessedData.clear_correlation_hist()
+
+    @QtCore.pyqtSlot(int)
+    def onXasStateToggle(self, state):
+        enabled = state == QtCore.Qt.Checked
+        self._xas_proc.setEnabled(enabled)
+
+    @QtCore.pyqtSlot(int)
+    def onXasEnergyBinsChange(self, n):
+        self._xas_proc.n_bins = n
+
+    @QtCore.pyqtSlot()
+    def onXasClear(self):
+        ProcessedData.clear_xas_hist()
 
     def update_roi_region(self, rank, activated, w, h, px, py):
         if activated:

@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 
+from PyQt5 import QtCore
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
@@ -23,7 +24,7 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = MainGUI('LPD')
-        cls.proc = cls.gui._proc_worker
+        cls.proc = cls.gui._pipe_worker
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._overview_action = cls._actions[3]
@@ -40,7 +41,7 @@ class TestMainGui(unittest.TestCase):
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         self.assertTrue(self.gui.updateSharedParameters())
 
@@ -48,7 +49,8 @@ class TestMainGui(unittest.TestCase):
         self.assertFalse(worker._sample_degradation_proc.isEnabled())
         self.assertFalse(worker._pp_proc.isEnabled())
 
-        QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton)
+        QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
+                         pos=QtCore.QPoint(2, widget.enable_ai_cb.height()/2))
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertTrue(worker._ai_proc.isEnabled())
@@ -57,7 +59,7 @@ class TestMainGui(unittest.TestCase):
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         photon_energy = 12.4
         photon_wavelength = 1.0e-10
@@ -104,7 +106,7 @@ class TestMainGui(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
@@ -112,7 +114,8 @@ class TestMainGui(unittest.TestCase):
         widget._laser_mode_cb.setCurrentIndex(1)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-        QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton)
+        QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton,
+                         pos=QtCore.QPoint(2, widget.abs_difference_cb.height()/2))
         self.assertTrue(worker._pp_proc.abs_difference)
 
         self.assertTrue(self.gui.updateSharedParameters())
@@ -122,35 +125,53 @@ class TestMainGui(unittest.TestCase):
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
         self.assertFalse(worker._pp_proc.abs_difference)
 
+    def testXasCtrlWidget(self):
+        widget = self.gui.xas_ctrl_widget
+        worker = self.gui._pipe_worker
+
+        self.assertFalse(worker._xas_proc.isEnabled())  # default
+
+        widget._enable_cb.show()
+        QTest.mouseClick(widget._enable_cb, Qt.LeftButton,
+                         pos=QtCore.QPoint(2, widget._enable_cb.height()/2))
+        self.assertTrue(worker._xas_proc.isEnabled())
+
+        # check initial value is set
+        self.assertEqual(int(widget._nbins_le.text()), worker._xas_proc.n_bins)
+        # set another value
+        widget._nbins_le.setText("40")
+        widget._nbins_le.editingFinished.emit()
+        self.assertEqual(40, worker._xas_proc.n_bins)
+
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
         daq = self.gui._daq_worker
 
         # test passing tcp hostname and port
         tcp_addr = "localhost:56565"
 
         widget._hostname_le.setText(tcp_addr.split(":")[0])
+        widget._hostname_le.editingFinished.emit()
         widget._port_le.setText(tcp_addr.split(":")[1])
+        widget._port_le.editingFinished.emit()
 
-        self.assertTrue(self.gui.updateSharedParameters())
-
-        self.assertEqual(daq.server_tcp_sp, "tcp://" + tcp_addr)
+        self.assertEqual("localhost", daq._tcp_host)
+        self.assertEqual(56565, daq._tcp_port)
 
         # test detector source name
-        src_name_cb = widget._source_name_cb
-        self.assertEqual(src_name_cb.currentText(),
+        self.assertEqual(widget._detector_src_cb.currentText(),
                          worker._image_assembler.source_name)
 
         # test mono source name
-        mono_src_cb = widget._mono_src_name_cb
+        mono_src_cb = widget._mono_src_cb
         # test default value is set
         self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
         mono_src_cb.setCurrentIndex(1)
         self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
 
         # test xgm source name
-        xgm_src_cb = widget._xgm_src_name_cb
+        xgm_src_cb = widget._xgm_src_cb
         # test default value is set
         self.assertEqual(xgm_src_cb.currentText(), worker._data_aggregator.xgm_src)
         xgm_src_cb.setCurrentIndex(1)
@@ -167,7 +188,7 @@ class TestMainGui(unittest.TestCase):
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
@@ -177,7 +198,7 @@ class TestMainGui(unittest.TestCase):
 
     def testCorrelationCtrlWidget(self):
         widget =self.gui.correlation_ctrl_widget
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         n_registered = len(self.gui._windows)
         self._correlation_action.trigger()
@@ -283,7 +304,7 @@ class TestMainGui(unittest.TestCase):
         # --------------------------
         # test setting max pulse ID
         # --------------------------
-        worker = self.gui._proc_worker
+        worker = self.gui._pipe_worker
 
         widget.updateSharedParameters()
         self.assertEqual((0, 2700), worker._image_assembler.pulse_id_range)

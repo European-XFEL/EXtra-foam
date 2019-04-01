@@ -24,8 +24,16 @@ class Mediator(QtCore.QObject):
 
     reset_image_level_sgn = QtCore.pyqtSignal()
 
+    source_type_change_sgn = QtCore.pyqtSignal(int)
+    detector_source_change_sgn = QtCore.pyqtSignal(str)
     xgm_source_change_sgn = QtCore.pyqtSignal(str)
     mono_source_change_sgn = QtCore.pyqtSignal(str)
+    tcp_host_change_sgn = QtCore.pyqtSignal(str)
+    tcp_port_change_sgn = QtCore.pyqtSignal(int)
+
+    xas_state_toggle_sgn = QtCore.pyqtSignal(int)
+    reset_xas_sgn = QtCore.pyqtSignal()
+    energy_bins_change_sgn = QtCore.pyqtSignal(int)
 
     __instance = None
 
@@ -43,15 +51,30 @@ class Mediator(QtCore.QObject):
 
         super().__init__(*args, **kwargs)
 
-        self._proc = None
+        self._pipe = None
+        self._daq = None
 
-    def setProcessor(self, proc):
-        self._proc = proc
-        self.initConnections()
+    def setPipeline(self, pipe):
+        self._pipe = pipe
+        self.initPipeConnections()
 
-    def initConnections(self):
-        self.xgm_source_change_sgn.connect(self._proc.onXgmSourceChange)
-        self.mono_source_change_sgn.connect(self._proc.onMonoSourceChange)
+    def initPipeConnections(self):
+        self.source_type_change_sgn.connect(self._pipe.onSourceTypeChange)
+        self.detector_source_change_sgn.connect(self._pipe.onDetectorSourceChange)
+        self.xgm_source_change_sgn.connect(self._pipe.onXgmSourceChange)
+        self.mono_source_change_sgn.connect(self._pipe.onMonoSourceChange)
+
+        self.xas_state_toggle_sgn.connect(self._pipe.onXasStateToggle)
+        self.reset_xas_sgn.connect(self._pipe.onXasClear)
+        self.energy_bins_change_sgn.connect(self._pipe.onXasEnergyBinsChange)
+
+    def setDaq(self, daq):
+        self._daq = daq
+        self.initDaqConnections()
+
+    def initDaqConnections(self):
+        self.tcp_host_change_sgn.connect(self._daq.onTcpHostChange)
+        self.tcp_port_change_sgn.connect(self._daq.onTcpPortChange)
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, v):
@@ -68,15 +91,15 @@ class Mediator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
-        self._proc.clear_roi_hist()
+        self._pipe.clear_roi_hist()
 
     @QtCore.pyqtSlot(object)
     def onRoiFomChange(self, state):
-        self._proc.update_roi_fom(state)
+        self._pipe.update_roi_fom(state)
 
     @QtCore.pyqtSlot(int, bool, int, int, int, int)
     def onRoiChange(self, rank, activated, w, h, px, py):
-        self._proc.update_roi_region(rank, activated, w, h, px, py)
+        self._pipe.update_roi_region(rank, activated, w, h, px, py)
 
     def updateVipPulseIds(self):
         self.update_vip_pulse_ids_sgn.emit()

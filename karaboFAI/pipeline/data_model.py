@@ -196,6 +196,12 @@ class MonoData(AbstractData):
         self.source = None
 
 
+class XasData(AbstractData):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source = None
+
+
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
@@ -758,6 +764,7 @@ class ProcessedData:
 
         self.xgm = XgmData()
         self.mono = MonoData()
+        self.xas = XasData()
         self.roi = RoiData()
         self.roi_ref = RoiData()
         self.pp = PumpProbeData()
@@ -785,6 +792,10 @@ class ProcessedData:
     @classmethod
     def clear_onoff_hist(cls):
         PumpProbeData.clear()
+
+    @classmethod
+    def clear_xas_hist(cls):
+        XasData.clear()
 
     @classmethod
     def clear_correlation_hist(cls):

@@ -19,7 +19,9 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .data_model import ProcessedData
 from .exceptions import ProcessingError
-from ..algorithms import intersection, normalize_curve, slice_curve
+from ..algorithms import (
+    compute_spectrum, intersection, normalize_curve, slice_curve
+)
 from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
 from ..logger import logger
 
@@ -561,3 +563,16 @@ class PumpProbeProcessor(AbstractProcessor):
     def reset(self):
         """Override."""
         self._prev_on = None
+
+
+class XasProcessor(AbstractProcessor):
+    """XasProcessor class."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.n_bins = None
+
+    def process(self, proc_data, raw_data=None):
+        """Override."""
+        energy = proc_data.mono.energy
