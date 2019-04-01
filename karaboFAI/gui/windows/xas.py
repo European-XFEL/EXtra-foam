@@ -15,7 +15,7 @@ from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
-    RoiImageView, XasSpectrumWidget, XasSpectrumDiffWidget
+    AssembledImageView, RoiImageView, XasSpectrumWidget, XasSpectrumDiffWidget
 )
 from ...config import config
 
@@ -32,16 +32,20 @@ class XasWindow(DockerWindow):
     _LW = 0.4 * _TOTAL_W
     _LH = _TOTAL_H / len(config["ROI_COLORS"])
     _RW = 0.6 * _TOTAL_W
-    _RH1 = 0.5 * _TOTAL_H - 25
+    _RH1 = 0.5 * _TOTAL_H - 50
     _RH2 = 50
-    _RH3 = 0.5 * _TOTAL_H - 25
+    _RH3 = 0.25 * _TOTAL_H
+
+    _n_spectra = 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
+        self._assembled = AssembledImageView(parent=self)
+
         self._roi_images = []
-        for i, color in enumerate(config["ROI_COLORS"], 1):
+        for i, color in enumerate(config["ROI_COLORS"][:self._n_spectra+1], 1):
             view = RoiImageView(i, parent=self)
             view.setBorder(make_pen(color))
             self._roi_images.append(view)
@@ -83,17 +87,20 @@ class XasWindow(DockerWindow):
         # right
         # -----------
 
-        spectrum_dock = Dock("Spectra",
-                             size=(self._RW, self._RH1))
-        self._docker_area.addDock(spectrum_dock, 'right')
-        spectrum_dock.addWidget(self._spectrum)
+        assembled_dock = Dock("Assembled Image", size=(self._RW, self._RH1))
+        self._docker_area.addDock(assembled_dock, 'right')
+        assembled_dock.addWidget(self._assembled)
 
         bulletin_dock = Dock("Bulletin", size=(self._RW, self._RH2))
-        self._docker_area.addDock(bulletin_dock, 'bottom', spectrum_dock)
+        self._docker_area.addDock(bulletin_dock, 'bottom', assembled_dock)
         bulletin_dock.addWidget(self._bulletin)
         bulletin_dock.hideTitleBar()
 
+        spectrum_dock = Dock("Spectra", size=(self._RW, self._RH3))
+        self._docker_area.addDock(spectrum_dock, 'bottom', bulletin_dock)
+        spectrum_dock.addWidget(self._spectrum)
+
         spectrum_diff_dock = Dock("Difference of spectra",
-                                size=(self._RW, self._RH1))
-        self._docker_area.addDock(spectrum_diff_dock, 'bottom', bulletin_dock)
+                                  size=(self._RW, self._RH3))
+        self._docker_area.addDock(spectrum_diff_dock, 'bottom', spectrum_dock)
         spectrum_diff_dock.addWidget(self._spectrum_diff)
