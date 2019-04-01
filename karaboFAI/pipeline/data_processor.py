@@ -566,18 +566,33 @@ class PumpProbeProcessor(AbstractProcessor):
 
 
 class XasProcessor(AbstractProcessor):
-    """XasProcessor class."""
+    """XasProcessor class.
+
+    A processor which calculate absorption spectra based on different
+    ROIs specified by the user.
+    """
 
     def __init__(self):
         super().__init__()
 
-        self.n_bins = None
+        self.n_bins = 10
 
         self._energies = []
         self._xgm = []
         self._I0 = []
         self._I1 = []
         self._I2 = []
+
+        self._bin_center = None
+        self._absorptions = None
+        self._bin_count = None
+
+        # we do not need to re-calculate the spectrum for every train, since
+        # there is only one more data for detectors like FastCCD.
+        self._counter = 0
+        self._update_frequency = 10
+
+        self.reset()
 
     def process(self, proc_data, raw_data=None):
         """Override."""
@@ -593,8 +608,23 @@ class XasProcessor(AbstractProcessor):
         self._I1.append(roi2_hist[-1])
         self._I2.append(roi3_hist[-1])
 
-        bin_center, absorptions, bin_count = compute_spectrum(
-            self._energies, self._I0, [self._I1, self._I2], self.n_bins)
+        if self._counter == self._update_frequency:
+            # re-calculate the spectra
+            bin_center, absorptions, bin_count = compute_spectrum(
+                self._energies, self._I0, [self._I1, self._I2], self.n_bins)
+
+            self._bin_center = bin_center
+            self._absorptions = absorptions
+            self._bin_count = bin_count
+
+            self._counter = 0
+        else:
+            # use old values
+            bin_center = self._bin_center
+            absorptions = self._absorptions
+            bin_count = self._bin_count
+
+        self._counter += 1
 
         proc_data.xas.bin_center = bin_center
         proc_data.xas.absorptions = absorptions
@@ -606,3 +636,9 @@ class XasProcessor(AbstractProcessor):
         self._I0.clear()
         self._I1.clear()
         self._I2.clear()
+
+        self._bin_center = np.array([])
+        self._bin_count = np.array([])
+        self._absorptions = [np.array([]), np.array([])]
+
+        self._counter = 0
