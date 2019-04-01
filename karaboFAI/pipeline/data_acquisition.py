@@ -63,7 +63,7 @@ class DataAcquisition(Worker):
     def run(self):
         """Override."""
         end_point = f"tcp://{self._tcp_host}:{self._tcp_port}"
-        print(end_point)
+
         self._running = True
         with TimeoutClient(end_point, timeout=1) as client:
             self.log("Bind to server {}!".format(end_point))

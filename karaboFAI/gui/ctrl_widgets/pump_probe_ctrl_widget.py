@@ -54,7 +54,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
-        self.abs_difference_cb = QtGui.QCheckBox("Absolute difference")
+        self.abs_difference_cb = QtGui.QCheckBox("FOM from absolute difference")
         self.abs_difference_cb.setChecked(True)
 
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
@@ -78,16 +78,16 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Laser on/off mode: "), 0, 0, AR)
-        layout.addWidget(self._laser_mode_cb, 0, 1)
+        layout.addWidget(self.reset_btn, 0, 1)
+        layout.addWidget(QtGui.QLabel("Laser on/off mode: "), 1, 0, AR)
+        layout.addWidget(self._laser_mode_cb, 1, 1)
         if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 1, 0, AR)
-            layout.addWidget(self._on_pulse_le, 1, 1)
-            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 2, 0, AR)
-            layout.addWidget(self._off_pulse_le, 2, 1)
+            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 2, 0, AR)
+            layout.addWidget(self._on_pulse_le, 2, 1)
+            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 3, 0, AR)
+            layout.addWidget(self._off_pulse_le, 3, 1)
 
-        layout.addWidget(self.abs_difference_cb, 3, 1)
-        layout.addWidget(self.reset_btn, 4, 1)
+        layout.addWidget(self.abs_difference_cb, 4, 0, 1, 2)
 
         self.setLayout(layout)
 

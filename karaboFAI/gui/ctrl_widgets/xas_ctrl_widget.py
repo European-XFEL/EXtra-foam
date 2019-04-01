@@ -23,7 +23,7 @@ class XasCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("XAS analysis setup", *args, **kwargs)
 
-        self._enable_cb = QtGui.QCheckBox("Enable")
+        self._enable_cb = QtGui.QCheckBox("Enable XAS")
         self._reset_btn = QtGui.QPushButton("Reset")
 
         self._nbins_le = QtGui.QLineEdit("60")
@@ -42,10 +42,11 @@ class XasCtrlWidget(AbstractCtrlWidget):
     def initUI(self):
         """Overload."""
         layout = QtGui.QGridLayout()
+        AR = QtCore.Qt.AlignRight
 
         layout.addWidget(self._enable_cb, 0, 0)
         layout.addWidget(self._reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("Energy bins"), 1, 0, 1, 1)
+        layout.addWidget(QtGui.QLabel("Energy bins: "), 1, 0, 1, 1, AR)
         layout.addWidget(self._nbins_le, 1, 1, 1, 1)
 
         self.setLayout(layout)
