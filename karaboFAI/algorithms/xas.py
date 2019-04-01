@@ -27,8 +27,8 @@ def compute_spectrum(energy, intensity_ref, intensities, n_bins):
     if not energy:
         return np.array([]), [], np.array([])
 
-    if n_bins < 0:
-        raise ValueError("Negative number of bins!")
+    if n_bins <= 0:
+        raise ValueError("Number of bins must > 0!")
 
     try:
         if len(energy) != len(intensity_ref):
@@ -46,7 +46,7 @@ def compute_spectrum(energy, intensity_ref, intensities, n_bins):
     bin_edges = binned_mean[1]
     intensity_ref_avg = binned_mean[0][0]
     intensities_avg = binned_mean[0][1:]
-    absorptions = [-np.log(intensity_avg/intensity_ref_avg)
+    absorptions = [-np.log(np.abs(intensity_avg/intensity_ref_avg))
                    for intensity_avg in intensities_avg]
 
     bin_center = (bin_edges[:-1] + bin_edges[1:]) / 2.

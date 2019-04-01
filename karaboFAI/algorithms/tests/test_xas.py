@@ -16,8 +16,8 @@ class TestXas(unittest.TestCase):
 
         # test raises
 
-        with self.assertRaisesRegex(ValueError, "Negative"):
-            compute_spectrum([1], [1], [[2], [2]], -1)
+        with self.assertRaisesRegex(ValueError, "> 0"):
+            compute_spectrum([1], [1], [[2], [2]], 0)
 
         with self.assertRaisesRegex(ValueError, "different lengths"):
             compute_spectrum([1], [1, 2], [[2], [3]], 1)
