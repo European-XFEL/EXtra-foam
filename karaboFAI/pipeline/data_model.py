@@ -596,7 +596,7 @@ class ImageData:
         self._registered_ops.add("threshold_mask")
 
     def set_reference(self):
-        # Reference should a copy of mean since mean could be modified
+        # Reference should be a copy of mean since mean could be modified
         # after a reference was set.
         if self._crop_area is None:
             self.__ref = np.copy(self.mean)

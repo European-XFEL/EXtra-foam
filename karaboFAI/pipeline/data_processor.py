@@ -289,7 +289,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         integration_range = self.integration_range
 
         assembled = proc_data.image.images
-        reference = proc_data.image.ref
+        reference = proc_data.image.masked_ref
         image_mask = proc_data.image.image_mask
 
         pixel_size = proc_data.image.pixel_size
@@ -370,8 +370,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         if reference is not None:
             mask = image_mask != 0
             # merge image mask and threshold mask
-            mask[(reference < mask_min) | (reference > mask_max)] = 1
-
+            mask[(reference <= mask_min) | (reference >= mask_max)] = 1
             ret = ai.integrate1d(reference,
                                  integration_points,
                                  method=integration_method,
@@ -382,6 +381,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                                  unit="q_A^-1")
 
             ref_intensity = ret.intensity
+
         else:
             ref_intensity = None
 
