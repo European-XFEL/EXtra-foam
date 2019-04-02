@@ -28,7 +28,7 @@ def compute_spectrum(energy, intensity_ref, intensities, n_bins):
         return np.array([]), [], np.array([])
 
     if n_bins <= 0:
-        raise ValueError("Number of bins must > 0!")
+        raise ValueError("Number of energy bins must > 0!")
 
     try:
         if len(energy) != len(intensity_ref):

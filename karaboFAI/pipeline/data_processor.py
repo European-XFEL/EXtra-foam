@@ -609,9 +609,12 @@ class XasProcessor(AbstractProcessor):
         self._I2.append(roi3_hist[-1])
 
         if self._counter == self._update_frequency:
-            # re-calculate the spectra
-            bin_center, absorptions, bin_count = compute_spectrum(
-                self._energies, self._I0, [self._I1, self._I2], self.n_bins)
+            try:
+                # re-calculate the spectra
+                bin_center, absorptions, bin_count = compute_spectrum(
+                    self._energies, self._I0, [self._I1, self._I2], self.n_bins)
+            except ValueError as e:
+                raise ProcessingError(repr(e))
 
             self._bin_center = bin_center
             self._absorptions = absorptions
