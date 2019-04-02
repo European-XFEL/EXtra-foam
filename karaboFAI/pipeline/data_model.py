@@ -21,8 +21,8 @@ from ..logger import logger
 from ..config import config, ImageMaskChange
 
 
-class TrainData:
-    """Store the history train data.
+class PairData:
+    """Store the history pair data.
 
     Each data point is pair of data: (x, y).
 
@@ -66,15 +66,15 @@ class TrainData:
         # do not clear _info here!
 
 
-class AccumulatedTrainData(TrainData):
-    """Store the history accumulated train data.
+class AccumulatedPairData(PairData):
+    """Store the history accumulated pair data.
 
     Each data point is pair of data: (x, DataStat).
 
     The data is collected in a stop-and-collected way. A motor,
     for example, will stop in a location and collect data for a
     period of time. Then,  each data point in the accumulated
-    train data is the average of the data during this period.
+    pair data is the average of the data during this period.
     """
     class DataStat:
         """Statistic of data."""
@@ -175,7 +175,7 @@ class AbstractData:
     @classmethod
     def clear(cls):
         for attr in cls.__dict__.values():
-            if isinstance(attr, TrainData):
+            if isinstance(attr, PairData):
                 # descriptor protocol will not be triggered here
                 attr.clear()
 
@@ -215,8 +215,8 @@ class RoiData(AbstractData):
         # (sum/mean) histories of ROIs
         if not cls.__initialized:
             for i, _ in enumerate(config["ROI_COLORS"], 1):
-                setattr(cls, f"roi{i}_hist", TrainData())
-                setattr(cls, f"roi{i}_hist_ref", TrainData())
+                setattr(cls, f"roi{i}_hist", PairData())
+                setattr(cls, f"roi{i}_hist_ref", PairData())
             cls.__initialized = True
         return instance
 
@@ -230,7 +230,7 @@ class PumpProbeData(AbstractData):
     """A class which stores Laser on-off data."""
 
     # FOM history
-    foms = TrainData()
+    foms = PairData()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -246,10 +246,10 @@ class CorrelationData(AbstractData):
     def add_param(cls, idx, device_id, ppt, resolution=0.0):
         param = f'param{idx}'
         if resolution:
-            setattr(cls, param, AccumulatedTrainData(
+            setattr(cls, param, AccumulatedPairData(
                 device_id=device_id, property=ppt, resolution=resolution))
         else:
-            setattr(cls, param, TrainData(device_id=device_id, property=ppt))
+            setattr(cls, param, PairData(device_id=device_id, property=ppt))
 
     @classmethod
     def remove_param(cls, idx):
@@ -261,7 +261,7 @@ class CorrelationData(AbstractData):
     def get_params(cls):
         params = []
         for kls in cls.__dict__:
-            if isinstance(cls.__dict__[kls], TrainData):
+            if isinstance(cls.__dict__[kls], PairData):
                 params.append(kls)
 
         return params
@@ -270,7 +270,7 @@ class CorrelationData(AbstractData):
     def remove_params(cls):
         params = []
         for kls in cls.__dict__:
-            if isinstance(cls.__dict__[kls], TrainData):
+            if isinstance(cls.__dict__[kls], PairData):
                 params.append(kls)
 
         for param in params:
@@ -326,7 +326,7 @@ class ImageData:
             return self._images - self._bkg
 
         def set(self, imgs):
-            """Set new image train data."""
+            """Set new image data."""
             if self._images is None:
                 self._images = imgs
                 self._ma_count = 1

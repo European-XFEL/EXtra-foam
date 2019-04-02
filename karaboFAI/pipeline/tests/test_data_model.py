@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AbstractData, AccumulatedTrainData, CorrelationData, ImageData,
-    ProcessedData, RoiData, TrainData
+    AbstractData, AccumulatedPairData, CorrelationData, ImageData,
+    ProcessedData, RoiData, PairData
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config, ImageMaskChange
@@ -17,7 +17,7 @@ class TestRoiData(unittest.TestCase):
         n_rois = len(config["ROI_COLORS"])
         for i in range(1, n_rois+1):
             self.assertTrue(hasattr(RoiData, f"roi{i}_hist"))
-            self.assertIsInstance(getattr(RoiData, f"roi{i}_hist"), TrainData)
+            self.assertIsInstance(getattr(RoiData, f"roi{i}_hist"), PairData)
             self.assertTrue(hasattr(data, f"roi{i}"))
 
         with self.assertRaises(AttributeError):
@@ -464,10 +464,10 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
 
 
-class TestTrainData(unittest.TestCase):
+class TestPairData(unittest.TestCase):
     def test_general(self):
         class Dummy(AbstractData):
-            values = TrainData()
+            values = PairData()
 
         dm = Dummy()
 
@@ -497,7 +497,7 @@ class TestCorrelationData(unittest.TestCase):
     def setUp(self):
         CorrelationData.remove_params()
 
-    def test_traindata(self):
+    def testPairData(self):
         data = ProcessedData(-1)
 
         data.add_correlator(0, "device1", "property1")
@@ -557,7 +557,7 @@ class TestCorrelationData(unittest.TestCase):
         # test when resolution becomes non-zero
         data.add_correlator(0, "device1", "property1", 0.2)
         self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
-                              AccumulatedTrainData)
+                              AccumulatedPairData)
 
         # ----------------------------
         # test when max length reached
@@ -578,10 +578,10 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual(max_len + overflow - 1, corr[-1])
         self.assertEqual(max_len + overflow - 1, fom[-1])
 
-    def test_accumulatedtraindata(self):
+    def testAccumulatedPairData(self):
         data = ProcessedData(-1)
 
-        self.assertEqual(2, AccumulatedTrainData._min_count)
+        self.assertEqual(2, AccumulatedPairData._min_count)
 
         data.add_correlator(0, "device1", "property1", 0.1)
         data.correlation.param0 = (1, 0.3)
@@ -629,7 +629,7 @@ class TestCorrelationData(unittest.TestCase):
         # test when resolution becomes 0
         data.add_correlator(0, "device1", "property1")
         self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
-                              TrainData)
+                              PairData)
 
         # ----------------------------
         # test when max length reached
