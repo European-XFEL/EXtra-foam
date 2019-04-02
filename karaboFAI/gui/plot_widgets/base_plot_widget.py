@@ -16,8 +16,8 @@ from ..pyqtgraph import GraphicsView, PlotItem, QtCore, QtGui
 from ..misc_widgets import make_brush, make_pen
 
 
-class _BarGraphItem(pg.GraphicsObject):
-    """_BarGraphItem"""
+class _BarPlotItem(pg.GraphicsObject):
+    """_BarPlotItem"""
     def __init__(self, x=None, y=None, width=1.0, pen=None, brush=None):
         """Initialization."""
         super().__init__()
@@ -259,7 +259,7 @@ class PlotWidget(GraphicsView):
 
     def plotBar(self, x=None, y=None, width=1.0, **kwargs):
         """Add and return a new bar plot."""
-        item = _BarGraphItem(x=x, y=y, width=width, **kwargs)
+        item = _BarPlotItem(x=x, y=y, width=width, **kwargs)
         self.plotItem.addItem(item)
         return item
 
