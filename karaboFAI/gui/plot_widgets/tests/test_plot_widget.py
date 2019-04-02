@@ -1,6 +1,6 @@
 import unittest
 
-from karaboFAI.gui.plot_widgets.plot_widget import PlotWidget
+from karaboFAI.gui.plot_widgets.plot_widgets import PlotWidget
 
 from . import app
 

@@ -2,7 +2,7 @@ from .image_view import (
     AssembledImageView, ImageAnalysis, ReferenceImageView, RoiImageView,
     SinglePulseImageView
 )
-from .plot_widget import (
+from .plot_widgets import (
     CorrelationWidget, LaserOnOffAiWidget, LaserOnOffDiffWidget,
     LaserOnOffFomWidget, MultiPulseAiWidget, RoiValueMonitor,
     SampleDegradationWidget, SinglePulseAiWidget, XasSpectrumWidget,

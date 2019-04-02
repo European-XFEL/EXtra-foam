@@ -14,7 +14,7 @@ import numpy as np
 from .. import pyqtgraph as pg
 from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 
-from .plot_widget import PlotWidget
+from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory
