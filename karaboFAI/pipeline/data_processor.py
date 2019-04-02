@@ -9,10 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
 import copy
-from collections import deque
 from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
@@ -23,7 +22,7 @@ from ..algorithms import (
     compute_spectrum, intersection, normalize_curve, slice_curve
 )
 from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
-from ..logger import logger
+from ..helpers import profiler
 
 
 class AbstractProcessor:
@@ -280,6 +279,7 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         self.normalizer = None
         self.auc_x_range = None
 
+    @profiler("Azimuthal integration")
     def process(self, proc_data, raw_data=None):
         sample_distance = self.sample_distance
         wavelength = self.wavelength
@@ -305,8 +305,6 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                                  rot2=0,
                                  rot3=0,
                                  wavelength=wavelength)
-
-        t0 = time.perf_counter()
 
         if assembled.ndim == 3:
             # pulse-resolved
@@ -363,9 +361,6 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             # for the convenience of data processing later; use copy() here
             # to avoid to be normalized twice
             intensities = np.expand_dims(intensities_mean.copy(), axis=0)
-
-        logger.debug("Time for azimuthal integration: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
 
         if reference is not None:
             mask = image_mask != 0

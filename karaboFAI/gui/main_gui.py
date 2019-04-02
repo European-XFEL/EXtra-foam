@@ -14,7 +14,6 @@ import logging
 import os.path as osp
 from queue import Queue, Empty
 import sys
-import time
 from weakref import WeakKeyDictionary
 
 import zmq
@@ -34,6 +33,7 @@ from .windows import (
 from .. import __version__
 from ..config import config
 from ..logger import logger
+from ..helpers import profiler
 from ..offline import FileServer
 from ..pipeline import DataAcquisition, PipelineLauncher, Data4Visualization
 
@@ -265,16 +265,14 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
             return
 
-        t0 = time.perf_counter()
-
-        # update the all the plots
-        for w in self._windows.keys():
-            w.update()
-
-        logger.debug("Time for updating the plots: {:.1f} ms"
-                     .format(1000 * (time.perf_counter() - t0)))
+        self._updateAllPlots()
 
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
+
+    @profiler("Update Plots")
+    def _updateAllPlots(self):
+        for w in self._windows.keys():
+            w.update()
 
     def _addAction(self, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))

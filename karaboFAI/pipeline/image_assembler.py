@@ -20,6 +20,7 @@ from karabo_data.geometry2 import AGIPD_1MGeometry
 
 from .exceptions import AssemblingError
 from ..config import DataSource
+from ..helpers import profiler
 
 
 class ImageAssemblerFactory(ABC):
@@ -76,6 +77,7 @@ class ImageAssemblerFactory(ABC):
             # like data['metadata'] is writeable.
             return np.copy(modules)
 
+        @profiler("Assemble Image Data")
         def assemble(self, data):
             """Assembled the image data.
 
@@ -118,11 +120,13 @@ class ImageAssemblerFactory(ABC):
         _modules = 16
         _module_shape = (512, 128)
 
+        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
             return data[src_name]["image.data"]
 
+        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
@@ -141,12 +145,14 @@ class ImageAssemblerFactory(ABC):
         _modules = 16
         _module_shape = (256, 256)
 
+        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             return np.moveaxis(
                 np.moveaxis(data[src_name]["image.data"], 3, 0), 3, 2)
 
+        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
@@ -167,6 +173,7 @@ class ImageAssemblerFactory(ABC):
         _modules = 1
         _module_shape = (512, 1024)
 
+        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             modules_data = data[src_name]["data.adc"]
@@ -176,6 +183,7 @@ class ImageAssemblerFactory(ABC):
             else:
                 raise NotImplementedError("Number of modules > 1")
 
+        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             modules_data = data[src_name]['data.adc']
@@ -189,11 +197,13 @@ class ImageAssemblerFactory(ABC):
         _modules = 1
         _module_shape = (1934, 960)
 
+        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (y, x, 1) -> (y, x)
             return data[src_name]["data.image"].squeeze(axis=-1)
 
+        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (y, x)

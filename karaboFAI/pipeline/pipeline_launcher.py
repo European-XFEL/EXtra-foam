@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
 import queue
 
 from scipy import constants
@@ -26,6 +25,7 @@ from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
 from ..gui import QtCore
 from ..logger import logger
+from ..helpers import profiler
 
 
 class PipelineLauncher(Worker):
@@ -209,12 +209,9 @@ class PipelineLauncher(Worker):
             except queue.Empty:
                 continue
 
-            t0 = time.perf_counter()
             processed_data = self._process(data)
             if processed_data is None:
                 continue
-            logger.debug("Time for data processing: {:.1f} ms in total!\n"
-                         .format(1000 * (time.perf_counter() - t0)))
 
             while self._running:
                 try:
@@ -229,6 +226,7 @@ class PipelineLauncher(Worker):
 
         self.log("Data processor stopped!")
 
+    @profiler("Process Data (total)")
     def _process(self, data):
         """Process data received from the bridge."""
         data, meta = data

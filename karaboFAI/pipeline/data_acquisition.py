@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
 import queue
 
 from karabo_bridge import Client
@@ -18,7 +17,7 @@ import zmq
 from .worker import Worker
 from ..config import config
 from ..gui import QtCore
-from ..logger import logger
+from ..helpers import profiler
 
 
 class TimeoutClient(Client):
@@ -68,16 +67,11 @@ class DataAcquisition(Worker):
         with TimeoutClient(end_point, timeout=1) as client:
             self.log("Bind to server {}!".format(end_point))
             while self._running:
-                t0 = time.perf_counter()
 
                 try:
-                    data = client.next()
+                    data = self._recv(client)
                 except zmq.error.Again:
                     continue
-
-                logger.debug(
-                    "Time for retrieving data from the server: {:.1f} ms"
-                    .format(1000 * (time.perf_counter() - t0)))
 
                 while self._running:
                     try:
@@ -87,3 +81,7 @@ class DataAcquisition(Worker):
                         continue
 
         self.log("DAQ stopped!")
+
+    @profiler("Receive Data from Bridge")
+    def _recv(self, client):
+        return client.next()
