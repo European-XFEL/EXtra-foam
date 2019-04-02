@@ -27,11 +27,13 @@ class BulletinWidget(QtGui.QWidget):
             self.setFont(QtGui.QFont("Times", 20, QtGui.QFont.Bold))
             self.setStyleSheet(f"color: rgb{Colors().p[:3]};")
 
-    def __init__(self, *, pulse_resolved=True, parent=None):
+    def __init__(self, *, pulse_resolved=True, vertical=False, parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
+        :param bool vertical: False for horizontal layout and True for
+            vertical layout.
         """
         super().__init__(parent=parent)
         parent.registerPlotWidget(self)
@@ -46,13 +48,22 @@ class BulletinWidget(QtGui.QWidget):
         self._npulses_no = self.NumberLabel(" ")
         self._moving_average_no = self.NumberLabel(" ")
 
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._trainid_lb, 1)
-        layout.addWidget(self._trainid_no, 2)
-        layout.addWidget(self._npulses_lb, 2)
-        layout.addWidget(self._npulses_no, 1)
-        layout.addWidget(self._moving_average_lb, 2)
-        layout.addWidget(self._moving_average_no, 1)
+        if not vertical:
+            layout = QtGui.QHBoxLayout()
+            layout.addWidget(self._trainid_lb, 1)
+            layout.addWidget(self._trainid_no, 2)
+            layout.addWidget(self._npulses_lb, 2)
+            layout.addWidget(self._npulses_no, 1)
+            layout.addWidget(self._moving_average_lb, 2)
+            layout.addWidget(self._moving_average_no, 1)
+        else:
+            layout = QtGui.QGridLayout()
+            layout.addWidget(self._trainid_lb, 0, 0)
+            layout.addWidget(self._trainid_no, 0, 1)
+            layout.addWidget(self._npulses_lb, 1, 0)
+            layout.addWidget(self._npulses_no, 1, 1)
+            layout.addWidget(self._moving_average_lb, 2, 0)
+            layout.addWidget(self._moving_average_no, 2, 1)
         self.setLayout(layout)
 
         self.reset()

@@ -2,7 +2,8 @@ import unittest
 from collections import Counter
 
 from karaboFAI.gui.plot_widgets import (
-    AssembledImageView, RoiImageView, XasSpectrumWidget, XasSpectrumDiffWidget
+    AssembledImageView, RoiImageView, XasSpectrumBinCountWidget,
+    XasSpectrumWidget, XasSpectrumDiffWidget
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.main_gui import MainGUI
@@ -16,7 +17,7 @@ class TestXasWindow(unittest.TestCase):
 
         self._win = XasWindow(pulse_resolved=True, parent=main_gui)
 
-        self.assertEqual(len(self._win._plot_widgets), 7)
+        self.assertEqual(len(self._win._plot_widgets), 8)
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
@@ -26,3 +27,4 @@ class TestXasWindow(unittest.TestCase):
         self.assertEqual(counter[BulletinWidget], 1)
         self.assertEqual(counter[XasSpectrumWidget], 1)
         self.assertEqual(counter[XasSpectrumDiffWidget], 1)
+        self.assertEqual(counter[XasSpectrumBinCountWidget], 1)

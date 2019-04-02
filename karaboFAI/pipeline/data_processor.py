@@ -625,10 +625,9 @@ class XasProcessor(AbstractProcessor):
             bin_count = self._bin_count
 
         self._counter += 1
-
         proc_data.xas.bin_center = bin_center
         proc_data.xas.absorptions = absorptions
-        proc_data.xas_bin_count = bin_count
+        proc_data.xas.bin_count = bin_count
 
     def reset(self):
         self._energies.clear()
