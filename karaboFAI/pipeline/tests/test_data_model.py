@@ -148,6 +148,12 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(imgs_orig, img_data.ref)
         np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
 
+        # test remove reference
+        img_data.remove_reference()
+        img_data.update()
+        self.assertEqual(None, img_data.ref)
+        self.assertEqual(None, img_data.masked_ref)
+
     def test_referencePulseResolved(self):
         imgs_orig = np.arange(32, dtype=np.float).reshape(2, 4, 4)
         imgs_mean = np.mean(imgs_orig, axis=0)
@@ -170,6 +176,12 @@ class TestImageData(unittest.TestCase):
         masked_gt[masked_gt < 20] = 20
         np.testing.assert_array_equal(imgs_mean, img_data.ref)
         np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
+
+        # test remove reference
+        img_data.remove_reference()
+        img_data.update()
+        self.assertEqual(None, img_data.ref)
+        self.assertEqual(None, img_data.masked_ref)
 
     def test_imagemask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
