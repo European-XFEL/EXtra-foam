@@ -24,7 +24,6 @@ from .data_processor import (
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
 from ..gui import QtCore
-from ..logger import logger
 from ..helpers import profiler
 
 
@@ -220,9 +219,6 @@ class PipelineLauncher(Worker):
                     break
                 except queue.Full:
                     continue
-
-            logger.debug("Size of in and out queues: {}, {}".format(
-                self._in_queue.qsize(), self._out_queue.qsize()))
 
         self.log("Data processor stopped!")
 
