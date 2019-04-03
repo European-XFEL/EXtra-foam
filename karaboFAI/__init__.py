@@ -1,6 +1,8 @@
 # coding: utf-8
 """
-karaboFAI - .
+karaboFAI - Real-time and off-line data analysis (azimuthal integration, ROI,
+            correlation, etc.) and visualization tool for experiments using
+            2D detectors at European XFEL.
 
 BSD 3-Clause License
 
@@ -33,4 +35,4 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-__version__ = "0.4.0rc0"
+__version__ = "0.4.0rc1"

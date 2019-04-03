@@ -17,10 +17,11 @@ setup(
     version=find_version(),
     author='Jun Zhu',
     author_email='cas-support@xfel.eu',
-    description='Azimuthal integration tool',
-    long_description='Offline and online data analysis and visualization tool '
-                     'for azimuthal integration of different data acquired '
-                     'with various detectors at European XFEL.',
+    description='Fast analysis integration for 2D detectors',
+    long_description='Real-time and off-line data analysis (azimuthal '
+                     'integration, ROI, correlation, etc.) and visualization '
+                     'tool for experiments using 2D detectors at '
+                     'European XFEL.',
     url='',
     packages=find_packages(),
     entry_points={
