@@ -89,44 +89,12 @@ class AccumulatedPairData(PairData):
     class DataStat:
         """Statistic of data."""
         def __init__(self):
-            self.count = []
-            self.avg = []
-            self.min = []
-            self.max = []
+            self.count = None
+            self.avg = None
+            self.min = None
+            self.max = None
 
-        def add(self, v):
-            self.count[-1] += 1
-            self.avg[-1] += (v - self.avg[-1]) / self.count[-1]
-            if v < self.min[-1]:
-                self.min[-1] = v
-            elif v > self.max[-1]:
-                self.max[-1] = v
-
-        def pop_last(self):
-            del self.count[-1]
-            del self.avg[-1]
-            del self.min[-1]
-            del self.max[-1]
-
-        def pop_first(self):
-            del self.count[0]
-            del self.avg[0]
-            del self.min[0]
-            del self.max[0]
-
-        def append(self, v):
-            self.count.append(1)
-            self.avg.append(v)
-            self.min.append(v)
-            self.max.append(v)
-
-        def clear(self):
-            self.count.clear()
-            self.avg.clear()
-            self.min.clear()
-            self.max.clear()
-
-    MAX_LENGTH = 5000
+    MAX_LENGTH = 600
 
     _min_count = 2
     _epsilon = 1e-9
@@ -140,45 +108,86 @@ class AccumulatedPairData(PairData):
             raise ValueError("'resolution must be positive!")
         self._resolution = resolution
 
-        self._y = self.DataStat()
+        self._y_count = []
+        self._y_avg = []
+        self._y_min = []
+        self._y_max = []
 
     def __set__(self, instance, pair):
         this_x, this_y = pair
-        if self._x:
-            if abs(this_x - self._x[-1]) - self._resolution < self._epsilon:
-                self._y.add(this_y)  # self._y.count will be updated
-                self._x[-1] += (this_x - self._x[-1]) / self._y.count[-1]
+        with self._lock:
+            if self._x:
+                if abs(this_x - self._x[-1]) - self._resolution < self._epsilon:
+                    self._y_count[-1] += 1
+                    self._y_avg[-1] += (this_y - self._y_avg[-1]) / self._y_count[-1]
+                    if this_y < self._y_min[-1]:
+                        self._y_min[-1] = this_y
+                    elif this_y > self._y_max[-1]:
+                        self._y_max[-1] = this_y
+                    self._x[-1] += (this_x - self._x[-1]) / self._y_count[-1]
+                else:
+                    # If the number of data at a location is less than
+                    # min_count, the data at this location will be discarded.
+                    if self._y_count[-1] < self._min_count:
+                        del self._x[-1]
+                        del self._y_count[-1]
+                        del self._y_avg[-1]
+                        del self._y_min[-1]
+                        del self._y_max[-1]
+                    self._x.append(this_x)
+                    self._y_count.append(1)
+                    self._y_avg.append(this_y)
+                    self._y_min.append(this_y)
+                    self._y_max.append(this_y)
             else:
-                # If the number of data at a location is less than _min_count,
-                # the data at this location will be discarded.
-                if self._y.count[-1] < self._min_count:
-                    del self._x[-1]
-                    self._y.pop_last()
                 self._x.append(this_x)
-                self._y.append(this_y)
-        else:
-            self._x.append(this_x)
-            self._y.append(this_y)
+                self._y_count.append(1)
+                self._y_avg.append(this_y)
+                self._y_min.append(this_y)
+                self._y_max.append(this_y)
 
-        if len(self._y.count) > self.MAX_LENGTH:
+        if len(self._x) > self.MAX_LENGTH:
             self.__delete__(instance)
 
     def __get__(self, instance, instance_type):
         if instance is None:
             return self
 
-        # Note: the cost of copy is acceptable as long as 'MAX_LENGTH'
-        #       is 5000.
-        x = copy.copy(self._x)
-        y = copy.deepcopy(self._y)
-        if y.count and y.count[-1] < self._min_count:
-            del x[-1]
-            y.pop_last()
-        return x, y, copy.copy(self._info)
+        y = self.DataStat()
+        with self._lock:
+            if self._y_count and self._y_count[-1] < self._min_count:
+                x = np.array(self._x[:-1])
+                y.count = np.array(self._y_count[:-1])
+                y.avg = np.array(self._y_avg[:-1])
+                y.min = np.array(self._y_min[:-1])
+                y.max = np.array(self._y_max[:-1])
+            else:
+                x = np.array(self._x)
+                y.count = np.array(self._y_count)
+                y.avg = np.array(self._y_avg)
+                y.min = np.array(self._y_min)
+                y.max = np.array(self._y_max)
+
+            info = copy.copy(self._info)
+
+        return x, y, info
 
     def __delete__(self, instance):
-        del self._x[0]
-        self._y.pop_first()
+        with self._lock:
+            del self._x[0]
+            del self._y_count[0]
+            del self._y_avg[0]
+            del self._y_min[0]
+            del self._y_max[0]
+
+    def clear(self):
+        with self._lock:
+            self._x.clear()
+            self._y_count.clear()
+            self._y_avg.clear()
+            self._y_min.clear()
+            self._y_max.clear()
+        # do not clear _info here!
 
 
 class AbstractData:

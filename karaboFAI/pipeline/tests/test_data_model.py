@@ -599,44 +599,44 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation.param0 = (1, 0.3)
         data.correlation.param0 = (2, 0.4)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([], corr)
-        self.assertListEqual([], fom.count)
-        self.assertListEqual([], fom.avg)
-        self.assertListEqual([], fom.min)
-        self.assertListEqual([], fom.max)
+        np.testing.assert_array_equal([], corr)
+        np.testing.assert_array_equal([], fom.count)
+        np.testing.assert_array_equal([], fom.avg)
+        np.testing.assert_array_equal([], fom.min)
+        np.testing.assert_array_equal([], fom.max)
 
         data.correlation.param0 = (2.02, 0.5)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([2.01], corr)
-        self.assertListEqual([2], fom.count)
-        self.assertListEqual([0.4], fom.min)
-        self.assertListEqual([0.5], fom.max)
-        self.assertListEqual([0.45], fom.avg)
+        np.testing.assert_array_equal([2.01], corr)
+        np.testing.assert_array_equal([2], fom.count)
+        np.testing.assert_array_equal([0.4], fom.min)
+        np.testing.assert_array_equal([0.5], fom.max)
+        np.testing.assert_array_equal([0.45], fom.avg)
 
         data.correlation.param0 = (2.11, 0.6)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([3], fom.count)
-        self.assertListEqual([0.4], fom.min)
-        self.assertListEqual([0.6], fom.max)
-        self.assertListEqual([0.5], fom.avg)
+        np.testing.assert_array_equal([3], fom.count)
+        np.testing.assert_array_equal([0.4], fom.min)
+        np.testing.assert_array_equal([0.6], fom.max)
+        np.testing.assert_array_equal([0.5], fom.avg)
 
         # new point
         data.correlation.param0 = (2.31, 1)
         data.correlation.param0 = (2.41, 2)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([3, 2], fom.count)
-        self.assertListEqual([0.4, 1], fom.min)
-        self.assertListEqual([0.6, 2], fom.max)
-        self.assertListEqual([0.5, 1.5], fom.avg)
+        np.testing.assert_array_equal([3, 2], fom.count)
+        np.testing.assert_array_equal([0.4, 1], fom.min)
+        np.testing.assert_array_equal([0.6, 2], fom.max)
+        np.testing.assert_array_equal([0.5, 1.5], fom.avg)
 
         # test when resolution changes
         data.add_correlator(0, "device1", "property1", 0.2)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([], corr)
-        self.assertListEqual([], fom.count)
-        self.assertListEqual([], fom.min)
-        self.assertListEqual([], fom.max)
-        self.assertListEqual([], fom.avg)
+        np.testing.assert_array_equal([], corr)
+        np.testing.assert_array_equal([], fom.count)
+        np.testing.assert_array_equal([], fom.min)
+        np.testing.assert_array_equal([], fom.max)
+        np.testing.assert_array_equal([], fom.avg)
 
         # test when resolution becomes 0
         data.add_correlator(0, "device1", "property1")
