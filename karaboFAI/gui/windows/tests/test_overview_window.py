@@ -3,7 +3,7 @@ from collections import Counter
 
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
-    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
+    PulseResolvedAiFomWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.main_gui import MainGUI
@@ -25,7 +25,7 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[BulletinWidget], 1)
         self.assertEqual(counter[AssembledImageView], 1)
         self.assertEqual(counter[MultiPulseAiWidget], 1)
-        self.assertEqual(counter[SampleDegradationWidget], 1)
+        self.assertEqual(counter[PulseResolvedAiFomWidget], 1)
         self.assertEqual(counter[SinglePulseAiWidget], 2)
         self.assertEqual(counter[SinglePulseImageView], 2)
         self.assertEqual(counter[RoiImageView], 2)

@@ -75,18 +75,18 @@ class CorrelationProcessor(AbstractProcessor):
             return
 
         if self.fom_name == FomName.AI_MEAN:
-            momentum = proc_data.momentum
+            momentum = proc_data.ai.momentum
             if momentum is None:
                 raise ProcessingError(
                     "Azimuthal integration result is not available!")
-            intensity = proc_data.intensity_mean
+            intensity = proc_data.ai.intensity_mean
 
             # calculate figure-of-merit
             fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
             fom = np.sum(np.abs(fom))
 
         elif self.fom_name == FomName.AI_PUMP_PROBE:
-            _, foms, _ = proc_data.pp.foms
+            _, foms, _ = proc_data.ai.on_off_fom
             if not foms:
                 raise ProcessingError("Laser on-off result is not available!")
             fom = foms[-1]
@@ -148,8 +148,8 @@ class CorrelationProcessor(AbstractProcessor):
                         f"'{info['property']}'")
 
 
-class SampleDegradationProcessor(AbstractProcessor):
-    """SampleDegradationProcessor.
+class PulseResolvedAiFomProcessor(AbstractProcessor):
+    """PulseResolvedAiFomProcessor.
 
     Only for pulse-resolved detectors.
 
@@ -168,8 +168,8 @@ class SampleDegradationProcessor(AbstractProcessor):
             # train-resolved
             return
 
-        momentum = proc_data.momentum
-        intensities = proc_data.intensities
+        momentum = proc_data.ai.momentum
+        intensities = proc_data.ai.intensities
 
         # calculate the different between each pulse and the first one
         diffs = [p - intensities[0] for p in intensities]
@@ -180,7 +180,7 @@ class SampleDegradationProcessor(AbstractProcessor):
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        proc_data.sample_degradation_foms = foms
+        proc_data.ai.pulse_fom = foms
 
 
 class RoiProcessor(AbstractProcessor):
@@ -443,10 +443,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             else:
                 ref_intensity = np.zeros_like(intensities_mean)
 
-        proc_data.momentum = momentum
-        proc_data.intensities = intensities
-        proc_data.intensity_mean = intensities_mean
-        proc_data.reference_intensity = ref_intensity
+        proc_data.ai.momentum = momentum
+        proc_data.ai.intensities = intensities
+        proc_data.ai.intensity_mean = intensities_mean
+        proc_data.ai.reference_intensity = ref_intensity
 
 
 class PumpProbeProcessor(AbstractProcessor):
@@ -476,15 +476,15 @@ class PumpProbeProcessor(AbstractProcessor):
         self.abs_difference = True
         self.fom_itgt_range = None
 
-        self._prev_on = None
+        self._prev_on_intensity = None
 
     def process(self, proc_data, raw_data=None):
         """Override."""
         on_pulse_ids = self.on_pulse_ids
         off_pulse_ids = self.off_pulse_ids
-        momentum = proc_data.momentum
-        intensities = proc_data.intensities
-        ref_intensity = proc_data.reference_intensity
+        momentum = proc_data.ai.momentum
+        intensities = proc_data.ai.intensities
+        ref_intensity = proc_data.ai.reference_intensity
 
         n_pulses = intensities.shape[0]
         max_on_pulse_id = max(on_pulse_ids)
@@ -524,40 +524,41 @@ class PumpProbeProcessor(AbstractProcessor):
         # is followed by a combined plots if the next train is
         # an off-train pulse.
 
-        diff = None
+        on_off_intensity = None
         fom = None
         if on_train_received:
-            self._prev_on = intensities[on_pulse_ids].mean(axis=0)
+            self._prev_on_intensity = intensities[on_pulse_ids].mean(axis=0)
 
-        on_pulse = self._prev_on
-        off_pulse = None
+        on_intensity = self._prev_on_intensity
+        off_intensity = None
 
-        if off_train_received and on_pulse is not None:
+        if off_train_received and on_intensity is not None:
             if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_pulse = ref_intensity
+                off_intensity = ref_intensity
             else:
-                off_pulse = intensities[off_pulse_ids].mean(axis=0)
+                off_intensity = intensities[off_pulse_ids].mean(axis=0)
 
-            diff = on_pulse - off_pulse
+            on_off_intensity = on_intensity - off_intensity
 
             # calculate figure-of-merit and update history
-            fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
+            fom = slice_curve(
+                on_off_intensity, momentum, *self.fom_itgt_range)[0]
             if self.abs_difference:
                 fom = np.sum(np.abs(fom))
             else:
                 fom = np.sum(fom)
 
             # reset flags
-            self._prev_on = None
+            self._prev_on_intensity = None
 
-        proc_data.pp.on_pulse = on_pulse
-        proc_data.pp.off_pulse = off_pulse
-        proc_data.pp.diff = diff
-        proc_data.pp.foms = (proc_data.tid, fom)
+        proc_data.ai.on_intensity_mean = on_intensity
+        proc_data.ai.off_intensity_mean = off_intensity
+        proc_data.ai.on_off_intensity_mean = on_off_intensity
+        proc_data.ai.on_off_fom = (proc_data.tid, fom)
 
     def reset(self):
         """Override."""
-        self._prev_on = None
+        self._prev_on_intensity = None
 
 
 class XasProcessor(AbstractProcessor):

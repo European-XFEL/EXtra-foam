@@ -19,7 +19,7 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    PumpProbeProcessor, RoiProcessor, SampleDegradationProcessor, XasProcessor
+    PumpProbeProcessor, RoiProcessor, PulseResolvedAiFomProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
@@ -48,7 +48,7 @@ class PipelineLauncher(Worker):
 
         self._ai_proc = AzimuthalIntegrationProcessor()
         self._pp_proc = PumpProbeProcessor()
-        self._sample_degradation_proc = SampleDegradationProcessor()
+        self._pulse_ai_fom_proc = PulseResolvedAiFomProcessor()
 
         self._xas_proc = XasProcessor()
 
@@ -133,7 +133,7 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
         self._pp_proc.fom_itgt_range = (lb, ub)
-        self._sample_degradation_proc.fom_itgt_range = (lb, ub)
+        self._pulse_ai_fom_proc.fom_itgt_range = (lb, ub)
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot()
@@ -145,7 +145,7 @@ class PipelineLauncher(Worker):
     def onEnableAiStateChange(self, state):
         enabled = state == QtCore.Qt.Checked
         self._ai_proc.setEnabled(enabled)
-        self._sample_degradation_proc.setEnabled(enabled)
+        self._pulse_ai_fom_proc.setEnabled(enabled)
         self._pp_proc.setEnabled(enabled)
 
     @QtCore.pyqtSlot()
@@ -193,8 +193,8 @@ class PipelineLauncher(Worker):
         self._head.next = self._roi_proc
         self._roi_proc.next = self._xas_proc
         self._xas_proc.next = self._ai_proc
-        self._ai_proc.next = self._sample_degradation_proc
-        self._sample_degradation_proc.next = self._pp_proc
+        self._ai_proc.next = self._pulse_ai_fom_proc
+        self._pulse_ai_fom_proc.next = self._pp_proc
         self._pp_proc.next = self._correlation_proc
 
     def run(self):

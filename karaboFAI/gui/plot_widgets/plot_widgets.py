@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .base_plot_widget import PlotWidget
 
 from ..pyqtgraph import QtCore
@@ -51,8 +53,8 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.momentum
-        intensities = data.intensities
+        momentum = data.ai.momentum
+        intensities = data.ai.intensities
 
         if intensities is None:
             return
@@ -71,7 +73,7 @@ class SinglePulseAiWidget(PlotWidget):
             self._pulse_plot.setData(momentum, intensities)
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.intensity_mean)
+            self._mean_plot.setData(momentum, data.ai.intensity_mean)
 
 
 class MultiPulseAiWidget(PlotWidget):
@@ -91,8 +93,8 @@ class MultiPulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.momentum
-        intensities = data.intensities
+        momentum = data.ai.momentum
+        intensities = data.ai.intensities
 
         if intensities is None:
             return
@@ -110,11 +112,11 @@ class MultiPulseAiWidget(PlotWidget):
                 item.setData(momentum, intensity)
 
 
-class SampleDegradationWidget(PlotWidget):
-    """SampleDegradationWindow class.
+class PulseResolvedAiFomWidget(PlotWidget):
+    """PulseResolvedAiFomWidget class.
 
-    A widget which allows users to monitor the degradation of the sample
-    within a train.
+    A widget which allows users to monitor the azimuthal integration FOM
+    of each pulse with respect to the first pulse in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -128,7 +130,7 @@ class SampleDegradationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.sample_degradation_foms
+        foms = data.ai.pulse_fom
         if foms is None:
             return
 
@@ -259,7 +261,7 @@ class LaserOnOffFomWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids, foms, _ = data.pp.foms
+        tids, foms, _ = data.ai.on_off_fom
         self._plot.setData(tids, foms)
 
 
@@ -282,23 +284,23 @@ class LaserOnOffAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.momentum
-        on_pulse = data.pp.on_pulse
-        off_pulse = data.pp.off_pulse
+        momentum = data.ai.momentum
+        on_intensity = data.ai.on_intensity_mean
+        off_intensity = data.ai.off_intensity_mean
 
-        if on_pulse is None:
+        if on_intensity is None:
             self._data = None
         else:
-            if off_pulse is None:
+            if off_intensity is None:
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
                 momentum, on_pulse, off_pulse = self._data
             else:
-                self._data = (momentum, on_pulse, off_pulse)
+                self._data = (momentum, on_intensity, off_intensity)
 
-            self._on_pulse.setData(momentum, on_pulse)
-            self._off_pulse.setData(momentum, off_pulse)
+            self._on_pulse.setData(momentum, on_intensity)
+            self._off_pulse.setData(momentum, off_intensity)
 
 
 class LaserOnOffDiffWidget(PlotWidget):
@@ -327,20 +329,21 @@ class LaserOnOffDiffWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.momentum
-        on_pulse = data.pp.on_pulse
-        off_pulse = data.pp.off_pulse
-        diff = data.pp.diff
+        momentum = data.ai.momentum
+        on_intensity = data.ai.on_intensity_mean
+        off_intensity = data.ai.off_intensity_mean
+        on_off_intensity = data.ai.on_off_intensity_mean
 
-        if on_pulse is None:
+        if on_intensity is None:
             self._data = None
         else:
-            if off_pulse is None:
+            if off_intensity is None:
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
                 diff = self._data
             else:
+                diff = on_off_intensity
                 self._data = diff
 
             self._plot.setData(momentum, diff)

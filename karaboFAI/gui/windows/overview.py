@@ -18,7 +18,7 @@ from ..bulletin_widget import BulletinWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import (
     AssembledImageView, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
-    SampleDegradationWidget, SinglePulseAiWidget, SinglePulseImageView
+    PulseResolvedAiFomWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
 
@@ -54,7 +54,7 @@ class OverviewWindow(DockerWindow):
         if self._pulse_resolved:
             self._ai = MultiPulseAiWidget(parent=self)
 
-            self._sample_degradation = SampleDegradationWidget(parent=self)
+            self._sample_degradation = PulseResolvedAiFomWidget(parent=self)
 
             self._vip1_ai_dock = None
             self._vip1_img_dock = None
@@ -169,7 +169,7 @@ class OverviewWindow(DockerWindow):
 
         if self._pulse_resolved:
             sample_degradation_dock = Dock(
-                "Sample Degradation", size=(self._RW, self._RH3))
+                "Pulse-resolved FOM", size=(self._RW, self._RH3))
             self._docker_area.addDock(
                 sample_degradation_dock, 'above', roi_intensity_dock)
             sample_degradation_dock.addWidget(self._sample_degradation)

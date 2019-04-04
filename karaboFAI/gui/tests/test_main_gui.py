@@ -46,7 +46,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertFalse(worker._ai_proc.isEnabled())
-        self.assertFalse(worker._sample_degradation_proc.isEnabled())
+        self.assertFalse(worker._pulse_ai_fom_proc.isEnabled())
         self.assertFalse(worker._pp_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
@@ -54,7 +54,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertTrue(worker._ai_proc.isEnabled())
-        self.assertTrue(worker._sample_degradation_proc.isEnabled())
+        self.assertTrue(worker._pulse_ai_fom_proc.isEnabled())
         self.assertTrue(worker._pp_proc.isEnabled())
 
     def testAiCtrlWidget(self):
@@ -99,7 +99,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTupleEqual(worker._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._sample_degradation_proc.fom_itgt_range,
+        self.assertTupleEqual(worker._pulse_ai_fom_proc.fom_itgt_range,
                               fom_itgt_range)
 
         self.assertTupleEqual(worker._pp_proc.fom_itgt_range, fom_itgt_range)
