@@ -222,7 +222,8 @@ class CorrelationWidget(PlotWidget):
             self._device_id = device_id
             self._ppt = ppt
 
-        if isinstance(foms, list):
+        if isinstance(foms, np.ndarray):
+            # PairData
             if self._resolution != 0.0:
                 self._resolution = 0.0
                 self._bar.setData([], [], beam=0.0)
@@ -230,8 +231,9 @@ class CorrelationWidget(PlotWidget):
 
             self._plot.setData(correlator, foms)
             # make auto-range of the viewbox work correctly
-            self._bar.setData(correlator[:1], foms[:1])
+            self._bar.setData(correlator, foms)
         else:
+            # AccumulatedPairData
             resolution = info['resolution']
 
             if self._resolution != resolution:

@@ -11,6 +11,7 @@ All rights reserved.
 """
 import abc
 import copy
+from threading import Lock
 
 import numpy as np
 
@@ -29,7 +30,7 @@ class PairData:
     For correlation plots: x can be a train ID or a motor position,
     and y is the figure of merit (FOM).
     """
-    MAX_LENGTH = 100000
+    MAX_LENGTH = 3000  # scatter plot is expensive
 
     def __init__(self, **kwargs):
         # We need to have a 'x' for each sub-dataset due to the
@@ -40,16 +41,23 @@ class PairData:
         # property information
         self._info = kwargs
 
+        self._lock = Lock()
+
     def __get__(self, instance, instance_type):
         if instance is None:
             return self
         # Note: here we must ensure that the data is not copied
-        return self._x, self._y, copy.copy(self._info)
+        with self._lock:
+            x = np.array(self._x)
+            y = np.array(self._y)
+            info = copy.copy(self._info)
+        return x, y, info
 
     def __set__(self, instance, pair):
         this_x, this_y = pair
-        self._x.append(this_x)
-        self._y.append(this_y)
+        with self._lock:
+            self._x.append(this_x)
+            self._y.append(this_y)
 
         # This is a reasonable choice since we always wants to return a
         # reference in __get__!
@@ -57,12 +65,14 @@ class PairData:
             self.__delete__(instance)
 
     def __delete__(self, instance):
-        del self._x[0]
-        del self._y[0]
+        with self._lock:
+            del self._x[0]
+            del self._y[0]
 
     def clear(self):
-        self._x.clear()
-        self._y.clear()
+        with self._lock:
+            self._x.clear()
+            self._y.clear()
         # do not clear _info here!
 
 

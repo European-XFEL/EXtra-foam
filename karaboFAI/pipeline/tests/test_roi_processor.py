@@ -45,24 +45,24 @@ class TestCorrelationProcessor(unittest.TestCase):
         self.assertEqual(self._proc_data.roi.roi3, self._rois[2])
         self.assertEqual(self._proc_data.roi.roi4, self._rois[3])
         tid, value, _ = self._proc_data.roi.roi1_hist
-        self.assertListEqual([count] * 2, tid)
-        self.assertListEqual([0] * 2, value)
+        np.testing.assert_array_equal([count] * 2, tid)
+        np.testing.assert_array_equal([0] * 2, value)
 
         # FOM of roi is SUM
         self._proc.roi_fom = RoiFom.SUM
         self._proc.process(self._proc_data)
         tid, value, _ = self._proc_data.roi.roi1_hist
-        self.assertListEqual([0, 0, 4], value)
+        np.testing.assert_array_equal([0, 0, 4], value)
         tid, value, _ = self._proc_data.roi.roi2_hist
-        self.assertListEqual([0, 0, 0], value)
+        np.testing.assert_array_equal([0, 0, 0], value)
         tid, value, _ = self._proc_data.roi.roi3_hist
-        self.assertListEqual([0, 0, 0], value)
+        np.testing.assert_array_equal([0, 0, 0], value)
         tid, value, _ = self._proc_data.roi.roi4_hist
-        self.assertListEqual([0, 0, 9], value)
+        np.testing.assert_array_equal([0, 0, 9], value)
 
         # reference image
         tid, value, _ = self._proc_data.roi.roi4_hist_ref
-        self.assertListEqual([0, 0, 0], value)
+        np.testing.assert_array_equal([0, 0, 0], value)
 
         # set a reference image
         self._proc_data._image_data.set_reference()
@@ -70,10 +70,10 @@ class TestCorrelationProcessor(unittest.TestCase):
         self._proc.process(self._proc_data)
 
         tid, value, _ = self._proc_data.roi.roi1_hist_ref
-        self.assertListEqual([0, 0, 0, 4], value)
+        np.testing.assert_array_equal([0, 0, 0, 4], value)
         tid, value, _ = self._proc_data.roi.roi2_hist_ref
-        self.assertListEqual([0, 0, 0, 0], value)
+        np.testing.assert_array_equal([0, 0, 0, 0], value)
         tid, value, _ = self._proc_data.roi.roi3_hist_ref
-        self.assertListEqual([0, 0, 0, 0], value)
+        np.testing.assert_array_equal([0, 0, 0, 0], value)
         tid, value, _ = self._proc_data.roi.roi4_hist_ref
-        self.assertListEqual([0, 0, 0, 9], value)
+        np.testing.assert_array_equal([0, 0, 0, 9], value)

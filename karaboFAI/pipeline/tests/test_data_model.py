@@ -483,26 +483,26 @@ class TestPairData(unittest.TestCase):
 
         dm = Dummy()
 
-        dm.values = (1, 'a')
-        dm.values = (2, 'b')
+        dm.values = (1, 10)
+        dm.values = (2, 20)
         tids, values, _ = dm.values
-        self.assertListEqual([1, 2], tids)
-        self.assertListEqual(['a', 'b'], values)
+        np.testing.assert_array_equal([1, 2], tids)
+        np.testing.assert_array_equal([10, 20], values)
 
-        dm.values = (3, 'c')
+        dm.values = (3, 30)
         tids, values, _ = dm.values
-        self.assertListEqual([1, 2, 3], tids)
-        self.assertListEqual(['a', 'b', 'c'], values)
+        np.testing.assert_array_equal([1, 2, 3], tids)
+        np.testing.assert_array_equal([10, 20, 30], values)
 
         del dm.values
         tids, values, _ = dm.values
-        self.assertListEqual([2, 3], tids)
-        self.assertListEqual(['b', 'c'], values)
+        np.testing.assert_array_equal([2, 3], tids)
+        np.testing.assert_array_equal([20, 30], values)
 
         Dummy.clear()
         tids, values, _ = dm.values
-        self.assertListEqual([], tids)
-        self.assertListEqual([], values)
+        np.testing.assert_array_equal([], tids)
+        np.testing.assert_array_equal([], values)
 
 
 class TestCorrelationData(unittest.TestCase):
@@ -516,8 +516,8 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation.param0 = (1, 0.5)
         data.correlation.param0 = (2, 0.6)
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([1, 2], corr)
-        self.assertListEqual([0.5, 0.6], fom)
+        np.testing.assert_array_almost_equal([1, 2], corr)
+        np.testing.assert_array_almost_equal([0.5, 0.6], fom)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
 
@@ -525,27 +525,27 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation.param1 = (3, 200)
         data.correlation.param1 = (4, 220)
         corr, fom, info = data.correlation.param1
-        self.assertListEqual([3, 4], corr)
-        self.assertListEqual([200, 220], fom)
+        np.testing.assert_array_almost_equal([3, 4], corr)
+        np.testing.assert_array_almost_equal([200, 220], fom)
         self.assertEqual("device2", info["device_id"])
         self.assertEqual("property2", info["property"])
         # check that param0 remains unchanged
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([1, 2], corr)
-        self.assertListEqual([0.5, 0.6], fom)
+        np.testing.assert_array_almost_equal([1, 2], corr)
+        np.testing.assert_array_almost_equal([0.5, 0.6], fom)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
 
         # test clear history
         ProcessedData.clear_correlation_hist()
         corr, fom, info = data.correlation.param0
-        self.assertListEqual([], corr)
-        self.assertListEqual([], fom)
+        np.testing.assert_array_almost_equal([], corr)
+        np.testing.assert_array_almost_equal([], fom)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
         corr, fom, info = data.correlation.param1
-        self.assertListEqual([], corr)
-        self.assertListEqual([], fom)
+        np.testing.assert_array_almost_equal([], corr)
+        np.testing.assert_array_almost_equal([], fom)
         self.assertEqual("device2", info["device_id"])
         self.assertEqual("property2", info["property"])
 
@@ -672,10 +672,10 @@ class TestProcessedData(unittest.TestCase):
 
         data.roi.roi1_hist = (1234, None)
         tids, roi1_hist, _ = data.roi.roi1_hist
-        self.assertListEqual([1234], tids)
-        self.assertListEqual([None], roi1_hist)
+        np.testing.assert_array_equal([1234], tids)
+        np.testing.assert_array_equal([None], roi1_hist)
 
         data.roi.roi1_hist = (1235, 2.0)
         tids, roi1_hist, _ = data.roi.roi1_hist
-        self.assertListEqual([1234, 1235], tids)
-        self.assertListEqual([None, 2.0], roi1_hist)
+        np.testing.assert_array_equal([1234, 1235], tids)
+        np.testing.assert_array_equal([None, 2.0], roi1_hist)

@@ -87,33 +87,33 @@ class CorrelationProcessor(AbstractProcessor):
 
         elif self.fom_name == FomName.AI_PUMP_PROBE:
             _, foms, _ = proc_data.ai.on_off_fom
-            if not foms:
+            if foms.size == 0:
                 raise ProcessingError("Laser on-off result is not available!")
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
-            if not roi1_hist:
+            if roi1_hist.size == 0:
                 return
             fom = roi1_hist[-1]
 
         elif self.fom_name == FomName.ROI2:
             _, roi2_hist, _ = proc_data.roi.roi2_hist
-            if not roi2_hist:
+            if roi2_hist.size == 0:
                 return
             fom = roi2_hist[-1]
 
         elif self.fom_name == FomName.ROI_SUM:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
             _, roi2_hist, _ = proc_data.roi.roi2_hist
-            if not roi1_hist:
+            if roi1_hist.size == 0:
                 return
             fom = roi1_hist[-1] + roi2_hist[-1]
 
         elif self.fom_name == FomName.ROI_SUB:
             _, roi1_hist, _ = proc_data.roi.roi1_hist
             _, roi2_hist, _ = proc_data.roi.roi2_hist
-            if not roi1_hist:
+            if roi1_hist.size == 0:
                 return
             fom = roi1_hist[-1] - roi2_hist[-1]
 
