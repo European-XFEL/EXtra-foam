@@ -177,7 +177,7 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = ['c', 'b', 'r', 'o']
+    _colors = ['c', 'b', 'o', 'y']
     _brushes = {
         0: make_brush(_colors[0], 120),
         1: make_brush(_colors[1], 120),
