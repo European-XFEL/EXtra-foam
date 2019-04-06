@@ -465,6 +465,7 @@ class PumpProbeProcessor(AbstractProcessor):
             difference between laser-on and laser-off.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
+        ma_window (int): moving average window size.
     """
 
     def __init__(self):
@@ -475,6 +476,8 @@ class PumpProbeProcessor(AbstractProcessor):
         self.off_pulse_ids = None
         self.abs_difference = True
         self.fom_itgt_range = None
+
+        self.ma_window = 1
 
         self._prev_on_intensity = None
 

@@ -163,6 +163,10 @@ class PipelineLauncher(Worker):
             ProcessedData.clear_correlation_hist()
 
     @QtCore.pyqtSlot(int)
+    def onPumpProbeMAWindowChange(self, n):
+        self._pp_proc.ma_window = n
+
+    @QtCore.pyqtSlot(int)
     def onXasStateToggle(self, state):
         enabled = state == QtCore.Qt.Checked
         self._xas_proc.setEnabled(enabled)

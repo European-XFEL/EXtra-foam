@@ -15,8 +15,11 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_ids
+from ..mediator import Mediator
 from ...config import PumpProbeMode
 from ...logger import logger
+
+mediator = Mediator()
 
 
 class PumpProbeCtrlWidget(AbstractCtrlWidget):
@@ -60,6 +63,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
+        self._ma_window_le = QtGui.QLineEdit("1")
+        self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
         self.reset_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
@@ -72,6 +77,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self.initUI()
 
         self.setFixedHeight(self.minimumSizeHint().height())
+
+        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -87,9 +94,17 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 3, 0, AR)
             layout.addWidget(self._off_pulse_le, 3, 1)
 
-        layout.addWidget(self.abs_difference_cb, 4, 0, 1, 2)
+        layout.addWidget(QtGui.QLabel("Moving average window: "), 4, 0, 1, 1)
+        layout.addWidget(self._ma_window_le, 4, 1, 1, 1)
+        layout.addWidget(self.abs_difference_cb, 5, 0, 1, 2)
 
         self.setLayout(layout)
+
+    def initConnections(self):
+        self._ma_window_le.editingFinished.connect(
+            lambda: mediator.pp_ma_window_change_sgn.emit(
+                int(self._ma_window_le.text())))
+        self._ma_window_le.editingFinished.emit()
 
     def updateSharedParameters(self):
         """Override"""

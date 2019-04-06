@@ -31,6 +31,8 @@ class Mediator(QtCore.QObject):
     tcp_host_change_sgn = QtCore.pyqtSignal(str)
     tcp_port_change_sgn = QtCore.pyqtSignal(int)
 
+    pp_ma_window_change_sgn = QtCore.pyqtSignal(int)
+
     xas_state_toggle_sgn = QtCore.pyqtSignal(int)
     reset_xas_sgn = QtCore.pyqtSignal()
     energy_bins_change_sgn = QtCore.pyqtSignal(int)
@@ -63,6 +65,8 @@ class Mediator(QtCore.QObject):
         self.detector_source_change_sgn.connect(self._pipe.onDetectorSourceChange)
         self.xgm_source_change_sgn.connect(self._pipe.onXgmSourceChange)
         self.mono_source_change_sgn.connect(self._pipe.onMonoSourceChange)
+
+        self.pp_ma_window_change_sgn.connect(self._pipe.onPumpProbeMAWindowChange)
 
         self.xas_state_toggle_sgn.connect(self._pipe.onXasStateToggle)
         self.reset_xas_sgn.connect(self._pipe.onXasClear)

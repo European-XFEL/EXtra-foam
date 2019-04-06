@@ -108,12 +108,17 @@ class TestMainGui(unittest.TestCase):
         widget = self.gui.pump_probe_ctrl_widget
         worker = self.gui._pipe_worker
 
+        self.assertEqual(1, worker._pp_proc.ma_window)
+
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
+        ma_window = 10
 
         widget._laser_mode_cb.setCurrentIndex(1)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
+        widget._ma_window_le.setText(str(ma_window))
+        widget._ma_window_le.editingFinished.emit()
         QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget.abs_difference_cb.height()/2))
         self.assertTrue(worker._pp_proc.abs_difference)
@@ -124,6 +129,7 @@ class TestMainGui(unittest.TestCase):
         self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
         self.assertFalse(worker._pp_proc.abs_difference)
+        self.assertEqual(ma_window, worker._pp_proc.ma_window)
 
     def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
