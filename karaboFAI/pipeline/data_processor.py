@@ -16,6 +16,7 @@ import numpy as np
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
+from .base_pipeline import AbstractProcessor, BasePumpProbeProcessor
 from .data_model import ProcessedData
 from .exceptions import ProcessingError
 from ..algorithms import (
@@ -23,31 +24,6 @@ from ..algorithms import (
 )
 from ..config import config, AiNormalizer, FomName, PumpProbeMode, RoiFom
 from ..helpers import profiler
-
-
-class AbstractProcessor:
-    """Base class for specific data processor."""
-
-    def __init__(self):
-        self.__enabled = True
-
-        self.next = None  # next processor in the pipeline
-
-    def setEnabled(self, state):
-        self.__enabled = state
-
-    def isEnabled(self):
-        return self.__enabled
-
-    def process(self, proc_data, raw_data=None):
-        """Process data.
-
-        :param ProcessedData proc_data: processed data.
-        :param dict raw_data: raw data received from the bridge.
-
-        :return str: error message.
-        """
-        raise NotImplementedError
 
 
 class HeadProcessor(AbstractProcessor):
@@ -449,37 +425,25 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         proc_data.ai.reference_intensity = ref_intensity
 
 
-class PumpProbeProcessor(AbstractProcessor):
-    """PumpProbeProcessor class.
+class PumpProbeAiProcessor(BasePumpProbeProcessor):
+    """PumpProbeAiProcessor class.
 
-    A processor which calculated the average of the azimuthal integration
-    of all pump/probe (on/off) pulses, as well as their difference.
+    A processor which calculated the moving average of the average azimuthal
+    integration of all pump/probe (on/off) pulses, as well as their difference.
     It also calculates the the figure of merit (FOM), which is integration
     of the absolute aforementioned difference.
 
     Attributes:
-        mode (int): Pump-probe mode.
-        on_pulse_ids (list): a list of laser-on pulse IDs.
-        off_pulse_ids (list): a list of laser-off pulse IDs.
         abs_difference (bool): True for calculating the absolute value of
             difference between laser-on and laser-off.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
-        ma_window (int): moving average window size.
     """
-
     def __init__(self):
         super().__init__()
 
-        self.mode = None
-        self.on_pulse_ids = None
-        self.off_pulse_ids = None
         self.abs_difference = True
         self.fom_itgt_range = None
-
-        self.ma_window = 1
-
-        self._prev_on_intensity = None
 
     def process(self, proc_data, raw_data=None):
         """Override."""
@@ -501,25 +465,7 @@ class PumpProbeProcessor(AbstractProcessor):
                 raise ProcessingError(f"Off-pulse ID {max_off_pulse_id} out of "
                                       f"range (0 - {n_pulses - 1})")
 
-        on_train_received = False
-        off_train_received = False
-        if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
-            # compare laser-on/off pulses in the same train
-            on_train_received = True
-            off_train_received = True
-        else:
-            # compare laser-on/off pulses in different trains
-            if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
-                flag = 0  # on-train has even train ID
-            elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
-                flag = 1  # on-train has odd train ID
-            else:
-                raise ProcessingError(f"Unknown laser mode: {self.mode}")
-
-            if proc_data.tid % 2 == 1 ^ flag:
-                off_train_received = True
-            else:
-                on_train_received = True
+        self._pre_process(proc_data)
 
         # Off-train will only be acknowledged when an on-train
         # was received! This ensures that in the visualization
@@ -527,41 +473,60 @@ class PumpProbeProcessor(AbstractProcessor):
         # is followed by a combined plots if the next train is
         # an off-train pulse.
 
-        on_off_intensity = None
         fom = None
-        if on_train_received:
-            self._prev_on_intensity = intensities[on_pulse_ids].mean(axis=0)
 
-        on_intensity = self._prev_on_intensity
-        off_intensity = None
-
-        if off_train_received and on_intensity is not None:
-            if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_intensity = ref_intensity
+        if self._state in (self.State.ON_ON, self.State.OFF_ON):
+            self._prev_on = intensities[on_pulse_ids].mean(axis=0)
+        elif self._state == self.State.ON_OFF:
+            if self._prev_on is None:
+                this_on = intensities[on_pulse_ids].mean(axis=0)
             else:
-                off_intensity = intensities[off_pulse_ids].mean(axis=0)
+                this_on = self._prev_on
+                self._prev_on = None
 
-            on_off_intensity = on_intensity - off_intensity
+            if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
+                this_off = ref_intensity
+            else:
+                this_off = intensities[off_pulse_ids].mean(axis=0)
+
+            this_on_off = this_on - this_off
+
+            if self.ma_window > 1 and self._ma_count > 0:
+                if self._ma_count < self.ma_window:
+                    self._ma_count += 1
+                    denominator = self._ma_count
+                else:  # self._ma_count == self._ma_window
+                    # this is an approximation
+                    denominator = self._ma_window
+
+                self._ma_on += (this_on - self._ma_on) / denominator
+                self._ma_off += (this_off - self._ma_off) / denominator
+                self._ma_on_off += (this_on_off - self._ma_on_off) / denominator
+
+            else:
+                self._ma_on = this_on
+                self._ma_off = this_off
+                self._ma_on_off = this_on_off
+                if self._ma_window > 1:
+                    self._ma_count = 1  # 0 -> 1
 
             # calculate figure-of-merit and update history
             fom = slice_curve(
-                on_off_intensity, momentum, *self.fom_itgt_range)[0]
+                self._ma_on_off, momentum, *self.fom_itgt_range)[0]
             if self.abs_difference:
                 fom = np.sum(np.abs(fom))
             else:
                 fom = np.sum(fom)
 
-            # reset flags
-            self._prev_on_intensity = None
+        # do nothing if self._state = self.State.OFF_OFF
 
-        proc_data.ai.on_intensity_mean = on_intensity
-        proc_data.ai.off_intensity_mean = off_intensity
-        proc_data.ai.on_off_intensity_mean = on_off_intensity
-        proc_data.ai.on_off_fom = (proc_data.tid, fom)
-
-    def reset(self):
-        """Override."""
-        self._prev_on_intensity = None
+        if fom is not None:
+            proc_data.ai.on_intensity_mean = self._ma_on
+            proc_data.ai.off_intensity_mean = self._ma_off
+            proc_data.ai.on_off_intensity_mean = self._ma_on_off
+            proc_data.ai.on_off_fom = (proc_data.tid, fom)
+        else:
+            proc_data.ai.on_intensity_mean = self._prev_on
 
 
 class XasProcessor(AbstractProcessor):

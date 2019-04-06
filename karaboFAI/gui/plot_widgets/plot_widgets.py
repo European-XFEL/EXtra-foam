@@ -297,7 +297,7 @@ class LaserOnOffAiWidget(PlotWidget):
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
-                momentum, on_pulse, off_pulse = self._data
+                momentum, on_intensity, off_intensity = self._data
             else:
                 self._data = (momentum, on_intensity, off_intensity)
 

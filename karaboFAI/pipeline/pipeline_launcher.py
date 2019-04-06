@@ -19,7 +19,8 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .data_processor import (
     AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    PumpProbeProcessor, RoiProcessor, PulseResolvedAiFomProcessor, XasProcessor
+    PumpProbeAiProcessor, RoiProcessor, PulseResolvedAiFomProcessor,
+    XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
@@ -47,7 +48,7 @@ class PipelineLauncher(Worker):
         self._correlation_proc = CorrelationProcessor()
 
         self._ai_proc = AzimuthalIntegrationProcessor()
-        self._pp_proc = PumpProbeProcessor()
+        self._pp_proc = PumpProbeAiProcessor()
         self._pulse_ai_fom_proc = PulseResolvedAiFomProcessor()
 
         self._xas_proc = XasProcessor()

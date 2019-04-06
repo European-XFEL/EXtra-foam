@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import QtCore
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow

@@ -6,12 +6,12 @@ from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.data_model import (
     AzimuthalIntegrationData, ProcessedData
 )
-from karaboFAI.pipeline.data_processor import PumpProbeProcessor
+from karaboFAI.pipeline.data_processor import PumpProbeAiProcessor
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
     def setUp(self):
-        self._proc = PumpProbeProcessor()
+        self._proc = PumpProbeAiProcessor()
         AzimuthalIntegrationData.clear()
 
         self._proc.fom_itgt_range = (1, 5)
@@ -37,9 +37,13 @@ class TestPumpProbeProcessor(unittest.TestCase):
         fom_hist_gt = []
         train_ids_gt = []
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_OFF)
+
         # 1st train
         data = self._data[0]
         self._proc.process(data)
+
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
 
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
@@ -57,6 +61,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         on_pulse_gt = np.array([0, 2, 0, 2, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
@@ -73,6 +79,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         on_pulse_gt = np.array([0, 3, 0, 3, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
@@ -85,9 +93,15 @@ class TestPumpProbeProcessor(unittest.TestCase):
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
 
-    def testEvenTrainOn(self):
-        """On-pulse has even id."""
-        self._proc.mode = PumpProbeMode.EVEN_TRAIN_ON
+    def testSameTrainMovingAverage(self):
+        self._run_same_train_moving_average_test()
+        ProcessedData.clear_onoff_hist()
+        self._proc.reset()  # test reset
+        self._run_same_train_moving_average_test()
+
+    def _run_same_train_moving_average_test(self):
+        self._proc.mode = PumpProbeMode.SAME_TRAIN
+        self._proc.ma_window = 3
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3]
 
@@ -98,11 +112,14 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[0]
         self._proc.process(data)
 
+        self.assertEqual(1, self._proc._ma_count)
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
-        self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
+        off_pulse_gt = np.array([1, 0, 1, 0, 1])
+        np.testing.assert_array_almost_equal(off_pulse_gt,
+                                             data.ai.off_intensity_mean)
+        fom_hist_gt.append(5)
         train_ids_gt.append(0)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
@@ -112,7 +129,86 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
+        self.assertEqual(2, self._proc._ma_count)
+        on_pulse_gt = np.array([0, 1.5, 0, 1.5, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt,
+                                             data.ai.on_intensity_mean)
+        off_pulse_gt = np.array([1.5, 0, 1.5, 0, 1.5])
+        np.testing.assert_array_almost_equal(off_pulse_gt,
+                                             data.ai.off_intensity_mean)
+        fom_hist_gt.append(7.5)
+        train_ids_gt.append(1)
+        tids, foms, _ = data.ai.on_off_fom
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
+
+        # 3rd train
+        data = self._data[2]
+        self._proc.process(data)
+
+        self.assertEqual(3, self._proc._ma_count)
+        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt,
+                                             data.ai.on_intensity_mean)
+        off_pulse_gt = np.array([2, 0, 2, 0, 2])
+        np.testing.assert_array_almost_equal(off_pulse_gt,
+                                             data.ai.off_intensity_mean)
+        fom_hist_gt.append(10)
+        train_ids_gt.append(2)
+        tids, foms, _ = data.ai.on_off_fom
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
+
+        # 4th train
+        data = self._data[3]
+        self._proc.process(data)
+
+        # Since the moving average is an approximation, it gives 2.666667
+        # instead of (2 + 3 + 4) / 3 = 3.
+        self.assertEqual(3, self._proc._ma_count)
+        on_pulse_gt = np.array([0, 2.666667, 0, 2.666667, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt,
+                                             data.ai.on_intensity_mean)
+        off_pulse_gt = np.array([2.666667, 0, 2.666667, 0, 2.666667])
+        np.testing.assert_array_almost_equal(off_pulse_gt,
+                                             data.ai.off_intensity_mean)
+        fom_hist_gt.append(13.333333)  # = 2.666667 * 5
+        train_ids_gt.append(3)
+        tids, foms, _ = data.ai.on_off_fom
+        np.testing.assert_array_almost_equal(train_ids_gt, tids)
+        np.testing.assert_array_almost_equal(fom_hist_gt, foms)
+
+    def testEvenTrainOn(self):
+        """On-pulse has even id."""
+        self._proc.mode = PumpProbeMode.EVEN_TRAIN_ON
+        self._proc.on_pulse_ids = [0, 2]
+        self._proc.off_pulse_ids = [1, 3]
+
+        fom_hist_gt = []
+        train_ids_gt = []
+
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_OFF)
+
+        # 1st train
+        data = self._data[0]
+        self._proc.process(data)
+
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_ON)
+
         on_pulse_gt = np.array([0, 1, 0, 1, 0])
+        np.testing.assert_array_almost_equal(on_pulse_gt,
+                                             data.ai.on_intensity_mean)
+        self.assertTrue(data.ai.off_intensity_mean is None)
+        tids, foms, _ = data.ai.on_off_fom
+        np.testing.assert_array_equal(train_ids_gt, tids)
+        np.testing.assert_array_equal(fom_hist_gt, foms)
+
+        # 2nd train
+        data = self._data[1]
+        self._proc.process(data)
+
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         off_pulse_gt = np.array([2, 0, 2, 0, 2])
@@ -128,12 +224,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_ON)
+
         on_pulse_gt = np.array([0, 3, 0, 3, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(2)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -142,7 +238,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 3, 0, 3, 0])
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         off_pulse_gt = np.array([4, 0, 4, 0, 4])
@@ -160,10 +257,10 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[5]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_OFF)
+
         self.assertTrue(data.ai.on_intensity_mean is None)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(5)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -172,12 +269,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.process(data)
 
-        on_pulse_gt = [0, 7, 0, 7, 0]
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_ON)
+
+        on_pulse_gt = np.array([0, 7, 0, 7, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(6)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -186,12 +283,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 7, 0, 7, 0])  # unchanged
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_ON)
+
+        on_pulse_gt = np.array([0, 7, 0, 7, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(6)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -202,12 +299,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[8]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_ON)
+
         on_pulse_gt = np.array([0, 9, 0, 9, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(8)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -216,12 +313,14 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[9]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         on_pulse_gt = np.array([0, 9, 0, 9, 0])
-        np.testing.assert_array_almost_equal(data.ai.on_intensity_mean,
-                                             on_pulse_gt)
+        np.testing.assert_array_almost_equal(
+            on_pulse_gt, data.ai.on_intensity_mean)
         off_pulse_gt = np.array([10, 0, 10, 0, 10])
-        np.testing.assert_array_almost_equal(data.ai.off_intensity_mean,
-                                             off_pulse_gt)
+        np.testing.assert_array_almost_equal(
+            off_pulse_gt, data.ai.off_intensity_mean)
         fom_hist_gt.append(48)
         train_ids_gt.append(9)
         tids, foms, _ = data.ai.on_off_fom
@@ -237,14 +336,16 @@ class TestPumpProbeProcessor(unittest.TestCase):
         fom_hist_gt = []
         train_ids_gt = []
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_OFF)
+
         # 1st train
         data = self._data[0]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_OFF)
+
         self.assertTrue(data.ai.on_intensity_mean is None)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(0)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -253,12 +354,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_ON)
+
         on_pulse_gt = np.array([0, 2, 0, 2, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(1)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -267,7 +368,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 2, 0, 2, 0])
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.ON_OFF)
+
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         off_pulse_gt = np.array([3, 0, 3, 0, 3])
@@ -283,12 +385,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.process(data)
 
+        self.assertEqual(self._proc._state, PumpProbeAiProcessor.State.OFF_ON)
+
         on_pulse_gt = np.array([0, 4, 0, 4, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         self.assertTrue(data.ai.off_intensity_mean is None)
-        fom_hist_gt.append(None)
-        train_ids_gt.append(3)
         tids, foms, _ = data.ai.on_off_fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)
@@ -297,7 +399,6 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[4]
         self._proc.process(data)
 
-        on_pulse_gt = np.array([0, 4, 0, 4, 0])
         np.testing.assert_array_almost_equal(on_pulse_gt,
                                              data.ai.on_intensity_mean)
         off_pulse_gt = np.array([5, 0, 5, 0, 5])
