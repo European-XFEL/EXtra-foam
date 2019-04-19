@@ -12,33 +12,11 @@ All rights reserved.
 import queue
 
 from karabo_bridge import Client
-import zmq
 
 from .worker import Worker
 from ..config import config
 from ..gui import QtCore
 from ..helpers import profiler
-
-
-class TimeoutClient(Client):
-    """A karabo-bridge client with timeout."""
-    def __init__(self, *args, timeout=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        # timeout setting
-        if timeout is not None:
-            self._socket.RCVTIMEO = 1000 * timeout
-
-        self._recv_ready = False
-
-    def next(self):
-        """Override."""
-        if self._pattern == zmq.REQ and not self._recv_ready:
-            self._socket.send(b'next')
-            self._recv_ready = True
-
-        msg = self._socket.recv_multipart(copy=False)
-        self._recv_ready = False
-        return self._deserialize(msg)
 
 
 class DataAcquisition(Worker):
@@ -64,13 +42,12 @@ class DataAcquisition(Worker):
         end_point = f"tcp://{self._tcp_host}:{self._tcp_port}"
 
         self._running = True
-        with TimeoutClient(end_point, timeout=1) as client:
+        with Client(end_point, timeout=1) as client:
             self.log("Bind to server {}!".format(end_point))
             while self._running:
-
                 try:
                     data = self._recv(client)
-                except zmq.error.Again:
+                except TimeoutError:
                     continue
 
                 while self._running:
