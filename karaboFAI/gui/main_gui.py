@@ -380,6 +380,8 @@ class MainGUI(QtGui.QMainWindow):
 
 def start():
     parser = argparse.ArgumentParser(prog="karaboFAI")
+    parser.add_argument('-V', '--version', action='version',
+                        version="%(prog)s " + __version__)
     parser.add_argument("detector", help="detector name (case insensitive)",
                         choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
                         type=lambda s: s.upper())
