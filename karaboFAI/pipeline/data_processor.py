@@ -50,19 +50,8 @@ class CorrelationProcessor(AbstractProcessor):
         if self.fom_name is None:
             return
 
-        if self.fom_name == FomName.AI_MEAN:
-            momentum = proc_data.ai.momentum
-            if momentum is None:
-                raise ProcessingError(
-                    "Azimuthal integration result is not available!")
-            intensity = proc_data.ai.intensity_mean
-
-            # calculate figure-of-merit
-            fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
-            fom = np.sum(np.abs(fom))
-
         elif self.fom_name == FomName.PUMP_PROBE_FOM:
-            _, foms, _ = proc_data.ai.on_off_fom
+            _, foms, _ = proc_data.pp.fom
             if foms.size == 0:
                 raise ProcessingError("Pump-probe result is not available!")
             fom = foms[-1]
@@ -92,6 +81,17 @@ class CorrelationProcessor(AbstractProcessor):
             if roi1_hist.size == 0:
                 return
             fom = roi1_hist[-1] - roi2_hist[-1]
+
+        if self.fom_name == FomName.AI_MEAN:
+            momentum = proc_data.ai.momentum
+            if momentum is None:
+                raise ProcessingError(
+                    "Azimuthal integration result is not available!")
+            intensity = proc_data.ai.intensity_mean
+
+            # calculate figure-of-merit
+            fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
+            fom = np.sum(np.abs(fom))
 
         else:
             raise ProcessingError(f"Unknown FOM name: {self.fom_name}!")
