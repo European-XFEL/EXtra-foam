@@ -13,8 +13,8 @@ class TestCorrelationProcessor(unittest.TestCase):
     def testRaise(self):
         for fom in FomName:
             self._proc.fom_name = fom
-            if fom == FomName.AI_PUMP_PROBE:
-                with self.assertRaisesRegex(ProcessingError, "Laser on-off"):
+            if fom == FomName.PUMP_PROBE_FOM:
+                with self.assertRaisesRegex(ProcessingError, "Pump-probe"):
                     self._proc.process(ProcessedData(1))
             elif fom == FomName.AI_MEAN:
                 with self.assertRaisesRegex(ProcessingError, "result is not"):

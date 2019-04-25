@@ -61,10 +61,10 @@ class CorrelationProcessor(AbstractProcessor):
             fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
             fom = np.sum(np.abs(fom))
 
-        elif self.fom_name == FomName.AI_PUMP_PROBE:
+        elif self.fom_name == FomName.PUMP_PROBE_FOM:
             _, foms, _ = proc_data.ai.on_off_fom
             if foms.size == 0:
-                raise ProcessingError("Laser on-off result is not available!")
+                raise ProcessingError("Pump-probe result is not available!")
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
