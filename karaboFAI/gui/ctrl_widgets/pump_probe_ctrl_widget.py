@@ -27,14 +27,14 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     _available_modes = OrderedDict({
         "": PumpProbeMode.INACTIVATE,
-        "pre-defined off": PumpProbeMode.PRE_DEFINED_OFF,
+        "predefined off": PumpProbeMode.PRE_DEFINED_OFF,
         "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
         "odd/even train": PumpProbeMode.ODD_TRAIN_ON
     })
 
     _analysis_foms = OrderedDict({
-        "Azimuthal integration": PumpProbeFom.AZIMUTHAL_INTEGRATION,
+        "A.I.": PumpProbeFom.AZIMUTHAL_INTEGRATION,
         "ROI": PumpProbeFom.ROI,
         "ROI 1D projection": PumpProbeFom.ROI_1D_PROJECTION
     })
@@ -97,7 +97,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         AR = QtCore.Qt.AlignRight
 
         layout.addWidget(self.reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("Mode: "), 1, 0, AR)
+        layout.addWidget(QtGui.QLabel("On/off mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
         layout.addWidget(QtGui.QLabel("FOM: "), 2, 0, AR)
         layout.addWidget(self._fom_cb, 2, 1)
