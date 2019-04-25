@@ -84,7 +84,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     })
 
     _available_foms = OrderedDict({
-        "": None,
+        "": FomName.UNDEFINED,
         "Pump-probe FOM": FomName.PUMP_PROBE_FOM,
         "ROI1 - ROI2": FomName.ROI_SUB,
         "ROI1 + ROI2": FomName.ROI_SUM,

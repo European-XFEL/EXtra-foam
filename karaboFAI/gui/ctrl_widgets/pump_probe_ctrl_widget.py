@@ -26,7 +26,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
-        "": None,
+        "": PumpProbeMode.UNDEFINED,
         "predefined off": PumpProbeMode.PRE_DEFINED_OFF,
         "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
@@ -41,6 +41,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     # (mode, on-pulse ids, off-pulse ids)
     pp_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
+    # FOM
+    pp_fom_sgn = QtCore.pyqtSignal(object)
 
     abs_difference_sgn = QtCore.pyqtSignal(int)
 
@@ -121,8 +123,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
-        mode_description = self._mode_cb.currentText()
-        mode = self._available_modes[mode_description]
+        mode_str = self._mode_cb.currentText()
+        mode = self._available_modes[mode_str]
+
+        fom_str = self._fom_cb.currentText()
+        fom = self._analysis_foms[fom_str]
 
         try:
             # check pulse ID only when laser on/off pulses are in the same
@@ -146,6 +151,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             return False
 
         self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
+        self.pp_fom_sgn.emit(fom)
 
         abs_diff_state = self.abs_difference_cb.checkState()
         self.abs_difference_sgn.emit(abs_diff_state)

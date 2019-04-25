@@ -14,8 +14,9 @@ from karaboFAI.gui.windows import (
 )
 
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
-from karaboFAI.config import config, FomName, AiNormalizer, PumpProbeMode
-
+from karaboFAI.config import (
+    config, FomName, AiNormalizer, PumpProbeFom, PumpProbeMode
+)
 from . import mkQApp
 app = mkQApp()
 
@@ -111,10 +112,14 @@ class TestMainGui(unittest.TestCase):
 
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(None, worker._pp_proc.mode)
+        self.assertEqual(PumpProbeMode.UNDEFINED, worker._pp_proc.mode)
+        self.assertEqual(PumpProbeFom(0), worker._pp_proc.fom_type)
 
         # assign new values
-        widget._mode_cb.setCurrentIndex(2)
+        new_mode = PumpProbeMode.EVEN_TRAIN_ON
+        new_fom = PumpProbeFom.ROI
+        widget._mode_cb.setCurrentIndex(new_mode)
+        widget._fom_cb.setCurrentIndex(new_fom)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
         widget._ma_window_le.setText(str(ma_window))
@@ -125,7 +130,8 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertEqual(PumpProbeMode.SAME_TRAIN, worker._pp_proc.mode)
+        self.assertEqual(PumpProbeMode(new_mode), worker._pp_proc.mode)
+        self.assertEqual(PumpProbeFom(new_fom), worker._pp_proc.fom_type)
         self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
         self.assertFalse(worker._pp_proc.abs_difference)
@@ -214,7 +220,7 @@ class TestMainGui(unittest.TestCase):
 
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(None, worker._correlation_proc.fom_name)
+        self.assertEqual(FomName.UNDEFINED, worker._correlation_proc.fom_name)
 
         # test the correlation param table
         expected_params = []

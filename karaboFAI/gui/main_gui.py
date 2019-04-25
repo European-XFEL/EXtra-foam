@@ -212,6 +212,8 @@ class MainGUI(QtGui.QMainWindow):
 
         self.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
             self._pipe_worker.onOffPulseStateChange)
+        self.pump_probe_ctrl_widget.pp_fom_sgn.connect(
+            self._pipe_worker.onPpFomChange)
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
             self._pipe_worker.onAbsDifferenceStateChange)
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(

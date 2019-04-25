@@ -20,10 +20,11 @@ class DataSource(IntEnum):
 
 
 class PumpProbeMode(IntEnum):
-    PRE_DEFINED_OFF = 0  # use pre-defined reference image
-    SAME_TRAIN = 1  # on-/off- pulses in the same train
-    EVEN_TRAIN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_TRAIN_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
+    UNDEFINED = 0
+    PRE_DEFINED_OFF = 1  # use pre-defined reference image
+    SAME_TRAIN = 2  # on-/off- pulses in the same train
+    EVEN_TRAIN_ON = 3  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class PumpProbeFom(IntEnum):
@@ -33,16 +34,17 @@ class PumpProbeFom(IntEnum):
 
 
 class FomName(IntEnum):
-    PUMP_PROBE_FOM = 0
+    UNDEFINED = 0
+    PUMP_PROBE_FOM = 1
     # ROI1 - ROI2
-    ROI_SUB = 1
+    ROI_SUB = 2
     # ROI1 + ROI2
-    ROI_SUM = 2
-    ROI1 = 3
-    ROI2 = 4
+    ROI_SUM = 3
+    ROI1 = 4
+    ROI2 = 5
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
-    AI_MEAN = 5
+    AI_MEAN = 6
 
 
 class AiNormalizer(IntEnum):

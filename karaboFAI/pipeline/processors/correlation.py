@@ -33,7 +33,7 @@ class CorrelationProcessor(AbstractProcessor):
 
     def process(self, proc_data, raw_data=None):
         """Override."""
-        if self.fom_name is None:
+        if self.fom_name is None or self.fom_name == FomName.UNDEFINED:
             return
 
         elif self.fom_name == FomName.PUMP_PROBE_FOM:

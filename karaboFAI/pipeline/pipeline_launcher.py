@@ -99,6 +99,10 @@ class PipelineLauncher(Worker):
         self._pp_proc.on_pulse_ids = on_pulse_ids
         self._pp_proc.off_pulse_ids = off_pulse_ids
 
+    @QtCore.pyqtSlot(object)
+    def onPpFomChange(self, fom):
+        self._pp_proc.fom_type = fom
+
     @QtCore.pyqtSlot(int)
     def onAbsDifferenceStateChange(self, state):
         self._pp_proc.abs_difference = state == QtCore.Qt.Checked
