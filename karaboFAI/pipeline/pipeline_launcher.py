@@ -90,7 +90,7 @@ class PipelineLauncher(Worker):
         self._image_assembler.pulse_id_range = (lb, ub)
 
     @QtCore.pyqtSlot(object, list, list)
-    def onOffPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
+    def onPpPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
         if mode != self._pp_proc.mode:
             self._pp_proc.mode = mode
             self._pp_proc.reset()
@@ -104,7 +104,7 @@ class PipelineLauncher(Worker):
         self._pp_proc.fom_type = fom
 
     @QtCore.pyqtSlot(int)
-    def onAbsDifferenceStateChange(self, state):
+    def onPpDifferenceTypeChange(self, state):
         self._pp_proc.abs_difference = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot(float, float)
