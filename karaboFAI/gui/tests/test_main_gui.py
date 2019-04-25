@@ -213,7 +213,7 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
         # test FOM name
-        fom = FomName.ROI1
+        fom = FomName.PUMP_PROBE_FOM
         widget._figure_of_merit_cb.setCurrentIndex(fom)
 
         self.assertTrue(self.gui.updateSharedParameters())
