@@ -265,6 +265,29 @@ class AzimuthalIntegrationData(AbstractData):
         self.pulse_fom = None
 
 
+class PumpProbeData(AbstractData):
+    """A class which stores pump-probe analysis data."""
+
+    # FOM is defined as the difference of the FOMs between on and off
+    # signals. For example, in azimuthal integration analysis, FOM is
+    # the integration of the scattering curve; in ROI analysis, FOM is
+    # the sum of ROI.
+    fom = PairData()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # on/off image means are the average images for on/off pulses
+        self.on_image_mean = None
+        self.off_image_mean = None
+
+        # on/off data are the azimuthal integration result / ROI image /
+        # projection of image, depending on the type of the pump-probe
+        # experiment
+        self.on_data = None
+        self.off_data = None
+
+
 class CorrelationData(AbstractData):
     """A class which stores Laser on-off data."""
 
@@ -785,6 +808,7 @@ class ProcessedData:
             self._image_data = ImageData(images)
 
         self.ai = AzimuthalIntegrationData()
+        self.pp = PumpProbeData()
         self.xas = XasData()
         self.roi = RoiData()
         self.correlation = CorrelationData()
