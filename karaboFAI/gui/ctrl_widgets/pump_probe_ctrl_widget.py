@@ -26,7 +26,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
-        "": PumpProbeMode.INACTIVATE,
+        "": None,
         "predefined off": PumpProbeMode.PRE_DEFINED_OFF,
         "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,

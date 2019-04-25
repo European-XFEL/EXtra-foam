@@ -3,7 +3,7 @@ import numpy as np
 
 from karaboFAI.config import config, RoiFom
 from karaboFAI.pipeline.data_model import ProcessedData, ImageData, RoiData
-from karaboFAI.pipeline.data_processor import RoiProcessor
+from karaboFAI.pipeline.processors.roi import RoiProcessor
 
 
 class TestCorrelationProcessor(unittest.TestCase):

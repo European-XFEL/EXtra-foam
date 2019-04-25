@@ -286,6 +286,7 @@ class PumpProbeData(AbstractData):
         # experiment
         self.on_data = None
         self.off_data = None
+        self.on_off_data = None
 
 
 class CorrelationData(AbstractData):

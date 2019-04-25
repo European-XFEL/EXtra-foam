@@ -666,6 +666,9 @@ class TestCorrelationData(unittest.TestCase):
 
 
 class TestProcessedData(unittest.TestCase):
+    def setUp(self):
+        RoiData.clear()
+
     def test_general(self):
         data = ProcessedData(1234)
         self.assertEqual(1234, data.tid)

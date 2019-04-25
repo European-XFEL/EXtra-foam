@@ -20,11 +20,10 @@ class DataSource(IntEnum):
 
 
 class PumpProbeMode(IntEnum):
-    INACTIVATE = 0
-    PRE_DEFINED_OFF = 1  # use pre-defined reference image
-    SAME_TRAIN = 2  # on-/off- pulses in the same train
-    EVEN_TRAIN_ON = 3  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
+    PRE_DEFINED_OFF = 0  # use pre-defined reference image
+    SAME_TRAIN = 1  # on-/off- pulses in the same train
+    EVEN_TRAIN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_TRAIN_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class PumpProbeFom(IntEnum):

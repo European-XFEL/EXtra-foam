@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import queue
+from queue import Queue, Empty, Full
 
 from scipy import constants
 
@@ -17,10 +17,9 @@ from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
 from .data_model import ProcessedData
 from .worker import Worker
-from .data_processor import (
-    AzimuthalIntegrationProcessor, CorrelationProcessor, HeadProcessor,
-    PumpProbeAiProcessor, RoiProcessor, PulseResolvedAiFomProcessor,
-    XasProcessor
+from .processors import (
+    AzimuthalIntegrationProcessor, CorrelationProcessor,
+    PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config
@@ -45,15 +44,23 @@ class PipelineLauncher(Worker):
         self._data_aggregator = DataAggregator()
 
         self._roi_proc = RoiProcessor()
+        self._roi_proc.setEnabled(True)
         self._correlation_proc = CorrelationProcessor()
+        self._correlation_proc.setEnabled(True)
 
         self._ai_proc = AzimuthalIntegrationProcessor()
-        self._pp_proc = PumpProbeAiProcessor()
-        self._pulse_ai_fom_proc = PulseResolvedAiFomProcessor()
+
+        self._pp_proc = PumpProbeProcessor()
 
         self._xas_proc = XasProcessor()
 
-        self._head = HeadProcessor()
+        self._tasks = [
+            self._roi_proc,
+            self._xas_proc,
+            self._ai_proc,
+            self._pp_proc,
+            self._correlation_proc
+        ]
 
     @QtCore.pyqtSlot(str)
     def onDetectorSourceChange(self, src):
@@ -134,7 +141,6 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
         self._pp_proc.fom_itgt_range = (lb, ub)
-        self._pulse_ai_fom_proc.fom_itgt_range = (lb, ub)
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot()
@@ -146,7 +152,6 @@ class PipelineLauncher(Worker):
     def onEnableAiStateChange(self, state):
         enabled = state == QtCore.Qt.Checked
         self._ai_proc.setEnabled(enabled)
-        self._pulse_ai_fom_proc.setEnabled(enabled)
         self._pp_proc.setEnabled(enabled)
 
     @QtCore.pyqtSlot()
@@ -193,24 +198,14 @@ class PipelineLauncher(Worker):
     def clear_roi_hist(self):
         ProcessedData.clear_roi_hist()
 
-    def _build_graph(self):
-        # TODO: implement the Graph!!! Now it is simply a linked list :(
-        self._head.next = self._roi_proc
-        self._roi_proc.next = self._xas_proc
-        self._xas_proc.next = self._ai_proc
-        self._ai_proc.next = self._pulse_ai_fom_proc
-        self._pulse_ai_fom_proc.next = self._pp_proc
-        self._pp_proc.next = self._correlation_proc
-
     def run(self):
         """Run the data processor."""
-        self._build_graph()
         self._running = True
         self.log("Data processor started!")
         while self._running:
             try:
                 data = self._in_queue.get(timeout=config['TIMEOUT'])
-            except queue.Empty:
+            except Empty:
                 continue
 
             processed_data = self._process(data)
@@ -222,7 +217,7 @@ class PipelineLauncher(Worker):
                     self._out_queue.put(processed_data,
                                         timeout=config['TIMEOUT'])
                     break
-                except queue.Full:
+                except Full:
                     continue
 
         self.log("Data processor stopped!")
@@ -263,19 +258,14 @@ class PipelineLauncher(Worker):
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
 
-        try:
-            proc = self._head
-            while True:
-                if proc is None:
-                    break
-
-                if proc.isEnabled():
-                    proc.process(processed_data, data)
-                proc = proc.next
-        except ProcessingError as e:
-            self.log(f"Train ID: {tid}: " + repr(e))
-        except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            raise
+        for task in self._tasks:
+            try:
+                if task.isEnabled():
+                    task.process(processed_data, data)
+            except ProcessingError as e:
+                self.log(f"Train ID: {tid}: " + repr(e))
+            except Exception as e:
+                self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+                raise
 
         return processed_data

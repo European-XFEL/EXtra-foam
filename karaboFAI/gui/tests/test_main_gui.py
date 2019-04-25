@@ -46,7 +46,6 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertFalse(worker._ai_proc.isEnabled())
-        self.assertFalse(worker._pulse_ai_fom_proc.isEnabled())
         self.assertFalse(worker._pp_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
@@ -54,7 +53,6 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertTrue(worker._ai_proc.isEnabled())
-        self.assertTrue(worker._pulse_ai_fom_proc.isEnabled())
         self.assertTrue(worker._pp_proc.isEnabled())
 
     def testAiCtrlWidget(self):
@@ -99,9 +97,6 @@ class TestMainGui(unittest.TestCase):
         self.assertTupleEqual(worker._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._pulse_ai_fom_proc.fom_itgt_range,
-                              fom_itgt_range)
-
         self.assertTupleEqual(worker._pp_proc.fom_itgt_range, fom_itgt_range)
 
     def testPumpProbeCtrlWidget(self):
@@ -114,6 +109,11 @@ class TestMainGui(unittest.TestCase):
         off_pulse_ids = [1, 3, 5, 7, 9]
         ma_window = 10
 
+        # test default FOM name
+        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertEqual(None, worker._pp_proc.mode)
+
+        # assign new values
         widget._mode_cb.setCurrentIndex(2)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
@@ -212,13 +212,9 @@ class TestMainGui(unittest.TestCase):
         self.assertIsInstance(window, CorrelationWindow)
         self.assertEqual(n_registered + 1, len(self.gui._windows))
 
-        # test FOM name
-        fom = FomName.PUMP_PROBE_FOM
-        widget._figure_of_merit_cb.setCurrentIndex(fom)
-
+        # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-
-        self.assertEqual(fom, worker._correlation_proc.fom_name)
+        self.assertEqual(None, worker._correlation_proc.fom_name)
 
         # test the correlation param table
         expected_params = []

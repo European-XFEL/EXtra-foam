@@ -1,6 +1,6 @@
 import unittest
 
-from karaboFAI.pipeline.data_processor import AzimuthalIntegrationProcessor
+from karaboFAI.pipeline.processors import AzimuthalIntegrationProcessor
 
 
 class TestAzimuthalIntegrationProcessor(unittest.TestCase):
