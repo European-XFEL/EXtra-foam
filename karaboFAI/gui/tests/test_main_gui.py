@@ -114,7 +114,7 @@ class TestMainGui(unittest.TestCase):
         off_pulse_ids = [1, 3, 5, 7, 9]
         ma_window = 10
 
-        widget._laser_mode_cb.setCurrentIndex(1)
+        widget._mode_cb.setCurrentIndex(1)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
         widget._ma_window_le.setText(str(ma_window))

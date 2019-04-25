@@ -40,7 +40,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe analysis setup", *args, **kwargs)
 
-        self._laser_mode_cb = QtGui.QComboBox()
+        self._mode_cb = QtGui.QComboBox()
 
         # We keep the definitions of attributes which are not used in the
         # PULSE_RESOLVED = True case. It makes sense since these attributes
@@ -48,12 +48,12 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
-            self._laser_mode_cb.addItems(all_keys)
+            self._mode_cb.addItems(all_keys)
             on_pulse_ids = "0:8:2"
             off_pulse_ids = "1:8:2"
         else:
             all_keys.remove("same train")
-            self._laser_mode_cb.addItems(all_keys)
+            self._mode_cb.addItems(all_keys)
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
@@ -68,7 +68,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self.reset_btn = QtGui.QPushButton("Reset")
 
         self._disabled_widgets_during_daq = [
-            self._laser_mode_cb,
+            self._mode_cb,
             self._on_pulse_le,
             self._off_pulse_le,
             self.abs_difference_cb,
@@ -86,8 +86,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         AR = QtCore.Qt.AlignRight
 
         layout.addWidget(self.reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("Laser on/off mode: "), 1, 0, AR)
-        layout.addWidget(self._laser_mode_cb, 1, 1)
+        layout.addWidget(QtGui.QLabel("Mode: "), 1, 0, AR)
+        layout.addWidget(self._mode_cb, 1, 1)
         if self._pulse_resolved:
             layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 2, 0, AR)
             layout.addWidget(self._on_pulse_le, 2, 1)
@@ -108,7 +108,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
-        mode_description = self._laser_mode_cb.currentText()
+        mode_description = self._mode_cb.currentText()
         mode = self._available_modes[mode_description]
 
         try:
