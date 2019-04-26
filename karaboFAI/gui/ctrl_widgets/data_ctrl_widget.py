@@ -76,7 +76,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
 
-        self._serve_start_btn = QtGui.QPushButton("Serve")
+        self._serve_start_btn = QtGui.QPushButton("Stream files")
         self._serve_start_btn.clicked.connect(self.parent().onStartServeFile)
         self._serve_terminate_btn = QtGui.QPushButton("Terminate")
         self._serve_terminate_btn.setEnabled(False)
