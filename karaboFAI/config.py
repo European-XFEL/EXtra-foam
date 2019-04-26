@@ -234,7 +234,7 @@ class Config(dict):
         "REQUIRE_GEOMETRY": False,
         "SOURCE_NAME": ("FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
                         "FXE_XAD_JF500K/DET/RECEIVER:display",
-                        # "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
+                        "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
                         "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
                         "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
                         "FXE_XAD_JF1M/DET/RECEIVER-1:display",
