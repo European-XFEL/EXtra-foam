@@ -30,7 +30,8 @@ class PumpProbeMode(IntEnum):
 class PumpProbeFom(IntEnum):
     AZIMUTHAL_INTEGRATION = 0
     ROI = 1
-    ROI_1D_PROJECTION = 2
+    ROI_1D_PROJECTION_X = 2
+    ROI_1D_PROJECTION_Y = 3
 
 
 class FomName(IntEnum):

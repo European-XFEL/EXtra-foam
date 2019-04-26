@@ -100,8 +100,8 @@ class PipelineLauncher(Worker):
         self._pp_proc.off_pulse_ids = off_pulse_ids
 
     @QtCore.pyqtSlot(object)
-    def onPpFomChange(self, fom):
-        self._pp_proc.fom_type = fom
+    def onPpAnalysisTypeChange(self, value):
+        self._pp_proc.analysis_type = value
 
     @QtCore.pyqtSlot(int)
     def onPpDifferenceTypeChange(self, state):

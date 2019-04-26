@@ -113,13 +113,13 @@ class TestMainGui(unittest.TestCase):
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
         self.assertEqual(PumpProbeMode.UNDEFINED, worker._pp_proc.mode)
-        self.assertEqual(PumpProbeFom(0), worker._pp_proc.fom_type)
+        self.assertEqual(PumpProbeFom(0), worker._pp_proc.analysis_type)
 
         # assign new values
         new_mode = PumpProbeMode.EVEN_TRAIN_ON
         new_fom = PumpProbeFom.ROI
         widget._mode_cb.setCurrentIndex(new_mode)
-        widget._fom_cb.setCurrentIndex(new_fom)
+        widget._analysis_type_cb.setCurrentIndex(new_fom)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
         widget._ma_window_le.setText(str(ma_window))
@@ -131,7 +131,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertEqual(PumpProbeMode(new_mode), worker._pp_proc.mode)
-        self.assertEqual(PumpProbeFom(new_fom), worker._pp_proc.fom_type)
+        self.assertEqual(PumpProbeFom(new_fom), worker._pp_proc.analysis_type)
         self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
         self.assertFalse(worker._pp_proc.abs_difference)

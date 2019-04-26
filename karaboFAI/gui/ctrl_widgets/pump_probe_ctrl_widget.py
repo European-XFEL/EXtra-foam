@@ -33,16 +33,17 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         "odd/even train": PumpProbeMode.ODD_TRAIN_ON
     })
 
-    _analysis_foms = OrderedDict({
+    _analysis_types = OrderedDict({
         "A.I.": PumpProbeFom.AZIMUTHAL_INTEGRATION,
         "ROI": PumpProbeFom.ROI,
-        "ROI 1D projection": PumpProbeFom.ROI_1D_PROJECTION
+        "ROI 1D projection X": PumpProbeFom.ROI_1D_PROJECTION_X,
+        "ROI 1D projection Y": PumpProbeFom.ROI_1D_PROJECTION_Y,
     })
 
     # (mode, on-pulse ids, off-pulse ids)
     pp_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
-    # FOM
-    pp_fom_sgn = QtCore.pyqtSignal(object)
+    # analysis type
+    pp_analysis_type_sgn = QtCore.pyqtSignal(object)
 
     abs_difference_sgn = QtCore.pyqtSignal(int)
 
@@ -66,8 +67,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             on_pulse_ids = "0"
             off_pulse_ids = "0"
 
-        self._fom_cb = QtGui.QComboBox()
-        self._fom_cb.addItems(list(self._analysis_foms.keys()))
+        self._analysis_type_cb = QtGui.QComboBox()
+        self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
         self.abs_difference_cb = QtGui.QCheckBox("FOM from absolute difference")
         self.abs_difference_cb.setChecked(True)
@@ -81,7 +82,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self._disabled_widgets_during_daq = [
             self._mode_cb,
-            self._fom_cb,
+            self._analysis_type_cb,
             self._on_pulse_le,
             self._off_pulse_le,
             self.abs_difference_cb,
@@ -101,8 +102,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self.reset_btn, 0, 1)
         layout.addWidget(QtGui.QLabel("On/off mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("FOM: "), 2, 0, AR)
-        layout.addWidget(self._fom_cb, 2, 1)
+        layout.addWidget(QtGui.QLabel("Analysis type: "), 2, 0, AR)
+        layout.addWidget(self._analysis_type_cb, 2, 1)
         if self._pulse_resolved:
             layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 3, 0, AR)
             layout.addWidget(self._on_pulse_le, 3, 1)
@@ -126,8 +127,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         mode_str = self._mode_cb.currentText()
         mode = self._available_modes[mode_str]
 
-        fom_str = self._fom_cb.currentText()
-        fom = self._analysis_foms[fom_str]
+        fom_str = self._analysis_type_cb.currentText()
+        type_ = self._analysis_types[fom_str]
 
         try:
             # check pulse ID only when laser on/off pulses are in the same
@@ -151,7 +152,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             return False
 
         self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
-        self.pp_fom_sgn.emit(fom)
+        self.pp_analysis_type_sgn.emit(type_)
 
         abs_diff_state = self.abs_difference_cb.checkState()
         self.abs_difference_sgn.emit(abs_diff_state)

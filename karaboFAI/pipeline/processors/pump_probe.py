@@ -41,7 +41,7 @@ class BasePumpProbeProcessor(AbstractProcessor):
         super().__init__()
 
         self.mode = None
-        self.fom_type = None
+        self.analysis_type = None
         self.on_pulse_ids = None
         self.off_pulse_ids = None
 
