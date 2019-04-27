@@ -15,7 +15,7 @@ from karaboFAI.gui.windows import (
 
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
-    config, FomName, AiNormalizer, PumpProbeFom, PumpProbeMode
+    config, FomName, AiNormalizer, PumpProbeMode, PumpProbeType
 )
 from . import mkQApp
 app = mkQApp()
@@ -25,7 +25,7 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = MainGUI('LPD')
-        cls.proc = cls.gui._pipe_worker
+        cls.proc = cls.gui._scheduler
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._overview_action = cls._actions[3]
@@ -42,23 +42,21 @@ class TestMainGui(unittest.TestCase):
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertFalse(worker._ai_proc.isEnabled())
-        self.assertFalse(worker._pp_proc.isEnabled())
+        # self.assertFalse(worker._ai_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget.enable_ai_cb.height()/2))
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertTrue(worker._ai_proc.isEnabled())
-        self.assertTrue(worker._pp_proc.isEnabled())
+        # self.assertTrue(worker._ai_proc.isEnabled())
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         photon_energy = 12.4
         photon_wavelength = 1.0e-10
@@ -102,7 +100,7 @@ class TestMainGui(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         self.assertEqual(1, worker._pp_proc.ma_window)
 
@@ -113,11 +111,11 @@ class TestMainGui(unittest.TestCase):
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
         self.assertEqual(PumpProbeMode.UNDEFINED, worker._pp_proc.mode)
-        self.assertEqual(PumpProbeFom(0), worker._pp_proc.analysis_type)
+        self.assertEqual(PumpProbeType(0), worker._pp_proc.analysis_type)
 
         # assign new values
         new_mode = PumpProbeMode.EVEN_TRAIN_ON
-        new_fom = PumpProbeFom.ROI
+        new_fom = PumpProbeType.ROI
         widget._mode_cb.setCurrentIndex(new_mode)
         widget._analysis_type_cb.setCurrentIndex(new_fom)
         widget._on_pulse_le.setText('0:10:2')
@@ -131,7 +129,7 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertEqual(PumpProbeMode(new_mode), worker._pp_proc.mode)
-        self.assertEqual(PumpProbeFom(new_fom), worker._pp_proc.analysis_type)
+        self.assertEqual(PumpProbeType(new_fom), worker._pp_proc.analysis_type)
         self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
         self.assertFalse(worker._pp_proc.abs_difference)
@@ -139,14 +137,7 @@ class TestMainGui(unittest.TestCase):
 
     def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
-        worker = self.gui._pipe_worker
-
-        self.assertFalse(worker._xas_proc.isEnabled())  # default
-
-        widget._enable_cb.show()
-        QTest.mouseClick(widget._enable_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, widget._enable_cb.height()/2))
-        self.assertTrue(worker._xas_proc.isEnabled())
+        worker = self.gui._scheduler
 
         # check initial value is set
         self.assertEqual(int(widget._nbins_le.text()), worker._xas_proc.n_bins)
@@ -157,7 +148,7 @@ class TestMainGui(unittest.TestCase):
 
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
         daq = self.gui._daq_worker
 
         # test passing tcp hostname and port
@@ -200,7 +191,7 @@ class TestMainGui(unittest.TestCase):
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
@@ -210,7 +201,7 @@ class TestMainGui(unittest.TestCase):
 
     def testCorrelationCtrlWidget(self):
         widget =self.gui.correlation_ctrl_widget
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         n_registered = len(self.gui._windows)
         self._correlation_action.trigger()
@@ -312,7 +303,7 @@ class TestMainGui(unittest.TestCase):
         # --------------------------
         # test setting max pulse ID
         # --------------------------
-        worker = self.gui._pipe_worker
+        worker = self.gui._scheduler
 
         widget.updateSharedParameters()
         self.assertEqual((0, 2700), worker._image_assembler.pulse_id_range)

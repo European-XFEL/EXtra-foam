@@ -13,19 +13,20 @@ import copy
 
 import numpy as np
 
-from .base_processor import AbstractProcessor
+from .base_processor import LeafProcessor
 from ...algorithms import intersection
 from ...config import config, RoiFom
+from ...helpers import profiler
 
 
-class RoiProcessor(AbstractProcessor):
+class RoiProcessor(LeafProcessor):
     """Process region of interest.
 
     Attributes:
         roi_fom (int): type of ROI FOM.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self._rois = [None] * len(config["ROI_COLORS"])
 
@@ -34,7 +35,8 @@ class RoiProcessor(AbstractProcessor):
     def set(self, rank, value):
         self._rois[rank-1] = value
 
-    def process(self, proc_data, raw_data=None):
+    @profiler("ROI processor")
+    def run(self, processed, raw=None):
         """Override.
 
         Note: We need to put some data in the history, even if ROI is not
@@ -43,10 +45,10 @@ class RoiProcessor(AbstractProcessor):
         """
         roi_fom = self.roi_fom
 
-        tid = proc_data.tid
+        tid = processed.tid
         if tid > 0:
-            img = proc_data.image.masked_mean
-            img_ref = proc_data.image.masked_ref
+            img = processed.image.masked_mean
+            img_ref = processed.image.masked_ref
 
             rois = copy.copy(self._rois)
             for i, roi in enumerate(rois):
@@ -59,11 +61,11 @@ class RoiProcessor(AbstractProcessor):
                     if roi[0] < 0 or roi[1] < 0:
                         self._rois[i] = None
                     else:
-                        setattr(proc_data.roi, f"roi{i+1}", roi)
+                        setattr(processed.roi, f"roi{i+1}", roi)
                         value = self._get_roi_fom(roi, roi_fom, img)
                         value_ref = self._get_roi_fom(roi, roi_fom, img_ref)
-                setattr(proc_data.roi, f"roi{i+1}_hist", (tid, value))
-                setattr(proc_data.roi, f"roi{i + 1}_hist_ref", (tid, value_ref))
+                setattr(processed.roi, f"roi{i+1}_hist", (tid, value))
+                setattr(processed.roi, f"roi{i+1}_hist_ref", (tid, value_ref))
 
     @staticmethod
     def _get_roi_fom(roi_param, roi_fom, img):

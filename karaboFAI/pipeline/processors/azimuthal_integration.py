@@ -15,14 +15,14 @@ import numpy as np
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
-from .base_processor import AbstractProcessor
+from .base_processor import LeafProcessor, CompositeProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_curve, slice_curve
 from ...config import AiNormalizer
 from ...helpers import profiler
 
 
-class AzimuthalIntegrationProcessor(AbstractProcessor):
+class AzimuthalIntegrationProcessor(CompositeProcessor):
     """Perform azimuthal integration.
 
     Attributes:
@@ -42,8 +42,8 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         auc_x_range (tuple): x range for calculating AUC, which is used as
             a normalizer of the azimuthal integration.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.sample_distance = None
         self.wavelength = None
@@ -54,8 +54,8 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         self.normalizer = None
         self.auc_x_range = None
 
-    @profiler("Azimuthal integration")
-    def process(self, proc_data, raw_data=None):
+    @profiler("Azimuthal integration processor")
+    def run(self, processed, raw=None):
         sample_distance = self.sample_distance
         wavelength = self.wavelength
         cx, cy = self.integration_center
@@ -63,13 +63,13 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
         integration_method = self.integration_method
         integration_range = self.integration_range
 
-        assembled = proc_data.image.images
-        reference = proc_data.image.masked_ref
-        image_mask = proc_data.image.image_mask
+        assembled = processed.image.images
+        reference = processed.image.masked_ref
+        image_mask = processed.image.image_mask
 
-        pixel_size = proc_data.image.pixel_size
-        poni2, poni1 = proc_data.image.pos_inv(cx, cy)
-        mask_min, mask_max = proc_data.image.threshold_mask
+        pixel_size = processed.image.pixel_size
+        poni2, poni1 = processed.image.pos_inv(cx, cy)
+        mask_min, mask_max = processed.image.threshold_mask
 
         ai = AzimuthalIntegrator(dist=sample_distance,
                                  poni1=poni1 * pixel_size,
@@ -156,10 +156,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             ref_intensity = None
 
         self._normalize(
-            momentum, intensities, intensities_mean, ref_intensity, proc_data)
+            momentum, intensities, intensities_mean, ref_intensity, processed)
 
     def _normalize(self, momentum, intensities, intensities_mean,
-                   ref_intensity, proc_data):
+                   ref_intensity, processed):
         if self.normalizer == AiNormalizer.AUC:
             try:
                 intensities_mean = normalize_curve(
@@ -179,10 +179,10 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
                 raise ProcessingError(e)
 
         else:
-            _, roi1_hist, _ = proc_data.roi.roi1_hist
-            _, roi2_hist, _ = proc_data.roi.roi2_hist
-            _, roi1_hist_ref, _ = proc_data.roi.roi1_hist_ref
-            _, roi2_hist_ref, _ = proc_data.roi.roi2_hist_ref
+            _, roi1_hist, _ = processed.roi.roi1_hist
+            _, roi2_hist, _ = processed.roi.roi2_hist
+            _, roi1_hist_ref, _ = processed.roi.roi1_hist_ref
+            _, roi2_hist_ref, _ = processed.roi.roi2_hist_ref
 
             denominator = 0
             denominator_ref = 0
@@ -218,13 +218,13 @@ class AzimuthalIntegrationProcessor(AbstractProcessor):
             else:
                 ref_intensity = np.zeros_like(intensities_mean)
 
-        proc_data.ai.momentum = momentum
-        proc_data.ai.intensities = intensities
-        proc_data.ai.intensity_mean = intensities_mean
-        proc_data.ai.reference_intensity = ref_intensity
+        processed.ai.momentum = momentum
+        processed.ai.intensities = intensities
+        processed.ai.intensity_mean = intensities_mean
+        processed.ai.reference_intensity = ref_intensity
 
 
-class PulseResolvedAiFomProcessor(AbstractProcessor):
+class PulseResolvedAiFomProcessor(LeafProcessor):
     """PulseResolvedAiFomProcessor.
 
     Only for pulse-resolved detectors.
@@ -233,19 +233,20 @@ class PulseResolvedAiFomProcessor(AbstractProcessor):
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.fom_itgt_range = None
 
-    def process(self, proc_data, raw_data=None):
+    @profiler("Pulse-resolved azimuthal integration FOM processor")
+    def run(self, processed, raw=None):
         """Override."""
-        if proc_data.n_pulses == 1:
+        if processed.n_pulses == 1:
             # train-resolved
             return
 
-        momentum = proc_data.ai.momentum
-        intensities = proc_data.ai.intensities
+        momentum = processed.ai.momentum
+        intensities = processed.ai.intensities
 
         # calculate the different between each pulse and the first one
         diffs = [p - intensities[0] for p in intensities]
@@ -256,4 +257,4 @@ class PulseResolvedAiFomProcessor(AbstractProcessor):
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        proc_data.ai.pulse_fom = foms
+        processed.ai.pulse_fom = foms

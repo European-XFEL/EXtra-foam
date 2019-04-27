@@ -17,7 +17,7 @@ class TestImageTool(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = MainGUI('LPD')
-        cls.proc = cls.gui._pipe_worker
+        cls.proc = cls.gui._scheduler
         cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]

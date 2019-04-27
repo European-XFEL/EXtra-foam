@@ -16,7 +16,7 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_ids
 from ..mediator import Mediator
-from ...config import PumpProbeFom, PumpProbeMode
+from ...config import PumpProbeMode, PumpProbeType
 from ...logger import logger
 
 mediator = Mediator()
@@ -34,10 +34,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     _analysis_types = OrderedDict({
-        "A.I.": PumpProbeFom.AZIMUTHAL_INTEGRATION,
-        "ROI": PumpProbeFom.ROI,
-        "ROI 1D projection X": PumpProbeFom.ROI_1D_PROJECTION_X,
-        "ROI 1D projection Y": PumpProbeFom.ROI_1D_PROJECTION_Y,
+        "A.I.": PumpProbeType.AZIMUTHAL_INTEGRATION,
+        "ROI": PumpProbeType.ROI,
+        "Projection X": PumpProbeType.ROI_PROJECTION_X,
+        "Projection Y": PumpProbeType.ROI_PROJECTION_Y,
     })
 
     # (mode, on-pulse ids, off-pulse ids)

@@ -35,7 +35,7 @@ from ..config import config
 from ..logger import logger
 from ..helpers import profiler
 from ..offline import FileServer
-from ..pipeline import DataAcquisition, PipelineLauncher, Data4Visualization
+from ..pipeline import DataAcquisition, Scheduler, Data4Visualization
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -133,11 +133,11 @@ class MainGUI(QtGui.QMainWindow):
         # a DAQ worker which acquires the data in another thread
         self._daq_worker = DataAcquisition(self._daq_queue)
         # a data processing worker which processes the data in another thread
-        self._pipe_worker = PipelineLauncher(self._daq_queue, self._proc_queue)
+        self._scheduler = Scheduler(self._daq_queue, self._proc_queue)
 
         # initializing mediator
         mediator = Mediator()
-        mediator.setPipeline(self._pipe_worker)
+        mediator.setPipeline(self._scheduler)
         mediator.setDaq(self._daq_worker)
 
         # For real time plot
@@ -180,51 +180,51 @@ class MainGUI(QtGui.QMainWindow):
         """Set up all signal and slot connections."""
         self._daq_worker.message.connect(self.onMessageReceived)
 
-        self._pipe_worker.message.connect(self.onMessageReceived)
+        self._scheduler.message.connect(self.onMessageReceived)
 
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget.geometry_sgn.connect(
-                self._pipe_worker.onGeometryChange)
+                self._scheduler.onGeometryChange)
 
         self.ai_ctrl_widget.photon_energy_sgn.connect(
-            self._pipe_worker.onPhotonEnergyChange)
+            self._scheduler.onPhotonEnergyChange)
         self.ai_ctrl_widget.sample_distance_sgn.connect(
-            self._pipe_worker.onSampleDistanceChange)
+            self._scheduler.onSampleDistanceChange)
         self.ai_ctrl_widget.integration_center_sgn.connect(
-            self._pipe_worker.onIntegrationCenterChange)
+            self._scheduler.onIntegrationCenterChange)
         self.ai_ctrl_widget.integration_method_sgn.connect(
-            self._pipe_worker.onIntegrationMethodChange)
+            self._scheduler.onIntegrationMethodChange)
         self.ai_ctrl_widget.integration_range_sgn.connect(
-            self._pipe_worker.onIntegrationRangeChange)
+            self._scheduler.onIntegrationRangeChange)
         self.ai_ctrl_widget.integration_points_sgn.connect(
-            self._pipe_worker.onIntegrationPointsChange)
+            self._scheduler.onIntegrationPointsChange)
         self.ai_ctrl_widget.ai_normalizer_sgn.connect(
-            self._pipe_worker.onAiNormalizeChange)
+            self._scheduler.onAiNormalizeChange)
         self.ai_ctrl_widget.auc_x_range_sgn.connect(
-            self._pipe_worker.onAucXRangeChange)
+            self._scheduler.onAucXRangeChange)
         self.ai_ctrl_widget.fom_integration_range_sgn.connect(
-            self._pipe_worker.onFomIntegrationRangeChange)
+            self._scheduler.onFomIntegrationRangeChange)
 
         self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
-            self._pipe_worker.onEnableAiStateChange)
+            self._scheduler.onEnableAiStateChange)
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._pipe_worker.onPulseIdRangeChange)
+            self._scheduler.onPulseIdRangeChange)
 
         self.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
-            self._pipe_worker.onPpPulseStateChange)
+            self._scheduler.onPpPulseStateChange)
         self.pump_probe_ctrl_widget.pp_analysis_type_sgn.connect(
-            self._pipe_worker.onPpAnalysisTypeChange)
+            self._scheduler.onPpAnalysisTypeChange)
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
-            self._pipe_worker.onPpDifferenceTypeChange)
+            self._scheduler.onPpDifferenceTypeChange)
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
-            self._pipe_worker.onLaserOnOffClear)
+            self._scheduler.onLaserOnOffClear)
 
         self.correlation_ctrl_widget.correlation_fom_change_sgn.connect(
-            self._pipe_worker.onCorrelationFomChange)
+            self._scheduler.onCorrelationFomChange)
         self.correlation_ctrl_widget.correlation_param_change_sgn.connect(
-            self._pipe_worker.onCorrelationParamChange)
+            self._scheduler.onCorrelationParamChange)
         self.correlation_ctrl_widget.clear_btn.clicked.connect(
-            self._pipe_worker.onCorrelationClear)
+            self._scheduler.onCorrelationClear)
 
     def initUI(self):
         analysis_layout = QtGui.QVBoxLayout()
@@ -298,7 +298,7 @@ class MainGUI(QtGui.QMainWindow):
 
         if not self.updateSharedParameters():
             return
-        self._pipe_worker.start()
+        self._scheduler.start()
         self._daq_worker.start()
 
         self._start_at.setEnabled(False)
@@ -319,9 +319,9 @@ class MainGUI(QtGui.QMainWindow):
         self.daq_stopped_sgn.emit()
 
     def clearWorkers(self):
-        self._pipe_worker.terminate()
+        self._scheduler.terminate()
         self._daq_worker.terminate()
-        self._pipe_worker.wait()
+        self._scheduler.wait()
         self._daq_worker.wait()
 
     def clearQueues(self):

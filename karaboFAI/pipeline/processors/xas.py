@@ -11,20 +11,21 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import AbstractProcessor
+from .base_processor import LeafProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
+from ...helpers import profiler
 
 
-class XasProcessor(AbstractProcessor):
+class XasProcessor(LeafProcessor):
     """XasProcessor class.
 
     A processor which calculate absorption spectra based on different
     ROIs specified by the user.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.n_bins = 10
 
@@ -45,16 +46,21 @@ class XasProcessor(AbstractProcessor):
 
         self.reset()
 
-    def process(self, proc_data, raw_data=None):
+    @profiler("XAS processor")
+    def run(self, processed, raw=None):
         """Override."""
-        xgm = proc_data.xgm
-        mono = proc_data.mono
-        _, roi1_hist, _ = proc_data.roi.roi1_hist
-        _, roi2_hist, _ = proc_data.roi.roi2_hist
-        _, roi3_hist, _ = proc_data.roi.roi3_hist
+        intensity = processed.xgm.intensity
+        if not intensity:
+            return
+        energy = processed.mono.energy
+        if not energy:
+            return
+        _, roi1_hist, _ = processed.roi.roi1_hist
+        _, roi2_hist, _ = processed.roi.roi2_hist
+        _, roi3_hist, _ = processed.roi.roi3_hist
 
-        self._energies.append(mono.energy)
-        self._xgm.append(xgm.intensity)
+        self._energies.append(energy)
+        self._xgm.append(intensity)
         self._I0.append(roi1_hist[-1])
         self._I1.append(roi2_hist[-1])
         self._I2.append(roi3_hist[-1])
@@ -79,9 +85,9 @@ class XasProcessor(AbstractProcessor):
             bin_count = self._bin_count
 
         self._counter += 1
-        proc_data.xas.bin_center = bin_center
-        proc_data.xas.absorptions = absorptions
-        proc_data.xas.bin_count = bin_count
+        processed.xas.bin_center = bin_center
+        processed.xas.absorptions = absorptions
+        processed.xas.bin_count = bin_count
 
     def reset(self):
         self._energies.clear()

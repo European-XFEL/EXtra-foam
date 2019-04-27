@@ -13,13 +13,14 @@ from enum import IntEnum
 
 import numpy as np
 
-from .base_processor import AbstractProcessor
+from .base_processor import LeafProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
-from ...config import PumpProbeMode
+from ...config import PumpProbeMode, PumpProbeType
+from ...helpers import profiler
 
 
-class BasePumpProbeProcessor(AbstractProcessor):
+class _BasePumpProbeProcessor(LeafProcessor):
     """BasePumpProbeProcessor class.
 
     Base class for pump-probe processors.
@@ -37,8 +38,8 @@ class BasePumpProbeProcessor(AbstractProcessor):
         ON_ON = 3
         OFF_OFF = 4
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, scheduler):
+        super().__init__(scheduler)
 
         self.mode = None
         self.analysis_type = None
@@ -71,13 +72,14 @@ class BasePumpProbeProcessor(AbstractProcessor):
 
         self._ma_window = v
 
-    def process(self, proc_data, raw_data=None):
+    def run(self, processed, raw=None):
         """Override."""
         # TODO: implement
         pass
 
-    def _pre_process(self, proc_data):
-        if self.mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
+    def _pre_process(self, processed):
+        if self.mode in (
+                PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             self._state = self.State.ON_OFF
         else:
             # compare laser-on/off pulses in different trains
@@ -86,9 +88,9 @@ class BasePumpProbeProcessor(AbstractProcessor):
             elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
                 flag = 1  # on-train has odd train ID
             else:
-                raise ProcessingError(f"Unknown laser mode: {self.mode}")
+                raise ProcessingError(f"Unknown pump-probe mode: {self.mode}")
 
-            if proc_data.tid % 2 == 1 ^ flag:
+            if processed.tid % 2 == 1 ^ flag:
                 # off received
                 if self._state in (self.State.OFF_ON, self.State.ON_ON):
                     self._state = self.State.ON_OFF
@@ -112,112 +114,155 @@ class BasePumpProbeProcessor(AbstractProcessor):
         self._state = self.State.OFF_OFF
 
 
-class PumpProbeProcessor(BasePumpProbeProcessor):
-    """PumpProbeProcessor class.
+class PumpProbeProcessorFactory:
 
-    A processor which calculated the moving average of the average azimuthal
-    integration of all pump/probe (on/off) pulses, as well as their difference.
-    It also calculates the the figure of merit (FOM), which is integration
-    of the absolute aforementioned difference.
+    class PumpProbeAiProcessor(_BasePumpProbeProcessor):
+        """PumpProbeProcessor class.
 
-    Attributes:
-        abs_difference (bool): True for calculating the absolute value of
-            difference between laser-on and laser-off.
-        fom_itgt_range (tuple): integration range for calculating FOM from
-            the normalized azimuthal integration.
-    """
-    def __init__(self):
-        super().__init__()
+        A processor which calculated the moving average of the average azimuthal
+        integration of all pump/probe (on/off) pulses, as well as their difference.
+        It also calculates the the figure of merit (FOM), which is integration
+        of the absolute aforementioned difference.
 
-        self.abs_difference = True
-        self.fom_itgt_range = None
+        Attributes:
+            abs_difference (bool): True for calculating the absolute value of
+                difference between laser-on and laser-off.
+            fom_itgt_range (tuple): integration range for calculating FOM from
+                the normalized azimuthal integration.
+        """
 
-    def process(self, proc_data, raw_data=None):
-        """Override."""
-        on_pulse_ids = self.on_pulse_ids
-        off_pulse_ids = self.off_pulse_ids
-        momentum = proc_data.ai.momentum
-        intensities = proc_data.ai.intensities
-        ref_intensity = proc_data.ai.reference_intensity
+        def __init__(self, scheduler):
+            super().__init__(scheduler)
+            self.abs_difference = True
+            self.fom_itgt_range = None
 
-        n_pulses = intensities.shape[0]
-        max_on_pulse_id = max(on_pulse_ids)
-        if max_on_pulse_id >= n_pulses:
-            raise ProcessingError(f"On-pulse ID {max_on_pulse_id} out of range "
-                                  f"(0 - {n_pulses - 1})")
+        @profiler("Pump-probe processor")
+        def run(self, processed, raw=None):
+            """Override."""
+            if self.mode == PumpProbeMode.UNDEFINED:
+                return
 
-        if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
-            max_off_pulse_id = max(off_pulse_ids)
-            if max_off_pulse_id >= n_pulses:
-                raise ProcessingError(f"Off-pulse ID {max_off_pulse_id} out of "
-                                      f"range (0 - {n_pulses - 1})")
+            on_pulse_ids = self.on_pulse_ids
+            off_pulse_ids = self.off_pulse_ids
+            momentum = processed.ai.momentum
+            intensities = processed.ai.intensities
+            ref_intensity = processed.ai.reference_intensity
 
-        self._pre_process(proc_data)
+            if momentum is None:
+                raise ProcessingError(
+                    "Azimuthal integration result is not available")
 
-        # Off-train will only be acknowledged when an on-train
-        # was received! This ensures that in the visualization
-        # it always shows the on-train plot alone first, which
-        # is followed by a combined plots if the next train is
-        # an off-train pulse.
+            n_pulses = intensities.shape[0]
+            max_on_pulse_id = max(on_pulse_ids)
+            if max_on_pulse_id >= n_pulses:
+                raise ProcessingError(
+                    f"On-pulse ID {max_on_pulse_id} out of range "
+                    f"(0 - {n_pulses - 1})")
 
-        fom = None
+            if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
+                max_off_pulse_id = max(off_pulse_ids)
+                if max_off_pulse_id >= n_pulses:
+                    raise ProcessingError(
+                        f"Off-pulse ID {max_off_pulse_id} out of "
+                        f"range (0 - {n_pulses - 1})")
 
-        if self._state in (self.State.ON_ON, self.State.OFF_ON):
-            self._prev_on = intensities[on_pulse_ids].mean(axis=0)
-        elif self._state == self.State.ON_OFF:
-            if self._prev_on is None:
-                this_on = intensities[on_pulse_ids].mean(axis=0)
+            self._pre_process(processed)
+
+            # Off-train will only be acknowledged when an on-train
+            # was received! This ensures that in the visualization
+            # it always shows the on-train plot alone first, which
+            # is followed by a combined plots if the next train is
+            # an off-train pulse.
+
+            fom = None
+
+            if self._state in (self.State.ON_ON, self.State.OFF_ON):
+                self._prev_on = intensities[on_pulse_ids].mean(axis=0)
+            elif self._state == self.State.ON_OFF:
+                if self._prev_on is None:
+                    this_on = intensities[on_pulse_ids].mean(axis=0)
+                else:
+                    this_on = self._prev_on
+                    self._prev_on = None
+
+                if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
+                    this_off = ref_intensity
+                else:
+                    this_off = intensities[off_pulse_ids].mean(axis=0)
+
+                this_on_off = this_on - this_off
+
+                if self.ma_window > 1 and self._ma_count > 0:
+                    if self._ma_count < self.ma_window:
+                        self._ma_count += 1
+                        denominator = self._ma_count
+                    else:  # self._ma_count == self._ma_window
+                        # this is an approximation
+                        denominator = self._ma_window
+
+                    self._ma_on += (this_on - self._ma_on) / denominator
+                    self._ma_off += (this_off - self._ma_off) / denominator
+                    self._ma_on_off += (this_on_off - self._ma_on_off) / denominator
+
+                else:
+                    self._ma_on = this_on
+                    self._ma_off = this_off
+                    self._ma_on_off = this_on_off
+                    if self._ma_window > 1:
+                        self._ma_count = 1  # 0 -> 1
+
+                # calculate figure-of-merit and update history
+                fom = slice_curve(
+                    self._ma_on_off, momentum, *self.fom_itgt_range)[0]
+                if self.abs_difference:
+                    fom = np.sum(np.abs(fom))
+                else:
+                    fom = np.sum(fom)
+
+            # do nothing if self._state = self.State.OFF_OFF
+
+            if fom is not None:
+                processed.ai.on_intensity_mean = self._ma_on
+                processed.ai.off_intensity_mean = self._ma_off
+                processed.ai.on_off_intensity_mean = self._ma_on_off
+                processed.ai.on_off_fom = (processed.tid, fom)
+
+                processed.pp.on_data = self._ma_on
+                processed.pp.off_data = self._ma_off
+                processed.pp.on_off_data = self._ma_on_off
+                processed.pp.fom = (processed.tid, fom)
             else:
-                this_on = self._prev_on
-                self._prev_on = None
+                processed.ai.on_intensity_mean = self._prev_on
 
-            if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
-                this_off = ref_intensity
-            else:
-                this_off = intensities[off_pulse_ids].mean(axis=0)
+                processed.pp.on_data = self._prev_on
 
-            this_on_off = this_on - this_off
+    class PumpProbeRoiProcessor(_BasePumpProbeProcessor):
+        def __init__(self, scheduler):
+            super().__init__(scheduler)
 
-            if self.ma_window > 1 and self._ma_count > 0:
-                if self._ma_count < self.ma_window:
-                    self._ma_count += 1
-                    denominator = self._ma_count
-                else:  # self._ma_count == self._ma_window
-                    # this is an approximation
-                    denominator = self._ma_window
+    class PumpProbe1DProjProcessor(_BasePumpProbeProcessor):
+        def __init__(self, scheduler, diret='x'):
+            super().__init__(scheduler)
 
-                self._ma_on += (this_on - self._ma_on) / denominator
-                self._ma_off += (this_off - self._ma_off) / denominator
-                self._ma_on_off += (this_on_off - self._ma_on_off) / denominator
+            diret = diret.lower()
+            if diret not in ('x', 'y'):
+                raise ValueError(
+                    f"Not understandable projection direction: {diret}")
+            self._direction = diret
 
-            else:
-                self._ma_on = this_on
-                self._ma_off = this_off
-                self._ma_on_off = this_on_off
-                if self._ma_window > 1:
-                    self._ma_count = 1  # 0 -> 1
+    @classmethod
+    def create(cls, analysis_type, scheduler=None):
+        if analysis_type == PumpProbeType.AZIMUTHAL_INTEGRATION:
+            return cls.PumpProbeAiProcessor(scheduler)
 
-            # calculate figure-of-merit and update history
-            fom = slice_curve(
-                self._ma_on_off, momentum, *self.fom_itgt_range)[0]
-            if self.abs_difference:
-                fom = np.sum(np.abs(fom))
-            else:
-                fom = np.sum(fom)
+        if analysis_type == PumpProbeType.ROI:
+            return cls.PumpProbeRoiProcessor(scheduler)
 
-        # do nothing if self._state = self.State.OFF_OFF
+        if analysis_type == PumpProbeType.ROI_PROJECTION_X:
+            return cls.PumpProbe1DProjProcessor(scheduler, 'x')
 
-        if fom is not None:
-            proc_data.ai.on_intensity_mean = self._ma_on
-            proc_data.ai.off_intensity_mean = self._ma_off
-            proc_data.ai.on_off_intensity_mean = self._ma_on_off
-            proc_data.ai.on_off_fom = (proc_data.tid, fom)
+        if analysis_type == PumpProbeType.ROI_PROJECTION_X:
+            return cls.PumpProbe1DProjProcessor(scheduler, 'y')
 
-            proc_data.pp.on_data = self._ma_on
-            proc_data.pp.off_data = self._ma_off
-            proc_data.pp.on_off_data = self._ma_on_off
-            proc_data.pp.fom = (proc_data.tid, fom)
-        else:
-            proc_data.ai.on_intensity_mean = self._prev_on
-
-            proc_data.pp.on_data = self._prev_on
+        raise NotImplementedError(
+            f"Unknown pump-probe analysis type: {analysis_type}!")

@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data processors.
+Pipeline scheduler.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -19,16 +19,18 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .processors import (
     AzimuthalIntegrationProcessor, CorrelationProcessor,
-    PumpProbeProcessor, RoiProcessor, XasProcessor
+    PumpProbeProcessorFactory, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
-from ..config import config
+from ..config import config, PumpProbeType
 from ..gui import QtCore
 from ..helpers import profiler
 
 
-class PipelineLauncher(Worker):
-    """Facade class which managers different processing pipelines."""
+class Scheduler(Worker):
+    """Pipeline scheduler."""
+    _tasks = []
+
     def __init__(self, in_queue, out_queue):
         """Initialization.
 
@@ -43,24 +45,19 @@ class PipelineLauncher(Worker):
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._data_aggregator = DataAggregator()
 
-        self._roi_proc = RoiProcessor()
-        self._roi_proc.setEnabled(True)
-        self._correlation_proc = CorrelationProcessor()
-        self._correlation_proc.setEnabled(True)
+        self._roi_proc = RoiProcessor(self)
 
-        self._ai_proc = AzimuthalIntegrationProcessor()
+        self._ai_proc = AzimuthalIntegrationProcessor(self)
 
-        self._pp_proc = PumpProbeProcessor()
+        self._pp_proc = PumpProbeProcessorFactory.create(
+            PumpProbeType.AZIMUTHAL_INTEGRATION, self)
 
-        self._xas_proc = XasProcessor()
+        self._correlation_proc = CorrelationProcessor(self)
 
-        self._tasks = [
-            self._roi_proc,
-            self._xas_proc,
-            self._ai_proc,
-            self._pp_proc,
-            self._correlation_proc
-        ]
+        self._xas_proc = XasProcessor(self)
+
+    def register_processor(self, task):
+        self._tasks.append(task)
 
     @QtCore.pyqtSlot(str)
     def onDetectorSourceChange(self, src):
@@ -155,8 +152,7 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(int)
     def onEnableAiStateChange(self, state):
         enabled = state == QtCore.Qt.Checked
-        self._ai_proc.setEnabled(enabled)
-        self._pp_proc.setEnabled(enabled)
+        self._ai_proc.enabled = enabled
 
     @QtCore.pyqtSlot()
     def onCorrelationClear(self):
@@ -175,11 +171,6 @@ class PipelineLauncher(Worker):
     @QtCore.pyqtSlot(int)
     def onPumpProbeMAWindowChange(self, n):
         self._pp_proc.ma_window = n
-
-    @QtCore.pyqtSlot(int)
-    def onXasStateToggle(self, state):
-        enabled = state == QtCore.Qt.Checked
-        self._xas_proc.setEnabled(enabled)
 
     @QtCore.pyqtSlot(int)
     def onXasEnergyBinsChange(self, n):
@@ -229,7 +220,7 @@ class PipelineLauncher(Worker):
     @profiler("Process Data (total)")
     def _process(self, data):
         """Process data received from the bridge."""
-        data, meta = data
+        raw, meta = data
 
         # get the train ID of the first metadata
         # Note: this is better than meta[src_name] because:
@@ -240,7 +231,7 @@ class PipelineLauncher(Worker):
         tid = next(iter(meta.values()))["timestamp.tid"]
 
         try:
-            assembled = self._image_assembler.assemble(data)
+            assembled = self._image_assembler.assemble(raw)
         except AssemblingError as e:
             self.log(f"Train ID: {tid}: " + repr(e))
             return None
@@ -249,13 +240,13 @@ class PipelineLauncher(Worker):
             raise
 
         try:
-            processed_data = ProcessedData(tid, assembled)
+            processed = ProcessedData(tid, assembled)
         except Exception as e:
             self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
 
         try:
-            self._data_aggregator.aggregate(processed_data, data)
+            self._data_aggregator.aggregate(processed, raw)
         except AggregatingError as e:
             self.log(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
@@ -264,12 +255,11 @@ class PipelineLauncher(Worker):
 
         for task in self._tasks:
             try:
-                if task.isEnabled():
-                    task.process(processed_data, data)
+                task.process(processed, raw)
             except ProcessingError as e:
                 self.log(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
                 self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
                 raise
 
-        return processed_data
+        return processed

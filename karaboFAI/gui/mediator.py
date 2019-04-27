@@ -13,6 +13,7 @@ from .pyqtgraph import QtCore
 
 
 class Mediator(QtCore.QObject):
+    """Mediator for GUI signal-slot connection."""
     vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
     vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
     update_vip_pulse_ids_sgn = QtCore.pyqtSignal()
@@ -33,7 +34,6 @@ class Mediator(QtCore.QObject):
 
     pp_ma_window_change_sgn = QtCore.pyqtSignal(int)
 
-    xas_state_toggle_sgn = QtCore.pyqtSignal(int)
     reset_xas_sgn = QtCore.pyqtSignal()
     energy_bins_change_sgn = QtCore.pyqtSignal(int)
 
@@ -68,7 +68,6 @@ class Mediator(QtCore.QObject):
 
         self.pp_ma_window_change_sgn.connect(self._pipe.onPumpProbeMAWindowChange)
 
-        self.xas_state_toggle_sgn.connect(self._pipe.onXasStateToggle)
         self.reset_xas_sgn.connect(self._pipe.onXasClear)
         self.energy_bins_change_sgn.connect(self._pipe.onXasEnergyBinsChange)
 

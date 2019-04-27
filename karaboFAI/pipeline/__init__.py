@@ -1,10 +1,10 @@
 from .data_acquisition import DataAcquisition
-from .pipeline_launcher import PipelineLauncher
+from .scheduler import Scheduler
 from .data_model import Data4Visualization
 
 
 __all__ = [
     "DataAcquisition",
-    "PipelineLauncher",
+    "Scheduler",
     "Data4Visualization"
 ]
