@@ -68,7 +68,7 @@ class Mediator(QtCore.QObject):
 
         self.pp_ma_window_change_sgn.connect(self._scheduler.onPumpProbeMAWindowChange)
 
-        self.reset_xas_sgn.connect(self._scheduler.onXasClear)
+        self.reset_xas_sgn.connect(self._scheduler.onXasReset)
         self.energy_bins_change_sgn.connect(self._scheduler.onXasEnergyBinsChange)
 
     def setBridge(self, bridge):

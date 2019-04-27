@@ -257,4 +257,4 @@ class PulseResolvedAiFomProcessor(LeafProcessor):
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        processed.ai.pulse_fom = foms
+        processed.pp.fom = foms

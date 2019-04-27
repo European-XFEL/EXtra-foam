@@ -91,7 +91,7 @@ class Scheduler(Worker):
         if mode != self._pp_proc.mode:
             self._pp_proc.mode = mode
             self._pp_proc.reset()
-            ProcessedData.clear_onoff_hist()
+            ProcessedData.clear_pp_hist()
 
         self._pp_proc.on_pulse_ids = on_pulse_ids
         self._pp_proc.off_pulse_ids = off_pulse_ids
@@ -145,8 +145,8 @@ class Scheduler(Worker):
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
     @QtCore.pyqtSlot()
-    def onLaserOnOffClear(self):
-        ProcessedData.clear_onoff_hist()
+    def onPumpProbeReset(self):
+        ProcessedData.clear_pp_hist()
         self._pp_proc.reset()
 
     @QtCore.pyqtSlot(int)
@@ -155,7 +155,7 @@ class Scheduler(Worker):
         self._ai_proc.enabled = enabled
 
     @QtCore.pyqtSlot()
-    def onCorrelationClear(self):
+    def onCorrelationReset(self):
         ProcessedData.clear_correlation_hist()
 
     @QtCore.pyqtSlot(int, str, str, float)
@@ -177,7 +177,7 @@ class Scheduler(Worker):
         self._xas_proc.n_bins = n
 
     @QtCore.pyqtSlot()
-    def onXasClear(self):
+    def onXasReset(self):
         self._xas_proc.reset()
 
     def update_roi_region(self, rank, activated, w, h, px, py):

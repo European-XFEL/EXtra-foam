@@ -248,8 +248,6 @@ class RoiData(AbstractData):
 class AzimuthalIntegrationData(AbstractData):
     """A class which stores Laser on-off data."""
 
-    on_off_fom = PairData()  # integration of "on - off"
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -257,12 +255,6 @@ class AzimuthalIntegrationData(AbstractData):
         self.intensities = None
         self.intensity_mean = None
         self.reference_intensity = None
-
-        self.on_intensity_mean = None
-        self.off_intensity_mean = None
-        self.on_off_intensity_mean = None
-
-        self.pulse_fom = None
 
 
 class PumpProbeData(AbstractData):
@@ -837,8 +829,8 @@ class ProcessedData:
         RoiData.clear()
 
     @classmethod
-    def clear_onoff_hist(cls):
-        AzimuthalIntegrationData.clear()
+    def clear_pp_hist(cls):
+        PumpProbeData.clear()
 
     @classmethod
     def clear_correlation_hist(cls):

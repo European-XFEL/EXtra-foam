@@ -217,14 +217,14 @@ class MainGUI(QtGui.QMainWindow):
         self.pump_probe_ctrl_widget.abs_difference_sgn.connect(
             self._scheduler.onPpDifferenceTypeChange)
         self.pump_probe_ctrl_widget.reset_btn.clicked.connect(
-            self._scheduler.onLaserOnOffClear)
+            self._scheduler.onPumpProbeReset)
 
         self.correlation_ctrl_widget.correlation_fom_change_sgn.connect(
             self._scheduler.onCorrelationFomChange)
         self.correlation_ctrl_widget.correlation_param_change_sgn.connect(
             self._scheduler.onCorrelationParamChange)
         self.correlation_ctrl_widget.clear_btn.clicked.connect(
-            self._scheduler.onCorrelationClear)
+            self._scheduler.onCorrelationReset)
 
     def initUI(self):
         analysis_layout = QtGui.QVBoxLayout()

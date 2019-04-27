@@ -227,18 +227,11 @@ class PumpProbeProcessorFactory:
             # do nothing if self._state = self.State.OFF_OFF
 
             if fom is not None:
-                processed.ai.on_intensity_mean = self._ma_on
-                processed.ai.off_intensity_mean = self._ma_off
-                processed.ai.on_off_intensity_mean = self._ma_on_off
-                processed.ai.on_off_fom = (processed.tid, fom)
-
                 processed.pp.on_data = self._ma_on
                 processed.pp.off_data = self._ma_off
                 processed.pp.on_off_data = self._ma_on_off
                 processed.pp.fom = (processed.tid, fom)
             else:
-                processed.ai.on_intensity_mean = self._prev_on
-
                 processed.pp.on_data = self._prev_on
 
     class PumpProbeRoiProcessor(_BasePumpProbeProcessor):
