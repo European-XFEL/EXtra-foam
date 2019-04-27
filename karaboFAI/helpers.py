@@ -12,6 +12,10 @@ All rights reserved.
 import functools
 import time
 
+# profiler will only print out information if the execution of the given
+# function takes more than the threshold value.
+PROFILER_THREASHOLD = 1.0  # in ms
+
 
 def profiler(info):
     def wrap(f):
@@ -19,8 +23,9 @@ def profiler(info):
         def timed_f(*args, **kwargs):
             t0 = time.perf_counter()
             result = f(*args, **kwargs)
-            t1 = time.perf_counter()
-            print(f"Profiler - [{info}]: {1000*(t1 - t0):.3f} ms")
+            dt_ms = 1000 * (time.perf_counter() - t0)
+            if dt_ms > PROFILER_THREASHOLD:
+                print(f"Profiler - [{info}]: {dt_ms:.3f} ms")
             return result
         return timed_f
     return wrap
