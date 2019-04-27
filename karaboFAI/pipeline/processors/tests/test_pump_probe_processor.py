@@ -2,7 +2,8 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.config import PumpProbeMode, PumpProbeType
+from karaboFAI.config import config, PumpProbeMode, PumpProbeType
+from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.data_model import (
     AzimuthalIntegrationData, ProcessedData
 )
@@ -14,6 +15,11 @@ _State = _BasePumpProbeProcessor.State
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        config["PIXEL_SIZE"] = 1e-6
+        config["MASK_RANGE"] = (None, None)
+
     def setUp(self):
         self._proc = PumpProbeProcessorFactory.create(
             PumpProbeType.AZIMUTHAL_INTEGRATION)
@@ -26,10 +32,27 @@ class TestPumpProbeProcessor(unittest.TestCase):
                               [1, 0, 1, 0, 1],
                               [0, 1, 0, 1, 0],
                               [1, 0, 1, 0, 1]])
+        # a train with 4 pulses
+        imgs = np.arange(16, dtype=np.float).reshape(4, 2, 2)
         for i in range(10):
-            self._data.append(ProcessedData(i))
+            self._data.append(ProcessedData(i, imgs))
             self._data[i].ai.momentum = np.linspace(1, 5, 5)
             self._data[i].ai.intensities = (i+1)*intensity
+
+    def testExceptions(self):
+        # test raises when pulse IDs are out of range
+        self._proc.mode = PumpProbeMode.SAME_TRAIN
+        data = self._data[0]
+
+        self._proc.on_pulse_ids = [0, 2]
+        self._proc.off_pulse_ids = [1, 3, 5]
+        with self.assertRaisesRegex(ProcessingError, "Out of range: off"):
+            self._proc.process(data)
+
+        self._proc.on_pulse_ids = [0, 2, 4]
+        self._proc.off_pulse_ids = [1, 3]
+        with self.assertRaisesRegex(ProcessingError, "Out of range: on"):
+            self._proc.process(data)
 
     def testPreDefinedOff(self):
         pass

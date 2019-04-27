@@ -33,10 +33,11 @@ class _BasePumpProbeProcessor(LeafProcessor):
         _ma_count (int): moving average window count.
     """
     class State(IntEnum):
-        ON_OFF = 1
-        OFF_ON = 2
-        ON_ON = 3
-        OFF_OFF = 4
+        """Representation of the previous/current pulse type."""
+        OFF_OFF = 0  # 0b00
+        OFF_ON = 1  # 0b01
+        ON_OFF = 2  # 0b10
+        ON_ON = 3  # 0b11
 
     def __init__(self, scheduler):
         super().__init__(scheduler)
@@ -78,6 +79,21 @@ class _BasePumpProbeProcessor(LeafProcessor):
         pass
 
     def _pre_process(self, processed):
+        n_pulses = processed.n_pulses
+
+        max_on_pulse_id = max(self.on_pulse_ids)
+        if max_on_pulse_id >= n_pulses:
+            raise ProcessingError(
+                f"Out of range: on-pulse ID = {max_on_pulse_id}, "
+                f"total number of pulses = {n_pulses}")
+
+        if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
+            max_off_pulse_id = max(self.off_pulse_ids)
+            if max_off_pulse_id >= n_pulses:
+                raise ProcessingError(
+                    f"Out of range: off-pulse ID = {max_off_pulse_id}, "
+                    f"total number of pulses = {n_pulses}")
+
         if self.mode in (
                 PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             self._state = self.State.ON_OFF
@@ -92,16 +108,19 @@ class _BasePumpProbeProcessor(LeafProcessor):
 
             if processed.tid % 2 == 1 ^ flag:
                 # off received
-                if self._state in (self.State.OFF_ON, self.State.ON_ON):
+                if self._is_previous_on():
                     self._state = self.State.ON_OFF
                 else:
                     self._state = self.State.OFF_OFF
             else:
                 # on received
-                if self._state in (self.State.ON_OFF, self.State.OFF_OFF):
-                    self._state = self.State.OFF_ON
-                else:
+                if self._is_previous_on():
                     self._state = self.State.ON_ON
+                else:
+                    self._state = self.State.OFF_ON
+
+    def _is_previous_on(self):
+        return 0b01 & self._state == 1
 
     def reset(self):
         """Override."""
@@ -142,6 +161,8 @@ class PumpProbeProcessorFactory:
             if self.mode == PumpProbeMode.UNDEFINED:
                 return
 
+            self._pre_process(processed)
+
             on_pulse_ids = self.on_pulse_ids
             off_pulse_ids = self.off_pulse_ids
             momentum = processed.ai.momentum
@@ -152,22 +173,6 @@ class PumpProbeProcessorFactory:
                 raise ProcessingError(
                     "Azimuthal integration result is not available")
 
-            n_pulses = intensities.shape[0]
-            max_on_pulse_id = max(on_pulse_ids)
-            if max_on_pulse_id >= n_pulses:
-                raise ProcessingError(
-                    f"On-pulse ID {max_on_pulse_id} out of range "
-                    f"(0 - {n_pulses - 1})")
-
-            if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
-                max_off_pulse_id = max(off_pulse_ids)
-                if max_off_pulse_id >= n_pulses:
-                    raise ProcessingError(
-                        f"Off-pulse ID {max_off_pulse_id} out of "
-                        f"range (0 - {n_pulses - 1})")
-
-            self._pre_process(processed)
-
             # Off-train will only be acknowledged when an on-train
             # was received! This ensures that in the visualization
             # it always shows the on-train plot alone first, which
@@ -176,7 +181,7 @@ class PumpProbeProcessorFactory:
 
             fom = None
 
-            if self._state in (self.State.ON_ON, self.State.OFF_ON):
+            if self._is_previous_on():
                 self._prev_on = intensities[on_pulse_ids].mean(axis=0)
             elif self._state == self.State.ON_OFF:
                 if self._prev_on is None:
