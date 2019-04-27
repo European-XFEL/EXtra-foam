@@ -149,7 +149,7 @@ class TestMainGui(unittest.TestCase):
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
         worker = self.gui._scheduler
-        daq = self.gui._daq_worker
+        bridge = self.gui._bridge
 
         # test passing tcp hostname and port
         tcp_addr = "localhost:56565"
@@ -159,8 +159,8 @@ class TestMainGui(unittest.TestCase):
         widget._port_le.setText(tcp_addr.split(":")[1])
         widget._port_le.editingFinished.emit()
 
-        self.assertEqual("localhost", daq._tcp_host)
-        self.assertEqual(56565, daq._tcp_port)
+        self.assertEqual("localhost", bridge._tcp_host)
+        self.assertEqual(56565, bridge._tcp_port)
 
         # test detector source name
         self.assertEqual(widget._detector_src_cb.currentText(),

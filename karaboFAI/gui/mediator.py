@@ -53,31 +53,31 @@ class Mediator(QtCore.QObject):
 
         super().__init__(*args, **kwargs)
 
-        self._pipe = None
-        self._daq = None
+        self._scheduler = None
+        self._bridge = None
 
-    def setPipeline(self, pipe):
-        self._pipe = pipe
-        self.initPipeConnections()
+    def setScheduler(self, scheduler):
+        self._scheduler = scheduler
+        self.initSchedulerConnections()
 
-    def initPipeConnections(self):
-        self.source_type_change_sgn.connect(self._pipe.onSourceTypeChange)
-        self.detector_source_change_sgn.connect(self._pipe.onDetectorSourceChange)
-        self.xgm_source_change_sgn.connect(self._pipe.onXgmSourceChange)
-        self.mono_source_change_sgn.connect(self._pipe.onMonoSourceChange)
+    def initSchedulerConnections(self):
+        self.source_type_change_sgn.connect(self._scheduler.onSourceTypeChange)
+        self.detector_source_change_sgn.connect(self._scheduler.onDetectorSourceChange)
+        self.xgm_source_change_sgn.connect(self._scheduler.onXgmSourceChange)
+        self.mono_source_change_sgn.connect(self._scheduler.onMonoSourceChange)
 
-        self.pp_ma_window_change_sgn.connect(self._pipe.onPumpProbeMAWindowChange)
+        self.pp_ma_window_change_sgn.connect(self._scheduler.onPumpProbeMAWindowChange)
 
-        self.reset_xas_sgn.connect(self._pipe.onXasClear)
-        self.energy_bins_change_sgn.connect(self._pipe.onXasEnergyBinsChange)
+        self.reset_xas_sgn.connect(self._scheduler.onXasClear)
+        self.energy_bins_change_sgn.connect(self._scheduler.onXasEnergyBinsChange)
 
-    def setDaq(self, daq):
-        self._daq = daq
-        self.initDaqConnections()
+    def setBridge(self, bridge):
+        self._bridge = bridge
+        self.initBridgeConnections()
 
-    def initDaqConnections(self):
-        self.tcp_host_change_sgn.connect(self._daq.onTcpHostChange)
-        self.tcp_port_change_sgn.connect(self._daq.onTcpPortChange)
+    def initBridgeConnections(self):
+        self.tcp_host_change_sgn.connect(self._bridge.onTcpHostChange)
+        self.tcp_port_change_sgn.connect(self._bridge.onTcpPortChange)
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, v):
@@ -94,15 +94,15 @@ class Mediator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def onRoiHistClear(self):
-        self._pipe.clear_roi_hist()
+        self._scheduler.clear_roi_hist()
 
     @QtCore.pyqtSlot(object)
     def onRoiFomChange(self, state):
-        self._pipe.update_roi_fom(state)
+        self._scheduler.update_roi_fom(state)
 
     @QtCore.pyqtSlot(int, bool, int, int, int, int)
     def onRoiChange(self, rank, activated, w, h, px, py):
-        self._pipe.update_roi_region(rank, activated, w, h, px, py)
+        self._scheduler.update_roi_region(rank, activated, w, h, px, py)
 
     def updateVipPulseIds(self):
         self.update_vip_pulse_ids_sgn.emit()

@@ -35,7 +35,7 @@ from ..config import config
 from ..logger import logger
 from ..helpers import profiler
 from ..offline import FileServer
-from ..pipeline import DataAcquisition, Scheduler, Data4Visualization
+from ..pipeline import Bridge, Scheduler, Data4Visualization
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -45,8 +45,8 @@ class MainGUI(QtGui.QMainWindow):
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    daq_started_sgn = QtCore.pyqtSignal()
-    daq_stopped_sgn = QtCore.pyqtSignal()
+    bridge_started_sgn = QtCore.pyqtSignal()
+    bridge_stopped_sgn = QtCore.pyqtSignal()
     file_server_started_sgn = QtCore.pyqtSignal()
     file_server_stopped_sgn = QtCore.pyqtSignal()
 
@@ -73,11 +73,11 @@ class MainGUI(QtGui.QMainWindow):
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
 
-        self._start_at = self._addAction("Start DAQ", "start.png")
-        self._start_at.triggered.connect(self.onStartDAQ)
+        self._start_at = self._addAction("Start bridge", "start.png")
+        self._start_at.triggered.connect(self.onStartBridge)
 
-        self._stop_at = self._addAction("Stop DAQ", "stop.png")
-        self._stop_at.triggered.connect(self.onStopDAQ)
+        self._stop_at = self._addAction("Stop bridge", "stop.png")
+        self._stop_at.triggered.connect(self.onStopBridge)
         self._stop_at.setEnabled(False)
 
         image_tool_at = self._addAction("Image tool", "image_tool.png")
@@ -127,18 +127,18 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server = None
 
-        self._daq_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._bridge_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
         self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
         # a DAQ worker which acquires the data in another thread
-        self._daq_worker = DataAcquisition(self._daq_queue)
+        self._bridge = Bridge(self._bridge_queue)
         # a data processing worker which processes the data in another thread
-        self._scheduler = Scheduler(self._daq_queue, self._proc_queue)
+        self._scheduler = Scheduler(self._bridge_queue, self._proc_queue)
 
         # initializing mediator
         mediator = Mediator()
-        mediator.setPipeline(self._scheduler)
-        mediator.setDaq(self._daq_worker)
+        mediator.setScheduler(self._scheduler)
+        mediator.setBridge(self._bridge)
 
         # For real time plot
         self._running = False
@@ -178,7 +178,7 @@ class MainGUI(QtGui.QMainWindow):
 
     def initConnection(self):
         """Set up all signal and slot connections."""
-        self._daq_worker.message.connect(self.onMessageReceived)
+        self._bridge.message.connect(self.onMessageReceived)
 
         self._scheduler.message.connect(self.onMessageReceived)
 
@@ -291,7 +291,7 @@ class MainGUI(QtGui.QMainWindow):
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)
 
-    def onStartDAQ(self):
+    def onStartBridge(self):
         """Actions taken before the start of a 'run'."""
         self.clearQueues()
         self._running = True  # starting to update plots
@@ -299,14 +299,14 @@ class MainGUI(QtGui.QMainWindow):
         if not self.updateSharedParameters():
             return
         self._scheduler.start()
-        self._daq_worker.start()
+        self._bridge.start()
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
 
-        self.daq_started_sgn.emit()
+        self.bridge_started_sgn.emit()
 
-    def onStopDAQ(self):
+    def onStopBridge(self):
         """Actions taken before the end of a 'run'."""
         self._running = False
 
@@ -316,17 +316,17 @@ class MainGUI(QtGui.QMainWindow):
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
 
-        self.daq_stopped_sgn.emit()
+        self.bridge_stopped_sgn.emit()
 
     def clearWorkers(self):
         self._scheduler.terminate()
-        self._daq_worker.terminate()
+        self._bridge.terminate()
         self._scheduler.wait()
-        self._daq_worker.wait()
+        self._bridge.wait()
 
     def clearQueues(self):
-        with self._daq_queue.mutex:
-            self._daq_queue.queue.clear()
+        with self._bridge_queue.mutex:
+            self._bridge_queue.queue.clear()
         with self._proc_queue.mutex:
             self._proc_queue.queue.clear()
 

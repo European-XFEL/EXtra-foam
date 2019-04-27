@@ -35,8 +35,8 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         if parent is not None:
             parent.registerCtrlWidget(self)
 
-        parent.daq_started_sgn.connect(self.onDaqStarted)
-        parent.daq_stopped_sgn.connect(self.onDaqStopped)
+        parent.bridge_started_sgn.connect(self.onBridgeStarted)
+        parent.bridge_stopped_sgn.connect(self.onBridgeStopped)
 
         self._disabled_widgets_during_daq = []
 
@@ -48,12 +48,12 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         raise NotImplementedError
 
     @QtCore.pyqtSlot()
-    def onDaqStarted(self):
+    def onBridgeStarted(self):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(False)
 
     @QtCore.pyqtSlot()
-    def onDaqStopped(self):
+    def onBridgeStopped(self):
         for widget in self._disabled_widgets_during_daq:
             widget.setEnabled(True)
 

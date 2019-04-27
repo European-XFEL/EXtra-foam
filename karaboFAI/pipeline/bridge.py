@@ -19,7 +19,7 @@ from ..gui import QtCore
 from ..helpers import profiler
 
 
-class DataAcquisition(Worker):
+class Bridge(Worker):
     def __init__(self, out_queue):
         """Initialization."""
         super().__init__()
@@ -57,7 +57,7 @@ class DataAcquisition(Worker):
                     except queue.Full:
                         continue
 
-        self.log("DAQ stopped!")
+        self.log("Bridge client stopped!")
 
     @profiler("Receive Data from Bridge")
     def _recv(self, client):
