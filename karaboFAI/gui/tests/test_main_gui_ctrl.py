@@ -8,55 +8,83 @@ from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
-from karaboFAI.gui.main_gui import MainGUI
-from karaboFAI.gui.windows import (
-    CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
-)
-
+from karaboFAI.services import FaiServer
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
     config, FomName, AiNormalizer, PumpProbeMode, PumpProbeType
 )
-from . import mkQApp
-app = mkQApp()
 
 
 class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = MainGUI('LPD')
-        cls.proc = cls.gui._scheduler
+        fai = FaiServer('LPD')
+        cls.gui = fai.gui
+        cls.app = fai.app
 
         cls._actions = cls.gui._tool_bar.actions()
+        cls._imagetool_action = cls._actions[2]
         cls._overview_action = cls._actions[3]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.gui.close()
 
     def setUp(self):
         ImageData.clear()
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
+        self._overview_action.trigger()
+        window = list(self.gui._windows.keys())[-1]
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        # self.assertFalse(worker._ai_proc.isEnabled())
+        # self.assertFalse(scheduler._ai_proc.isEnabled())
 
         QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget.enable_ai_cb.height()/2))
         self.assertTrue(self.gui.updateSharedParameters())
 
-        # self.assertTrue(worker._ai_proc.isEnabled())
+        # self.assertTrue(scheduler._ai_proc.isEnabled())
+
+        # --------------------------
+        # test setting VIP pulse IDs
+        # --------------------------
+
+        vip_pulse_id1 = int(widget._vip_pulse_id1_le.text())
+        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
+        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+        vip_pulse_id2 = int(widget._vip_pulse_id2_le.text())
+        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
+        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+
+        vip_pulse_id1 = 10
+        widget._vip_pulse_id1_le.setText(str(vip_pulse_id1))
+        widget._vip_pulse_id1_le.returnPressed.emit()
+        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
+        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+        vip_pulse_id2 = 20
+        widget._vip_pulse_id2_le.setText(str(vip_pulse_id2))
+        widget._vip_pulse_id2_le.returnPressed.emit()
+        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
+        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+
+        # --------------------------
+        # test setting max pulse ID
+        # --------------------------
+        scheduler = self.gui._scheduler
+
+        widget.updateSharedParameters()
+        self.assertEqual((0, 2700), scheduler._image_assembler.pulse_id_range)
+
+        widget._max_pulse_id_le.setText("1000")
+        widget.updateSharedParameters()
+        self.assertEqual((0, 1001), scheduler._image_assembler.pulse_id_range)
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
 
         photon_energy = 12.4
         photon_wavelength = 1.0e-10
@@ -84,25 +112,25 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertAlmostEqual(worker._ai_proc.wavelength, photon_wavelength, 13)
-        self.assertAlmostEqual(worker._ai_proc.sample_distance, sample_dist)
-        self.assertTupleEqual(worker._ai_proc.integration_center, (cx, cy))
-        self.assertEqual(worker._ai_proc.integration_method, itgt_method)
-        self.assertEqual(worker._ai_proc.integration_points, itgt_pts)
-        self.assertTupleEqual(worker._ai_proc.integration_range, itgt_range)
-        self.assertEqual(worker._ai_proc.normalizer, ai_normalizer)
-        self.assertTupleEqual(worker._ai_proc.auc_x_range, aux_x_range)
+        self.assertAlmostEqual(scheduler._ai_proc.wavelength, photon_wavelength, 13)
+        self.assertAlmostEqual(scheduler._ai_proc.sample_distance, sample_dist)
+        self.assertTupleEqual(scheduler._ai_proc.integration_center, (cx, cy))
+        self.assertEqual(scheduler._ai_proc.integration_method, itgt_method)
+        self.assertEqual(scheduler._ai_proc.integration_points, itgt_pts)
+        self.assertTupleEqual(scheduler._ai_proc.integration_range, itgt_range)
+        self.assertEqual(scheduler._ai_proc.normalizer, ai_normalizer)
+        self.assertTupleEqual(scheduler._ai_proc.auc_x_range, aux_x_range)
 
-        self.assertTupleEqual(worker._correlation_proc.fom_itgt_range,
+        self.assertTupleEqual(scheduler._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
 
-        self.assertTupleEqual(worker._pp_proc.fom_itgt_range, fom_itgt_range)
+        self.assertTupleEqual(scheduler._pp_proc.fom_itgt_range, fom_itgt_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
 
-        self.assertEqual(1, worker._pp_proc.ma_window)
+        self.assertEqual(1, scheduler._pp_proc.ma_window)
 
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
@@ -110,8 +138,8 @@ class TestMainGui(unittest.TestCase):
 
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(PumpProbeMode.UNDEFINED, worker._pp_proc.mode)
-        self.assertEqual(PumpProbeType(0), worker._pp_proc.analysis_type)
+        self.assertEqual(PumpProbeMode.UNDEFINED, scheduler._pp_proc.mode)
+        self.assertEqual(PumpProbeType(0), scheduler._pp_proc.analysis_type)
 
         # assign new values
         new_mode = PumpProbeMode.EVEN_TRAIN_ON
@@ -124,31 +152,31 @@ class TestMainGui(unittest.TestCase):
         widget._ma_window_le.editingFinished.emit()
         QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget.abs_difference_cb.height()/2))
-        self.assertTrue(worker._pp_proc.abs_difference)
+        self.assertTrue(scheduler._pp_proc.abs_difference)
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertEqual(PumpProbeMode(new_mode), worker._pp_proc.mode)
-        self.assertEqual(PumpProbeType(new_fom), worker._pp_proc.analysis_type)
-        self.assertListEqual(on_pulse_ids, worker._pp_proc.on_pulse_ids)
-        self.assertListEqual(off_pulse_ids, worker._pp_proc.off_pulse_ids)
-        self.assertFalse(worker._pp_proc.abs_difference)
-        self.assertEqual(ma_window, worker._pp_proc.ma_window)
+        self.assertEqual(PumpProbeMode(new_mode), scheduler._pp_proc.mode)
+        self.assertEqual(PumpProbeType(new_fom), scheduler._pp_proc.analysis_type)
+        self.assertListEqual(on_pulse_ids, scheduler._pp_proc.on_pulse_ids)
+        self.assertListEqual(off_pulse_ids, scheduler._pp_proc.off_pulse_ids)
+        self.assertFalse(scheduler._pp_proc.abs_difference)
+        self.assertEqual(ma_window, scheduler._pp_proc.ma_window)
 
     def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
 
         # check initial value is set
-        self.assertEqual(int(widget._nbins_le.text()), worker._xas_proc.n_bins)
+        self.assertEqual(int(widget._nbins_le.text()), scheduler._xas_proc.n_bins)
         # set another value
         widget._nbins_le.setText("40")
         widget._nbins_le.editingFinished.emit()
-        self.assertEqual(40, worker._xas_proc.n_bins)
+        self.assertEqual(40, scheduler._xas_proc.n_bins)
 
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
         bridge = self.gui._bridge
 
         # test passing tcp hostname and port
@@ -164,54 +192,50 @@ class TestMainGui(unittest.TestCase):
 
         # test detector source name
         self.assertEqual(widget._detector_src_cb.currentText(),
-                         worker._image_assembler.source_name)
+                         scheduler._image_assembler.source_name)
 
         # test mono source name
         mono_src_cb = widget._mono_src_cb
         # test default value is set
-        self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
+        self.assertEqual(mono_src_cb.currentText(), scheduler._data_aggregator.mono_src)
         mono_src_cb.setCurrentIndex(1)
-        self.assertEqual(mono_src_cb.currentText(), worker._data_aggregator.mono_src)
+        self.assertEqual(mono_src_cb.currentText(), scheduler._data_aggregator.mono_src)
 
         # test xgm source name
         xgm_src_cb = widget._xgm_src_cb
         # test default value is set
-        self.assertEqual(xgm_src_cb.currentText(), worker._data_aggregator.xgm_src)
+        self.assertEqual(xgm_src_cb.currentText(), scheduler._data_aggregator.xgm_src)
         xgm_src_cb.setCurrentIndex(1)
-        self.assertEqual(xgm_src_cb.currentText(), worker._data_aggregator.xgm_src)
+        self.assertEqual(xgm_src_cb.currentText(), scheduler._data_aggregator.xgm_src)
 
         # test passing data source types
         for rbt in widget._source_type_rbts:
             QTest.mouseClick(rbt, Qt.LeftButton)
             self.assertTrue(self.gui.updateSharedParameters())
-            self.assertEqual(worker._image_assembler.source_type,
+            self.assertEqual(scheduler._image_assembler.source_type,
                              widget._available_sources[rbt.text()])
         # make source type available
         QTest.mouseClick(widget._source_type_rbts[0], Qt.LeftButton)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
-        worker = self.gui._scheduler
+        scheduler = self.gui._scheduler
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertIsInstance(worker._image_assembler._geom, LPDGeometry)
+        self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
 
     def testCorrelationCtrlWidget(self):
         widget =self.gui.correlation_ctrl_widget
-        worker = self.gui._scheduler
-
-        n_registered = len(self.gui._windows)
+        scheduler = self.gui._scheduler
         self._correlation_action.trigger()
         window = list(self.gui._windows.keys())[-1]
-        self.assertIsInstance(window, CorrelationWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
 
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(FomName.UNDEFINED, worker._correlation_proc.fom_name)
+        self.assertEqual(FomName.UNDEFINED, scheduler._correlation_proc.fom_name)
 
         # test the correlation param table
         expected_params = []
@@ -245,7 +269,7 @@ class TestMainGui(unittest.TestCase):
             data.correlation.param3 = (i, -i)
         self.gui._data.set(data)
         window.update()
-        app.processEvents()
+        self.app.processEvents()
 
         # change the resolutions
         for i in range(widget._n_params):
@@ -263,69 +287,4 @@ class TestMainGui(unittest.TestCase):
             data.correlation.param1 = (i, -i)
         self.gui._data.set(data)
         window.update()
-        app.processEvents()
-
-        # test unregister
-        window.close()
-        self.assertEqual(n_registered, len(self.gui._windows))
-
-    def testOverviewWindow(self):
-        widget = self.gui.analysis_ctrl_widget
-
-        n_registered = len(self.gui._windows)
-        self._overview_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
-        self.assertIsInstance(window, OverviewWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
-
-        # --------------------------
-        # test setting VIP pulse IDs
-        # --------------------------
-
-        vip_pulse_id1 = int(widget._vip_pulse_id1_le.text())
-        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
-        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
-        vip_pulse_id2 = int(widget._vip_pulse_id2_le.text())
-        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
-        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
-
-        vip_pulse_id1 = 10
-        widget._vip_pulse_id1_le.setText(str(vip_pulse_id1))
-        widget._vip_pulse_id1_le.returnPressed.emit()
-        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
-        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
-        vip_pulse_id2 = 20
-        widget._vip_pulse_id2_le.setText(str(vip_pulse_id2))
-        widget._vip_pulse_id2_le.returnPressed.emit()
-        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
-        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
-
-        # --------------------------
-        # test setting max pulse ID
-        # --------------------------
-        worker = self.gui._scheduler
-
-        widget.updateSharedParameters()
-        self.assertEqual((0, 2700), worker._image_assembler.pulse_id_range)
-
-        widget._max_pulse_id_le.setText("1000")
-        widget.updateSharedParameters()
-        self.assertEqual((0, 1001), worker._image_assembler.pulse_id_range)
-
-        # test unregister
-        window.close()
-        self.assertEqual(n_registered, len(self.gui._windows))
-
-    def testPumpProbeWindow(self):
-        n_registered = len(self.gui._windows)
-        self._pp_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
-        self.assertIsInstance(window, PumpProbeWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
-
-    def testXasWindow(self):
-        n_registered = len(self.gui._windows)
-        self._xas_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
-        self.assertIsInstance(window, XasWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
+        self.app.processEvents()

@@ -24,8 +24,8 @@ class XasProcessor(LeafProcessor):
     ROIs specified by the user.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
 
         self.n_bins = 10
 

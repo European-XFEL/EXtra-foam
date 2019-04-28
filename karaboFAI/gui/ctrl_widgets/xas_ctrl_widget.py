@@ -14,8 +14,6 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
 
-mediator = Mediator()
-
 
 class XasCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
@@ -46,6 +44,8 @@ class XasCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        mediator = Mediator()
+
         self._reset_btn.clicked.connect(mediator.reset_xas_sgn)
 
         self._nbins_le.editingFinished.connect(

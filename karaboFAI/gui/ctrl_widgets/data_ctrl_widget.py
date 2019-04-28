@@ -17,8 +17,6 @@ from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
 from ...config import config, DataSource
 
-mediator = Mediator()
-
 
 class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
@@ -119,6 +117,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        mediator = Mediator()
+
         self._hostname_le.editingFinished.connect(
             lambda: mediator.tcp_host_change_sgn.emit(self._hostname_le.text()))
         self._hostname_le.editingFinished.emit()

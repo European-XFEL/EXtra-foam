@@ -1,21 +1,21 @@
 import unittest
 from collections import Counter
 
+from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, MultiPulseAiWidget, RoiImageView, RoiValueMonitor,
     PulseResolvedAiFomWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
-from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui.windows import OverviewWindow
 
 
 class TestOverviewWindow(unittest.TestCase):
 
     def testPulseResolved(self):
-        main_gui = MainGUI('LPD')
+        gui = FaiServer('LPD').gui
 
-        self._win = OverviewWindow(pulse_resolved=True, parent=main_gui)
+        self._win = OverviewWindow(pulse_resolved=True, parent=gui)
 
         self.assertEqual(len(self._win._plot_widgets), 11)
         counter = Counter()
@@ -33,9 +33,8 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[RoiValueMonitor], 1)
 
     def testTrainResolved(self):
-        main_gui = MainGUI('JungFrau')
-
-        self._win = OverviewWindow(pulse_resolved=False, parent=main_gui)
+        gui = FaiServer('JungFrau').gui
+        self._win = OverviewWindow(pulse_resolved=False, parent=gui)
 
         self.assertEqual(len(self._win._plot_widgets), 6)
         counter = Counter()

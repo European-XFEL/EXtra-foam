@@ -39,8 +39,8 @@ class _BasePumpProbeProcessor(LeafProcessor):
         ON_OFF = 2  # 0b10
         ON_ON = 3  # 0b11
 
-    def __init__(self, scheduler):
-        super().__init__(scheduler)
+    def __init__(self):
+        super().__init__()
 
         self.mode = None
         self.analysis_type = None
@@ -150,8 +150,8 @@ class PumpProbeProcessorFactory:
                 the normalized azimuthal integration.
         """
 
-        def __init__(self, scheduler):
-            super().__init__(scheduler)
+        def __init__(self):
+            super().__init__()
             self.abs_difference = True
             self.fom_itgt_range = None
 
@@ -251,16 +251,16 @@ class PumpProbeProcessorFactory:
     @classmethod
     def create(cls, analysis_type, scheduler=None):
         if analysis_type == PumpProbeType.AZIMUTHAL_INTEGRATION:
-            return cls.PumpProbeAiProcessor(scheduler)
+            return cls.PumpProbeAiProcessor()
 
         if analysis_type == PumpProbeType.ROI:
-            return cls.PumpProbeRoiProcessor(scheduler)
+            return cls.PumpProbeRoiProcessor()
 
         if analysis_type == PumpProbeType.ROI_PROJECTION_X:
-            return cls.PumpProbe1DProjProcessor(scheduler, 'x')
+            return cls.PumpProbe1DProjProcessor('x')
 
         if analysis_type == PumpProbeType.ROI_PROJECTION_X:
-            return cls.PumpProbe1DProjProcessor(scheduler, 'y')
+            return cls.PumpProbe1DProjProcessor('y')
 
         raise NotImplementedError(
             f"Unknown pump-probe analysis type: {analysis_type}!")

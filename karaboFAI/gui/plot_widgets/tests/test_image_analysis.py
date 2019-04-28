@@ -3,18 +3,18 @@ import tempfile
 
 import numpy as np
 
+from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets.image_view import ImageAnalysis
 from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.logger import logger
 from karaboFAI.config import config
 
-config['PIXEL_SIZE'] = 1e-6
-config["MASK_RANGE"] = (None, None)
-
 
 class TestPlotWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        FaiServer()
+
         config["PIXEL_SIZE"] = 1e-6
         config["MASK_RANGE"] = (None, None)
 

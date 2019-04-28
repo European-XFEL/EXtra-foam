@@ -5,54 +5,45 @@ import numpy as np
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
-from karaboFAI.gui.main_gui import MainGUI
-
+from karaboFAI.services import FaiServer
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
-
-from . import mkQApp
-app = mkQApp()
 
 
 class TestImageTool(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = MainGUI('LPD')
-        cls.proc = cls.gui._scheduler
+        cls.gui = FaiServer('LPD').gui
         cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]
+        cls._imagetool_action.trigger()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.gui.close()
+        cls.window = list(cls.gui._windows.keys())[-1]
+        cls.view = cls.window._image_view
 
     def setUp(self):
         self.__class__._tid += 1
         ImageData.clear()
 
-    def test_imagetoolwindow(self):
-        n_registered = len(self.gui._windows)
-        self._imagetool_action.trigger()
-
-        window = list(self.gui._windows.keys())[-1]
-        view = window._image_view
-        # TODO: ImageToolWindow is a SingletonWindow
-        # self.assertIsInstance(window, ImageToolWindow)
-        self.assertEqual(n_registered + 1, len(self.gui._windows))
-
+    def test_imageOperation(self):
         imgs = np.arange(2*128*128).reshape(2, 128, 128)
         img_mean = np.mean(imgs, axis=0)
         proc_data = ProcessedData(self._tid, imgs)
-        window._data.set(proc_data)
+        self.window._data.set(proc_data)
 
-        self.assertEqual(None, view._image)
-        window.update()
-        np.testing.assert_array_equal(img_mean, view._image)
+        self.assertEqual(None, self.view._image)
+        self.window.update()
+        np.testing.assert_array_equal(img_mean, self.view._image)
 
         # test 'update_image_btn'
         imgs = 2 * np.arange(2*128*128).reshape(2, 128, 128)
         img_mean = np.mean(imgs, axis=0)
         proc_data = ProcessedData(self._tid, imgs)
-        window._data.set(proc_data)
-        window._image_proc_widget.update_image_btn.clicked.emit()
-        np.testing.assert_array_equal(img_mean, view._image)
+        self.window._data.set(proc_data)
+        self.window._image_proc_widget.update_image_btn.clicked.emit()
+        np.testing.assert_array_equal(img_mean, self.view._image)
+
+    def test_roiOperation(self):
+        # test clear ROI history
+        widget = self.window._roi_ctrl_widget
+        QTest.mouseClick(widget._clear_roi_hist_btn, Qt.LeftButton)

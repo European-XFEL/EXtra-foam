@@ -22,8 +22,6 @@ from ..plot_widgets import (
 )
 from ...config import config
 
-mediator = Mediator()
-
 
 class OverviewWindow(DockerWindow):
     """OverviewWindow class."""
@@ -46,6 +44,8 @@ class OverviewWindow(DockerWindow):
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
+
+        mediator = Mediator()
 
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)

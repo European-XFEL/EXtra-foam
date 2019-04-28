@@ -1,21 +1,22 @@
 import unittest
 from collections import Counter
 
+from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, RoiImageView, XasSpectrumBinCountWidget,
     XasSpectrumWidget, XasSpectrumDiffWidget
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
-from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui.windows import XasWindow
 
 
 class TestXasWindow(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.gui = FaiServer('LPD').gui
 
     def testInstantiation(self):
-        main_gui = MainGUI('LPD')
-
-        self._win = XasWindow(pulse_resolved=True, parent=main_gui)
+        self._win = XasWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(len(self._win._plot_widgets), 8)
         counter = Counter()

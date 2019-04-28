@@ -9,25 +9,26 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import queue
+from queue import Queue, Full
+
+from PyQt5 import QtCore
+
+from zmq.error import ZMQError
 
 from karabo_bridge import Client
 
 from .worker import Worker
 from ..config import config
-from ..gui import QtCore
 from ..helpers import profiler
 
 
 class Bridge(Worker):
-    def __init__(self, out_queue):
+    def __init__(self):
         """Initialization."""
         super().__init__()
 
         self._tcp_host = None
         self._tcp_port = None
-
-        self._out_queue = out_queue
 
     @QtCore.pyqtSlot(str)
     def onTcpHostChange(self, hostname):
@@ -39,23 +40,27 @@ class Bridge(Worker):
 
     def run(self):
         """Override."""
-        end_point = f"tcp://{self._tcp_host}:{self._tcp_port}"
+        endpoint = f"tcp://{self._tcp_host}:{self._tcp_port}"
 
         self._running = True
-        with Client(end_point, timeout=1) as client:
-            self.log("Bind to server {}!".format(end_point))
-            while self._running:
-                try:
-                    data = self._recv(client)
-                except TimeoutError:
-                    continue
-
+        try:
+            with Client(endpoint, timeout=1) as client:
+                self.log("Bind to server {}!".format(endpoint))
                 while self._running:
                     try:
-                        self._out_queue.put(data, timeout=config['TIMEOUT'])
-                        break
-                    except queue.Full:
+                        data = self._recv(client)
+                    except TimeoutError:
                         continue
+
+                    while self._running:
+                        try:
+                            self._output.put(data, timeout=config['TIMEOUT'])
+                            break
+                        except Full:
+                            continue
+        except ZMQError:
+            self.log(f"ZMQError with endpoint: {endpoint}")
+            raise
 
         self.log("Bridge client stopped!")
 

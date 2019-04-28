@@ -130,7 +130,7 @@ class PulseResolvedAiFomWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.pp.fom
+        foms = data.ai.pulse_fom
         if foms is None:
             return
 

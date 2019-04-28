@@ -14,8 +14,6 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
 
-mediator = Mediator()
-
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
@@ -92,6 +90,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        mediator = Mediator()
+
         self.vip_pulse_id1_sgn.connect(mediator.onPulseID1Updated)
         self.vip_pulse_id2_sgn.connect(mediator.onPulseID2Updated)
         mediator.update_vip_pulse_ids_sgn.connect(self.updateVipPulseIDs)

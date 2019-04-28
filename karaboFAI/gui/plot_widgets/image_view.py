@@ -23,8 +23,6 @@ from ...algorithms import intersection, quick_min_max
 from ...config import config, ImageMaskChange
 from ...logger import logger
 
-mediator = Mediator()
-
 
 class ImageView(QtGui.QWidget):
     """ImageView class.
@@ -86,7 +84,7 @@ class ImageView(QtGui.QWidget):
 
         self.initUI()
 
-        mediator.reset_image_level_sgn.connect(self._updateImage)
+        Mediator().reset_image_level_sgn.connect(self._updateImage)
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()

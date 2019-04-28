@@ -20,8 +20,6 @@ from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
 from ...config import config, RoiFom, ImageMaskChange
 
-mediator = Mediator()
-
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
@@ -171,8 +169,10 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
     def __init__(self, rois, *, parent=None):
         super().__init__(parent)
 
+        mediator = Mediator()
+
         self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
-        self._clear_roi_hist_btn.clicked.connect(mediator.onRoiHistClear)
+        self._clear_roi_hist_btn.clicked.connect(mediator.roi_hist_clear_sgn)
 
         self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
         validator = QtGui.QIntValidator()
@@ -187,7 +187,7 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
         self._roi_fom_cb.currentTextChanged.connect(
             lambda x: self.roi_fom_sgn.emit(
                 self._available_roi_foms[x]))
-        self.roi_fom_sgn.connect(mediator.onRoiFomChange)
+        self.roi_fom_sgn.connect(mediator.roi_fom_change_sgn)
         self._roi_fom_cb.currentTextChanged.emit(
             self._roi_fom_cb.currentText())
 
@@ -195,7 +195,7 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
         for roi in rois:
             widget = _SingleRoiCtrlWidget(roi)
             self._roi_ctrls.append(widget)
-            widget.roi_region_change_sgn.connect(mediator.onRoiChange)
+            widget.roi_region_change_sgn.connect(mediator.roi_region_change_sgn)
 
         self.initUI()
 
@@ -302,6 +302,8 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
     def __init__(self, *, parent=None):
         super().__init__(parent)
+
+        mediator = Mediator()
 
         self.bkg_le = QtGui.QLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())

@@ -55,17 +55,61 @@ class StateProcessing(State):
         return StateOn()
 
 
-class AbstractProcessor(ABC):
+class SharedProperty:
+    """Property shared among Processors.
+
+    Define a property which is shared by the current processor and its
+    children processors.
+    """
+    def __init__(self):
+        self.name = None
+
+    def __get__(self, instance, instance_type):
+        if instance is None:
+            return self
+
+        if self.name not in instance._params:
+            # initialization
+            instance._params[self.name] = None
+
+        return instance._params[self.name]
+
+    def __set__(self, instance, value):
+        instance._params[self.name] = value
+
+
+class MetaProcessor(type):
+    def __new__(mcs, name, bases, class_dict):
+        for key, value in class_dict.items():
+            if isinstance(value, SharedProperty):
+                value.name = key
+
+        cls = type.__new__(mcs, name, bases, class_dict)
+        return cls
+
+
+class _BaseProcessor(metaclass=MetaProcessor):
     """Data processor interface."""
-    def __init__(self, scheduler):
+
+    def __init__(self):
+
+        self._parent = None
 
         self._state = StateOn()
 
-        self.on_hanlder = None
+        self._params = dict()
+
+        self.on_handler = None
         self.processing_handler = None
 
-        if scheduler is not None:
-            scheduler.register_processor(self)
+    def __getattribute__(self, item):
+        try:
+            return super().__getattribute__(item)
+        except AttributeError:
+            if item in self._params:
+                return self._params[item]
+            else:
+                raise
 
     @abstractmethod
     def process(self, processed, raw=None):
@@ -80,10 +124,15 @@ class AbstractProcessor(ABC):
         """Process data."""
         pass
 
+    def set_parent(self, parent):
+        if parent is not None and not isinstance(parent, _BaseProcessor):
+            raise ValueError(f"Invalid parent: {type(parent)}")
+        self._parent = parent
 
-class LeafProcessor(AbstractProcessor):
-    def __init__(self, scheduler=None):
-        super().__init__(scheduler)
+
+class LeafProcessor(_BaseProcessor):
+    def __init__(self):
+        super().__init__()
 
     def process(self, processed, raw=None):
         # self._state = self._state.next()
@@ -92,13 +141,20 @@ class LeafProcessor(AbstractProcessor):
         # self._state = self._state.next()
 
 
-class CompositeProcessor(AbstractProcessor):
-    def __init__(self, scheduler=None):
-        super().__init__(scheduler)
+class CompositeProcessor(_BaseProcessor):
+    def __init__(self):
+        super().__init__()
 
-        self._childrens = set()
+        self._children = []
+
+    def add(self, child):
+        self._children.append(child)
+        child.set_parent(self)
+
+    def remove(self, child):
+        self._children.remove(child)
 
     def process(self, processed, raw=None):
-        self.run(processed, raw)
-        for proc in self._childrens:
-            proc.process(processed, raw)
+        for child in self._children:
+            child._params.update(self._params)
+            child.process(processed, raw)

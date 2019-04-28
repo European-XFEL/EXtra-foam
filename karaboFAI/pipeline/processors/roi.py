@@ -25,8 +25,8 @@ class RoiProcessor(LeafProcessor):
     Attributes:
         roi_fom (int): type of ROI FOM.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
 
         self._rois = [None] * len(config["ROI_COLORS"])
 

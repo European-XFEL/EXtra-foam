@@ -15,7 +15,7 @@ import numpy as np
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
-from .base_processor import LeafProcessor, CompositeProcessor
+from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_curve, slice_curve
 from ...config import AiNormalizer
@@ -41,19 +41,30 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             azimuthal integration result.
         auc_x_range (tuple): x range for calculating AUC, which is used as
             a normalizer of the azimuthal integration.
+        fom_itgt_range (tuple): integration range for calculating FOM from
+            the normalized azimuthal integration.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    sample_distance = SharedProperty()
+    wavelength = SharedProperty()
+    integration_center = SharedProperty()
+    integration_method = SharedProperty()
+    integration_range = SharedProperty()
+    integration_points = SharedProperty()
+    normalizer = SharedProperty()
+    auc_x_range = SharedProperty()
+    fom_itgt_range = SharedProperty()
 
-        self.sample_distance = None
-        self.wavelength = None
-        self.integration_center = None
-        self.integration_method = None
-        self.integration_range = None
-        self.integration_points = None
-        self.normalizer = None
-        self.auc_x_range = None
+    def __init__(self):
+        super().__init__()
 
+        self.add(PulseAiProcessor())
+
+        next = CompositeProcessor()
+        next.add(PulseResolvedAiFomProcessor())
+        self.add(next)
+
+
+class PulseAiProcessor(LeafProcessor):
     @profiler("Azimuthal integration processor")
     def run(self, processed, raw=None):
         sample_distance = self.sample_distance
@@ -228,16 +239,7 @@ class PulseResolvedAiFomProcessor(LeafProcessor):
     """PulseResolvedAiFomProcessor.
 
     Only for pulse-resolved detectors.
-
-    Attributes:
-        fom_itgt_range (tuple): integration range for calculating FOM from
-            the normalized azimuthal integration.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fom_itgt_range = None
-
     @profiler("Pulse-resolved azimuthal integration FOM processor")
     def run(self, processed, raw=None):
         """Override."""
@@ -257,4 +259,4 @@ class PulseResolvedAiFomProcessor(LeafProcessor):
             fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        processed.pp.fom = foms
+        processed.ai.pulse_fom = foms

@@ -255,6 +255,7 @@ class AzimuthalIntegrationData(AbstractData):
         self.intensities = None
         self.intensity_mean = None
         self.reference_intensity = None
+        self.pulse_fom = None
 
 
 class PumpProbeData(AbstractData):

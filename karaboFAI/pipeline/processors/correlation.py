@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor
+from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
@@ -19,19 +19,23 @@ from ...config import FomName
 from ...helpers import profiler
 
 
-class CorrelationProcessor(LeafProcessor):
+class CorrelationProcessor(CompositeProcessor):
     """Add correlation information into processed data.
 
     Attributes:
+        fom_name (FomName): name of the figure-of-merit
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    fom_itgt_range = SharedProperty()
+    fom_name = SharedProperty()
 
-        self.fom_name = None
-        self.fom_itgt_range = None
+    def __init__(self):
+        super().__init__()
+        self.add(CorrelationFomProcessor())
 
+
+class CorrelationFomProcessor(LeafProcessor):
     @profiler("Correlation processor")
     def run(self, processed, raw=None):
         """Override."""

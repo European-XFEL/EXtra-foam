@@ -1,11 +1,14 @@
 import unittest
 
+from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets.plot_widgets import PlotWidget
-
-from . import app
 
 
 class TestPlotWidget(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = FaiServer().app
+
     def setUp(self):
         self._widget = PlotWidget()
 
@@ -23,11 +26,11 @@ class TestPlotWidget(unittest.TestCase):
     def testBarPlot(self):
         # set any valid number
         plot = self._widget.plotBar([1, 2], [3, 4])
-        app.processEvents()
+        self.app.processEvents()
 
         # test set empty data
         plot.setData([], [])
-        app.processEvents()
+        self.app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):
@@ -36,15 +39,15 @@ class TestPlotWidget(unittest.TestCase):
     def testErrorBarPlot(self):
         # set any valid number
         plot = self._widget.plotErrorBar([1, 2], [3, 4])
-        app.processEvents()
+        self.app.processEvents()
 
         # set x, y, y_min and y_max together
         plot.setData([1, 2], [1, 2], y_min=[0, 0], y_max=[2, 2])
-        app.processEvents()
+        self.app.processEvents()
 
         # test set empty data
         plot.setData([], [])
-        app.processEvents()
+        self.app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):

@@ -19,8 +19,6 @@ from ..mediator import Mediator
 from ...config import PumpProbeMode, PumpProbeType
 from ...logger import logger
 
-mediator = Mediator()
-
 
 class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
@@ -117,6 +115,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        mediator = Mediator()
+
         self._ma_window_le.editingFinished.connect(
             lambda: mediator.pp_ma_window_change_sgn.emit(
                 int(self._ma_window_le.text())))

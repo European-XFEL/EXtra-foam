@@ -9,55 +9,58 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from queue import Queue, Empty, Full
+from queue import Empty, Full
 
 from scipy import constants
+
+from PyQt5 import QtCore
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
 from .data_model import ProcessedData
 from .worker import Worker
 from .processors import (
-    AzimuthalIntegrationProcessor, CorrelationProcessor,
+    AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
     PumpProbeProcessorFactory, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
 from ..config import config, PumpProbeType
-from ..gui import QtCore
 from ..helpers import profiler
 
 
 class Scheduler(Worker):
     """Pipeline scheduler."""
-    _tasks = []
+    __instance = None
 
-    def __init__(self, in_queue, out_queue):
-        """Initialization.
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+        return cls.__instance
 
-        :param Queue in_queue: a queue of data from the ZMQ bridge.
-        :param Queue out_queue: a queue of processed data.
-        """
+    def __init__(self):
+        """Initialization."""
         super().__init__()
 
-        self._in_queue = in_queue
-        self._out_queue = out_queue
+        self._tasks = []
 
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._data_aggregator = DataAggregator()
 
-        self._roi_proc = RoiProcessor(self)
+        self._roi_proc = RoiProcessor()
 
-        self._ai_proc = AzimuthalIntegrationProcessor(self)
+        self._ai_proc = AzimuthalIntegrationProcessor()
 
         self._pp_proc = PumpProbeProcessorFactory.create(
-            PumpProbeType.AZIMUTHAL_INTEGRATION, self)
+            PumpProbeType.AZIMUTHAL_INTEGRATION)
 
-        self._correlation_proc = CorrelationProcessor(self)
+        self._correlation_proc = CorrelationProcessor()
 
-        self._xas_proc = XasProcessor(self)
+        self._xas_proc = XasProcessor()
 
-    def register_processor(self, task):
-        self._tasks.append(task)
+    def __setattr__(self, key, value):
+        if isinstance(value, _BaseProcessor):
+            self._tasks.append(value)
+        super().__setattr__(key, value)
 
     @QtCore.pyqtSlot(str)
     def onDetectorSourceChange(self, src):
@@ -141,6 +144,7 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot(float, float)
     def onFomIntegrationRangeChange(self, lb, ub):
+        self._ai_proc.fom_itgt_range = (lb, ub)
         self._pp_proc.fom_itgt_range = (lb, ub)
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
@@ -180,13 +184,15 @@ class Scheduler(Worker):
     def onXasReset(self):
         self._xas_proc.reset()
 
-    def update_roi_region(self, rank, activated, w, h, px, py):
+    @QtCore.pyqtSlot(int, bool, int, int, int, int)
+    def onRoiRegionChange(self, rank, activated, w, h, px, py):
         if activated:
             self._roi_proc.set(rank, (w, h, px, py))
         else:
             self._roi_proc.set(rank, None)
 
-    def update_roi_fom(self, value):
+    @QtCore.pyqtSlot(object)
+    def onRoiFomChange(self, value):
         self._roi_proc.roi_fom = value
         ProcessedData.clear_roi_hist()
 
@@ -199,7 +205,7 @@ class Scheduler(Worker):
         self.log("Data processor started!")
         while self._running:
             try:
-                data = self._in_queue.get(timeout=config['TIMEOUT'])
+                data = self._input.get(timeout=config['TIMEOUT'])
             except Empty:
                 continue
 
@@ -209,8 +215,7 @@ class Scheduler(Worker):
 
             while self._running:
                 try:
-                    self._out_queue.put(processed_data,
-                                        timeout=config['TIMEOUT'])
+                    self._output.put(processed_data, timeout=config['TIMEOUT'])
                     break
                 except Full:
                     continue

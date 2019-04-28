@@ -9,11 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import argparse
 import logging
 import os.path as osp
-from queue import Queue, Empty
-import sys
+from queue import Empty
 from weakref import WeakKeyDictionary
 
 import zmq
@@ -35,7 +33,7 @@ from ..config import config
 from ..logger import logger
 from ..helpers import profiler
 from ..offline import FileServer
-from ..pipeline import Bridge, Scheduler, Data4Visualization
+from ..pipeline import Data4Visualization
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -50,18 +48,22 @@ class MainGUI(QtGui.QMainWindow):
     file_server_started_sgn = QtCore.pyqtSignal()
     file_server_stopped_sgn = QtCore.pyqtSignal()
 
-    def __init__(self, detector):
+    def __init__(self, bridge=None, scheduler=None):
         """Initialization."""
         super().__init__()
 
-        # update global configuration
-        config.load(detector)
+        self._bridge = bridge
+        self._scheduler = scheduler
+
+        mediator = Mediator()
+        mediator.connect_bridge(bridge)
+        mediator.connect_scheduler(scheduler)
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        self.title = f"karaboFAI {__version__} ({detector})"
+        self.title = f"karaboFAI {__version__} ({config['DETECTOR']})"
         self.setWindowTitle(self.title + " - main GUI")
 
         self._cw = QtGui.QWidget()
@@ -127,19 +129,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server = None
 
-        self._bridge_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-        self._proc_queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
-
-        # a DAQ worker which acquires the data in another thread
-        self._bridge = Bridge(self._bridge_queue)
-        # a data processing worker which processes the data in another thread
-        self._scheduler = Scheduler(self._bridge_queue, self._proc_queue)
-
-        # initializing mediator
-        mediator = Mediator()
-        mediator.setScheduler(self._scheduler)
-        mediator.setBridge(self._bridge)
-
         # For real time plot
         self._running = False
         self.timer = QtCore.QTimer()
@@ -178,7 +167,11 @@ class MainGUI(QtGui.QMainWindow):
 
     def initConnection(self):
         """Set up all signal and slot connections."""
-        self._bridge.message.connect(self.onMessageReceived)
+        if self._bridge is not None:
+            self._bridge.message.connect(self.onMessageReceived)
+
+        if self._scheduler is None:
+            return
 
         self._scheduler.message.connect(self.onMessageReceived)
 
@@ -255,7 +248,7 @@ class MainGUI(QtGui.QMainWindow):
         # bottleneck for the performance.
 
         try:
-            self._data.set(self._proc_queue.get_nowait())
+            self._data.set(self._scheduler._output.get_nowait())
         except Empty:
             return
 
@@ -325,10 +318,8 @@ class MainGUI(QtGui.QMainWindow):
         self._bridge.wait()
 
     def clearQueues(self):
-        with self._bridge_queue.mutex:
-            self._bridge_queue.queue.clear()
-        with self._proc_queue.mutex:
-            self._proc_queue.queue.clear()
+        self._bridge.clear_queue()
+        self._scheduler.clear_queue()
 
     def onStartServeFile(self):
         """Actions taken before the start of file serving."""
@@ -378,30 +369,3 @@ class MainGUI(QtGui.QMainWindow):
             self._file_server.terminate()
 
         super().closeEvent(QCloseEvent)
-
-
-def start():
-    parser = argparse.ArgumentParser(prog="karaboFAI")
-    parser.add_argument('-V', '--version', action='version',
-                        version="%(prog)s " + __version__)
-    parser.add_argument("detector", help="detector name (case insensitive)",
-                        choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
-                        type=lambda s: s.upper())
-
-    args = parser.parse_args()
-
-    detector = args.detector
-    if detector == 'JUNGFRAU':
-        detector = 'JungFrau'
-    elif detector == 'FASTCCD':
-        detector = 'FastCCD'
-    else:
-        detector = detector.upper()
-
-    app = QtGui.QApplication(sys.argv)
-    ex = MainGUI(detector)
-    app.exec_()
-
-
-if __name__ == "__main__":
-    start()
