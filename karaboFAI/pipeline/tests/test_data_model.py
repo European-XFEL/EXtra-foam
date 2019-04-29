@@ -475,6 +475,37 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(4, img_data.ma_count)
         np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
 
+    def test_pulseResolvedSliceMaskedMean(self):
+        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
+        mean_orig = np.mean(imgs_orig, axis=0)
+        img_data = ImageData(np.copy(imgs_orig))
+        mask_range = (1, 4)
+        img_data.set_threshold_mask(*mask_range)
+        img_data.update()
+
+        with self.assertRaises(IndexError):
+            img_data.sliced_masked_mean([1, 3])
+
+        np.testing.assert_array_equal(np.clip(mean_orig, *mask_range),
+                                      img_data.sliced_masked_mean([0, 1]))
+        np.testing.assert_array_equal(np.clip(imgs_orig[0], *mask_range),
+                                      img_data.sliced_masked_mean([0]))
+
+    def test_trainResolvedSliceMaskedMean(self):
+        imgs_orig = np.arange(16, dtype=np.float).reshape((4, 4))
+        img_data = ImageData(np.copy(imgs_orig))
+        mask_range = (1, 4)
+        img_data.set_threshold_mask(*mask_range)
+        img_data.update()
+
+        with self.assertRaises(IndexError):
+            img_data.sliced_masked_mean([1, 2])
+        with self.assertRaises(IndexError):
+            img_data.sliced_masked_mean([1])
+
+        np.testing.assert_array_equal(np.clip(imgs_orig, *mask_range),
+                                      img_data.sliced_masked_mean([0]))
+
 
 class TestPairData(unittest.TestCase):
     def test_general(self):

@@ -702,6 +702,7 @@ class ImageData:
         return self._mean_imp(self.images)
 
     def _mean_imp(self, imgs):
+        """Return the average of a stack of images."""
         if imgs.ndim == 3:
             # pulse resolved
             return nanmean_axis0_para(imgs, max_workers=8, chunk_size=20)
@@ -731,6 +732,23 @@ class ImageData:
         np.clip(mean_image, *self._threshold_mask, out=mean_image)
 
         return mean_image
+
+    def sliced_masked_mean(self, indices):
+        """Get masked mean by indices of images.
+
+        :param list indices: a list of integers.
+        """
+        imgs = self.images
+
+        if imgs.ndim == 3:
+            sliced_imgs = imgs[indices]
+        else:
+            if len(indices) > 1 or indices[0] != 0:
+                raise IndexError(
+                    f"{indices} is out of bound for train-resolved image data")
+            sliced_imgs = imgs
+
+        return self._masked_mean_imp(self._mean_imp(sliced_imgs))
 
     def update(self):
         invalid_caches = set()
