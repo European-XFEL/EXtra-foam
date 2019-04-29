@@ -42,6 +42,9 @@ class AiCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Azimuthal integration setup", *args, **kwargs)
 
+        # default state is unchecked
+        self.pulsed_ai_cb = QtGui.QCheckBox("Pulsed azimuthal integration")
+
         self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
         self._photon_energy_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
         self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
@@ -72,6 +75,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
+            self.pulsed_ai_cb,
             self._photon_energy_le,
             self._sample_dist_le,
             self._cx_le,
@@ -85,6 +89,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
         ]
 
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
 
@@ -113,11 +118,17 @@ class AiCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._auc_x_range_le, 8, 1)
         layout.addWidget(QtGui.QLabel("FOM integration range: "), 9, 0, AR)
         layout.addWidget(self._fom_itgt_range_le, 9, 1)
+        layout.addWidget(self.pulsed_ai_cb, 10, 0)
 
         self.setLayout(layout)
 
+    def initConnections(self):
+        pass
+
     def updateSharedParameters(self):
         """Override"""
+        self.pulsed_ai_cb.stateChanged.emit(self.pulsed_ai_cb.checkState())
+
         photon_energy = float(self._photon_energy_le.text().strip())
         if photon_energy <= 0:
             logger.error("<Photon energy>: Invalid input! Must be positive!")

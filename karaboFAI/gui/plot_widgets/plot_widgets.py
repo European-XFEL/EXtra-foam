@@ -246,32 +246,10 @@ class CorrelationWidget(PlotWidget):
             self._plot.setData(correlator, foms.avg)
 
 
-class LaserOnOffFomWidget(PlotWidget):
-    """LaserOnOffFomWidget class.
+class PumpProbeOnOffWidget(PlotWidget):
+    """PumpProbeOnOffWidget class.
 
-    Widget for displaying the evolution of FOM in the Laser On-off analysis.
-    """
-
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "ROI (arb. u.)")
-
-        self._plot = self.plotScatter(brush=make_brush('o'))
-
-    def update(self, data):
-        """Override."""
-        tids, foms, _ = data.pp.fom
-        self._plot.setData(tids, foms)
-
-
-class LaserOnOffAiWidget(PlotWidget):
-    """LaserOnOffAiWidget class.
-
-    Widget for displaying the average of the azimuthal integrations
-    of laser-on/off pulses.
+    Widget for displaying the pump and probe signal, respectively.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -286,7 +264,7 @@ class LaserOnOffAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
+        x = data.pp.x_data
         on_intensity = data.pp.on_data
         off_intensity = data.pp.off_data
 
@@ -297,19 +275,18 @@ class LaserOnOffAiWidget(PlotWidget):
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
-                momentum, on_intensity, off_intensity = self._data
+                x, on_intensity, off_intensity = self._data
             else:
-                self._data = (momentum, on_intensity, off_intensity)
+                self._data = (x, on_intensity, off_intensity)
 
-            self._on_pulse.setData(momentum, on_intensity)
-            self._off_pulse.setData(momentum, off_intensity)
+            self._on_pulse.setData(x, on_intensity)
+            self._off_pulse.setData(x, off_intensity)
 
 
-class LaserOnOffDiffWidget(PlotWidget):
-    """LaserOnOffDiffWidget class.
+class PumpProbeDiffWidget(PlotWidget):
+    """PumpProbeDiffWidget class.
 
-    Widget for displaying the difference of the average of the azimuthal
-    integrations of laser-on/off pulses.
+    Widget for displaying the difference between the pump and probe signal.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -331,7 +308,7 @@ class LaserOnOffDiffWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
+        x = data.pp.x_data
         on_intensity = data.pp.on_data
         off_intensity = data.pp.off_data
         on_off_intensity = data.pp.on_off_data
@@ -348,7 +325,28 @@ class LaserOnOffDiffWidget(PlotWidget):
                 diff = on_off_intensity
                 self._data = diff
 
-            self._plot.setData(momentum, diff)
+            self._plot.setData(x, diff)
+
+
+class PumpProbeFomWidget(PlotWidget):
+    """PumpProbeFomWidget class.
+
+    Widget for displaying the evolution of FOM in pump-probe analysis.
+    """
+
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "Train ID")
+        self.setLabel('left', "ROI (arb. u.)")
+
+        self._plot = self.plotScatter(brush=make_brush('o'))
+
+    def update(self, data):
+        """Override."""
+        tids, foms, _ = data.pp.fom
+        self._plot.setData(tids, foms)
 
 
 class XasSpectrumWidget(PlotWidget):

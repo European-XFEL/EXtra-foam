@@ -13,74 +13,189 @@ import copy
 
 import numpy as np
 
-from .base_processor import LeafProcessor
+from .base_processor import (
+    CompositeProcessor, LeafProcessor, SharedProperty,
+    StopCompositionProcessing
+)
+from ..exceptions import ProcessingError
 from ...algorithms import intersection
-from ...config import config, RoiFom
+from ...config import config, RoiFom, PumpProbeType
 from ...helpers import profiler
 
 
-class RoiProcessor(LeafProcessor):
-    """Process region of interest.
+class RoiProcessor(CompositeProcessor):
+    """RoiProcessor class.
+
+    Process region of interest.
 
     Attributes:
-        roi_fom (int): type of ROI FOM.
+        _rois (list): a list of ROI regions (w, h, x, y) or None if the
+            corresponding ROI is not activated.
+        fom_type (RoiFom): type of ROI FOM.
     """
+    _rois = SharedProperty()
+    _fom_handler = SharedProperty()
+
     def __init__(self):
         super().__init__()
 
+        # initialization
         self._rois = [None] * len(config["ROI_COLORS"])
 
-        self.roi_fom = None
+        self._fom_type = None
+        self._fom_handler = None
 
-    def set(self, rank, value):
+        self.add(RoiFomProcessor())
+        self.add(RoiPumpProbeFomProcessor())
+        self.add(RoiPumpProbeProj1dProcessor())
+
+    @property
+    def fom_type(self):
+        return self._fom_type
+
+    @fom_type.setter
+    def fom_type(self, v):
+        self._fom_type = v
+        if v == RoiFom.SUM:
+            self._fom_handler = np.sum
+        elif v == RoiFom.MEAN:
+            self._fom_handler = np.mean
+        else:
+            self._fom_type = None
+            self._fom_handler = None
+
+    def set_roi(self, rank, value):
+        """Set ROI.
+
+        :param int rank: ROI rank (index).
+        :param tuple value: (w, h, x, y) of the ROI. None for unset.
+        """
         self._rois[rank-1] = value
 
+    @staticmethod
+    def get_roi_image(roi_region, img):
+        w, h, x, y = roi_region
+        return img[y:y + h, x:x + w]
+
+
+class RoiFomProcessor(LeafProcessor):
+    """RoiFomProcessor class.
+
+    Take the on and off images calculated by the PumpProbeProcessor
+    and extract the ROIs of both on and off images using ROI1. The
+    figure-of-merit is sum or mean of the difference between these
+    two ROI images.
+    """
     @profiler("ROI processor")
     def process(self, processed, raw=None):
         """Override.
 
         Note: We need to put some data in the history, even if ROI is not
-        activated. This is required for the case that ROI1 and ROI2 were
-        activate at different times.
+        activated. This is required for the case that different ROIs are
+        activated at different times.
         """
-        roi_fom = self.roi_fom
+        fom_handler = self._fom_handler
+        if fom_handler is None:
+            return
 
         tid = processed.tid
         if tid > 0:
             img = processed.image.masked_mean
-            img_ref = processed.image.masked_ref
 
             rois = copy.copy(self._rois)
             for i, roi in enumerate(rois):
                 # it should be valid to set ROI intensity to zero if the data
                 # is not available
-                value = 0
-                value_ref = 0
+                fom = 0
                 if roi is not None:
                     roi = intersection(*roi, *img.shape[::-1], 0, 0)
                     if roi[0] < 0 or roi[1] < 0:
                         self._rois[i] = None
                     else:
                         setattr(processed.roi, f"roi{i+1}", roi)
-                        value = self._get_roi_fom(roi, roi_fom, img)
-                        value_ref = self._get_roi_fom(roi, roi_fom, img_ref)
-                setattr(processed.roi, f"roi{i+1}_hist", (tid, value))
-                setattr(processed.roi, f"roi{i+1}_hist_ref", (tid, value_ref))
+                        roi_img = RoiProcessor.get_roi_image(roi, img)
 
-    @staticmethod
-    def _get_roi_fom(roi_param, roi_fom, img):
-        if roi_fom is None or img is None:
-            return 0
+                        proj_x = np.sum(roi_img, axis=-1)
+                        proj_y = np.sum(roi_img, axis=-2)
+                        setattr(processed.roi, f"roi{i + 1}_proj_x", proj_x)
+                        setattr(processed.roi, f"roi{i + 1}_proj_y", proj_y)
 
-        w, h, x, y = roi_param
-        roi_img = img[y:y + h, x:x + w]
-        if roi_fom == RoiFom.SUM:
-            ret = np.sum(roi_img)
-        elif roi_fom == RoiFom.MEAN:
-            ret = np.mean(roi_img)
+                        fom = fom_handler(roi_img)
+
+                setattr(processed.roi, f"roi{i+1}_hist", (tid, fom))
+
+
+class RoiPumpProbeFomProcessor(LeafProcessor):
+    """RoiPumpProbeFomProcessor class.
+
+    Take the on and off images calculated by the PumpProbeProcessor
+    and extract the ROIs of both on and off images using ROI1. The
+    figure-of-merit is sum or mean of the difference between these
+    two ROI images.
+    """
+    @profiler("ROI processor")
+    def process(self, processed, raw=None):
+        if processed.pp.analysis_type != PumpProbeType.ROI:
+            return
+
+        on_image = processed.pp.on_image_mean
+        off_image = processed.pp.off_image_mean
+        if on_image is None or off_image is None:
+            return StopCompositionProcessing
+
+        fom_handler = self._fom_handler
+        roi = self._rois[0]  # always use ROI1
+        if roi is None:
+            raise ProcessingError("ROI1 is inactivated or out of region")
+
+        on_image_roi = RoiProcessor.get_roi_image(roi, on_image)
+        off_image_roi = RoiProcessor.get_roi_image(roi, off_image)
+        # processed.pp.on_data = on_image_roi
+        # processed.pp.off_data = off_image_roi
+        on_off_image_roi = on_image_roi - off_image_roi
+        # processed.pp.on_off_data = on_off_image_roi
+
+        fom = fom_handler(on_off_image_roi)
+        processed.pp.fom = (processed.tid, fom)
+
+
+class RoiPumpProbeProj1dProcessor(LeafProcessor):
+    """RoiPumpProbeProj1dProcessor class.
+
+    Take the on and off images calculated by the PumpProbeProcessor
+    and calculate the 1D projections of ROI1 on both on and off images
+    as well as the figure-of-merit, which is the (absolute) sum of
+    the difference between the two projections.
+    """
+    @profiler("ROI projection 1D processor")
+    def process(self, processed, raw=None):
+        if processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_X:
+            axis = -2
+        elif processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_Y:
+            axis = -1
         else:
-            ret = 0
+            return
 
-        return ret
+        roi = self._rois[0]  # always use ROI1
+        if roi is None:
+            raise ProcessingError("ROI1 is inactivated or out of region")
 
+        on_image = processed.pp.on_image_mean
+        off_image = processed.pp.off_image_mean
+        if on_image is None or off_image is None:
+            raise StopCompositionProcessing
 
+        on_image_roi = RoiProcessor.get_roi_image(roi, on_image)
+        off_image_roi = RoiProcessor.get_roi_image(roi, off_image)
+        x_data = np.arange(on_image_roi.shape[::-1][axis])
+        on_data = np.sum(on_image_roi, axis=axis)
+        off_data = np.sum(off_image_roi, axis=axis)
+        on_off_data = on_data - off_data
+
+        processed.pp.x_data = x_data
+        processed.pp.on_data = on_data
+        processed.pp.off_data = off_data
+        processed.pp.on_off_data = on_off_data
+
+        fom = np.sum(np.abs(on_off_data))
+        processed.pp.fom = (processed.tid, fom)

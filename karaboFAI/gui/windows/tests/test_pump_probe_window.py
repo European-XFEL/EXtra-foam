@@ -3,7 +3,7 @@ from collections import Counter
 
 from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets import (
-    LaserOnOffAiWidget, LaserOnOffDiffWidget, LaserOnOffFomWidget,
+    PumpProbeOnOffWidget, PumpProbeDiffWidget, PumpProbeFomWidget,
     PumpProbeImageView
 )
 from karaboFAI.gui.bulletin_widget import BulletinWidget
@@ -25,6 +25,6 @@ class TestPumpProbeWindow(unittest.TestCase):
 
         self.assertEqual(counter[PumpProbeImageView], 2)
         self.assertEqual(counter[BulletinWidget], 1)
-        self.assertEqual(counter[LaserOnOffAiWidget], 1)
-        self.assertEqual(counter[LaserOnOffDiffWidget], 1)
-        self.assertEqual(counter[LaserOnOffFomWidget], 1)
+        self.assertEqual(counter[PumpProbeOnOffWidget], 1)
+        self.assertEqual(counter[PumpProbeDiffWidget], 1)
+        self.assertEqual(counter[PumpProbeFomWidget], 1)

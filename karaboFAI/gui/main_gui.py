@@ -197,9 +197,9 @@ class MainGUI(QtGui.QMainWindow):
             self._scheduler.onAucXRangeChange)
         self.ai_ctrl_widget.fom_integration_range_sgn.connect(
             self._scheduler.onFomIntegrationRangeChange)
+        self.ai_ctrl_widget.pulsed_ai_cb.stateChanged.connect(
+            self._scheduler.onPulsedAiStateChange)
 
-        self.analysis_ctrl_widget.enable_ai_cb.stateChanged.connect(
-            self._scheduler.onEnableAiStateChange)
         self.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._scheduler.onPulseIdRangeChange)
 

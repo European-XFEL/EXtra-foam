@@ -15,17 +15,25 @@ import numpy as np
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
-from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
+from .base_processor import (
+    LeafProcessor, CompositeProcessor, SharedProperty,
+    StopCompositionProcessing
+)
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_curve, slice_curve
-from ...config import AiNormalizer
+from ...config import AiNormalizer, PumpProbeType
 from ...helpers import profiler
 
 
 class AzimuthalIntegrationProcessor(CompositeProcessor):
-    """Perform azimuthal integration.
+    """AzimuthalIntegrationProcessor class.
+
+    Perform azimuthal integration.
 
     Attributes:
+        pulsed_ai (bool): True for performing azimuthal integration for
+            individual pulses. It only affect the performance with the
+            pulse-resolved detectors.
         wavelength (float): photon wavelength in meter.
         sample_distance (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
@@ -44,6 +52,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
+    pulsed_ai = SharedProperty()
+
     sample_distance = SharedProperty()
     wavelength = SharedProperty()
     integration_center = SharedProperty()
@@ -57,26 +67,42 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self.add(PulseResolvedAiFomProcessor())
+        self.add(AiPulsedProcessor())
+        self.add(AiPumpProbeProcessor())
 
-    @profiler("Azimuthal integration processor")
+    def process(self, processed, raw):
+        pass
+
+
+class AiPulsedProcessor(CompositeProcessor):
+    """AiPulsedProcessor class.
+
+    Calculate azimuthal integration for individual pulses in a train.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.add(AiPulsedNormProcessor())
+        self.add(AiPulseFomProcessor())
+
+    @profiler("Azimuthal integration pulsed processor")
     def process(self, processed, raw=None):
-        sample_distance = self.sample_distance
-        wavelength = self.wavelength
+        if not self.pulsed_ai:
+            return
+
         cx, cy = self.integration_center
         integration_points = self.integration_points
         integration_method = self.integration_method
         integration_range = self.integration_range
 
         assembled = processed.image.images
-        reference = processed.image.masked_ref
         image_mask = processed.image.image_mask
 
         pixel_size = processed.image.pixel_size
         poni2, poni1 = processed.image.pos_inv(cx, cy)
         mask_min, mask_max = processed.image.threshold_mask
 
-        ai = AzimuthalIntegrator(dist=sample_distance,
+        ai = AzimuthalIntegrator(dist=self.sample_distance,
                                  poni1=poni1 * pixel_size,
                                  poni2=poni2 * pixel_size,
                                  pixel1=pixel_size,
@@ -84,7 +110,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
                                  rot1=0,
                                  rot2=0,
                                  rot3=0,
-                                 wavelength=wavelength)
+                                 wavelength=self.wavelength)
 
         if assembled.ndim == 3:
             # pulse-resolved
@@ -142,68 +168,48 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             # to avoid to be normalized twice
             intensities = np.expand_dims(intensities_mean.copy(), axis=0)
 
-        if reference is not None:
-            mask = image_mask != 0
-            # merge image mask and threshold mask
-            mask[(reference <= mask_min) | (reference >= mask_max)] = 1
-            ret = ai.integrate1d(reference,
-                                 integration_points,
-                                 method=integration_method,
-                                 mask=mask,
-                                 radial_range=integration_range,
-                                 correctSolidAngle=True,
-                                 polarization_factor=1,
-                                 unit="q_A^-1")
+        processed.ai.momentum = momentum
+        processed.ai.intensities = intensities
+        processed.ai.intensity_mean = intensities_mean
 
-            ref_intensity = ret.intensity
 
-        else:
-            ref_intensity = None
+class AiPulsedNormProcessor(LeafProcessor):
+    """AiPulsedNormProcessor class.
 
-        self._normalize(
-            momentum, intensities, intensities_mean, ref_intensity, processed)
+    Normalize the azimuthal integration result from AiPulsedProcessor.
+    """
+    @profiler("Azimuthal integration normalization processor")
+    def process(self, processed, raw=None):
+        momentum = processed.ai.momentum
+        intensity_mean = processed.ai.intensity_mean
+        intensities = processed.ai.intensities
+        auc_x_range = self.auc_x_range
 
-    def _normalize(self, momentum, intensities, intensities_mean,
-                   ref_intensity, processed):
+        if momentum is None:
+            raise StopCompositionProcessing
+
         if self.normalizer == AiNormalizer.AUC:
-            try:
-                intensities_mean = normalize_curve(
-                    intensities_mean, momentum, *self.auc_x_range)
-                if ref_intensity is not None:
-                    ref_intensity = normalize_curve(
-                        ref_intensity, momentum, *self.auc_x_range)
-                else:
-                    ref_intensity = np.zeros_like(intensities_mean)
+            intensity_mean = normalize_curve(
+                intensity_mean, momentum, *auc_x_range)
 
-                # normalize azimuthal integration curves for each pulse
-                for i, intensity in enumerate(intensities):
-                    intensities[i][:] = normalize_curve(
-                        intensity, momentum, *self.auc_x_range)
-
-            except ValueError as e:
-                raise ProcessingError(e)
-
+            # normalize azimuthal integration curves for each pulse
+            for i, intensity in enumerate(intensities):
+                intensities[i][:] = normalize_curve(
+                    intensity, momentum, *auc_x_range)
         else:
             _, roi1_hist, _ = processed.roi.roi1_hist
             _, roi2_hist, _ = processed.roi.roi2_hist
-            _, roi1_hist_ref, _ = processed.roi.roi1_hist_ref
-            _, roi2_hist_ref, _ = processed.roi.roi2_hist_ref
 
             denominator = 0
-            denominator_ref = 0
             try:
                 if self.normalizer == AiNormalizer.ROI1:
                     denominator = roi1_hist[-1]
-                    denominator_ref = roi1_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI2:
                     denominator = roi2_hist[-1]
-                    denominator_ref = roi2_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI_SUM:
                     denominator = roi1_hist[-1] + roi2_hist[-1]
-                    denominator_ref = roi1_hist_ref[-1] + roi2_hist_ref[-1]
                 elif self.normalizer == AiNormalizer.ROI_SUB:
                     denominator = roi1_hist[-1] - roi2_hist[-1]
-                    denominator_ref = roi1_hist_ref[-1] - roi2_hist_ref[-1]
 
             except IndexError as e:
                 # this could happen if the history is clear just now
@@ -212,29 +218,20 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             if denominator == 0:
                 raise ProcessingError(
                     "Invalid normalizer: sum of ROI(s) is zero!")
-            intensities_mean /= denominator
+            intensity_mean /= denominator
             intensities /= denominator
-
-            if ref_intensity is not None:
-                if denominator_ref == 0:
-                    raise ProcessingError(
-                        "Invalid reference normalizer: sum of ROI(s) is zero!")
-                ref_intensity /= denominator_ref
-            else:
-                ref_intensity = np.zeros_like(intensities_mean)
 
         processed.ai.momentum = momentum
         processed.ai.intensities = intensities
-        processed.ai.intensity_mean = intensities_mean
-        processed.ai.reference_intensity = ref_intensity
+        processed.ai.intensity_mean = intensity_mean
 
 
-class PulseResolvedAiFomProcessor(LeafProcessor):
-    """PulseResolvedAiFomProcessor.
+class AiPulseFomProcessor(LeafProcessor):
+    """AiPulseFomProcessor class.
 
-    Only for pulse-resolved detectors.
+    Calculate azimuthal integration FOM for pulse-resolved detectors.
     """
-    @profiler("Pulse-resolved azimuthal integration FOM processor")
+    @profiler("Azimuthal integration pulsed FOM processor")
     def process(self, processed, raw=None):
         """Override."""
         if processed.n_pulses == 1:
@@ -254,3 +251,135 @@ class PulseResolvedAiFomProcessor(LeafProcessor):
             foms.append(np.sum(np.abs(fom)))
 
         processed.ai.pulse_fom = foms
+
+
+class AiPumpProbeProcessor(CompositeProcessor):
+    """AiPumpProbeProcessor class.
+
+    Calculate azimuthal integration FOM for a pair of on and off images.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.add(AiPumpProbeNormProcessor())
+        self.add(AiPumpProbeFomProcessor())
+
+    @profiler("Azimuthal integration pump-probe processor")
+    def process(self, processed, raw=None):
+        if processed.pp.analysis_type != PumpProbeType.AZIMUTHAL_INTEGRATION:
+            raise StopCompositionProcessing
+
+        on_image = processed.pp.on_image_mean
+        off_image = processed.pp.off_image_mean
+        if on_image is None or off_image is None:
+            raise StopCompositionProcessing
+
+        cx, cy = self.integration_center
+        integration_points = self.integration_points
+        integration_method = self.integration_method
+        integration_range = self.integration_range
+
+        image_mask = processed.image.image_mask
+
+        pixel_size = processed.image.pixel_size
+        poni2, poni1 = processed.image.pos_inv(cx, cy)
+        mask_min, mask_max = processed.image.threshold_mask
+
+        ai = AzimuthalIntegrator(dist=self.sample_distance,
+                                 poni1=poni1 * pixel_size,
+                                 poni2=poni2 * pixel_size,
+                                 pixel1=pixel_size,
+                                 pixel2=pixel_size,
+                                 rot1=0,
+                                 rot2=0,
+                                 rot3=0,
+                                 wavelength=self.wavelength)
+
+        def _integrate1d_on_off_imp(img):
+            """Use for multiprocessing."""
+            mask = np.copy(image_mask)
+            # merge image mask and threshold mask
+            mask[(img <= mask_min) | (img >= mask_max)] = 1
+
+            # do integration
+            ret = ai.integrate1d(img,
+                                 integration_points,
+                                 method=integration_method,
+                                 mask=mask,
+                                 radial_range=integration_range,
+                                 correctSolidAngle=True,
+                                 polarization_factor=1,
+                                 unit="q_A^-1")
+
+            return ret.radial, ret.intensity
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            rets = executor.map(_integrate1d_on_off_imp, [on_image, off_image])
+
+        momentums, intensities = zip(*rets)
+        processed.pp.x_data = momentums[0]
+        processed.pp.on_data = intensities[0]
+        processed.pp.off_data = intensities[1]
+
+
+class AiPumpProbeNormProcessor(LeafProcessor):
+    """AiPumpProbeNormProcessor class.
+
+    Normalize the pump-probe azimuthal integration result.
+    """
+    @profiler("Azimuthal integration pump-probe normalization processor")
+    def process(self, processed, raw=None):
+        x_data = processed.pp.x_data
+        on_data = processed.pp.on_data
+        off_data = processed.pp.off_data
+        auc_x_range = self.auc_x_range
+
+        if self.normalizer == AiNormalizer.AUC:
+            on_data = normalize_curve(on_data, x_data, *auc_x_range)
+            off_data = normalize_curve(off_data, x_data, *auc_x_range)
+        else:
+            _, roi1_hist, _ = processed.roi.roi1_hist
+            _, roi2_hist, _ = processed.roi.roi2_hist
+
+            denominator = 0
+            try:
+                if self.normalizer == AiNormalizer.ROI1:
+                    denominator = roi1_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI2:
+                    denominator = roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI_SUM:
+                    denominator = roi1_hist[-1] + roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI_SUB:
+                    denominator = roi1_hist[-1] - roi2_hist[-1]
+
+            except IndexError as e:
+                # this could happen if the history is clear just now
+                raise ProcessingError(e)
+
+            if denominator == 0:
+                raise ProcessingError(
+                    "Invalid normalizer: sum of ROI(s) is zero!")
+            on_data /= denominator
+            off_data /= denominator
+
+        processed.pp.on_data = on_data
+        processed.pp.off_data = off_data
+
+
+class AiPumpProbeFomProcessor(LeafProcessor):
+    """AiPumpProbeFomProcessor class.
+
+    Calculate the pump-probe FOM.
+    """
+    @profiler("Azimuthal integration pump-probe FOM processor")
+    def process(self, processed, raw=None):
+        x_data = processed.pp.x_data
+        on_data = processed.pp.on_data
+        off_data = processed.pp.off_data
+
+        on_off_data = on_data - off_data
+        fom = slice_curve(on_off_data, x_data, *self.fom_itgt_range)[0]
+        fom = np.sum(np.abs(fom))
+
+        processed.pp.on_off_data = on_off_data
+        processed.pp.fom = (processed.tid, fom)

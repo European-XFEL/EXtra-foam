@@ -27,9 +27,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("General analysis setup", *args, **kwargs)
 
-        # default state is unchecked
-        self.enable_ai_cb = QtGui.QCheckBox("Enable azimuthal integration")
-
         # We keep the definitions of attributes which are not used in the
         # PULSE_RESOLVED = True case. It makes sense since these attributes
         # also appear in the defined methods.
@@ -60,7 +57,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             self.onVipPulseConfirmed)
 
         self._disabled_widgets_during_daq = [
-            self.enable_ai_cb,
             self._max_pulse_id_le,
         ]
 
@@ -74,18 +70,16 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self.enable_ai_cb, 0, 0, 1, 4)
-
         if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("Min. pulse ID: "), 1, 0, AR)
-            layout.addWidget(self._min_pulse_id_le, 1, 1)
-            layout.addWidget(QtGui.QLabel("Max. pulse ID: "), 1, 2, AR)
-            layout.addWidget(self._max_pulse_id_le, 1, 3)
+            layout.addWidget(QtGui.QLabel("Min. pulse ID: "), 0, 0, AR)
+            layout.addWidget(self._min_pulse_id_le, 0, 1)
+            layout.addWidget(QtGui.QLabel("Max. pulse ID: "), 0, 2, AR)
+            layout.addWidget(self._max_pulse_id_le, 0, 3)
 
-            layout.addWidget(QtGui.QLabel("VIP pulse ID 1: "), 2, 0, AR)
-            layout.addWidget(self._vip_pulse_id1_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("VIP pulse ID 2: "), 2, 2, AR)
-            layout.addWidget(self._vip_pulse_id2_le, 2, 3)
+            layout.addWidget(QtGui.QLabel("VIP pulse ID 1: "), 1, 0, AR)
+            layout.addWidget(self._vip_pulse_id1_le, 1, 1)
+            layout.addWidget(QtGui.QLabel("VIP pulse ID 2: "), 1, 2, AR)
+            layout.addWidget(self._vip_pulse_id2_le, 1, 3)
 
         self.setLayout(layout)
 
@@ -98,8 +92,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
-        self.enable_ai_cb.stateChanged.emit(self.enable_ai_cb.checkState())
-
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)

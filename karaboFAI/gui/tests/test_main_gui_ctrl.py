@@ -40,13 +40,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        # self.assertFalse(scheduler._ai_proc.isEnabled())
-
-        QTest.mouseClick(widget.enable_ai_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, widget.enable_ai_cb.height()/2))
         self.assertTrue(self.gui.updateSharedParameters())
-
-        # self.assertTrue(scheduler._ai_proc.isEnabled())
 
         # --------------------------
         # test setting VIP pulse IDs
@@ -112,6 +106,7 @@ class TestMainGui(unittest.TestCase):
 
         self.assertTrue(self.gui.updateSharedParameters())
 
+        self.assertFalse(scheduler._ai_proc.pulsed_ai)
         self.assertAlmostEqual(scheduler._ai_proc.wavelength, photon_wavelength, 13)
         self.assertAlmostEqual(scheduler._ai_proc.sample_distance, sample_dist)
         self.assertTupleEqual(scheduler._ai_proc.integration_center, (cx, cy))
@@ -125,6 +120,12 @@ class TestMainGui(unittest.TestCase):
                               fom_itgt_range)
 
         self.assertTupleEqual(scheduler._pp_proc.fom_itgt_range, fom_itgt_range)
+
+        # activate "pulsed azimuthal integration"
+        QTest.mouseClick(widget.pulsed_ai_cb, Qt.LeftButton,
+                         pos=QtCore.QPoint(2, widget.pulsed_ai_cb.height()/2))
+        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertTrue(scheduler._ai_proc.pulsed_ai)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget

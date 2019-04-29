@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import sys, traceback
 from queue import Empty, Full
 
 from scipy import constants
@@ -21,10 +22,10 @@ from .data_model import ProcessedData
 from .worker import Worker
 from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
-    PumpProbeProcessorFactory, RoiProcessor, XasProcessor
+    PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
-from ..config import config, PumpProbeType
+from ..config import config, FomName
 from ..helpers import profiler
 
 
@@ -46,12 +47,19 @@ class Scheduler(Worker):
         self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._data_aggregator = DataAggregator()
 
+        # processor pipeline flow:
+        #
+        # PumpProbeProcessor ->
+        #
+        # RoiProcessor, AzimuthalIntegrationProcessor ->
+        #
+        # CorrelationProcessor, XasProcessor
+
+        self._pp_proc = PumpProbeProcessor()
+
         self._roi_proc = RoiProcessor()
 
         self._ai_proc = AzimuthalIntegrationProcessor()
-
-        self._pp_proc = PumpProbeProcessorFactory.create(
-            PumpProbeType.AZIMUTHAL_INTEGRATION)
 
         self._correlation_proc = CorrelationProcessor()
 
@@ -95,6 +103,8 @@ class Scheduler(Worker):
             self._pp_proc.mode = mode
             self._pp_proc.reset()
             ProcessedData.clear_pp_hist()
+            if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
+                ProcessedData.clear_correlation_hist()
 
         self._pp_proc.on_pulse_ids = on_pulse_ids
         self._pp_proc.off_pulse_ids = off_pulse_ids
@@ -102,6 +112,9 @@ class Scheduler(Worker):
     @QtCore.pyqtSlot(object)
     def onPpAnalysisTypeChange(self, value):
         self._pp_proc.analysis_type = value
+        ProcessedData.clear_pp_hist()
+        if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
+            ProcessedData.clear_correlation_hist()
 
     @QtCore.pyqtSlot(int)
     def onPpDifferenceTypeChange(self, state):
@@ -154,9 +167,8 @@ class Scheduler(Worker):
         self._pp_proc.reset()
 
     @QtCore.pyqtSlot(int)
-    def onEnableAiStateChange(self, state):
-        enabled = state == QtCore.Qt.Checked
-        self._ai_proc.enabled = enabled
+    def onPulsedAiStateChange(self, state):
+        self._ai_proc.pulsed_ai = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot()
     def onCorrelationReset(self):
@@ -187,13 +199,13 @@ class Scheduler(Worker):
     @QtCore.pyqtSlot(int, bool, int, int, int, int)
     def onRoiRegionChange(self, rank, activated, w, h, px, py):
         if activated:
-            self._roi_proc.set(rank, (w, h, px, py))
+            self._roi_proc.set_roi(rank, (w, h, px, py))
         else:
-            self._roi_proc.set(rank, None)
+            self._roi_proc.set_roi(rank, None)
 
     @QtCore.pyqtSlot(object)
     def onRoiFomChange(self, value):
-        self._roi_proc.roi_fom = value
+        self._roi_proc.fom_type = value
         ProcessedData.clear_roi_hist()
 
     def clear_roi_hist(self):
@@ -262,6 +274,9 @@ class Scheduler(Worker):
             try:
                 task.run_once(processed, raw)
             except ProcessingError as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                # TODO: to be improved by having something like self.log.debug
+                print(repr(traceback.format_tb(exc_traceback)))
                 self.log(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
                 self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))

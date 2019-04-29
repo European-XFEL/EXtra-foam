@@ -14,8 +14,8 @@ from ..pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..plot_widgets import (
-    PumpProbeImageView, LaserOnOffAiWidget, LaserOnOffDiffWidget,
-    LaserOnOffFomWidget
+    PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeDiffWidget,
+    PumpProbeFomWidget
 )
 
 
@@ -47,9 +47,9 @@ class PumpProbeWindow(DockerWindow):
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)
 
-        self._pp_fom = LaserOnOffFomWidget(parent=self)
-        self._pp_ai = LaserOnOffAiWidget(parent=self)
-        self._pp_diff = LaserOnOffDiffWidget(parent=self)
+        self._pp_fom = PumpProbeFomWidget(parent=self)
+        self._pp_ai = PumpProbeOnOffWidget(parent=self)
+        self._pp_diff = PumpProbeDiffWidget(parent=self)
 
         self.initUI()
 

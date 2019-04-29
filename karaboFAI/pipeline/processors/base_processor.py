@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
+import copy
 
 
 class State(ABC):
@@ -76,6 +77,15 @@ class SharedProperty:
 
     def __set__(self, instance, value):
         instance._params[self.name] = value
+
+
+class StopCompositionProcessing(Exception):
+    """StopCompositionProcessing
+
+    Exception raise in the process() method which will be called by the
+    parent processor to stop the rest child processors.
+    """
+    pass
 
 
 class MetaProcessor(type):
@@ -169,10 +179,17 @@ class CompositeProcessor(_BaseProcessor):
         return self._children.pop(-1)
 
     def run_once(self, processed, raw=None):
+        params = copy.deepcopy(self._params)  # froze all the shared properties
+        # StopCompositionProcessing it raises will be handled by its
+        # parent processor
         self.process(processed, raw)
+
         for child in self._children:
-            child._params.update(self._params)
-            child.run_once(processed, raw)
+            child._params.update(params)
+            try:
+                child.run_once(processed, raw)
+            except StopCompositionProcessing:
+                break
 
     def reset_all(self):
         self.reset()

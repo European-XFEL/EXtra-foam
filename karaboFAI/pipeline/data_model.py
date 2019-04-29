@@ -235,14 +235,15 @@ class RoiData(AbstractData):
         if not cls.__initialized:
             for i, _ in enumerate(config["ROI_COLORS"], 1):
                 setattr(cls, f"roi{i}_hist", PairData())
-                setattr(cls, f"roi{i}_hist_ref", PairData())
             cls.__initialized = True
         return instance
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for i, _ in enumerate(config["ROI_COLORS"], 1):
-            setattr(self, f"roi{i}", None)   # (w, h, px, py)
+            setattr(self, f"roi{i}", None)  # (w, h, px, py)
+            setattr(self, f"roi{i}_proj_x", None)  # projection on x
+            setattr(self, f"roi{i}_proj_y", None)  # projection on y
 
 
 class AzimuthalIntegrationData(AbstractData):
@@ -254,7 +255,6 @@ class AzimuthalIntegrationData(AbstractData):
         self.momentum = None
         self.intensities = None
         self.intensity_mean = None
-        self.reference_intensity = None
         self.pulse_fom = None
 
 
@@ -270,6 +270,8 @@ class PumpProbeData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.analysis_type = None
+
         # on/off image means are the average images for on/off pulses
         self.on_image_mean = None
         self.off_image_mean = None
@@ -277,6 +279,9 @@ class PumpProbeData(AbstractData):
         # on/off data are the azimuthal integration result / ROI image /
         # projection of image, depending on the type of the pump-probe
         # experiment
+        self.x_data = None
+
+        # on/off data for the current train
         self.on_data = None
         self.off_data = None
         self.on_off_data = None
