@@ -112,7 +112,7 @@ class _BaseProcessor(metaclass=MetaProcessor):
                 raise
 
     @abstractmethod
-    def process(self, processed, raw=None):
+    def run_once(self, processed, raw=None):
         """Composition interface.
 
         :param ProcessedData processed: processed data.
@@ -120,8 +120,15 @@ class _BaseProcessor(metaclass=MetaProcessor):
         """
         pass
 
-    def run(self, processed, raw):
+    def process(self, processed, raw):
         """Process data."""
+        pass
+
+    @abstractmethod
+    def reset_all(self):
+        pass
+
+    def reset(self):
         pass
 
     def set_parent(self, parent):
@@ -134,11 +141,14 @@ class LeafProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-    def process(self, processed, raw=None):
+    def run_once(self, processed, raw=None):
         # self._state = self._state.next()
         # self._state.update(self)
-        self.run(processed, raw)
+        self.process(processed, raw)
         # self._state = self._state.next()
+
+    def reset_all(self):
+        self.reset()
 
 
 class CompositeProcessor(_BaseProcessor):
@@ -154,7 +164,13 @@ class CompositeProcessor(_BaseProcessor):
     def remove(self, child):
         self._children.remove(child)
 
-    def process(self, processed, raw=None):
+    def run_once(self, processed, raw=None):
+        self.process(processed, raw)
         for child in self._children:
             child._params.update(self._params)
-            child.process(processed, raw)
+            child.run_once(processed, raw)
+
+    def reset_all(self):
+        self.reset()
+        for child in self._children:
+            child.reset_all()

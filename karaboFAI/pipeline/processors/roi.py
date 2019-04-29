@@ -36,7 +36,7 @@ class RoiProcessor(LeafProcessor):
         self._rois[rank-1] = value
 
     @profiler("ROI processor")
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         """Override.
 
         Note: We need to put some data in the history, even if ROI is not

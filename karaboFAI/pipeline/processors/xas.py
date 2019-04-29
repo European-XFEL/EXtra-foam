@@ -47,7 +47,7 @@ class XasProcessor(LeafProcessor):
         self.reset()
 
     @profiler("XAS processor")
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         """Override."""
         intensity = processed.xgm.intensity
         if not intensity:

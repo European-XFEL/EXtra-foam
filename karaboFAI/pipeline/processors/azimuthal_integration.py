@@ -66,7 +66,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
 class PulseAiProcessor(LeafProcessor):
     @profiler("Azimuthal integration processor")
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         sample_distance = self.sample_distance
         wavelength = self.wavelength
         cx, cy = self.integration_center
@@ -241,7 +241,7 @@ class PulseResolvedAiFomProcessor(LeafProcessor):
     Only for pulse-resolved detectors.
     """
     @profiler("Pulse-resolved azimuthal integration FOM processor")
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         """Override."""
         if processed.n_pulses == 1:
             # train-resolved

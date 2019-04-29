@@ -29,7 +29,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         # ROIs are all None
         self.assertEqual(len(config["ROI_COLORS"]), len(self._proc._rois))
         self.assertEqual(None, self._rois[0])
-        self._proc.process(self._proc_data)
+        self._proc.run_once(self._proc_data)
 
         # Set ROI1 and ROI4
         self._proc.set(1, (2, 2, 0, 0))
@@ -39,7 +39,7 @@ class TestCorrelationProcessor(unittest.TestCase):
 
         # FOM of roi is None
         self.assertEqual(None, self._proc.roi_fom)
-        self._proc.process(self._proc_data)
+        self._proc.run_once(self._proc_data)
         self.assertEqual(self._proc_data.roi.roi1, self._rois[0])
         self.assertEqual(self._proc_data.roi.roi2, self._rois[1])
         self.assertEqual(self._proc_data.roi.roi3, self._rois[2])
@@ -50,7 +50,7 @@ class TestCorrelationProcessor(unittest.TestCase):
 
         # FOM of roi is SUM
         self._proc.roi_fom = RoiFom.SUM
-        self._proc.process(self._proc_data)
+        self._proc.run_once(self._proc_data)
         tid, value, _ = self._proc_data.roi.roi1_hist
         np.testing.assert_array_equal([0, 0, 4], value)
         tid, value, _ = self._proc_data.roi.roi2_hist
@@ -67,7 +67,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         # set a reference image
         self._proc_data._image_data.set_reference()
         self._proc_data._image_data.update()
-        self._proc.process(self._proc_data)
+        self._proc.run_once(self._proc_data)
 
         tid, value, _ = self._proc_data.roi.roi1_hist_ref
         np.testing.assert_array_equal([0, 0, 0, 4], value)

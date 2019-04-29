@@ -47,12 +47,12 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.on_pulse_ids = [0, 2]
         self._proc.off_pulse_ids = [1, 3, 5]
         with self.assertRaisesRegex(ProcessingError, "Out of range: off"):
-            self._proc.process(data)
+            self._proc.run_once(data)
 
         self._proc.on_pulse_ids = [0, 2, 4]
         self._proc.off_pulse_ids = [1, 3]
         with self.assertRaisesRegex(ProcessingError, "Out of range: on"):
-            self._proc.process(data)
+            self._proc.run_once(data)
 
     def testPreDefinedOff(self):
         pass
@@ -69,7 +69,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 1st train
         data = self._data[0]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -85,7 +85,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 2nd train
         data = self._data[1]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -101,7 +101,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 3rd train
         data = self._data[2]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -132,7 +132,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 1st train
         data = self._data[0]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(1, self._proc._ma_count)
         on_data_gt = np.array([0, 1, 0, 1, 0])
@@ -147,7 +147,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 2nd train
         data = self._data[1]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(2, self._proc._ma_count)
         on_data_gt = np.array([0, 1.5, 0, 1.5, 0])
@@ -162,7 +162,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 3rd train
         data = self._data[2]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(3, self._proc._ma_count)
         on_data_gt = np.array([0, 2, 0, 2, 0])
@@ -177,7 +177,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 4th train
         data = self._data[3]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         # Since the moving average is an approximation, it gives 2.666667
         # instead of (2 + 3 + 4) / 3 = 3.
@@ -205,7 +205,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 1st train
         data = self._data[0]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_ON)
 
@@ -218,7 +218,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 2nd train
         data = self._data[1]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -233,7 +233,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 3rd train
         data = self._data[2]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_ON)
 
@@ -246,7 +246,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 4th train
         data = self._data[3]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -263,7 +263,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 6th train (off pulse is followed by an off pulse)
         data = self._data[5]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_OFF)
 
@@ -275,7 +275,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 7th train
         data = self._data[6]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_ON)
 
@@ -288,7 +288,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 7th train was sent twice (on train is followed by an on train)
         data = self._data[6]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_ON)
 
@@ -303,7 +303,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 9th train (on train is followed by an on train)
         data = self._data[8]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_ON)
 
@@ -316,7 +316,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 10th train
         data = self._data[9]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -344,7 +344,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 1st train
         data = self._data[0]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_OFF)
 
@@ -356,7 +356,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 2nd train
         data = self._data[1]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_ON)
 
@@ -369,7 +369,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 3rd train
         data = self._data[2]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.ON_OFF)
 
@@ -384,7 +384,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 4th train
         data = self._data[3]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         self.assertEqual(self._proc._state, _State.OFF_ON)
 
@@ -397,7 +397,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
 
         # 5th train
         data = self._data[4]
-        self._proc.process(data)
+        self._proc.run_once(data)
 
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
         off_data_gt = np.array([5, 0, 5, 0, 5])

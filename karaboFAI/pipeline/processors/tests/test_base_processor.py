@@ -62,25 +62,44 @@ class TestBaseProcessor(unittest.TestCase):
         self.assertEqual(None, self._comp2._params['param2'])
         self.assertEqual(2, len(self._comp2._params))
 
-    def testProcess(self):
-        self._leaf1.run = MagicMock()
-        self._leaf1.process(self._processed, self._raw)
-        self._leaf1.run.assert_called_once_with(self._processed, self._raw)
-        self._leaf1.run.reset_mock()
+    def testProcessInterface(self):
+        self._leaf1.process = MagicMock()
+        self._leaf1.run_once(self._processed, self._raw)
+        self._leaf1.process.assert_called_once_with(self._processed, self._raw)
+        self._leaf1.process.reset_mock()
 
-        self._leaf2.run = MagicMock()
-        self._comp2.process(self._processed, self._raw)
-        self._leaf2.run.assert_called_once_with(self._processed, self._raw)
-        self._leaf1.run.assert_called_once_with(self._processed, self._raw)
+        self._leaf2.process = MagicMock()
+        self._comp1.process = MagicMock()
+        self._comp2.process = MagicMock()
+        self._comp2.run_once(self._processed, self._raw)
+        self._leaf1.process.assert_called_once_with(self._processed, self._raw)
+        self._leaf2.process.assert_called_once_with(self._processed, self._raw)
+        self._comp1.process.assert_called_once_with(self._processed, self._raw)
+        self._comp2.process.assert_called_once_with(self._processed, self._raw)
+
+    def testResetInterface(self):
+        self._leaf1.reset = MagicMock()
+        self._leaf1.reset_all()
+        self._leaf1.reset.assert_called_once_with()
+        self._leaf1.reset.reset_mock()
+
+        self._leaf2.reset = MagicMock()
+        self._comp1.reset = MagicMock()
+        self._comp2.reset = MagicMock()
+        self._comp2.reset_all()
+        self._leaf1.reset.assert_called_once_with()
+        self._leaf2.reset.assert_called_once_with()
+        self._comp1.reset.assert_called_once_with()
+        self._comp2.reset.assert_called_once_with()
 
     def testSharedPropertyPropagation(self):
         self._comp1.param1 = 1
-        self._comp1.process(self._processed)
+        self._comp1.run_once(self._processed)
         self.assertEqual(1, self._leaf1.param1)
 
         self._comp2.param1 = 2
         self._comp2.param2 = 3
-        self._comp2.process(self._processed)
+        self._comp2.run_once(self._processed)
         # overridden by the parent class
         self.assertEqual(2, self._leaf1.param1)
         self.assertEqual(3, self._leaf1.param2)

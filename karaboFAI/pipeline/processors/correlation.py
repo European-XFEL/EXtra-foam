@@ -37,7 +37,7 @@ class CorrelationProcessor(CompositeProcessor):
 
 class CorrelationFomProcessor(LeafProcessor):
     @profiler("Correlation processor")
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         """Override."""
         if self.fom_name is None or self.fom_name == FomName.UNDEFINED:
             return

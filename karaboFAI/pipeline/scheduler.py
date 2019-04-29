@@ -260,7 +260,7 @@ class Scheduler(Worker):
 
         for task in self._tasks:
             try:
-                task.process(processed, raw)
+                task.run_once(processed, raw)
             except ProcessingError as e:
                 self.log(f"Train ID: {tid}: " + repr(e))
             except Exception as e:

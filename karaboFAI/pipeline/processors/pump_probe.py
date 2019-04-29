@@ -73,7 +73,7 @@ class _BasePumpProbeProcessor(LeafProcessor):
 
         self._ma_window = v
 
-    def run(self, processed, raw=None):
+    def process(self, processed, raw=None):
         """Override."""
         # TODO: implement
         pass
@@ -156,7 +156,7 @@ class PumpProbeProcessorFactory:
             self.fom_itgt_range = None
 
         @profiler("Pump-probe processor")
-        def run(self, processed, raw=None):
+        def process(self, processed, raw=None):
             """Override."""
             if self.mode == PumpProbeMode.UNDEFINED:
                 return

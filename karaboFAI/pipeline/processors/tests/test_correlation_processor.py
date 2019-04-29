@@ -15,13 +15,13 @@ class TestCorrelationProcessor(unittest.TestCase):
             self._proc.fom_name = fom
             if fom == FomName.PUMP_PROBE_FOM:
                 with self.assertRaisesRegex(ProcessingError, "Pump-probe"):
-                    self._proc.process(ProcessedData(1))
+                    self._proc.run_once(ProcessedData(1))
             elif fom == FomName.AI_MEAN:
                 with self.assertRaisesRegex(ProcessingError, "result is not"):
-                    self._proc.process(ProcessedData(1))
+                    self._proc.run_once(ProcessedData(1))
             else:
-                self._proc.process(ProcessedData(1))
+                self._proc.run_once(ProcessedData(1))
 
         self._proc.fom_name = "unknown"
         with self.assertRaisesRegex(ProcessingError, "Unknown"):
-            self._proc.process(ProcessedData(1))
+            self._proc.run_once(ProcessedData(1))
