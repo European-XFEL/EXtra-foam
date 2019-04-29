@@ -164,6 +164,10 @@ class CompositeProcessor(_BaseProcessor):
     def remove(self, child):
         self._children.remove(child)
 
+    def pop(self):
+        """Remove and return the last child."""
+        return self._children.pop(-1)
+
     def run_once(self, processed, raw=None):
         self.process(processed, raw)
         for child in self._children:

@@ -48,6 +48,17 @@ class TestBaseProcessor(unittest.TestCase):
         # sequence matters
         self.assertListEqual([self._comp1, self._leaf2], self._comp2._children)
 
+        leaf1 = self._comp1.pop()
+        self.assertListEqual([], self._comp1._children)
+        self.assertIs(leaf1, self._leaf1)
+
+        leaf2 = self._comp2.pop()
+        self.assertListEqual([self._comp1], self._comp2._children)
+        self.assertIs(leaf2, self._leaf2)
+
+        self._comp2.remove(self._comp1)
+        self.assertListEqual([], self._comp2._children)
+
     def testSharedPropertyInitialization(self):
         self.assertEqual(0, len(self._comp1._params))
         # if a key does not exist, it will be assigned to None when visited
