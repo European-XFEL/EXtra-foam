@@ -20,6 +20,14 @@ from ...config import PumpProbeMode, PumpProbeType
 from ...helpers import profiler
 
 
+class _PP_State(IntEnum):
+    """Representation of the previous/current pulse type."""
+    OFF_OFF = 0  # 0b00
+    OFF_ON = 1  # 0b01
+    ON_OFF = 2  # 0b10
+    ON_ON = 3  # 0b11
+
+
 class _BasePumpProbeProcessor(LeafProcessor):
     """BasePumpProbeProcessor class.
 
@@ -32,12 +40,6 @@ class _BasePumpProbeProcessor(LeafProcessor):
         _ma_window (int): moving average window size.
         _ma_count (int): moving average window count.
     """
-    class State(IntEnum):
-        """Representation of the previous/current pulse type."""
-        OFF_OFF = 0  # 0b00
-        OFF_ON = 1  # 0b01
-        ON_OFF = 2  # 0b10
-        ON_ON = 3  # 0b11
 
     def __init__(self):
         super().__init__()
@@ -54,7 +56,7 @@ class _BasePumpProbeProcessor(LeafProcessor):
         self._ma_off = None
         self._ma_on_off = None
         self._prev_on = None
-        self._state = self.State.OFF_OFF
+        self._state = _PP_State.OFF_OFF
 
     @property
     def ma_window(self):
@@ -96,7 +98,7 @@ class _BasePumpProbeProcessor(LeafProcessor):
 
         if self.mode in (
                 PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
-            self._state = self.State.ON_OFF
+            self._state = _PP_State.ON_OFF
         else:
             # compare laser-on/off pulses in different trains
             if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
@@ -109,15 +111,15 @@ class _BasePumpProbeProcessor(LeafProcessor):
             if processed.tid % 2 == 1 ^ flag:
                 # off received
                 if self._is_previous_on():
-                    self._state = self.State.ON_OFF
+                    self._state = _PP_State.ON_OFF
                 else:
-                    self._state = self.State.OFF_OFF
+                    self._state = _PP_State.OFF_OFF
             else:
                 # on received
                 if self._is_previous_on():
-                    self._state = self.State.ON_ON
+                    self._state = _PP_State.ON_ON
                 else:
-                    self._state = self.State.OFF_ON
+                    self._state = _PP_State.OFF_ON
 
     def _is_previous_on(self):
         return 0b01 & self._state == 1
@@ -130,7 +132,7 @@ class _BasePumpProbeProcessor(LeafProcessor):
         self._ma_on_off = None
         self._prev_on = None
 
-        self._state = self.State.OFF_OFF
+        self._state = _PP_State.OFF_OFF
 
 
 class PumpProbeProcessorFactory:
@@ -183,7 +185,7 @@ class PumpProbeProcessorFactory:
 
             if self._is_previous_on():
                 self._prev_on = intensities[on_pulse_ids].mean(axis=0)
-            elif self._state == self.State.ON_OFF:
+            elif self._state == _PP_State.ON_OFF:
                 if self._prev_on is None:
                     this_on = intensities[on_pulse_ids].mean(axis=0)
                 else:
@@ -224,7 +226,7 @@ class PumpProbeProcessorFactory:
                 else:
                     fom = np.sum(fom)
 
-            # do nothing if self._state = self.State.OFF_OFF
+            # do nothing if self._state = _PP_State.OFF_OFF
 
             if fom is not None:
                 processed.pp.on_data = self._ma_on

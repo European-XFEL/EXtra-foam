@@ -8,10 +8,9 @@ from karaboFAI.pipeline.data_model import (
     PumpProbeData, ProcessedData
 )
 from karaboFAI.pipeline.processors import PumpProbeProcessorFactory
-from karaboFAI.pipeline.processors.pump_probe import _BasePumpProbeProcessor
-
-
-_State = _BasePumpProbeProcessor.State
+from karaboFAI.pipeline.processors.pump_probe import (
+    _PP_State, _BasePumpProbeProcessor
+)
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
@@ -65,13 +64,13 @@ class TestPumpProbeProcessor(unittest.TestCase):
         fom_hist_gt = []
         train_ids_gt = []
 
-        self.assertEqual(self._proc._state, _State.OFF_OFF)
+        self.assertEqual(self._proc._state, _PP_State.OFF_OFF)
 
         # 1st train
         data = self._data[0]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         on_data_gt = np.array([0, 1, 0, 1, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -87,7 +86,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         on_data_gt = np.array([0, 2, 0, 2, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -103,7 +102,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         on_data_gt = np.array([0, 3, 0, 3, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -201,13 +200,13 @@ class TestPumpProbeProcessor(unittest.TestCase):
         fom_hist_gt = []
         train_ids_gt = []
 
-        self.assertEqual(self._proc._state, _State.OFF_OFF)
+        self.assertEqual(self._proc._state, _PP_State.OFF_OFF)
 
         # 1st train
         data = self._data[0]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_ON)
+        self.assertEqual(self._proc._state, _PP_State.OFF_ON)
 
         on_data_gt = np.array([0, 1, 0, 1, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -220,7 +219,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
         off_data_gt = np.array([2, 0, 2, 0, 2])
@@ -235,7 +234,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_ON)
+        self.assertEqual(self._proc._state, _PP_State.OFF_ON)
 
         on_data_gt = np.array([0, 3, 0, 3, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -248,7 +247,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
         off_data_gt = np.array([4, 0, 4, 0, 4])
@@ -265,7 +264,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[5]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_OFF)
+        self.assertEqual(self._proc._state, _PP_State.OFF_OFF)
 
         self.assertTrue(data.pp.on_data is None)
         self.assertTrue(data.pp.off_data is None)
@@ -277,7 +276,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_ON)
+        self.assertEqual(self._proc._state, _PP_State.OFF_ON)
 
         on_data_gt = np.array([0, 7, 0, 7, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -290,7 +289,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[6]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_ON)
+        self.assertEqual(self._proc._state, _PP_State.ON_ON)
 
         on_data_gt = np.array([0, 7, 0, 7, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -305,7 +304,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[8]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_ON)
+        self.assertEqual(self._proc._state, _PP_State.ON_ON)
 
         on_data_gt = np.array([0, 9, 0, 9, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -318,7 +317,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[9]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         on_data_gt = np.array([0, 9, 0, 9, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -340,13 +339,13 @@ class TestPumpProbeProcessor(unittest.TestCase):
         fom_hist_gt = []
         train_ids_gt = []
 
-        self.assertEqual(self._proc._state, _State.OFF_OFF)
+        self.assertEqual(self._proc._state, _PP_State.OFF_OFF)
 
         # 1st train
         data = self._data[0]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_OFF)
+        self.assertEqual(self._proc._state, _PP_State.OFF_OFF)
 
         self.assertTrue(data.pp.on_data is None)
         self.assertTrue(data.pp.off_data is None)
@@ -358,7 +357,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[1]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_ON)
+        self.assertEqual(self._proc._state, _PP_State.OFF_ON)
 
         on_data_gt = np.array([0, 2, 0, 2, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
@@ -371,7 +370,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[2]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.ON_OFF)
+        self.assertEqual(self._proc._state, _PP_State.ON_OFF)
 
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
         off_data_gt = np.array([3, 0, 3, 0, 3])
@@ -386,7 +385,7 @@ class TestPumpProbeProcessor(unittest.TestCase):
         data = self._data[3]
         self._proc.run_once(data)
 
-        self.assertEqual(self._proc._state, _State.OFF_ON)
+        self.assertEqual(self._proc._state, _PP_State.OFF_ON)
 
         on_data_gt = np.array([0, 4, 0, 4, 0])
         np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
