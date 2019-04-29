@@ -57,14 +57,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self.add(PulseAiProcessor())
+        self.add(PulseResolvedAiFomProcessor())
 
-        next = CompositeProcessor()
-        next.add(PulseResolvedAiFomProcessor())
-        self.add(next)
-
-
-class PulseAiProcessor(LeafProcessor):
     @profiler("Azimuthal integration processor")
     def process(self, processed, raw=None):
         sample_distance = self.sample_distance
