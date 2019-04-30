@@ -264,23 +264,23 @@ class PumpProbeOnOffWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        x = data.pp.x_data
-        on_intensity = data.pp.on_data
-        off_intensity = data.pp.off_data
+        x, on, off, on_off = data.pp.data
+        if x is None:
+            return
 
-        if on_intensity is None:
+        if on is None:
             self._data = None
         else:
-            if off_intensity is None:
+            if off is None:
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
-                x, on_intensity, off_intensity = self._data
+                x, on, off = self._data
             else:
-                self._data = (x, on_intensity, off_intensity)
+                self._data = (x, on, off)
 
-            self._on_pulse.setData(x, on_intensity)
-            self._off_pulse.setData(x, off_intensity)
+            self._on_pulse.setData(x, on)
+            self._off_pulse.setData(x, off)
 
 
 class PumpProbeDiffWidget(PlotWidget):
@@ -308,21 +308,20 @@ class PumpProbeDiffWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        x = data.pp.x_data
-        on_intensity = data.pp.on_data
-        off_intensity = data.pp.off_data
-        on_off_intensity = data.pp.on_off_data
+        x, on, off, on_off = data.pp.data
+        if x is None:
+            return
 
-        if on_intensity is None:
+        if on is None:
             self._data = None
         else:
-            if off_intensity is None:
+            if off is None:
                 if self._data is None:
                     return
                 # on-pulse arrives but off-pulse does not
                 diff = self._data
             else:
-                diff = on_off_intensity
+                diff = on_off
                 self._data = diff
 
             self._plot.setData(x, diff)

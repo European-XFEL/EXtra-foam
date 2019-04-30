@@ -267,24 +267,112 @@ class PumpProbeData(AbstractData):
     # the sum of ROI.
     fom = PairData()
 
+    class MovingAverage:
+        def __init__(self):
+            self._x = None
+            self._on_ma = None  # moving average of on data
+            self._off_ma = None  # moving average of off data
+            self._on_off_ma = None  # moving average of on - off data
+
+            self._ma_window = 1
+            self._ma_count = 0
+
+            self._lock = Lock()
+
+        def __get__(self, instance, instance_type):
+            return self._x, self._on_ma, self._off_ma, self._on_off_ma
+
+        def __set__(self, instance, data):
+            x, on, off = data
+
+            with self._lock:
+                self._x = x
+                if self._ma_window > 1 and self._ma_count > 0:
+                    if self._ma_count < self._ma_window:
+                        self._ma_count += 1
+                        denominator = self._ma_count
+                    else:   # self._ma_count == self._ma_window
+                        # here is an approximation
+                        denominator = self._ma_window
+                    self._on_ma += (on - self._on_ma) / denominator
+                    self._off_ma += (off - self._off_ma) / denominator
+
+                else:  # self._ma_window == 1
+                    self._on_ma = on
+                    self._off_ma = off
+                    if self._ma_window > 1:
+                        self._ma_count = 1  # 0 -> 1
+
+                self._on_off_ma = self._on_ma - self._off_ma
+
+        @property
+        def moving_average_window(self):
+            return self._ma_window
+
+        @moving_average_window.setter
+        def moving_average_window(self, v):
+            if not isinstance(v, int) or v < 0:
+                v = 1
+
+            if v < self._ma_window:
+                # if the new window size is smaller than the current one,
+                # we reset the original image sum and count
+                with self._lock:
+                    self._ma_window = v
+                    self._ma_count = 0
+                    self._x = None
+                    self._on_ma = None
+                    self._off_ma = None
+                    self._on_off_ma = None
+
+            self._ma_window = v
+
+        @property
+        def moving_average_count(self):
+            return self._ma_count
+
+        def reset(self):
+            with self._lock:
+                self._x = None
+                self._on_ma = None
+                self._off_ma = None
+                self._on_off_ma = None
+                self._ma_window = 1
+                self._ma_count = 0
+
+    # Moving average of the on/off data in pump-probe experiments, for
+    # example: azimuthal integration / ROI / 1D projection, etc.
+    data = MovingAverage()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.analysis_type = None
 
-        # on/off image means are the average images for on/off pulses
+        # the current average of on/off images
         self.on_image_mean = None
         self.off_image_mean = None
 
-        # on/off data are the azimuthal integration result / ROI image /
-        # projection of image, depending on the type of the pump-probe
-        # experiment
-        self.x_data = None
+    @property
+    def ma_window(self):
+        return self.__class__.__dict__['data'].moving_average_window
 
-        # on/off data for the current train
-        self.on_data = None
-        self.off_data = None
-        self.on_off_data = None
+    @ma_window.setter
+    def ma_window(self, v):
+        self.__class__.__dict__['data'].moving_average_window = v
+
+    @property
+    def ma_count(self):
+        return self.__class__.__dict__['data'].moving_average_count
+
+    @ma_count.setter
+    def ma_count(self, v):
+        self.__class__.__dict__['data'].moving_average_count = v
+
+    @classmethod
+    def clear(cls):
+        super().clear()
+        cls.__dict__['data'].reset()
 
 
 class CorrelationData(AbstractData):

@@ -148,14 +148,13 @@ class RoiPumpProbeFomProcessor(LeafProcessor):
         if roi is None:
             raise ProcessingError("ROI1 is inactivated or out of region")
 
-        on_image_roi = RoiProcessor.get_roi_image(roi, on_image)
-        off_image_roi = RoiProcessor.get_roi_image(roi, off_image)
-        # processed.pp.on_data = on_image_roi
-        # processed.pp.off_data = off_image_roi
-        on_off_image_roi = on_image_roi - off_image_roi
-        # processed.pp.on_off_data = on_off_image_roi
+        on_roi = RoiProcessor.get_roi_image(roi, on_image)
+        off_roi = RoiProcessor.get_roi_image(roi, off_image)
 
-        fom = fom_handler(on_off_image_roi)
+        processed.pp.data = (None, on_roi, off_roi)
+        _, _, _, on_off_roi_ma = processed.pp.data  # get the moving average
+
+        fom = fom_handler(on_off_roi_ma)
         processed.pp.fom = (processed.tid, fom)
 
 
@@ -192,10 +191,8 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         off_data = np.sum(off_image_roi, axis=axis)
         on_off_data = on_data - off_data
 
-        processed.pp.x_data = x_data
-        processed.pp.on_data = on_data
-        processed.pp.off_data = off_data
-        processed.pp.on_off_data = on_off_data
+        processed.pp.data = (x_data, on_data, off_data)
+        _, _, _, on_off_ma = processed.pp.data  # get the moving average
 
-        fom = np.sum(np.abs(on_off_data))
+        fom = np.sum(np.abs(on_off_ma))
         processed.pp.fom = (processed.tid, fom)
