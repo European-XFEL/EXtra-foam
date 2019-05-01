@@ -14,6 +14,7 @@ import os.path as osp
 from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
+import time
 
 import zmq
 
@@ -307,6 +308,8 @@ class MainGUI(QtGui.QMainWindow):
     def onStopBridge(self):
         """Actions taken before the end of a 'run'."""
         self._running = False
+
+        time.sleep(0.2)
 
         self.clearWorkers()
         self.clearQueues()
