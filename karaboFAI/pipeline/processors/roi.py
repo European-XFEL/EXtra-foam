@@ -184,5 +184,5 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.data = (x_data, on_data, off_data)
         _, _, _, on_off_ma = processed.pp.data
 
-        fom = np.sum(np.abs(on_off_ma))
+        fom = np.sum(on_off_ma)
         processed.pp.fom = (processed.tid, fom)

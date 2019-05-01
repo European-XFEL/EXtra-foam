@@ -26,6 +26,8 @@ class PumpProbeProcessor(CompositeProcessor):
         analysis_type (PumpProbeType): pump-probe analysis type.
         on_pulse_ids (list): a list of laser-on pulse IDs.
         off_pulse_ids (list): a list of laser-off pulse IDs.
+        abs_difference (bool): True for calculating absolute different
+            between on/off pulses.
         ma_window (int): moving average window size.
     """
     mode = SharedProperty()
@@ -33,6 +35,7 @@ class PumpProbeProcessor(CompositeProcessor):
     on_pulse_ids = SharedProperty()
     off_pulse_ids = SharedProperty()
 
+    abs_difference = SharedProperty()
     ma_window = SharedProperty()
 
     def __init__(self):
@@ -118,7 +121,9 @@ class PumpProbeImageProcessor(LeafProcessor):
 
         if len(self._buffer) == 2:
             processed.pp.analysis_type = self.analysis_type
-            # setting ma_window should come before setting image data
+            # setting processing parameters should come before setting data
             processed.pp.ma_window = self.ma_window
+            processed.pp.abs_difference = self.abs_difference
+
             processed.pp.off_image_mean = self._buffer.pop()[1]
             processed.pp.on_image_mean = self._buffer.pop()[1]
