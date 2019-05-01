@@ -12,7 +12,6 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..bulletin_widget import BulletinWidget
 from ..plot_widgets import (
     PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeFomWidget
 )
@@ -32,9 +31,8 @@ class PumpProbeWindow(DockerWindow):
     _LH2 = 0.25 * _TOTAL_H
     _LH3 = 0.25 * _TOTAL_H
     _RW = 0.6 * _TOTAL_W
-    _RH1 = 0.5 * _TOTAL_H - 25
-    _RH2 = 50
-    _RH3 = 0.5 * _TOTAL_H - 25
+    _RH1 = 0.5 * _TOTAL_H
+    _RH2 = 0.5 * _TOTAL_H
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -46,9 +44,6 @@ class PumpProbeWindow(DockerWindow):
         self._off_roi = PumpProbeImageView(on=False, roi=True, parent=self)
         self._on_off_roi = PumpProbeImageView(
             on=False, roi=True, diff=True, parent=self)
-
-        self._bulletin = BulletinWidget(parent=self)
-        self._bulletin.setMaximumHeight(self._RH2)
 
         self._pp_fom = PumpProbeFomWidget(parent=self)
         self._pp_ai = PumpProbeOnOffWidget(parent=self)
@@ -103,11 +98,6 @@ class PumpProbeWindow(DockerWindow):
         self._docker_area.addDock(pp_diff_dock, 'bottom', pp_ai_dock)
         pp_diff_dock.addWidget(self._pp_diff)
 
-        bulletin_dock = Dock("Bulletin", size=(self._RW, self._RH2))
-        self._docker_area.addDock(bulletin_dock, 'bottom', pp_diff_dock)
-        bulletin_dock.addWidget(self._bulletin)
-        bulletin_dock.hideTitleBar()
-
-        pp_fom_dock = Dock("FOM", size=(self._RW, self._RH3))
-        self._docker_area.addDock(pp_fom_dock, 'bottom', bulletin_dock)
+        pp_fom_dock = Dock("FOM", size=(self._RW, self._RH2))
+        self._docker_area.addDock(pp_fom_dock, 'bottom', pp_diff_dock)
         pp_fom_dock.addWidget(self._pp_fom)

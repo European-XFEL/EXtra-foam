@@ -27,7 +27,8 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
+    CorrelationWindow, ImageToolWindow, OverviewWindow,
+    PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
     SingletonWindow, XasWindow
 )
 from .. import __version__
@@ -103,6 +104,14 @@ class MainGUI(QtGui.QMainWindow):
         open_xas_window_at = self._addAction("XAS", "xas.png")
         open_xas_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, XasWindow))
+
+        open_pulsed_ai_window_at = self._addAction("Pulsed A.I", "pulsed_ai.png")
+        open_pulsed_ai_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, PulsedAzimuthalIntegrationWindow))
+
+        open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
+        open_roi_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, RoiWindow))
 
         # *************************************************************
         # Miscellaneous
@@ -278,6 +287,7 @@ class MainGUI(QtGui.QMainWindow):
             if isinstance(key, instance_type):
                 key.activateWindow()
                 return
+
         instance_type(self._data,
                       pulse_resolved=self._pulse_resolved, parent=self)
 

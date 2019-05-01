@@ -24,10 +24,10 @@ class TestMainGui(unittest.TestCase):
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._imagetool_action = cls._actions[2]
-        cls._overview_action = cls._actions[3]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
+        cls._pulsed_ai_action = cls._actions[7]
 
     @classmethod
     def tearDownClass(cls):
@@ -39,7 +39,7 @@ class TestMainGui(unittest.TestCase):
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
         scheduler = self.gui._scheduler
-        self._overview_action.trigger()
+        self._pulsed_ai_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 
         self.assertTrue(self.gui.updateSharedParameters())

@@ -112,8 +112,8 @@ class MultiPulseAiWidget(PlotWidget):
                 item.setData(momentum, intensity)
 
 
-class PulseResolvedAiFomWidget(PlotWidget):
-    """PulseResolvedAiFomWidget class.
+class PulsedFOMWidget(PlotWidget):
+    """PulsedFOMWidget class.
 
     A widget which allows users to monitor the azimuthal integration FOM
     of each pulse with respect to the first pulse in a train.
