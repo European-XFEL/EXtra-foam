@@ -419,18 +419,22 @@ class PumpProbeImageView(ImageView):
 
     Widget for displaying the on or off image in the pump-probe analysis.
     """
-    def __init__(self, on=True, *, roi=False, parent=None):
+    def __init__(self, on=True, *, roi=False, diff=False, parent=None):
         """Initialization.
 
         :param bool on: True for display the on image while False for
             displaying the off image.
         :param bool roi: True for displaying the ROI while False for
             displaying the whole image.
+        :param bool diff: True for displaying on - off ROI instead of
+            off ROI. Ignored if roi == False. This option is not enabled
+            for the whole image because of the concern of performance.
         """
         super().__init__(parent=parent)
 
         self._on = on
         self._roi = roi
+        self._diff = diff
         if self._roi:
             self._plot_widget.removeItem(self._mask_item)
 
@@ -448,7 +452,10 @@ class PumpProbeImageView(ImageView):
                 img = data.pp.on_image_mean
         else:
             if self._roi:
-                img = data.pp.off_roi
+                if self._diff and data.pp.off_roi is not None:
+                    img = data.pp.on_roi - data.pp.off_roi
+                else:
+                    img = data.pp.off_roi
             else:
                 img = data.pp.off_image_mean
 

@@ -44,6 +44,8 @@ class PumpProbeWindow(DockerWindow):
         self._off_image = PumpProbeImageView(on=False, parent=self)
         self._on_roi = PumpProbeImageView(on=True, roi=True, parent=self)
         self._off_roi = PumpProbeImageView(on=False, roi=True, parent=self)
+        self._on_off_roi = PumpProbeImageView(
+            on=False, roi=True, diff=True, parent=self)
 
         self._bulletin = BulletinWidget(parent=self)
         self._bulletin.setMaximumHeight(self._RH2)
@@ -77,8 +79,12 @@ class PumpProbeWindow(DockerWindow):
         self._docker_area.addDock(on_image_dock, "above", on_roi_dock)
         on_image_dock.addWidget(self._on_image)
 
+        on_off_roi_dock = Dock("'ON - Off' ROI", size=(self._LW, self._LH1))
+        self._docker_area.addDock(on_off_roi_dock, 'bottom', on_roi_dock)
+        on_off_roi_dock.addWidget(self._on_off_roi)
+
         off_roi_dock = Dock("'Off' ROI", size=(self._LW, self._LH1))
-        self._docker_area.addDock(off_roi_dock, 'bottom', on_roi_dock)
+        self._docker_area.addDock(off_roi_dock, 'above', on_off_roi_dock)
         off_roi_dock.addWidget(self._off_roi)
 
         off_image_dock = Dock("'Off' Image", size=(self._LW, self._LH1))
