@@ -45,7 +45,8 @@ class CorrelationFomProcessor(LeafProcessor):
         if self.fom_name == FomName.PUMP_PROBE_FOM:
             _, foms, _ = processed.pp.fom
             if foms.size == 0:
-                raise ProcessingError("Pump-probe result is not available!")
+                raise ProcessingError(
+                    "Pump-probe result is not available for correlation plots!")
             fom = foms[-1]
 
         elif self.fom_name == FomName.ROI1:
