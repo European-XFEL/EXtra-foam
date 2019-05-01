@@ -13,6 +13,7 @@ import logging
 import os.path as osp
 from queue import Empty
 from weakref import WeakKeyDictionary
+import functools
 
 import zmq
 
@@ -26,7 +27,7 @@ from .ctrl_widgets import (
 from .misc_widgets import GuiLogger
 from .windows import (
     CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
-    XasWindow
+    SingletonWindow, XasWindow
 )
 from .. import __version__
 from ..config import config
@@ -88,27 +89,19 @@ class MainGUI(QtGui.QMainWindow):
 
         open_overview_window_at = self._addAction("Overview", "overview.png")
         open_overview_window_at.triggered.connect(
-            lambda: OverviewWindow(self._data,
-                                   pulse_resolved=self._pulse_resolved,
-                                   parent=self))
+            functools.partial(self.onOpenPlotWindow, OverviewWindow))
 
         pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(
-            lambda: PumpProbeWindow(self._data,
-                                    pulse_resolved=self._pulse_resolved,
-                                    parent=self))
+            functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
         open_corr_window_at = self._addAction("Correlations", "scatter.png")
         open_corr_window_at.triggered.connect(
-            lambda: CorrelationWindow(self._data,
-                                      pulse_resolved=self._pulse_resolved,
-                                      parent=self))
+            functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
         open_xas_window_at = self._addAction("XAS", "xas.png")
         open_xas_window_at.triggered.connect(
-            lambda: XasWindow(self._data,
-                              pulse_resolved=self._pulse_resolved,
-                              parent=self))
+            functools.partial(self.onOpenPlotWindow, XasWindow))
 
         # *************************************************************
         # Miscellaneous
@@ -275,6 +268,18 @@ class MainGUI(QtGui.QMainWindow):
         self._tool_bar.addAction(action)
         return action
 
+    def onOpenPlotWindow(self, instance_type):
+        """Open a plot window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
+        for key in self._windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return
+        instance_type(self._data,
+                      pulse_resolved=self._pulse_resolved, parent=self)
+
     def registerWindow(self, instance):
         self._windows[instance] = 1
 
@@ -367,5 +372,8 @@ class MainGUI(QtGui.QMainWindow):
 
         if self._file_server is not None and self._file_server.is_alive():
             self._file_server.terminate()
+
+        # useful in unittests
+        SingletonWindow._instances.clear()
 
         super().closeEvent(QCloseEvent)

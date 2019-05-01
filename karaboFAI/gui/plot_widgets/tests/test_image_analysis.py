@@ -16,7 +16,7 @@ from karaboFAI.config import config
 class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        FaiServer()
+        cls.server = FaiServer()
 
         config["PIXEL_SIZE"] = 1e-6
         config["MASK_RANGE"] = (None, None)

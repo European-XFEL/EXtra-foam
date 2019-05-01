@@ -32,6 +32,8 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[RoiImageView], 2)
         self.assertEqual(counter[RoiValueMonitor], 1)
 
+        gui.close()
+
     def testTrainResolved(self):
         gui = FaiServer('JungFrau').gui
         self._win = OverviewWindow(pulse_resolved=False, parent=gui)
@@ -47,3 +49,6 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(counter[RoiImageView], 2)
         self.assertEqual(counter[RoiImageView], 2)
         self.assertEqual(counter[RoiValueMonitor], 1)
+
+        gui.close()
+

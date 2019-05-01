@@ -21,6 +21,10 @@ class TestImageTool(unittest.TestCase):
         cls.window = list(cls.gui._windows.keys())[-1]
         cls.view = cls.window._image_view
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.gui.close()
+
     def setUp(self):
         self.__class__._tid += 1
         ImageData.clear()

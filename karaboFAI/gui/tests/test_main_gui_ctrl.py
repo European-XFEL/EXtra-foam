@@ -29,6 +29,10 @@ class TestMainGui(unittest.TestCase):
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.gui.close()
+
     def setUp(self):
         ImageData.clear()
 

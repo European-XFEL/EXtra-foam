@@ -15,6 +15,10 @@ class TestXasWindow(unittest.TestCase):
     def setUpClass(cls):
         cls.gui = FaiServer('LPD').gui
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.gui.close()
+
     def testInstantiation(self):
         self._win = XasWindow(pulse_resolved=True, parent=self.gui)
 
