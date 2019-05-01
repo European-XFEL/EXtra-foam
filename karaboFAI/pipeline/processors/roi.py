@@ -136,9 +136,16 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
     @profiler("ROI processor")
     def process(self, processed, raw=None):
-        roi = self._rois[0]  # always use ROI1
+        # use ROI1 for signal
+        roi = self._rois[0]
         if roi is None:
             raise StopCompositionProcessing
+
+        # use ROI2 for background
+        roi_bkg = self._rois[1]
+        if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
+            raise ProcessingError(
+                "Shapes of ROI1 (signal) and ROI2 (background) are different")
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean
@@ -147,6 +154,13 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         on_roi = RoiProcessor.get_roi_image(roi, on_image)
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
+        # ROI background subtraction
+        if roi_bkg is not None:
+            on_roi_bkg = RoiProcessor.get_roi_image(roi_bkg, on_image)
+            off_roi_bkg = RoiProcessor.get_roi_image(roi_bkg, off_image)
+            on_roi -= on_roi_bkg
+            off_roi -= off_roi_bkg
+
         # set the current on/off ROIs
         processed.pp.on_roi = on_roi
         processed.pp.off_roi = off_roi
