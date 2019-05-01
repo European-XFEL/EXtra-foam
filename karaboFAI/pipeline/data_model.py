@@ -357,6 +357,10 @@ class PumpProbeData(AbstractData):
         self.on_image_mean = None
         self.off_image_mean = None
 
+        # the current ROI of on/off images
+        self.on_roi = None
+        self.off_roi = None
+
     @property
     def ma_window(self):
         return self.__class__.__dict__['data'].moving_average_window

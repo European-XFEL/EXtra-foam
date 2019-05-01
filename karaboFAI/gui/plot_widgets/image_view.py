@@ -419,11 +419,21 @@ class PumpProbeImageView(ImageView):
 
     Widget for displaying the on or off image in the pump-probe analysis.
     """
-    def __init__(self, on=True, *, parent=None):
-        """Initialization."""
+    def __init__(self, on=True, *, roi=False, parent=None):
+        """Initialization.
+
+        :param bool on: True for display the on image while False for
+            displaying the off image.
+        :param bool roi: True for displaying the ROI while False for
+            displaying the whole image.
+        """
         super().__init__(parent=parent)
 
         self._on = on
+        self._roi = roi
+        if self._roi:
+            self._plot_widget.removeItem(self._mask_item)
+
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
         self._tick = 0
@@ -432,9 +442,15 @@ class PumpProbeImageView(ImageView):
     def update(self, data):
         """Override."""
         if self._on:
-            img = data.pp.on_image_mean
+            if self._roi:
+                img = data.pp.on_roi
+            else:
+                img = data.pp.on_image_mean
         else:
-            img = data.pp.off_image_mean
+            if self._roi:
+                img = data.pp.off_roi
+            else:
+                img = data.pp.off_image_mean
 
         frame_rate = data.pp.frame_rate
         if img is None:
@@ -460,7 +476,8 @@ class PumpProbeImageView(ImageView):
                 self._cached_image = img
 
         self.setImage(img, auto_levels=(not self._is_initialized))
-        self.updateROI(data)
+        if not self._roi:
+            self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True

@@ -46,7 +46,7 @@ class RoiProcessor(CompositeProcessor):
         self._fom_handler = None
 
         self.add(RoiFomProcessor())
-        self.add(RoiPumpProbeFomProcessor())
+        self.add(RoiPumpProbeRoiProcessor())
         self.add(RoiPumpProbeProj1dProcessor())
 
     @property
@@ -125,6 +125,26 @@ class RoiFomProcessor(LeafProcessor):
                 setattr(processed.roi, f"roi{i+1}_hist", (tid, fom))
 
 
+class RoiPumpProbeRoiProcessor(LeafProcessor):
+    """RoiPumpProbeRoiProcessor class.
+
+    Extract the ROI image for on/off pulses respectively.
+    """
+    @profiler("ROI processor")
+    def process(self, processed, raw=None):
+        roi = self._rois[0]  # always use ROI1
+        if roi is None:
+            raise StopCompositionProcessing
+
+        on_image = processed.pp.on_image_mean
+        off_image = processed.pp.off_image_mean
+        if on_image is None or off_image is None:
+            return StopCompositionProcessing
+
+        processed.pp.on_roi = RoiProcessor.get_roi_image(roi, on_image)
+        processed.pp.off_roi = RoiProcessor.get_roi_image(roi, off_image)
+
+
 class RoiPumpProbeFomProcessor(LeafProcessor):
     """RoiPumpProbeFomProcessor class.
 
@@ -135,8 +155,9 @@ class RoiPumpProbeFomProcessor(LeafProcessor):
     """
     @profiler("ROI processor")
     def process(self, processed, raw=None):
-        if processed.pp.analysis_type != PumpProbeType.ROI:
-            return
+        roi = self._rois[0]  # always use ROI1
+        if roi is None:
+            raise StopCompositionProcessing
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean
@@ -144,9 +165,6 @@ class RoiPumpProbeFomProcessor(LeafProcessor):
             return StopCompositionProcessing
 
         fom_handler = self._fom_handler
-        roi = self._rois[0]  # always use ROI1
-        if roi is None:
-            raise ProcessingError("ROI1 is inactivated or out of region")
 
         on_roi = RoiProcessor.get_roi_image(roi, on_image)
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
