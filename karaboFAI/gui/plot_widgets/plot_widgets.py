@@ -300,6 +300,10 @@ class PumpProbeOnOffWidget(PlotWidget):
                 # cache data
                 self._data = (x, on, off, on_off)
 
+        if isinstance(on, np.ndarray) and on.ndim > 1:
+            # image data
+            return
+
         if self._is_diff:
             self._on_off_pulse.setData(x, on_off)
         else:
