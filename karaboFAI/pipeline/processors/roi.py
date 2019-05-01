@@ -164,6 +164,13 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
 
     Calculate the 1D projection for on/off ROIs.
     """
+    def __init__(self):
+        super().__init__()
+
+        # 1D projection FOM handler (shadows the _fom_handler attribute
+        # in the parent class)
+        self._fom_handler = np.sum
+
     def process(self, processed, raw=None):
         if processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_X:
             axis = -2
@@ -184,5 +191,5 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.data = (x_data, on_data, off_data)
         _, _, _, on_off_ma = processed.pp.data
 
-        fom = np.sum(on_off_ma)
+        fom = self._fom_handler(on_off_ma)
         processed.pp.fom = (processed.tid, fom)
