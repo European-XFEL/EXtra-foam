@@ -1,16 +1,19 @@
 import unittest
+from unittest.mock import MagicMock
 import tempfile
 
 import numpy as np
 
 from karaboFAI.services import FaiServer
-from karaboFAI.gui.plot_widgets.image_view import ImageAnalysis
+from karaboFAI.gui.plot_widgets.image_view import (
+    ImageAnalysis, PumpProbeImageView
+)
 from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.logger import logger
 from karaboFAI.config import config
 
 
-class TestPlotWidget(unittest.TestCase):
+class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         FaiServer()
@@ -74,3 +77,71 @@ class TestPlotWidget(unittest.TestCase):
 
         np.testing.assert_array_equal(mask,
                                       ImageData(imgs).image_mask)
+
+
+class TestPumpProbeImageView(unittest.TestCase):
+    class Data:
+        class PP:
+            def __init__(self):
+                self.frame_rate = 1
+                self.on_image_mean = None
+                self.off_image_mean = None
+
+        def __init__(self):
+            self.pp = self.PP()
+
+    @classmethod
+    def setUpClass(cls):
+        config["COLOR_MAP"] = "thermal"
+
+    def testPumpProbeOnOffWidgetFrameRate1(self):
+        data = self.Data()
+        widget = PumpProbeImageView(on=True)
+        widget.setImage = MagicMock()
+        widget.updateROI = MagicMock()
+        func = widget.setImage
+
+        # no data
+        widget.update(data)
+        self.assertFalse(func.called)
+
+        img = np.arange(4).reshape(2, 2)
+
+        # data comes
+        data.pp.on_image_mean = img
+        widget.update(data)
+        func.assert_called()
+        func.reset_mock()
+
+        # no data
+        data.pp.on_image_mean = None
+        widget.update(data)
+        self.assertFalse(func.called)
+
+    def testPumpProbeOnOffWidgetFrameRate2(self):
+        data = self.Data()
+        data.pp.frame_rate = 2
+        widget = PumpProbeImageView(on=False)
+        widget.setImage = MagicMock()
+        widget.updateROI = MagicMock()
+        func = widget.setImage
+
+        img = np.arange(4).reshape(2, 2)
+
+        # data comes
+        data.pp.off_image_mean = img
+        widget.update(data)
+        func.assert_called()
+        func.reset_mock()
+
+        # no data, use cached data
+        data.pp.off_image_mean = None
+        widget.update(data)
+        func.assert_called()
+        func.reset_mock()
+
+        # still no data
+        data.pp.data = None
+        widget.update(data)
+        self.assertFalse(func.called)
+        self.assertIs(widget._cached_image, None)  # cached data should be reset

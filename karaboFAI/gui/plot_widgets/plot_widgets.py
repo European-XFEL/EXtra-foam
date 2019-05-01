@@ -262,25 +262,38 @@ class PumpProbeOnOffWidget(PlotWidget):
         self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
         self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
 
+        self._tick = 0
+
     def update(self, data):
         """Override."""
         x, on, off, on_off = data.pp.data
-        if x is None:
-            return
+        frame_rate = data.pp.frame_rate
 
-        if on is None:
-            self._data = None
-        else:
-            if off is None:
-                if self._data is None:
-                    return
-                # on-pulse arrives but off-pulse does not
-                x, on, off = self._data
+        if on is None or off is None:
+            # return is there is no data and cached data
+            if self._data is None:
+                return
+
+            # use cached data
+            x, on, off = self._data
+
+            if self._tick < frame_rate - 1:
+                self._tick += 1
             else:
+                # reset tick and cached data
+                self._tick = 0
+                self._data = None
+                return
+
+        else:
+            # reset tick when new data is received
+            self._tick = 0
+            if frame_rate > 1:
+                # cache data
                 self._data = (x, on, off)
 
-            self._on_pulse.setData(x, on)
-            self._off_pulse.setData(x, off)
+        self._on_pulse.setData(x, on)
+        self._off_pulse.setData(x, off)
 
 
 class PumpProbeDiffWidget(PlotWidget):
@@ -298,33 +311,36 @@ class PumpProbeDiffWidget(PlotWidget):
 
         self._plot = self.plotCurve(name="On - Off", pen=make_pen("y"))
 
-    def clear(self):
-        """Override."""
-        self.reset()
-
-    def reset(self):
-        """Override."""
-        self._plot.setData([], [])
+        self._tick = 0
 
     def update(self, data):
         """Override."""
         x, on, off, on_off = data.pp.data
-        if x is None:
-            return
+        frame_rate = data.pp.frame_rate
 
-        if on is None:
-            self._data = None
-        else:
-            if off is None:
-                if self._data is None:
-                    return
-                # on-pulse arrives but off-pulse does not
-                diff = self._data
+        if on_off is None:
+            # return is there is no data and cached data
+            if self._data is None:
+                return
+
+            # use cached data
+            x, on_off = self._data
+
+            if self._tick < frame_rate - 1:
+                self._tick += 1
             else:
-                diff = on_off
-                self._data = diff
+                # reset tick and cached data
+                self._tick = 0
+                self._data = None
+                return
 
-            self._plot.setData(x, diff)
+        else:
+            self._tick = 0  # reset tick when new data is received
+            if frame_rate > 1:
+                # cache data
+                self._data = (x, on_off)
+
+        self._plot.setData(x, on_off)
 
 
 class PumpProbeFomWidget(PlotWidget):

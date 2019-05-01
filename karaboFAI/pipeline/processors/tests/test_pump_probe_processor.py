@@ -194,8 +194,9 @@ class TestPumpProbeProcessor(unittest.TestCase):
         self._proc.run_once(data)
 
         on_data_gt = np.array([0, 1, 0, 1, 0])
-        np.testing.assert_array_almost_equal(on_data_gt, data.pp.on_data)
-        self.assertTrue(data.pp.off_data is None)
+        _, on_data, off_data, _ = data.pp.data
+        np.testing.assert_array_almost_equal(on_data_gt, on_data)
+        self.assertTrue(off_data is None)
         tids, foms, _ = data.pp.fom
         np.testing.assert_array_equal(train_ids_gt, tids)
         np.testing.assert_array_equal(fom_hist_gt, foms)

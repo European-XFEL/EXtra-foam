@@ -344,6 +344,10 @@ class PumpProbeData(AbstractData):
     # example: azimuthal integration / ROI / 1D projection, etc.
     data = MovingAverage()
 
+    # For on/off pulses in the same train, frame_rate is 1; if they come
+    # alternatively, frame_rate = 2.
+    frame_rate = 1
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

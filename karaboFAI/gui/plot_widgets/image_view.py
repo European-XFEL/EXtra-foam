@@ -449,6 +449,9 @@ class PumpProbeImageView(ImageView):
         self._on = on
         self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
+        self._tick = 0
+        self._cached_image = None
+
     def update(self, data):
         """Override."""
         if self._on:
@@ -456,12 +459,34 @@ class PumpProbeImageView(ImageView):
         else:
             img = data.pp.off_image_mean
 
-        if img is not None:
-            self.setImage(img, auto_levels=(not self._is_initialized))
-            self.updateROI(data)
+        frame_rate = data.pp.frame_rate
+        if img is None:
+            # return is there is no data and cached data
+            if self._cached_image is None:
+                return
 
-            if not self._is_initialized:
-                self._is_initialized = True
+            # use cached data
+            img = self._cached_image
+
+            if self._tick < frame_rate - 1:
+                self._tick += 1
+            else:
+                # reset tick and cached data
+                self._tick = 0
+                self._cached_image = None
+                return
+
+        else:
+            self._tick = 0  # reset tick when new data is received
+            if frame_rate > 1:
+                # cache data
+                self._cached_image = img
+
+        self.setImage(img, auto_levels=(not self._is_initialized))
+        self.updateROI(data)
+
+        if not self._is_initialized:
+            self._is_initialized = True
 
 
 class SinglePulseImageView(ImageView):

@@ -18,14 +18,14 @@ from PyQt5 import QtCore
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
-from .data_model import ProcessedData
+from .data_model import ProcessedData, PumpProbeData
 from .worker import Worker
 from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
     PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
-from ..config import config, FomName
+from ..config import config, FomName, PumpProbeMode
 from ..helpers import profiler
 
 
@@ -101,6 +101,10 @@ class Scheduler(Worker):
     def onPpPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
         if mode != self._pp_proc.mode:
             self._pp_proc.mode = mode
+            if mode in (PumpProbeMode.ODD_TRAIN_ON, PumpProbeMode.EVEN_TRAIN_ON):
+                PumpProbeData.frame_rate = 2
+            else:
+                PumpProbeData.frame_rate = 1
             self._pp_proc.reset()
             ProcessedData.clear_pp_hist()
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
