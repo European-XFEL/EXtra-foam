@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import logging
+import threading
 
 from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
@@ -102,4 +103,6 @@ class GuiLogger(logging.Handler):
         self.widget.setMaximumBlockCount(500)
 
     def emit(self, record):
-        self.widget.appendPlainText(self.format(record))
+        # guard logger from other threads
+        if threading.current_thread() is threading.main_thread():
+            self.widget.appendPlainText(self.format(record))
