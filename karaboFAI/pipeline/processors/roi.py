@@ -72,9 +72,9 @@ class RoiProcessor(CompositeProcessor):
         self._rois[rank-1] = value
 
     @staticmethod
-    def get_roi_image(roi_region, img):
+    def get_roi_image(roi_region, img, copy=True):
         w, h, x, y = roi_region
-        return img[y:y + h, x:x + w]
+        return np.array(img[y:y + h, x:x + w], copy=copy)
 
 
 class RoiFomProcessor(LeafProcessor):
@@ -112,7 +112,7 @@ class RoiFomProcessor(LeafProcessor):
                         self._rois[i] = None
                     else:
                         setattr(processed.roi, f"roi{i+1}", roi)
-                        roi_img = RoiProcessor.get_roi_image(roi, img)
+                        roi_img = RoiProcessor.get_roi_image(roi, img, copy=False)
 
                         proj_x = np.sum(roi_img, axis=-2)
                         proj_y = np.sum(roi_img, axis=-1)
@@ -155,8 +155,10 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
         # ROI background subtraction
         if roi_bkg is not None:
-            on_roi_bkg = RoiProcessor.get_roi_image(roi_bkg, on_image)
-            off_roi_bkg = RoiProcessor.get_roi_image(roi_bkg, off_image)
+            on_roi_bkg = RoiProcessor.get_roi_image(
+                roi_bkg, on_image, copy=False)
+            off_roi_bkg = RoiProcessor.get_roi_image(
+                roi_bkg, off_image, copy=False)
             on_roi -= on_roi_bkg
             off_roi -= off_roi_bkg
 
