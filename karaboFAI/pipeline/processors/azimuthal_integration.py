@@ -322,30 +322,24 @@ class AiPumpProbeProcessor(CompositeProcessor):
             on = normalize_curve(on, momentum, *auc_x_range)
             off = normalize_curve(off, momentum, *auc_x_range)
         else:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
+            on_roi = processed.pp.on_roi
+            off_roi = processed.pp.off_roi
+            if on_roi is None or off_roi is None:
+                raise ProcessingError("ROI information is not available")
 
-            denominator = 0
-            try:
-                if self.normalizer == AiNormalizer.ROI1:
-                    denominator = roi1_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI2:
-                    denominator = roi2_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI_SUM:
-                    denominator = roi1_hist[-1] + roi2_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI_SUB:
-                    denominator = roi1_hist[-1] - roi2_hist[-1]
+            if self.normalizer in (AiNormalizer.ROI1, AiNormalizer.ROI_SUB):
+                on_denominator = np.sum(on_roi)
+                off_denominator = np.sum(off_roi)
+            else:
+                raise ProcessingError(
+                    f"Normalizer is not supported in pump-probe analysis")
 
-            except IndexError as e:
-                # this could happen if the history is clear just now
-                raise ProcessingError(e)
-
-            if denominator == 0:
+            if on_denominator == 0 or off_denominator == 0:
                 raise ProcessingError(
                     "Invalid normalizer: sum of ROI(s) is zero!")
 
-            on /= denominator
-            off /= denominator
+            on /= on_denominator
+            off /= off_denominator
 
         return on, off
 

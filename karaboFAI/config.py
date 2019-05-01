@@ -39,10 +39,10 @@ class FomName(IntEnum):
     PUMP_PROBE_FOM = 1
     # ROI1 - ROI2
     ROI_SUB = 2
+    ROI1 = 3
+    ROI2 = 4
     # ROI1 + ROI2
-    ROI_SUM = 3
-    ROI1 = 4
-    ROI2 = 5
+    ROI_SUM = 5
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
     AI_MEAN = 6
@@ -53,9 +53,9 @@ class AiNormalizer(IntEnum):
     AUC = 0
     # Normalize the azimuthal integration curve by the sum of ROI(s).
     ROI_SUB = 1  # ROI1 - ROI2
-    ROI_SUM = 2  # ROI1 + ROI2
-    ROI1 = 3
-    ROI2 = 4
+    ROI1 = 2
+    ROI2 = 3
+    ROI_SUM = 4  # ROI1 + ROI2
 
 
 class RoiFom(IntEnum):

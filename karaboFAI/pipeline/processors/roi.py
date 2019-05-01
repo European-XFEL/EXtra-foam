@@ -144,8 +144,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         # use ROI2 for background
         roi_bkg = self._rois[1]
         if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
-            raise ProcessingError(
-                "Shapes of ROI1 (signal) and ROI2 (background) are different")
+            raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean

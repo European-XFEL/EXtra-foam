@@ -87,9 +87,9 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "": FomName.UNDEFINED,
         "Pump-probe FOM": FomName.PUMP_PROBE_FOM,
         "ROI1 - ROI2": FomName.ROI_SUB,
-        "ROI1 + ROI2": FomName.ROI_SUM,
         "ROI1": FomName.ROI1,
         "ROI2": FomName.ROI2,
+        "ROI1 + ROI2": FomName.ROI_SUM,
         "A.I. mean": FomName.AI_MEAN,
     })
 
