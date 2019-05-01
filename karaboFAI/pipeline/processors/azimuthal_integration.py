@@ -167,15 +167,14 @@ class AiPulsedProcessor(CompositeProcessor):
             # to avoid to be normalized twice
             intensities = np.expand_dims(intensities_mean.copy(), axis=0)
 
-        normalized_intensities, normalized_intensity_mean = self._normalize(
-            processed, momentum, intensities, intensities_mean
-        )
+        normalized_intensity_mean, normalized_intensities = self._normalize(
+            processed, momentum, intensities_mean, intensities)
 
         processed.ai.momentum = momentum
         processed.ai.intensities = normalized_intensities
         processed.ai.intensity_mean = normalized_intensity_mean
 
-    def _normalize(self, processed, momentum, intensities, intensities_mean):
+    def _normalize(self, processed, momentum, intensities_mean, intensities):
         auc_x_range = self.auc_x_range
 
         if self.normalizer == AiNormalizer.AUC:
@@ -231,7 +230,7 @@ class AiPulsedFomProcessor(LeafProcessor):
             return
         intensities = processed.ai.intensities
 
-        # calculate the different between each pulse and the first one
+        # calculate the difference between each pulse and the first one
         diffs = [p - intensities[0] for p in intensities]
 
         # calculate the figure of merit for each pulse
