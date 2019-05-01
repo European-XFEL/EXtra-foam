@@ -115,8 +115,8 @@ class RoiFomProcessor(LeafProcessor):
                         setattr(processed.roi, f"roi{i+1}", roi)
                         roi_img = RoiProcessor.get_roi_image(roi, img)
 
-                        proj_x = np.sum(roi_img, axis=-1)
-                        proj_y = np.sum(roi_img, axis=-2)
+                        proj_x = np.sum(roi_img, axis=-2)
+                        proj_y = np.sum(roi_img, axis=-1)
                         setattr(processed.roi, f"roi{i + 1}_proj_x", proj_x)
                         setattr(processed.roi, f"roi{i + 1}_proj_y", proj_y)
 

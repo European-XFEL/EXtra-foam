@@ -1,5 +1,5 @@
 from .image_view import (
-    AssembledImageView, ImageAnalysis, PumpProbeImageView, ReferenceImageView,
+    AssembledImageView, ImageAnalysis, PumpProbeImageView,
     RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
@@ -16,7 +16,6 @@ __all__ = ([
     "ImageAnalysis",
     "PumpProbeImageView",
     "RoiImageView",
-    "ReferenceImageView",
     "SinglePulseImageView",
 ])
 

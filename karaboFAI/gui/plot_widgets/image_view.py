@@ -414,29 +414,6 @@ class AssembledImageView(ImageView):
             self._is_initialized = True
 
 
-class ReferenceImageView(ImageView):
-    """ReferenceImageView class.
-
-    Widget for displaying the reference image, which is used as:
-    1. a pre-defined laser-off image in pump-probe experiment;
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
-
-    def update(self, data):
-        """Override."""
-        masked_ref = data.image.masked_ref
-        if masked_ref is not None:
-            self.setImage(masked_ref, auto_levels=(not self._is_initialized))
-            self.updateROI(data)
-
-            if not self._is_initialized:
-                self._is_initialized = True
-
-
 class PumpProbeImageView(ImageView):
     """PumpProbeImageView class.
 
