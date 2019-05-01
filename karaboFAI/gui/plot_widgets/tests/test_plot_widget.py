@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets.plot_widgets import (
-    PlotWidget, PumpProbeOnOffWidget, PumpProbeDiffWidget
+    PlotWidget, PumpProbeOnOffWidget
 )
 
 
@@ -133,9 +133,9 @@ class TestPumpProbeWidgets(unittest.TestCase):
 
     def testPumpProbeDiffWidgetFrameRate1(self):
         data = self.Data()
-        widget = PumpProbeDiffWidget()
-        widget._plot.setData = MagicMock()
-        func = widget._plot.setData
+        widget = PumpProbeOnOffWidget(diff=True)
+        widget._on_off_pulse.setData = MagicMock()
+        func = widget._on_off_pulse.setData
 
         # no data
         widget.update(data)
@@ -155,9 +155,9 @@ class TestPumpProbeWidgets(unittest.TestCase):
     def testPumpProbeDiffWidgetFrameRate2(self):
         data = self.Data()
         data.pp.frame_rate = 2
-        widget = PumpProbeDiffWidget()
-        widget._plot.setData = MagicMock()
-        func = widget._plot.setData
+        widget = PumpProbeOnOffWidget(diff=True)
+        widget._on_off_pulse.setData = MagicMock()
+        func = widget._on_off_pulse.setData
 
         # data comes
         data.pp.data = [3], [5], [4], [1]

@@ -3,7 +3,7 @@ from .image_view import (
     RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
-    CorrelationWidget, PumpProbeOnOffWidget, PumpProbeDiffWidget,
+    CorrelationWidget, PumpProbeOnOffWidget,
     PumpProbeFomWidget, MultiPulseAiWidget, RoiValueMonitor,
     PulseResolvedAiFomWidget, SinglePulseAiWidget, XasSpectrumWidget,
     XasSpectrumDiffWidget, XasSpectrumBinCountWidget
@@ -23,7 +23,6 @@ __all__ = ([
 __all__.extend([
     "CorrelationWidget",
     "PumpProbeOnOffWidget",
-    "PumpProbeDiffWidget",
     "PumpProbeFomWidget",
     "MultiPulseAiWidget",
     "RoiValueMonitor",

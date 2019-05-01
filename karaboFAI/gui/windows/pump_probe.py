@@ -14,8 +14,7 @@ from ..pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..plot_widgets import (
-    PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeDiffWidget,
-    PumpProbeFomWidget
+    PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeFomWidget
 )
 
 
@@ -51,7 +50,7 @@ class PumpProbeWindow(DockerWindow):
 
         self._pp_fom = PumpProbeFomWidget(parent=self)
         self._pp_ai = PumpProbeOnOffWidget(parent=self)
-        self._pp_diff = PumpProbeDiffWidget(parent=self)
+        self._pp_diff = PumpProbeOnOffWidget(diff=True, parent=self)
 
         self.initUI()
 

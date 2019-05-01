@@ -249,18 +249,26 @@ class CorrelationWidget(PlotWidget):
 class PumpProbeOnOffWidget(PlotWidget):
     """PumpProbeOnOffWidget class.
 
-    Widget for displaying the pump and probe signal, respectively.
+    Widget for displaying the pump and probe signal or their difference.
     """
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, diff=False, *, parent=None):
+        """Initialization.
+
+        :param bool diff: True for displaying on-off while False for
+            displaying on and off
+        """
         super().__init__(parent=parent)
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.addLegend(offset=(-40, 20))
 
-        self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
-        self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
+        self._is_diff = diff
+        if diff:
+            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("y"))
+        else:
+            self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
+            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
 
         self._tick = 0
 
@@ -275,7 +283,7 @@ class PumpProbeOnOffWidget(PlotWidget):
                 return
 
             # use cached data
-            x, on, off = self._data
+            x, on, off, on_off = self._data
 
             if self._tick < frame_rate - 1:
                 self._tick += 1
@@ -290,63 +298,13 @@ class PumpProbeOnOffWidget(PlotWidget):
             self._tick = 0
             if frame_rate > 1:
                 # cache data
-                self._data = (x, on, off)
+                self._data = (x, on, off, on_off)
 
-        if on.ndim > 1:
-            # on is a 2D array (image)
-            return
-        self._on_pulse.setData(x, on)
-        self._off_pulse.setData(x, off)
-
-
-class PumpProbeDiffWidget(PlotWidget):
-    """PumpProbeDiffWidget class.
-
-    Widget for displaying the difference between the pump and probe signal.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('left', "Scattering signal (arb. u.)")
-        self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.addLegend(offset=(-40, 20))
-
-        self._plot = self.plotCurve(name="On - Off", pen=make_pen("y"))
-
-        self._tick = 0
-
-    def update(self, data):
-        """Override."""
-        x, on, off, on_off = data.pp.data
-        frame_rate = data.pp.frame_rate
-
-        if on_off is None:
-            # return is there is no data and cached data
-            if self._data is None:
-                return
-
-            # use cached data
-            x, on_off = self._data
-
-            if self._tick < frame_rate - 1:
-                self._tick += 1
-            else:
-                # reset tick and cached data
-                self._tick = 0
-                self._data = None
-                return
-
+        if self._is_diff:
+            self._on_off_pulse.setData(x, on_off)
         else:
-            self._tick = 0  # reset tick when new data is received
-            if frame_rate > 1:
-                # cache data
-                self._data = (x, on_off)
-
-        if on.ndim > 1:
-            # on is a 2D array (image)
-            return
-        self._plot.setData(x, on_off)
+            self._on_pulse.setData(x, on)
+            self._off_pulse.setData(x, off)
 
 
 class PumpProbeFomWidget(PlotWidget):
