@@ -292,6 +292,9 @@ class PumpProbeOnOffWidget(PlotWidget):
                 # cache data
                 self._data = (x, on, off)
 
+        if on.ndim > 1:
+            # on is a 2D array (image)
+            return
         self._on_pulse.setData(x, on)
         self._off_pulse.setData(x, off)
 
@@ -340,6 +343,9 @@ class PumpProbeDiffWidget(PlotWidget):
                 # cache data
                 self._data = (x, on_off)
 
+        if on.ndim > 1:
+            # on is a 2D array (image)
+            return
         self._plot.setData(x, on_off)
 
 

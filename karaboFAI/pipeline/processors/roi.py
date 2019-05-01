@@ -47,7 +47,6 @@ class RoiProcessor(CompositeProcessor):
 
         self.add(RoiFomProcessor())
         self.add(RoiPumpProbeRoiProcessor())
-        self.add(RoiPumpProbeProj1dProcessor())
 
     @property
     def fom_type(self):
@@ -125,11 +124,16 @@ class RoiFomProcessor(LeafProcessor):
                 setattr(processed.roi, f"roi{i+1}_hist", (tid, fom))
 
 
-class RoiPumpProbeRoiProcessor(LeafProcessor):
+class RoiPumpProbeRoiProcessor(CompositeProcessor):
     """RoiPumpProbeRoiProcessor class.
 
     Extract the ROI image for on/off pulses respectively.
     """
+    def __init__(self):
+        super().__init__()
+
+        self.add(RoiPumpProbeProj1dProcessor())
+
     @profiler("ROI processor")
     def process(self, processed, raw=None):
         roi = self._rois[0]  # always use ROI1
@@ -140,51 +144,26 @@ class RoiPumpProbeRoiProcessor(LeafProcessor):
         off_image = processed.pp.off_image_mean
         if on_image is None or off_image is None:
             return StopCompositionProcessing
-
-        processed.pp.on_roi = RoiProcessor.get_roi_image(roi, on_image)
-        processed.pp.off_roi = RoiProcessor.get_roi_image(roi, off_image)
-
-
-class RoiPumpProbeFomProcessor(LeafProcessor):
-    """RoiPumpProbeFomProcessor class.
-
-    Take the on and off images calculated by the PumpProbeProcessor
-    and extract the ROIs of both on and off images using ROI1. The
-    figure-of-merit is sum or mean of the difference between these
-    two ROI images.
-    """
-    @profiler("ROI processor")
-    def process(self, processed, raw=None):
-        roi = self._rois[0]  # always use ROI1
-        if roi is None:
-            raise StopCompositionProcessing
-
-        on_image = processed.pp.on_image_mean
-        off_image = processed.pp.off_image_mean
-        if on_image is None or off_image is None:
-            return StopCompositionProcessing
-
-        fom_handler = self._fom_handler
 
         on_roi = RoiProcessor.get_roi_image(roi, on_image)
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
+        # set the current on/off ROIs
+        processed.pp.on_roi = on_roi
+        processed.pp.off_roi = off_roi
 
-        processed.pp.data = (None, on_roi, off_roi)
-        _, _, _, on_off_roi_ma = processed.pp.data  # get the moving average
+        if processed.pp.analysis_type == PumpProbeType.ROI:
+            processed.pp.data = (None, on_roi, off_roi)
+            _, _, _, on_off_roi_ma = processed.pp.data  # get the moving average
 
-        fom = fom_handler(on_off_roi_ma)
-        processed.pp.fom = (processed.tid, fom)
+            fom = self._fom_handler(on_off_roi_ma)
+            processed.pp.fom = (processed.tid, fom)
 
 
 class RoiPumpProbeProj1dProcessor(LeafProcessor):
     """RoiPumpProbeProj1dProcessor class.
 
-    Take the on and off images calculated by the PumpProbeProcessor
-    and calculate the 1D projections of ROI1 on both on and off images
-    as well as the figure-of-merit, which is the (absolute) sum of
-    the difference between the two projections.
+    Calculate the 1D projection for on/off ROIs.
     """
-    @profiler("ROI projection 1D processor")
     def process(self, processed, raw=None):
         if processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_X:
             axis = -2
@@ -193,24 +172,17 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         else:
             return
 
-        roi = self._rois[0]  # always use ROI1
-        if roi is None:
-            raise ProcessingError("ROI1 is inactivated or out of region")
+        on_roi = processed.pp.on_roi
+        off_roi = processed.pp.off_roi
 
-        on_image = processed.pp.on_image_mean
-        off_image = processed.pp.off_image_mean
-        if on_image is None or off_image is None:
-            raise StopCompositionProcessing
+        x_data = np.arange(on_roi.shape[::-1][axis])
+        # 1D projection
+        on_data = np.sum(on_roi, axis=axis)
+        off_data = np.sum(off_roi, axis=axis)
 
-        on_image_roi = RoiProcessor.get_roi_image(roi, on_image)
-        off_image_roi = RoiProcessor.get_roi_image(roi, off_image)
-        x_data = np.arange(on_image_roi.shape[::-1][axis])
-        on_data = np.sum(on_image_roi, axis=axis)
-        off_data = np.sum(off_image_roi, axis=axis)
-        on_off_data = on_data - off_data
-
+        # set data and calculate moving average
         processed.pp.data = (x_data, on_data, off_data)
-        _, _, _, on_off_ma = processed.pp.data  # get the moving average
+        _, _, _, on_off_ma = processed.pp.data
 
         fom = np.sum(np.abs(on_off_ma))
         processed.pp.fom = (processed.tid, fom)
