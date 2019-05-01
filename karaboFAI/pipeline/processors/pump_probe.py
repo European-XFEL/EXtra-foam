@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
 
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
@@ -89,8 +90,12 @@ class PumpProbeImageProcessor(LeafProcessor):
             return
 
         if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
-            self._buffer_image(('on', processed.image.masked_mean))
-            self._buffer_image(('off', processed.image.masked_ref))
+            on_image = processed.image.masked_mean
+            off_image = processed.image.masked_ref
+            if off_image is None:
+                off_image = np.zeros_like(on_image)
+            self._buffer_image(('on', on_image))
+            self._buffer_image(('off', off_image))
         else:
             handler = processed.image.sliced_masked_mean
 
