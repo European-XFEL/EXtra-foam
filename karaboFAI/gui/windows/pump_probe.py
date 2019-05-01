@@ -95,13 +95,11 @@ class PumpProbeWindow(DockerWindow):
         # right
         # -----------
 
-        pp_ai_dock = Dock("On&Off Azimuthal Integration",
-                          size=(self._RW, self._RH1))
+        pp_ai_dock = Dock("On&Off data", size=(self._RW, self._RH1))
         self._docker_area.addDock(pp_ai_dock, 'right')
         pp_ai_dock.addWidget(self._pp_ai)
 
-        pp_diff_dock = Dock("On-Off Azimuthal Integration",
-                            size=(self._RW, self._RH1))
+        pp_diff_dock = Dock("On-Off data", size=(self._RW, self._RH1))
         self._docker_area.addDock(pp_diff_dock, 'bottom', pp_ai_dock)
         pp_diff_dock.addWidget(self._pp_diff)
 

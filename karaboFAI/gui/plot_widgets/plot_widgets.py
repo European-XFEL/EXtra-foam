@@ -259,8 +259,10 @@ class PumpProbeOnOffWidget(PlotWidget):
         """
         super().__init__(parent=parent)
 
-        self.setLabel('left', "Scattering signal (arb. u.)")
-        self.setLabel('bottom', "Momentum transfer (1/A)")
+        # self.setLabel('left', "Scattering signal (arb. u.)")
+        # self.setLabel('bottom', "Momentum transfer (1/A)")
+        self.setLabel('left', "y (arb. u.)")
+        self.setLabel('bottom', "x (arb. u.)")
         self.addLegend(offset=(-40, 20))
 
         self._is_diff = diff
