@@ -288,6 +288,14 @@ class PumpProbeData(AbstractData):
             x, on, off = data
 
             with self._lock:
+                # x is always None when on/off are image data
+                if self._on_ma is not None and on.shape != self._on_ma.shape:
+                    # reset moving average if data shape (ROI shape) changes
+                    self._ma_count = 0
+                    self._on_ma = None
+                    self._off_ma = None
+                    self._on_off_ma = None
+
                 self._x = x
                 if self._ma_window > 1 and self._ma_count > 0:
                     if self._ma_count < self._ma_window:

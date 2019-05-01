@@ -283,6 +283,8 @@ class Scheduler(Worker):
                 print(repr(traceback.format_tb(exc_traceback)))
                 self.log(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                print(repr(traceback.format_tb(exc_traceback)))
                 self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
                 raise
 
