@@ -117,6 +117,8 @@ class PumpProbeImageProcessor(LeafProcessor):
                     self._buffer_image(('off', handler(self.off_pulse_ids)))
 
         if len(self._buffer) == 2:
+            processed.pp.analysis_type = self.analysis_type
+            # setting ma_window should come before setting image data
+            processed.pp.ma_window = self.ma_window
             processed.pp.off_image_mean = self._buffer.pop()[1]
             processed.pp.on_image_mean = self._buffer.pop()[1]
-            processed.pp.analysis_type = self.analysis_type

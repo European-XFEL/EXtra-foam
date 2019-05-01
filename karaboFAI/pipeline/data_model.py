@@ -311,12 +311,12 @@ class PumpProbeData(AbstractData):
 
         @moving_average_window.setter
         def moving_average_window(self, v):
-            if not isinstance(v, int) or v < 0:
+            if not isinstance(v, int) or v <= 0:
                 v = 1
 
             if v < self._ma_window:
                 # if the new window size is smaller than the current one,
-                # we reset the original image sum and count
+                # we reset everything
                 with self._lock:
                     self._ma_window = v
                     self._ma_count = 0
@@ -333,12 +333,12 @@ class PumpProbeData(AbstractData):
 
         def reset(self):
             with self._lock:
+                self._ma_window = 1
+                self._ma_count = 0
                 self._x = None
                 self._on_ma = None
                 self._off_ma = None
                 self._on_off_ma = None
-                self._ma_window = 1
-                self._ma_count = 0
 
     # Moving average of the on/off data in pump-probe experiments, for
     # example: azimuthal integration / ROI / 1D projection, etc.
@@ -501,7 +501,7 @@ class ImageData:
 
         @moving_average_window.setter
         def moving_average_window(self, v):
-            if not isinstance(v, int) or v < 0:
+            if not isinstance(v, int) or v <= 0:
                 v = 1
 
             if v < self._ma_window:
