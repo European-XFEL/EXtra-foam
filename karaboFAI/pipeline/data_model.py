@@ -973,10 +973,6 @@ class ProcessedData:
         RoiData.clear()
 
     @classmethod
-    def clear_pp_hist(cls):
-        PumpProbeData.clear()
-
-    @classmethod
     def clear_correlation_hist(cls):
         CorrelationData.clear()
 

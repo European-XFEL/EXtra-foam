@@ -105,8 +105,7 @@ class Scheduler(Worker):
                 PumpProbeData.frame_rate = 2
             else:
                 PumpProbeData.frame_rate = 1
-            self._pp_proc.reset()
-            ProcessedData.clear_pp_hist()
+            PumpProbeData.clear()
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
                 ProcessedData.clear_correlation_hist()
 
@@ -115,10 +114,12 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot(object)
     def onPpAnalysisTypeChange(self, value):
-        self._pp_proc.analysis_type = value
-        ProcessedData.clear_pp_hist()
-        if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
-            ProcessedData.clear_correlation_hist()
+        if value != self._pp_proc.analysis_type:
+            self._pp_proc.analysis_type = value
+            PumpProbeData.clear()
+
+            if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
+                ProcessedData.clear_correlation_hist()
 
     @QtCore.pyqtSlot(int)
     def onPpDifferenceTypeChange(self, state):
@@ -167,8 +168,7 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot()
     def onPumpProbeReset(self):
-        ProcessedData.clear_pp_hist()
-        self._pp_proc.reset()
+        PumpProbeData.clear()
 
     @QtCore.pyqtSlot(int)
     def onPulsedAiStateChange(self, state):
