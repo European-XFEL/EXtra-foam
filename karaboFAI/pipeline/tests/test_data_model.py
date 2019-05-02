@@ -568,7 +568,7 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual("property1", info["property"])
 
         # test clear history
-        ProcessedData.clear_correlation_hist()
+        CorrelationData.clear()
         corr, fom, info = data.correlation.param0
         np.testing.assert_array_almost_equal([], corr)
         np.testing.assert_array_almost_equal([], fom)

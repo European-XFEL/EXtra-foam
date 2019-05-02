@@ -18,7 +18,7 @@ from PyQt5 import QtCore
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
-from .data_model import ProcessedData, PumpProbeData
+from .data_model import CorrelationData, ProcessedData, PumpProbeData, RoiData
 from .worker import Worker
 from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
@@ -103,7 +103,7 @@ class Scheduler(Worker):
             self._pp_proc.mode = mode
             PumpProbeData.clear()
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
-                ProcessedData.clear_correlation_hist()
+                CorrelationData.clear()
 
         self._pp_proc.on_pulse_ids = on_pulse_ids
         self._pp_proc.off_pulse_ids = off_pulse_ids
@@ -115,7 +115,7 @@ class Scheduler(Worker):
             PumpProbeData.clear()
 
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
-                ProcessedData.clear_correlation_hist()
+                CorrelationData.clear()
 
     @QtCore.pyqtSlot(int)
     def onPpDifferenceTypeChange(self, state):
@@ -172,7 +172,7 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot()
     def onCorrelationReset(self):
-        ProcessedData.clear_correlation_hist()
+        CorrelationData.clear()
 
     @QtCore.pyqtSlot(int, str, str, float)
     def onCorrelationParamChange(self, idx, device_id, ppt, resolution):
@@ -182,7 +182,7 @@ class Scheduler(Worker):
     def onCorrelationFomChange(self, fom):
         if self._correlation_proc.fom_name != fom:
             self._correlation_proc.fom_name = fom
-            ProcessedData.clear_correlation_hist()
+            CorrelationData.clear()
 
     @QtCore.pyqtSlot(int)
     def onPumpProbeMAWindowChange(self, n):
@@ -206,10 +206,10 @@ class Scheduler(Worker):
     @QtCore.pyqtSlot(object)
     def onRoiFomChange(self, value):
         self._roi_proc.fom_type = value
-        ProcessedData.clear_roi_hist()
+        RoiData.clear()
 
     def clear_roi_hist(self):
-        ProcessedData.clear_roi_hist()
+        RoiData.clear()
 
     def run(self):
         """Run the data processor."""

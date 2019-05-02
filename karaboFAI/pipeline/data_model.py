@@ -963,14 +963,6 @@ class ProcessedData:
 
         return self._image_data.n_images
 
-    @classmethod
-    def clear_roi_hist(cls):
-        RoiData.clear()
-
-    @classmethod
-    def clear_correlation_hist(cls):
-        CorrelationData.clear()
-
     @staticmethod
     def add_correlator(idx, device_id, ppt, resolution=0.0):
         """Add a correlated parameter.
