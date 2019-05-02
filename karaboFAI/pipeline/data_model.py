@@ -125,6 +125,9 @@ class AccumulatedPairData(PairData):
                         (this_y - self._y_avg[-1]) / self._y_count[-1]
                     self._y_std[-1] += \
                         (this_y - avg_prev)*(this_y - self._y_avg[-1])
+                    # self._y_min and self._y_max does not store min and max
+                    # self._y_min stores y_avg - 0.5*std_dev
+                    # self._y_max stores y_avg + 0.5*std_dev
                     self._y_min[-1] = self._y_avg[-1] - 0.5*np.sqrt(
                         self._y_std[-1]/self._y_count[-1])
                     self._y_max[-1] = self._y_avg[-1] + 0.5*np.sqrt(
@@ -195,6 +198,7 @@ class AccumulatedPairData(PairData):
             self._y_avg.clear()
             self._y_min.clear()
             self._y_max.clear()
+            self._y_std.clear()
         # do not clear _info here!
 
 
