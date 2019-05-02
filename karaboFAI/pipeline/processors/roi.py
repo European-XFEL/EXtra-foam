@@ -34,7 +34,7 @@ class RoiProcessor(CompositeProcessor):
         fom_type (RoiFom): type of ROI FOM.
     """
     _raw_rois = SharedProperty()
-    _fom_handler = SharedProperty()
+    _roi_fom_handler = SharedProperty()
 
     def __init__(self):
         super().__init__()
@@ -43,7 +43,7 @@ class RoiProcessor(CompositeProcessor):
         self._raw_rois = [None] * len(config["ROI_COLORS"])
 
         self._fom_type = None
-        self._fom_handler = None
+        self._roi_fom_handler = None
 
         self.add(RoiFomProcessor())
         self.add(RoiPumpProbeRoiProcessor())
@@ -55,13 +55,14 @@ class RoiProcessor(CompositeProcessor):
     @fom_type.setter
     def fom_type(self, v):
         self._fom_type = v
+
         if v == RoiFom.SUM:
-            self._fom_handler = np.sum
+            self._roi_fom_handler = np.sum
         elif v == RoiFom.MEAN:
-            self._fom_handler = np.mean
+            self._roi_fom_handler = np.mean
         else:
+            self._roi_fom_handler = None
             self._fom_type = None
-            self._fom_handler = None
 
     def set_roi(self, rank, value):
         """Set ROI.
@@ -93,8 +94,7 @@ class RoiFomProcessor(LeafProcessor):
         activated. This is required for the case that different ROIs are
         activated at different times.
         """
-        fom_handler = self._fom_handler
-        if fom_handler is None:
+        if self._roi_fom_handler is None:
             return
 
         tid = processed.tid
@@ -121,7 +121,7 @@ class RoiFomProcessor(LeafProcessor):
                         setattr(processed.roi, f"roi{i + 1}_proj_x", proj_x)
                         setattr(processed.roi, f"roi{i + 1}_proj_y", proj_y)
 
-                        fom = fom_handler(roi_img)
+                        fom = self._roi_fom_handler(roi_img)
 
                 setattr(processed.roi, f"roi{i+1}_hist", (tid, fom))
 
@@ -172,7 +172,10 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
             processed.pp.data = (None, on_roi, off_roi)
             _, _, _, on_off_roi_ma = processed.pp.data  # get the moving average
 
-            fom = self._fom_handler(on_off_roi_ma)
+            if processed.pp.abs_difference:
+                fom = self._roi_fom_handler(np.abs(on_off_roi_ma))
+            else:
+                fom = self._roi_fom_handler(on_off_roi_ma)
             processed.pp.fom = (processed.tid, fom)
 
 
@@ -183,10 +186,6 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
     """
     def __init__(self):
         super().__init__()
-
-        # 1D projection FOM handler (shadows the _fom_handler attribute
-        # in the parent class)
-        self._fom_handler = np.sum
 
     def process(self, processed, raw=None):
         if processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_X:
@@ -211,7 +210,10 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         norm_on_ma = normalize_curve(on_ma, x_data, x_data[0], x_data[-1])
         norm_off_ma = normalize_curve(off_ma, x_data, x_data[0], x_data[-1])
         norm_on_off_ma = norm_on_ma - norm_off_ma
-        fom = self._fom_handler(np.abs(norm_on_off_ma))
+        if processed.pp.abs_difference:
+            fom = np.sum(np.abs(norm_on_off_ma))
+        else:
+            fom = np.sum(norm_on_off_ma)
 
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma

@@ -372,6 +372,8 @@ class PumpProbeData(AbstractData):
 
         self.analysis_type = None
 
+        self.abs_difference = None
+
         # the current average of on/off images
         self.on_image_mean = None
         self.off_image_mean = None
@@ -380,6 +382,7 @@ class PumpProbeData(AbstractData):
         self.on_roi = None
         self.off_roi = None
 
+        # normalized on/off/on-off moving average
         self.norm_on_ma = None
         self.norm_off_ma = None
         self.norm_on_off_ma = None

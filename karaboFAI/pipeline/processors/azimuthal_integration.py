@@ -326,7 +326,10 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         norm_on_off_ma = norm_on_ma - norm_off_ma
 
         fom = slice_curve(norm_on_off_ma, momentum, *self.fom_itgt_range)[0]
-        fom = np.sum(np.abs(fom))
+        if processed.pp.abs_difference:
+            fom = np.sum(np.abs(fom))
+        else:
+            fom = np.sum(fom)
 
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma
