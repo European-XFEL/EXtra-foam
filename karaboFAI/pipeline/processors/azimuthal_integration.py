@@ -309,10 +309,29 @@ class AiPumpProbeProcessor(CompositeProcessor):
         on_intensity = intensities[0]
         off_intensity = intensities[1]
 
-        normalized_on, normalized_off = self._normalize(
-            processed, momentum, on_intensity, off_intensity)
+        processed.pp.data = (momentum, on_intensity, off_intensity)
 
-        processed.pp.data = (momentum, normalized_on, normalized_off)
+
+class AiPumpProbeFomProcessor(LeafProcessor):
+    """AiPumpProbeFomProcessor class.
+
+    Calculate the pump-probe FOM.
+    """
+    @profiler("Azimuthal integration pump-probe FOM processor")
+    def process(self, processed, raw=None):
+        momentum, on_ma, off_ma, on_off_ma = processed.pp.data
+
+        norm_on_ma, norm_off_ma = self._normalize(
+            processed, momentum, on_ma, off_ma)
+        norm_on_off_ma = norm_on_ma - norm_off_ma
+
+        fom = slice_curve(norm_on_off_ma, momentum, *self.fom_itgt_range)[0]
+        fom = np.sum(np.abs(fom))
+
+        processed.pp.norm_on_ma = norm_on_ma
+        processed.pp.norm_off_ma = norm_off_ma
+        processed.pp.norm_on_off_ma = norm_on_off_ma
+        processed.pp.fom = (processed.tid, fom)
 
     def _normalize(self, processed, momentum, on, off):
         auc_x_range = self.auc_x_range
@@ -341,19 +360,3 @@ class AiPumpProbeProcessor(CompositeProcessor):
             off /= off_denominator
 
         return on, off
-
-
-class AiPumpProbeFomProcessor(LeafProcessor):
-    """AiPumpProbeFomProcessor class.
-
-    Calculate the pump-probe FOM.
-    """
-    @profiler("Azimuthal integration pump-probe FOM processor")
-    def process(self, processed, raw=None):
-        x, on_ma, off_ma, on_off_ma = processed.pp.data
-
-        fom = slice_curve(on_off_ma, x, *self.fom_itgt_range)[0]
-        # TODO: fix
-        fom = np.sum(np.abs(fom))
-
-        processed.pp.fom = (processed.tid, fom)

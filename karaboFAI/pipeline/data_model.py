@@ -291,8 +291,6 @@ class PumpProbeData(AbstractData):
 
             self._ma_window = 1
             self._ma_count = 0
-            # True for calculating absolute different between on/off pulses.
-            self._abs_difference = True
 
             self._lock = Lock()
 
@@ -356,14 +354,6 @@ class PumpProbeData(AbstractData):
         def moving_average_count(self):
             return self._ma_count
 
-        @property
-        def abs_difference(self):
-            return self._abs_difference
-
-        @abs_difference.setter
-        def abs_difference(self, v):
-            self._abs_difference = True if v else False
-
         def reset(self):
             with self._lock:
                 self._ma_window = 1
@@ -405,14 +395,6 @@ class PumpProbeData(AbstractData):
     @property
     def ma_count(self):
         return self.__class__.__dict__['data'].moving_average_count
-
-    @property
-    def abs_difference(self):
-        return self.__class__.__dict__['data'].abs_difference
-
-    @abs_difference.setter
-    def abs_difference(self, v):
-        self.__class__.__dict__['data'].abs_difference = v
 
     @classmethod
     def clear(cls):
