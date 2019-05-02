@@ -640,15 +640,15 @@ class TestCorrelationData(unittest.TestCase):
         corr, fom, info = data.correlation.param0
         np.testing.assert_array_equal([2.01], corr)
         np.testing.assert_array_equal([2], fom.count)
-        np.testing.assert_array_equal([0.4], fom.min)
-        np.testing.assert_array_equal([0.5], fom.max)
+        np.testing.assert_array_almost_equal([0.425], fom.min)
+        np.testing.assert_array_almost_equal([0.475], fom.max)
         np.testing.assert_array_equal([0.45], fom.avg)
 
         data.correlation.param0 = (2.11, 0.6)
         corr, fom, info = data.correlation.param0
         np.testing.assert_array_equal([3], fom.count)
-        np.testing.assert_array_equal([0.4], fom.min)
-        np.testing.assert_array_equal([0.6], fom.max)
+        np.testing.assert_array_almost_equal([0.4591751709536137], fom.min)
+        np.testing.assert_array_almost_equal([0.5408248290463863], fom.max)
         np.testing.assert_array_equal([0.5], fom.avg)
 
         # new point
@@ -656,8 +656,8 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation.param0 = (2.41, 2)
         corr, fom, info = data.correlation.param0
         np.testing.assert_array_equal([3, 2], fom.count)
-        np.testing.assert_array_equal([0.4, 1], fom.min)
-        np.testing.assert_array_equal([0.6, 2], fom.max)
+        np.testing.assert_array_almost_equal([0.4591751709536137, 1.25], fom.min)
+        np.testing.assert_array_almost_equal([0.5408248290463863, 1.75], fom.max)
         np.testing.assert_array_equal([0.5, 1.5], fom.avg)
 
         # test when resolution changes

@@ -112,6 +112,7 @@ class AccumulatedPairData(PairData):
         self._y_avg = []
         self._y_min = []
         self._y_max = []
+        self._y_std = []
 
     def __set__(self, instance, pair):
         this_x, this_y = pair
@@ -119,11 +120,20 @@ class AccumulatedPairData(PairData):
             if self._x:
                 if abs(this_x - self._x[-1]) - self._resolution < self._epsilon:
                     self._y_count[-1] += 1
-                    self._y_avg[-1] += (this_y - self._y_avg[-1]) / self._y_count[-1]
-                    if this_y < self._y_min[-1]:
-                        self._y_min[-1] = this_y
-                    elif this_y > self._y_max[-1]:
-                        self._y_max[-1] = this_y
+                    avg_prev = self._y_avg[-1]
+                    self._y_avg[-1] += \
+                        (this_y - self._y_avg[-1]) / self._y_count[-1]
+                    self._y_std[-1] += \
+                        (this_y - avg_prev)*(this_y - self._y_avg[-1])
+                    # self._y_min and self._y_max does not store min and max
+                    # Only Standard deviation will be plotted. Min Max functionality
+                    # does not exist as of now.
+                    # self._y_min stores y_avg - 0.5*std_dev
+                    # self._y_max stores y_avg + 0.5*std_dev
+                    self._y_min[-1] = self._y_avg[-1] - 0.5*np.sqrt(
+                        self._y_std[-1]/self._y_count[-1])
+                    self._y_max[-1] = self._y_avg[-1] + 0.5*np.sqrt(
+                        self._y_std[-1]/self._y_count[-1])
                     self._x[-1] += (this_x - self._x[-1]) / self._y_count[-1]
                 else:
                     # If the number of data at a location is less than
@@ -134,17 +144,20 @@ class AccumulatedPairData(PairData):
                         del self._y_avg[-1]
                         del self._y_min[-1]
                         del self._y_max[-1]
+                        del self._y_std[-1]
                     self._x.append(this_x)
                     self._y_count.append(1)
                     self._y_avg.append(this_y)
                     self._y_min.append(this_y)
                     self._y_max.append(this_y)
+                    self._y_std.append(0.0)
             else:
                 self._x.append(this_x)
                 self._y_count.append(1)
                 self._y_avg.append(this_y)
                 self._y_min.append(this_y)
                 self._y_max.append(this_y)
+                self._y_std.append(0.0)
 
         if len(self._x) > self.MAX_LENGTH:
             self.__delete__(instance)
@@ -179,6 +192,7 @@ class AccumulatedPairData(PairData):
             del self._y_avg[0]
             del self._y_min[0]
             del self._y_max[0]
+            del self._y_std[0]
 
     def clear(self):
         with self._lock:
@@ -187,6 +201,7 @@ class AccumulatedPairData(PairData):
             self._y_avg.clear()
             self._y_min.clear()
             self._y_max.clear()
+            self._y_std.clear()
         # do not clear _info here!
 
 
