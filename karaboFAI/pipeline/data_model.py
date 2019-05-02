@@ -329,8 +329,6 @@ class PumpProbeData(AbstractData):
                         self._ma_count = 1  # 0 -> 1
 
                 self._on_off_ma = self._on_ma - self._off_ma
-                if self._abs_difference:
-                    np.abs(self._on_off_ma, out=self._on_off_ma)
 
         @property
         def moving_average_window(self):
@@ -391,6 +389,10 @@ class PumpProbeData(AbstractData):
         # the current ROI of on/off images
         self.on_roi = None
         self.off_roi = None
+
+        self.norm_on_ma = None
+        self.norm_off_ma = None
+        self.norm_on_off_ma = None
 
     @property
     def ma_window(self):

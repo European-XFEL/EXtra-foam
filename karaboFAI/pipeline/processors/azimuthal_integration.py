@@ -353,6 +353,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         x, on_ma, off_ma, on_off_ma = processed.pp.data
 
         fom = slice_curve(on_off_ma, x, *self.fom_itgt_range)[0]
+        # TODO: fix
         fom = np.sum(np.abs(fom))
 
         processed.pp.fom = (processed.tid, fom)

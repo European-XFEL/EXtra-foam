@@ -18,7 +18,7 @@ from .base_processor import (
     StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
-from ...algorithms import intersection
+from ...algorithms import intersection, normalize_curve
 from ...config import config, RoiFom, PumpProbeType
 from ...helpers import profiler
 
@@ -206,7 +206,14 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
 
         # set data and calculate moving average
         processed.pp.data = (x_data, on_data, off_data)
-        _, _, _, on_off_ma = processed.pp.data
+        _, on_ma, off_ma, on_off_ma = processed.pp.data
 
-        fom = self._fom_handler(on_off_ma)
+        norm_on_ma = normalize_curve(on_ma, x_data, x_data[0], x_data[-1])
+        norm_off_ma = normalize_curve(off_ma, x_data, x_data[0], x_data[-1])
+        norm_on_off_ma = norm_on_ma - norm_off_ma
+        fom = self._fom_handler(np.abs(norm_on_off_ma))
+
+        processed.pp.norm_on_ma = norm_on_ma
+        processed.pp.norm_off_ma = norm_off_ma
+        processed.pp.norm_on_off_ma = norm_on_off_ma
         processed.pp.fom = (processed.tid, fom)

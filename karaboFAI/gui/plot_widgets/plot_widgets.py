@@ -274,7 +274,10 @@ class PumpProbeOnOffWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        x, on, off, on_off = data.pp.data
+        x, _, _, _ = data.pp.data
+        on = data.pp.norm_on_ma
+        off = data.pp.norm_off_ma
+        on_off = data.pp.norm_on_off_ma
 
         if on is None or off is None:
             return
