@@ -19,7 +19,7 @@ class TestRoiProcessor(unittest.TestCase):
         ImageData.clear()
 
         self._proc = RoiProcessor()
-        self._rois = self._proc._rois
+        self._rois = self._proc._raw_rois
         img = np.ones((100, 100))
         self.__class__._count += 1
         self._proc_data = ProcessedData(self._count, images=img)
@@ -28,7 +28,7 @@ class TestRoiProcessor(unittest.TestCase):
         count = self.__class__._count
 
         # ROIs are all None
-        self.assertEqual(len(config["ROI_COLORS"]), len(self._proc._rois))
+        self.assertEqual(len(config["ROI_COLORS"]), len(self._rois))
         self.assertEqual(None, self._rois[0])
         self._proc.run_once(self._proc_data)
 

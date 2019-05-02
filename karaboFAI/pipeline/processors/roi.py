@@ -33,14 +33,14 @@ class RoiProcessor(CompositeProcessor):
             corresponding ROI is not activated.
         fom_type (RoiFom): type of ROI FOM.
     """
-    _rois = SharedProperty()
+    _raw_rois = SharedProperty()
     _fom_handler = SharedProperty()
 
     def __init__(self):
         super().__init__()
 
         # initialization
-        self._rois = [None] * len(config["ROI_COLORS"])
+        self._raw_rois = [None] * len(config["ROI_COLORS"])
 
         self._fom_type = None
         self._fom_handler = None
@@ -69,7 +69,7 @@ class RoiProcessor(CompositeProcessor):
         :param int rank: ROI rank (index).
         :param tuple value: (w, h, x, y) of the ROI. None for unset.
         """
-        self._rois[rank-1] = value
+        self._raw_rois[rank-1] = value
 
     @staticmethod
     def get_roi_image(roi_region, img, copy=True):
@@ -101,18 +101,20 @@ class RoiFomProcessor(LeafProcessor):
         if tid > 0:
             img = processed.image.masked_mean
 
-            rois = copy.copy(self._rois)
+            rois = copy.copy(self._raw_rois)
             for i, roi in enumerate(rois):
                 # it should be valid to set ROI intensity to zero if the data
                 # is not available
                 fom = 0
                 if roi is not None:
                     roi = intersection(*roi, *img.shape[::-1], 0, 0)
-                    if roi[0] < 0 or roi[1] < 0:
-                        self._rois[i] = None
-                    else:
+                    # if w > 0 and h > 0
+                    if roi[0] > 0 and roi[1] > 0:
+                        # set the corrected roi
                         setattr(processed.roi, f"roi{i+1}", roi)
-                        roi_img = RoiProcessor.get_roi_image(roi, img, copy=False)
+
+                        roi_img = RoiProcessor.get_roi_image(
+                            roi, img, copy=False)
 
                         proj_x = np.sum(roi_img, axis=-2)
                         proj_y = np.sum(roi_img, axis=-1)
@@ -137,12 +139,12 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
     @profiler("ROI processor")
     def process(self, processed, raw=None):
         # use ROI1 for signal
-        roi = self._rois[0]
+        roi = processed.roi.roi1
         if roi is None:
             raise StopCompositionProcessing
 
         # use ROI2 for background
-        roi_bkg = self._rois[1]
+        roi_bkg = processed.roi.roi2
         if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
             raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
