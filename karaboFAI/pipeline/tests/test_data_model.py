@@ -735,7 +735,6 @@ class TestPumpProbeData(unittest.TestCase):
         this_off = 10 * np.ones(10)
         on_gt = np.copy(this_on)
         off_gt = np.copy(this_off)
-        on_off_gt = np.copy(this_on - this_off)
 
         # test clear
         data.data = (x_gt, this_on, this_off)
@@ -749,23 +748,21 @@ class TestPumpProbeData(unittest.TestCase):
         # count < window size
         for i in range(data.ma_window - 1):
             data.data = (x_gt, this_on - 2 - i, this_off - 2 - i)
-            x, on, off, on_off = data.data
+            x, on, off = data.data
             on_gt -= 1
             off_gt -= 1
             np.testing.assert_array_equal(x_gt, x)
             np.testing.assert_array_equal(on_gt, on)
             np.testing.assert_array_equal(off_gt, off)
-            np.testing.assert_array_equal(on_off_gt, on_off)
         self.assertEqual(window, data.ma_count)
 
         # on = 10 * np.ones(1), off = 5 * np.ones(1)
-        x, on, off, on_off = data.data
+        x, on, off = data.data
 
         this_on = 4 * np.ones(10)
         this_off = 2 * np.ones(10)
         data.data = (x_gt, this_on, this_off)
         self.assertEqual(window, data.ma_count)
-        x, on, off, on_off = data.data
+        x, on, off = data.data
         np.testing.assert_array_equal(9 * np.ones(10), on)  # 10 + (4 - 10)/6
         np.testing.assert_array_equal(4.5 * np.ones(10), off)  # 5 + (2 - 5)/6
-        np.testing.assert_array_equal(4.5 * np.ones(10), on_off)

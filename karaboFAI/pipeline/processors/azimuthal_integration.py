@@ -319,7 +319,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
     """
     @profiler("Azimuthal integration pump-probe FOM processor")
     def process(self, processed, raw=None):
-        momentum, on_ma, off_ma, on_off_ma = processed.pp.data
+        momentum, on_ma, off_ma = processed.pp.data
 
         norm_on_ma, norm_off_ma = self._normalize(
             processed, momentum, on_ma, off_ma)

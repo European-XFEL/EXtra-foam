@@ -287,7 +287,6 @@ class PumpProbeData(AbstractData):
             self._x = None
             self._on_ma = None  # moving average of on data
             self._off_ma = None  # moving average of off data
-            self._on_off_ma = None  # moving average of on - off data
 
             self._ma_window = 1
             self._ma_count = 0
@@ -295,7 +294,7 @@ class PumpProbeData(AbstractData):
             self._lock = Lock()
 
         def __get__(self, instance, instance_type):
-            return self._x, self._on_ma, self._off_ma, self._on_off_ma
+            return self._x, self._on_ma, self._off_ma
 
         def __set__(self, instance, data):
             x, on, off = data
@@ -307,7 +306,6 @@ class PumpProbeData(AbstractData):
                     self._ma_count = 0
                     self._on_ma = None
                     self._off_ma = None
-                    self._on_off_ma = None
 
                 self._x = x
                 if self._ma_window > 1 and self._ma_count > 0:
@@ -325,8 +323,6 @@ class PumpProbeData(AbstractData):
                     self._off_ma = off
                     if self._ma_window > 1:
                         self._ma_count = 1  # 0 -> 1
-
-                self._on_off_ma = self._on_ma - self._off_ma
 
         @property
         def moving_average_window(self):
@@ -346,7 +342,6 @@ class PumpProbeData(AbstractData):
                     self._x = None
                     self._on_ma = None
                     self._off_ma = None
-                    self._on_off_ma = None
 
             self._ma_window = v
 
@@ -361,7 +356,6 @@ class PumpProbeData(AbstractData):
                 self._x = None
                 self._on_ma = None
                 self._off_ma = None
-                self._on_off_ma = None
 
     # Moving average of the on/off data in pump-probe experiments, for
     # example: azimuthal integration / ROI / 1D projection, etc.
