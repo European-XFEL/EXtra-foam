@@ -101,10 +101,6 @@ class Scheduler(Worker):
     def onPpPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
         if mode != self._pp_proc.mode:
             self._pp_proc.mode = mode
-            if mode in (PumpProbeMode.ODD_TRAIN_ON, PumpProbeMode.EVEN_TRAIN_ON):
-                PumpProbeData.frame_rate = 2
-            else:
-                PumpProbeData.frame_rate = 1
             PumpProbeData.clear()
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
                 ProcessedData.clear_correlation_hist()

@@ -199,8 +199,6 @@ class PlotWidget(GraphicsView):
         if parent is not None:
             parent.registerPlotWidget(self)
 
-        self._data = None  # keep the last data (could be invalid)
-
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
         self.enableMouse(False)

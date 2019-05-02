@@ -272,35 +272,12 @@ class PumpProbeOnOffWidget(PlotWidget):
             self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
             self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
 
-        self._tick = 0
-
     def update(self, data):
         """Override."""
         x, on, off, on_off = data.pp.data
-        frame_rate = data.pp.frame_rate
 
         if on is None or off is None:
-            # return is there is no data and cached data
-            if self._data is None:
-                return
-
-            # use cached data
-            x, on, off, on_off = self._data
-
-            if self._tick < frame_rate - 1:
-                self._tick += 1
-            else:
-                # reset tick and cached data
-                self._tick = 0
-                self._data = None
-                return
-
-        else:
-            # reset tick when new data is received
-            self._tick = 0
-            if frame_rate > 1:
-                # cache data
-                self._data = (x, on, off, on_off)
+            return
 
         if isinstance(on, np.ndarray) and on.ndim > 1:
             # image data
