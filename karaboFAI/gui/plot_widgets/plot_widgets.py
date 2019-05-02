@@ -283,7 +283,8 @@ class PumpProbeOnOffWidget(PlotWidget):
             return
 
         if isinstance(on, np.ndarray) and on.ndim > 1:
-            # image data
+            # call reset() to reset() plots from other analysis types
+            self.reset()
             return
 
         if self._is_diff:

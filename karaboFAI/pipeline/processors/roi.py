@@ -155,7 +155,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         on_roi = RoiProcessor.get_roi_image(roi, on_image)
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
-        # ROI background subtraction
+        # ROI background subtraction, which is also a kind of normalization
         if roi_bkg is not None:
             on_roi_bkg = RoiProcessor.get_roi_image(
                 roi_bkg, on_image, copy=False)
@@ -170,12 +170,21 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         if processed.pp.analysis_type == PumpProbeType.ROI:
             processed.pp.data = (None, on_roi, off_roi)
-            _, _, _, on_off_roi_ma = processed.pp.data  # get the moving average
+            _, on_ma, off_ma, on_off_roi_ma = processed.pp.data  # get the moving average
+
+            # for now, no normalization is applied
+            norm_on_ma = np.copy(on_ma)
+            norm_off_ma = np.copy(off_ma)
+            norm_on_off_ma = norm_on_ma - norm_off_ma
 
             if processed.pp.abs_difference:
                 fom = self._roi_fom_handler(np.abs(on_off_roi_ma))
             else:
                 fom = self._roi_fom_handler(on_off_roi_ma)
+
+            processed.pp.norm_on_ma = norm_on_ma
+            processed.pp.norm_off_ma = norm_off_ma
+            processed.pp.norm_on_off_ma = norm_on_off_ma
             processed.pp.fom = (processed.tid, fom)
 
 
