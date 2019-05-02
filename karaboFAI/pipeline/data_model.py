@@ -192,6 +192,7 @@ class AccumulatedPairData(PairData):
             del self._y_avg[0]
             del self._y_min[0]
             del self._y_max[0]
+            del self._y_std[0]
 
     def clear(self):
         with self._lock:
