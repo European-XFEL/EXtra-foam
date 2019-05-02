@@ -126,6 +126,8 @@ class AccumulatedPairData(PairData):
                     self._y_std[-1] += \
                         (this_y - avg_prev)*(this_y - self._y_avg[-1])
                     # self._y_min and self._y_max does not store min and max
+                    # Only Standard deviation will be plotted. Min Max functionality
+                    # does not exist as of now.
                     # self._y_min stores y_avg - 0.5*std_dev
                     # self._y_max stores y_avg + 0.5*std_dev
                     self._y_min[-1] = self._y_avg[-1] - 0.5*np.sqrt(
