@@ -208,7 +208,8 @@ class Scheduler(Worker):
         self._roi_proc.fom_type = value
         RoiData.clear()
 
-    def clear_roi_hist(self):
+    @QtCore.pyqtSlot()
+    def onRoiHistClear(self):
         RoiData.clear()
 
     def run(self):

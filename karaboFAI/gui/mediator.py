@@ -73,7 +73,7 @@ class Mediator(QtCore.QObject):
 
         self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
         self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
-        self.roi_hist_clear_sgn.connect(scheduler.clear_roi_hist)
+        self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
 
     def connect_bridge(self, bridge):
         self.tcp_host_change_sgn.connect(bridge.onTcpHostChange)
