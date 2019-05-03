@@ -73,6 +73,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 "FXE_SMS_USR/MOTOR/UM04",
                 "FXE_SMS_USR/MOTOR/UM05",
                 "FXE_SMS_USR/MOTOR/UM13",
+                "FXE_AUXT_LIC/DOOCS/PPLASER",
             ],
             properties=["actualPosition"],
         ),
