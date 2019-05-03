@@ -487,27 +487,24 @@ class ImageData:
 
         def set(self, imgs):
             """Set new image data."""
-            if self._images is None:
-                self._images = imgs
-                self._ma_count = 1
-            else:
+            if self._images is not None and self._ma_window > 1:
                 if imgs.shape != self._images.shape:
-                    logger.error(f"The shape {imgs.shape} of the new image is "
-                                 f"different from the current one "
-                                 f"{self._images.shape}!")
+                    logger.error(
+                        f"The shape {imgs.shape} of the new image is "
+                        f"different from the current one "
+                        f"{self._images.shape}!")
                     return
 
-                elif self._ma_window > 1:
-                    if self._ma_count < self._ma_window:
-                        self._ma_count += 1
-                        self._images += (imgs - self._images) / self._ma_count
-                    else:  # self._ma_count == self._ma_window
-                        # here is an approximation
-                        self._images += (imgs - self._images) / self._ma_window
+                if self._ma_count < self._ma_window:
+                    self._ma_count += 1
+                    self._images += (imgs - self._images) / self._ma_count
+                else:  # self._ma_count == self._ma_window
+                    # here is an approximation
+                    self._images += (imgs - self._images) / self._ma_window
 
-                else:  # self._ma_window == 1
-                    self._images = imgs
-                    self._ma_count = 1
+            else:  # self._images is None or self._ma_window == 1
+                self._images = imgs
+                self._ma_count = 1
 
             self._invalid_image_cached()
 
