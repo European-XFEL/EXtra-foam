@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import QApplication
 
 from . import __version__
 from .config import config
+from .logger import logger
 from .pipeline import Bridge, Scheduler
 from .gui import MainGUI
 
@@ -61,8 +62,15 @@ def start():
     parser.add_argument("detector", help="detector name (case insensitive)",
                         choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
                         type=lambda s: s.upper())
+    parser.add_argument('--debug', action='store_true',
+                        help="Enable faulthandler")
 
     args = parser.parse_args()
+
+    if args.debug:
+        import faulthandler
+        faulthandler.enable()
+        logger.debug("'faulthandler enabled")
 
     detector = args.detector
     if detector == 'JUNGFRAU':
@@ -76,4 +84,5 @@ def start():
 
 
 if __name__ == "__main__":
+
     start()
