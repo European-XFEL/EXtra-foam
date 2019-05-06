@@ -112,7 +112,7 @@ class TestPulsedAiWindow(unittest.TestCase):
 class TestSingletonWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        FaiServer()
+        FaiServer.make_app()
         SingletonWindow._instances.clear()
 
     @SingletonWindow

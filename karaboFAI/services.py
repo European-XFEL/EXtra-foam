@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import argparse
-import sys
 
 from PyQt5.QtWidgets import QApplication
 
@@ -22,14 +21,19 @@ from .gui import MainGUI
 
 
 class FaiServer:
-    _app = None
+    """FaiServer class.
 
-    def __init__(self, detector=None):
+    TODO: change the class name.
+
+    It manages all services in karaboFAI: QApplication, Redis, Processors,
+    etc.
+    """
+    __app = None
+
+    def __init__(self, detector):
         """Initialization."""
-        self.__class__.start()
 
-        if detector is None:
-            return
+        self.__class__.make_app()
 
         # update global configuration
         config.load(detector)
@@ -43,16 +47,18 @@ class FaiServer:
         self.gui = MainGUI(bridge=bridge, scheduler=scheduler)
 
     @classmethod
-    def start(cls):
-        if cls._app is None:
-            cls._app = QApplication(sys.argv)
+    def make_app(cls):
+        if cls.__app is None:
+            import sys
+            cls.__app = QApplication(sys.argv)
+        return cls.__app.instance()
 
     @property
     def app(self):
-        return self._app.instance()
+        return self.__app.instance()
 
-    def exec(self):
-        self._app.exec_()
+    def start(self):
+        self.app.exec_()
 
 
 def start():
@@ -80,7 +86,7 @@ def start():
     else:
         detector = detector.upper()
 
-    FaiServer(detector).exec()
+    FaiServer(detector).start()
 
 
 if __name__ == "__main__":

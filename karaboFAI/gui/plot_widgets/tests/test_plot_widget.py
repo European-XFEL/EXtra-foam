@@ -1,16 +1,15 @@
 import unittest
-from unittest.mock import MagicMock
 
 from karaboFAI.services import FaiServer
 from karaboFAI.gui.plot_widgets.plot_widgets import (
-    PlotWidget, PumpProbeOnOffWidget
+    PlotWidget
 )
 
 
 class TestPlotWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = FaiServer().app
+        cls.app = FaiServer.make_app()
 
     def setUp(self):
         self._widget = PlotWidget()
