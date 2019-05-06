@@ -74,7 +74,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
         self._fom_itgt_range_le = QtGui.QLineEdit(
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self.pulsed_ai_cb,
             self._photon_energy_le,
             self._sample_dist_le,

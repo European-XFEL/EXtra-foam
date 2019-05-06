@@ -30,7 +30,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         self._geom_file_open_btn = QtGui.QPushButton("Load geometry file")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._quad_positions_tb,
             self._geom_file_le,
             self._geom_file_open_btn

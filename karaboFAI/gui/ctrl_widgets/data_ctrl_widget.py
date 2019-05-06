@@ -79,12 +79,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._serve_terminate_btn = QtGui.QPushButton("Terminate")
         self._serve_terminate_btn.setEnabled(False)
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._detector_src_cb,
             self._hostname_le,
             self._port_le,
         ]
-        self._disabled_widgets_during_daq.extend(self._source_type_rbts)
+        self._non_reconfigurable_widgets.extend(self._source_type_rbts)
 
         self.initUI()
         self.initConnections()

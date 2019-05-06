@@ -35,10 +35,9 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         if parent is not None:
             parent.registerCtrlWidget(self)
 
-        parent.bridge_started_sgn.connect(self.onBridgeStarted)
-        parent.bridge_stopped_sgn.connect(self.onBridgeStopped)
-
-        self._disabled_widgets_during_daq = []
+        # widgets whose values are not allowed to change after the "run"
+        # button is clicked
+        self._non_reconfigurable_widgets = []
 
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
@@ -49,12 +48,12 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
 
     @QtCore.pyqtSlot()
     def onBridgeStarted(self):
-        for widget in self._disabled_widgets_during_daq:
+        for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
 
     @QtCore.pyqtSlot()
     def onBridgeStopped(self):
-        for widget in self._disabled_widgets_during_daq:
+        for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
 
     def updateSharedParameters(self):

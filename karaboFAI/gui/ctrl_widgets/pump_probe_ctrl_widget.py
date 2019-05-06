@@ -78,7 +78,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
         self.reset_btn = QtGui.QPushButton("Reset")
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._mode_cb,
             self._analysis_type_cb,
             self._on_pulse_le,

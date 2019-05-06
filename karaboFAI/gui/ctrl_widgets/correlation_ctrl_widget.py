@@ -112,7 +112,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         self._table = QtGui.QTableWidget()
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._figure_of_merit_cb,
         ]
 

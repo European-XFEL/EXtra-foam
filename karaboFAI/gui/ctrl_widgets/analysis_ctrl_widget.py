@@ -56,7 +56,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le.returnPressed.connect(
             self.onVipPulseConfirmed)
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._max_pulse_id_le,
         ]
 

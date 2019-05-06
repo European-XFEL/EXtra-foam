@@ -299,6 +299,8 @@ class MainGUI(QtGui.QMainWindow):
 
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)
+        self.bridge_started_sgn.connect(instance.onBridgeStarted)
+        self.bridge_stopped_sgn.connect(instance.onBridgeStopped)
 
     def onStartBridge(self):
         """Actions taken before the start of a 'run'."""
