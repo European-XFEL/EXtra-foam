@@ -10,8 +10,8 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         server = FaiServer('LPD')
-        cls.gui = server.gui
-        cls.app = server.app
+        cls.gui = server._gui
+        cls.app = server.qt_app()
 
     @classmethod
     def tearDownClass(cls):

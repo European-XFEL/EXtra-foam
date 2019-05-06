@@ -9,9 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from queue import Queue, Full
+from queue import Full
 
-from PyQt5 import QtCore
+from PyQt5.QtCore import pyqtSlot
 
 from zmq.error import ZMQError
 
@@ -27,42 +27,36 @@ class Bridge(Worker):
         """Initialization."""
         super().__init__()
 
-        self._tcp_host = None
-        self._tcp_port = None
+        self._endpoint = None
 
-    @QtCore.pyqtSlot(str)
-    def onTcpHostChange(self, hostname):
-        self._tcp_host = hostname
-
-    @QtCore.pyqtSlot(int)
-    def onTcpPortChange(self, port):
-        self._tcp_port = port
+    @pyqtSlot(str)
+    def onEndpointChange(self, endpoint):
+        self._endpoint = endpoint
 
     def run(self):
         """Override."""
-        endpoint = f"tcp://{self._tcp_host}:{self._tcp_port}"
+        endpoint = self._endpoint
+        self.empty_output()  # remove old data
 
-        self._running = True
         try:
-            with Client(endpoint, timeout=1) as client:
-                self.log("Bind to server {}!".format(endpoint))
-                while self._running:
+            with Client(endpoint, timeout=config['TIMEOUT']) as client:
+                self.info("Bind to server {}!".format(endpoint))
+                while not self.isInterruptionRequested():
                     try:
                         data = self._recv(client)
                     except TimeoutError:
                         continue
 
-                    while self._running:
-                        try:
-                            self._output.put(data, timeout=config['TIMEOUT'])
-                            break
-                        except Full:
-                            continue
+                    # always keep the latest data in the queue
+                    try:
+                        self._output.put_nowait(data)
+                    except Full:
+                        self.pop_output()
         except ZMQError:
-            self.log(f"ZMQError with endpoint: {endpoint}")
+            self.error(f"ZMQError with endpoint: {endpoint}")
             raise
 
-        self.log("Bridge client stopped!")
+        self.info("Bridge client stopped!")
 
     @profiler("Receive Data from Bridge")
     def _recv(self, client):

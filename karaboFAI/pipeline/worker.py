@@ -9,46 +9,71 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from queue import Queue
+from queue import Empty, Queue
 
 # import QtCore inside package pipeline from package gui will result in
 # circle import
-from PyQt5 import QtCore
+from PyQt5.QtCore import pyqtSignal, QThread
 
 from ..config import config
 
 
-class Worker(QtCore.QThread):
+class Worker(QThread):
     # post messages in the main GUI
-    message = QtCore.pyqtSignal(str)
+    debug_sgn = pyqtSignal(str)
+    info_sgn = pyqtSignal(str)
+    warning_sgn = pyqtSignal(str)
+    error_sgn = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
 
-        queue_size = config["MAX_QUEUE_SIZE"]
-        self._input = Queue(maxsize=queue_size)
-        self._output = Queue(maxsize=queue_size)
+        self._input = None
+        self._output = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
-        self._running = False
+    @property
+    def output(self):
+        return self._output
 
-    def connect(self, worker):
+    def connect_input(self, worker):
         if not isinstance(worker, Worker):
             raise ValueError
 
-        worker._input = self._output
+        self._input = worker.output
 
-    def clear_queue(self):
-        with self._input.mutex:
-            self._input.queue.clear()
-        with self._output.mutex:
-            self._output.queue.clear()
+    def debug(self, msg):
+        """Log debug information in the main GUI."""
+        self.debug_sgn.emit(msg)
 
-    def log(self, msg):
-        """Log information in the main GUI.
+    def info(self, msg):
+        """Log info information in the main GUI."""
+        self.info_sgn.emit(msg)
 
-        :param str msg: message string.
-        """
-        self.message.emit(msg)
+    def warning(self, msg):
+        """Log warning information in the main GUI."""
+        self.warning_sgn.emit(msg)
 
-    def terminate(self):
-        self._running = False
+    def error(self, msg):
+        """Log error information in the main GUI."""
+        self.error_sgn.emit(msg)
+
+    def log_on_main_thread(self, instance):
+        self.debug_sgn.connect(instance.onDebugReceived)
+        self.info_sgn.connect(instance.onInfoReceived)
+        self.warning_sgn.connect(instance.onWarningReceived)
+        self.error_sgn.connect(instance.onErrorReceived)
+
+    def empty_output(self):
+        """Empty the output queue."""
+        while not self._output.empty():
+            try:
+                self._output.get_nowait()
+            except Empty:
+                break
+
+    def pop_output(self):
+        """Remove and return an item from the output queue"""
+        try:
+            return self._output.get_nowait()
+        except Empty:
+            pass

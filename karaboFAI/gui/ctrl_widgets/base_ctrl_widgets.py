@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import QtCore, QtGui
+from ..pyqtgraph import QtGui
 
 
 class AbstractCtrlWidget(QtGui.QGroupBox):
@@ -46,12 +46,10 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         """Initialization of UI."""
         raise NotImplementedError
 
-    @QtCore.pyqtSlot()
     def onBridgeStarted(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
 
-    @QtCore.pyqtSlot()
     def onBridgeStopped(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)

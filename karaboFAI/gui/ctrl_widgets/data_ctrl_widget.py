@@ -40,6 +40,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
     ]
 
     source_type_change_sgn = QtCore.pyqtSignal(int)
+    bridge_endpoint_sgn = QtCore.pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Data source", *args, **kwargs)
@@ -75,7 +76,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
 
         self._serve_start_btn = QtGui.QPushButton("Stream files")
-        self._serve_start_btn.clicked.connect(self.parent().onStartServeFile)
         self._serve_terminate_btn = QtGui.QPushButton("Terminate")
         self._serve_terminate_btn.setEnabled(False)
 
@@ -119,12 +119,18 @@ class DataCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = Mediator()
 
-        self._hostname_le.editingFinished.connect(
-            lambda: mediator.tcp_host_change_sgn.emit(self._hostname_le.text()))
+        self.bridge_endpoint_sgn.connect(mediator.bridge_endpoint_sgn)
+
+        self._hostname_le.editingFinished.connect(self.onEndpointChange)
         self._hostname_le.editingFinished.emit()
+        self._port_le.editingFinished.connect(self.onEndpointChange)
         self._port_le.editingFinished.connect(
-            lambda: mediator.tcp_port_change_sgn.emit(int(self._port_le.text())))
+            lambda: mediator.port_change_sgn.emit(self._port_le.text()))
         self._port_le.editingFinished.emit()
+
+        self._data_folder_le.editingFinished.connect(
+            lambda: mediator.data_folder_change_sgn.emit(self._data_folder_le.text()))
+        self._data_folder_le.editingFinished.emit()
 
         self._detector_src_cb.currentIndexChanged.connect(
             lambda i: mediator.detector_source_change_sgn.emit(
@@ -144,10 +150,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self.source_type_change_sgn.connect(mediator.source_type_change_sgn)
 
-        self._serve_terminate_btn.clicked.connect(self.parent().onStopServeFile)
-
-        self.parent().file_server_started_sgn.connect(self.onFileServerStarted)
-        self.parent().file_server_stopped_sgn.connect(self.onFileServerStopped)
+        self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
+        self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
+        mediator.file_server_started_sgn.connect(self.onFileServerStarted)
+        mediator.file_server_stopped_sgn.connect(self.onFileServerStopped)
 
     def updateSharedParameters(self, log=False):
         """Override"""
@@ -158,12 +164,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self.source_type_change_sgn.emit(source_type)
 
         return True
-
-    @property
-    def file_server(self):
-        source_name = self._data_folder_le.text()
-        server_port = self._port_le.text()
-        return source_name, server_port
 
     @QtCore.pyqtSlot()
     def onFileServerStarted(self):
@@ -176,3 +176,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._serve_start_btn.setEnabled(True)
         self._serve_terminate_btn.setEnabled(False)
         self._data_folder_le.setEnabled(True)
+
+    @QtCore.pyqtSlot()
+    def onEndpointChange(self):
+        endpoint = f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
+        self.bridge_endpoint_sgn.emit(endpoint)

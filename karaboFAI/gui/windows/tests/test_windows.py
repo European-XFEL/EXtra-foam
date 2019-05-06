@@ -20,7 +20,7 @@ from karaboFAI.gui.plot_widgets import (
 class TestOverviewWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = FaiServer('LPD').gui
+        cls.gui = FaiServer('LPD')._gui
 
     @classmethod
     def tearDownClass(cls):
@@ -77,7 +77,7 @@ class TestOverviewWindow(unittest.TestCase):
 class TestPulsedAiWindow(unittest.TestCase):
 
     def testPulseResolved(self):
-        gui = FaiServer('LPD').gui
+        gui = FaiServer('LPD')._gui
 
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
@@ -95,7 +95,7 @@ class TestPulsedAiWindow(unittest.TestCase):
         gui.close()
 
     def testTrainResolved(self):
-        gui = FaiServer('JungFrau').gui
+        gui = FaiServer('JungFrau')._gui
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=False, parent=gui)
 
@@ -112,7 +112,7 @@ class TestPulsedAiWindow(unittest.TestCase):
 class TestSingletonWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        FaiServer.make_app()
+        FaiServer.qt_app()
         SingletonWindow._instances.clear()
 
     @SingletonWindow

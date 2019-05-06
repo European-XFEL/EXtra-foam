@@ -19,8 +19,10 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         fai = FaiServer('LPD')
-        cls.gui = fai.gui
-        cls.app = fai.app
+        cls.gui = fai._gui
+        cls.app = fai.qt_app()
+        cls.scheduler = fai._scheduler
+        cls.bridge = fai._bridge
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._imagetool_action = cls._actions[2]
@@ -38,7 +40,7 @@ class TestMainGui(unittest.TestCase):
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
         self._pulsed_ai_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 
@@ -71,7 +73,7 @@ class TestMainGui(unittest.TestCase):
         # --------------------------
         # test setting max pulse ID
         # --------------------------
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
 
         widget.updateSharedParameters()
         self.assertEqual((0, 2700), scheduler._image_assembler.pulse_id_range)
@@ -82,7 +84,7 @@ class TestMainGui(unittest.TestCase):
 
     def testAiCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
 
         photon_energy = 12.4
         photon_wavelength = 1.0e-10
@@ -133,7 +135,7 @@ class TestMainGui(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
 
         self.assertEqual(1, scheduler._pp_proc.ma_window)
 
@@ -170,7 +172,7 @@ class TestMainGui(unittest.TestCase):
 
     def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
 
         # check initial value is set
         self.assertEqual(int(widget._nbins_le.text()), scheduler._xas_proc.n_bins)
@@ -181,8 +183,8 @@ class TestMainGui(unittest.TestCase):
 
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
-        scheduler = self.gui._scheduler
-        bridge = self.gui._bridge
+        scheduler = self.scheduler
+        bridge = self.bridge
 
         # test passing tcp hostname and port
         tcp_addr = "localhost:56565"
@@ -192,8 +194,7 @@ class TestMainGui(unittest.TestCase):
         widget._port_le.setText(tcp_addr.split(":")[1])
         widget._port_le.editingFinished.emit()
 
-        self.assertEqual("localhost", bridge._tcp_host)
-        self.assertEqual(56565, bridge._tcp_port)
+        self.assertEqual("tcp://localhost:56565", bridge._endpoint)
 
         # test detector source name
         self.assertEqual(widget._detector_src_cb.currentText(),
@@ -224,7 +225,7 @@ class TestMainGui(unittest.TestCase):
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
@@ -234,7 +235,7 @@ class TestMainGui(unittest.TestCase):
 
     def testCorrelationCtrlWidget(self):
         widget =self.gui.correlation_ctrl_widget
-        scheduler = self.gui._scheduler
+        scheduler = self.scheduler
         self._correlation_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 

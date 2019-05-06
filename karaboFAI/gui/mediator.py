@@ -9,39 +9,46 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .pyqtgraph import QtCore
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
 
 
-class Mediator(QtCore.QObject):
+class Mediator(QObject):
     """Mediator for GUI signal-slot connection."""
 
-    tcp_host_change_sgn = QtCore.pyqtSignal(str)
-    tcp_port_change_sgn = QtCore.pyqtSignal(int)
+    bridge_endpoint_sgn = pyqtSignal(str)
 
-    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
-    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
-    update_vip_pulse_ids_sgn = QtCore.pyqtSignal()
+    port_change_sgn = pyqtSignal(str)
+    data_folder_change_sgn = pyqtSignal(str)
 
-    roi_displayed_range_sgn = QtCore.pyqtSignal(int)
+    start_file_server_sgn = pyqtSignal()
+    stop_file_server_sgn = pyqtSignal()
+    file_server_started_sgn = pyqtSignal()
+    file_server_stopped_sgn = pyqtSignal()
+
+    vip_pulse_id1_sgn = pyqtSignal(int)
+    vip_pulse_id2_sgn = pyqtSignal(int)
+    update_vip_pulse_ids_sgn = pyqtSignal()
+
+    roi_displayed_range_sgn = pyqtSignal(int)
 
     # index, device ID, property name, resolution
-    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
+    correlation_param_change_sgn = pyqtSignal(int, str, str, float)
 
-    reset_image_level_sgn = QtCore.pyqtSignal()
+    reset_image_level_sgn = pyqtSignal()
 
-    source_type_change_sgn = QtCore.pyqtSignal(int)
-    detector_source_change_sgn = QtCore.pyqtSignal(str)
-    xgm_source_change_sgn = QtCore.pyqtSignal(str)
-    mono_source_change_sgn = QtCore.pyqtSignal(str)
+    source_type_change_sgn = pyqtSignal(int)
+    detector_source_change_sgn = pyqtSignal(str)
+    xgm_source_change_sgn = pyqtSignal(str)
+    mono_source_change_sgn = pyqtSignal(str)
 
-    pp_ma_window_change_sgn = QtCore.pyqtSignal(int)
+    pp_ma_window_change_sgn = pyqtSignal(int)
 
-    reset_xas_sgn = QtCore.pyqtSignal()
-    energy_bins_change_sgn = QtCore.pyqtSignal(int)
+    reset_xas_sgn = pyqtSignal()
+    energy_bins_change_sgn = pyqtSignal(int)
 
-    roi_region_change_sgn = QtCore.pyqtSignal(int, bool, int, int, int, int)
-    roi_fom_change_sgn = QtCore.pyqtSignal(object)
-    roi_hist_clear_sgn = QtCore.pyqtSignal()
+    roi_region_change_sgn = pyqtSignal(int, bool, int, int, int, int)
+    roi_fom_change_sgn = pyqtSignal(object)
+    roi_hist_clear_sgn = pyqtSignal()
 
     __instance = None
 
@@ -60,34 +67,15 @@ class Mediator(QtCore.QObject):
 
         self._is_initialized = True
 
-    def connect_scheduler(self, scheduler):
-        self.source_type_change_sgn.connect(scheduler.onSourceTypeChange)
-        self.detector_source_change_sgn.connect(scheduler.onDetectorSourceChange)
-        self.xgm_source_change_sgn.connect(scheduler.onXgmSourceChange)
-        self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
-
-        self.pp_ma_window_change_sgn.connect(scheduler.onPumpProbeMAWindowChange)
-
-        self.reset_xas_sgn.connect(scheduler.onXasReset)
-        self.energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
-
-        self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
-        self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
-        self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
-
-    def connect_bridge(self, bridge):
-        self.tcp_host_change_sgn.connect(bridge.onTcpHostChange)
-        self.tcp_port_change_sgn.connect(bridge.onTcpPortChange)
-
-    @QtCore.pyqtSlot(int)
+    @pyqtSlot(int)
     def onPulseID1Updated(self, v):
         self.vip_pulse_id1_sgn.emit(v)
 
-    @QtCore.pyqtSlot(int)
+    @pyqtSlot(int)
     def onPulseID2Updated(self, v):
         self.vip_pulse_id2_sgn.emit(v)
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def onRoiDisplayedRangeChange(self):
         v = int(self.sender().text())
         self.roi_displayed_range_sgn.emit(v)

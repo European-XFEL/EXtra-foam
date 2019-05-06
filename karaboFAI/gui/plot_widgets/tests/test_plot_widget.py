@@ -9,7 +9,7 @@ from karaboFAI.gui.plot_widgets.plot_widgets import (
 class TestPlotWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = FaiServer.make_app()
+        cls.app = FaiServer.qt_app()
 
     def setUp(self):
         self._widget = PlotWidget()

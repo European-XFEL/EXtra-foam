@@ -91,7 +91,7 @@ class Scheduler(Worker):
         success, info = self._image_assembler.load_geometry(
             filename, quad_positions)
         if not success:
-            self.log(info)
+            self.info(info)
 
     @QtCore.pyqtSlot(int, int)
     def onPulseIdRangeChange(self, lb, ub):
@@ -214,9 +214,10 @@ class Scheduler(Worker):
 
     def run(self):
         """Run the data processor."""
-        self._running = True
-        self.log("Data processor started!")
-        while self._running:
+        self.empty_output()  # remove old data
+
+        self.info("Scheduler started!")
+        while not self.isInterruptionRequested():
             try:
                 data = self._input.get(timeout=config['TIMEOUT'])
             except Empty:
@@ -226,14 +227,12 @@ class Scheduler(Worker):
             if processed_data is None:
                 continue
 
-            while self._running:
-                try:
-                    self._output.put(processed_data, timeout=config['TIMEOUT'])
-                    break
-                except Full:
-                    continue
+            try:
+                self._output.put_nowait(processed_data)
+            except Full:
+                self.pop_output()
 
-        self.log("Data processor stopped!")
+        self.info("Scheduler stopped!")
 
     @profiler("Process Data (total)")
     def _process(self, data):
@@ -251,24 +250,24 @@ class Scheduler(Worker):
         try:
             assembled = self._image_assembler.assemble(raw)
         except AssemblingError as e:
-            self.log(f"Train ID: {tid}: " + repr(e))
+            self.error(f"Train ID: {tid}: " + repr(e))
             return None
         except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
 
         try:
             processed = ProcessedData(tid, assembled)
         except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
 
         try:
             self._data_aggregator.aggregate(processed, raw)
         except AggregatingError as e:
-            self.log(f"Train ID: {tid}: " + repr(e))
+            self.error(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
-            self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             raise
 
         for task in self._tasks:
@@ -276,13 +275,12 @@ class Scheduler(Worker):
                 task.run_once(processed, raw)
             except ProcessingError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                # TODO: to be improved by having something like self.log.debug
-                print(repr(traceback.format_tb(exc_traceback)))
-                self.log(f"Train ID: {tid}: " + repr(e))
+                self.debug(repr(traceback.format_tb(exc_traceback)))
+                self.error(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print(repr(traceback.format_tb(exc_traceback)))
-                self.log(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+                self.debug(repr(traceback.format_tb(exc_traceback)))
+                self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
                 raise
 
         return processed

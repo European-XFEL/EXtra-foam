@@ -12,7 +12,7 @@ from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 class TestImageTool(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = FaiServer('LPD').gui
+        cls.gui = FaiServer('LPD')._gui
         cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]
