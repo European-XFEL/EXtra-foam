@@ -209,6 +209,20 @@ class ImageAssemblerFactory(ABC):
             # (y, x)
             return data[src_name]['data.image.pixels']
 
+    class BaslerCameraImageAssembler(BaseAssembler):
+        _modules = 1
+        _module_shape = (1024, 1024)
+
+        @profiler("Prepare Module Data")
+        def _get_modules_bridge(self, data, src_name):
+            """Overload."""
+            return data[src_name]["data.image.data"]
+
+        @profiler("Prepare Module Data")
+        def _get_modules_file(self, data, src_name):
+            """Overload."""
+            raise NotImplementedError
+
     @classmethod
     def create(cls, detector):
         if detector == 'AGIPD':
@@ -222,5 +236,8 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'FastCCD':
             return cls.FastCCDImageAssembler()
+
+        if detector == 'BaslerCamera':
+            return cls.BaslerCameraImageAssembler()
 
         raise NotImplementedError(f"Unknown detector type {detector}!")

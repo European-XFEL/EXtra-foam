@@ -222,7 +222,8 @@ def application():
     parser.add_argument('-V', '--version', action='version',
                         version="%(prog)s " + __version__)
     parser.add_argument("detector", help="detector name (case insensitive)",
-                        choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD'],
+                        choices=['AGIPD', 'LPD', 'JUNGFRAU', 'FASTCCD',
+                                 'BASLERCAMERA'],
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Enable faulthandler")
@@ -239,6 +240,8 @@ def application():
         detector = 'JungFrau'
     elif detector == 'FASTCCD':
         detector = 'FastCCD'
+    elif detector == 'BASLERCAMERA':
+        detector = 'BaslerCamera'
     else:
         detector = detector.upper()
 

@@ -155,13 +155,13 @@ class Config(dict):
     _detector_readonly_config_keys = (
         "PULSE_RESOLVED",
         "REQUIRE_GEOMETRY",
-        "SOURCE_NAME",
     )
 
     _detector_reconfigurable_keys = (
         "SERVER_ADDR",
         "SERVER_PORT",
         "SOURCE_TYPE",
+        "SOURCE_NAME",
         "DATA_FOLDER",
         "GEOMETRY_FILE",
         "QUAD_POSITIONS",
@@ -295,11 +295,38 @@ class Config(dict):
         "MASK_RANGE": (-1e5, 1e5)
     }
 
+    _default_baslercamera_config = {
+        "PULSE_RESOLVED": False,
+        "REQUIRE_GEOMETRY": False,
+        "SOURCE_NAME": ("LIMA_CAMERA:output",),
+        "SERVER_ADDR": "localhost",
+        "SERVER_PORT": 12345,
+        "SOURCE_TYPE": 1,
+        "DATA_FOLDER": "",
+        "GEOMETRY_FILE": "",
+        "QUAD_POSITIONS": ((0, 0),
+                           (0, 0),
+                           (0, 0),
+                           (0, 0)),
+        "INTEGRATION_METHODS": ['nosplit_csr', 'csr_ocl', 'csr', 'BBox',
+                                'splitpixel', 'lut', 'lut_ocl'],
+        "INTEGRATION_RANGE": (1e-3, 0.02),
+        "INTEGRATION_POINTS": 1024,
+        "PHOTON_ENERGY": 12.4,
+        "DISTANCE": 1.0,
+        "CENTER_Y": 512,
+        "CENTER_X": 512,
+        "PIXEL_SIZE": 0.0022e-3,
+        "COLOR_MAP": 'thermal',
+        "MASK_RANGE": (-1e5, 1e5)
+    }
+
     _default_detector_configs = {
         "AGIPD": _default_agipd_config,
         "LPD": _default_lpd_config,
         "JungFrau": _default_jfrau_config,
-        "FastCCD": _default_fastccd_config
+        "FastCCD": _default_fastccd_config,
+        "BaslerCamera": _default_baslercamera_config,
     }
 
     _filename = os.path.join(ROOT_PATH, "settings.ini")
