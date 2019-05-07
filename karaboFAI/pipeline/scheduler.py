@@ -117,9 +117,9 @@ class Scheduler(Worker):
             if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
                 CorrelationData.clear()
 
-    @QtCore.pyqtSlot(int)
-    def onPpDifferenceTypeChange(self, state):
-        self._pp_proc.abs_difference = state == QtCore.Qt.Checked
+    @QtCore.pyqtSlot(bool)
+    def onPpDifferenceTypeChange(self, is_checked):
+        self._pp_proc.abs_difference = is_checked
 
     @QtCore.pyqtSlot(float, float)
     def onAucXRangeChange(self, lb, ub):

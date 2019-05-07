@@ -43,8 +43,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     # analysis type
     pp_analysis_type_sgn = QtCore.pyqtSignal(object)
 
-    abs_difference_sgn = QtCore.pyqtSignal(int)
-
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe analysis setup", *args, **kwargs)
 
@@ -68,8 +66,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
-        self.abs_difference_cb = QtGui.QCheckBox("FOM from absolute difference")
-        self.abs_difference_cb.setChecked(True)
+        self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute difference")
 
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
@@ -83,7 +80,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             self._analysis_type_cb,
             self._on_pulse_le,
             self._off_pulse_le,
-            self.abs_difference_cb,
         ]
 
         self.initUI()
@@ -110,7 +106,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Moving average window: "), 5, 0, 1, 1)
         layout.addWidget(self._ma_window_le, 5, 1, 1, 1)
-        layout.addWidget(self.abs_difference_cb, 6, 0, 1, 2)
+        layout.addWidget(self._abs_difference_cb, 6, 0, 1, 2)
 
         self.setLayout(layout)
 
@@ -121,6 +117,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.pp_ma_window_change_sgn.emit(
                 int(self._ma_window_le.text())))
         self._ma_window_le.editingFinished.emit()
+
+        self._abs_difference_cb.toggled.connect(mediator.pp_abs_difference_sgn)
+        self._abs_difference_cb.setChecked(True)
 
     def updateSharedParameters(self):
         """Override"""
@@ -153,8 +152,5 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
         self.pp_analysis_type_sgn.emit(type_)
-
-        abs_diff_state = self.abs_difference_cb.checkState()
-        self.abs_difference_sgn.emit(abs_diff_state)
 
         return True

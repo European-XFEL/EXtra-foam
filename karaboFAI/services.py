@@ -80,6 +80,9 @@ class FaiServer:
         mediator.roi_fom_change_sgn.connect(self._scheduler.onRoiFomChange)
         mediator.roi_hist_clear_sgn.connect(self._scheduler.onRoiHistClear)
 
+        mediator.pp_abs_difference_sgn.connect(
+            self._scheduler.onPpDifferenceTypeChange)
+
         # with the file server
         mediator.start_file_server_sgn.connect(self.start_fileserver)
         mediator.stop_file_server_sgn.connect(self.stop_fileserver)
@@ -124,8 +127,6 @@ class FaiServer:
             self._scheduler.onPpPulseStateChange)
         self._gui.pump_probe_ctrl_widget.pp_analysis_type_sgn.connect(
             self._scheduler.onPpAnalysisTypeChange)
-        self._gui.pump_probe_ctrl_widget.abs_difference_sgn.connect(
-            self._scheduler.onPpDifferenceTypeChange)
         self._gui.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._scheduler.onPumpProbeReset)
 

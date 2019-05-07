@@ -141,12 +141,20 @@ class TestMainGui(unittest.TestCase):
 
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
-        ma_window = 10
 
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
         self.assertEqual(PumpProbeMode.UNDEFINED, scheduler._pp_proc.mode)
         self.assertEqual(PumpProbeType(0), scheduler._pp_proc.analysis_type)
+
+        self.assertTrue(scheduler._pp_proc.abs_difference)  # default is False
+        QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
+                         pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
+        self.assertFalse(scheduler._pp_proc.abs_difference)
+
+        widget._ma_window_le.setText(str(10))
+        widget._ma_window_le.editingFinished.emit()
+        self.assertEqual(10, scheduler._pp_proc.ma_window)
 
         # assign new values
         new_mode = PumpProbeMode.EVEN_TRAIN_ON
@@ -155,11 +163,7 @@ class TestMainGui(unittest.TestCase):
         widget._analysis_type_cb.setCurrentIndex(new_fom)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-        widget._ma_window_le.setText(str(ma_window))
         widget._ma_window_le.editingFinished.emit()
-        QTest.mouseClick(widget.abs_difference_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, widget.abs_difference_cb.height()/2))
-        self.assertTrue(scheduler._pp_proc.abs_difference)
 
         self.assertTrue(self.gui.updateSharedParameters())
 
@@ -167,8 +171,6 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(PumpProbeType(new_fom), scheduler._pp_proc.analysis_type)
         self.assertListEqual(on_pulse_ids, scheduler._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, scheduler._pp_proc.off_pulse_ids)
-        self.assertFalse(scheduler._pp_proc.abs_difference)
-        self.assertEqual(ma_window, scheduler._pp_proc.ma_window)
 
     def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
