@@ -43,6 +43,7 @@ class Mediator(QObject):
 
     pp_ma_window_change_sgn = pyqtSignal(int)
     pp_abs_difference_sgn = pyqtSignal(bool)
+    pp_analysis_type_sgn = pyqtSignal(object)
 
     reset_xas_sgn = pyqtSignal()
     energy_bins_change_sgn = pyqtSignal(int)

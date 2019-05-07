@@ -77,7 +77,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self._non_reconfigurable_widgets = [
             self._mode_cb,
-            self._analysis_type_cb,
             self._on_pulse_le,
             self._off_pulse_le,
         ]
@@ -121,13 +120,16 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._abs_difference_cb.toggled.connect(mediator.pp_abs_difference_sgn)
         self._abs_difference_cb.setChecked(True)
 
+        self._analysis_type_cb.currentTextChanged.connect(
+            lambda x: mediator.pp_analysis_type_sgn.emit(
+                self._analysis_types[x]))
+        self._analysis_type_cb.currentTextChanged.emit(
+            self._analysis_type_cb.currentText())
+
     def updateSharedParameters(self):
         """Override"""
         mode_str = self._mode_cb.currentText()
         mode = self._available_modes[mode_str]
-
-        fom_str = self._analysis_type_cb.currentText()
-        type_ = self._analysis_types[fom_str]
 
         try:
             # check pulse ID only when laser on/off pulses are in the same
@@ -151,6 +153,5 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             return False
 
         self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
-        self.pp_analysis_type_sgn.emit(type_)
 
         return True

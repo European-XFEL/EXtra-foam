@@ -142,11 +142,6 @@ class TestMainGui(unittest.TestCase):
         on_pulse_ids = [0, 2, 4, 6, 8]
         off_pulse_ids = [1, 3, 5, 7, 9]
 
-        # test default FOM name
-        self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(PumpProbeMode.UNDEFINED, scheduler._pp_proc.mode)
-        self.assertEqual(PumpProbeType(0), scheduler._pp_proc.analysis_type)
-
         self.assertTrue(scheduler._pp_proc.abs_difference)  # default is False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
@@ -156,11 +151,19 @@ class TestMainGui(unittest.TestCase):
         widget._ma_window_le.editingFinished.emit()
         self.assertEqual(10, scheduler._pp_proc.ma_window)
 
+        self.assertEqual(PumpProbeType(0), scheduler._pp_proc.analysis_type)
+        new_fom = PumpProbeType.ROI
+        widget._analysis_type_cb.setCurrentIndex(new_fom)
+        self.assertEqual(PumpProbeType(new_fom),
+                         scheduler._pp_proc.analysis_type)
+
+        # test default FOM name
+        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertEqual(PumpProbeMode.UNDEFINED, scheduler._pp_proc.mode)
+
         # assign new values
         new_mode = PumpProbeMode.EVEN_TRAIN_ON
-        new_fom = PumpProbeType.ROI
         widget._mode_cb.setCurrentIndex(new_mode)
-        widget._analysis_type_cb.setCurrentIndex(new_fom)
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
         widget._ma_window_le.editingFinished.emit()
@@ -168,7 +171,6 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertEqual(PumpProbeMode(new_mode), scheduler._pp_proc.mode)
-        self.assertEqual(PumpProbeType(new_fom), scheduler._pp_proc.analysis_type)
         self.assertListEqual(on_pulse_ids, scheduler._pp_proc.on_pulse_ids)
         self.assertListEqual(off_pulse_ids, scheduler._pp_proc.off_pulse_ids)
 

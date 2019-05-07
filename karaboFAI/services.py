@@ -82,6 +82,8 @@ class FaiServer:
 
         mediator.pp_abs_difference_sgn.connect(
             self._scheduler.onPpDifferenceTypeChange)
+        mediator.pp_analysis_type_sgn.connect(
+            self._scheduler.onPpAnalysisTypeChange)
 
         # with the file server
         mediator.start_file_server_sgn.connect(self.start_fileserver)
@@ -125,8 +127,6 @@ class FaiServer:
 
         self._gui.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
             self._scheduler.onPpPulseStateChange)
-        self._gui.pump_probe_ctrl_widget.pp_analysis_type_sgn.connect(
-            self._scheduler.onPpAnalysisTypeChange)
         self._gui.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._scheduler.onPumpProbeReset)
 
