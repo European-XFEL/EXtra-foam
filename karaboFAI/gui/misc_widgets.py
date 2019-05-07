@@ -10,23 +10,33 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import logging
+import threading
 
-from .pyqtgraph import ColorMap, mkPen, mkBrush, QtCore, QtGui
+from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
 class Colors:
-    def __init__(self, alpha):
-        self.r = (255, 0, 0, alpha)  # red
-        self.g = (0, 255, 0, alpha)  # green
-        self.b = (0, 0, 255, alpha)  # blue
-        self.c = (0, 255, 255, alpha)  # cyan
-        self.p = (255, 0, 255, alpha)  # purple
-        self.y = (255, 255, 0, alpha)  # yellow
+    def __init__(self, alpha=255):
+        self.r = (215, 25, 28, alpha)  # red
+        self.o = (253, 174, 97, alpha)  # orange
+        self.y = (255, 255, 191, alpha)  # yellow
+        self.c = (171, 217, 233, alpha)  # cyan
+        self.b = (44, 123, 182, alpha)  # blue
+        self.g = (26, 150, 65, alpha)  # green
+        self.p = (175, 141, 195, alpha)  # purple
+        self.w = (247, 247, 247, alpha)  # white
+        self.e = (186, 186, 186, alpha)  # dark grey
 
 
 def make_pen(color, width=2, alpha=255, **kwargs):
     """Convenient function for making QPen."""
+    if color is None:
+        return mkPen(None)
+
+    if isinstance(color, int):
+        return mkPen(intColor(color, **kwargs), width=width)
+
     return mkPen(getattr(Colors(alpha=alpha), color[0]), width=width, **kwargs)
 
 
@@ -93,4 +103,6 @@ class GuiLogger(logging.Handler):
         self.widget.setMaximumBlockCount(500)
 
     def emit(self, record):
-        self.widget.appendPlainText(self.format(record))
+        # guard logger from other threads
+        if threading.current_thread() is threading.main_thread():
+            self.widget.appendPlainText(self.format(record))

@@ -17,31 +17,34 @@ setup(
     version=find_version(),
     author='Jun Zhu',
     author_email='cas-support@xfel.eu',
-    description='Azimuthal integration tool',
-    long_description='Offline and online data analysis and visualization tool '
-                     'for azimuthal integration of different data acquired '
-                     'with various detectors at European XFEL.',
+    description='Fast analysis integration for 2D detectors',
+    long_description='Real-time and off-line data analysis (azimuthal '
+                     'integration, ROI, correlation, etc.) and visualization '
+                     'tool for experiments using 2D detectors at '
+                     'European XFEL.',
     url='',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.gui.main_fai_gui:start',
-            'karaboBDP=karaboFAI.gui.main_bdp_gui:main_bdp_gui'
+            'karaboFAI=karaboFAI.services:start',
         ],
     },
     package_data={
-        'karaboFAI': ['gui/icons/*.png']
+        'karaboFAI': [
+            'gui/icons/*.png',
+            'geometries/*.h5'
+        ]
     },
     install_requires=[
         'numpy>=1.16.1',
-        'scipy>=1.1.0',
+        'scipy>=1.2.1',
         'msgpack>=0.5.6',
         'msgpack-numpy>=0.4.4',
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
         'karabo-data>=0.3.0',
-        'karabo-bridge>=0.2.0',
+        'karabo-bridge>=0.3.0',
         'toolz',
         'silx>=0.9.0',
         'cached-property>=1.5.1',

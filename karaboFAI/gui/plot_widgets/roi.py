@@ -19,36 +19,31 @@ class RectROI(ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, pos, size, *, lock=True, **args):
+    def __init__(self, rank, color, pos, size, *, style=QtCore.Qt.SolidLine):
         """Initialization.
 
-        :param bool lock: whether the ROI is modifiable.
+        :param int rank: rank of the ROI.
+        :param str color: color of the ROI.
         """
-        super().__init__(pos, size, translateSnap=True, scaleSnap=True, **args)
+        super().__init__(pos, size,
+                         translateSnap=True,
+                         scaleSnap=True,
+                         pen=make_pen(color, style=style))
 
-        if lock:
+        self.rank = rank
+        self.color = color
+
+    def setLocked(self, locked):
+        if locked:
             self.translatable = False
+            self.removeHandle(0)
+            self._handle_info = None
         else:
-            self._add_handle()
-            self._handle_info = self.handles[0]  # there is only one handler
+            self.translatable = True
+            self._addHandle()
+            self._handle_info = self.handles[0]
 
-    def lockAspect(self):
-        self._handle_info['lockAspect'] = True
-
-    def unLockAspect(self):
-        self._handle_info['lockAspect'] = False
-
-    def lock(self):
-        self.translatable = False
-        self.removeHandle(0)
-        self._handle_info = None
-
-    def unLock(self):
-        self.translatable = True
-        self._add_handle()
-        self._handle_info = self.handles[0]
-
-    def _add_handle(self):
+    def _addHandle(self):
         """An alternative to addHandle in parent class."""
         # position, scaling center
         self.addScaleHandle([1, 1], [0, 0])
@@ -63,9 +58,9 @@ class CropROI(ROI):
                          scaleSnap=True,
                          pen=make_pen('y', width=1, style=QtCore.Qt.DashDotLine))
 
-        self._add_handles()
+        self._addHandles()
 
-    def _add_handles(self):
+    def _addHandles(self):
         # position, scaling center
         self.addScaleHandle([1, 1], [0, 0])
         self.addScaleHandle([1, 0.5], [0, 0.5])

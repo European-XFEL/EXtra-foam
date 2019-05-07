@@ -1,10 +1,12 @@
 from .image_view import (
-    AssembledImageView, ImageAnalysis, RoiImageView, SinglePulseImageView
+    AssembledImageView, ImageAnalysis, PumpProbeImageView,
+    RoiImageView, SinglePulseImageView
 )
-from .plot_widget import (
-    CorrelationWidget, LaserOnOffAiWidget, LaserOnOffFomWidget,
-    MultiPulseAiWidget, RoiValueMonitor, SampleDegradationWidget,
-    SinglePulseAiWidget
+from .plot_widgets import (
+    CorrelationWidget, PumpProbeOnOffWidget,
+    PumpProbeFomWidget, MultiPulseAiWidget, RoiValueMonitor,
+    PulsedFOMWidget, SinglePulseAiWidget, XasSpectrumWidget,
+    XasSpectrumDiffWidget, XasSpectrumBinCountWidget
 )
 from .roi import CropROI, RectROI
 
@@ -12,6 +14,7 @@ from .roi import CropROI, RectROI
 __all__ = ([
     "AssembledImageView",
     "ImageAnalysis",
+    "PumpProbeImageView",
     "RoiImageView",
     "SinglePulseImageView",
 ])
@@ -19,12 +22,15 @@ __all__ = ([
 # add plot widgets
 __all__.extend([
     "CorrelationWidget",
-    "LaserOnOffAiWidget",
-    "LaserOnOffFomWidget",
+    "PumpProbeOnOffWidget",
+    "PumpProbeFomWidget",
     "MultiPulseAiWidget",
     "RoiValueMonitor",
-    "SampleDegradationWidget",
+    "PulsedFOMWidget",
     "SinglePulseAiWidget",
+    "XasSpectrumWidget",
+    "XasSpectrumDiffWidget",
+    "XasSpectrumBinCountWidget",
 ])
 
 # add ROI widgets

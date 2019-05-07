@@ -1,5 +1,6 @@
+.coverage
+
 .ipynb_checkpoints
-*.h5
 *.pyc
 __pycache__/
 .pytest_cache/

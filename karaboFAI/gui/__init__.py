@@ -1,6 +1,4 @@
-from .pyqtgraph import QtCore, setConfigOption
+from .pyqtgraph import setConfigOption
+from .main_gui import MainGUI
 
 setConfigOption("imageAxisOrder", "row-major")
-
-
-__all__ = ["QtCore"]

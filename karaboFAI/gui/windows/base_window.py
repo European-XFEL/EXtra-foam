@@ -20,23 +20,25 @@ class SingletonWindow:
 
     A singleton window is only allowed to have one instance.
     """
+    _instances = dict()
+
     def __init__(self, instance_type):
-        self.instance = None
-        self.instance_type = instance_type
+        self._instance_type = instance_type
 
     def __call__(self, *args, **kwargs):
-        if self.instance is None:
-            self.instance = self.instance_type(*args, **kwargs)
+        if self._instance_type not in self._instances:
+            instance = self._instance_type(*args, **kwargs)
+            self._instances[self._instance_type] = instance
         else:
-            if isinstance(self.instance, AbstractWindow):
-                parent = self.instance.parent()
-                if parent is not None:
-                    parent.registerWindow(self.instance)
-                self.instance.update()
+            instance = self._instances[self._instance_type]
+            parent = instance.parent()
+            if parent is not None:
+                parent.registerWindow(instance)
+            instance.update()
 
-        self.instance.show()
-        self.instance.activateWindow()
-        return self.instance
+        instance.show()
+        instance.activateWindow()
+        return instance
 
 
 class AbstractWindow(QtGui.QMainWindow):
@@ -47,8 +49,7 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
-    def __init__(self, data, *,
-                 mediator=None, pulse_resolved=True, parent=None):
+    def __init__(self, data=None, *, pulse_resolved=True, parent=None):
         """Initialization.
 
         :param Data4Visualization data: the data shared by widgets
@@ -62,7 +63,6 @@ class AbstractWindow(QtGui.QMainWindow):
 
         self._data = data
         self._pulse_resolved = pulse_resolved
-        self._mediator = mediator
 
         try:
             if self.title:
@@ -145,6 +145,9 @@ class DockerWindow(AbstractWindow):
 
         This method is called by the main GUI.
         """
+        if self._data is None:
+            return
+
         data = self._data.get()
         if data.image is None:
             return

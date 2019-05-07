@@ -1,14 +1,20 @@
-from .bragg_spot import BraggSpotsWindow
 from .correlation import CorrelationWindow
-from .draw_mask import DrawMaskWindow
 from .image_tool import ImageToolWindow
 from .overview import OverviewWindow
+from .pulsed_azimuthal_integration import PulsedAzimuthalIntegrationWindow
+from .pump_probe import PumpProbeWindow
+from .roi import RoiWindow
+from .xas import XasWindow
+from .base_window import SingletonWindow
 
 
 __all__ = [
-    "BraggSpotsWindow",
     "CorrelationWindow",
-    "DrawMaskWindow",
     "ImageToolWindow",
-    "OverviewWindow"
+    "OverviewWindow",
+    "PulsedAzimuthalIntegrationWindow",
+    "PumpProbeWindow",
+    "RoiWindow",
+    'SingletonWindow',
+    'XasWindow',
 ]

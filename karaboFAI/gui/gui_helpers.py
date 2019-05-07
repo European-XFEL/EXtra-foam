@@ -36,7 +36,7 @@ def parse_boundary(text):
             raise ValueError("lower boundary > upper boundary")
 
     except Exception as e:
-        raise ValueError("Invalid input! " + str(e))
+        raise ValueError("Invalid input! " + repr(e))
 
     return ret[0], ret[1]
 
@@ -93,7 +93,7 @@ def parse_ids(text):
                 return list(range(start, end, inc))
 
             except Exception as e:
-                raise ValueError("Invalid input: " + str(e))
+                raise ValueError("Invalid input: " + repr(e))
 
         else:
             try:
@@ -101,7 +101,7 @@ def parse_ids(text):
                 if v < 0:
                     raise ValueError("Pulse ID cannot be negative!")
             except Exception as e:
-                raise ValueError("Invalid input: " + str(e))
+                raise ValueError("Invalid input: " + repr(e))
 
         return v
 
@@ -141,6 +141,6 @@ def parse_table_widget(widget):
     """
     n_row, n_col = widget.rowCount(), widget.columnCount()
     ret = []
-    for i in range(n_row):
-        ret.append([float(widget.item(i, j).text()) for j in range(n_col)])
+    for i in range(n_col):
+        ret.append([float(widget.item(j, i).text()) for j in range(n_row)])
     return ret

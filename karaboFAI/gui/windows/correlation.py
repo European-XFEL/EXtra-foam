@@ -13,7 +13,6 @@ from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
 from ..plot_widgets import CorrelationWidget
-from ...logger import logger
 
 
 class CorrelationWindow(DockerWindow):
@@ -35,9 +34,10 @@ class CorrelationWindow(DockerWindow):
 
         self.initUI()
 
-        self.update()
+        self.resize(1200, 900)
+        self.setMinimumSize(800, 600)
 
-        logger.info("Open {}".format(self.__class__.__name__))
+        self.update()
 
     def initUI(self):
         """Override."""

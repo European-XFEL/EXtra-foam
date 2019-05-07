@@ -9,11 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_boundary
-from ...config import config
+from ...config import AiNormalizer, config
 from ...logger import logger
 
 
@@ -21,18 +23,36 @@ class AiCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
     photon_energy_sgn = QtCore.pyqtSignal(float)
     sample_distance_sgn = QtCore.pyqtSignal(float)
-    poni_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
+    integration_center_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)
     integration_range_sgn = QtCore.pyqtSignal(float, float)
     integration_points_sgn = QtCore.pyqtSignal(int)
+    ai_normalizer_sgn = QtCore.pyqtSignal(object)
+    auc_x_range_sgn = QtCore.pyqtSignal(float, float)
+    fom_integration_range_sgn = QtCore.pyqtSignal(float, float)
+
+    _available_normalizers = OrderedDict({
+        "AUC": AiNormalizer.AUC,
+        "ROI1 - ROI2": AiNormalizer.ROI_SUB,
+        "ROI1": AiNormalizer.ROI1,
+        "ROI2": AiNormalizer.ROI2,
+        "ROI1 + ROI2": AiNormalizer.ROI_SUM,
+    })
 
     def __init__(self, *args, **kwargs):
         super().__init__("Azimuthal integration setup", *args, **kwargs)
 
+        # default state is unchecked
+        self.pulsed_ai_cb = QtGui.QCheckBox("Pulsed azimuthal integration")
+
         self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
         self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
+        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
         self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
+        self._cx_le.setValidator(QtGui.QIntValidator())
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
+        self._cy_le.setValidator(QtGui.QIntValidator())
         self._itgt_method_cb = QtGui.QComboBox()
         for method in config["INTEGRATION_METHODS"]:
             self._itgt_method_cb.addItem(method)
@@ -40,18 +60,38 @@ class AiCtrlWidget(AbstractCtrlWidget):
             ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
         self._itgt_points_le = QtGui.QLineEdit(
             str(config["INTEGRATION_POINTS"]))
+        self._itgt_points_le.setValidator(QtGui.QIntValidator(1, 8192))
+
+        self._normalizers_cb = QtGui.QComboBox()
+        for v in self._available_normalizers:
+            self._normalizers_cb.addItem(v)
+        self._normalizers_cb.currentTextChanged.connect(
+            lambda x: self.ai_normalizer_sgn.emit(self._available_normalizers[x]))
+
+        self._auc_x_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+
+        self._fom_itgt_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
 
         self._disabled_widgets_during_daq = [
+            self.pulsed_ai_cb,
             self._photon_energy_le,
             self._sample_dist_le,
             self._cx_le,
             self._cy_le,
             self._itgt_method_cb,
             self._itgt_range_le,
-            self._itgt_points_le
+            self._itgt_points_le,
+            self._normalizers_cb,
+            self._auc_x_range_le,
+            self._fom_itgt_range_le,
         ]
 
         self.initUI()
+        self.initConnections()
+
+        self.setFixedHeight(self.minimumSizeHint().height())
 
     def initUI(self):
         """Override."""
@@ -72,37 +112,49 @@ class AiCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._itgt_points_le, 5, 1)
         layout.addWidget(QtGui.QLabel("Integration range (1/A): "), 6, 0, AR)
         layout.addWidget(self._itgt_range_le, 6, 1)
+        layout.addWidget(QtGui.QLabel("Normalized by: "), 7, 0, AR)
+        layout.addWidget(self._normalizers_cb, 7, 1)
+        layout.addWidget(QtGui.QLabel("AUC x range: "), 8, 0, AR)
+        layout.addWidget(self._auc_x_range_le, 8, 1)
+        layout.addWidget(QtGui.QLabel("FOM integration range: "), 9, 0, AR)
+        layout.addWidget(self._fom_itgt_range_le, 9, 1)
+        layout.addWidget(self.pulsed_ai_cb, 10, 0)
 
         self.setLayout(layout)
 
+    def initConnections(self):
+        pass
+
     def updateSharedParameters(self):
         """Override"""
+        self.pulsed_ai_cb.stateChanged.emit(self.pulsed_ai_cb.checkState())
+
         photon_energy = float(self._photon_energy_le.text().strip())
         if photon_energy <= 0:
             logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return None
+            return False
         else:
             self.photon_energy_sgn.emit(photon_energy)
 
         sample_distance = float(self._sample_dist_le.text().strip())
         if sample_distance <= 0:
             logger.error("<Sample distance>: Invalid input! Must be positive!")
-            return None
+            return False
         else:
             self.sample_distance_sgn.emit(sample_distance)
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
-        self.poni_sgn.emit(center_x, center_y)
+        self.integration_center_sgn.emit(center_x, center_y)
 
         integration_method = self._itgt_method_cb.currentText()
         self.integration_method_sgn.emit(integration_method)
 
         integration_points = int(self._itgt_points_le.text().strip())
-        if integration_points <= 0:
+        if integration_points < 1:
             logger.error(
                 "<Integration points>: Invalid input! Must be positive!")
-            return None
+            return False
         else:
             self.integration_points_sgn.emit(integration_points)
 
@@ -110,18 +162,25 @@ class AiCtrlWidget(AbstractCtrlWidget):
             integration_range = parse_boundary(self._itgt_range_le.text())
             self.integration_range_sgn.emit(*integration_range)
         except ValueError as e:
-            logger.error("<Integration range>: " + str(e))
-            return None
+            logger.error("<Integration range>: " + repr(e))
+            return False
 
-        info = "\n<Photon energy (keV)>: {}".format(photon_energy)
-        info += "\n<Sample distance (m)>: {}".format(sample_distance)
-        info += "\n<Cx (pixel), Cy (pixel>: ({:d}, {:d})".format(
-            center_x, center_y)
-        info += "\n<Cy (pixel)>: {:d}".format(center_y)
-        info += "\n<Integration method>: '{}'".format(integration_method)
-        info += "\n<Integration range (1/A)>: ({}, {})".format(
-            *integration_range)
-        info += "\n<Number of integration points>: {}".format(
-            integration_points)
+        self._normalizers_cb.currentTextChanged.emit(
+            self._normalizers_cb.currentText())
 
-        return info
+        try:
+            auc_x_range = parse_boundary(self._auc_x_range_le.text())
+            self.auc_x_range_sgn.emit(*auc_x_range)
+        except ValueError as e:
+            logger.error("<AUC x range>: " + repr(e))
+            return False
+
+        try:
+            fom_integration_range = parse_boundary(
+                self._fom_itgt_range_le.text())
+            self.fom_integration_range_sgn.emit(*fom_integration_range)
+        except ValueError as e:
+            logger.error("<FOM integration range>: " + repr(e))
+            return False
+
+        return True

@@ -15,41 +15,59 @@ from enum import IntEnum
 
 
 class DataSource(IntEnum):
-    CALIBRATED_FILE = 0  # calibrated data from files
-    CALIBRATED = 1  # calibrated data from Karabo-bridge
-    PROCESSED = 2  # processed data from the Middle-layer device
+    FILES = 0  # data from files (run directory)
+    BRIDGE = 1  # real-time data from the bridge
 
 
-class OpLaserMode(IntEnum):
-    INACTIVE = 0  # not perform any relevant calculation
-    NORMAL = 1  # on-/off- pulses in the same train
-    EVEN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
+class PumpProbeMode(IntEnum):
+    UNDEFINED = 0
+    PRE_DEFINED_OFF = 1  # use pre-defined reference image
+    SAME_TRAIN = 2  # on-/off- pulses in the same train
+    EVEN_TRAIN_ON = 3  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
+
+
+class PumpProbeType(IntEnum):
+    AZIMUTHAL_INTEGRATION = 0
+    ROI = 1
+    ROI_PROJECTION_X = 2
+    ROI_PROJECTION_Y = 3
 
 
 class FomName(IntEnum):
+    UNDEFINED = 0
+    PUMP_PROBE_FOM = 1
+    # ROI1 - ROI2
+    ROI_SUB = 2
+    ROI1 = 3
+    ROI2 = 4
+    # ROI1 + ROI2
+    ROI_SUM = 5
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
-    AI_MEAN = 1
-    # Calculate the FOM based on the difference between the azimuthal
-    # integration result between the laser on/off pulse(s).
-    AI_ON_OFF = 2
-    # Calculate the FOM based on the integration of ROI(s).
-    ROI = 3
+    AI_MEAN = 6
 
 
 class AiNormalizer(IntEnum):
-    # Normalize the azimuthal integration curve by the integral of the
-    # curve itself.
-    INTEGRAL = 1
-    # Normalize the azimuthal integration curve by the sum of the
-    # integrations of the ROI(s).
-    ROI = 2
+    # Normalize the azimuthal integration curve by the area under the curve.
+    AUC = 0
+    # Normalize the azimuthal integration curve by the sum of ROI(s).
+    ROI_SUB = 1  # ROI1 - ROI2
+    ROI1 = 2
+    ROI2 = 3
+    ROI_SUM = 4  # ROI1 + ROI2
 
 
-class RoiValueType(IntEnum):
-    SUM = 1  # monitor sum of ROI
-    MEAN = 2  # monitor mean of ROI
+class RoiFom(IntEnum):
+    SUM = 0  # monitor sum of ROI
+    MEAN = 1  # monitor mean of ROI
+
+
+class ImageMaskChange(IntEnum):
+    MASK = 0  # mask an area
+    UNMASK = 1  # unmask an area
+    CLEAR = 2  # remove all the mask areas
+    REPLACE = 3  # replace the whole current mask
 
 
 # root path for storing config and log files
@@ -99,8 +117,6 @@ class Config(dict):
     #
     # azimuthal integration
     # ---------------------
-    # EXPECTED_SHAPE tuple: shape (modules, y, x) of the detector image data
-    #                       (readonly)
     # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
     #                         detector (readonly)
     # GEOMETRY_FILE str: path of the geometry file of the detector
@@ -119,9 +135,9 @@ class Config(dict):
     # DISTANCE float: distance from sample - detector plan (orthogonal
     #                 distance, not along the beam), in meter
     # CENTER_Y int: coordinate of the point of normal incidence along the
-    #               detector's first dimension, in pixels
+    #               detector's first dimension, in pixels, PONI1 in pyFAI
     # CENTER_X int: coordinate of the point of normal incidence along the
-    #               detector's second dimension, in pixels
+    #               detector's second dimension, in pixels, PONI2 in pyFAI
     # PIXEL_SIZE float: detector pixel size, in meter
 
     # system config
@@ -133,13 +149,12 @@ class Config(dict):
         "TIMER_INTERVAL": 20,
         "MAX_QUEUE_SIZE": 2,
         "TIMEOUT": 0.1,
-        "ROI_COLORS": ('purple', 'green')
+        "ROI_COLORS": ('c', 'b', 'o', 'y')
     }
 
     _detector_readonly_config_keys = (
         "PULSE_RESOLVED",
         "REQUIRE_GEOMETRY",
-        "EXPECTED_SHAPE",
         "SOURCE_NAME",
     )
 
@@ -170,7 +185,6 @@ class Config(dict):
     _default_agipd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "EXPECTED_SHAPE": (16, 512, 128),
         "SOURCE_NAME": ('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',),
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
@@ -191,19 +205,19 @@ class Config(dict):
         "CENTER_X": 590,
         "PIXEL_SIZE": 0.2e-3,
         "COLOR_MAP": 'flame',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_lpd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "EXPECTED_SHAPE": (16, 256, 256),
         "SOURCE_NAME": ("FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
         "SOURCE_TYPE": 1,
         "DATA_FOLDER": "",
-        "GEOMETRY_FILE": os.path.join(os.path.expanduser("~"), "lpd_mar_18.h5"),
+        "GEOMETRY_FILE": os.path.join(os.path.dirname(__file__),
+                                      'geometries/lpd_mar_18.h5'),
         "QUAD_POSITIONS": ((-13.0, -299.0),
                            (11.0, -8.0),
                            (-254.0, 16.0),
@@ -215,17 +229,21 @@ class Config(dict):
         "PHOTON_ENERGY": 9.3,
         "DISTANCE": 0.2,
         "CENTER_Y": 620,
-        "CENTER_X": 580,
+        "CENTER_X": 570,
         "PIXEL_SIZE": 0.5e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_jfrau_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "EXPECTED_SHAPE": (1, 512, 1024),
-        "SOURCE_NAME": ("FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",),
+        "SOURCE_NAME": ("FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
+                        "FXE_XAD_JF1M/DET/RECEIVER-1:display",
+                        "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
+                        "FXE_XAD_JF1M/DET/RECEIVER-2:display",
+                        "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
+                        "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",),
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
         "SOURCE_TYPE": 1,
@@ -245,7 +263,7 @@ class Config(dict):
         "CENTER_X": 1400,
         "PIXEL_SIZE": 0.075e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     # For FastCCD at SCS, we have two SOURCE_NAMEs, the first one is for
@@ -253,7 +271,6 @@ class Config(dict):
     _default_fastccd_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "EXPECTED_SHAPE": (1934, 960),
         "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
                         "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",),
         "SERVER_ADDR": "10.253.0.140",
@@ -275,7 +292,7 @@ class Config(dict):
         "CENTER_X": 480,
         "PIXEL_SIZE": 0.030e-3,
         "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (0, 10000)
+        "MASK_RANGE": (-1e5, 1e5)
     }
 
     _default_detector_configs = {
