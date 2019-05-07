@@ -60,4 +60,4 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         :return: None if any of the parameters is invalid. Otherwise, a
             string of to be logged information.
         """
-        raise NotImplementedError
+        return True

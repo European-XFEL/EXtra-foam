@@ -15,6 +15,7 @@ import functools
 from ..pyqtgraph import Qt, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..mediator import Mediator
 from ...config import FomName
 
 
@@ -97,26 +98,19 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     # index, device ID, property name, resolution
     correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
 
-    correlation_fom_change_sgn = QtCore.pyqtSignal(object)
-
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
 
         self._figure_of_merit_cb = QtGui.QComboBox()
         for v in self._available_foms:
             self._figure_of_merit_cb.addItem(v)
-        self._figure_of_merit_cb.currentTextChanged.connect(
-            lambda x: self.correlation_fom_change_sgn.emit(self._available_foms[x]))
 
         self.clear_btn = QtGui.QPushButton("Clear history")
 
         self._table = QtGui.QTableWidget()
 
-        self._non_reconfigurable_widgets = [
-            self._figure_of_merit_cb,
-        ]
-
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
 
@@ -133,6 +127,16 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
         self.initParamTable()
+
+    def initConnections(self):
+        mediator = Mediator()
+
+        self._figure_of_merit_cb.currentTextChanged.connect(
+            lambda x: mediator.correlation_fom_change_sgn.emit(
+                self._available_foms[x]))
+        self._figure_of_merit_cb.currentTextChanged.emit(
+            self._figure_of_merit_cb.currentText())
+        return True
 
     def initParamTable(self):
         """Initialize the correlation parameter table widget."""
@@ -171,12 +175,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         header_height = self._table.horizontalHeader().height()
         self._table.setMinimumHeight(header_height * (self._n_params + 2))
         self._table.setMaximumHeight(header_height * (self._n_params + 3))
-
-    def updateSharedParameters(self):
-        """Override"""
-        self._figure_of_merit_cb.currentTextChanged.emit(
-            self._figure_of_merit_cb.currentText())
-        return True
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):

@@ -85,6 +85,9 @@ class FaiServer:
         mediator.pp_analysis_type_sgn.connect(
             self._scheduler.onPpAnalysisTypeChange)
 
+        mediator.correlation_fom_change_sgn.connect(
+            self._scheduler.onCorrelationFomChange)
+
         # with the file server
         mediator.start_file_server_sgn.connect(self.start_fileserver)
         mediator.stop_file_server_sgn.connect(self.stop_fileserver)
@@ -130,8 +133,6 @@ class FaiServer:
         self._gui.pump_probe_ctrl_widget.reset_btn.clicked.connect(
             self._scheduler.onPumpProbeReset)
 
-        self._gui.correlation_ctrl_widget.correlation_fom_change_sgn.connect(
-            self._scheduler.onCorrelationFomChange)
         self._gui.correlation_ctrl_widget.correlation_param_change_sgn.connect(
             self._scheduler.onCorrelationParamChange)
         self._gui.correlation_ctrl_widget.clear_btn.clicked.connect(

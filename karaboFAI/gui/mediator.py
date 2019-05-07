@@ -33,6 +33,7 @@ class Mediator(QObject):
 
     # index, device ID, property name, resolution
     correlation_param_change_sgn = pyqtSignal(int, str, str, float)
+    correlation_fom_change_sgn = pyqtSignal(object)
 
     reset_image_level_sgn = pyqtSignal()
 

@@ -243,9 +243,14 @@ class TestMainGui(unittest.TestCase):
         self._correlation_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 
+        self.assertEqual(FomName(0), scheduler._correlation_proc.fom_name)
+        new_fom = FomName.ROI1
+        widget._figure_of_merit_cb.setCurrentIndex(new_fom)
+        self.assertEqual(FomName(new_fom),
+                         scheduler._correlation_proc.fom_name)
+
         # test default FOM name
         self.assertTrue(self.gui.updateSharedParameters())
-        self.assertEqual(FomName.UNDEFINED, scheduler._correlation_proc.fom_name)
 
         # test the correlation param table
         expected_params = []
