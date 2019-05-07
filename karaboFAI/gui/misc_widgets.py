@@ -95,6 +95,9 @@ class GuiLogger(logging.Handler):
         super().__init__(level=logging.INFO)
         self.widget = QtGui.QPlainTextEdit(parent)
 
+        formatter = logging.Formatter('%(levelname)s - %(message)s')
+        self.setFormatter(formatter)
+
         logger_font = QtGui.QFont()
         logger_font.setPointSize(12)
         self.widget.setFont(logger_font)
