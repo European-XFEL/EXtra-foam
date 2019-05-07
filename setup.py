@@ -26,7 +26,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.services:start',
+            'karaboFAI=karaboFAI.services:application',
         ],
     },
     package_data={
