@@ -22,7 +22,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
 
     _available_sources = OrderedDict({
-        "Run directory": DataSource.FILES,
+        "Run directory": DataSource.FILE,
         "ZeroMQ bridge": DataSource.BRIDGE,
     })
 
@@ -188,8 +188,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._hostname_le.setText(hostname)
         self._port_le.setText(str(port))
 
-        for src in sources:
-            self._detector_src_cb.addItem(src)
-
-        self._detector_src_cb.currentIndexChanged.emit(
-            self._detector_src_cb.currentIndex())
+        self._detector_src_cb.addItems(sources)
+        #
+        # self._detector_src_cb.currentIndexChanged.emit(
+        #     self._detector_src_cb.currentIndex())

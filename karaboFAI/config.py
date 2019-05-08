@@ -20,7 +20,7 @@ from .logger import logger
 
 
 class DataSource(IntEnum):
-    FILES = 0  # data from files (run directory)
+    FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge
 
 

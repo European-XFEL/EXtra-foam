@@ -75,7 +75,7 @@ class TestJungfrauAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [512, 1024]})
     def testAssembleFile(self):
-        self._assembler.source_type = DataSource.FILES
+        self._assembler.source_type = DataSource.FILE
         src_name = 'detector_data'
         key_name = 'data.adc'
         self._assembler.source_name = src_name
@@ -116,7 +116,7 @@ class TestFastccdAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [1934, 960]})
     def testAssembleFile(self):
-        self._assembler.source_type = DataSource.FILES
+        self._assembler.source_type = DataSource.FILE
         src_name = 'detector_data'
         key_name = 'data.image.pixels'
         self._assembler.source_name = src_name

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import tempfile
 import os
 
@@ -13,7 +14,7 @@ from karabo_data.geometry import LPDGeometry
 from karaboFAI.services import FaiServer
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
-    config, FomName, AiNormalizer, PumpProbeMode, PumpProbeType
+    config, AiNormalizer, FomName, DataSource, PumpProbeMode, PumpProbeType
 )
 
 
@@ -194,6 +195,8 @@ class TestMainGui(unittest.TestCase):
         widget._nbins_le.editingFinished.emit()
         self.assertEqual(40, scheduler._xas_proc.n_bins)
 
+    @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
+                               "SOURCE_NAME_FILE": ["A", "B"]})
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
         scheduler = self.scheduler
@@ -209,16 +212,29 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual("tcp://127.0.0.1:12345", bridge._endpoint)
 
         # test passing data source types and detector source name
-        # TODO: mock a config file and add more tests
-        sources = widget._available_sources
 
-        self.assertEqual(config['DEFAULT_SOURCE_TYPE'],
-                         sources[widget._source_type_cb.currentText()])
-        self.assertEqual(config['DEFAULT_SOURCE_TYPE'],
-                         scheduler._image_assembler.source_type)
+        source_type = DataSource.FILE
+        widget._source_type_cb.setCurrentIndex(source_type)
+        self.assertEqual(source_type, scheduler._image_assembler.source_type)
+        self.assertEqual(source_type, scheduler._source_type)
+        self.assertEqual(source_type, bridge._source_type)
+        self.assertEqual("A", scheduler._image_assembler.source_name)
+        items = []
+        for i in range(widget._detector_src_cb.count()):
+            items.append(widget._detector_src_cb.itemText(i))
+        self.assertListEqual(["A", "B"], items)
 
-        self.assertEqual(widget._detector_src_cb.currentText(),
-                         scheduler._image_assembler.source_name)
+        # change source_type from FILE to BRIDGE
+        source_type = DataSource.BRIDGE
+        widget._source_type_cb.setCurrentIndex(source_type)
+        self.assertEqual(source_type, scheduler._image_assembler.source_type)
+        self.assertEqual(source_type, scheduler._source_type)
+        self.assertEqual(source_type, bridge._source_type)
+        self.assertEqual("E", scheduler._image_assembler.source_name)
+        items = []
+        for i in range(widget._detector_src_cb.count()):
+            items.append(widget._detector_src_cb.itemText(i))
+        self.assertListEqual(["E", "F", "G"], items)
 
         # test mono source name
         mono_src_cb = widget._mono_src_cb
@@ -245,7 +261,7 @@ class TestMainGui(unittest.TestCase):
         self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
 
     def testCorrelationCtrlWidget(self):
-        widget =self.gui.correlation_ctrl_widget
+        widget = self.gui.correlation_ctrl_widget
         scheduler = self.scheduler
         self._correlation_action.trigger()
         window = list(self.gui._windows.keys())[-1]

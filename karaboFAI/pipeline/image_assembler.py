@@ -84,7 +84,7 @@ class ImageAssemblerFactory(ABC):
             src_type = self.source_type
 
             try:
-                if src_type == DataSource.FILES:
+                if src_type == DataSource.FILE:
                     modules_data = self._get_modules_file(data, src_name)
                 elif src_type == DataSource.BRIDGE:
                     modules_data = self._get_modules_bridge(data, src_name)
