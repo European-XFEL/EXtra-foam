@@ -22,13 +22,12 @@ class RoiWindow(DockerWindow):
     """RoiWindow class."""
     title = "ROI"
 
-    _TOTAL_W = 800
-    _TOTAL_H = 1000
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     _LW1 = 0.5 * _TOTAL_W
     _LW2 = _TOTAL_W
-    _LH1 = 0.3 * _TOTAL_H
-    _LH2 = 0.4 * _TOTAL_H
+    _LH1 = 0.35 * _TOTAL_H
+    _LH2 = 0.3 * _TOTAL_H
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

@@ -14,14 +14,14 @@ from ..pyqtgraph.dockarea import Dock
 from .base_window import DockerWindow
 from ..bulletin_widget import BulletinWidget
 from ..plot_widgets import AssembledImageView
+from ...config import config
 
 
 class OverviewWindow(DockerWindow):
     """OverviewWindow class."""
     title = "overview"
 
-    _TOTAL_W = 1440
-    _TOTAL_H = 900
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -33,7 +33,7 @@ class OverviewWindow(DockerWindow):
         self.initUI()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
         self.update()
 

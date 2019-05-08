@@ -1,9 +1,10 @@
 import unittest
+from unittest.mock import patch
 import numpy as np
 
 from karaboFAI.pipeline.image_assembler import ImageAssemblerFactory
 from karaboFAI.pipeline.exceptions import AssemblingError
-from karaboFAI.config import DataSource
+from karaboFAI.config import config, DataSource
 
 
 class TestAgipdAssembler(unittest.TestCase):
@@ -13,6 +14,8 @@ class TestAgipdAssembler(unittest.TestCase):
     def testAssembleFile(self):
         pass
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
+                               "MODULE_SHAPE": [512, 128]})
     def testAssembleBridge(self):
         self._assembler.source_type = DataSource.BRIDGE
         src_name = 'detector_data'
@@ -35,12 +38,15 @@ class TestAgipdAssembler(unittest.TestCase):
 
 
 class TestLpdAssembler(unittest.TestCase):
+
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("LPD")
 
     def testAssembleFile(self):
         pass
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
+                               "MODULE_SHAPE": [256, 256]})
     def testAssembleBridge(self):
         self._assembler.source_type = DataSource.BRIDGE
         src_name = 'detector_data'
@@ -66,6 +72,8 @@ class TestJungfrauAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrau")
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
+                               "MODULE_SHAPE": [512, 1024]})
     def testAssembleFile(self):
         self._assembler.source_type = DataSource.FILES
         src_name = 'detector_data'
@@ -82,6 +90,8 @@ class TestJungfrauAssembler(unittest.TestCase):
             data = {src_name: {key_name: np.ones((2, 512, 1024))}}
             self._assembler.assemble(data)
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
+                               "MODULE_SHAPE": [512, 1024]})
     def testAssembleBridge(self):
         self._assembler.source_type = DataSource.BRIDGE
         src_name = 'detector_data'
@@ -103,6 +113,8 @@ class TestFastccdAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("FastCCD")
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
+                               "MODULE_SHAPE": [1934, 960]})
     def testAssembleFile(self):
         self._assembler.source_type = DataSource.FILES
         src_name = 'detector_data'
@@ -115,6 +127,8 @@ class TestFastccdAssembler(unittest.TestCase):
             data = {src_name: {key_name: np.ones((100, 100))}}
             self._assembler.assemble(data)
 
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
+                               "MODULE_SHAPE": [1934, 960]})
     def testAssembleBridge(self):
         self._assembler.source_type = DataSource.BRIDGE
         src_name = 'detector_data'

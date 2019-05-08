@@ -74,7 +74,7 @@ class ImageView(QtGui.QWidget):
         self._hist_widget.setImageItem(self._image_item)
 
         if color_map is None:
-            self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+            self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
         else:
             self.setColorMap(colorMapFactory["thermal"])
 
@@ -402,7 +402,7 @@ class AssembledImageView(ImageView):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
@@ -438,7 +438,7 @@ class PumpProbeImageView(ImageView):
         if self._roi:
             self._plot_widget.removeItem(self._mask_item)
 
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""

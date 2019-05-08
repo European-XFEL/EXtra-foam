@@ -18,14 +18,14 @@ from ..plot_widgets import (
     MultiPulseAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
     SinglePulseImageView
 )
+from ...config import config
 
 
 class PulsedAzimuthalIntegrationWindow(DockerWindow):
     """PulsedAzimuthalIntegrationWindow class."""
     title = "pulsed-azimuthal-integration"
 
-    _TOTAL_W = 1500
-    _TOTAL_H = 1000
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     _LW = 0.5 * _TOTAL_W
     _LH = 0.5 * _TOTAL_H
@@ -68,7 +68,7 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
             self.initUI()
             self.resize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
-        self.setMinimumSize(900, 600)
+        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
         self.update()
 

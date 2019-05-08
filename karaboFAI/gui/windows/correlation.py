@@ -13,6 +13,7 @@ from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
 from ..plot_widgets import CorrelationWidget
+from ...config import config
 
 
 class CorrelationWindow(DockerWindow):
@@ -21,6 +22,8 @@ class CorrelationWindow(DockerWindow):
     Plot correlations between different parameters.
     """
     title = "correlation"
+
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     N_PLOTS = 4
 
@@ -34,8 +37,8 @@ class CorrelationWindow(DockerWindow):
 
         self.initUI()
 
-        self.resize(1200, 900)
-        self.setMinimumSize(800, 600)
+        self.resize(self._TOTAL_W, self._TOTAL_H)
+        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
         self.update()
 

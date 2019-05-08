@@ -52,7 +52,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._source_type_cb = QtGui.QComboBox()
         for src in self._available_sources:
             self._source_type_cb.addItem(src)
-        self._source_type_cb.setCurrentIndex(config['DATA_SOURCE_TYPE'])
+        self._source_type_cb.setCurrentIndex(config['DEFAULT_SOURCE_TYPE'])
 
         # fill the combobox in the run time based on the source type
         self._detector_src_cb = QtGui.QComboBox()

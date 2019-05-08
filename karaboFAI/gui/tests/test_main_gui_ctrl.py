@@ -203,9 +203,9 @@ class TestMainGui(unittest.TestCase):
         # TODO: mock a config file and add more tests
         sources = widget._available_sources
 
-        self.assertEqual(config['DATA_SOURCE_TYPE'],
+        self.assertEqual(config['DEFAULT_SOURCE_TYPE'],
                          sources[widget._source_type_cb.currentText()])
-        self.assertEqual(config['DATA_SOURCE_TYPE'],
+        self.assertEqual(config['DEFAULT_SOURCE_TYPE'],
                          scheduler._image_assembler.source_type)
 
         self.assertEqual(widget._detector_src_cb.currentText(),

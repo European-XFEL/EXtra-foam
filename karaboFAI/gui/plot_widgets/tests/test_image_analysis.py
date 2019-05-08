@@ -10,16 +10,12 @@ from karaboFAI.gui.plot_widgets.image_view import (
 )
 from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.logger import logger
-from karaboFAI.config import config
 
 
 class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         FaiServer.qt_app()
-
-        config["PIXEL_SIZE"] = 1e-6
-        config["MASK_RANGE"] = (None, None)
 
         cls._widget = ImageAnalysis(color_map="thermal")
 

@@ -11,11 +11,6 @@ from karaboFAI.pipeline.processors import PumpProbeProcessor
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        config["PIXEL_SIZE"] = 1e-6
-        config["MASK_RANGE"] = (None, None)
-
     def setUp(self):
         self._proc = PumpProbeProcessor()
         self._proc.analysis_type = PumpProbeType.AZIMUTHAL_INTEGRATION

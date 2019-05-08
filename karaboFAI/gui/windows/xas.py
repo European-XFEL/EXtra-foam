@@ -24,8 +24,7 @@ class XasWindow(DockerWindow):
     """OverviewWindow class."""
     title = "XAS"
 
-    _TOTAL_W = 1440
-    _TOTAL_H = 900
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     _LW = 0.25 * _TOTAL_W
     _LH = _TOTAL_H / 3
@@ -51,7 +50,7 @@ class XasWindow(DockerWindow):
         self.initUI()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
-        self.setMinimumSize(800, 500)
+        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
         self.update()
 

@@ -19,7 +19,7 @@ from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
 from .exceptions import AssemblingError
-from ..config import DataSource
+from ..config import config, DataSource
 from ..helpers import profiler
 
 
@@ -33,9 +33,6 @@ class ImageAssemblerFactory(ABC):
             pulse_id_range (tuple): (min, max) pulse ID to be processed.
                 (int, int)
         """
-        _modules = 1
-        _module_shape = None
-
         def __init__(self):
             """Initialization."""
             self.source_name = None
@@ -99,11 +96,13 @@ class ImageAssemblerFactory(ABC):
             shape = modules_data.shape
             ndim = len(shape)
             try:
-                if shape[-2:] != self._module_shape:
-                    raise ValueError(f"Expected module shape {self._module_shape}, "
+                n_modules = config["NUMBER_OF_MODULES"]
+                module_shape = config["MODULE_SHAPE"]
+                if list(shape[-2:]) != module_shape:
+                    raise ValueError(f"Expected module shape {module_shape}, "
                                      f"but get {shape[-2:]} instead!")
-                elif ndim >= 3 and shape[-3] != self._modules:
-                    raise ValueError(f"Expected {self._modules} modules, but get "
+                elif ndim >= 3 and shape[-3] != n_modules:
+                    raise ValueError(f"Expected {n_modules} modules, but get "
                                      f"{shape[0]} instead!")
                 elif ndim == 4 and not shape[0]:
                     raise ValueError("Number of memory cells is zero!")
@@ -117,9 +116,6 @@ class ImageAssemblerFactory(ABC):
             return assembled
 
     class AgipdImageAssembler(BaseAssembler):
-        _modules = 16
-        _module_shape = (512, 128)
-
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
@@ -142,9 +138,6 @@ class ImageAssemblerFactory(ABC):
                 return False, info
 
     class LpdImageAssembler(BaseAssembler):
-        _modules = 16
-        _module_shape = (256, 256)
-
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
@@ -170,9 +163,6 @@ class ImageAssemblerFactory(ABC):
                 return False, info
 
     class JungFrauImageAssembler(BaseAssembler):
-        _modules = 1
-        _module_shape = (512, 1024)
-
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
@@ -194,9 +184,6 @@ class ImageAssemblerFactory(ABC):
                 raise NotImplementedError("Number of modules > 1")
 
     class FastCCDImageAssembler(BaseAssembler):
-        _modules = 1
-        _module_shape = (1934, 960)
-
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
@@ -210,9 +197,6 @@ class ImageAssemblerFactory(ABC):
             return data[src_name]['data.image.pixels']
 
     class BaslerCameraImageAssembler(BaseAssembler):
-        _modules = 1
-        _module_shape = (1024, 1024)
-
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""

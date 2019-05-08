@@ -11,8 +11,6 @@ class TestRoiProcessor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._count = 0
-        config["PIXEL_SIZE"] = 1e-6
-        config["MASK_RANGE"] = (None, None)
 
     def setUp(self):
         RoiData.clear()

@@ -28,11 +28,6 @@ class TestRoiData(unittest.TestCase):
 
 
 class TestImageData(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        config["PIXEL_SIZE"] = 1e-6
-        config["MASK_RANGE"] = (None, None)
-
     def setUp(self):
         ImageData.clear()
 
@@ -221,7 +216,7 @@ class TestImageData(unittest.TestCase):
         img_data.set_reference()
         img_data.update()
 
-        self.assertTupleEqual((-np.inf, np.inf), img_data.threshold_mask)
+        self.assertTupleEqual((-1e5, 1e5), img_data.threshold_mask)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
         np.testing.assert_array_equal(imgs_orig, img_data.masked_ref)
 

@@ -15,14 +15,14 @@ from .base_window import DockerWindow
 from ..plot_widgets import (
     PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeFomWidget
 )
+from ...config import config
 
 
 class PumpProbeWindow(DockerWindow):
     """PumpProbeWindow class."""
     title = "pump-probe"
 
-    _TOTAL_W = 1500
-    _TOTAL_H = 1000
+    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     # There are two columns of plots in the PumpProbeWindow. They are
     # numbered at 1, 2, ... from top to bottom.
@@ -52,7 +52,7 @@ class PumpProbeWindow(DockerWindow):
         self.initUI()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
         self.update()
 
