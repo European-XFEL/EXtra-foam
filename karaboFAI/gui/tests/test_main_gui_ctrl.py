@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+import os
 
 import numpy as np
 
@@ -18,6 +20,13 @@ from karaboFAI.config import (
 class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        from karaboFAI.config import _Config, ConfigWrapper
+
+        # do not use the config file in the current computer
+        cls.dir = tempfile.mkdtemp()
+        _Config._filename = os.path.join(cls.dir, "config.json")
+        ConfigWrapper()  # ensure file
+
         fai = FaiServer('LPD')
         cls.gui = fai._gui
         cls.app = fai.qt_app()
