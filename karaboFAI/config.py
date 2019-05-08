@@ -100,7 +100,7 @@ class Config(dict):
         # yellowy, bipolar, spectrum, cyclic, greyclip, grey
         "COLOR_MAP": 'thermal',
         # Source of data: FILES or BRIDGE
-        "SOURCE_TYPE": DataSource.BRIDGE,
+        "DATA_SOURCE_TYPE": DataSource.BRIDGE,
     }
 
     _detector_default_config = {

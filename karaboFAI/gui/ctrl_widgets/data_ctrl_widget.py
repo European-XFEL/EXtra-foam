@@ -22,8 +22,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
 
     _available_sources = OrderedDict({
-        "Stream data from run directory": DataSource.FILES,
-        "Stream data from bridge": DataSource.BRIDGE,
+        "Run directory": DataSource.FILES,
+        "ZeroMQ bridge": DataSource.BRIDGE,
     })
 
     _mono_chromators = [
@@ -39,7 +39,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "SCS_BLU_XGM/XGM/DOOCS",
     ]
 
-    source_type_change_sgn = QtCore.pyqtSignal(int)
     bridge_endpoint_sgn = QtCore.pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
@@ -50,9 +49,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
         self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
 
+        self._source_type_cb = QtGui.QComboBox()
+        for src in self._available_sources:
+            self._source_type_cb.addItem(src)
+
+        # fill the combobox in the run time based on the source type
         self._detector_src_cb = QtGui.QComboBox()
-        for src in config["SOURCE_NAME_BRIDGE"]:
-            self._detector_src_cb.addItem(src)
 
         self._mono_src_cb = QtGui.QComboBox()
         for src in self._mono_chromators:
@@ -62,17 +64,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
 
-        self._source_type_rbts = []
-        for key in self._available_sources:
-            self._source_type_rbts.append(QtGui.QRadioButton(key))
-
-        source_type = int(config["SOURCE_TYPE"])
-        self._source_type_rbts[source_type].setChecked(True)
-        # this is a temporary solution to switch the two difference
-        # source names for FastCCD at SCS
-        if self._detector_src_cb.count() > source_type:
-            self._detector_src_cb.setCurrentIndex(source_type)
-
         self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
 
         self._serve_start_btn = QtGui.QPushButton("Stream files")
@@ -80,11 +71,11 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._serve_terminate_btn.setEnabled(False)
 
         self._non_reconfigurable_widgets = [
+            self._source_type_cb,
             self._detector_src_cb,
             self._hostname_le,
             self._port_le,
         ]
-        self._non_reconfigurable_widgets.extend(self._source_type_rbts)
 
         self.initUI()
         self.initConnections()
@@ -94,18 +85,18 @@ class DataCtrlWidget(AbstractCtrlWidget):
         AR = QtCore.Qt.AlignRight
 
         src_layout = QtGui.QGridLayout()
-        src_layout.addWidget(QtGui.QLabel("Hostname: "), 0, 0, AR)
-        src_layout.addWidget(self._hostname_le, 0, 1)
-        src_layout.addWidget(QtGui.QLabel("Port: "), 0, 2, AR)
-        src_layout.addWidget(self._port_le, 0, 3)
-        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
-        src_layout.addWidget(self._detector_src_cb, 1, 1, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 2, 0, AR)
-        src_layout.addWidget(self._mono_src_cb, 2, 1, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 3, 0, AR)
-        src_layout.addWidget(self._xgm_src_cb, 3, 1, 1, 3)
-        src_layout.addWidget(self._source_type_rbts[0], 4, 0)
-        src_layout.addWidget(self._source_type_rbts[1], 4, 2)
+        src_layout.addWidget(QtGui.QLabel("Data streamed from: "), 0, 0, AR)
+        src_layout.addWidget(self._source_type_cb, 0, 1, 1, 3)
+        src_layout.addWidget(QtGui.QLabel("Hostname: "), 1, 0, AR)
+        src_layout.addWidget(self._hostname_le, 1, 1)
+        src_layout.addWidget(QtGui.QLabel("Port: "), 1, 2, AR)
+        src_layout.addWidget(self._port_le, 1, 3)
+        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 2, 0, AR)
+        src_layout.addWidget(self._detector_src_cb, 2, 1, 1, 3)
+        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 3, 0, AR)
+        src_layout.addWidget(self._mono_src_cb, 3, 1, 1, 3)
+        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 4, 0, AR)
+        src_layout.addWidget(self._xgm_src_cb, 4, 1, 1, 3)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)
@@ -118,6 +109,14 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
     def initConnections(self):
         mediator = Mediator()
+
+        self._source_type_cb.currentTextChanged.connect(
+            lambda x: self.onSourceTypeChange(self._available_sources[x]))
+        self._source_type_cb.currentTextChanged.connect(
+            lambda x: mediator.source_type_change_sgn.emit(
+                self._available_sources[x]))
+        self._source_type_cb.currentTextChanged.emit(
+            self._source_type_cb.currentText())
 
         self.bridge_endpoint_sgn.connect(mediator.bridge_endpoint_sgn)
 
@@ -134,7 +133,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._detector_src_cb.currentIndexChanged.connect(
             lambda i: mediator.detector_source_change_sgn.emit(
-                config["SOURCE_NAME_BRIDGE"][i]))
+                self._detector_src_cb.currentText()))
         self._detector_src_cb.currentIndexChanged.emit(
             self._detector_src_cb.currentIndex())
 
@@ -148,22 +147,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._xgm_src_cb.currentTextChanged.emit(
             self._mono_src_cb.currentText())
 
-        self.source_type_change_sgn.connect(mediator.source_type_change_sgn)
-
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
         self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
         mediator.file_server_started_sgn.connect(self.onFileServerStarted)
         mediator.file_server_stopped_sgn.connect(self.onFileServerStopped)
-
-    def updateSharedParameters(self, log=False):
-        """Override"""
-        for btn in self._source_type_rbts:
-            if btn.isChecked():
-                source_type = self._available_sources[btn.text()]
-                break
-        self.source_type_change_sgn.emit(source_type)
-
-        return True
 
     @QtCore.pyqtSlot()
     def onFileServerStarted(self):
@@ -181,3 +168,19 @@ class DataCtrlWidget(AbstractCtrlWidget):
     def onEndpointChange(self):
         endpoint = f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
         self.bridge_endpoint_sgn.emit(endpoint)
+
+    @QtCore.pyqtSlot(object)
+    def onSourceTypeChange(self, source_type):
+        while self._detector_src_cb.currentIndex() >= 0:
+            self._detector_src_cb.removeItem(0)
+
+        if source_type == DataSource.BRIDGE:
+            sources = config["SOURCE_NAME_BRIDGE"]
+        else:
+            sources = config["SOURCE_NAME_FILE"]
+
+        for src in sources:
+            self._detector_src_cb.addItem(src)
+
+        self._detector_src_cb.currentIndexChanged.emit(
+            self._detector_src_cb.currentIndex())

@@ -200,7 +200,11 @@ class TestMainGui(unittest.TestCase):
 
         self.assertEqual("tcp://localhost:56565", bridge._endpoint)
 
-        # test detector source name
+        # test passing data source types and detector source name
+        sources = widget._available_sources
+        self.assertEqual(sources[widget._source_type_cb.currentText()],
+                         scheduler._image_assembler.source_type)
+
         self.assertEqual(widget._detector_src_cb.currentText(),
                          scheduler._image_assembler.source_name)
 
@@ -217,15 +221,6 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(xgm_src_cb.currentText(), scheduler._data_aggregator.xgm_src)
         xgm_src_cb.setCurrentIndex(1)
         self.assertEqual(xgm_src_cb.currentText(), scheduler._data_aggregator.xgm_src)
-
-        # test passing data source types
-        for rbt in widget._source_type_rbts:
-            QTest.mouseClick(rbt, Qt.LeftButton)
-            self.assertTrue(self.gui.updateSharedParameters())
-            self.assertEqual(scheduler._image_assembler.source_type,
-                             widget._available_sources[rbt.text()])
-        # make source type available
-        QTest.mouseClick(widget._source_type_rbts[0], Qt.LeftButton)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
