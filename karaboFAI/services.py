@@ -64,6 +64,8 @@ class FaiServer:
         # with the scheduler
         mediator.source_type_change_sgn.connect(
             self._scheduler.onSourceTypeChange)
+        mediator.source_type_change_sgn.connect(
+            self._bridge.onSourceTypeChange)
         mediator.detector_source_change_sgn.connect(
             self._scheduler.onDetectorSourceChange)
         mediator.xgm_source_change_sgn.connect(

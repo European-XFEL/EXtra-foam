@@ -25,7 +25,7 @@ from .processors import (
     PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import AggregatingError, AssemblingError, ProcessingError
-from ..config import config, FomName, PumpProbeMode
+from ..config import config, DataSource, FomName, PumpProbeMode
 from ..helpers import profiler
 
 
@@ -41,6 +41,8 @@ class Scheduler(Worker):
     def __init__(self):
         """Initialization."""
         super().__init__()
+
+        self._source_type = None
 
         self._tasks = []
 
@@ -77,6 +79,7 @@ class Scheduler(Worker):
     @QtCore.pyqtSlot(int)
     def onSourceTypeChange(self, value):
         self._image_assembler.source_type = value
+        self._source_type = value
 
     @QtCore.pyqtSlot(str)
     def onXgmSourceChange(self, name):
@@ -216,10 +219,11 @@ class Scheduler(Worker):
         """Run the data processor."""
         self.empty_output()  # remove old data
 
+        timeout = config['TIMEOUT']
         self.info("Scheduler started!")
         while not self.isInterruptionRequested():
             try:
-                data = self._input.get(timeout=config['TIMEOUT'])
+                data = self._input.get(timeout=timeout)
             except Empty:
                 continue
 
@@ -227,10 +231,20 @@ class Scheduler(Worker):
             if processed_data is None:
                 continue
 
-            try:
-                self._output.put_nowait(processed_data)
-            except Full:
-                self.pop_output()
+            if self._source_type == DataSource.BRIDGE:
+                # always keep the latest data in the queue
+                try:
+                    self._output.put_nowait(processed_data)
+                except Full:
+                    self.pop_output()
+            else:  # self._source_type == DataSource.FILE:
+                # wait until data in the queue has been processed
+                while not self.isInterruptionRequested():
+                    try:
+                        self._output.put(processed_data, timeout=timeout)
+                        break
+                    except Full:
+                        continue
 
         self.info("Scheduler stopped!")
 

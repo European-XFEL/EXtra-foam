@@ -18,7 +18,7 @@ from zmq.error import ZMQError
 from karabo_bridge import Client
 
 from .worker import Worker
-from ..config import config
+from ..config import config, DataSource
 from ..helpers import profiler
 
 
@@ -27,6 +27,7 @@ class Bridge(Worker):
         """Initialization."""
         super().__init__()
 
+        self._source_type = None
         self._endpoint = None
 
     @pyqtSlot(str)
@@ -38,8 +39,9 @@ class Bridge(Worker):
         endpoint = self._endpoint
         self.empty_output()  # remove old data
 
+        timeout = config['TIMEOUT']
         try:
-            with Client(endpoint, timeout=config['TIMEOUT']) as client:
+            with Client(endpoint, timeout=timeout) as client:
                 self.info("Bind to server {}!".format(endpoint))
                 while not self.isInterruptionRequested():
                     try:
@@ -47,11 +49,21 @@ class Bridge(Worker):
                     except TimeoutError:
                         continue
 
-                    # always keep the latest data in the queue
-                    try:
-                        self._output.put_nowait(data)
-                    except Full:
-                        self.pop_output()
+                    if self._source_type == DataSource.BRIDGE:
+                        # always keep the latest data in the queue
+                        try:
+                            self._output.put_nowait(data)
+                        except Full:
+                            self.pop_output()
+                    else:  # self._source_type == DataSource.FILE:
+                        # wait until data in the queue has been processed
+                        while not self.isInterruptionRequested():
+                            try:
+                                self._output.put(data, timeout=timeout)
+                                break
+                            except Full:
+                                continue
+
         except ZMQError:
             self.error(f"ZMQError with endpoint: {endpoint}")
             raise
@@ -61,3 +73,7 @@ class Bridge(Worker):
     @profiler("Receive Data from Bridge")
     def _recv(self, client):
         return client.next()
+
+    @pyqtSlot(int)
+    def onSourceTypeChange(self, value):
+        self._source_type = value
