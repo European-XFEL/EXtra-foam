@@ -120,12 +120,13 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self.bridge_endpoint_sgn.connect(mediator.bridge_endpoint_sgn)
 
-        self._hostname_le.editingFinished.connect(self.onEndpointChange)
-        self._hostname_le.editingFinished.emit()
-        self._port_le.editingFinished.connect(self.onEndpointChange)
-        self._port_le.editingFinished.connect(
+        self._hostname_le.textChanged.connect(self.onEndpointChange)
+        self._port_le.textChanged.connect(self.onEndpointChange)
+        self._port_le.textChanged.connect(
             lambda: mediator.port_change_sgn.emit(self._port_le.text()))
-        self._port_le.editingFinished.emit()
+        # Since hostname and port have already been set, trigger either of
+        # the signal is enough.
+        self._port_le.textChanged.emit(self._port_le.text())
 
         self._data_folder_le.editingFinished.connect(
             lambda: mediator.data_folder_change_sgn.emit(self._data_folder_le.text()))

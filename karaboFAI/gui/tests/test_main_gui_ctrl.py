@@ -191,14 +191,13 @@ class TestMainGui(unittest.TestCase):
         bridge = self.bridge
 
         # test passing tcp hostname and port
-        tcp_addr = "localhost:56565"
-
-        widget._hostname_le.setText(tcp_addr.split(":")[0])
-        widget._hostname_le.editingFinished.emit()
-        widget._port_le.setText(tcp_addr.split(":")[1])
-        widget._port_le.editingFinished.emit()
-
-        self.assertEqual("tcp://localhost:56565", bridge._endpoint)
+        hostname = config['SERVER_ADDR']
+        port = config['SERVER_PORT']
+        self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
+        widget._hostname_le.setText('127.0.0.1')
+        self.assertEqual(f"tcp://127.0.0.1:{port}", bridge._endpoint)
+        widget._port_le.setText('12345')
+        self.assertEqual("tcp://127.0.0.1:12345", bridge._endpoint)
 
         # test passing data source types and detector source name
         sources = widget._available_sources
