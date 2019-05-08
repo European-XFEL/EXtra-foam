@@ -200,8 +200,12 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual("tcp://127.0.0.1:12345", bridge._endpoint)
 
         # test passing data source types and detector source name
+        # TODO: mock a config file and add more tests
         sources = widget._available_sources
-        self.assertEqual(sources[widget._source_type_cb.currentText()],
+
+        self.assertEqual(config['DATA_SOURCE_TYPE'],
+                         sources[widget._source_type_cb.currentText()])
+        self.assertEqual(config['DATA_SOURCE_TYPE'],
                          scheduler._image_assembler.source_type)
 
         self.assertEqual(widget._detector_src_cb.currentText(),

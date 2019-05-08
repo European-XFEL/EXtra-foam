@@ -101,6 +101,10 @@ class Config(dict):
         "COLOR_MAP": 'thermal',
         # Source of data: FILES or BRIDGE
         "DATA_SOURCE_TYPE": DataSource.BRIDGE,
+        # host name if source is FILES
+        "LOCAL_HOST": "localhost",
+        # port number if source is FILES
+        "LOCAL_PORT": 45454,
     }
 
     _detector_default_config = {
@@ -111,9 +115,9 @@ class Config(dict):
         # detector pixel size, in meter
         "PIXEL_SIZE": 1.0e-6,
         # TCP address of the ZMQ bridge
-        "SERVER_ADDR": "localhost",
+        "SERVER_ADDR": "",
         # TCP port of the ZMQ bridge
-        "SERVER_PORT": 12345,
+        "SERVER_PORT": 0,
         # Karabo device ID + output channel name
         "SOURCE_NAME_BRIDGE": ["",],
         # instrument source name in HDF5 files
@@ -237,7 +241,7 @@ class Config(dict):
     _default_baslercamera_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "PIXEL_SIZE": 0.002e-3,
+        "PIXEL_SIZE": 0.0022e-3,
         "SERVER_ADDR": "10.253.0.140",
         "SERVER_PORT": 4503,
         "DISTANCE": 1.0,

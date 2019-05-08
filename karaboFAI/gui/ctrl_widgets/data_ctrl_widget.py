@@ -44,14 +44,15 @@ class DataCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Data source", *args, **kwargs)
 
-        self._hostname_le = QtGui.QLineEdit(config["SERVER_ADDR"])
+        self._hostname_le = QtGui.QLineEdit()
         self._hostname_le.setMinimumWidth(120)
-        self._port_le = QtGui.QLineEdit(str(config["SERVER_PORT"]))
+        self._port_le = QtGui.QLineEdit()
         self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
 
         self._source_type_cb = QtGui.QComboBox()
         for src in self._available_sources:
             self._source_type_cb.addItem(src)
+        self._source_type_cb.setCurrentIndex(config['DATA_SOURCE_TYPE'])
 
         # fill the combobox in the run time based on the source type
         self._detector_src_cb = QtGui.QComboBox()
@@ -177,8 +178,15 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         if source_type == DataSource.BRIDGE:
             sources = config["SOURCE_NAME_BRIDGE"]
+            hostname = config["SERVER_ADDR"]
+            port = config["SERVER_PORT"]
         else:
             sources = config["SOURCE_NAME_FILE"]
+            hostname = config["LOCAL_HOST"]
+            port = config["LOCAL_PORT"]
+
+        self._hostname_le.setText(hostname)
+        self._port_le.setText(str(port))
 
         for src in sources:
             self._detector_src_cb.addItem(src)
