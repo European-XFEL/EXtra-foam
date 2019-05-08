@@ -9,9 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import os
-import configparser
+import copy
 from enum import IntEnum
+import json
+import os
+
+from . import ROOT_PATH
+from .logger import logger
 
 
 class DataSource(IntEnum):
@@ -70,256 +74,180 @@ class ImageMaskChange(IntEnum):
     REPLACE = 3  # replace the whole current mask
 
 
-# root path for storing config and log files
-ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")
-if not os.path.isdir(ROOT_PATH):
-    os.makedirs(ROOT_PATH)
-
-
-class UpperCaseConfigParser(configparser.ConfigParser):
-    def optionxform(self, optionstr):
-        return optionstr.upper()
-
-
 class Config(dict):
     """Config class.
 
-    The default detector config, e.g. _default_agipd_config, should be
-    the config used in the corresponding experimental hutch on the
-    online cluster.
-
-    The config file should hold the config used in users' local PCs,
-    typically for offline analysis and tests.
+    The default detector config should be the config used in the
+    corresponding experimental hutch on the online cluster.
     """
-    # miscellaneous
-    # -------------
-    # COLOR_MAP str: color map in contour plots, valid options are:
-    #                thermal, flame, yellowy, bipolar, spectrum, cyclic,
-    #                greyclip, grey
-    #
-    # data pipeline setup
-    # -------------------
-    # MASK_RANGE tuple: pixels with values outside the (lower, upper) range
-    #                   will be masked
-    # TIMER_INTERVAL int: QTimer interval in milliseconds (sys)
-    # MAX_QUEUE_SIZE int: maximum length of data acquisition and processing
-    #                     queues in data pipeline (sys)
-    # TIMEOUT int: block time (s) in Queue.get() and Queue.put() methods (sys)
-    #
-    # networking
-    # ----------
-    # SERVER_ADDR str: TCP address of the ZMQ bridge
-    # SERVER_PORT int: TCP port of the ZMQ bridge
-    # SOURCE_NAME str: PipeToZeroMQ device ID
-    # SOURCE_TYPE int: see data_processing.data_model.DataSource
-    # DATA_FOLDER str: data folder if streamed from files
-    # PULSE_RESOLVED bool: whether the data is pulse resolved (readonly)
-    #
-    # azimuthal integration
-    # ---------------------
-    # REQUIRE_GEOMETRY tuple: whether geometry is required to assemble the
-    #                         detector (readonly)
-    # GEOMETRY_FILE str: path of the geometry file of the detector
-    # QUAD_POSITIONS tuple: quadrant coordinates for assembling detector
-    #                       modules, ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-    # INTEGRATION_METHODS list: azimuthal integration methods supported
-    #                           in pyFAI
-    # INTEGRATION_RANGE tuple: (lower, upper) range of the radial unit of
-    #                          azimuthal integration
-    # INTEGRATION_POINTS int: number of points in the output pattern of
-    #                         azimuthal integration
-    #
-    # experiment setup
-    # ----------------
-    # PHOTON_ENERGY float: photon energy, in keV
-    # DISTANCE float: distance from sample - detector plan (orthogonal
-    #                 distance, not along the beam), in meter
-    # CENTER_Y int: coordinate of the point of normal incidence along the
-    #               detector's first dimension, in pixels, PONI1 in pyFAI
-    # CENTER_X int: coordinate of the point of normal incidence along the
-    #               detector's second dimension, in pixels, PONI2 in pyFAI
-    # PIXEL_SIZE float: detector pixel size, in meter
 
-    # system config
-    # -------------
-    # "IMAGE_DATA_KEYS" tuple: image data keys, "image.data": AGIPD, LPD,
-    #                          "data.image.data": FastCCD,
-    _default_sys_config = {
-        "DETECTOR": '',  # detector name, leave it empty
+    _sys_readonly_config = {
+        # detector name, leave it empty
+        "DETECTOR": "",
+        # QTimer interval in milliseconds
         "TIMER_INTERVAL": 20,
+        # maximum length of a queue in data pipeline
         "MAX_QUEUE_SIZE": 2,
+        # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
-        "ROI_COLORS": ('c', 'b', 'o', 'y')
+        # colors of ROI1- ROI4
+        "ROI_COLORS": ('c', 'b', 'o', 'y'),
     }
 
-    _detector_readonly_config_keys = (
-        "PULSE_RESOLVED",
-        "REQUIRE_GEOMETRY",
-    )
+    # system configuration which users are allowed to modify
+    _sys_reconfigurable_config = {
+        # color map in contour plots, valid options are: thermal, flame,
+        # yellowy, bipolar, spectrum, cyclic, greyclip, grey
+        "COLOR_MAP": 'thermal',
+        # Source of data: FILES or BRIDGE
+        "SOURCE_TYPE": DataSource.BRIDGE,
+    }
 
-    _detector_reconfigurable_keys = (
-        "SERVER_ADDR",
-        "SERVER_PORT",
-        "SOURCE_TYPE",
-        "SOURCE_NAME",
-        "DATA_FOLDER",
-        "GEOMETRY_FILE",
-        "QUAD_POSITIONS",
-        "INTEGRATION_METHODS",
-        "INTEGRATION_RANGE",
-        "INTEGRATION_POINTS",
-        "PHOTON_ENERGY",
-        "DISTANCE",
-        "CENTER_Y",
-        "CENTER_X",
-        "PIXEL_SIZE",
-        "COLOR_MAP",
-        "MASK_RANGE"
-    )
+    _detector_default_config = {
+        # whether the data is pulse resolved
+        "PULSE_RESOLVED": False,
+        # whether geometry is required to assemble the detector
+        "REQUIRE_GEOMETRY": False,
+        # detector pixel size, in meter
+        "PIXEL_SIZE": 1.0e-6,
+        # TCP address of the ZMQ bridge
+        "SERVER_ADDR": "localhost",
+        # TCP port of the ZMQ bridge
+        "SERVER_PORT": 12345,
+        # Karabo device ID + output channel name
+        "SOURCE_NAME_BRIDGE": ["",],
+        # instrument source name in HDF5 files
+        "SOURCE_NAME_FILE": ["",],
+        # data folder if streamed from files
+        "DATA_FOLDER": "",
+        "GEOMETRY_FILE": "",
+        # quadrant coordinates for assembling detector modules,
+        # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
+        "QUAD_POSITIONS": ((0, 0), (0, 0), (0, 0), (0, 0)),
+        # distance from sample to detector plan (orthogonal distance,
+        # not along the beam), in meter
+        "DISTANCE": 1.0,
+        # coordinate of the point of normal incidence along the detector's
+        # first dimension, in pixels, PONI1 in pyFAI
+        "CENTER_Y": 0,
+        # coordinate of the point of normal incidence along the detector's
+        # second dimension, in pixels, PONI2 in pyFAI
+        "CENTER_X": 0,
+        # azimuthal integration methods supported in pyFAI
+        "AZIMUTHAL_INTEGRATION_METHODS": [
+            'nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel', 'lut',
+            'lut_ocl'
+        ],
+        # range (lower, upper) of the radial unit of azimuthal integration
+        "AZIMUTHAL_INTEGRATION_RANGE": (1e-3, 0.1),
+        # number of points of azimuthal integration
+        "AZIMUTHAL_INTEGRATION_POINTS": 512,
+        # pixels with values outside the (lower, upper) range will be masked
+        "MASK_RANGE": (-1e5, 1e5),
+        # photon energy, in keV
+        "PHOTON_ENERGY": 12.4,
+    }
 
-    # In order to pass the test, the default detector config must include
-    # all the keys in '_allowed_detector_config_keys'.
-
-    # the read-only config keys should come first, e.g. PULSE_RESOLVED,
-    # REQUIRED_GEOMETRY, EXPECTED_SHAPE, SOURCE_NAME
     _default_agipd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "SOURCE_NAME": ('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',),
+        "PIXEL_SIZE": 0.2e-3,
         "SERVER_ADDR": '10.253.0.51',
         "SERVER_PORT": 45012,
-        "SOURCE_TYPE": 1,
-        "DATA_FOLDER": "",
-        "GEOMETRY_FILE": '/home/spbonc/xfel_geom_AgBehenate_20181012.geom',
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
-        "INTEGRATION_METHODS": ['BBox', 'splitpixel', 'csr', 'nosplit_csr',
-                                'csr_ocl', 'lut', 'lut_ocl'],
-        "INTEGRATION_RANGE": (1e-3, 0.1),
-        "INTEGRATION_POINTS": 512,
-        "PHOTON_ENERGY": 9.3,
+        "SOURCE_NAME_BRIDGE": ['SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
+        "SOURCE_NAME_FILE":  ['SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
+        "AZIMUTHAL_INTEGRATION_METHODS": [
+            'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl', 'lut',
+            'lut_ocl'
+        ],
+        "AZIMUTHAL_INTEGRATION_RANGE": (1e-3, 0.1),
         "DISTANCE": 5.5,
         "CENTER_Y": 490,
         "CENTER_X": 590,
-        "PIXEL_SIZE": 0.2e-3,
-        "COLOR_MAP": 'flame',
-        "MASK_RANGE": (-1e5, 1e5)
+        "PHOTON_ENERGY": 9.3,
     }
 
     _default_lpd_config = {
         "PULSE_RESOLVED": True,
         "REQUIRE_GEOMETRY": True,
-        "SOURCE_NAME": ("FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED",),
+        "PIXEL_SIZE": 0.5e-3,
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
-        "SOURCE_TYPE": 1,
-        "DATA_FOLDER": "",
+        "SOURCE_NAME_BRIDGE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
+        "SOURCE_NAME_FILE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
         "GEOMETRY_FILE": os.path.join(os.path.dirname(__file__),
                                       'geometries/lpd_mar_18.h5'),
         "QUAD_POSITIONS": ((-13.0, -299.0),
                            (11.0, -8.0),
                            (-254.0, 16.0),
                            (-278.0, -275.0)),
-        "INTEGRATION_METHODS": ['BBox', 'splitpixel', 'csr', 'nosplit_csr',
-                                'csr_ocl', 'lut', 'lut_ocl'],
-        "INTEGRATION_RANGE": (0.2, 5),
-        "INTEGRATION_POINTS": 512,
-        "PHOTON_ENERGY": 9.3,
-        "DISTANCE": 0.2,
+        "AZIMUTHAL_INTEGRATION_METHODS": [
+            'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl', 'lut',
+            'lut_ocl'
+        ],
+        "AZIMUTHAL_INTEGRATION_RANGE": (0.2, 5),
+        "DISTANCE": 0.4,
         "CENTER_Y": 620,
         "CENTER_X": 570,
-        "PIXEL_SIZE": 0.5e-3,
-        "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (-1e5, 1e5)
+        "PHOTON_ENERGY": 9.3,
     }
 
     _default_jfrau_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "SOURCE_NAME": ("FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
-                        "FXE_XAD_JF1M/DET/RECEIVER-1:display",
-                        "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
-                        "FXE_XAD_JF1M/DET/RECEIVER-2:display",
-                        "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
-                        "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",),
+        "PIXEL_SIZE": 0.075e-3,
         "SERVER_ADDR": "10.253.0.53",
         "SERVER_PORT": 4501,
-        "SOURCE_TYPE": 1,
-        "DATA_FOLDER": "",
-        "GEOMETRY_FILE": "",
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
-        "INTEGRATION_METHODS": ['nosplit_csr', 'csr_ocl', 'csr', 'BBox',
-                                'splitpixel', 'lut', 'lut_ocl'],
-        "INTEGRATION_RANGE": (0.05, 0.4),
-        "INTEGRATION_POINTS": 1024,
-        "PHOTON_ENERGY": 12.4,
+        "SOURCE_NAME_BRIDGE": [
+            "FXE_XAD_JF1M/DET/RECEIVER-1:display",
+            "FXE_XAD_JF1M/DET/RECEIVER-2:display",
+        ],
+        "SOURCE_NAME_FILE": [
+            "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
+            "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
+            "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
+            "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
+        ],
+        "AZIMUTHAL_INTEGRATION_RANGE": (0.05, 0.4),
         "DISTANCE": 2.0,
         "CENTER_Y": 512,
         "CENTER_X": 1400,
-        "PIXEL_SIZE": 0.075e-3,
-        "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (-1e5, 1e5)
+        "PHOTON_ENERGY": 9.3,
     }
 
-    # For FastCCD at SCS, we have two SOURCE_NAMEs, the first one is for
-    # the file and the second one for online analysis
     _default_fastccd_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "SOURCE_NAME": ("SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
-                        "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",),
+        "PIXEL_SIZE": 0.030e-3,
         "SERVER_ADDR": "10.253.0.140",
         "SERVER_PORT": 4502,
-        "SOURCE_TYPE": 1,
-        "DATA_FOLDER": "",
-        "GEOMETRY_FILE": "",
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
-        "INTEGRATION_METHODS": ['nosplit_csr', 'csr_ocl', 'csr', 'BBox',
-                                'splitpixel', 'lut', 'lut_ocl'],
-        "INTEGRATION_RANGE": (1e-3, 0.02),
-        "INTEGRATION_POINTS": 1024,
-        "PHOTON_ENERGY": 0.780,
+        "SOURCE_NAME_BRIDGE": [
+            "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",
+        ],
+        "SOURCE_NAME_FILE": [
+            "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
+        ],
+        "AZIMUTHAL_INTEGRATION_RANGE": (1e-3, 0.02),
         "DISTANCE": 0.6,
         "CENTER_Y": 967,
         "CENTER_X": 480,
-        "PIXEL_SIZE": 0.030e-3,
-        "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (-1e5, 1e5)
+        "PHOTON_ENERGY": 0.780,
     }
 
     _default_baslercamera_config = {
         "PULSE_RESOLVED": False,
         "REQUIRE_GEOMETRY": False,
-        "SOURCE_NAME": ("LIMA_CAMERA:output",),
-        "SERVER_ADDR": "localhost",
-        "SERVER_PORT": 12345,
-        "SOURCE_TYPE": 1,
-        "DATA_FOLDER": "",
-        "GEOMETRY_FILE": "",
-        "QUAD_POSITIONS": ((0, 0),
-                           (0, 0),
-                           (0, 0),
-                           (0, 0)),
-        "INTEGRATION_METHODS": ['nosplit_csr', 'csr_ocl', 'csr', 'BBox',
-                                'splitpixel', 'lut', 'lut_ocl'],
-        "INTEGRATION_RANGE": (1e-3, 0.02),
-        "INTEGRATION_POINTS": 1024,
-        "PHOTON_ENERGY": 12.4,
+        "PIXEL_SIZE": 0.002e-3,
+        "SERVER_ADDR": "10.253.0.140",
+        "SERVER_PORT": 4503,
         "DISTANCE": 1.0,
         "CENTER_Y": 512,
         "CENTER_X": 512,
-        "PIXEL_SIZE": 0.0022e-3,
-        "COLOR_MAP": 'thermal',
-        "MASK_RANGE": (-1e5, 1e5)
     }
+
+    _filename = os.path.join(ROOT_PATH, "config.json")
+
+    detectors = ['AGIPD', 'LPD', 'JungFrau', 'FastCCD', 'BaslerCamera']
 
     _default_detector_configs = {
         "AGIPD": _default_agipd_config,
@@ -329,88 +257,68 @@ class Config(dict):
         "BaslerCamera": _default_baslercamera_config,
     }
 
-    _filename = os.path.join(ROOT_PATH, "settings.ini")
-
     def __init__(self):
-        super().__init__(self._default_sys_config)
+        super().__init__(self._sys_readonly_config)
 
+        self.update(self._sys_reconfigurable_config)
         self.ensure_file()
 
     def ensure_file(self):
         """Generate the config file if it does not exist."""
         if not os.path.isfile(self._filename):
-            cfg = UpperCaseConfigParser()
-            for detector in self._default_detector_configs.keys():
-                # only write the reconfigurable keys to the file
-                cfg[detector] = \
-                    {k: "" for k in
-                     self._detector_reconfigurable_keys}
+            cfg = copy.deepcopy(self._sys_reconfigurable_config)
+
+            for key in self.detectors:
+                cfg[key] = copy.deepcopy(self._detector_default_config)
+                cfg[key].update(self._default_detector_configs[key])
+
             with open(self._filename, 'w') as fp:
-                cfg.write(fp)
+                json.dump(cfg, fp, indent=4)
 
     def load(self, detector):
-        """Update the global config.
+        """Update the config from the config file.
 
-        The default config will be overwritten by the valid config in
-        the config file.
-
-        :param str detector: detector detector, allowed options "LPD", "AGIPD",
-            "JungFrau", "FastCCD".
+        :param str detector: detector name.
         """
         self.__setitem__("DETECTOR", detector)
-        self.update(self._default_detector_configs[detector])
         self.from_file(detector)
 
     def from_file(self, detector):
         """Update the config dictionary from the config file.
 
-        The parameters in the config file are grouped by detectors, e.g.
-
-        [AGIPD]
-        SERVER_ADDR = localhost
-        SERVER_PORT = 12345
-        SOURCE_NAME = /hdf5/data/file/folder/
-        SOURCE_TYPE = 0
-
-        [LPD]
-        SERVER_ADDR = 10.253.0.53
-        SERVER_PORT = 4501
-        SOURCE_NAME: FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED
-        SOURCE_TYPE: 1
-
-        where the "AGIPD" detector defines a local file server while the
-        "LPD" detector defines an online server.
-
-        Invalid keys or keys with empty entries will be ignored.
+        Raise ValueError is any invalid/unknown keys were found.
         """
-        cfg = UpperCaseConfigParser()
-        cfg.read(self._filename)
+        with open(self._filename, 'r') as fp:
+            try:
+                config_from_file = json.load(fp)
+            except json.decoder.JSONDecodeError as e:
+                logger.error(f"Invalid config file: {self._filename}")
+                raise
 
-        if detector in cfg:
-            invalid_keys = []
-            for key in cfg[detector]:
-                if key in self._default_sys_config:
-                    raise KeyError("Found system config key in the file: '{}'".
-                                   format(key))
-                elif key in self._detector_readonly_config_keys:
-                    if key == 'SOURCE_NAME':
-                        msg = "You may have used the old version of " \
-                              "karaboFAI. Please change 'SOURCE_NAME' to " \
-                              "'DATA_FOLDER' in the the file " \
-                              "~/.karaboFAI/settings.ini"
-                    raise KeyError("Found read-only key in the file: '{}'. ".
-                                   format(key) + msg)
-                elif key not in self._detector_reconfigurable_keys:
-                    invalid_keys.append(key)
-                else:
-                    if cfg[detector][key]:
-                        self.__setitem__(key, cfg[detector][key])
+        # check system configuration
+        invalid_keys = []
+        for key in config_from_file:
+            if key not in self.detectors and key not in self._sys_reconfigurable_config:
+                invalid_keys.append(key)
 
-            if invalid_keys:
-                msg = "The following unknown keys were found in '{}':\n".\
-                    format(self._filename)
-                msg += ", ".join(invalid_keys)
-                print(msg)
+        # check detector configuration
+        for key in config_from_file[detector]:
+            if key not in self._detector_default_config:
+                invalid_keys.append(f"{detector}.{key}")
+
+        if invalid_keys:
+            msg = f"The following invalid keys were found in " \
+                f"{self._filename}:\n{', '.join(invalid_keys)}"
+            logger.error(msg)
+            raise ValueError(msg)
+
+        # update system configuration
+        for key in self._sys_reconfigurable_config:
+            if key in config_from_file:
+                self.__setitem__(key, config_from_file[key])
+
+        # update detector configuration
+        self.update(config_from_file[detector])
 
 
 config = Config()  # global configuration

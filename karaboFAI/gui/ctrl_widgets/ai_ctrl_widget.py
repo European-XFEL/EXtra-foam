@@ -54,12 +54,12 @@ class AiCtrlWidget(AbstractCtrlWidget):
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
         self._cy_le.setValidator(QtGui.QIntValidator())
         self._itgt_method_cb = QtGui.QComboBox()
-        for method in config["INTEGRATION_METHODS"]:
+        for method in config["AZIMUTHAL_INTEGRATION_METHODS"]:
             self._itgt_method_cb.addItem(method)
         self._itgt_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
         self._itgt_points_le = QtGui.QLineEdit(
-            str(config["INTEGRATION_POINTS"]))
+            str(config["AZIMUTHAL_INTEGRATION_POINTS"]))
         self._itgt_points_le.setValidator(QtGui.QIntValidator(1, 8192))
 
         self._normalizers_cb = QtGui.QComboBox()
@@ -69,10 +69,10 @@ class AiCtrlWidget(AbstractCtrlWidget):
             lambda x: self.ai_normalizer_sgn.emit(self._available_normalizers[x]))
 
         self._auc_x_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
 
         self._fom_itgt_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["INTEGRATION_RANGE"]]))
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
 
         self._non_reconfigurable_widgets = [
             self.pulsed_ai_cb,

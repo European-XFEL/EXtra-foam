@@ -51,7 +51,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
 
         self._detector_src_cb = QtGui.QComboBox()
-        for src in config["SOURCE_NAME"]:
+        for src in config["SOURCE_NAME_BRIDGE"]:
             self._detector_src_cb.addItem(src)
 
         self._mono_src_cb = QtGui.QComboBox()
@@ -134,7 +134,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._detector_src_cb.currentIndexChanged.connect(
             lambda i: mediator.detector_source_change_sgn.emit(
-                config["SOURCE_NAME"][i]))
+                config["SOURCE_NAME_BRIDGE"][i]))
         self._detector_src_cb.currentIndexChanged.emit(
             self._detector_src_cb.currentIndex())
 

@@ -13,7 +13,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from .config import ROOT_PATH
+from . import ROOT_PATH
 
 # disable DEBUG information from imported module pyFAI
 logging.getLogger("pyFAI").setLevel(logging.CRITICAL)
