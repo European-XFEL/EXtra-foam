@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+import math
 import tempfile
 import os
 
@@ -143,20 +144,23 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
         self.assertTrue(scheduler._ai_proc.pulsed_ai)
 
-    def testProject1dWidget(self):
+    def testProject1dCtrlWidget(self):
         widget = self.gui.projection1d_ctrl_widget
-        scheduler = self.scheduler
+        proc = self.scheduler._roi_proc
 
-        self.assertEqual(Projection1dNormalizer.AUC,
-                         scheduler._roi_proc.proj1d_normalizer)
+        # test default values
+        self.assertEqual(Projection1dNormalizer.AUC, proc.proj1d_normalizer)
+        self.assertEqual((0, math.inf), proc.proj1d_fom_integ_range)
+        self.assertEqual((0, math.inf), proc.proj1d_auc_x_range)
 
+        # test setting new values
         widget._fom_integ_range_le.setText("10, 20")
         widget._fom_integ_range_le.editingFinished.emit()
-        self.assertEqual((10, 20), scheduler._roi_proc.proj1d_fom_integ_range)
+        self.assertEqual((10, 20), proc.proj1d_fom_integ_range)
 
         widget._auc_x_range_le.setText("30, 40")
         widget._auc_x_range_le.editingFinished.emit()
-        self.assertEqual((30, 40), scheduler._roi_proc.proj1d_auc_x_range)
+        self.assertEqual((30, 40), proc.proj1d_auc_x_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
