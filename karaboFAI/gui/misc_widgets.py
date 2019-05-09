@@ -27,7 +27,8 @@ class Colors:
         self.c = (171, 217, 233, alpha)  # cyan
         self.b = (44, 123, 182, alpha)  # blue
         self.g = (26, 150, 65, alpha)  # green
-        self.p = (175, 141, 195, alpha)  # purple
+        self.p = (94, 60, 153, alpha)  # purple
+        self.d = (218, 112, 214, alpha)  # orchid
         self.w = (247, 247, 247, alpha)  # white
         self.e = (186, 186, 186, alpha)  # dark grey
 

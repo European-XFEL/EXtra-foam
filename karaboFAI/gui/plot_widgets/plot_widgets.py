@@ -269,7 +269,7 @@ class PumpProbeOnOffWidget(PlotWidget):
         if diff:
             self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("y"))
         else:
-            self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
+            self._on_pulse = self.plotCurve(name="On", pen=make_pen("d"))
             self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
 
     def update(self, data):
