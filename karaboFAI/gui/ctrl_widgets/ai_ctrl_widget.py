@@ -54,12 +54,12 @@ class AiCtrlWidget(AbstractCtrlWidget):
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
         self._cy_le.setValidator(QtGui.QIntValidator())
         self._itgt_method_cb = QtGui.QComboBox()
-        for method in config["AZIMUTHAL_INTEGRATION_METHODS"]:
+        for method in config["AZIMUTHAL_INTEG_METHODS"]:
             self._itgt_method_cb.addItem(method)
         self._itgt_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
         self._itgt_points_le = QtGui.QLineEdit(
-            str(config["AZIMUTHAL_INTEGRATION_POINTS"]))
+            str(config["AZIMUTHAL_INTEG_POINTS"]))
         self._itgt_points_le.setValidator(QtGui.QIntValidator(1, 8192))
 
         self._normalizers_cb = QtGui.QComboBox()
@@ -69,10 +69,10 @@ class AiCtrlWidget(AbstractCtrlWidget):
             lambda x: self.ai_normalizer_sgn.emit(self._available_normalizers[x]))
 
         self._auc_x_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
 
-        self._fom_itgt_range_le = QtGui.QLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEGRATION_RANGE"]]))
+        self._fom_integ_range_le = QtGui.QLineEdit(
+            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
 
         self._non_reconfigurable_widgets = [
             self.pulsed_ai_cb,
@@ -85,7 +85,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
             self._itgt_points_le,
             self._normalizers_cb,
             self._auc_x_range_le,
-            self._fom_itgt_range_le,
+            self._fom_integ_range_le,
         ]
 
         self.initUI()
@@ -117,7 +117,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("AUC x range: "), 8, 0, AR)
         layout.addWidget(self._auc_x_range_le, 8, 1)
         layout.addWidget(QtGui.QLabel("FOM integration range: "), 9, 0, AR)
-        layout.addWidget(self._fom_itgt_range_le, 9, 1)
+        layout.addWidget(self._fom_integ_range_le, 9, 1)
         layout.addWidget(self.pulsed_ai_cb, 10, 0)
 
         self.setLayout(layout)
@@ -177,7 +177,7 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
         try:
             fom_integration_range = parse_boundary(
-                self._fom_itgt_range_le.text())
+                self._fom_integ_range_le.text())
             self.fom_integration_range_sgn.emit(*fom_integration_range)
         except ValueError as e:
             logger.error("<FOM integration range>: " + repr(e))

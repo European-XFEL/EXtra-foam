@@ -37,9 +37,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self._reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("# of energy bins: "), 1, 0, 1, 1, AR)
-        layout.addWidget(self._nbins_le, 1, 1, 1, 1)
+        layout.addWidget(QtGui.QLabel("# of energy bins: "), 0, 0, 1, 1, AR)
+        layout.addWidget(self._nbins_le, 0, 1, 1, 1)
+        layout.addWidget(self._reset_btn, 0, 2, 1, 2)
 
         self.setLayout(layout)
 

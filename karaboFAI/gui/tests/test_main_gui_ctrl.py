@@ -117,7 +117,7 @@ class TestMainGui(unittest.TestCase):
         widget._itgt_range_le.setText(','.join([str(x) for x in itgt_range]))
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._auc_x_range_le.setText(','.join([str(x) for x in aux_x_range]))
-        widget._fom_itgt_range_le.setText(
+        widget._fom_integ_range_le.setText(
             ','.join([str(x) for x in fom_itgt_range]))
 
         self.assertTrue(self.gui.updateSharedParameters())

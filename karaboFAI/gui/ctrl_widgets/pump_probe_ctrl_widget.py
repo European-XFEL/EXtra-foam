@@ -32,10 +32,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     _analysis_types = OrderedDict({
-        "A.I.": PumpProbeType.AZIMUTHAL_INTEGRATION,
+        "azimuthal integ": PumpProbeType.AZIMUTHAL_INTEG,
         "ROI": PumpProbeType.ROI,
-        "Projection X": PumpProbeType.ROI_PROJECTION_X,
-        "Projection Y": PumpProbeType.ROI_PROJECTION_Y,
+        "projection X": PumpProbeType.ROI_PROJECTION_X,
+        "projection Y": PumpProbeType.ROI_PROJECTION_Y,
     })
 
     # (mode, on-pulse ids, off-pulse ids)
@@ -66,7 +66,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
-        self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute difference")
+        self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute on-off")
 
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
@@ -92,20 +92,20 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self.reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("On/off mode: "), 1, 0, AR)
-        layout.addWidget(self._mode_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 2, 0, AR)
-        layout.addWidget(self._analysis_type_cb, 2, 1)
+        layout.addWidget(QtGui.QLabel("On/off mode: "), 0, 0, AR)
+        layout.addWidget(self._mode_cb, 0, 1)
+        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 2, AR)
+        layout.addWidget(self._analysis_type_cb, 0, 3)
         if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 3, 0, AR)
-            layout.addWidget(self._on_pulse_le, 3, 1)
-            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 4, 0, AR)
-            layout.addWidget(self._off_pulse_le, 4, 1)
+            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 2, 0, AR)
+            layout.addWidget(self._on_pulse_le, 2, 1)
+            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 2, 2, AR)
+            layout.addWidget(self._off_pulse_le, 2, 3)
 
-        layout.addWidget(QtGui.QLabel("Moving average window: "), 5, 0, 1, 1)
-        layout.addWidget(self._ma_window_le, 5, 1, 1, 1)
-        layout.addWidget(self._abs_difference_cb, 6, 0, 1, 2)
+        layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
+        layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
+        layout.addWidget(self._abs_difference_cb, 4, 0, 1, 2)
+        layout.addWidget(self.reset_btn, 4, 2, 1, 2)
 
         self.setLayout(layout)
 

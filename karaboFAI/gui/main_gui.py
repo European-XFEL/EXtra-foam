@@ -19,7 +19,8 @@ from .pyqtgraph import QtCore, QtGui
 
 from .ctrl_widgets import (
     AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
-    GeometryCtrlWidget, PumpProbeCtrlWidget, XasCtrlWidget
+    GeometryCtrlWidget, PumpProbeCtrlWidget, Projection1dCtrlWidget,
+    XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
@@ -135,6 +136,9 @@ class MainGUI(QtGui.QMainWindow):
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
+        self.projection1d_ctrl_widget = Projection1dCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+
         self.correlation_ctrl_widget = CorrelationCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -157,6 +161,7 @@ class MainGUI(QtGui.QMainWindow):
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
         analysis_layout.addWidget(self.ai_ctrl_widget)
+        analysis_layout.addWidget(self.projection1d_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)
 

@@ -87,12 +87,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     _available_foms = OrderedDict({
         "": FomName.UNDEFINED,
-        "Pump-probe FOM": FomName.PUMP_PROBE_FOM,
+        "pump-probe FOM": FomName.PUMP_PROBE_FOM,
         "ROI1 - ROI2": FomName.ROI_SUB,
         "ROI1": FomName.ROI1,
         "ROI2": FomName.ROI2,
         "ROI1 + ROI2": FomName.ROI_SUM,
-        "A.I. mean": FomName.AI_MEAN,
+        "azimuthal integ mean": FomName.AZIMUTHAL_INTEG_MEAN,
     })
 
     # index, device ID, property name, resolution

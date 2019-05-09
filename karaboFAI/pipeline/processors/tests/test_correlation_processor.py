@@ -16,7 +16,7 @@ class TestCorrelationProcessor(unittest.TestCase):
             if fom == FomName.PUMP_PROBE_FOM:
                 with self.assertRaisesRegex(ProcessingError, "Pump-probe"):
                     self._proc.run_once(ProcessedData(1))
-            elif fom == FomName.AI_MEAN:
+            elif fom == FomName.AZIMUTHAL_INTEG_MEAN:
                 with self.assertRaisesRegex(ProcessingError, "result is not"):
                     self._proc.run_once(ProcessedData(1))
             else:

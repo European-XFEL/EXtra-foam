@@ -124,6 +124,22 @@ class Scheduler(Worker):
     def onPpDifferenceTypeChange(self, is_checked):
         self._pp_proc.abs_difference = is_checked
 
+    @QtCore.pyqtSlot(object)
+    def onProj1dNormalizerChange(self, normalizer):
+        self._roi_proc.proj1d_normalizer = normalizer
+
+    @QtCore.pyqtSlot(float, float)
+    def onProj1dAucXRangeChange(self, lb, ub):
+        self._roi_proc.proj1d_auc_x_range = (lb, ub)
+
+    @QtCore.pyqtSlot(float, float)
+    def onProj1dFomIntegRangeChange(self, lb, ub):
+        self._roi_proc.proj1d_fom_integ_range = (lb, ub)
+
+    @QtCore.pyqtSlot(object)
+    def onProj1dNormalizerChange(self, normalizer):
+        self._roi_proc.proj1d_normalizer = normalizer
+
     @QtCore.pyqtSlot(float, float)
     def onAucXRangeChange(self, lb, ub):
         self._ai_proc.auc_x_range = (lb, ub)

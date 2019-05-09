@@ -75,7 +75,7 @@ class CorrelationFomProcessor(LeafProcessor):
                 return
             fom = roi1_hist[-1] - roi2_hist[-1]
 
-        elif self.fom_name == FomName.AI_MEAN:
+        elif self.fom_name == FomName.AZIMUTHAL_INTEG_MEAN:
             momentum = processed.ai.momentum
             if momentum is None:
                 raise ProcessingError(

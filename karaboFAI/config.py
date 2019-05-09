@@ -33,7 +33,7 @@ class PumpProbeMode(IntEnum):
 
 
 class PumpProbeType(IntEnum):
-    AZIMUTHAL_INTEGRATION = 0
+    AZIMUTHAL_INTEG = 0
     ROI = 1
     ROI_PROJECTION_X = 2
     ROI_PROJECTION_Y = 3
@@ -50,7 +50,7 @@ class FomName(IntEnum):
     ROI_SUM = 5
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
-    AI_MEAN = 6
+    AZIMUTHAL_INTEG_MEAN = 6
 
 
 class AiNormalizer(IntEnum):
@@ -61,6 +61,10 @@ class AiNormalizer(IntEnum):
     ROI1 = 2
     ROI2 = 3
     ROI_SUM = 4  # ROI1 + ROI2
+
+
+class Projection1dNormalizer(IntEnum):
+    AUC = 0
 
 
 class RoiFom(IntEnum):
@@ -185,14 +189,14 @@ class _Config(dict):
             # second dimension, in pixels, PONI2 in pyFAI
             "CENTER_X": 0,
             # azimuthal integration methods supported in pyFAI
-            "AZIMUTHAL_INTEGRATION_METHODS": [
+            "AZIMUTHAL_INTEG_METHODS": [
                 'nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel', 'lut',
                 'lut_ocl'
             ],
             # range (lower, upper) of the radial unit of azimuthal integration
-            "AZIMUTHAL_INTEGRATION_RANGE": [1e-3, 0.1],
+            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
             # number of points of azimuthal integration
-            "AZIMUTHAL_INTEGRATION_POINTS": 512,
+            "AZIMUTHAL_INTEG_POINTS": 512,
             # pixels with values outside the (lower, upper) range will be masked
             "MASK_RANGE": [-1e5, 1e5],
             # photon energy, in keV
@@ -204,12 +208,12 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": [
                 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
             "SOURCE_NAME_FILE": ['SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
-            "AZIMUTHAL_INTEGRATION_METHODS": [
+            "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
                 'lut_ocl'
             ],
-            "AZIMUTHAL_INTEGRATION_RANGE": [1e-3, 0.1],
+            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
             "DISTANCE": 5.5,
             "CENTER_Y": 490,
             "CENTER_X": 590,
@@ -226,12 +230,12 @@ class _Config(dict):
                                [11.0, -8.0],
                                [-254.0, 16.0],
                                [-278.0, -275.0]],
-            "AZIMUTHAL_INTEGRATION_METHODS": [
+            "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
                 'lut_ocl'
             ],
-            "AZIMUTHAL_INTEGRATION_RANGE": [0.2, 5],
+            "AZIMUTHAL_INTEG_RANGE": [0.2, 5],
             "DISTANCE": 0.4,
             "CENTER_Y": 620,
             "CENTER_X": 570,
@@ -250,7 +254,7 @@ class _Config(dict):
                 "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
                 "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
             ],
-            "AZIMUTHAL_INTEGRATION_RANGE": [0.05, 0.4],
+            "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "DISTANCE": 2.0,
             "CENTER_Y": 512,
             "CENTER_X": 1400,
@@ -265,7 +269,7 @@ class _Config(dict):
             "SOURCE_NAME_FILE": [
                 "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
             ],
-            "AZIMUTHAL_INTEGRATION_RANGE": [1e-3, 0.02],
+            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.02],
             "DISTANCE": 0.6,
             "CENTER_Y": 967,
             "CENTER_X": 480,

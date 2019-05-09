@@ -13,7 +13,7 @@ from karaboFAI.pipeline.processors import PumpProbeProcessor
 class TestPumpProbeProcessor(unittest.TestCase):
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc.analysis_type = PumpProbeType.AZIMUTHAL_INTEGRATION
+        self._proc.analysis_type = PumpProbeType.AZIMUTHAL_INTEG
         PumpProbeData.clear()
 
         self._proc.fom_itgt_range = (1, 5)

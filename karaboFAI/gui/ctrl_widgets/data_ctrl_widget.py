@@ -22,7 +22,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the data source."""
 
     _available_sources = OrderedDict({
-        "Run directory": DataSource.FILE,
+        "run directory": DataSource.FILE,
         "ZeroMQ bridge": DataSource.BRIDGE,
     })
 
@@ -45,7 +45,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         super().__init__("Data source", *args, **kwargs)
 
         self._hostname_le = QtGui.QLineEdit()
-        self._hostname_le.setMinimumWidth(120)
+        self._hostname_le.setMinimumWidth(150)
         self._port_le = QtGui.QLineEdit()
         self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
 
@@ -87,17 +87,17 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         src_layout = QtGui.QGridLayout()
         src_layout.addWidget(QtGui.QLabel("Data streamed from: "), 0, 0, AR)
-        src_layout.addWidget(self._source_type_cb, 0, 1, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("Hostname: "), 1, 0, AR)
-        src_layout.addWidget(self._hostname_le, 1, 1)
-        src_layout.addWidget(QtGui.QLabel("Port: "), 1, 2, AR)
-        src_layout.addWidget(self._port_le, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 2, 0, AR)
-        src_layout.addWidget(self._detector_src_cb, 2, 1, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 3, 0, AR)
-        src_layout.addWidget(self._mono_src_cb, 3, 1, 1, 3)
-        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 4, 0, AR)
-        src_layout.addWidget(self._xgm_src_cb, 4, 1, 1, 3)
+        src_layout.addWidget(self._source_type_cb, 0, 1)
+        src_layout.addWidget(QtGui.QLabel("Hostname: "), 0, 2, AR)
+        src_layout.addWidget(self._hostname_le, 0, 3)
+        src_layout.addWidget(QtGui.QLabel("Port: "), 0, 4, AR)
+        src_layout.addWidget(self._port_le, 0, 5)
+        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
+        src_layout.addWidget(self._detector_src_cb, 1, 1, 1, 5)
+        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 2, 0, AR)
+        src_layout.addWidget(self._mono_src_cb, 2, 1, 1, 5)
+        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 3, 0, AR)
+        src_layout.addWidget(self._xgm_src_cb, 3, 1, 1, 5)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)

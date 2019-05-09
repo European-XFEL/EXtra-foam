@@ -18,7 +18,7 @@ from .base_processor import (
     StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
-from ...algorithms import intersection, normalize_curve
+from ...algorithms import intersection, normalize_curve, slice_curve
 from ...config import config, RoiFom, PumpProbeType
 from ...helpers import profiler
 
@@ -35,6 +35,9 @@ class RoiProcessor(CompositeProcessor):
     """
     _raw_rois = SharedProperty()
     _roi_fom_handler = SharedProperty()
+    proj1d_normalizer = SharedProperty()
+    proj1d_auc_x_range = SharedProperty()
+    proj1d_fom_integ_range = SharedProperty()
 
     def __init__(self):
         super().__init__()
@@ -216,13 +219,16 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.data = (x_data, on_data, off_data)
         _, on_ma, off_ma = processed.pp.data
 
-        norm_on_ma = normalize_curve(on_ma, x_data, x_data[0], x_data[-1])
-        norm_off_ma = normalize_curve(off_ma, x_data, x_data[0], x_data[-1])
+        norm_on_ma = normalize_curve(on_ma, x_data, *self.proj1d_auc_x_range)
+        norm_off_ma = normalize_curve(off_ma, x_data, *self.proj1d_auc_x_range)
         norm_on_off_ma = norm_on_ma - norm_off_ma
+
+        sliced = slice_curve(norm_on_off_ma, x_data,
+                             *self.proj1d_fom_integ_range)[0]
         if processed.pp.abs_difference:
-            fom = np.sum(np.abs(norm_on_off_ma))
+            fom = np.sum(np.abs(sliced))
         else:
-            fom = np.sum(norm_on_off_ma)
+            fom = np.sum(sliced)
 
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma

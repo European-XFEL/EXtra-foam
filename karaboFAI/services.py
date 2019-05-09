@@ -87,6 +87,13 @@ class FaiServer:
         mediator.pp_analysis_type_sgn.connect(
             self._scheduler.onPpAnalysisTypeChange)
 
+        mediator.proj1d_normalizer_change_sgn.connect(
+            self._scheduler.onProj1dNormalizerChange)
+        mediator.proj1d_auc_x_range_change_sgn.connect(
+            self._scheduler.onProj1dAucXRangeChange)
+        mediator.proj1d_fom_integ_range_change_sgn.connect(
+            self._scheduler.onProj1dFomIntegRangeChange)
+
         mediator.correlation_fom_change_sgn.connect(
             self._scheduler.onCorrelationFomChange)
 

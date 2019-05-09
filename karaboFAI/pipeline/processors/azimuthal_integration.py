@@ -254,7 +254,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
 
     @profiler("Azimuthal integration pump-probe processor")
     def process(self, processed, raw=None):
-        if processed.pp.analysis_type != PumpProbeType.AZIMUTHAL_INTEGRATION:
+        if processed.pp.analysis_type != PumpProbeType.AZIMUTHAL_INTEG:
             raise StopCompositionProcessing
 
         on_image = processed.pp.on_image_mean
