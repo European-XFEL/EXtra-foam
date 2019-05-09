@@ -15,7 +15,7 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
-from ..gui_helpers import parse_boundary
+from ..misc_widgets import SmartBoundaryLineEdit
 from ...config import Projection1dNormalizer
 
 
@@ -33,9 +33,8 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         for v in self._available_normalizers:
             self._normalizers_cb.addItem(v)
 
-        self._auc_x_range_le = QtGui.QLineEdit("0, Inf")
-
-        self._fom_integ_range_le = QtGui.QLineEdit("0, Inf")
+        self._auc_x_range_le = SmartBoundaryLineEdit("0, Inf")
+        self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
 
         self.initUI()
 
@@ -66,12 +65,10 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         self._normalizers_cb.currentTextChanged.emit(
             self._normalizers_cb.currentText())
 
-        self._auc_x_range_le.editingFinished.connect(
-            lambda: mediator.proj1d_auc_x_range_change_sgn.emit(
-                *parse_boundary(self._auc_x_range_le.text())))
-        self._auc_x_range_le.editingFinished.emit()
+        self._auc_x_range_le.value_changed_sgn.connect(
+            mediator.proj1d_auc_x_range_change_sgn)
+        self._auc_x_range_le.returnPressed.emit()
 
-        self._fom_integ_range_le.editingFinished.connect(
-            lambda: mediator.proj1d_fom_integ_range_change_sgn.emit(
-                *parse_boundary(self._fom_integ_range_le.text())))
-        self._fom_integ_range_le.editingFinished.emit()
+        self._fom_integ_range_le.value_changed_sgn.connect(
+            mediator.proj1d_fom_integ_range_change_sgn)
+        self._fom_integ_range_le.returnPressed.emit()

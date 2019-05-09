@@ -155,11 +155,11 @@ class TestMainGui(unittest.TestCase):
 
         # test setting new values
         widget._fom_integ_range_le.setText("10, 20")
-        widget._fom_integ_range_le.editingFinished.emit()
+        widget._fom_integ_range_le.returnPressed.emit()
         self.assertEqual((10, 20), proc.proj1d_fom_integ_range)
 
         widget._auc_x_range_le.setText("30, 40")
-        widget._auc_x_range_le.editingFinished.emit()
+        widget._auc_x_range_le.returnPressed.emit()
         self.assertEqual((30, 40), proc.proj1d_auc_x_range)
 
     def testPumpProbeCtrlWidget(self):

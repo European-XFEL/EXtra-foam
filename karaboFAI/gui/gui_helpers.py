@@ -37,7 +37,7 @@ def parse_boundary(text):
             raise ValueError("lower boundary > upper boundary")
 
     except Exception as e:
-        raise ValueError("Invalid input! " + repr(e))
+        raise ValueError(str(e))
 
     return ret[0], ret[1]
 

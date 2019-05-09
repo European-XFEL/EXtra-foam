@@ -15,6 +15,8 @@ import threading
 from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
+from .gui_helpers import parse_boundary
+
 
 class Colors:
     def __init__(self, alpha=255):
@@ -109,3 +111,51 @@ class GuiLogger(logging.Handler):
         # guard logger from other threads
         if threading.current_thread() is threading.main_thread():
             self.widget.appendPlainText(self.format(record))
+
+
+class _SmartLineEdit(QtGui.QLineEdit):
+    """A smart QLineEdit.
+
+    - It stores the latest valid value and restore the value if the
+      current input is invalid.
+    - One can get the parsed result via a signal-slot connection.
+    """
+    # signal emitted when a new valid input is applied
+    value_changed_sgn = QtCore.pyqtSignal(object)
+
+    def __init__(self, content, handler=None, parent=None):
+        """Initialization
+
+        :param str content: Initial value of the QLineEdit
+        :param callable handler: a handler use to validate and parse the
+            content
+        """
+        super().__init__(content, parent=parent)
+
+        self._handler = handler
+        if self._handler is None:
+            raise NotImplementedError
+        else:
+            # validate the initial value
+            self._handler(content)
+
+        self._cached = content
+
+        self.returnPressed.connect(self.onReturnPressed)
+
+    def onReturnPressed(self):
+        try:
+            content = self.text()
+            validated = self._handler(content)
+            self._cached = content
+            self.value_changed_sgn.emit(*validated)
+        except ValueError:
+            # restore the cached valid value
+            self.setText(self._cached)
+
+
+class SmartBoundaryLineEdit(_SmartLineEdit):
+    value_changed_sgn = QtCore.pyqtSignal(float, float)
+
+    def __init__(self, content, parent=None):
+        super().__init__(content, parse_boundary, parent=parent)
