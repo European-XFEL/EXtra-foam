@@ -26,8 +26,8 @@ def normalize_auc(y, x, x_min=None, x_max=None):
 
     :raise ValueError
     """
-    # if y contains only 0
-    if not np.count_nonzero(y):
+    # if y contains only 0 (np.any() is much faster to np.count_nonzero())
+    if not np.any(y):
         return np.copy(y)
 
     # get the integration
