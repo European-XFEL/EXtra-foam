@@ -14,7 +14,8 @@ from karabo_data.geometry import LPDGeometry
 from karaboFAI.services import FaiServer
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
-    config, AiNormalizer, FomName, DataSource, PumpProbeMode, PumpProbeType
+    config, AiNormalizer, FomName, DataSource, Projection1dNormalizer,
+    PumpProbeMode, PumpProbeType
 )
 
 
@@ -142,6 +143,21 @@ class TestMainGui(unittest.TestCase):
                          pos=QtCore.QPoint(2, widget.pulsed_ai_cb.height()/2))
         self.assertTrue(self.gui.updateSharedParameters())
         self.assertTrue(scheduler._ai_proc.pulsed_ai)
+
+    def testProject1dWidget(self):
+        widget = self.gui.projection1d_ctrl_widget
+        scheduler = self.scheduler
+
+        self.assertEqual(Projection1dNormalizer.AUC,
+                         scheduler._roi_proc.proj1d_normalizer)
+
+        widget._fom_integ_range_le.setText("10, 20")
+        widget._fom_integ_range_le.editingFinished.emit()
+        self.assertEqual((10, 20), scheduler._roi_proc.proj1d_fom_integ_range)
+
+        widget._auc_x_range_le.setText("30, 40")
+        widget._auc_x_range_le.editingFinished.emit()
+        self.assertEqual((30, 40), scheduler._roi_proc.proj1d_auc_x_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
