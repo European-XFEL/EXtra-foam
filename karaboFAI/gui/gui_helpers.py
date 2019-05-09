@@ -27,6 +27,7 @@ def parse_boundary(text):
         if "," not in text:
             raise ValueError(msg)
 
+        # float('Inf') = inf
         ret = [float(x) for x in text.split(",")]
 
         if len(ret) != 2:

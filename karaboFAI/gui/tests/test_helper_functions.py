@@ -1,4 +1,7 @@
 import unittest
+import math
+
+import numpy as np
 
 from karaboFAI.gui.gui_helpers import parse_boundary, parse_ids
 
@@ -13,6 +16,15 @@ class TestGUI(unittest.TestCase):
 
         self.assertEqual(parse_boundary("0.1, 2"), (0.1, 2))
         self.assertEqual(parse_boundary(" 0.1, 2.0 "), (0.1, 2))
+
+        # test parse -Inf and Inf
+        self.assertEqual(parse_boundary(" -inf, inf "), (-np.inf, np.inf))
+        lb, ub = parse_boundary(" -Inf, 0 ")
+        self.assertTrue(math.isinf(lb))
+        self.assertTrue(math.isfinite(ub))
+        lb, ub = parse_boundary(" -100, INF ")
+        self.assertTrue(math.isfinite(lb))
+        self.assertTrue(math.isinf(ub))
 
     def test_parseids(self):
         self.assertEqual(parse_ids("  "), [])
