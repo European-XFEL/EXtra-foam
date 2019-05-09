@@ -33,9 +33,9 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         for v in self._available_normalizers:
             self._normalizers_cb.addItem(v)
 
-        self._auc_x_range_le = QtGui.QLineEdit("0, 100")
+        self._auc_x_range_le = QtGui.QLineEdit("0, Inf")
 
-        self._fom_integ_range_le = QtGui.QLineEdit("0, 100")
+        self._fom_integ_range_le = QtGui.QLineEdit("0, Inf")
 
         self.initUI()
 

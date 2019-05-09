@@ -84,7 +84,6 @@ class TestMainGui(unittest.TestCase):
         # --------------------------
         # test setting max pulse ID
         # --------------------------
-        scheduler = self.scheduler
 
         widget.updateSharedParameters()
         self.assertEqual((0, 2700), scheduler._image_assembler.pulse_id_range)
