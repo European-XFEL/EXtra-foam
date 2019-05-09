@@ -24,8 +24,6 @@ def slice_curve(y, x, x_min=None, x_max=None):
 
     :return: (the sliced x and y)
     :rtype: (numpy.ndarray, numpy.ndarray)
-
-    :raise: ValueError
     """
     if x_min is None:
         x_min = x.min()

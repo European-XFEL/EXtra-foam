@@ -219,8 +219,14 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.data = (x_data, on_data, off_data)
         _, on_ma, off_ma = processed.pp.data
 
-        norm_on_ma = normalize_auc(on_ma, x_data, *self.proj1d_auc_x_range)
-        norm_off_ma = normalize_auc(off_ma, x_data, *self.proj1d_auc_x_range)
+        try:
+            norm_on_ma = normalize_auc(
+                on_ma, x_data, *self.proj1d_auc_x_range)
+            norm_off_ma = normalize_auc(
+                off_ma, x_data, *self.proj1d_auc_x_range)
+        except ValueError as e:
+            raise ProcessingError(str(e))
+
         norm_on_off_ma = norm_on_ma - norm_off_ma
 
         sliced = slice_curve(norm_on_off_ma, x_data,

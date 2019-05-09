@@ -148,6 +148,7 @@ class FaiServer:
             self._scheduler.onCorrelationReset)
 
         self._gui.start_bridge_sgn.connect(self._bridge.start)
+        self._gui.start_bridge_sgn.connect(self._maybe_start_scheduler)
         self._gui.stop_bridge_sgn.connect(self.stop_bridge)
         self._gui.closed_sgn.connect(self.stop_bridge)
         self._gui.closed_sgn.connect(self.stop_scheduler)
@@ -170,6 +171,13 @@ class FaiServer:
         self._scheduler.requestInterruption()
         self._scheduler.quit()
         self._scheduler.wait()
+
+    def _maybe_start_scheduler(self):
+        # This function is need for now since an Exception could be raised
+        # which will stop the thread. In the future, we will have an event
+        # loop to handle it.
+        if not self._scheduler.isRunning():
+            self._scheduler.start()
 
     def start_fileserver(self):
         folder = self._data_folder
@@ -210,9 +218,6 @@ class FaiServer:
 
     def start(self):
         try:
-            # scheduler is always running
-            self._scheduler.start()
-
             self.qt_app().exec_()
         finally:
             self.stop_fileserver()

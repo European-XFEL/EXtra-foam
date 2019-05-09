@@ -340,8 +340,12 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         auc_x_range = self.auc_x_range
 
         if self.normalizer == AiNormalizer.AUC:
-            on = normalize_auc(on, momentum, *auc_x_range)
-            off = normalize_auc(off, momentum, *auc_x_range)
+            try:
+                on = normalize_auc(on, momentum, *auc_x_range)
+                off = normalize_auc(off, momentum, *auc_x_range)
+            except ValueError as e:
+                raise ProcessingError(str(e))
+
         else:
             on_roi = processed.pp.on_roi
             off_roi = processed.pp.off_roi
