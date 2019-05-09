@@ -15,7 +15,6 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_ids
-from ..mediator import Mediator
 from ...config import PumpProbeMode, PumpProbeType
 from ...logger import logger
 
@@ -110,7 +109,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
         self._ma_window_le.editingFinished.connect(
             lambda: mediator.pp_ma_window_change_sgn.emit(

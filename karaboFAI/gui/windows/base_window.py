@@ -14,6 +14,8 @@ from weakref import WeakKeyDictionary
 from ..pyqtgraph import QtGui
 from ..pyqtgraph.dockarea import DockArea
 
+from ..mediator import Mediator
+
 
 class SingletonWindow:
     """SingletonWindow decorator.
@@ -61,6 +63,8 @@ class AbstractWindow(QtGui.QMainWindow):
         if parent is not None:
             parent.registerWindow(self)
 
+        self._mediator = Mediator()
+
         self._data = data
         self._pulse_resolved = pulse_resolved
 
@@ -99,6 +103,10 @@ class AbstractWindow(QtGui.QMainWindow):
 
         Initialization of the plot UI should take place in this method.
         """
+        pass
+
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
         pass
 
     def reset(self):

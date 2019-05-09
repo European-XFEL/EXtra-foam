@@ -14,7 +14,6 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 from ..misc_widgets import SmartBoundaryLineEdit
 from ...config import Projection1dNormalizer
 
@@ -57,7 +56,7 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
         self._normalizers_cb.currentTextChanged.connect(
             lambda x: mediator.proj1d_normalizer_change_sgn.emit(

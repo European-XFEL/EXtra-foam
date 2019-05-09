@@ -12,7 +12,6 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..mediator import Mediator
 from ..misc_widgets import make_pen
 from ..plot_widgets import RoiImageView, RoiValueMonitor
 from ...config import config
@@ -33,8 +32,6 @@ class RoiWindow(DockerWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        mediator = Mediator()
-
         self._roi1_image = RoiImageView(1, parent=self)
         self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
         self._roi2_image = RoiImageView(2, parent=self)
@@ -45,10 +42,9 @@ class RoiWindow(DockerWindow):
         self._roi4_image.setBorder(make_pen(config["ROI_COLORS"][3]))
 
         self._roi_intensity = RoiValueMonitor(parent=self)
-        mediator.roi_displayed_range_sgn.connect(
-            self._roi_intensity.onDisplayRangeChange)
 
         self.initUI()
+        self.initConnections()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
@@ -79,3 +75,8 @@ class RoiWindow(DockerWindow):
         roi_intensity_dock = Dock("ROI intensity", size=(self._LW2, self._LH2))
         self._docker_area.addDock(roi_intensity_dock, 'bottom')
         roi_intensity_dock.addWidget(self._roi_intensity)
+
+    def initConnections(self):
+        """Override."""
+        self._mediator.roi_displayed_range_sgn.connect(
+            self._roi_intensity.onDisplayRangeChange)

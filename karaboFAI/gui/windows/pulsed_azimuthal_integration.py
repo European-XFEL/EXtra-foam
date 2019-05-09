@@ -13,7 +13,6 @@ from ..pyqtgraph import QtCore
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..mediator import Mediator
 from ..plot_widgets import (
     MultiPulseAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
     SinglePulseImageView
@@ -38,8 +37,6 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
         super().__init__(*args, **kwargs)
 
         if self._pulse_resolved:
-            mediator = Mediator()
-
             self._ai = MultiPulseAiWidget(parent=self)
 
             self._sample_degradation = PulsedFOMWidget(parent=self)
@@ -54,12 +51,7 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
             self._vip2_ai = SinglePulseAiWidget(parent=self)
             self._vip2_img = SinglePulseImageView(parent=self)
 
-            mediator.vip_pulse_id1_sgn.connect(self.onPulseID1Updated)
-            mediator.vip_pulse_id2_sgn.connect(self.onPulseID2Updated)
-
             self.initUI()
-
-            mediator.updateVipPulseIds()
 
             self.resize(self._TOTAL_W, self._TOTAL_H)
         else:
@@ -70,6 +62,7 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
 
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
+        self.initConnections()
         self.update()
 
     def initUI(self):
@@ -126,6 +119,14 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
                            size=(self._TOTAL_W, self._TOTAL_H))
             self._docker_area.addDock(ai_dock)
             ai_dock.addWidget(self._ai)
+
+    def initConnections(self):
+        """Override."""
+        if self._pulse_resolved:
+            mediator = self._mediator
+            mediator.vip_pulse_id1_sgn.connect(self.onPulseID1Updated)
+            mediator.vip_pulse_id2_sgn.connect(self.onPulseID2Updated)
+            mediator.vip_pulse_ids_connected_sgn.emit()
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, value):

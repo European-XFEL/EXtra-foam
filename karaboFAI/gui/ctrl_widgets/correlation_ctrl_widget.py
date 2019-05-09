@@ -15,7 +15,6 @@ import functools
 from ..pyqtgraph import Qt, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 from ...config import FomName
 
 
@@ -129,7 +128,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self.initParamTable()
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
         self._figure_of_merit_cb.currentTextChanged.connect(
             lambda x: mediator.correlation_fom_change_sgn.emit(

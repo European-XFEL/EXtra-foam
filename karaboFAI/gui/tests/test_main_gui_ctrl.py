@@ -56,14 +56,11 @@ class TestMainGui(unittest.TestCase):
         self._pulsed_ai_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 
-        self.assertTrue(self.gui.updateSharedParameters())
-
-        self.assertTrue(self.gui.updateSharedParameters())
-
         # --------------------------
         # test setting VIP pulse IDs
         # --------------------------
 
+        # default values
         vip_pulse_id1 = int(widget._vip_pulse_id1_le.text())
         self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
         self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
@@ -71,11 +68,13 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
         self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
 
+        # set new values
         vip_pulse_id1 = 10
         widget._vip_pulse_id1_le.setText(str(vip_pulse_id1))
         widget._vip_pulse_id1_le.returnPressed.emit()
         self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
         self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+
         vip_pulse_id2 = 20
         widget._vip_pulse_id2_le.setText(str(vip_pulse_id2))
         widget._vip_pulse_id2_le.returnPressed.emit()

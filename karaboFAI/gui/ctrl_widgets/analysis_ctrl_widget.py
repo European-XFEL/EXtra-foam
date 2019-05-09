@@ -12,7 +12,6 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
@@ -49,12 +48,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
         self._vip_pulse_id1_le.setValidator(self._pulse_id_validator)
-        self._vip_pulse_id1_le.returnPressed.connect(
-            self.onVipPulseConfirmed)
+
         self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
         self._vip_pulse_id2_le.setValidator(self._pulse_id_validator)
-        self._vip_pulse_id2_le.returnPressed.connect(
-            self.onVipPulseConfirmed)
 
         self._non_reconfigurable_widgets = [
             self._max_pulse_id_le,
@@ -84,11 +80,17 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
-        self.vip_pulse_id1_sgn.connect(mediator.onPulseID1Updated)
-        self.vip_pulse_id2_sgn.connect(mediator.onPulseID2Updated)
-        mediator.update_vip_pulse_ids_sgn.connect(self.updateVipPulseIDs)
+        self._vip_pulse_id1_le.returnPressed.connect(
+            lambda: mediator.vip_pulse_id1_sgn.emit(
+                int(self._vip_pulse_id1_le.text())))
+
+        self._vip_pulse_id2_le.returnPressed.connect(
+            lambda: mediator.vip_pulse_id2_sgn.emit(
+                int(self._vip_pulse_id2_le.text())))
+
+        mediator.vip_pulse_ids_connected_sgn.connect(self.updateVipPulseIDs)
 
     def updateSharedParameters(self):
         """Override"""
@@ -98,15 +100,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self.pulse_id_range_sgn.emit(*pulse_id_range)
 
         return True
-
-    def onVipPulseConfirmed(self):
-        sender = self.sender()
-        if sender is self._vip_pulse_id1_le:
-            sgn = self.vip_pulse_id1_sgn
-        else:
-            sgn = self.vip_pulse_id2_sgn
-
-        sgn.emit(int(sender.text()))
 
     def updateVipPulseIDs(self):
         """Called when OverviewWindow is opened."""

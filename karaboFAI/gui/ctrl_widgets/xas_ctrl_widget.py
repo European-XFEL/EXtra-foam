@@ -12,7 +12,6 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 
 
 class XasCtrlWidget(AbstractCtrlWidget):
@@ -44,7 +43,7 @@ class XasCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
         self._reset_btn.clicked.connect(mediator.reset_xas_sgn)
 
@@ -52,7 +51,3 @@ class XasCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.energy_bins_change_sgn.emit(
                 int(self._nbins_le.text())))
         self._nbins_le.editingFinished.emit()
-
-    def updateSharedParameters(self):
-        """Override"""
-        return True

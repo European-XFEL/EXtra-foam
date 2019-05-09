@@ -11,6 +11,8 @@ All rights reserved.
 """
 from ..pyqtgraph import QtGui
 
+from ..mediator import Mediator
+
 
 class AbstractCtrlWidget(QtGui.QGroupBox):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
@@ -34,6 +36,8 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         parent = self.parent()
         if parent is not None:
             parent.registerCtrlWidget(self)
+
+        self._mediator = Mediator()
 
         # widgets whose values are not allowed to change after the "run"
         # button is clicked

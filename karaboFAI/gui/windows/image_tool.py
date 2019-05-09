@@ -179,7 +179,8 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
         validator.setBottom(1)
         self._roi_displayed_range_le.setValidator(validator)
         self._roi_displayed_range_le.editingFinished.connect(
-            mediator.onRoiDisplayedRangeChange)
+            lambda: mediator.roi_displayed_range_sgn.emit(
+                int(self._roi_displayed_range_le.text())))
 
         self._roi_fom_cb = QtGui.QComboBox()
         for v in self._available_roi_foms:
@@ -311,7 +312,7 @@ class _ImageProcWidget(QtGui.QGroupBox):
         self.update_image_btn = QtGui.QPushButton("Update image")
 
         self._auto_level_btn = QtGui.QPushButton("Auto level")
-        self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
+        self._auto_level_btn.clicked.connect(mediator.reset_image_level_sgn)
 
         self.set_ref_btn = QtGui.QPushButton("Set reference")
         self.remove_ref_btn = QtGui.QPushButton("Remove reference")

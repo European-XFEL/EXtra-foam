@@ -27,7 +27,8 @@ class Mediator(QObject):
 
     vip_pulse_id1_sgn = pyqtSignal(int)
     vip_pulse_id2_sgn = pyqtSignal(int)
-    update_vip_pulse_ids_sgn = pyqtSignal()
+    # tell the control widget to update VIP pulse IDs
+    vip_pulse_ids_connected_sgn = pyqtSignal()
 
     roi_displayed_range_sgn = pyqtSignal(int)
 
@@ -73,22 +74,3 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._is_initialized = True
-
-    @pyqtSlot(int)
-    def onPulseID1Updated(self, v):
-        self.vip_pulse_id1_sgn.emit(v)
-
-    @pyqtSlot(int)
-    def onPulseID2Updated(self, v):
-        self.vip_pulse_id2_sgn.emit(v)
-
-    @pyqtSlot()
-    def onRoiDisplayedRangeChange(self):
-        v = int(self.sender().text())
-        self.roi_displayed_range_sgn.emit(v)
-
-    def updateVipPulseIds(self):
-        self.update_vip_pulse_ids_sgn.emit()
-
-    def onAutoLevel(self):
-        self.reset_image_level_sgn.emit()

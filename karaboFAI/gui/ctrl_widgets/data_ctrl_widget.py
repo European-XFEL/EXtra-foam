@@ -14,7 +14,6 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
 from ...config import config, DataSource
 
 
@@ -109,7 +108,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
         self._source_type_cb.currentTextChanged.connect(
             lambda x: self.onSourceTypeChange(self._available_sources[x]))
