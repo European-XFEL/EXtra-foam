@@ -9,7 +9,7 @@ from karaboFAI.gui.gui_helpers import parse_boundary, parse_ids
 class TestGUI(unittest.TestCase):
     def test_parserboundary(self):
         invalid_inputs = ["1., 2., 3.0", "1, ", ", 2", "a a", ", 1,,2, ",
-                          "2.0, 0.1"]
+                          "2.0, 0.1", "1, 1"]
         for v in invalid_inputs:
             with self.assertRaises(ValueError):
                 parse_boundary(v)

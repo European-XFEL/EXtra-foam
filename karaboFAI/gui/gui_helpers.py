@@ -33,8 +33,8 @@ def parse_boundary(text):
         if len(ret) != 2:
             raise ValueError(msg)
 
-        if ret[0] > ret[1]:
-            raise ValueError("lower boundary > upper boundary")
+        if ret[0] >= ret[1]:
+            raise ValueError("lower boundary >= upper boundary")
 
     except Exception as e:
         raise ValueError(str(e))
