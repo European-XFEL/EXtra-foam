@@ -16,6 +16,7 @@ from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 from .gui_helpers import parse_boundary
+from ..logger import logger
 
 
 class Colors:
@@ -128,7 +129,7 @@ class _SmartLineEdit(QtGui.QLineEdit):
 
         :param str content: Initial value of the QLineEdit
         :param callable handler: a handler use to validate and parse the
-            content
+            content. If handler raises, only ValueError will be handled.
         """
         super().__init__(content, parent=parent)
 
@@ -149,9 +150,10 @@ class _SmartLineEdit(QtGui.QLineEdit):
             validated = self._handler(content)
             self._cached = content
             self.value_changed_sgn.emit(*validated)
-        except ValueError:
+        except ValueError as e:
             # restore the cached valid value
             self.setText(self._cached)
+            logger.error(repr(e))
 
 
 class SmartBoundaryLineEdit(_SmartLineEdit):
