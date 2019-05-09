@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.algorithms import normalize_curve
+from karaboFAI.algorithms import normalize_auc
 
 
 class TestMiscellaneous(unittest.TestCase):
@@ -11,21 +11,21 @@ class TestMiscellaneous(unittest.TestCase):
         y = np.array([1, 1, 1, 1, 1, 1])
         x = np.array([0, 1, 2, 3, 4, 5])
 
-        y_normalized = normalize_curve(y, x)
+        y_normalized = normalize_auc(y, x)
         self.assertTrue(np.array_equal(y_normalized, np.array([0.2]*6)))
 
-        y_normalized = normalize_curve(y, x, 1, 3)
+        y_normalized = normalize_auc(y, x, 1, 3)
         self.assertTrue(np.array_equal(y_normalized, np.array([0.5]*6)))
 
         y = np.array([1, -1, 1, -1, 1, -1])
         x = np.array([0, 1, 2, 3, 4, 5])
         # normalized by 0
         with self.assertRaises(ValueError):
-            normalize_curve(y, x)
+            normalize_auc(y, x)
         with self.assertRaises(ValueError):
-            normalize_curve(y, x, 2, 3)
+            normalize_auc(y, x, 2, 3)
 
         y = np.array([0, 0, 0, 0, 0, 0])
         x = np.array([0, 1, 2, 3, 4, 5])
-        y_normalized = normalize_curve(y, x)
+        y_normalized = normalize_auc(y, x)
         self.assertTrue(np.array_equal(y_normalized, np.array([0]*6)))

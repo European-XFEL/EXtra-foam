@@ -18,7 +18,7 @@ from .base_processor import (
     StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
-from ...algorithms import intersection, normalize_curve, slice_curve
+from ...algorithms import intersection, normalize_auc, slice_curve
 from ...config import config, RoiFom, PumpProbeType
 from ...helpers import profiler
 
@@ -219,8 +219,8 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.data = (x_data, on_data, off_data)
         _, on_ma, off_ma = processed.pp.data
 
-        norm_on_ma = normalize_curve(on_ma, x_data, *self.proj1d_auc_x_range)
-        norm_off_ma = normalize_curve(off_ma, x_data, *self.proj1d_auc_x_range)
+        norm_on_ma = normalize_auc(on_ma, x_data, *self.proj1d_auc_x_range)
+        norm_off_ma = normalize_auc(off_ma, x_data, *self.proj1d_auc_x_range)
         norm_on_off_ma = norm_on_ma - norm_off_ma
 
         sliced = slice_curve(norm_on_off_ma, x_data,

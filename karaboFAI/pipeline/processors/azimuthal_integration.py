@@ -20,7 +20,7 @@ from .base_processor import (
     StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
-from ...algorithms import normalize_curve, slice_curve
+from ...algorithms import normalize_auc, slice_curve
 from ...config import AiNormalizer, PumpProbeType
 from ...helpers import profiler
 
@@ -178,12 +178,12 @@ class AiPulsedProcessor(CompositeProcessor):
         auc_x_range = self.auc_x_range
 
         if self.normalizer == AiNormalizer.AUC:
-            intensities_mean = normalize_curve(
+            intensities_mean = normalize_auc(
                 intensities_mean, momentum, *auc_x_range)
 
             # normalize azimuthal integration curves for each pulse
             for i, intensity in enumerate(intensities):
-                intensities[i][:] = normalize_curve(
+                intensities[i][:] = normalize_auc(
                     intensity, momentum, *auc_x_range)
         else:
             _, roi1_hist, _ = processed.roi.roi1_hist
@@ -340,8 +340,8 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         auc_x_range = self.auc_x_range
 
         if self.normalizer == AiNormalizer.AUC:
-            on = normalize_curve(on, momentum, *auc_x_range)
-            off = normalize_curve(off, momentum, *auc_x_range)
+            on = normalize_auc(on, momentum, *auc_x_range)
+            off = normalize_auc(off, momentum, *auc_x_range)
         else:
             on_roi = processed.pp.on_roi
             off_roi = processed.pp.off_roi

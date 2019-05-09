@@ -14,8 +14,8 @@ import numpy as np
 from .sampling import slice_curve
 
 
-def normalize_curve(y, x, x_min=None, x_max=None):
-    """Normalize y by the integration of y within a given range of x.
+def normalize_auc(y, x, x_min=None, x_max=None):
+    """Normalize a curve a given area under the curve (AUC).
 
     :param numpy.ndarray y: 1D array.
     :param numpy.ndarray x: 1D array.
