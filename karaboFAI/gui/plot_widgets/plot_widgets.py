@@ -305,7 +305,7 @@ class PumpProbeFomWidget(PlotWidget):
         super().__init__(parent=parent)
 
         self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "ROI (arb. u.)")
+        self.setLabel('left', "FOM (arb. u.)")
 
         self._plot = self.plotScatter(brush=make_brush('o'))
 
