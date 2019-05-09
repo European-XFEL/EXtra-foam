@@ -48,6 +48,7 @@ setup(
         'toolz',
         'silx>=0.9.0',
         'cached-property>=1.5.1',
+        'redis',
     ],
     extras_require={
         'docs': [
