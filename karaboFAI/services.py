@@ -101,11 +101,6 @@ class FaiServer:
         self._gui.analysis_ctrl_widget.pulse_id_range_sgn.connect(
             self._scheduler.onPulseIdRangeChange)
 
-        self._gui.pump_probe_ctrl_widget.pp_pulse_ids_sgn.connect(
-            self._scheduler.onPpPulseStateChange)
-        self._gui.pump_probe_ctrl_widget.reset_btn.clicked.connect(
-            self._scheduler.onPumpProbeReset)
-
         self._gui.correlation_ctrl_widget.correlation_param_change_sgn.connect(
             self._scheduler.onCorrelationParamChange)
         self._gui.correlation_ctrl_widget.clear_btn.clicked.connect(

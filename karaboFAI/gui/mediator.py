@@ -43,9 +43,11 @@ class Mediator(QObject):
     xgm_source_change_sgn = pyqtSignal(str)
     mono_source_change_sgn = pyqtSignal(str)
 
+    pp_pulse_ids_sgn = pyqtSignal(object, list, list)
     pp_ma_window_change_sgn = pyqtSignal(int)
     pp_abs_difference_sgn = pyqtSignal(bool)
     pp_analysis_type_sgn = pyqtSignal(object)
+    pp_state_reset_sgn = pyqtSignal()
 
     proj1d_normalizer_change_sgn = pyqtSignal(object)
     proj1d_auc_x_range_change_sgn = pyqtSignal(float, float)
@@ -92,6 +94,8 @@ class Mediator(QObject):
 
         self.pp_abs_difference_sgn.connect(scheduler.onPpDifferenceTypeChange)
         self.pp_analysis_type_sgn.connect(scheduler.onPpAnalysisTypeChange)
+        self.pp_pulse_ids_sgn.connect(scheduler.onPpPulseStateChange)
+        self.pp_state_reset_sgn.connect(scheduler.onPumpProbeReset)
 
         self.proj1d_normalizer_change_sgn.connect(
             scheduler.onProj1dNormalizerChange)

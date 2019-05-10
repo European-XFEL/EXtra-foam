@@ -73,7 +73,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self._ma_window_le = QtGui.QLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
-        self.reset_btn = QtGui.QPushButton("Reset")
+        self._reset_btn = QtGui.QPushButton("Reset")
 
         self._non_reconfigurable_widgets = [
             self._mode_cb,
@@ -105,12 +105,15 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
         layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
         layout.addWidget(self._abs_difference_cb, 4, 0, 1, 2)
-        layout.addWidget(self.reset_btn, 4, 2, 1, 2)
+        layout.addWidget(self._reset_btn, 4, 2, 1, 2)
 
         self.setLayout(layout)
 
     def initConnections(self):
         mediator = self._mediator
+
+        self.pp_pulse_ids_sgn.connect(mediator.pp_pulse_ids_sgn)
+        self._reset_btn.clicked.connect(mediator.pp_state_reset_sgn)
 
         self._ma_window_le.editingFinished.connect(
             lambda: mediator.pp_ma_window_change_sgn.emit(
