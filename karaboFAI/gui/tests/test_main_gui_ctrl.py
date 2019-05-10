@@ -102,7 +102,7 @@ class TestMainGui(unittest.TestCase):
         widget.updateSharedParameters()
         self.assertEqual((0, 1001), scheduler._image_assembler.pulse_id_range)
 
-    def testAiCtrlWidget(self):
+    def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.ai_ctrl_widget
         scheduler = self.scheduler
 

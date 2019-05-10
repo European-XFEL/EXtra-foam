@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-AiCtrlWidget.
+AzimuthalIntegCtrlWidget.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -19,7 +19,7 @@ from ...config import AiNormalizer, config
 from ...logger import logger
 
 
-class AiCtrlWidget(AbstractCtrlWidget):
+class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
     integration_center_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)

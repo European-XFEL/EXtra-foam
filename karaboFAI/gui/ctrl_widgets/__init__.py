@@ -1,4 +1,4 @@
-from .ai_ctrl_widget import AiCtrlWidget
+from .ai_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
@@ -10,7 +10,7 @@ from .projection1d_ctrl_widget import Projection1dCtrlWidget
 
 # add control widgets
 __all__ = [
-    "AiCtrlWidget",
+    "AzimuthalIntegCtrlWidget",
     "AnalysisCtrlWidget",
     "CorrelationCtrlWidget",
     "DataCtrlWidget",

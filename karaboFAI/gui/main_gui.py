@@ -18,7 +18,7 @@ import functools
 from .pyqtgraph import QtCore, QtGui
 
 from .ctrl_widgets import (
-    AiCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
+    AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
     GeometryCtrlWidget, PumpProbeCtrlWidget, Projection1dCtrlWidget,
     XasCtrlWidget
 )
@@ -129,7 +129,7 @@ class MainGUI(QtGui.QMainWindow):
         # control widgets
         # *************************************************************
 
-        self.ai_ctrl_widget = AiCtrlWidget(parent=self)
+        self.ai_ctrl_widget = AzimuthalIntegCtrlWidget(parent=self)
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
 
