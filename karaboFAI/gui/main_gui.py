@@ -68,7 +68,7 @@ class MainGUI(QtGui.QMainWindow):
         self._tool_bar = self.addToolBar("Control")
 
         self._start_at = self._addAction("Start bridge", "start.png")
-        self._start_at.triggered.connect(self.start_bridge_sgn)
+        self._start_at.triggered.connect(self.onStart)
 
         self._stop_at = self._addAction("Stop bridge", "stop.png")
         self._stop_at.triggered.connect(self.stop_bridge_sgn)
@@ -239,12 +239,15 @@ class MainGUI(QtGui.QMainWindow):
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)
 
+    def onStart(self):
+        if not self.updateSharedParameters():
+            return
+
+        self.start_bridge_sgn.emit()
+
     def onBridgeStarted(self):
         """Actions taken before the start of a 'run'."""
         self._running = True  # starting to update plots
-
-        if not self.updateSharedParameters():
-            return
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
