@@ -32,7 +32,7 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         for v in self._available_normalizers:
             self._normalizers_cb.addItem(v)
 
-        self._auc_x_range_le = SmartBoundaryLineEdit("0, Inf")
+        self._auc_range_le = SmartBoundaryLineEdit("0, Inf")
         self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
 
         self.initUI()
@@ -49,7 +49,7 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Normalized by: "), 0, 0, AR)
         layout.addWidget(self._normalizers_cb, 0, 1)
         layout.addWidget(QtGui.QLabel("AUC x range: "), 0, 2, AR)
-        layout.addWidget(self._auc_x_range_le, 0, 3)
+        layout.addWidget(self._auc_range_le, 0, 3)
         layout.addWidget(QtGui.QLabel("FOM integ range: "), 1, 2, AR)
         layout.addWidget(self._fom_integ_range_le, 1, 3)
 
@@ -64,9 +64,9 @@ class Projection1dCtrlWidget(AbstractCtrlWidget):
         self._normalizers_cb.currentTextChanged.emit(
             self._normalizers_cb.currentText())
 
-        self._auc_x_range_le.value_changed_sgn.connect(
-            mediator.proj1d_auc_x_range_change_sgn)
-        self._auc_x_range_le.returnPressed.emit()
+        self._auc_range_le.value_changed_sgn.connect(
+            mediator.proj1d_auc_range_change_sgn)
+        self._auc_range_le.returnPressed.emit()
 
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.proj1d_fom_integ_range_change_sgn)

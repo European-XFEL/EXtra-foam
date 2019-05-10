@@ -73,23 +73,6 @@ class FaiServer:
         self._gui = MainGUI()
         self._gui.connectInput(self._scheduler)
 
-        self._gui.ai_ctrl_widget.integration_center_sgn.connect(
-            self._scheduler.onIntegrationCenterChange)
-        self._gui.ai_ctrl_widget.integration_method_sgn.connect(
-            self._scheduler.onIntegrationMethodChange)
-        self._gui.ai_ctrl_widget.integration_range_sgn.connect(
-            self._scheduler.onIntegrationRangeChange)
-        self._gui.ai_ctrl_widget.integration_points_sgn.connect(
-            self._scheduler.onIntegrationPointsChange)
-        self._gui.ai_ctrl_widget.ai_normalizer_sgn.connect(
-            self._scheduler.onAiNormalizeChange)
-        self._gui.ai_ctrl_widget.auc_x_range_sgn.connect(
-            self._scheduler.onAucXRangeChange)
-        self._gui.ai_ctrl_widget.fom_integration_range_sgn.connect(
-            self._scheduler.onFomIntegrationRangeChange)
-        self._gui.ai_ctrl_widget.pulsed_ai_cb.stateChanged.connect(
-            self._scheduler.onPulsedAiStateChange)
-
         self._gui.start_bridge_sgn.connect(self._bridge.start)
         self._gui.start_bridge_sgn.connect(self._maybe_start_scheduler)
         self._gui.stop_bridge_sgn.connect(self.stop_bridge)

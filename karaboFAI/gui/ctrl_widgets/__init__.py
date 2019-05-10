@@ -1,4 +1,4 @@
-from .ai_ctrl_widget import AzimuthalIntegCtrlWidget
+from .azimuthal_integ_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget

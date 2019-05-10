@@ -103,48 +103,52 @@ class TestMainGui(unittest.TestCase):
         self.assertEqual((0, 1001), scheduler._image_assembler.pulse_id_range)
 
     def testAzimuthalIntegCtrlWidget(self):
-        widget = self.gui.ai_ctrl_widget
+        widget = self.gui.azimuthal_integ_ctrl_widget
         scheduler = self.scheduler
+
+        self.assertFalse(scheduler._ai_proc.pulsed_ai)
+        widget._pulsed_integ_cb.setChecked(True)
+        self.assertTrue(scheduler._ai_proc.pulsed_ai)
+
+        default_integ_method = 'BBox'
+        self.assertEqual(scheduler._ai_proc.integ_method, default_integ_method)
+        itgt_method = 'nosplit_csr'
+        widget._itgt_method_cb.setCurrentText(itgt_method)
+        self.assertEqual(scheduler._ai_proc.integ_method, itgt_method)
+
+        default_normalizer = AiNormalizer.AUC
+        self.assertEqual(scheduler._ai_proc.normalizer, default_normalizer)
+        ai_normalizer = AiNormalizer.ROI2
+        widget._normalizers_cb.setCurrentIndex(ai_normalizer)
+        self.assertEqual(scheduler._ai_proc.normalizer, ai_normalizer)
 
         cx = 1024
         cy = 512
-        itgt_method = 'nosplit_csr'
         itgt_pts = 1024
         itgt_range = (0.1, 0.2)
-        ai_normalizer = AiNormalizer.ROI2
-        aux_x_range = (0.2, 0.3)
+        auc_range = (0.2, 0.3)
         fom_itgt_range = (0.3, 0.4)
 
         widget._cx_le.setText(str(cx))
         widget._cy_le.setText(str(cy))
-        widget._itgt_method_cb.setCurrentText(itgt_method)
         widget._itgt_points_le.setText(str(itgt_pts))
         widget._itgt_range_le.setText(','.join([str(x) for x in itgt_range]))
-        widget._normalizers_cb.setCurrentIndex(ai_normalizer)
-        widget._auc_x_range_le.setText(','.join([str(x) for x in aux_x_range]))
+        widget._auc_range_le.setText(','.join([str(x) for x in auc_range]))
         widget._fom_integ_range_le.setText(
             ','.join([str(x) for x in fom_itgt_range]))
 
         self.assertTrue(self.gui.updateSharedParameters())
 
-        self.assertFalse(scheduler._ai_proc.pulsed_ai)
-        self.assertTupleEqual(scheduler._ai_proc.integration_center, (cx, cy))
-        self.assertEqual(scheduler._ai_proc.integration_method, itgt_method)
-        self.assertEqual(scheduler._ai_proc.integration_points, itgt_pts)
-        self.assertTupleEqual(scheduler._ai_proc.integration_range, itgt_range)
-        self.assertEqual(scheduler._ai_proc.normalizer, ai_normalizer)
-        self.assertTupleEqual(scheduler._ai_proc.auc_x_range, aux_x_range)
+        self.assertTupleEqual(scheduler._ai_proc.integ_center, (cx, cy))
+        self.assertEqual(scheduler._ai_proc.integ_pts, itgt_pts)
+        self.assertTupleEqual(scheduler._ai_proc.integ_range, itgt_range)
+        self.assertTupleEqual(scheduler._ai_proc.auc_range, auc_range)
+        self.assertTupleEqual(scheduler._ai_proc.fom_itgt_range, fom_itgt_range)
 
         self.assertTupleEqual(scheduler._correlation_proc.fom_itgt_range,
                               fom_itgt_range)
 
         self.assertTupleEqual(scheduler._pp_proc.fom_itgt_range, fom_itgt_range)
-
-        # activate "pulsed azimuthal integration"
-        QTest.mouseClick(widget.pulsed_ai_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, widget.pulsed_ai_cb.height()/2))
-        self.assertTrue(self.gui.updateSharedParameters())
-        self.assertTrue(scheduler._ai_proc.pulsed_ai)
 
     def testProject1dCtrlWidget(self):
         widget = self.gui.projection1d_ctrl_widget
@@ -153,16 +157,16 @@ class TestMainGui(unittest.TestCase):
         # test default values
         self.assertEqual(Projection1dNormalizer.AUC, proc.proj1d_normalizer)
         self.assertEqual((0, math.inf), proc.proj1d_fom_integ_range)
-        self.assertEqual((0, math.inf), proc.proj1d_auc_x_range)
+        self.assertEqual((0, math.inf), proc.proj1d_auc_range)
 
         # test setting new values
         widget._fom_integ_range_le.setText("10, 20")
         widget._fom_integ_range_le.returnPressed.emit()
         self.assertEqual((10, 20), proc.proj1d_fom_integ_range)
 
-        widget._auc_x_range_le.setText("30, 40")
-        widget._auc_x_range_le.returnPressed.emit()
-        self.assertEqual((30, 40), proc.proj1d_auc_x_range)
+        widget._auc_range_le.setText("30, 40")
+        widget._auc_range_le.returnPressed.emit()
+        self.assertEqual((30, 40), proc.proj1d_auc_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget

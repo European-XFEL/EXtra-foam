@@ -36,7 +36,7 @@ class RoiProcessor(CompositeProcessor):
     _raw_rois = SharedProperty()
     _roi_fom_handler = SharedProperty()
     proj1d_normalizer = SharedProperty()
-    proj1d_auc_x_range = SharedProperty()
+    proj1d_auc_range = SharedProperty()
     proj1d_fom_integ_range = SharedProperty()
 
     def __init__(self):
@@ -237,9 +237,9 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
 
         try:
             norm_on_ma = normalize_auc(
-                on_ma, x_data, *self.proj1d_auc_x_range)
+                on_ma, x_data, *self.proj1d_auc_range)
             norm_off_ma = normalize_auc(
-                off_ma, x_data, *self.proj1d_auc_x_range)
+                off_ma, x_data, *self.proj1d_auc_range)
         except ValueError as e:
             raise ProcessingError(str(e))
 

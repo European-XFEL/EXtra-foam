@@ -147,7 +147,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                 common = set(on_pulse_ids).intersection(off_pulse_ids)
                 if common:
                     logger.error("Pulse IDs {} are found in both on- and "
-                                 "off- pulses.".format(','.join([str(v) for v in common])))
+                                 "off- pulses.".
+                                 format(','.join([str(v) for v in common])))
                     return False
 
         except ValueError:

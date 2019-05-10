@@ -129,7 +129,7 @@ class MainGUI(QtGui.QMainWindow):
         # control widgets
         # *************************************************************
 
-        self.ai_ctrl_widget = AzimuthalIntegCtrlWidget(parent=self)
+        self.azimuthal_integ_ctrl_widget = AzimuthalIntegCtrlWidget(parent=self)
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
 
@@ -160,7 +160,7 @@ class MainGUI(QtGui.QMainWindow):
     def initUI(self):
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
-        analysis_layout.addWidget(self.ai_ctrl_widget)
+        analysis_layout.addWidget(self.azimuthal_integ_ctrl_widget)
         analysis_layout.addWidget(self.projection1d_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)

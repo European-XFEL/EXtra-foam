@@ -100,6 +100,17 @@ class Scheduler(Worker):
     def onPulseIdRangeChange(self, lb, ub):
         self._image_assembler.pulse_id_range = (lb, ub)
 
+    @QtCore.pyqtSlot(float)
+    def onPhotonEnergyChange(self, photon_energy):
+        """Compute photon wavelength (m) from photon energy (keV)."""
+        # Plank-einstein relation (E=hv)
+        HC_E = 1e-3 * constants.c * constants.h / constants.e
+        self._ai_proc.wavelength = HC_E / photon_energy
+
+    @QtCore.pyqtSlot(float)
+    def onSampleDistanceChange(self, value):
+        self._ai_proc.sample_distance = value
+
     @QtCore.pyqtSlot(object, list, list)
     def onPpPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
         if mode != self._pp_proc.mode:
@@ -130,7 +141,7 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot(float, float)
     def onProj1dAucXRangeChange(self, lb, ub):
-        self._roi_proc.proj1d_auc_x_range = (lb, ub)
+        self._roi_proc.proj1d_auc_range = (lb, ub)
 
     @QtCore.pyqtSlot(float, float)
     def onProj1dFomIntegRangeChange(self, lb, ub):
@@ -141,53 +152,42 @@ class Scheduler(Worker):
         self._roi_proc.proj1d_normalizer = normalizer
 
     @QtCore.pyqtSlot(float, float)
-    def onAucXRangeChange(self, lb, ub):
-        self._ai_proc.auc_x_range = (lb, ub)
+    def onAiAucRangeChange(self, lb, ub):
+        self._ai_proc.auc_range = (lb, ub)
 
     @QtCore.pyqtSlot(object)
     def onAiNormalizeChange(self, normalizer):
         self._ai_proc.normalizer = normalizer
 
-    @QtCore.pyqtSlot(float)
-    def onSampleDistanceChange(self, value):
-        self._ai_proc.sample_distance = value
-
     @QtCore.pyqtSlot(int, int)
-    def onIntegrationCenterChange(self, cx, cy):
-        self._ai_proc.integration_center = (cx, cy)
+    def onAiIntegCenterChange(self, cx, cy):
+        self._ai_proc.integ_center = (cx, cy)
 
     @QtCore.pyqtSlot(str)
-    def onIntegrationMethodChange(self, value):
-        self._ai_proc.integration_method = value
+    def onAiIntegMethodChange(self, value):
+        self._ai_proc.integ_method = value
 
     @QtCore.pyqtSlot(float, float)
-    def onIntegrationRangeChange(self, lb, ub):
-        self._ai_proc.integration_range = (lb, ub)
+    def onAiIntegRangeChange(self, lb, ub):
+        self._ai_proc.integ_range = (lb, ub)
 
     @QtCore.pyqtSlot(int)
-    def onIntegrationPointsChange(self, value):
-        self._ai_proc.integration_points = value
-
-    @QtCore.pyqtSlot(float)
-    def onPhotonEnergyChange(self, photon_energy):
-        """Compute photon wavelength (m) from photon energy (keV)."""
-        # Plank-einstein relation (E=hv)
-        HC_E = 1e-3 * constants.c * constants.h / constants.e
-        self._ai_proc.wavelength = HC_E / photon_energy
+    def onAiIntegPtsChange(self, value):
+        self._ai_proc.integ_pts = value
 
     @QtCore.pyqtSlot(float, float)
-    def onFomIntegrationRangeChange(self, lb, ub):
+    def onAiFomIntegRangeChange(self, lb, ub):
         self._ai_proc.fom_itgt_range = (lb, ub)
         self._pp_proc.fom_itgt_range = (lb, ub)
         self._correlation_proc.fom_itgt_range = (lb, ub)
 
+    @QtCore.pyqtSlot(bool)
+    def onAiPulsedIntegStateChange(self, state):
+        self._ai_proc.pulsed_ai = state
+
     @QtCore.pyqtSlot()
     def onPumpProbeReset(self):
         PumpProbeData.clear()
-
-    @QtCore.pyqtSlot(int)
-    def onPulsedAiStateChange(self, state):
-        self._ai_proc.pulsed_ai = state == QtCore.Qt.Checked
 
     @QtCore.pyqtSlot()
     def onCorrelationReset(self):

@@ -38,16 +38,16 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         sample_distance (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
-        integration_center (tuple): (Cx, Cy) in pixels. (int, int)
-        integration_method (string): the azimuthal integration
+        integ_center (tuple): (Cx, Cy) in pixels. (int, int)
+        integ_method (string): the azimuthal integration
             method supported by pyFAI.
-        integration_range (tuple): the lower and upper range of
+        integ_range (tuple): the lower and upper range of
             the integration radial unit. (float, float)
-        integration_points (int): number of points in the
+        integ_pts (int): number of points in the
             integration output pattern.
         normalizer (int): normalizer type for calculating FOM from
             azimuthal integration result.
-        auc_x_range (tuple): x range for calculating AUC, which is used as
+        auc_range (tuple): x range for calculating AUC, which is used as
             a normalizer of the azimuthal integration.
         fom_itgt_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
@@ -56,12 +56,12 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     sample_distance = SharedProperty()
     wavelength = SharedProperty()
-    integration_center = SharedProperty()
-    integration_method = SharedProperty()
-    integration_range = SharedProperty()
-    integration_points = SharedProperty()
+    integ_center = SharedProperty()
+    integ_method = SharedProperty()
+    integ_range = SharedProperty()
+    integ_pts = SharedProperty()
     normalizer = SharedProperty()
-    auc_x_range = SharedProperty()
+    auc_range = SharedProperty()
     fom_itgt_range = SharedProperty()
 
     def __init__(self):
@@ -89,10 +89,10 @@ class AiPulsedProcessor(CompositeProcessor):
         if not self.pulsed_ai:
             return
 
-        cx, cy = self.integration_center
-        integration_points = self.integration_points
-        integration_method = self.integration_method
-        integration_range = self.integration_range
+        cx, cy = self.integ_center
+        integ_pts = self.integ_pts
+        integ_method = self.integ_method
+        integ_range = self.integ_range
 
         assembled = processed.image.images
         image_mask = processed.image.image_mask
@@ -125,10 +125,10 @@ class AiPulsedProcessor(CompositeProcessor):
 
                 # do integration
                 ret = ai.integrate1d(assembled[i],
-                                     integration_points,
-                                     method=integration_method,
+                                     integ_pts,
+                                     method=integ_method,
                                      mask=mask,
-                                     radial_range=integration_range,
+                                     radial_range=integ_range,
                                      correctSolidAngle=True,
                                      polarization_factor=1,
                                      unit="q_A^-1")
@@ -151,10 +151,10 @@ class AiPulsedProcessor(CompositeProcessor):
             mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
             ret = ai.integrate1d(assembled,
-                                 integration_points,
-                                 method=integration_method,
+                                 integ_pts,
+                                 method=integ_method,
                                  mask=mask,
-                                 radial_range=integration_range,
+                                 radial_range=integ_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
@@ -175,16 +175,16 @@ class AiPulsedProcessor(CompositeProcessor):
         processed.ai.intensity_mean = normalized_intensity_mean
 
     def _normalize(self, processed, momentum, intensities_mean, intensities):
-        auc_x_range = self.auc_x_range
+        auc_range = self.auc_range
 
         if self.normalizer == AiNormalizer.AUC:
             intensities_mean = normalize_auc(
-                intensities_mean, momentum, *auc_x_range)
+                intensities_mean, momentum, *auc_range)
 
             # normalize azimuthal integration curves for each pulse
             for i, intensity in enumerate(intensities):
                 intensities[i][:] = normalize_auc(
-                    intensity, momentum, *auc_x_range)
+                    intensity, momentum, *auc_range)
         else:
             _, roi1_hist, _ = processed.roi.roi1_hist
             _, roi2_hist, _ = processed.roi.roi2_hist
@@ -262,10 +262,10 @@ class AiPumpProbeProcessor(CompositeProcessor):
         if on_image is None or off_image is None:
             raise StopCompositionProcessing
 
-        cx, cy = self.integration_center
-        integration_points = self.integration_points
-        integration_method = self.integration_method
-        integration_range = self.integration_range
+        cx, cy = self.integ_center
+        integ_pts = self.integ_pts
+        integ_method = self.integ_method
+        integ_range = self.integ_range
 
         image_mask = processed.image.image_mask
 
@@ -291,10 +291,10 @@ class AiPumpProbeProcessor(CompositeProcessor):
 
             # do integration
             ret = ai.integrate1d(img,
-                                 integration_points,
-                                 method=integration_method,
+                                 integ_pts,
+                                 method=integ_method,
                                  mask=mask,
-                                 radial_range=integration_range,
+                                 radial_range=integ_range,
                                  correctSolidAngle=True,
                                  polarization_factor=1,
                                  unit="q_A^-1")
@@ -337,12 +337,12 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         processed.pp.fom = (processed.tid, fom)
 
     def _normalize(self, processed, momentum, on, off):
-        auc_x_range = self.auc_x_range
+        auc_range = self.auc_range
 
         if self.normalizer == AiNormalizer.AUC:
             try:
-                on = normalize_auc(on, momentum, *auc_x_range)
-                off = normalize_auc(off, momentum, *auc_x_range)
+                on = normalize_auc(on, momentum, *auc_range)
+                off = normalize_auc(off, momentum, *auc_range)
             except ValueError as e:
                 raise ProcessingError(str(e))
 

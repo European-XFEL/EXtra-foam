@@ -51,6 +51,15 @@ class Mediator(QObject):
     xgm_source_change_sgn = pyqtSignal(str)
     mono_source_change_sgn = pyqtSignal(str)
 
+    ai_integ_center_change_sgn = pyqtSignal(int, int)  # (cx, cy)
+    ai_integ_method_change_sgn = pyqtSignal(str)
+    ai_integ_range_change_sgn = pyqtSignal(float, float)
+    ai_integ_pts_change_sgn = pyqtSignal(int)
+    ai_normalizer_change_sgn = pyqtSignal(object)
+    ai_auc_range_change_sgn = pyqtSignal(float, float)
+    ai_fom_integ_range_change_sgn = pyqtSignal(float, float)
+    ai_pulsed_integ_state_sgn = pyqtSignal(bool)
+
     pp_pulse_ids_sgn = pyqtSignal(object, list, list)
     pp_ma_window_change_sgn = pyqtSignal(int)
     pp_abs_difference_sgn = pyqtSignal(bool)
@@ -58,7 +67,7 @@ class Mediator(QObject):
     pp_state_reset_sgn = pyqtSignal()
 
     proj1d_normalizer_change_sgn = pyqtSignal(object)
-    proj1d_auc_x_range_change_sgn = pyqtSignal(float, float)
+    proj1d_auc_range_change_sgn = pyqtSignal(float, float)
     proj1d_fom_integ_range_change_sgn = pyqtSignal(float, float)
 
     xas_state_set_sgn = pyqtSignal()
@@ -92,22 +101,39 @@ class Mediator(QObject):
             scheduler.onDetectorSourceChange)
         self.xgm_source_change_sgn.connect(scheduler.onXgmSourceChange)
         self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
-        self.pp_ma_window_change_sgn.connect(
-            scheduler.onPumpProbeMAWindowChange)
+
         self.xas_state_set_sgn.connect(scheduler.onXasReset)
         self.xas_energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
+
         self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
         self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
         self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
+
+        self.ai_integ_center_change_sgn.connect(
+            scheduler.onAiIntegCenterChange)
+        self.ai_integ_method_change_sgn.connect(
+            scheduler.onAiIntegMethodChange)
+        self.ai_integ_range_change_sgn.connect(
+            scheduler.onAiIntegRangeChange)
+        self.ai_integ_pts_change_sgn.connect(
+            scheduler.onAiIntegPtsChange)
+        self.ai_normalizer_change_sgn.connect(scheduler.onAiNormalizeChange)
+        self.ai_auc_range_change_sgn.connect(scheduler.onAiAucRangeChange)
+        self.ai_fom_integ_range_change_sgn.connect(
+            scheduler.onAiFomIntegRangeChange)
+        self.ai_pulsed_integ_state_sgn.connect(
+            scheduler.onAiPulsedIntegStateChange)
 
         self.pp_abs_difference_sgn.connect(scheduler.onPpDifferenceTypeChange)
         self.pp_analysis_type_sgn.connect(scheduler.onPpAnalysisTypeChange)
         self.pp_pulse_ids_sgn.connect(scheduler.onPpPulseStateChange)
         self.pp_state_reset_sgn.connect(scheduler.onPumpProbeReset)
+        self.pp_ma_window_change_sgn.connect(
+            scheduler.onPumpProbeMAWindowChange)
 
         self.proj1d_normalizer_change_sgn.connect(
             scheduler.onProj1dNormalizerChange)
-        self.proj1d_auc_x_range_change_sgn.connect(
+        self.proj1d_auc_range_change_sgn.connect(
             scheduler.onProj1dAucXRangeChange)
         self.proj1d_fom_integ_range_change_sgn.connect(
             scheduler.onProj1dFomIntegRangeChange)
