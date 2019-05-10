@@ -98,9 +98,6 @@ class FaiServer:
         self._gui.ai_ctrl_widget.pulsed_ai_cb.stateChanged.connect(
             self._scheduler.onPulsedAiStateChange)
 
-        self._gui.analysis_ctrl_widget.pulse_id_range_sgn.connect(
-            self._scheduler.onPulseIdRangeChange)
-
         self._gui.correlation_ctrl_widget.correlation_param_change_sgn.connect(
             self._scheduler.onCorrelationParamChange)
         self._gui.correlation_ctrl_widget.clear_btn.clicked.connect(

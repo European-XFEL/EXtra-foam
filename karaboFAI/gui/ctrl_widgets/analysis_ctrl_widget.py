@@ -17,10 +17,6 @@ from .base_ctrl_widgets import AbstractCtrlWidget
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
 
-    pulse_id_range_sgn = QtCore.pyqtSignal(int, int)
-    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
-    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
-
     _pulse_id_validator = QtGui.QIntValidator(0, 2699)
 
     def __init__(self, *args, **kwargs):
@@ -97,7 +93,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)
-        self.pulse_id_range_sgn.emit(*pulse_id_range)
+        self._mediator.pulse_id_range_sgn.emit(*pulse_id_range)
 
         return True
 

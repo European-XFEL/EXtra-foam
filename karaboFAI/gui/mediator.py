@@ -38,6 +38,8 @@ class Mediator(QObject):
 
     reset_image_level_sgn = pyqtSignal()
 
+    pulse_id_range_sgn = pyqtSignal(int, int)
+
     source_type_change_sgn = pyqtSignal(int)
     detector_source_change_sgn = pyqtSignal(str)
     xgm_source_change_sgn = pyqtSignal(str)
@@ -106,6 +108,8 @@ class Mediator(QObject):
 
         self.correlation_fom_change_sgn.connect(
             scheduler.onCorrelationFomChange)
+
+        self.pulse_id_range_sgn.connect(scheduler.onPulseIdRangeChange)
 
     def connect_bridge(self, bridge):
         self.bridge_endpoint_sgn.connect(bridge.onEndpointChange)
