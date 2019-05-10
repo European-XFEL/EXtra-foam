@@ -94,9 +94,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         "azimuthal integ mean": FomName.AZIMUTHAL_INTEG_MEAN,
     })
 
-    # index, device ID, property name, resolution
-    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
-
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation analysis setup", *args, **kwargs)
 
@@ -104,7 +101,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         for v in self._available_foms:
             self._figure_of_merit_cb.addItem(v)
 
-        self.clear_btn = QtGui.QPushButton("Clear history")
+        self._reset_btn = QtGui.QPushButton("Reset")
 
         self._table = QtGui.QTableWidget()
 
@@ -120,7 +117,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Figure of merit (FOM): "), 0, 0, AR)
         layout.addWidget(self._figure_of_merit_cb, 0, 1)
-        layout.addWidget(self.clear_btn, 0, 3)
+        layout.addWidget(self._reset_btn, 0, 3)
         layout.addWidget(self._table, 1, 0, 1, 4)
 
         self.setLayout(layout)
@@ -135,7 +132,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 self._available_foms[x]))
         self._figure_of_merit_cb.currentTextChanged.emit(
             self._figure_of_merit_cb.currentText())
-        return True
+
+        self._reset_btn.clicked.connect(mediator.correlation_state_reset_sgn)
 
     def initParamTable(self):
         """Initialize the correlation parameter table widget."""
@@ -221,7 +219,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self._table.setCellWidget(i_row, 3, resolution_le)
 
         # we always have invalid (empty) input when the category changes
-        self.correlation_param_change_sgn.emit(i_row, '', '', 0.0)
+        self._mediator.correlation_param_change_sgn.emit(i_row, '', '', 0.0)
 
     @QtCore.pyqtSlot()
     def onCorrelationParamChangeLe(self, i_row):
@@ -229,7 +227,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         ppt = self._table.cellWidget(i_row, 2).text()
         res = float(self._table.cellWidget(i_row, 3).text())
 
-        self.correlation_param_change_sgn.emit(i_row, device_id, ppt, res)
+        self._mediator.correlation_param_change_sgn.emit(
+            i_row, device_id, ppt, res)
 
     @QtCore.pyqtSlot(str)
     def onCorrelationParamChangeCb(self, i_row):
@@ -237,4 +236,5 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         ppt = self._table.cellWidget(i_row, 2).currentText()
         res = float(self._table.cellWidget(i_row, 3).text())
 
-        self.correlation_param_change_sgn.emit(i_row, device_id, ppt, res)
+        self._mediator.correlation_param_change_sgn.emit(
+            i_row, device_id, ppt, res)

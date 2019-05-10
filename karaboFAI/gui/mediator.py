@@ -35,6 +35,7 @@ class Mediator(QObject):
     # index, device ID, property name, resolution
     correlation_param_change_sgn = pyqtSignal(int, str, str, float)
     correlation_fom_change_sgn = pyqtSignal(object)
+    correlation_state_reset_sgn = pyqtSignal()
 
     reset_image_level_sgn = pyqtSignal()
 
@@ -111,6 +112,10 @@ class Mediator(QObject):
 
         self.correlation_fom_change_sgn.connect(
             scheduler.onCorrelationFomChange)
+        self.correlation_param_change_sgn.connect(
+            scheduler.onCorrelationParamChange)
+        self.correlation_state_reset_sgn.connect(
+            scheduler.onCorrelationReset)
 
         self.pulse_id_range_sgn.connect(scheduler.onPulseIdRangeChange)
 

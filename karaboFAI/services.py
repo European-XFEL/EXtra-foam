@@ -94,11 +94,6 @@ class FaiServer:
         self._gui.ai_ctrl_widget.pulsed_ai_cb.stateChanged.connect(
             self._scheduler.onPulsedAiStateChange)
 
-        self._gui.correlation_ctrl_widget.correlation_param_change_sgn.connect(
-            self._scheduler.onCorrelationParamChange)
-        self._gui.correlation_ctrl_widget.clear_btn.clicked.connect(
-            self._scheduler.onCorrelationReset)
-
         self._gui.start_bridge_sgn.connect(self._bridge.start)
         self._gui.start_bridge_sgn.connect(self._maybe_start_scheduler)
         self._gui.stop_bridge_sgn.connect(self.stop_bridge)
