@@ -73,10 +73,6 @@ class FaiServer:
         self._gui = MainGUI()
         self._gui.connectInput(self._scheduler)
 
-        if config['REQUIRE_GEOMETRY']:
-            self._gui.geometry_ctrl_widget.geometry_sgn.connect(
-                self._scheduler.onGeometryChange)
-
         self._gui.ai_ctrl_widget.photon_energy_sgn.connect(
             self._scheduler.onPhotonEnergyChange)
         self._gui.ai_ctrl_widget.sample_distance_sgn.connect(

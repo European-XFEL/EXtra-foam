@@ -40,6 +40,9 @@ class Mediator(QObject):
 
     pulse_id_range_sgn = pyqtSignal(int, int)
 
+    # (geometry file, quadrant positions)
+    geometry_sgn = pyqtSignal(str, list)
+
     source_type_change_sgn = pyqtSignal(int)
     detector_source_change_sgn = pyqtSignal(str)
     xgm_source_change_sgn = pyqtSignal(str)
@@ -110,6 +113,8 @@ class Mediator(QObject):
             scheduler.onCorrelationFomChange)
 
         self.pulse_id_range_sgn.connect(scheduler.onPulseIdRangeChange)
+
+        self.geometry_sgn.connect(scheduler.onGeometryChange)
 
     def connect_bridge(self, bridge):
         self.bridge_endpoint_sgn.connect(bridge.onEndpointChange)

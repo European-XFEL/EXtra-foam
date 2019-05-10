@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import Qt, QtCore, QtGui
+from ..pyqtgraph import Qt, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_table_widget
@@ -19,8 +19,6 @@ from ...logger import logger
 
 class GeometryCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the geometry parameters."""
-    # (geometry file, quadrant positions)
-    geometry_sgn = QtCore.pyqtSignal(str, list)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Geometry setup", *args, **kwargs)
@@ -95,7 +93,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         try:
             geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self.geometry_sgn.emit(geom_file, quad_positions)
+            self._mediator.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + repr(e))
             return False
