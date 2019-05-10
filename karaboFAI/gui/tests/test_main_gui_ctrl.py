@@ -84,11 +84,21 @@ class TestMainGui(unittest.TestCase):
         # --------------------------
         # test setting max pulse ID
         # --------------------------
+        photon_energy = 12.4
+        photon_wavelength = 1.0e-10
+        sample_dist = 0.3
+
+        widget._photon_energy_le.setText(str(photon_energy))
+        widget._sample_dist_le.setText(str(sample_dist))
 
         widget.updateSharedParameters()
         self.assertEqual((0, 2700), scheduler._image_assembler.pulse_id_range)
 
         widget._max_pulse_id_le.setText("1000")
+        self.assertAlmostEqual(
+            scheduler._ai_proc.wavelength, photon_wavelength, 13)
+        self.assertAlmostEqual(scheduler._ai_proc.sample_distance, sample_dist)
+
         widget.updateSharedParameters()
         self.assertEqual((0, 1001), scheduler._image_assembler.pulse_id_range)
 
@@ -96,9 +106,6 @@ class TestMainGui(unittest.TestCase):
         widget = self.gui.ai_ctrl_widget
         scheduler = self.scheduler
 
-        photon_energy = 12.4
-        photon_wavelength = 1.0e-10
-        sample_dist = 0.3
         cx = 1024
         cy = 512
         itgt_method = 'nosplit_csr'
@@ -108,8 +115,6 @@ class TestMainGui(unittest.TestCase):
         aux_x_range = (0.2, 0.3)
         fom_itgt_range = (0.3, 0.4)
 
-        widget._photon_energy_le.setText(str(photon_energy))
-        widget._sample_dist_le.setText(str(sample_dist))
         widget._cx_le.setText(str(cx))
         widget._cy_le.setText(str(cy))
         widget._itgt_method_cb.setCurrentText(itgt_method)
@@ -123,8 +128,6 @@ class TestMainGui(unittest.TestCase):
         self.assertTrue(self.gui.updateSharedParameters())
 
         self.assertFalse(scheduler._ai_proc.pulsed_ai)
-        self.assertAlmostEqual(scheduler._ai_proc.wavelength, photon_wavelength, 13)
-        self.assertAlmostEqual(scheduler._ai_proc.sample_distance, sample_dist)
         self.assertTupleEqual(scheduler._ai_proc.integration_center, (cx, cy))
         self.assertEqual(scheduler._ai_proc.integration_method, itgt_method)
         self.assertEqual(scheduler._ai_proc.integration_points, itgt_pts)

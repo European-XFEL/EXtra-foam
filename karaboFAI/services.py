@@ -73,10 +73,6 @@ class FaiServer:
         self._gui = MainGUI()
         self._gui.connectInput(self._scheduler)
 
-        self._gui.ai_ctrl_widget.photon_energy_sgn.connect(
-            self._scheduler.onPhotonEnergyChange)
-        self._gui.ai_ctrl_widget.sample_distance_sgn.connect(
-            self._scheduler.onSampleDistanceChange)
         self._gui.ai_ctrl_widget.integration_center_sgn.connect(
             self._scheduler.onIntegrationCenterChange)
         self._gui.ai_ctrl_widget.integration_method_sgn.connect(

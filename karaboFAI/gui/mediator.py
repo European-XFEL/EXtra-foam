@@ -29,6 +29,8 @@ class Mediator(QObject):
     vip_pulse_id2_sgn = pyqtSignal(int)
     # tell the control widget to update VIP pulse IDs
     vip_pulse_ids_connected_sgn = pyqtSignal()
+    photon_energy_change_sgn = pyqtSignal(float)
+    sample_distance_change_sgn = pyqtSignal(float)
 
     roi_displayed_range_sgn = pyqtSignal(int)
 
@@ -118,6 +120,9 @@ class Mediator(QObject):
             scheduler.onCorrelationReset)
 
         self.pulse_id_range_sgn.connect(scheduler.onPulseIdRangeChange)
+        self.photon_energy_change_sgn.connect(scheduler.onPhotonEnergyChange)
+        self.sample_distance_change_sgn.connect(
+            scheduler.onSampleDistanceChange)
 
         self.geometry_sgn.connect(scheduler.onGeometryChange)
 

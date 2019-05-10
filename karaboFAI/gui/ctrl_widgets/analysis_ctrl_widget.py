@@ -12,6 +12,8 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ...config import config
+from ...logger import logger
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):
@@ -48,8 +50,16 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
         self._vip_pulse_id2_le.setValidator(self._pulse_id_validator)
 
+        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
+
+        self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
+        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
+
         self._non_reconfigurable_widgets = [
             self._max_pulse_id_le,
+            self._photon_energy_le,
+            self._sample_dist_le,
         ]
 
         self.initUI()
@@ -73,6 +83,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             layout.addWidget(QtGui.QLabel("VIP pulse ID 2: "), 1, 2, AR)
             layout.addWidget(self._vip_pulse_id2_le, 1, 3)
 
+        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 2, 0, AR)
+        layout.addWidget(self._photon_energy_le, 2, 1)
+        layout.addWidget(QtGui.QLabel("Sample distance (m): "), 2, 2, AR)
+        layout.addWidget(self._sample_dist_le, 2, 3)
+
         self.setLayout(layout)
 
     def initConnections(self):
@@ -90,10 +105,26 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
+        mediator = self._mediator
+
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)
-        self._mediator.pulse_id_range_sgn.emit(*pulse_id_range)
+        mediator.pulse_id_range_sgn.emit(*pulse_id_range)
+
+        photon_energy = float(self._photon_energy_le.text())
+        if photon_energy <= 0:
+            logger.error("<Photon energy>: Invalid input! Must be positive!")
+            return False
+        else:
+            mediator.photon_energy_change_sgn.emit(photon_energy)
+
+        sample_distance = float(self._sample_dist_le.text().strip())
+        if sample_distance <= 0:
+            logger.error("<Sample distance>: Invalid input! Must be positive!")
+            return False
+        else:
+            mediator.sample_distance_change_sgn.emit(sample_distance)
 
         return True
 

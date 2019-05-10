@@ -21,8 +21,6 @@ from ...logger import logger
 
 class AiCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
-    photon_energy_sgn = QtCore.pyqtSignal(float)
-    sample_distance_sgn = QtCore.pyqtSignal(float)
     integration_center_sgn = QtCore.pyqtSignal(int, int)  # (cx, cy)
     integration_method_sgn = QtCore.pyqtSignal(str)
     integration_range_sgn = QtCore.pyqtSignal(float, float)
@@ -45,10 +43,6 @@ class AiCtrlWidget(AbstractCtrlWidget):
         # default state is unchecked
         self.pulsed_ai_cb = QtGui.QCheckBox("Pulsed azimuthal integration")
 
-        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
-        self._photon_energy_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
-        self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
-        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
         self._cx_le = QtGui.QLineEdit(str(config["CENTER_X"]))
         self._cx_le.setValidator(QtGui.QIntValidator())
         self._cy_le = QtGui.QLineEdit(str(config["CENTER_Y"]))
@@ -76,8 +70,6 @@ class AiCtrlWidget(AbstractCtrlWidget):
 
         self._non_reconfigurable_widgets = [
             self.pulsed_ai_cb,
-            self._photon_energy_le,
-            self._sample_dist_le,
             self._cx_le,
             self._cy_le,
             self._itgt_method_cb,
@@ -98,10 +90,6 @@ class AiCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 0, 0, AR)
-        layout.addWidget(self._photon_energy_le, 0, 1)
-        layout.addWidget(QtGui.QLabel("Sample distance (m): "), 1, 0, AR)
-        layout.addWidget(self._sample_dist_le, 1, 1)
         layout.addWidget(QtGui.QLabel("Cx (pixel): "), 2, 0, AR)
         layout.addWidget(self._cx_le, 2, 1)
         layout.addWidget(QtGui.QLabel("Cy (pixel): "), 3, 0, AR)
@@ -128,20 +116,6 @@ class AiCtrlWidget(AbstractCtrlWidget):
     def updateSharedParameters(self):
         """Override"""
         self.pulsed_ai_cb.stateChanged.emit(self.pulsed_ai_cb.checkState())
-
-        photon_energy = float(self._photon_energy_le.text().strip())
-        if photon_energy <= 0:
-            logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return False
-        else:
-            self.photon_energy_sgn.emit(photon_energy)
-
-        sample_distance = float(self._sample_dist_le.text().strip())
-        if sample_distance <= 0:
-            logger.error("<Sample distance>: Invalid input! Must be positive!")
-            return False
-        else:
-            self.sample_distance_sgn.emit(sample_distance)
 
         center_x = int(self._cx_le.text().strip())
         center_y = int(self._cy_le.text().strip())
