@@ -45,9 +45,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._reset_btn.clicked.connect(mediator.reset_xas_sgn)
+        self._reset_btn.clicked.connect(mediator.xas_state_set_sgn)
 
         self._nbins_le.editingFinished.connect(
-            lambda: mediator.energy_bins_change_sgn.emit(
+            lambda: mediator.xas_energy_bins_change_sgn.emit(
                 int(self._nbins_le.text())))
         self._nbins_le.editingFinished.emit()

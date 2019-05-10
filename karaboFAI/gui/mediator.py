@@ -59,8 +59,8 @@ class Mediator(QObject):
     proj1d_auc_x_range_change_sgn = pyqtSignal(float, float)
     proj1d_fom_integ_range_change_sgn = pyqtSignal(float, float)
 
-    reset_xas_sgn = pyqtSignal()
-    energy_bins_change_sgn = pyqtSignal(int)
+    xas_state_set_sgn = pyqtSignal()
+    xas_energy_bins_change_sgn = pyqtSignal(int)
 
     roi_region_change_sgn = pyqtSignal(int, bool, int, int, int, int)
     roi_fom_change_sgn = pyqtSignal(object)
@@ -92,8 +92,8 @@ class Mediator(QObject):
         self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
         self.pp_ma_window_change_sgn.connect(
             scheduler.onPumpProbeMAWindowChange)
-        self.reset_xas_sgn.connect(scheduler.onXasReset)
-        self.energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
+        self.xas_state_set_sgn.connect(scheduler.onXasReset)
+        self.xas_energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
         self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
         self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
         self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
