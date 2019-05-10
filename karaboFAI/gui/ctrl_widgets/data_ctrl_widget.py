@@ -120,6 +120,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self.bridge_endpoint_sgn.connect(mediator.bridge_endpoint_sgn)
 
+        # Note: use textChanged signal for non-reconfigurable QLineEdit
         self._hostname_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(
@@ -188,6 +189,3 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._port_le.setText(str(port))
 
         self._detector_src_cb.addItems(sources)
-        #
-        # self._detector_src_cb.currentIndexChanged.emit(
-        #     self._detector_src_cb.currentIndex())
