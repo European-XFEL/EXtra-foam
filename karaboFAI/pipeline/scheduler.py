@@ -250,9 +250,10 @@ class Scheduler(Worker):
             if self._source_type == DataSource.BRIDGE:
                 # always keep the latest data in the queue
                 try:
-                    self._output.put_nowait(processed_data)
+                    self._output.put(processed_data, timeout=timeout)
                 except Full:
                     self.pop_output()
+                    self.debug("Data dropped by the scheduler")
             else:  # self._source_type == DataSource.FILE:
                 # wait until data in the queue has been processed
                 while not self.isInterruptionRequested():
