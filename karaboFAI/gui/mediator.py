@@ -74,3 +74,35 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._is_initialized = True
+
+    def connect_scheduler(self, scheduler):
+        # with the scheduler
+        self.source_type_change_sgn.connect(scheduler.onSourceTypeChange)
+        self.detector_source_change_sgn.connect(
+            scheduler.onDetectorSourceChange)
+        self.xgm_source_change_sgn.connect(scheduler.onXgmSourceChange)
+        self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
+        self.pp_ma_window_change_sgn.connect(
+            scheduler.onPumpProbeMAWindowChange)
+        self.reset_xas_sgn.connect(scheduler.onXasReset)
+        self.energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
+        self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
+        self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
+        self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
+
+        self.pp_abs_difference_sgn.connect(scheduler.onPpDifferenceTypeChange)
+        self.pp_analysis_type_sgn.connect(scheduler.onPpAnalysisTypeChange)
+
+        self.proj1d_normalizer_change_sgn.connect(
+            scheduler.onProj1dNormalizerChange)
+        self.proj1d_auc_x_range_change_sgn.connect(
+            scheduler.onProj1dAucXRangeChange)
+        self.proj1d_fom_integ_range_change_sgn.connect(
+            scheduler.onProj1dFomIntegRangeChange)
+
+        self.correlation_fom_change_sgn.connect(
+            scheduler.onCorrelationFomChange)
+
+    def connect_bridge(self, bridge):
+        self.bridge_endpoint_sgn.connect(bridge.onEndpointChange)
+        self.source_type_change_sgn.connect(bridge.onSourceTypeChange)

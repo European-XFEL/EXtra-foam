@@ -58,44 +58,8 @@ class FaiServer:
         # -------------------------------------------------------------
         mediator = Mediator()
 
-        # with the bridge
-        mediator.bridge_endpoint_sgn.connect(self._bridge.onEndpointChange)
-
-        # with the scheduler
-        mediator.source_type_change_sgn.connect(
-            self._scheduler.onSourceTypeChange)
-        mediator.source_type_change_sgn.connect(
-            self._bridge.onSourceTypeChange)
-        mediator.detector_source_change_sgn.connect(
-            self._scheduler.onDetectorSourceChange)
-        mediator.xgm_source_change_sgn.connect(
-            self._scheduler.onXgmSourceChange)
-        mediator.mono_source_change_sgn.connect(
-            self._scheduler.onMonoSourceChange)
-        mediator.pp_ma_window_change_sgn.connect(
-            self._scheduler.onPumpProbeMAWindowChange)
-        mediator.reset_xas_sgn.connect(self._scheduler.onXasReset)
-        mediator.energy_bins_change_sgn.connect(
-            self._scheduler.onXasEnergyBinsChange)
-        mediator.roi_region_change_sgn.connect(
-            self._scheduler.onRoiRegionChange)
-        mediator.roi_fom_change_sgn.connect(self._scheduler.onRoiFomChange)
-        mediator.roi_hist_clear_sgn.connect(self._scheduler.onRoiHistClear)
-
-        mediator.pp_abs_difference_sgn.connect(
-            self._scheduler.onPpDifferenceTypeChange)
-        mediator.pp_analysis_type_sgn.connect(
-            self._scheduler.onPpAnalysisTypeChange)
-
-        mediator.proj1d_normalizer_change_sgn.connect(
-            self._scheduler.onProj1dNormalizerChange)
-        mediator.proj1d_auc_x_range_change_sgn.connect(
-            self._scheduler.onProj1dAucXRangeChange)
-        mediator.proj1d_fom_integ_range_change_sgn.connect(
-            self._scheduler.onProj1dFomIntegRangeChange)
-
-        mediator.correlation_fom_change_sgn.connect(
-            self._scheduler.onCorrelationFomChange)
+        mediator.connect_bridge(self._bridge)
+        mediator.connect_scheduler(self._scheduler)
 
         # with the file server
         mediator.start_file_server_sgn.connect(self.start_fileserver)

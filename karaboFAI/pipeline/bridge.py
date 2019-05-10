@@ -49,6 +49,13 @@ class Bridge(Worker):
                     except TimeoutError:
                         continue
 
+                    # Note: the pipeline is not reliable since for whatever
+                    #       reason the output queue could be filled because
+                    #       the consumer has not started. Then, since the
+                    #       bridge is always faster than the processing
+                    #       pipeline, the output queue will stay filled, which
+                    #       make the specification of queue length useless.
+
                     if self._source_type == DataSource.BRIDGE:
                         # always keep the latest data in the queue
                         try:
