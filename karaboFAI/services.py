@@ -203,7 +203,7 @@ def application():
                         choices=[det.upper() for det in config.detectors],
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
-                        help="Enable faulthandler")
+                        help="Run in debug mode")
 
     args = parser.parse_args()
 
@@ -211,6 +211,8 @@ def application():
         import faulthandler
         faulthandler.enable()
         logger.debug("'faulthandler enabled")
+    else:
+        logger.setLevel("INFO")
 
     detector = args.detector
     if detector == 'JUNGFRAU':
