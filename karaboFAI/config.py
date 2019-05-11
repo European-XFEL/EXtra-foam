@@ -12,7 +12,7 @@ All rights reserved.
 import copy
 from enum import IntEnum
 import json
-import os
+import os.path as osp
 import collections
 
 from . import ROOT_PATH
@@ -40,15 +40,13 @@ class PumpProbeType(IntEnum):
     ROI1_BY_ROI2 = 4
 
 
-class FomName(IntEnum):
+class CorrelationFom(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE_FOM = 1
-    # ROI1 - ROI2
-    ROI_SUB = 2
+    ROI_SUB = 2  # ROI1 - ROI2
     ROI1 = 3
     ROI2 = 4
-    # ROI1 + ROI2
-    ROI_SUM = 5
+    ROI_SUM = 5  # ROI1 + ROI2
     # Calculate the FOM based on the azimuthal integration of the mean
     # of the assembled image(s).
     AZIMUTHAL_INTEG_MEAN = 6
@@ -92,8 +90,17 @@ class _Config(dict):
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
-        # colors of ROI1- ROI4
+        # colors of for ROI 1 to 4
         "ROI_COLORS": ['c', 'b', 'o', 'y'],
+        # colors for correlation parameters 1 to 4
+        "CORRELATION_COLORS": ['c', 'b', 'o', 'y'],
+        "REDIS": {
+            # full path of the Redis server executable
+            "EXECUTABLE": osp.join(osp.abspath(
+                osp.dirname(__file__)), "thirdparty/bin/redis-server"),
+            # port of the Redis server
+            "PORT": 6379,
+        }
     }
 
     # system configuration which users are allowed to modify
@@ -182,7 +189,7 @@ class _Config(dict):
             "QUAD_POSITIONS": [[0, 0], [0, 0], [0, 0], [0, 0]],
             # distance from sample to detector plan (orthogonal distance,
             # not along the beam), in meter
-            "DISTANCE": 1.0,
+            "SAMPLE_DISTANCE": 1.0,
             # coordinate of the point of normal incidence along the detector's
             # first dimension, in pixels, PONI1 in pyFAI
             "CENTER_Y": 0,
@@ -215,7 +222,7 @@ class _Config(dict):
                 'lut_ocl'
             ],
             "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
-            "DISTANCE": 5.5,
+            "SAMPLE_DISTANCE": 5.5,
             "CENTER_Y": 490,
             "CENTER_X": 590,
             "PHOTON_ENERGY": 9.3,
@@ -225,8 +232,8 @@ class _Config(dict):
             "SERVER_PORT": 4501,
             "SOURCE_NAME_BRIDGE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
             "SOURCE_NAME_FILE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
-            "GEOMETRY_FILE": os.path.join(os.path.dirname(__file__),
-                                          'geometries/lpd_mar_18.h5'),
+            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
+                                      'geometries/lpd_mar_18.h5'),
             "QUAD_POSITIONS": [[-13.0, -299.0],
                                [11.0, -8.0],
                                [-254.0, 16.0],
@@ -237,7 +244,7 @@ class _Config(dict):
                 'lut_ocl'
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.2, 5],
-            "DISTANCE": 0.4,
+            "SAMPLE_DISTANCE": 0.4,
             "CENTER_Y": 620,
             "CENTER_X": 570,
             "PHOTON_ENERGY": 9.3,
@@ -256,7 +263,7 @@ class _Config(dict):
                 "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
-            "DISTANCE": 2.0,
+            "SAMPLE_DISTANCE": 2.0,
             "CENTER_Y": 512,
             "CENTER_X": 1400,
             "PHOTON_ENERGY": 9.3,
@@ -271,7 +278,7 @@ class _Config(dict):
                 "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
             ],
             "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.02],
-            "DISTANCE": 0.6,
+            "SAMPLE_DISTANCE": 0.6,
             "CENTER_Y": 967,
             "CENTER_X": 480,
             "PHOTON_ENERGY": 0.780,
@@ -279,13 +286,13 @@ class _Config(dict):
         "BaslerCamera": {
             "SERVER_ADDR": "localhost",
             "SERVER_PORT": 45454,
-            "DISTANCE": 1.0,
+            "SAMPLE_DISTANCE": 1.0,
             "CENTER_Y": 512,
             "CENTER_X": 512,
         }
     }
 
-    _filename = os.path.join(ROOT_PATH, "config.json")
+    _filename = osp.join(ROOT_PATH, "config.json")
 
     detectors = list(_detector_readonly_config.keys())
     detectors.remove('DEFAULT')
@@ -303,14 +310,13 @@ class _Config(dict):
 
     def ensure_file(self):
         """Generate the config file if it does not exist."""
-        if not os.path.isfile(self._filename):
+        if not osp.isfile(self._filename):
             cfg = copy.deepcopy(self._system_reconfigurable_config)
 
             for det in self.detectors:
                 cfg[det] = copy.deepcopy(
                     self._detector_reconfigurable_config['DEFAULT'])
                 cfg[det].update(self._detector_reconfigurable_config[det])
-
             with open(self._filename, 'w') as fp:
                 json.dump(cfg, fp, indent=4)
 

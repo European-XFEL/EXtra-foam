@@ -12,6 +12,7 @@ All rights reserved.
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+from scipy import constants
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
@@ -25,44 +26,53 @@ from ...config import AiNormalizer, PumpProbeType
 from ...helpers import profiler
 
 
+def energy2wavelength(energy):
+    # Plank-einstein relation (E=hv)
+    HC_E = 1e-3 * constants.c * constants.h / constants.e
+    return HC_E / energy
+
+
 class AzimuthalIntegrationProcessor(CompositeProcessor):
     """AzimuthalIntegrationProcessor class.
 
     Perform azimuthal integration.
 
     Attributes:
-        pulsed_ai (bool): True for performing azimuthal integration for
+        enable_pulsed_ai (bool): True for performing azimuthal integration for
             individual pulses. It only affect the performance with the
             pulse-resolved detectors.
-        wavelength (float): photon wavelength in meter.
+        photon_energy (float): photon energy in keV.
         sample_distance (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
-        integ_center (tuple): (Cx, Cy) in pixels. (int, int)
+        integ_center_x (int): Cx in pixel.
+        integ_center_y (int): Cy in pixel.
         integ_method (string): the azimuthal integration
             method supported by pyFAI.
         integ_range (tuple): the lower and upper range of
             the integration radial unit. (float, float)
-        integ_pts (int): number of points in the
+        integ_points (int): number of points in the
             integration output pattern.
         normalizer (int): normalizer type for calculating FOM from
             azimuthal integration result.
         auc_range (tuple): x range for calculating AUC, which is used as
             a normalizer of the azimuthal integration.
-        fom_itgt_range (tuple): integration range for calculating FOM from
+        fom_integ_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    pulsed_ai = SharedProperty()
 
     sample_distance = SharedProperty()
-    wavelength = SharedProperty()
-    integ_center = SharedProperty()
+    photon_energy = SharedProperty()
+    integ_center_x = SharedProperty()
+    integ_center_y = SharedProperty()
     integ_method = SharedProperty()
     integ_range = SharedProperty()
-    integ_pts = SharedProperty()
+    integ_points = SharedProperty()
     normalizer = SharedProperty()
     auc_range = SharedProperty()
-    fom_itgt_range = SharedProperty()
+    fom_integ_range = SharedProperty()
+
+    enable_pulsed_ai = SharedProperty()
 
     def __init__(self):
         super().__init__()
@@ -72,6 +82,22 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     def process(self, processed, raw):
         pass
+
+    def update(self):
+        cfg = self._meta.ai_getall()
+        ga_cfg = self._meta.ga_getall()
+
+        self.sample_distance = float(ga_cfg['sample_distance'])
+        self.photon_energy = float(ga_cfg['photon_energy'])
+        self.integ_center_x = int(cfg['integ_center_x'])
+        self.integ_center_y = int(cfg['integ_center_y'])
+        self.integ_method = cfg['integ_method']
+        self.integ_range = self.str2tuple(cfg['integ_range'])
+        self.integ_points = int(cfg['integ_points'])
+        self.normalizer = AiNormalizer(int(cfg['normalizer']))
+        self.auc_range = self.str2tuple(cfg['auc_range'])
+        self.fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
+        self.enable_pulsed_ai = cfg['enable_pulsed_ai'] == 'True'
 
 
 class AiPulsedProcessor(CompositeProcessor):
@@ -86,11 +112,12 @@ class AiPulsedProcessor(CompositeProcessor):
 
     @profiler("Azimuthal integration pulsed processor")
     def process(self, processed, raw=None):
-        if not self.pulsed_ai:
+        if not self.enable_pulsed_ai:
             return
 
-        cx, cy = self.integ_center
-        integ_pts = self.integ_pts
+        cx = self.integ_center_x
+        cy = self.integ_center_y
+        integ_points = self.integ_points
         integ_method = self.integ_method
         integ_range = self.integ_range
 
@@ -109,7 +136,7 @@ class AiPulsedProcessor(CompositeProcessor):
                                  rot1=0,
                                  rot2=0,
                                  rot3=0,
-                                 wavelength=self.wavelength)
+                                 wavelength=energy2wavelength(self.photon_energy))
 
         if assembled.ndim == 3:
             # pulse-resolved
@@ -125,7 +152,7 @@ class AiPulsedProcessor(CompositeProcessor):
 
                 # do integration
                 ret = ai.integrate1d(assembled[i],
-                                     integ_pts,
+                                     integ_points,
                                      method=integ_method,
                                      mask=mask,
                                      radial_range=integ_range,
@@ -151,7 +178,7 @@ class AiPulsedProcessor(CompositeProcessor):
             mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
             ret = ai.integrate1d(assembled,
-                                 integ_pts,
+                                 integ_points,
                                  method=integ_method,
                                  mask=mask,
                                  radial_range=integ_range,
@@ -236,7 +263,7 @@ class AiPulsedFomProcessor(LeafProcessor):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(diff, momentum, *self.fom_itgt_range)[0]
+            fom = slice_curve(diff, momentum, *self.fom_integ_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         processed.ai.pulse_fom = foms
@@ -262,8 +289,9 @@ class AiPumpProbeProcessor(CompositeProcessor):
         if on_image is None or off_image is None:
             raise StopCompositionProcessing
 
-        cx, cy = self.integ_center
-        integ_pts = self.integ_pts
+        cx = self.integ_center_x
+        cy = self.integ_center_y
+        integ_points = self.integ_points
         integ_method = self.integ_method
         integ_range = self.integ_range
 
@@ -281,7 +309,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
                                  rot1=0,
                                  rot2=0,
                                  rot3=0,
-                                 wavelength=self.wavelength)
+                                 wavelength=energy2wavelength(self.photon_energy))
 
         def _integrate1d_on_off_imp(img):
             """Use for multiprocessing."""
@@ -291,7 +319,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
 
             # do integration
             ret = ai.integrate1d(img,
-                                 integ_pts,
+                                 integ_points,
                                  method=integ_method,
                                  mask=mask,
                                  radial_range=integ_range,
@@ -325,7 +353,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
             processed, momentum, on_ma, off_ma)
         norm_on_off_ma = norm_on_ma - norm_off_ma
 
-        fom = slice_curve(norm_on_off_ma, momentum, *self.fom_itgt_range)[0]
+        fom = slice_curve(norm_on_off_ma, momentum, *self.fom_integ_range)[0]
         if processed.pp.abs_difference:
             fom = np.sum(np.abs(fom))
         else:
@@ -334,7 +362,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma
         processed.pp.norm_on_off_ma = norm_on_off_ma
-        processed.pp.fom = (processed.tid, fom)
+        processed.pp.fom = fom
 
     def _normalize(self, processed, momentum, on, off):
         auc_range = self.auc_range

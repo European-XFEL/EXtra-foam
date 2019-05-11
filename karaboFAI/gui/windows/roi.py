@@ -78,5 +78,4 @@ class RoiWindow(DockerWindow):
 
     def initConnections(self):
         """Override."""
-        self._mediator.roi_displayed_range_sgn.connect(
-            self._roi_intensity.onDisplayRangeChange)
+        pass

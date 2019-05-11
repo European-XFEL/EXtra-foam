@@ -1,7 +1,11 @@
 import unittest
 from collections import Counter
+import os
+import tempfile
 
-from karaboFAI.services import FaiServer
+from karaboFAI.config import _Config, ConfigWrapper
+from karaboFAI.services import Fai
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.windows.base_window import AbstractWindow
 from karaboFAI.gui.windows import (
@@ -20,11 +24,18 @@ from karaboFAI.gui.plot_widgets import (
 class TestOverviewWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = FaiServer('LPD')._gui
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()  # ensure file
+
+        cls.fai = Fai('LPD')
+        cls.fai.init()
+        cls.gui = cls.fai.gui
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+        cls.fai.shutdown()
 
     def testOverviewWindow(self):
         win = OverviewWindow(pulse_resolved=True, parent=self.gui)
@@ -76,13 +87,23 @@ class TestOverviewWindow(unittest.TestCase):
 
 class TestPulsedAiWindow(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()  # ensure file
+
+        mkQApp()
+
     def testPulseResolved(self):
-        gui = FaiServer('LPD')._gui
+        fai = Fai('LPD')
+        fai.init()
+        gui = fai.gui
 
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
 
-        self.assertEqual(len(self._win._plot_widgets),6)
+        self.assertEqual(len(self._win._plot_widgets), 6)
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
@@ -92,10 +113,14 @@ class TestPulsedAiWindow(unittest.TestCase):
         self.assertEqual(counter[SinglePulseAiWidget], 2)
         self.assertEqual(counter[SinglePulseImageView], 2)
 
+        fai.shutdown()
         gui.close()
 
     def testTrainResolved(self):
-        gui = FaiServer('JungFrau')._gui
+        fai = Fai('JungFrau')
+        fai.init()
+        gui = fai.gui
+
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=False, parent=gui)
 
@@ -106,13 +131,14 @@ class TestPulsedAiWindow(unittest.TestCase):
 
         self.assertEqual(counter[SinglePulseAiWidget], 1)
 
+        fai.shutdown()
         gui.close()
 
 
 class TestSingletonWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        FaiServer.qt_app()
+        mkQApp()
         SingletonWindow._instances.clear()
 
     @SingletonWindow

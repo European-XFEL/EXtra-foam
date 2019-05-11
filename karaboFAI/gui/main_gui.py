@@ -15,11 +15,11 @@ from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
 
-from .pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, CorrelationCtrlWidget, DataCtrlWidget,
-    GeometryCtrlWidget, PumpProbeCtrlWidget, Projection1dCtrlWidget,
+    GeometryCtrlWidget, PumpProbeCtrlWidget, RoiCtrlWidget,
     XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
@@ -42,10 +42,8 @@ class MainGUI(QtGui.QMainWindow):
 
     image_mask_sgn = QtCore.pyqtSignal(str)  # filename
 
-    start_bridge_sgn = QtCore.pyqtSignal()
-    stop_bridge_sgn = QtCore.pyqtSignal()
-
-    closed_sgn = QtCore.pyqtSignal()
+    start_sgn = QtCore.pyqtSignal()
+    stop_sgn = QtCore.pyqtSignal()
 
     def __init__(self):
         """Initialization."""
@@ -71,7 +69,7 @@ class MainGUI(QtGui.QMainWindow):
         self._start_at.triggered.connect(self.onStart)
 
         self._stop_at = self._addAction("Stop bridge", "stop.png")
-        self._stop_at.triggered.connect(self.stop_bridge_sgn)
+        self._stop_at.triggered.connect(self.onStop)
         self._stop_at.setEnabled(False)
 
         image_tool_at = self._addAction("Image tool", "image_tool.png")
@@ -136,7 +134,7 @@ class MainGUI(QtGui.QMainWindow):
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
-        self.projection1d_ctrl_widget = Projection1dCtrlWidget(
+        self.roi_ctrl_widget = RoiCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
         self.correlation_ctrl_widget = CorrelationCtrlWidget(
@@ -161,7 +159,7 @@ class MainGUI(QtGui.QMainWindow):
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
         analysis_layout.addWidget(self.azimuthal_integ_ctrl_widget)
-        analysis_layout.addWidget(self.projection1d_ctrl_widget)
+        analysis_layout.addWidget(self.roi_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)
 
@@ -185,12 +183,10 @@ class MainGUI(QtGui.QMainWindow):
         if not self._running:
             return
 
-        # TODO: improve plot updating
-        # Use multithreading for plot updating. However, this is not the
-        # bottleneck for the performance.
-
         try:
-            self._data.set(self._input.get_nowait())
+            processed_data = self._input.get_nowait()
+            processed_data.update_hist()
+            self._data.set(processed_data)
         except Empty:
             return
 
@@ -243,27 +239,29 @@ class MainGUI(QtGui.QMainWindow):
         if not self.updateSharedParameters():
             return
 
-        self.start_bridge_sgn.emit()
-
-    def onBridgeStarted(self):
-        """Actions taken before the start of a 'run'."""
-        self._running = True  # starting to update plots
+        self.start_sgn.emit()
 
         self._start_at.setEnabled(False)
         self._stop_at.setEnabled(True)
 
         for widget in self._ctrl_widgets:
-            widget.onBridgeStarted()
+            widget.onStart()
 
-    def onBridgeStopped(self):
+        self._running = True  # starting to update plots
+
+    def onStop(self):
         """Actions taken before the end of a 'run'."""
         self._running = False
+
+        self.stop_sgn.emit()
+
+        # TODO: wait for some signal
 
         self._start_at.setEnabled(True)
         self._stop_at.setEnabled(False)
 
         for widget in self._ctrl_widgets:
-            widget.onBridgeStopped()
+            widget.onStop()
 
     def updateSharedParameters(self):
         """Update shared parameters for all child windows.
@@ -294,7 +292,8 @@ class MainGUI(QtGui.QMainWindow):
         logger.error(msg)
 
     def closeEvent(self, QCloseEvent):
-        self.closed_sgn.emit()
+        # prevent from logging in the GUI when it has been closed
+        logging.getLogger().removeHandler(self._logger)
 
         # useful in unittests
         SingletonWindow._instances.clear()

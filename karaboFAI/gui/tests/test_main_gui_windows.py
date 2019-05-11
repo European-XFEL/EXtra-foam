@@ -1,6 +1,10 @@
 import unittest
+import tempfile
+import os
 
-from karaboFAI.services import FaiServer
+from karaboFAI.config import _Config, ConfigWrapper
+from karaboFAI.services import Fai
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
     CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
 )
@@ -9,12 +13,18 @@ from karaboFAI.gui.windows import (
 class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        server = FaiServer('LPD')
-        cls.gui = server._gui
-        cls.app = server.qt_app()
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()  # ensure file
+
+        cls.fai = Fai('LPD')
+        cls.app = mkQApp()
+        cls.fai.init()
+        cls.gui = cls.fai.gui
 
     @classmethod
     def tearDownClass(cls):
+        cls.fai.shutdown()
         cls.gui.close()
 
     def testOpenCloseWindows(self):

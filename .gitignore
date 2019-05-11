@@ -1,6 +1,11 @@
 .cache
 .coverage
 docs/_build
+cmake-build-debug
+build/
+
+dump.rdb
+*.so
 
 .ipynb_checkpoints
 *.pyc

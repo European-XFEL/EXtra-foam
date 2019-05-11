@@ -46,6 +46,11 @@ class XasProcessor(LeafProcessor):
 
         self.reset()
 
+    def update(self):
+        cfg = self._meta.xas_getall()
+
+        self.n_bins = int(cfg["energy_bins"])
+
     @profiler("XAS processor")
     def process(self, processed, raw=None):
         """Override."""

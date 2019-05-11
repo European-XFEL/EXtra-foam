@@ -3,65 +3,47 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Abstract class worker.
+Abstract process worker class.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from queue import Empty, Queue
+import multiprocessing as mp
+from queue import Empty
 
-# import QtCore inside package pipeline from package gui will result in
-# circle import
-from PyQt5.QtCore import pyqtSignal, QThread
-
-from ..config import config
+from ..metadata import MetadataProxy
+from ..config import config, DataSource
 
 
-class Worker(QThread):
-    # post messages in the main GUI
-    debug_sgn = pyqtSignal(str)
-    info_sgn = pyqtSignal(str)
-    warning_sgn = pyqtSignal(str)
-    error_sgn = pyqtSignal(str)
-
-    def __init__(self):
+class ProcessWorker(mp.Process):
+    """Base worker class for heavy online data analysis."""
+    def __init__(self, name):
         super().__init__()
 
-        self._input = None
-        self._output = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._name = name
+        self._source_type = None
+
+        self._input = mp.Manager().Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._output = mp.Manager().Queue(maxsize=config["MAX_QUEUE_SIZE"])
+
+        self._shutdown_event = mp.Event()
+
+        self._meta = MetadataProxy()
 
     @property
     def output(self):
         return self._output
 
     def connect_input(self, worker):
-        if not isinstance(worker, Worker):
-            raise ValueError
+        if not isinstance(worker, ProcessWorker):
+            raise TypeError("QThreadWorker is only allowed to connect "
+                            "QThreadWorker instance.")
 
         self._input = worker.output
 
-    def debug(self, msg):
-        """Log debug information in the main GUI."""
-        self.debug_sgn.emit(msg)
-
-    def info(self, msg):
-        """Log info information in the main GUI."""
-        self.info_sgn.emit(msg)
-
-    def warning(self, msg):
-        """Log warning information in the main GUI."""
-        self.warning_sgn.emit(msg)
-
-    def error(self, msg):
-        """Log error information in the main GUI."""
-        self.error_sgn.emit(msg)
-
-    def log_on_main_thread(self, instance):
-        self.debug_sgn.connect(instance.onDebugReceived)
-        self.info_sgn.connect(instance.onInfoReceived)
-        self.warning_sgn.connect(instance.onWarningReceived)
-        self.error_sgn.connect(instance.onErrorReceived)
+    def shutdown(self):
+        self._shutdown_event.set()
 
     def empty_output(self):
         """Empty the output queue."""
@@ -77,3 +59,7 @@ class Worker(QThread):
             return self._output.get_nowait()
         except Empty:
             pass
+
+    def update(self):
+        self._source_type = DataSource(
+            int(self._meta.ds_get('source_type')))

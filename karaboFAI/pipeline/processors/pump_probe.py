@@ -44,6 +44,16 @@ class PumpProbeProcessor(CompositeProcessor):
         self.add(PumpProbePreProcessor())
         self.add(PumpProbeImageProcessor())
 
+    def update(self):
+        cfg = self._meta.pp_getall()
+
+        self.mode = PumpProbeMode(int(cfg['mode']))
+        self.on_pulse_ids = self.str2list(cfg['on_pulse_ids'], handler=int)
+        self.off_pulse_ids = self.str2list(cfg['off_pulse_ids'], handler=int)
+        self.analysis_type = PumpProbeType(int(cfg['analysis_type']))
+        self.ma_window = int(cfg['ma_window'])
+        self.abs_difference = cfg['abs_difference'] == 'True'
+
 
 class PumpProbePreProcessor(LeafProcessor):
 

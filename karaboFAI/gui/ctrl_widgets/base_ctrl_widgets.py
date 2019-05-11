@@ -50,11 +50,11 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         """Initialization of UI."""
         raise NotImplementedError
 
-    def onBridgeStarted(self):
+    def onStart(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
 
-    def onBridgeStopped(self):
+    def onStop(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
 

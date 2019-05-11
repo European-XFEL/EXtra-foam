@@ -12,6 +12,8 @@ All rights reserved.
 import logging
 import threading
 
+from PyQt5.QtGui import QValidator
+
 from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
@@ -115,50 +117,92 @@ class GuiLogger(logging.Handler):
             self.widget.appendPlainText(self.format(record))
 
 
-class _SmartLineEdit(QtGui.QLineEdit):
+class SmartLineEdit(QtGui.QLineEdit):
     """A smart QLineEdit.
 
-    - It stores the latest valid value and restore the value if the
-      current input is invalid.
-    - One can get the parsed result via a signal-slot connection.
+    - It is highlighted when modified but not confirmed.
+    - It restores the previous valid input when ESC is pressed. Still,
+      one must press enter to confirm the value.
     """
-    # signal emitted when a new valid input is applied
-    value_changed_sgn = QtCore.pyqtSignal(object)
 
-    def __init__(self, content, handler=None, parent=None):
-        """Initialization
+    def __init__(self, *args, **kwargs):
+        """Initialization"""
+        super().__init__(*args, **kwargs)
 
-        :param str content: Initial value of the QLineEdit
-        :param callable handler: a handler use to validate and parse the
-            content. If handler raises, only ValueError will be handled.
-        """
-        super().__init__(content, parent=parent)
+        self._text_modified = False
+        self._cached = None
 
-        self._handler = handler
-        if self._handler is None:
-            raise NotImplementedError
-        else:
-            # validate the initial value
-            self._handler(content)
+        self.textChanged.connect(self.onTextChanged)
 
-        self._cached = content
-
+        self.returnPressed.connect(self.onTextChangeConfirmed)
         self.returnPressed.connect(self.onReturnPressed)
 
+    def onTextChanged(self):
+        if not self._text_modified:
+            self.setStyleSheet(
+                f"QLineEdit {{ background: rgb{Colors().o[:3]}}}")
+            self._text_modified = True
+
+    def onTextChangeConfirmed(self):
+        self.setStyleSheet("QLineEdit { background: rgb(255, 255, 255)}")
+        self._text_modified = False
+
+    def setText(self, text):
+        """'Press enter' after setText.
+
+        This will remove the background color used when modified.
+        """
+        super().setText(text)
+        self.returnPressed.emit()
+
+    def setTextWithoutSignal(self, text):
+        """SetText without signaling returnPressed."""
+        super().setText(text)
+
+    def keyPressEvent(self, event):
+        """Press ESC to return to the previous valid value."""
+        key = event.key()
+        if key == QtCore.Qt.Key_Escape:
+            self.setTextWithoutSignal(self._cached)
+        else:
+            return super().keyPressEvent(event)
+
     def onReturnPressed(self):
-        try:
-            content = self.text()
-            validated = self._handler(content)
-            self._cached = content
-            self.value_changed_sgn.emit(*validated)
-        except ValueError as e:
-            # restore the cached valid value
-            self.setText(self._cached)
-            logger.error(repr(e))
+        self._cached = self.text()
 
 
-class SmartBoundaryLineEdit(_SmartLineEdit):
-    value_changed_sgn = QtCore.pyqtSignal(float, float)
+class SmartBoundaryLineEdit(SmartLineEdit):
+
+    value_changed_sgn = QtCore.pyqtSignal(object)
+
+    class ValidateBoundary(QValidator):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+        def validate(self, s, pos):
+            try:
+                self.parse(s)
+                return QValidator.Acceptable, s, pos
+            except ValueError:
+                return QValidator.Intermediate, s, pos
+
+        @staticmethod
+        def parse(s):
+            parse_boundary(s)
 
     def __init__(self, content, parent=None):
-        super().__init__(content, parse_boundary, parent=parent)
+        super().__init__(content, parent=parent)
+
+        try:
+            self.ValidateBoundary.parse(content)
+        except ValueError:
+            raise
+
+        self._cached = self.text()
+
+        self.setValidator(self.ValidateBoundary())
+
+    def onReturnPressed(self):
+        self._cached = self.text()
+        # convert it to str in order to store in Redis
+        self.value_changed_sgn.emit(str(parse_boundary(self.text())))

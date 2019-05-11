@@ -12,38 +12,25 @@ All rights reserved.
 import sys, traceback
 from queue import Empty, Full
 
-from scipy import constants
-
-from PyQt5 import QtCore
-
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
-from .data_model import CorrelationData, ProcessedData, PumpProbeData, RoiData
-from .worker import Worker
+from .data_model import ProcessedData
+from .worker import ProcessWorker
 from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
     PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import (
-    AggregatingError, AssemblingError, GeometryFileError, ProcessingError)
-from ..config import config, DataSource, FomName, PumpProbeMode
+    AggregatingError, AssemblingError, ProcessingError)
+from ..config import config, DataSource
 from ..helpers import profiler
 
 
-class Scheduler(Worker):
+class Scheduler(ProcessWorker):
     """Pipeline scheduler."""
-    __instance = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls, *args, **kwargs)
-        return cls.__instance
-
-    def __init__(self):
+    def __init__(self, name="scheduler"):
         """Initialization."""
-        super().__init__()
-
-        self._source_type = None
+        super().__init__(name)
 
         self._tasks = []
 
@@ -59,13 +46,9 @@ class Scheduler(Worker):
         # CorrelationProcessor, XasProcessor
 
         self._pp_proc = PumpProbeProcessor()
-
         self._roi_proc = RoiProcessor()
-
         self._ai_proc = AzimuthalIntegrationProcessor()
-
         self._correlation_proc = CorrelationProcessor()
-
         self._xas_proc = XasProcessor()
 
     def __setattr__(self, key, value):
@@ -73,200 +56,54 @@ class Scheduler(Worker):
             self._tasks.append(value)
         super().__setattr__(key, value)
 
-    @QtCore.pyqtSlot(str)
-    def onDetectorSourceChange(self, src):
-        self._image_assembler.source_name = src
-
-    @QtCore.pyqtSlot(int)
-    def onSourceTypeChange(self, value):
-        self._image_assembler.source_type = value
-        self._source_type = value
-
-    @QtCore.pyqtSlot(str)
-    def onXgmSourceChange(self, name):
-        self._data_aggregator.xgm_src = name
-
-    @QtCore.pyqtSlot(str)
-    def onMonoSourceChange(self, name):
-        self._data_aggregator.mono_src = name
-
-    @QtCore.pyqtSlot(str, list)
-    def onGeometryChange(self, filename, quad_positions):
-        try:
-            self._image_assembler.load_geometry(
-                filename, quad_positions)
-            self.info(f"Loaded geometry from {filename}")
-        except GeometryFileError as e:
-            self.error(repr(e))
-
-    @QtCore.pyqtSlot(int, int)
-    def onPulseIdRangeChange(self, lb, ub):
-        self._image_assembler.pulse_id_range = (lb, ub)
-
-    @QtCore.pyqtSlot(float)
-    def onPhotonEnergyChange(self, photon_energy):
-        """Compute photon wavelength (m) from photon energy (keV)."""
-        # Plank-einstein relation (E=hv)
-        HC_E = 1e-3 * constants.c * constants.h / constants.e
-        self._ai_proc.wavelength = HC_E / photon_energy
-
-    @QtCore.pyqtSlot(float)
-    def onSampleDistanceChange(self, value):
-        self._ai_proc.sample_distance = value
-
-    @QtCore.pyqtSlot(object, list, list)
-    def onPpPulseStateChange(self, mode, on_pulse_ids, off_pulse_ids):
-        if mode != self._pp_proc.mode:
-            self._pp_proc.mode = mode
-            PumpProbeData.clear()
-            if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
-                CorrelationData.clear()
-
-        self._pp_proc.on_pulse_ids = on_pulse_ids
-        self._pp_proc.off_pulse_ids = off_pulse_ids
-
-    @QtCore.pyqtSlot(object)
-    def onPpAnalysisTypeChange(self, value):
-        if value != self._pp_proc.analysis_type:
-            self._pp_proc.analysis_type = value
-            PumpProbeData.clear()
-
-            if self._correlation_proc.fom_name == FomName.PUMP_PROBE_FOM:
-                CorrelationData.clear()
-
-    @QtCore.pyqtSlot(bool)
-    def onPpDifferenceTypeChange(self, is_checked):
-        self._pp_proc.abs_difference = is_checked
-
-    @QtCore.pyqtSlot(object)
-    def onProj1dNormalizerChange(self, normalizer):
-        self._roi_proc.proj1d_normalizer = normalizer
-
-    @QtCore.pyqtSlot(float, float)
-    def onProj1dAucXRangeChange(self, lb, ub):
-        self._roi_proc.proj1d_auc_range = (lb, ub)
-
-    @QtCore.pyqtSlot(float, float)
-    def onProj1dFomIntegRangeChange(self, lb, ub):
-        self._roi_proc.proj1d_fom_integ_range = (lb, ub)
-
-    @QtCore.pyqtSlot(object)
-    def onProj1dNormalizerChange(self, normalizer):
-        self._roi_proc.proj1d_normalizer = normalizer
-
-    @QtCore.pyqtSlot(float, float)
-    def onAiAucRangeChange(self, lb, ub):
-        self._ai_proc.auc_range = (lb, ub)
-
-    @QtCore.pyqtSlot(object)
-    def onAiNormalizeChange(self, normalizer):
-        self._ai_proc.normalizer = normalizer
-
-    @QtCore.pyqtSlot(int, int)
-    def onAiIntegCenterChange(self, cx, cy):
-        self._ai_proc.integ_center = (cx, cy)
-
-    @QtCore.pyqtSlot(str)
-    def onAiIntegMethodChange(self, value):
-        self._ai_proc.integ_method = value
-
-    @QtCore.pyqtSlot(float, float)
-    def onAiIntegRangeChange(self, lb, ub):
-        self._ai_proc.integ_range = (lb, ub)
-
-    @QtCore.pyqtSlot(int)
-    def onAiIntegPtsChange(self, value):
-        self._ai_proc.integ_pts = value
-
-    @QtCore.pyqtSlot(float, float)
-    def onAiFomIntegRangeChange(self, lb, ub):
-        self._ai_proc.fom_itgt_range = (lb, ub)
-        self._pp_proc.fom_itgt_range = (lb, ub)
-        self._correlation_proc.fom_itgt_range = (lb, ub)
-
-    @QtCore.pyqtSlot(bool)
-    def onAiPulsedIntegStateChange(self, state):
-        self._ai_proc.pulsed_ai = state
-
-    @QtCore.pyqtSlot()
-    def onPumpProbeReset(self):
-        PumpProbeData.clear()
-
-    @QtCore.pyqtSlot()
-    def onCorrelationReset(self):
-        CorrelationData.clear()
-
-    @QtCore.pyqtSlot(int, str, str, float)
-    def onCorrelationParamChange(self, idx, device_id, ppt, resolution):
-        ProcessedData.add_correlator(idx, device_id, ppt, resolution)
-
-    @QtCore.pyqtSlot(object)
-    def onCorrelationFomChange(self, fom):
-        if self._correlation_proc.fom_name != fom:
-            self._correlation_proc.fom_name = fom
-            CorrelationData.clear()
-
-    @QtCore.pyqtSlot(int)
-    def onPumpProbeMAWindowChange(self, n):
-        self._pp_proc.ma_window = n
-
-    @QtCore.pyqtSlot(int)
-    def onXasEnergyBinsChange(self, n):
-        self._xas_proc.n_bins = n
-
-    @QtCore.pyqtSlot()
-    def onXasReset(self):
-        self._xas_proc.reset()
-
-    @QtCore.pyqtSlot(int, bool, int, int, int, int)
-    def onRoiRegionChange(self, rank, activated, w, h, px, py):
-        if activated:
-            self._roi_proc.set_roi(rank, (w, h, px, py))
-        else:
-            self._roi_proc.set_roi(rank, None)
-
-    @QtCore.pyqtSlot(object)
-    def onRoiFomChange(self, value):
-        self._roi_proc.fom_type = value
-        RoiData.clear()
-
-    @QtCore.pyqtSlot()
-    def onRoiHistClear(self):
-        RoiData.clear()
-
     def run(self):
         """Run the data processor."""
         self.empty_output()  # remove old data
 
         timeout = config['TIMEOUT']
-        self.info("Scheduler started!")
-        while not self.isInterruptionRequested():
+        print("Scheduler processes started!")
+
+        while not self._shutdown_event.is_set():
             try:
                 data = self._input.get(timeout=timeout)
             except Empty:
                 continue
 
+            self.update()
+
+            self._data_aggregator.update()
+            self._image_assembler.update()
+
+            self._ai_proc.update()
+            self._pp_proc.update()
+            self._roi_proc.update()
+            self._xas_proc.update()
+            self._correlation_proc.update()
+
             processed_data = self._process(data)
+            print("Data was processed")
             if processed_data is None:
                 continue
-
             if self._source_type == DataSource.BRIDGE:
                 # always keep the latest data in the queue
                 try:
                     self._output.put(processed_data, timeout=timeout)
                 except Full:
                     self.pop_output()
-                    self.debug("Data dropped by the scheduler")
-            else:  # self._source_type == DataSource.FILE:
+                    print("Data dropped by the scheduler")
+            elif self._source_type == DataSource.FILE:
                 # wait until data in the queue has been processed
-                while not self.isInterruptionRequested():
+                while not self._shutdown_event.is_set():
                     try:
                         self._output.put(processed_data, timeout=timeout)
                         break
                     except Full:
                         continue
+            else:
+                raise ProcessingError(
+                    f"Unknown source type {self._source_type}!")
 
-        self.info("Scheduler stopped!")
+        print("Scheduler shutdown cleanly!")
 
     @profiler("Process Data (total)")
     def _process(self, data):
@@ -284,37 +121,33 @@ class Scheduler(Worker):
         try:
             assembled = self._image_assembler.assemble(raw)
         except AssemblingError as e:
-            self.error(f"Train ID: {tid}: " + repr(e))
+            print(f"Train ID: {tid}: " + repr(e))
             return None
         except Exception as e:
-            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            raise
+            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         try:
             processed = ProcessedData(tid, assembled)
         except Exception as e:
-            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            raise
+            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         try:
             self._data_aggregator.aggregate(processed, raw)
         except AggregatingError as e:
-            self.error(f"Train ID: {tid}: " + repr(e))
+            print(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
-            self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-            raise
+            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         for task in self._tasks:
             try:
                 task.run_once(processed, raw)
             except ProcessingError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.debug(repr(traceback.format_tb(exc_traceback)))
-                self.error(f"Train ID: {tid}: " + repr(e))
+                print(repr(traceback.format_tb(exc_traceback)))
+                print(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.debug(repr(traceback.format_tb(exc_traceback)))
-                self.error(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
-                raise
+                print(repr(traceback.format_tb(exc_traceback)))
+                print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         return processed

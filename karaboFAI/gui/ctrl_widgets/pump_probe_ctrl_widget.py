@@ -14,6 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..misc_widgets import SmartLineEdit
 from ..gui_helpers import parse_ids
 from ...config import PumpProbeMode, PumpProbeType
 from ...logger import logger
@@ -37,11 +38,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         "projection Y": PumpProbeType.ROI_PROJECTION_Y,
         "ROI1 / ROI2": PumpProbeType.ROI1_BY_ROI2,
     })
-
-    # (mode, on-pulse ids, off-pulse ids)
-    pp_pulse_ids_sgn = QtCore.pyqtSignal(object, list, list)
-    # analysis type
-    pp_analysis_type_sgn = QtCore.pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe analysis setup", *args, **kwargs)
@@ -71,7 +67,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
         self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
 
-        self._ma_window_le = QtGui.QLineEdit("1")
+        self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
         self._reset_btn = QtGui.QPushButton("Reset")
 
@@ -105,26 +101,26 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
         layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
         layout.addWidget(self._abs_difference_cb, 4, 0, 1, 2)
-        layout.addWidget(self._reset_btn, 4, 2, 1, 2)
+        layout.addWidget(self._reset_btn, 4, 3, 1, 1)
 
         self.setLayout(layout)
 
     def initConnections(self):
         mediator = self._mediator
 
-        self.pp_pulse_ids_sgn.connect(mediator.pp_pulse_ids_sgn)
-        self._reset_btn.clicked.connect(mediator.pp_state_reset_sgn)
+        self._reset_btn.clicked.connect(mediator.onPpReset)
 
-        self._ma_window_le.editingFinished.connect(
-            lambda: mediator.pp_ma_window_change_sgn.emit(
+        self._ma_window_le.returnPressed.connect(
+            lambda: mediator.onPpMaWindowChange(
                 int(self._ma_window_le.text())))
-        self._ma_window_le.editingFinished.emit()
+        self._ma_window_le.returnPressed.emit()
 
-        self._abs_difference_cb.toggled.connect(mediator.pp_abs_difference_sgn)
+        self._abs_difference_cb.toggled.connect(
+            mediator.onPpAbsDifferenceChange)
         self._abs_difference_cb.setChecked(True)
 
         self._analysis_type_cb.currentTextChanged.connect(
-            lambda x: mediator.pp_analysis_type_sgn.emit(
+            lambda x: mediator.onPpAnalysisTypeChange(
                 self._analysis_types[x]))
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
@@ -156,6 +152,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
                          "by ',' and/or use the range operator ':'!")
             return False
 
-        self.pp_pulse_ids_sgn.emit(mode, on_pulse_ids, off_pulse_ids)
+        self._mediator.onPpModeChange(mode)
+        self._mediator.onPpOnPulseIdsChange(on_pulse_ids)
+        self._mediator.onPpOffPulseIdsChange(off_pulse_ids)
 
         return True

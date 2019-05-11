@@ -11,6 +11,7 @@ All rights reserved.
 """
 from abc import ABC, abstractmethod
 
+import json
 import numpy as np
 from h5py import File
 
@@ -18,29 +19,56 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
-from .exceptions import AssemblingError, GeometryFileError
+from .processors.base_processor import _RedisParserMixin
+from .exceptions import AssemblingError
 from ..config import config, DataSource
 from ..helpers import profiler
+from ..metadata import MetadataProxy
 
 
 class ImageAssemblerFactory(ABC):
-    class BaseAssembler:
+    class BaseAssembler(_RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:
-            source_name (str): detector data source name.
-            source_type (DataSource): detector data source type.
-            pulse_id_range (tuple): (min, max) pulse ID to be processed.
+            _detector_source_name (str): detector data source name.
+            _source_type (DataSource): detector data source type.
+            _pulse_id_range (tuple): (min, max) pulse ID to be processed.
                 (int, int)
         """
         def __init__(self):
             """Initialization."""
-            self.source_name = None
-            self.source_type = None
+            self._meta = MetadataProxy()
 
+            self._detector_source_name = None
+            self._source_type = None
+            self._pulse_id_range = None
+
+            self._geom_file = None
+            self._quad_position = None
             self._geom = None
 
-            self.pulse_id_range = (None, None)
+        def update(self):
+            ds_cfg = self._meta.ds_getall()
+            self._detector_source_name = ds_cfg["detector_source_name"]
+            self._source_type = DataSource(int(ds_cfg["source_type"]))
+
+            ga_cfg = self._meta.ga_getall()
+
+            self._pulse_id_range = self.str2tuple(
+                ga_cfg['pulse_id_range'], handler=int)
+
+            if config['REQUIRE_GEOMETRY']:
+                geom_cfg = self._meta.geom_getall()
+                geom_file = geom_cfg["geometry_file"]
+                quad_positions = json.loads(geom_cfg["quad_positions"],
+                                            encoding='utf8')
+                if geom_file != self._geom_file or \
+                        quad_positions != self._quad_position:
+                    self.load_geometry(geom_file, quad_positions)
+                    self._geom_file = geom_file
+                    self._quad_position = quad_positions
+                    print(f"Loaded geometry from {geom_file}")
 
         @abstractmethod
         def _get_modules_bridge(self, data, src_name):
@@ -80,8 +108,8 @@ class ImageAssemblerFactory(ABC):
 
             :returns assembled: assembled detector image data.
             """
-            src_name = self.source_name
-            src_type = self.source_type
+            src_name = self._detector_source_name
+            src_type = self._source_type
 
             try:
                 if src_type == DataSource.FILE:
@@ -111,7 +139,7 @@ class ImageAssemblerFactory(ABC):
 
             assembled = self._modules_to_assembled(modules_data)
             if assembled.ndim == 3:
-                assembled = assembled[slice(*self.pulse_id_range)]
+                assembled = assembled[slice(*self._pulse_id_range)]
 
             return assembled
 
@@ -133,7 +161,7 @@ class ImageAssemblerFactory(ABC):
             try:
                 self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
             except (ImportError, ModuleNotFoundError, OSError) as e:
-                raise GeometryFileError(e)
+                raise AssemblingError(e)
 
     class LpdImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")
@@ -156,7 +184,7 @@ class ImageAssemblerFactory(ABC):
                     self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                         f, quad_positions)
             except OSError as e:
-                raise GeometryFileError(e)
+                raise AssemblingError(e)
 
     class JungFrauImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")

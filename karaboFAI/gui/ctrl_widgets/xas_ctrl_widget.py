@@ -12,6 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..misc_widgets import SmartLineEdit
 
 
 class XasCtrlWidget(AbstractCtrlWidget):
@@ -22,8 +23,8 @@ class XasCtrlWidget(AbstractCtrlWidget):
 
         self._reset_btn = QtGui.QPushButton("Reset")
 
-        self._nbins_le = QtGui.QLineEdit("60")
-        self._nbins_le.setValidator(QtGui.QIntValidator(0, 999))
+        self._nbins_le = SmartLineEdit("60")
+        self._nbins_le.setValidator(QtGui.QIntValidator(1, 999))
 
         self.initUI()
 
@@ -45,9 +46,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._reset_btn.clicked.connect(mediator.xas_state_set_sgn)
+        self._reset_btn.clicked.connect(mediator.onXasReset)
 
-        self._nbins_le.editingFinished.connect(
-            lambda: mediator.xas_energy_bins_change_sgn.emit(
+        self._nbins_le.returnPressed.connect(
+            lambda: mediator.onXasEnergyBinsChange(
                 int(self._nbins_le.text())))
-        self._nbins_le.editingFinished.emit()
+        self._nbins_le.returnPressed.emit()

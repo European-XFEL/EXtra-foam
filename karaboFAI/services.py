@@ -9,120 +9,168 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import multiprocessing
 import argparse
+import multiprocessing as mp
+import os
+import sys
+import subprocess
+import time
+import faulthandler
 
-from PyQt5.QtWidgets import QApplication
+import redis
 
 from zmq.error import ZMQError
 
 from . import __version__
 from .config import config
 from .logger import logger
-from .gui import MainGUI, Mediator
+from .gui import MainGUI, mkQApp, Mediator
+from .metadata import MetadataProxy
 from .offline import FileServer
-from .pipeline import Bridge, Scheduler
+from .pipeline import Bridge, ProcessInfo, Scheduler
 
 
 def check_system_resource():
     """Check the resource of the current system"""
-    n_cpus = multiprocessing.cpu_count()
+    n_cpus = mp.cpu_count()
 
     n_gpus = 0
 
     return n_cpus, n_gpus
 
 
-class FaiServer:
-    """FaiServer class.
+def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
+    """Try to connect to a starting Redis server.
 
-    TODO: change the class name.
+    :param str host: IP address of the redis server.
+    :param int port:: Port of the redis server.
+    :param str password: Password of the redis server.
+    :param int n_attempts: Number of attempts to connect to the redis server.
+
+    Raises:
+        ConnectionError: raised if the Redis server cannot be connected.
+    """
+    # Create a Redis client to check whether the server is reachable.
+    client = redis.StrictRedis(host=host, port=port, password=password)
+
+    # try 10 times
+    for i in range(n_attempts):
+        try:
+            logger.info(f"Say hello to Redis server at {host}:{port}")
+            client.ping()
+        except redis.ConnectionError:
+            time.sleep(1)
+            logger.info("No response from the Redis server")
+        else:
+            logger.info("Received response from the Redis server")
+            return
+
+    raise ConnectionError(f"Failed to connect to the Redis server at "
+                          f"{host}:{port}.")
+
+
+def start_redis_server():
+    """Start a Redis server.
+
+    :returns: port, process info
+    :rtype: int, ProcessInfo
+
+    Raises:
+        FileNOtFoundError: raised if the Redis executable does not exist.
+    """
+    redis_cfg = config["REDIS"]
+    executable = redis_cfg["EXECUTABLE"]
+    if not os.path.isfile(executable):
+        raise FileNotFoundError
+    port = redis_cfg["PORT"]
+
+    # Construct the command to start the Redis server.
+    command = [executable]
+    command += (["--port", str(port), "--loglevel", "warning"])
+
+    process = subprocess.Popen(command)
+
+    # Create a Redis client just for configuring Redis.
+    client = redis.Redis(host="127.0.0.1", port=port)
+
+    # wait for the Redis server to start
+    try_to_connect_redis_server("127.0.0.1", port)
+
+    # Put a time stamp in Redis to indicate when it was started.
+    client.set("redis_start_time", time.time())
+
+    logger.info(f"\nRedis servert started at '127.0.0.1':{port}")
+
+    return port, ProcessInfo(
+        process=process,
+        stdout_file=None,
+        stderr_file=None,
+    )
+
+
+class Fai:
+    """Fai class.
 
     It manages all services in karaboFAI: QApplication, Redis, Processors,
     etc.
     """
-    __app = None
 
     def __init__(self, detector):
         """Initialization."""
 
         n_cpus, n_gpus = check_system_resource()
         logger.info(f"Number of available CPUs: {n_cpus}, "
-                    "number of available GPUs: {n_gpus}")
-
-        self.qt_app()
+                    f"number of available GPUs: {n_gpus}")
 
         # update global configuration
         config.load(detector)
 
-        # a zmq bridge which acquires the data in another thread
+        self._meta = MetadataProxy()
+
+        self._gui = None
+
+        self._redis_port = None
+        self._redis_process_info = None
+
+        # process which runs one or more zmq bridge
         self._bridge = Bridge()
 
-        # a data processing worker which processes the data in another thread
+        # process which runs the scheduler
         self._scheduler = Scheduler()
         self._scheduler.connect_input(self._bridge)
 
         # a file server which streams data from files
         self._file_server = None
-        self._port = None
-        self._data_folder = None
 
-        # -------------------------------------------------------------
-        # mediator for connections
-        # -------------------------------------------------------------
-        mediator = Mediator()
+    def _shutdown_redis_server(self):
+        logger.info("Shutting down the Redis server...")
+        self._redis_process_info.process.terminate()
 
-        mediator.connect_bridge(self._bridge)
-        mediator.connect_scheduler(self._scheduler)
+    def _shutdown_scheduler(self):
+        logger.info("Shutting down the scheduler...")
+        self._scheduler.shutdown()
+        self._scheduler.join()
+        logger.info("Scheduler has been shutdown!")
 
-        # with the file server
-        mediator.start_file_server_sgn.connect(self.start_fileserver)
-        mediator.stop_file_server_sgn.connect(self.stop_fileserver)
-        mediator.port_change_sgn.connect(self.onFileServerPortChange)
-        mediator.data_folder_change_sgn.connect(self.onFileServerDataFolderChange)
+    def _shutdown_bridge(self):
+        logger.info("Shutting down the bridge...")
+        self._bridge.shutdown()
+        self._bridge.join()
+        logger.info("Bridge has been shutdown!")
 
-        # -------------------------------------------------------------
-        # MainGUI for karaboFAI
-        # -------------------------------------------------------------
-        self._gui = MainGUI()
-        self._gui.connectInput(self._scheduler)
+    def shutdown(self):
+        self._stop_fileserver()
 
-        self._gui.start_bridge_sgn.connect(self._bridge.start)
-        self._gui.start_bridge_sgn.connect(self._maybe_start_scheduler)
-        self._gui.stop_bridge_sgn.connect(self.stop_bridge)
-        self._gui.closed_sgn.connect(self.stop_bridge)
-        self._gui.closed_sgn.connect(self.stop_scheduler)
+        self._shutdown_bridge()
+        self._shutdown_scheduler()
 
-        self._bridge.started.connect(self._gui.onBridgeStarted)
-        self._bridge.finished.connect(self._gui.onBridgeStopped)
+        self._shutdown_redis_server()
 
-        # -------------------------------------------------------------
-        # logging from threads
-        # -------------------------------------------------------------
-        self._bridge.log_on_main_thread(self._gui)
-        self._scheduler.log_on_main_thread(self._gui)
+    def _start_fileserver(self):
+        cfg = self._meta.ds_getall()
 
-    def stop_bridge(self):
-        self._bridge.requestInterruption()
-        self._bridge.quit()
-        self._bridge.wait()
-
-    def stop_scheduler(self):
-        self._scheduler.requestInterruption()
-        self._scheduler.quit()
-        self._scheduler.wait()
-
-    def _maybe_start_scheduler(self):
-        # This function is need for now since an Exception could be raised
-        # which will stop the thread. In the future, we will have an event
-        # loop to handle it.
-        if not self._scheduler.isRunning():
-            self._scheduler.start()
-
-    def start_fileserver(self):
-        folder = self._data_folder
-        port = self._port
-
+        folder = cfg['data_folder']
+        port = cfg['endpoint'].split(':')[-1]
         # process can only be start once
         self._file_server = FileServer(folder, port)
         try:
@@ -139,36 +187,42 @@ class FaiServer:
 
         Mediator().file_server_started_sgn.emit()
 
-    def stop_fileserver(self):
+    def _stop_fileserver(self):
         if self._file_server is not None and self._file_server.is_alive():
+            # fileserver does not have any shared object
             self._file_server.terminate()
 
         if self._file_server is not None:
             self._file_server.join()
 
-        print("File server stopped!")
         Mediator().file_server_stopped_sgn.emit()
 
-    @classmethod
-    def qt_app(cls):
-        if cls.__app is None:
-            import sys
-            cls.__app = QApplication(sys.argv)
-        return cls.__app.instance()
+    @property
+    def gui(self):
+        return self._gui
 
-    def start(self):
-        try:
-            self.qt_app().exec_()
-        finally:
-            self.stop_fileserver()
-            self.stop_bridge()
-            self.stop_scheduler()
+    def init(self, args=None):
+        if not faulthandler.is_enabled():
+            faulthandler.enable(all_threads=False)
 
-    def onFileServerPortChange(self, port):
-        self._port = port
+        self._redis_port, self._redis_process_info = start_redis_server()
 
-    def onFileServerDataFolderChange(self, path):
-        self._data_folder = path
+        self._meta.reset()
+
+        mkQApp(args)
+        mediator = Mediator()
+        self._gui = MainGUI()
+
+        mediator.start_file_server_sgn.connect(self._start_fileserver)
+        mediator.stop_file_server_sgn.connect(self._stop_fileserver)
+
+        self._gui.connectInput(self._scheduler)
+
+        self._gui.start_sgn.connect(self._bridge.activate)
+        self._gui.stop_sgn.connect(self._bridge.pause)
+
+        self._bridge.start()
+        self._scheduler.start()
 
 
 def application():
@@ -184,8 +238,6 @@ def application():
     args = parser.parse_args()
 
     if args.debug:
-        import faulthandler
-        faulthandler.enable()
         logger.debug("'faulthandler enabled")
     else:
         logger.setLevel("INFO")
@@ -200,9 +252,14 @@ def application():
     else:
         detector = detector.upper()
 
-    server = FaiServer(detector)
+    fai = Fai(detector)
 
-    server.start()
+    try:
+        fai.init(sys.argv)
+
+        mkQApp().exec_()
+    finally:
+        fai.shutdown()
 
 
 if __name__ == "__main__":

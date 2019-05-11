@@ -1,16 +1,30 @@
 import unittest
 
-from PyQt5.QtTest import QSignalSpy
+from PyQt5.QtTest import QSignalSpy, QTest
+from PyQt5.QtCore import Qt
 
-from karaboFAI.logger import logger
-from karaboFAI.services import FaiServer
-from karaboFAI.gui.misc_widgets import SmartBoundaryLineEdit
+from karaboFAI.gui import mkQApp
+from karaboFAI.gui.misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
 
 
 class TestSmartLineEdit(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = FaiServer.qt_app()
+        cls.app = mkQApp()
+
+    def testSmartLineEdit(self):
+        widget = SmartLineEdit()
+
+        QTest.keyClicks(widget, 'abc')
+        self.assertTrue(widget._text_modified)
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertFalse(widget._text_modified)
+
+        spy = QSignalSpy(widget.returnPressed)
+        widget.setText('abc')
+        self.assertEqual(1, len(spy))
+        widget.setTextWithoutSignal('efg')
+        self.assertEqual(1, len(spy))
 
     def testSmartBoundaryLineEdit(self):
         # require at least one argument for initialization
@@ -29,21 +43,25 @@ class TestSmartLineEdit(unittest.TestCase):
         spy = QSignalSpy(widget.value_changed_sgn)
         self.assertEqual(0, len(spy))
 
-        widget.setText("0, 2")
-        widget.returnPressed.emit()
+        widget.clear()
+        QTest.keyClicks(widget, "0, 2")
+        QTest.keyPress(widget, Qt.Key_Enter)
         self.assertEqual("0, 2", widget.text())
         self.assertEqual("0, 2", widget._cached)
         self.assertEqual(1, len(spy))
 
         # set an invalid value
-        with self.assertLogs(logger=logger, level='ERROR'):
-            widget.setText("2, 0")
-            widget.returnPressed.emit()
-        self.assertEqual("0, 2", widget.text())
+        widget.clear()
+        QTest.keyClicks(widget, "2, 0")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual("2, 0", widget.text())
         self.assertEqual("0, 2", widget._cached)
         self.assertEqual(1, len(spy))
 
         # set a valid value again
-        widget.setText("0, 2")
-        widget.returnPressed.emit()
+        widget.clear()
+        QTest.keyClicks(widget, "0, 2")
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual("0, 2", widget.text())
+        self.assertEqual("0, 2", widget._cached)
         self.assertEqual(2, len(spy))

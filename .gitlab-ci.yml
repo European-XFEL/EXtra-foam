@@ -8,7 +8,6 @@ stages:
 
 unittest:
     stage: unittest
-
     script:
         - source ci/build.sh
         - source ci/test.sh

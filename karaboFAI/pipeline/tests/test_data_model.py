@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AbstractData, AccumulatedPairData, CorrelationData, ImageData,
-    ProcessedData, PumpProbeData, RoiData, PairData
+    AbstractData, AccumulatedPairData, ImageData,
+    DataManager, ProcessedData, PumpProbeData, RoiData, PairData
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config, ImageMaskChange
@@ -532,83 +532,91 @@ class TestPairData(unittest.TestCase):
 
 
 class TestCorrelationData(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._manager = DataManager()
+
     def setUp(self):
-        CorrelationData.remove_params()
+        self._manager.reset_correlation()
+        self._manager.remove_correlations()
 
     def testPairData(self):
-        data = ProcessedData(-1)
+        data = ProcessedData(1)
+        with self.assertRaises(ValueError):
+            self._manager.add_correlation(0, "device1", "property1")
 
-        data.add_correlator(0, "device1", "property1")
-        data.correlation.param0 = (1, 0.5)
-        data.correlation.param0 = (2, 0.6)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_almost_equal([1, 2], corr)
-        np.testing.assert_array_almost_equal([0.5, 0.6], fom)
+        self._manager.add_correlation(1, "device1", "property1")
+        data.correlation.correlation1 = (1, 0.5)
+        data.correlation.correlation1 = (2, 0.6)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_almost_equal([1, 2], corr_hist)
+        np.testing.assert_array_almost_equal([0.5, 0.6], fom_hist)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
 
-        data.add_correlator(1, "device2", "property2")
-        data.correlation.param1 = (3, 200)
-        data.correlation.param1 = (4, 220)
-        corr, fom, info = data.correlation.param1
-        np.testing.assert_array_almost_equal([3, 4], corr)
-        np.testing.assert_array_almost_equal([200, 220], fom)
+        self._manager.add_correlation(2, "device2", "property2")
+        data.correlation.correlation2 = (3, 200)
+        data.correlation.correlation2 = (4, 220)
+        corr_hist, fom_hist, info = data.correlation.correlation2
+        np.testing.assert_array_almost_equal([3, 4], corr_hist)
+        np.testing.assert_array_almost_equal([200, 220], fom_hist)
         self.assertEqual("device2", info["device_id"])
         self.assertEqual("property2", info["property"])
-        # check that param0 remains unchanged
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_almost_equal([1, 2], corr)
-        np.testing.assert_array_almost_equal([0.5, 0.6], fom)
+        # check that correlation1 remains unchanged
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_almost_equal([1, 2], corr_hist)
+        np.testing.assert_array_almost_equal([0.5, 0.6], fom_hist)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
 
         # test clear history
-        CorrelationData.clear()
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_almost_equal([], corr)
-        np.testing.assert_array_almost_equal([], fom)
+        self._manager.reset_correlation()
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_almost_equal([], corr_hist)
+        np.testing.assert_array_almost_equal([], fom_hist)
         self.assertEqual("device1", info["device_id"])
         self.assertEqual("property1", info["property"])
-        corr, fom, info = data.correlation.param1
-        np.testing.assert_array_almost_equal([], corr)
-        np.testing.assert_array_almost_equal([], fom)
+        corr_hist, fom_hist, info = data.correlation.correlation2
+        np.testing.assert_array_almost_equal([], corr_hist)
+        np.testing.assert_array_almost_equal([], fom_hist)
         self.assertEqual("device2", info["device_id"])
         self.assertEqual("property2", info["property"])
 
         # when device_id or property is empty, the corresponding 'param'
         # will be removed
-        data.add_correlator(0, "", "property2")
+        self._manager.add_correlation(1, "", "property2")
         with self.assertRaises(AttributeError):
-            data.correlation.param0
+            data.correlation.correlation1
 
-        data.add_correlator(1, "device2", "")
+        self._manager.add_correlation(2, "device2", "")
         with self.assertRaises(AttributeError):
-            data.correlation.param1
+            data.correlation.correlation2
 
-        # test CorrelationData.remove_params()
-        data.add_correlator(0, "device1", "property1")
-        data.add_correlator(1, "device1", "property1")
-        self.assertListEqual(['param0', 'param1'], data.get_correlators())
-        ProcessedData.remove_correlators()
-        self.assertListEqual([], data.get_correlators())
+        # test CorrelationData.remove_correlations()
+        self._manager.add_correlation(1, "device1", "property1")
+        self._manager.add_correlation(2, "device1", "property1")
+        self.assertListEqual(['correlation1', 'correlation2'],
+                             self._manager.get_correlations())
+        self._manager.remove_correlations()
+        self.assertListEqual([], self._manager.get_correlations())
 
         # test when resolution becomes non-zero
-        data.add_correlator(0, "device1", "property1", 0.2)
-        self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
+        self._manager.add_correlation(1, "device1", "property1", 0.2)
+        self.assertIsInstance(data.correlation.__class__.__dict__['correlation1'],
                               AccumulatedPairData)
 
         # ----------------------------
         # test when max length reached
         # ----------------------------
 
-        data.add_correlator(0, "device1", "property1")
+        self._manager.add_correlation(1, "device1", "property1")
         # override the class attribute
         max_len = 1000
-        data.correlation.__class__.__dict__['param0'].MAX_LENGTH = max_len
+        data.correlation.__class__.__dict__['correlation1'].MAX_LENGTH = max_len
         overflow = 10
         for i in range(max_len + overflow):
-            data.correlation.param0 = (i, i)
-        corr, fom, _ = data.correlation.param0
+            data.correlation.correlation1 = (i, i)
+        corr, fom, _ = data.correlation.correlation1
         self.assertEqual(max_len, len(corr))
         self.assertEqual(max_len, len(fom))
         self.assertEqual(overflow, corr[0])
@@ -617,83 +625,82 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual(max_len + overflow - 1, fom[-1])
 
     def testAccumulatedPairData(self):
-        data = ProcessedData(-1)
-
+        data = ProcessedData(1)
         self.assertEqual(2, AccumulatedPairData._min_count)
 
-        data.add_correlator(0, "device1", "property1", 0.1)
-        data.correlation.param0 = (1, 0.3)
-        data.correlation.param0 = (2, 0.4)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_equal([], corr)
-        np.testing.assert_array_equal([], fom.count)
-        np.testing.assert_array_equal([], fom.avg)
-        np.testing.assert_array_equal([], fom.min)
-        np.testing.assert_array_equal([], fom.max)
+        self._manager.add_correlation(1, "device1", "property1", 0.1)
+        data.correlation.correlation1 = (1, 0.3)
+        data.correlation.correlation1 = (2, 0.4)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_equal([], corr_hist)
+        np.testing.assert_array_equal([], fom_hist.count)
+        np.testing.assert_array_equal([], fom_hist.avg)
+        np.testing.assert_array_equal([], fom_hist.min)
+        np.testing.assert_array_equal([], fom_hist.max)
 
-        data.correlation.param0 = (2.02, 0.5)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_equal([2.01], corr)
-        np.testing.assert_array_equal([2], fom.count)
-        np.testing.assert_array_almost_equal([0.425], fom.min)
-        np.testing.assert_array_almost_equal([0.475], fom.max)
-        np.testing.assert_array_equal([0.45], fom.avg)
+        data.correlation.correlation1 = (2.02, 0.5)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_equal([2.01], corr_hist)
+        np.testing.assert_array_equal([2], fom_hist.count)
+        np.testing.assert_array_almost_equal([0.425], fom_hist.min)
+        np.testing.assert_array_almost_equal([0.475], fom_hist.max)
+        np.testing.assert_array_equal([0.45], fom_hist.avg)
 
-        data.correlation.param0 = (2.11, 0.6)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_equal([3], fom.count)
-        np.testing.assert_array_almost_equal([0.4591751709536137], fom.min)
-        np.testing.assert_array_almost_equal([0.5408248290463863], fom.max)
-        np.testing.assert_array_equal([0.5], fom.avg)
+        data.correlation.correlation1 = (2.11, 0.6)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_equal([3], fom_hist.count)
+        np.testing.assert_array_almost_equal([0.4591751709536137], fom_hist.min)
+        np.testing.assert_array_almost_equal([0.5408248290463863], fom_hist.max)
+        np.testing.assert_array_equal([0.5], fom_hist.avg)
 
         # new point
-        data.correlation.param0 = (2.31, 1)
-        data.correlation.param0 = (2.41, 2)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_equal([3, 2], fom.count)
-        np.testing.assert_array_almost_equal([0.4591751709536137, 1.25], fom.min)
-        np.testing.assert_array_almost_equal([0.5408248290463863, 1.75], fom.max)
-        np.testing.assert_array_equal([0.5, 1.5], fom.avg)
+        data.correlation.correlation1 = (2.31, 1)
+        data.correlation.correlation1 = (2.41, 2)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_equal([3, 2], fom_hist.count)
+        np.testing.assert_array_almost_equal([0.4591751709536137, 1.25], fom_hist.min)
+        np.testing.assert_array_almost_equal([0.5408248290463863, 1.75], fom_hist.max)
+        np.testing.assert_array_equal([0.5, 1.5], fom_hist.avg)
 
         # test when resolution changes
-        data.add_correlator(0, "device1", "property1", 0.2)
-        corr, fom, info = data.correlation.param0
-        np.testing.assert_array_equal([], corr)
-        np.testing.assert_array_equal([], fom.count)
-        np.testing.assert_array_equal([], fom.min)
-        np.testing.assert_array_equal([], fom.max)
-        np.testing.assert_array_equal([], fom.avg)
+        self._manager.add_correlation(1, "device1", "property1", 0.2)
+        corr_hist, fom_hist, info = data.correlation.correlation1
+        np.testing.assert_array_equal([], corr_hist)
+        np.testing.assert_array_equal([], fom_hist.count)
+        np.testing.assert_array_equal([], fom_hist.min)
+        np.testing.assert_array_equal([], fom_hist.max)
+        np.testing.assert_array_equal([], fom_hist.avg)
 
         # test when resolution becomes 0
-        data.add_correlator(0, "device1", "property1")
-        self.assertIsInstance(data.correlation.__class__.__dict__['param0'],
+        self._manager.add_correlation(1, "device1", "property1")
+        self.assertIsInstance(data.correlation.__class__.__dict__['correlation1'],
                               PairData)
 
         # ----------------------------
         # test when max length reached
         # ----------------------------
 
-        data.add_correlator(0, "device1", "property1", 1.0)
+        self._manager.add_correlation(1, "device1", "property1", 1.0)
         # override the class attribute
         max_len = 1000
-        data.correlation.__class__.__dict__['param0'].MAX_LENGTH = max_len
+        data.correlation.__class__.__dict__['correlation1'].MAX_LENGTH = max_len
         overflow = 10
         for i in range(2*max_len + 2*overflow):
             # two adjacent data point will be grouped together since
             # resolution is 1.0
-            data.correlation.param0 = (i, i)
-        corr, fom, _ = data.correlation.param0
-        self.assertEqual(max_len, len(corr))
-        self.assertEqual(max_len, len(fom.avg))
-        self.assertEqual(2*overflow + 0.5, corr[0])
-        self.assertEqual(2*overflow + 0.5, fom.avg[0])
-        self.assertEqual(2*(max_len + overflow - 1) + 0.5, corr[-1])
-        self.assertEqual(2*(max_len + overflow - 1) + 0.5, fom.avg[-1])
+            data.correlation.correlation1 = (i, i)
+        corr_hist, fom_hist, _ = data.correlation.correlation1
+        self.assertEqual(max_len, len(corr_hist))
+        self.assertEqual(max_len, len(fom_hist.avg))
+        self.assertEqual(2*overflow + 0.5, corr_hist[0])
+        self.assertEqual(2*overflow + 0.5, fom_hist.avg[0])
+        self.assertEqual(2*(max_len + overflow - 1) + 0.5, corr_hist[-1])
+        self.assertEqual(2*(max_len + overflow - 1) + 0.5, fom_hist.avg[-1])
 
 
 class TestProcessedData(unittest.TestCase):
     def setUp(self):
-        RoiData.clear()
+        DataManager().reset_roi()
 
     def testGeneral(self):
         data = ProcessedData(1234)
@@ -712,7 +719,7 @@ class TestProcessedData(unittest.TestCase):
 
 class TestPumpProbeData(unittest.TestCase):
     def setUp(self):
-        PumpProbeData.clear()
+        DataManager().reset_pp()
 
     def testGeneral(self):
         data = PumpProbeData()

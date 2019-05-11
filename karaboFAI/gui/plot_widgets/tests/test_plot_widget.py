@@ -1,6 +1,6 @@
 import unittest
 
-from karaboFAI.services import FaiServer
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.plot_widgets.plot_widgets import (
     PlotWidget
 )
@@ -9,7 +9,7 @@ from karaboFAI.gui.plot_widgets.plot_widgets import (
 class TestPlotWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = FaiServer.qt_app()
+        cls.app = mkQApp()
 
     def setUp(self):
         self._widget = PlotWidget()

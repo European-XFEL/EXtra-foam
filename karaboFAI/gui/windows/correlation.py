@@ -25,14 +25,14 @@ class CorrelationWindow(DockerWindow):
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
-    N_PLOTS = 4
+    N_PLOTS = len(config['CORRELATION_COLORS'])
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
         self._plots = []
-        for i in range(self.N_PLOTS):
+        for i in range(1, self.N_PLOTS+1):
             self._plots.append(CorrelationWidget(i, parent=self))
 
         self.initUI()

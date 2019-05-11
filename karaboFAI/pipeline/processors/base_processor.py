@@ -12,6 +12,8 @@ All rights reserved.
 from abc import ABC, abstractmethod
 import copy
 
+from ...metadata import MetadataProxy
+
 
 class State(ABC):
     """Base class of processor state."""
@@ -79,6 +81,41 @@ class SharedProperty:
         instance._params[self.name] = value
 
 
+class _RedisParserMixin:
+    """_RedisParserMixin class.
+
+    Due to the performance concern, methods in this class are not suppose
+    to cover all the corner cases, passing an arbitrary input may result
+    in undefined behavior.
+    """
+    @staticmethod
+    def str2tuple(text, delimiter=",", handler=float):
+        """Convert a string to a tuple.
+
+        The string is expected to be the result of str(tp), where tp is a
+        tuple.
+
+        For example:
+            str2tuple('(1, 2)') -> (1.0, 2.0)
+        """
+        splitted = text[1:-1].split(delimiter)
+        return handler(splitted[0]), handler(splitted[1])
+
+    @staticmethod
+    def str2list(text, delimiter=",", handler=float):
+        """Convert a string to a list.
+
+        The string is expected to be the result of str(lt), where lt is a
+        list.
+
+        For example:
+            str2list('[1, 2, 3]') -> [1.0, 2.0, 3.0]
+        """
+        if not text[1:-1]:
+            return []
+        return [handler(v) for v in text[1:-1].split(delimiter)]
+
+
 class StopCompositionProcessing(Exception):
     """StopCompositionProcessing
 
@@ -98,7 +135,7 @@ class MetaProcessor(type):
         return cls
 
 
-class _BaseProcessor(metaclass=MetaProcessor):
+class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     """Data processor interface."""
 
     def __init__(self):
@@ -106,6 +143,8 @@ class _BaseProcessor(metaclass=MetaProcessor):
         self._parent = None
 
         self._state = StateOn()
+
+        self._meta = MetadataProxy()
 
         self._params = dict()
 

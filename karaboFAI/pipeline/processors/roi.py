@@ -19,7 +19,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import intersection, normalize_auc, slice_curve
-from ...config import config, RoiFom, PumpProbeType
+from ...config import config, RoiFom, PumpProbeType, Projection1dNormalizer
 from ...helpers import profiler
 
 
@@ -29,12 +29,14 @@ class RoiProcessor(CompositeProcessor):
     Process region of interest.
 
     Attributes:
-        _rois (list): a list of ROI regions (w, h, x, y) or None if the
+        regions (list): a list of ROI regions (x, y, w, h) or None if the
             corresponding ROI is not activated.
         fom_type (RoiFom): type of ROI FOM.
     """
-    _raw_rois = SharedProperty()
-    _roi_fom_handler = SharedProperty()
+    regions = SharedProperty()
+    visibilities = SharedProperty()
+    roi_fom_handler = SharedProperty()
+    fom_type = SharedProperty()
     proj1d_normalizer = SharedProperty()
     proj1d_auc_range = SharedProperty()
     proj1d_fom_integ_range = SharedProperty()
@@ -43,41 +45,38 @@ class RoiProcessor(CompositeProcessor):
         super().__init__()
 
         # initialization
-        self._raw_rois = [None] * len(config["ROI_COLORS"])
+        self.regions = [None] * len(config["ROI_COLORS"])
+        self.visibilities = copy.copy(self.regions)
 
-        self._fom_type = None
-        self._roi_fom_handler = None
+        self.roi_fom_handler = None
 
         self.add(RoiFomProcessor())
         self.add(RoiPumpProbeRoiProcessor())
 
-    @property
-    def fom_type(self):
-        return self._fom_type
+    def update(self):
+        cfg = self._meta.roi_getall()
 
-    @fom_type.setter
-    def fom_type(self, v):
-        self._fom_type = v
+        self.fom_type = RoiFom(int(cfg['fom_type']))
 
-        if v == RoiFom.SUM:
-            self._roi_fom_handler = np.sum
-        elif v == RoiFom.MEAN:
-            self._roi_fom_handler = np.mean
+        if self.fom_type == RoiFom.SUM:
+            self.roi_fom_handler = np.sum
+        elif self.fom_type == RoiFom.MEAN:
+            self.roi_fom_handler = np.mean
         else:
-            self._roi_fom_handler = None
-            self._fom_type = None
+            self.fom_type.fom_type = None
+            self.roi_fom_handler = None
 
-    def set_roi(self, rank, value):
-        """Set ROI.
+        for i, _ in enumerate(self.regions, 1):
+            self.visibilities[i-1] = cfg[f'visibility{i}'] == 'True'
+            self.regions[i-1] = self.str2list(cfg[f'region{i}'], handler=int)
 
-        :param int rank: ROI rank (index).
-        :param tuple value: (w, h, x, y) of the ROI. None for unset.
-        """
-        self._raw_rois[rank-1] = value
+        self.proj1d_normalizer = Projection1dNormalizer(int(cfg['proj1d:normalizer']))
+        self.proj1d_auc_range = self.str2tuple(cfg['proj1d:auc_range'])
+        self.proj1d_fom_integ_range = self.str2tuple(cfg['proj1d:fom_integ_range'])
 
     @staticmethod
     def get_roi_image(roi_region, img, copy=True):
-        w, h, x, y = roi_region
+        x, y, w, h = roi_region
         return np.array(img[y:y + h, x:x + w], copy=copy)
 
 
@@ -97,22 +96,20 @@ class RoiFomProcessor(LeafProcessor):
         activated. This is required for the case that different ROIs are
         activated at different times.
         """
-        if self._roi_fom_handler is None:
-            return
-
         tid = processed.tid
         if tid > 0:
             img = processed.image.masked_mean
 
-            rois = copy.copy(self._raw_rois)
+            rois = copy.copy(self.regions)
             for i, roi in enumerate(rois):
                 # it should be valid to set ROI intensity to zero if the data
                 # is not available
                 fom = 0
-                if roi is not None:
-                    roi = intersection(*roi, *img.shape[::-1], 0, 0)
-                    # if w > 0 and h > 0
-                    if roi[0] > 0 and roi[1] > 0:
+                if self.visibilities[i]:
+                    x, y, w, h = roi
+                    roi = intersection([x, y, w, h], [0, 0, *img.shape[::-1]])
+                    x, y, w, h = roi
+                    if w > 0 and h > 0:
                         # set the corrected roi
                         setattr(processed.roi, f"roi{i+1}", roi)
 
@@ -121,12 +118,11 @@ class RoiFomProcessor(LeafProcessor):
 
                         proj_x = np.sum(roi_img, axis=-2)
                         proj_y = np.sum(roi_img, axis=-1)
-                        setattr(processed.roi, f"roi{i + 1}_proj_x", proj_x)
-                        setattr(processed.roi, f"roi{i + 1}_proj_y", proj_y)
+                        setattr(processed.roi, f"roi{i+1}_proj_x", proj_x)
+                        setattr(processed.roi, f"roi{i+1}_proj_y", proj_y)
 
-                        fom = self._roi_fom_handler(roi_img)
-
-                setattr(processed.roi, f"roi{i+1}_hist", (tid, fom))
+                        fom = self.roi_fom_handler(roi_img)
+                        setattr(processed.roi, f"roi{i+1}_fom", fom)
 
 
 class RoiPumpProbeRoiProcessor(CompositeProcessor):
@@ -192,20 +188,15 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
             norm_on_off_ma = norm_on_ma - norm_off_ma
 
             if processed.pp.abs_difference:
-                if processed.pp.analysis_type == PumpProbeType.ROI:
-                    fom = self._roi_fom_handler(np.abs(norm_on_off_ma))
-                else:
-                    fom = np.sum(np.abs(norm_on_off_ma))
+                fom = self.roi_fom_handler(np.abs(norm_on_off_ma))
             else:
-                if processed.pp.analysis_type == PumpProbeType.ROI:
-                    fom = self._roi_fom_handler(norm_on_off_ma)
-                else:
-                    fom = np.sum(norm_on_off_ma)
+                fom = self.roi_fom_handler(norm_on_off_ma)
 
             processed.pp.norm_on_ma = norm_on_ma
             processed.pp.norm_off_ma = norm_off_ma
             processed.pp.norm_on_off_ma = norm_on_off_ma
-            processed.pp.fom = (processed.tid, fom)
+            processed.pp.fom = fom
+
 
 class RoiPumpProbeProj1dProcessor(LeafProcessor):
     """RoiPumpProbeProj1dProcessor class.
@@ -255,4 +246,4 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma
         processed.pp.norm_on_off_ma = norm_on_off_ma
-        processed.pp.fom = (processed.tid, fom)
+        processed.pp.fom = fom

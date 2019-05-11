@@ -1,13 +1,10 @@
 import unittest
-from unittest.mock import MagicMock
 import tempfile
 
 import numpy as np
 
-from karaboFAI.services import FaiServer
-from karaboFAI.gui.plot_widgets.image_view import (
-    ImageAnalysis, PumpProbeImageView
-)
+from karaboFAI.gui import mkQApp
+from karaboFAI.gui.plot_widgets.image_view import ImageAnalysis
 from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.logger import logger
 
@@ -15,7 +12,7 @@ from karaboFAI.logger import logger
 class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        FaiServer.qt_app()
+        mkQApp()
 
         cls._widget = ImageAnalysis(color_map="thermal")
 

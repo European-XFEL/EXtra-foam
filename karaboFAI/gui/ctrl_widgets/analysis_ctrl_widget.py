@@ -12,6 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..misc_widgets import SmartLineEdit
 from ...config import config
 from ...logger import logger
 
@@ -44,22 +45,21 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._max_pulse_id_le = QtGui.QLineEdit(str(max_pulse_id))
         self._max_pulse_id_le.setValidator(self._pulse_id_validator)
 
-        self._vip_pulse_id1_le = QtGui.QLineEdit(str(vip_pulse_id1))
+        self._vip_pulse_id1_le = SmartLineEdit(str(vip_pulse_id1))
         self._vip_pulse_id1_le.setValidator(self._pulse_id_validator)
 
-        self._vip_pulse_id2_le = QtGui.QLineEdit(str(vip_pulse_id2))
+        self._vip_pulse_id2_le = SmartLineEdit(str(vip_pulse_id2))
         self._vip_pulse_id2_le.setValidator(self._pulse_id_validator)
 
-        self._photon_energy_le = QtGui.QLineEdit(str(config["PHOTON_ENERGY"]))
-        self._photon_energy_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
+        self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le.setValidator(
+            QtGui.QDoubleValidator(0.001, 100, 6))
 
-        self._sample_dist_le = QtGui.QLineEdit(str(config["DISTANCE"]))
-        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0, 100, 6))
+        self._sample_dist_le = SmartLineEdit(str(config["SAMPLE_DISTANCE"]))
+        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0.001, 100, 6))
 
         self._non_reconfigurable_widgets = [
             self._max_pulse_id_le,
-            self._photon_energy_le,
-            self._sample_dist_le,
         ]
 
         self.initUI()
@@ -103,6 +103,16 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         mediator.vip_pulse_ids_connected_sgn.connect(self.updateVipPulseIDs)
 
+        self._photon_energy_le.returnPressed.connect(
+            lambda: mediator.onPhotonEnergyChange(
+                float(self._photon_energy_le.text())))
+        self._photon_energy_le.returnPressed.emit()
+
+        self._sample_dist_le.returnPressed.connect(
+            lambda: mediator.onSampleDistanceChange(
+                float(self._sample_dist_le.text())))
+        self._sample_dist_le.returnPressed.emit()
+
     def updateSharedParameters(self):
         """Override"""
         mediator = self._mediator
@@ -110,21 +120,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),
                           int(self._max_pulse_id_le.text()) + 1)
-        mediator.pulse_id_range_sgn.emit(*pulse_id_range)
 
-        photon_energy = float(self._photon_energy_le.text())
-        if photon_energy <= 0:
-            logger.error("<Photon energy>: Invalid input! Must be positive!")
-            return False
-        else:
-            mediator.photon_energy_change_sgn.emit(photon_energy)
-
-        sample_distance = float(self._sample_dist_le.text().strip())
-        if sample_distance <= 0:
-            logger.error("<Sample distance>: Invalid input! Must be positive!")
-            return False
-        else:
-            mediator.sample_distance_change_sgn.emit(sample_distance)
+        mediator.onPulseIdRangeChange(pulse_id_range)
 
         return True
 

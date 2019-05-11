@@ -120,9 +120,9 @@ class ImageView(QtGui.QWidget):
             roi_area = getattr(data.roi, f"roi{i}")
             if roi_area is not None:
                 roi.show()
-                w, h, px, py = roi_area
+                x, y, w, h = roi_area
                 roi.setSize((w, h), update=False)
-                roi.setPos((px, py), update=False)
+                roi.setPos((x, y), update=False)
             else:
                 roi.hide()
 
@@ -282,7 +282,8 @@ class ImageAnalysis(ImageView):
         w, h = self.crop.size()
         h0, w0 = self._image.shape
 
-        w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
+        x, y, w, h = [int(v) for v in intersection([x, y, w, h],
+                                                   [0, 0, w0, h0])]
         if w > 0 and h > 0:
             self.setImage(self._image[y:y+h, x:x+w], auto_range=True)
             # convert x, y to position at the original image
@@ -522,7 +523,6 @@ class RoiImageView(ImageView):
 
         if roi is None:
             return
-        w, h, px, py = roi
+        x, y, w, h = roi
 
-        self.setImage(image[py:py+h, px:px+w],
-                      auto_range=True, auto_levels=True)
+        self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)

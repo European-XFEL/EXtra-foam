@@ -12,10 +12,9 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
-from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
-from ...config import FomName
+from ...config import config, CorrelationFom
 from ...helpers import profiler
 
 
@@ -23,59 +22,78 @@ class CorrelationProcessor(CompositeProcessor):
     """Add correlation information into processed data.
 
     Attributes:
-        fom_name (FomName): name of the figure-of-merit
-        fom_itgt_range (tuple): integration range for calculating FOM from
+        fom_type (CorrelationFom): type of the figure-of-merit
+        fom_integ_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
     """
-    fom_itgt_range = SharedProperty()
-    fom_name = SharedProperty()
+    fom_integ_range = SharedProperty()
+    fom_type = SharedProperty()
+    device_ids = SharedProperty()
+    properties = SharedProperty()
 
     def __init__(self):
         super().__init__()
+
+        n_params = len(config["CORRELATION_COLORS"])
+        self.device_ids = [""] * n_params
+        self.properties = [""] * n_params
+
         self.add(CorrelationFomProcessor())
+
+    def update(self):
+        cfg = self._meta.corr_getall()
+        self.fom_type = CorrelationFom(int(cfg['fom_type']))
+        self.fom_integ_range = self.str2tuple(self._meta.ai_get('integ_range'))
+
+        for i in range(len(self.device_ids)):
+            self.device_ids[i] = cfg[f'device_id{i+1}']
+            self.properties[i] = cfg[f'property{i+1}']
 
 
 class CorrelationFomProcessor(LeafProcessor):
     @profiler("Correlation processor")
     def process(self, processed, raw=None):
         """Override."""
-        if self.fom_name is None or self.fom_name == FomName.UNDEFINED:
+        if self.fom_type is None or self.fom_type == CorrelationFom.UNDEFINED:
             return
 
-        if self.fom_name == FomName.PUMP_PROBE_FOM:
-            _, foms, _ = processed.pp.fom
-            if foms.size == 0:
+        if self.fom_type == CorrelationFom.PUMP_PROBE_FOM:
+            fom = processed.pp.fom
+            if fom is None:
                 raise ProcessingError(
-                    "Pump-probe result is not available for correlation plots!")
-            fom = foms[-1]
+                    "Pump-probe result is not available!")
 
-        elif self.fom_name == FomName.ROI1:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1]
+        elif self.fom_type == CorrelationFom.ROI1:
+            fom = processed.roi.roi1_fom
+            if fom is None:
+                raise ProcessingError("ROI1 result is not available!")
 
-        elif self.fom_name == FomName.ROI2:
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi2_hist.size == 0:
-                return
-            fom = roi2_hist[-1]
+        elif self.fom_type == CorrelationFom.ROI2:
+            fom = processed.roi.roi2_fom
+            if fom is None:
+                raise ProcessingError("ROI2 result is not available!")
 
-        elif self.fom_name == FomName.ROI_SUM:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1] + roi2_hist[-1]
+        elif self.fom_type == CorrelationFom.ROI_SUM:
+            fom1 = processed.roi.roi1_fom
+            if fom1 is None:
+                raise ProcessingError("ROI1 result is not available!")
+            fom2 = processed.roi.roi2_fom
+            if fom2 is None:
+                raise ProcessingError("ROI2 result is not available!")
 
-        elif self.fom_name == FomName.ROI_SUB:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1] - roi2_hist[-1]
+            fom = fom1 + fom2
 
-        elif self.fom_name == FomName.AZIMUTHAL_INTEG_MEAN:
+        elif self.fom_type == CorrelationFom.ROI_SUB:
+            fom1 = processed.roi.roi1_fom
+            if fom1 is None:
+                raise ProcessingError("ROI1 result is not available!")
+            fom2 = processed.roi.roi2_fom
+            if fom2 is None:
+                raise ProcessingError("ROI2 result is not available!")
+
+            fom = fom1 - fom2
+
+        elif self.fom_type == CorrelationFom.AZIMUTHAL_INTEG_MEAN:
             momentum = processed.ai.momentum
             if momentum is None:
                 raise ProcessingError(
@@ -83,36 +101,47 @@ class CorrelationFomProcessor(LeafProcessor):
             intensity = processed.ai.intensity_mean
 
             # calculate figure-of-merit
-            fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
+            fom = slice_curve(intensity, momentum, *self.fom_integ_range)[0]
             fom = np.sum(np.abs(fom))
 
         else:
-            name = str(self.fom_name).split(".")[-1]
+            name = str(self.fom_type).split(".")[-1]
             raise ProcessingError(f"Unknown FOM name: {name}!")
 
-        for param in ProcessedData.get_correlators():
-            _, _, info = getattr(processed.correlation, param)
-            if info['device_id'] == "Any":
+        processed.correlation.fom = fom
+
+        # get the correlator values
+
+        for i in range(1, len(self.device_ids)+1):
+            device_id = self.device_ids[i-1]
+            if not device_id:
+                continue
+
+            ppt = self.properties[i-1]
+            if not ppt:
+                continue
+
+            if device_id == "Any":
                 # orig_data cannot be empty here
-                setattr(processed.correlation, param, (processed.tid, fom))
+                setattr(processed.correlation,
+                        f'correlator{i}',
+                        processed.tid)
             else:
                 try:
-                    device_data = raw[info['device_id']]
+                    device_data = raw[device_id]
                 except KeyError:
                     raise ProcessingError(
-                        f"Device '{info['device_id']}' is not in the data!")
+                        f"Device '{device_id}' is not in the data!")
 
                 try:
-                    if info['property'] in device_data:
-                        ppt = info['property']
-                    else:
-                        # From the file
-                        ppt = info['property'] + '.value'
+                    if ppt not in device_data:
+                        # from file
+                        ppt += '.value'
 
-                    setattr(processed.correlation, param,
-                            (device_data[ppt], fom))
+                    setattr(processed.correlation,
+                            f'correlator{i}',
+                            device_data[ppt])
 
                 except KeyError:
                     raise ProcessingError(
-                        f"'{info['device_id']}'' does not have property "
-                        f"'{info['property']}'")
+                        f"'{device_id}'' does not have property '{ppt}'")

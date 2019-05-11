@@ -143,15 +143,9 @@ class RoiValueMonitor(PlotWidget):
     Widget for displaying the evolution of the value (integration, median,
     mean) of ROIs.
     """
-    def __init__(self, *, window=600, parent=None):
-        """Initialization.
-
-        :param int window: window size, i.e. maximum number of trains to
-            display. Default = 600.
-        """
+    def __init__(self, *, parent=None):
+        """Initialization."""
         super().__init__(parent=parent)
-
-        self._window = window
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "Intensity (arb. u.)")
@@ -165,11 +159,7 @@ class RoiValueMonitor(PlotWidget):
         """Override."""
         for i, plot in enumerate(self._plots, 1):
             tids, roi_hist, _ = getattr(data.roi, f"roi{i}_hist")
-            plot.setData(tids[-self._window:], roi_hist[-self._window:])
-
-    @QtCore.pyqtSlot(int)
-    def onDisplayRangeChange(self, v):
-        self._window = v
+            plot.setData(tids, roi_hist)
 
 
 class CorrelationWidget(PlotWidget):
@@ -177,31 +167,21 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = ['c', 'b', 'o', 'y']
-    _brushes = {
-        0: make_brush(_colors[0], 120),
-        1: make_brush(_colors[1], 120),
-        2: make_brush(_colors[2], 120),
-        3: make_brush(_colors[3], 120)
-    }
-    _opaque_brushes = {
-        0: make_brush(_colors[0]),
-        1: make_brush(_colors[1]),
-        2: make_brush(_colors[2]),
-        3: make_brush(_colors[3])
-    }
+    _colors = config["CORRELATION_COLORS"]
+    _brushes = {i: make_brush(color, 120) for i, color in enumerate(_colors)}
+    _opaque_brushes = {i: make_brush(color) for i, color in enumerate(_colors)}
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._idx = idx
+        self._idx = idx # start from 1
 
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
 
         self._bar = self.plotErrorBar()
-        self._plot = self.plotScatter(brush=self._brushes[self._idx])
+        self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
         self._device_id = None
         self._ppt = None
@@ -210,8 +190,8 @@ class CorrelationWidget(PlotWidget):
     def update(self, data):
         """Override."""
         try:
-            correlator, foms, info = getattr(data.correlation,
-                                             f'param{self._idx}')
+            correlator_hist, fom_hist, info = getattr(
+                data.correlation, f'correlation{self._idx}')
         except AttributeError:
             return
 
@@ -222,16 +202,16 @@ class CorrelationWidget(PlotWidget):
             self._device_id = device_id
             self._ppt = ppt
 
-        if isinstance(foms, np.ndarray):
+        if isinstance(fom_hist, np.ndarray):
             # PairData
             if self._resolution != 0.0:
                 self._resolution = 0.0
                 self._bar.setData([], [], beam=0.0)
-                self._plot.setBrush(self._brushes[self._idx])
+                self._plot.setBrush(self._brushes[self._idx-1])
 
-            self._plot.setData(correlator, foms)
+            self._plot.setData(correlator_hist, fom_hist)
             # make auto-range of the viewbox work correctly
-            self._bar.setData(correlator, foms)
+            self._bar.setData(correlator_hist, fom_hist)
         else:
             # AccumulatedPairData
             resolution = info['resolution']
@@ -239,11 +219,13 @@ class CorrelationWidget(PlotWidget):
             if self._resolution != resolution:
                 self._resolution = resolution
                 self._bar.setData([], [], beam=resolution)
-                self._plot.setBrush(self._opaque_brushes[self._idx])
+                self._plot.setBrush(self._opaque_brushes[self._idx-1])
 
-            self._bar.setData(x=correlator,
-                              y=foms.avg, y_min=foms.min, y_max=foms.max)
-            self._plot.setData(correlator, foms.avg)
+            self._bar.setData(x=correlator_hist,
+                              y=fom_hist.avg,
+                              y_min=fom_hist.min,
+                              y_max=fom_hist.max)
+            self._plot.setData(correlator_hist, fom_hist.avg)
 
 
 class PumpProbeOnOffWidget(PlotWidget):
@@ -311,8 +293,8 @@ class PumpProbeFomWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        tids, foms, _ = data.pp.fom
-        self._plot.setData(tids, foms)
+        tids, fom_hist, _ = data.pp.fom_hist
+        self._plot.setData(tids, fom_hist)
 
 
 class XasSpectrumWidget(PlotWidget):

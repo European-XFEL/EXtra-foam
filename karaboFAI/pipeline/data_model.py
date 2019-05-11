@@ -9,7 +9,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import abc
 import copy
 from threading import Lock
 
@@ -242,27 +241,36 @@ class XasData(AbstractData):
 class RoiData(AbstractData):
     """A class which stores ROI data."""
 
+    _n_rois = len(config["ROI_COLORS"])
     __initialized = False
 
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls, *args, **kwargs)
         # (sum/mean) histories of ROIs
         if not cls.__initialized:
-            for i, _ in enumerate(config["ROI_COLORS"], 1):
+            for i in range(1, cls._n_rois+1):
                 setattr(cls, f"roi{i}_hist", PairData())
             cls.__initialized = True
         return instance
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for i, _ in enumerate(config["ROI_COLORS"], 1):
-            setattr(self, f"roi{i}", None)  # (w, h, px, py)
+        for i in range(1, self._n_rois+1):
+            setattr(self, f"roi{i}", None)  # (x, y, w, h)
             setattr(self, f"roi{i}_proj_x", None)  # projection on x
             setattr(self, f"roi{i}_proj_y", None)  # projection on y
+            setattr(self, f"roi{i}_fom", None)  # FOM
+
+    def update_hist(self, tid):
+        for i in range(1, self._n_rois+1):
+            fom = getattr(self, f"roi{i}_fom")
+            if fom is None:
+                fom = 0
+            setattr(self, f"roi{i}_hist", (tid, fom))
 
 
 class AzimuthalIntegrationData(AbstractData):
-    """A class which stores Laser on-off data."""
+    """Azimuthal integration data model."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -274,13 +282,9 @@ class AzimuthalIntegrationData(AbstractData):
 
 
 class PumpProbeData(AbstractData):
-    """A class which stores pump-probe analysis data."""
+    """Pump-probe data model."""
 
-    # FOM is defined as the difference of the FOMs between on and off
-    # signals. For example, in azimuthal integration analysis, FOM is
-    # the integration of the scattering curve; in ROI analysis, FOM is
-    # the sum of ROI.
-    fom = PairData()
+    fom_hist = PairData()
 
     class MovingAverage:
         def __init__(self):
@@ -381,6 +385,17 @@ class PumpProbeData(AbstractData):
         self.norm_off_ma = None
         self.norm_on_off_ma = None
 
+        # FOM is defined as the difference of the FOMs between on and off
+        # signals. For example, in azimuthal integration analysis, FOM is
+        # the integration of the scattering curve; in ROI analysis, FOM is
+        # the sum of ROI.
+        self.fom = None
+
+    def update_hist(self, tid):
+        fom = self.fom
+        if fom is not None:
+            self.fom_hist = (tid, fom)
+
     @property
     def ma_window(self):
         return self.__class__.__dict__['data'].moving_average_window
@@ -400,45 +415,26 @@ class PumpProbeData(AbstractData):
 
 
 class CorrelationData(AbstractData):
-    """A class which stores Laser on-off data."""
+    """Correlation data model."""
 
-    @classmethod
-    def add_param(cls, idx, device_id, ppt, resolution=0.0):
-        param = f'param{idx}'
-        if resolution:
-            setattr(cls, param, AccumulatedPairData(
-                device_id=device_id, property=ppt, resolution=resolution))
-        else:
-            setattr(cls, param, PairData(device_id=device_id, property=ppt))
+    n_params = len(config["CORRELATION_COLORS"])
 
-    @classmethod
-    def remove_param(cls, idx):
-        name = f'param{idx}'
-        if hasattr(cls, name):
-            delattr(cls, name)
+    def __init__(self):
+        super().__init__()
+        self.fom = None
+        for i in range(1, self.n_params+1):
+            setattr(self, f"correlator{i}", None)
 
-    @classmethod
-    def get_params(cls):
-        params = []
-        for kls in cls.__dict__:
-            if isinstance(cls.__dict__[kls], PairData):
-                params.append(kls)
-
-        return params
-
-    @classmethod
-    def remove_params(cls):
-        params = []
-        for kls in cls.__dict__:
-            if isinstance(cls.__dict__[kls], PairData):
-                params.append(kls)
-
-        for param in params:
-            delattr(cls, param)
+    def update_hist(self, tid):
+        fom = self.fom
+        for i in range(1, self.n_params+1):
+            corr = getattr(self, f"correlator{i}")
+            if corr is not None:
+                setattr(self, f"correlation{i}", (corr, fom))
 
 
 class ImageData:
-    """A class that manages the detector images.
+    """Image data model.
 
     Operation flow:
 
@@ -957,41 +953,17 @@ class ProcessedData:
 
         return self._image_data.n_images
 
-    @staticmethod
-    def add_correlator(idx, device_id, ppt, resolution=0.0):
-        """Add a correlated parameter.
-
-        :param int idx: index
-        :param str device_id: device ID
-        :param str ppt: property
-        :param float resolution: resolution. Default = 0.0
-        """
-        if device_id and ppt:
-            if resolution:
-                CorrelationData.add_param(idx, device_id, ppt, resolution)
-            else:
-                CorrelationData.add_param(idx, device_id, ppt)
-        else:
-            CorrelationData.remove_param(idx)
-
-    @staticmethod
-    def get_correlators():
-        return CorrelationData.get_params()
-
-    @staticmethod
-    def remove_correlators():
-        CorrelationData.remove_params()
-
-    @staticmethod
-    def update_correlator_resolution(idx, resolution):
-        CorrelationData.update_resolution(idx, resolution)
-
     def empty(self):
         """Check the goodness of the data."""
         logger.debug("Deprecated! use self.n_pulses!")
         if self.image is None:
             return True
         return False
+
+    def update_hist(self):
+        self.roi.update_hist(self._tid)
+        self.pp.update_hist(self._tid)
+        self.correlation.update_hist(self._tid)
 
 
 class Data4Visualization:
@@ -1007,3 +979,60 @@ class Data4Visualization:
 
     def set(self, value):
         self.__value = value
+
+
+class DataManager:
+    """Interface for manipulating data model."""
+    @staticmethod
+    def add_correlation(idx, device_id, ppt, resolution=0.0):
+        """Add a correlation.
+
+        :param int idx: index (starts from 1)
+        :param str device_id: device ID
+        :param str ppt: property
+        :param float resolution: resolution. Default = 0.0
+        """
+        if idx <= 0:
+            raise ValueError("Correlation index must start from 1!")
+
+        if device_id and ppt:
+            corr = f'correlation{idx}'
+            if resolution:
+                setattr(CorrelationData, corr, AccumulatedPairData(
+                    device_id=device_id, property=ppt, resolution=resolution))
+            else:
+                setattr(CorrelationData, corr, PairData(
+                    device_id=device_id, property=ppt))
+        else:
+            DataManager.remove_correlation(idx)
+
+    @staticmethod
+    def get_correlations():
+        correlations = []
+        for kls in CorrelationData.__dict__:
+            if isinstance(CorrelationData.__dict__[kls], PairData):
+                correlations.append(kls)
+        return correlations
+
+    @staticmethod
+    def remove_correlation(idx):
+        name = f'correlation{idx}'
+        if hasattr(CorrelationData, name):
+            delattr(CorrelationData, name)
+
+    @staticmethod
+    def remove_correlations():
+        for i in range(CorrelationData.n_params):
+            DataManager.remove_correlation(i+1)
+
+    @staticmethod
+    def reset_correlation():
+        CorrelationData.clear()
+
+    @staticmethod
+    def reset_roi():
+        RoiData.clear()
+
+    @staticmethod
+    def reset_pp():
+        PumpProbeData.clear()

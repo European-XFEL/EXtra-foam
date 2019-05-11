@@ -16,11 +16,6 @@ class AggregatingError(Exception):
     pass
 
 
-class GeometryFileError(Exception):
-    """Raised when error is related to geometry file."""
-    pass
-
-
 class AssemblingError(Exception):
     """Raised when image assembling fails."""
     pass

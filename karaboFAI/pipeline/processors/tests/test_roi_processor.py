@@ -17,7 +17,8 @@ class TestRoiProcessor(unittest.TestCase):
         ImageData.clear()
 
         self._proc = RoiProcessor()
-        self._rois = self._proc._raw_rois
+        self._proc.roi_fom_handler = np.sum
+        self._rois = self._proc.regions
         img = np.ones((100, 100))
         self.__class__._count += 1
         self._proc_data = ProcessedData(self._count, images=img)
@@ -31,10 +32,10 @@ class TestRoiProcessor(unittest.TestCase):
         self._proc.run_once(self._proc_data)
 
         # Set ROI1 and ROI4
-        self._proc.set_roi(1, (2, 2, 0, 0))
-        self._proc.set_roi(4, (3, 3, 1, 1))
-        with self.assertRaises(IndexError):
-            self._proc.set_roi(5, None)
+        self._proc.visibilities[0] = True
+        self._proc.regions[0] = [0, 0, 2, 2]
+        self._proc.visibilities[3] = True
+        self._proc.regions[3] = [1, 1, 3, 3]
 
         # FOM of ROI is None
         self.assertEqual(None, self._proc.fom_type)
@@ -47,22 +48,12 @@ class TestRoiProcessor(unittest.TestCase):
         self.assertEqual(self._proc_data.roi.roi3, self._rois[2])
         self.assertEqual(self._proc_data.roi.roi4, self._rois[3])
 
-        tid, value, _ = self._proc_data.roi.roi1_hist
-        np.testing.assert_array_equal([count], tid)
-        np.testing.assert_array_equal([1], value)
-
         # FOM of roi is SUM
         self._proc.fom_type = RoiFom.SUM
         # set the second history data
         self._proc.run_once(self._proc_data)
-        tid, value, _ = self._proc_data.roi.roi1_hist
-        np.testing.assert_array_equal([1, 4], value)
-        tid, value, _ = self._proc_data.roi.roi2_hist
-        np.testing.assert_array_equal([0, 0], value)
-        tid, value, _ = self._proc_data.roi.roi3_hist
-        np.testing.assert_array_equal([0, 0], value)
-        tid, value, _ = self._proc_data.roi.roi4_hist
-        np.testing.assert_array_equal([1, 9], value)
 
-    def testRoiPumpProbeFomProcessor(self):
-        pass
+        self.assertEqual(4, self._proc_data.roi.roi1_fom)
+        self.assertEqual(None, self._proc_data.roi.roi2_fom)
+        self.assertEqual(None, self._proc_data.roi.roi3_fom)
+        self.assertEqual(9, self._proc_data.roi.roi4_fom)

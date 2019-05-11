@@ -200,3 +200,17 @@ class TestBaseProcessor(unittest.TestCase):
         self._comp2.run_once(self._processed, self._raw)
         self._leaf2.process.assert_called_once_with(self._processed, self._raw)
         self.assertFalse(self._leaf4.process.called)
+
+
+class TestRedisParserMixin(unittest.TestCase):
+    def testStr2Tuple(self):
+        proc = CompositeProcessor()
+
+        self.assertTupleEqual((1.0, 2.0), proc.str2tuple('(1, 2)'))
+
+    def testStr2List(self):
+        proc = CompositeProcessor()
+
+        self.assertListEqual([1.0, 2.0], proc.str2list('[1, 2]'))
+        self.assertListEqual([1], proc.str2list('[1]'))
+        self.assertListEqual([], proc.str2list('[]'))

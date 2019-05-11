@@ -10,51 +10,50 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from queue import Full
-
-from PyQt5.QtCore import pyqtSlot
+import multiprocessing as mp
 
 from zmq.error import ZMQError
 
 from karabo_bridge import Client
 
-from .worker import Worker
+from .exceptions import ProcessingError
+from .worker import ProcessWorker
 from ..config import config, DataSource
 from ..helpers import profiler
 
 
-class Bridge(Worker):
-    def __init__(self):
+class Bridge(ProcessWorker):
+    """Bridge running in a separate processor.
+
+    This is main workhorse for large scale online data analysis.
+    """
+    def __init__(self, name="bridge"):
         """Initialization."""
-        super().__init__()
+        super().__init__(name)
 
-        self._source_type = None
-        self._endpoint = None
+        self._pause_event = mp.Event()
 
-    @pyqtSlot(str)
-    def onEndpointChange(self, endpoint):
-        self._endpoint = endpoint
+        self._clients = dict()
 
     def run(self):
         """Override."""
-        endpoint = self._endpoint
-        self.empty_output()  # remove old data
+        self.empty_output()
 
         timeout = config['TIMEOUT']
-        try:
-            with Client(endpoint, timeout=timeout) as client:
-                self.info("Bind to server {}!".format(endpoint))
-                while not self.isInterruptionRequested():
-                    try:
-                        data = self._recv(client)
-                    except TimeoutError:
-                        continue
 
-                    # Note: the pipeline is not reliable since for whatever
-                    #       reason the output queue could be filled because
-                    #       the consumer has not started. Then, since the
-                    #       bridge is always faster than the processing
-                    #       pipeline, the output queue will stay filled, which
-                    #       make the specification of queue length useless.
+        print("Bridge process started")
+
+        while not self._shutdown_event.is_set():
+            if not self._pause_event.is_set():
+                self.empty_output()
+                self.update()
+                self._pause_event.wait(timeout=timeout)
+                continue
+
+            for client in self._clients.values():
+                try:
+                    data = self._recv(client)
+                    print("data received")
 
                     if self._source_type == DataSource.BRIDGE:
                         # always keep the latest data in the queue
@@ -62,26 +61,51 @@ class Bridge(Worker):
                             self._output.put(data, timeout=timeout)
                         except Full:
                             self.pop_output()
-                            self.debug("Data dropped by the bridge")
-                    else:  # self._source_type == DataSource.FILE:
+                            print("Data dropped by the bridge")
+                    elif self._source_type == DataSource.FILE:
                         # wait until data in the queue has been processed
-                        while not self.isInterruptionRequested():
+                        while not self._shutdown_event.is_set():
                             try:
                                 self._output.put(data, timeout=timeout)
                                 break
                             except Full:
                                 continue
+                    else:
+                        raise ProcessingError(
+                            f"Unknown source type {self._source_type}!")
+                except TimeoutError:
+                    continue
 
-        except ZMQError:
-            self.error(f"ZMQError with endpoint: {endpoint}")
-            raise
+        print("Bridge shutdown cleanly")
 
-        self.info("Bridge client stopped!")
+    def activate(self):
+        self._pause_event.set()
+
+    def pause(self):
+        self._pause_event.clear()
 
     @profiler("Receive Data from Bridge")
     def _recv(self, client):
         return client.next()
 
-    @pyqtSlot(int)
-    def onSourceTypeChange(self, value):
-        self._source_type = value
+    def update(self):
+        super().update()
+
+        endpoint = self._meta.ds_get('endpoint')
+        if endpoint is None or endpoint in self._clients:
+            return
+
+        try:
+            # destroy the old connections
+            for client in self._clients.values():
+                client._context.destroy(linger=0)
+            self._clients.clear()
+
+            client = Client(endpoint, timeout=config['TIMEOUT'])
+            self._clients[endpoint] = client
+        except ZMQError:
+            return
+
+    def __del__(self):
+        for client in self._clients.values():
+            client._context.destroy(linger=0)

@@ -97,12 +97,14 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
             logger.error(f"<Geometry file>: {geom_file} is not a valid file")
             return False
 
+        self._mediator.onGeometryFileChange(geom_file)
+
         try:
             quad_positions = parse_table_widget(self._quad_positions_tb)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + repr(e))
             return False
 
-        self._mediator.geometry_sgn.emit(geom_file, quad_positions)
+        self._mediator.onQuadPositionsChange(quad_positions)
 
         return True

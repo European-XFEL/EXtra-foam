@@ -38,8 +38,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "SCS_BLU_XGM/XGM/DOOCS",
     ]
 
-    bridge_endpoint_sgn = QtCore.pyqtSignal(str)
-
     def __init__(self, *args, **kwargs):
         super().__init__("Data source", *args, **kwargs)
 
@@ -113,41 +111,36 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._source_type_cb.currentTextChanged.connect(
             lambda x: self.onSourceTypeChange(self._available_sources[x]))
         self._source_type_cb.currentTextChanged.connect(
-            lambda x: mediator.source_type_change_sgn.emit(
+            lambda x: mediator.onSourceTypeChange(
                 self._available_sources[x]))
         self._source_type_cb.currentTextChanged.emit(
             self._source_type_cb.currentText())
 
-        self.bridge_endpoint_sgn.connect(mediator.bridge_endpoint_sgn)
-
         # Note: use textChanged signal for non-reconfigurable QLineEdit
         self._hostname_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(self.onEndpointChange)
-        self._port_le.textChanged.connect(
-            lambda: mediator.port_change_sgn.emit(self._port_le.text()))
         # Since hostname and port have already been set, trigger either of
         # the signal is enough.
         self._port_le.textChanged.emit(self._port_le.text())
 
-        self._data_folder_le.editingFinished.connect(
-            lambda: mediator.data_folder_change_sgn.emit(self._data_folder_le.text()))
-        self._data_folder_le.editingFinished.emit()
+        self._data_folder_le.returnPressed.connect(
+            lambda: mediator.onDataFolderChange(self._data_folder_le.text()))
+        self._data_folder_le.returnPressed.emit()
 
-        self._detector_src_cb.currentIndexChanged.connect(
-            lambda i: mediator.detector_source_change_sgn.emit(
-                self._detector_src_cb.currentText()))
-        self._detector_src_cb.currentIndexChanged.emit(
-            self._detector_src_cb.currentIndex())
+        self._detector_src_cb.currentTextChanged.connect(
+            mediator.onDetectorSourceNameChange)
+        self._detector_src_cb.currentTextChanged.emit(
+            self._detector_src_cb.currentText())
 
         self._mono_src_cb.currentTextChanged.connect(
-            lambda x: mediator.mono_source_change_sgn.emit(x))
+            mediator.onMonoSourceNameChange)
         self._mono_src_cb.currentTextChanged.emit(
             self._mono_src_cb.currentText())
 
         self._xgm_src_cb.currentTextChanged.connect(
-            lambda x: mediator.xgm_source_change_sgn.emit(x))
+            mediator.onXgmSourceNameChange)
         self._xgm_src_cb.currentTextChanged.emit(
-            self._mono_src_cb.currentText())
+            self._xgm_src_cb.currentText())
 
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
         self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
@@ -169,7 +162,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
     @QtCore.pyqtSlot()
     def onEndpointChange(self):
         endpoint = f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
-        self.bridge_endpoint_sgn.emit(endpoint)
+        self._mediator.onBridgeEndpointChange(endpoint)
 
     @QtCore.pyqtSlot(object)
     def onSourceTypeChange(self, source_type):

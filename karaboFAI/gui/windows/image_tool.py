@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os.path as osp
-from collections import OrderedDict
 import functools
 
 from ..pyqtgraph import QtCore, QtGui
@@ -18,72 +17,105 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_window import AbstractWindow, SingletonWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiFom, ImageMaskChange
+from ..misc_widgets import SmartLineEdit
+from ...config import config, ImageMaskChange
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
 
-    Implemented four QLineEdits (w, h, x, y) and their connection to the
+    Implemented four QLineEdits (x, y, w, h) and their connection to the
     corresponding ROI.
     """
-    # rank, activated, w, h, px, py
-    roi_region_change_sgn = QtCore.Signal(int, bool, int, int, int, int)
+    # (rank, x, y, w, h) where rank starts from 1
+    roi_region_change_sgn = QtCore.Signal(object)
+    # (rank, visible)
+    roi_visibility_change_sgn = QtCore.Signal(object)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
-    _size_validator = QtGui.QIntValidator(0, 10000)
+    _size_validator = QtGui.QIntValidator(1, 10000)
 
     def __init__(self, roi, *, parent=None):
         super().__init__(parent=parent)
         self._roi = roi
 
-        self._width_le = QtGui.QLineEdit()
+        self._width_le = SmartLineEdit()
         self._width_le.setValidator(self._size_validator)
-        self._height_le = QtGui.QLineEdit()
+        self._height_le = SmartLineEdit()
         self._height_le.setValidator(self._size_validator)
-        self._px_le = QtGui.QLineEdit()
+        self._px_le = SmartLineEdit()
         self._px_le.setValidator(self._pos_validator)
-        self._py_le = QtGui.QLineEdit()
+        self._py_le = SmartLineEdit()
         self._py_le.setValidator(self._pos_validator)
-        self._width_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._height_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._px_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._py_le.editingFinished.connect(self.onRoiRegionEdited)
+        self._width_le.returnPressed.connect(self.onRoiSizeEdited)
+        self._height_le.returnPressed.connect(self.onRoiSizeEdited)
+        self._px_le.returnPressed.connect(self.onRoiPositionEdited)
+        self._py_le.returnPressed.connect(self.onRoiPositionEdited)
 
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
 
         roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
-        roi.sigRegionChangeFinished.emit(roi)  # fill the QLineEdit(s)
 
     @QtCore.pyqtSlot()
-    def onRoiRegionEdited(self):
-        w = int(self._width_le.text())
-        h = int(self._height_le.text())
-        px = int(self._px_le.text())
-        py = int(self._py_le.text())
+    def onRoiPositionEdited(self):
+        x, y = [int(v) for v in self._roi.pos()]
+        w, h = [int(v) for v in self._roi.size()]
+
+        if self.sender() == self._px_le:
+            x = int(self._px_le.text())
+        elif self.sender() == self._py_le:
+            y = int(self._py_le.text())
+
+        # If 'update' == False, the state change will be remembered
+        # but not processed and no signals will be emitted.
+        self._roi.setPos((x, y), update=False)
+        # trigger sigRegionChanged which moves the handler(s)
+        # finish=False -> sigRegionChangeFinished will not emit, which
+        # otherwise triggers infinite recursion
+        self._roi.stateChanged(finish=False)
+
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
+
+    @QtCore.pyqtSlot()
+    def onRoiSizeEdited(self):
+        x, y = [int(v) for v in self._roi.pos()]
+        w, h = [int(v) for v in self._roi.size()]
+        if self.sender() == self._width_le:
+            w = int(self._width_le.text())
+        elif self.sender() == self._height_le:
+            h = int(self._height_le.text())
 
         # If 'update' == False, the state change will be remembered
         # but not processed and no signals will be emitted.
         self._roi.setSize((w, h), update=False)
-        self._roi.setPos((px, py), update=False)
+        # trigger sigRegionChanged which moves the handler(s)
+        # finish=False -> sigRegionChangeFinished will not emit, which
+        # otherwise triggers infinite recursion
         self._roi.stateChanged(finish=False)
-        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
+
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
 
     @QtCore.pyqtSlot(object)
     def onRoiRegionChangeFinished(self, roi):
         """Connect to the signal from an ROI object."""
-        w, h = [int(v) for v in self._roi.size()]
-        px, py = [int(v) for v in self._roi.pos()]
-        self.updateParameters(w, h, px, py)
+        x, y = [int(v) for v in roi.pos()]
+        w, h = [int(v) for v in roi.size()]
+        self.updateParameters(x, y, w, h)
         # inform widgets outside this window
-        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
 
-    def updateParameters(self, w, h, px, py):
+    def notifyRoiParams(self):
+        # fill the QLineEdit(s)
+        self._roi.sigRegionChangeFinished.emit(self._roi)
+
+    def updateParameters(self, x, y, w, h):
+        self.roi_region_change_sgn.disconnect()
+        self._px_le.setText(str(x))
+        self._py_le.setText(str(y))
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self._px_le.setText(str(px))
-        self._py_le.setText(str(py))
+        self.roi_region_change_sgn.connect(Mediator().onRoiRegionChange)
 
     def setEditable(self, editable):
         for w in self._line_edits:
@@ -108,6 +140,7 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
         self.disableAllEdit()
 
         self.activate_cb.stateChanged.connect(self.onToggleRoiActivation)
+        self.activate_cb.stateChanged.emit(self.activate_cb.checkState())
         self.lock_cb.stateChanged.connect(self.onLock)
 
     def initUI(self):
@@ -131,16 +164,15 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
 
     @QtCore.pyqtSlot(int)
     def onToggleRoiActivation(self, state):
-        if state == QtCore.Qt.Checked:
+        activated = state == QtCore.Qt.Checked
+        if activated:
             self._roi.show()
             self.enableAllEdit()
-            self.roi_region_change_sgn.emit(
-                self._roi.rank, True, *self._roi.size(), *self._roi.pos())
         else:
             self._roi.hide()
             self.disableAllEdit()
-            self.roi_region_change_sgn.emit(
-                self._roi.rank, False, *self._roi.size(), *self._roi.pos())
+
+        self.roi_visibility_change_sgn.emit((self._roi.rank, activated))
 
     @QtCore.pyqtSlot(int)
     def onLock(self, state):
@@ -159,55 +191,25 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
 class _RoisCtrlWidget(QtGui.QGroupBox):
     """Widget for controlling of a group of ROIs."""
 
-    _available_roi_foms = OrderedDict({
-        "sum": RoiFom.SUM,
-        "mean": RoiFom.MEAN,
-    })
-
-    roi_fom_sgn = QtCore.pyqtSignal(object)
-
     def __init__(self, rois, *, parent=None):
         super().__init__(parent)
 
         mediator = Mediator()
 
-        self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
-        self._clear_roi_hist_btn.clicked.connect(mediator.roi_hist_clear_sgn)
-
-        self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
-        validator = QtGui.QIntValidator()
-        validator.setBottom(1)
-        self._roi_displayed_range_le.setValidator(validator)
-        self._roi_displayed_range_le.editingFinished.connect(
-            lambda: mediator.roi_displayed_range_sgn.emit(
-                int(self._roi_displayed_range_le.text())))
-
-        self._roi_fom_cb = QtGui.QComboBox()
-        for v in self._available_roi_foms:
-            self._roi_fom_cb.addItem(v)
-        self._roi_fom_cb.currentTextChanged.connect(
-            lambda x: self.roi_fom_sgn.emit(
-                self._available_roi_foms[x]))
-        self.roi_fom_sgn.connect(mediator.roi_fom_change_sgn)
-        self._roi_fom_cb.currentTextChanged.emit(
-            self._roi_fom_cb.currentText())
-
         self._roi_ctrls = []
         for roi in rois:
             widget = _SingleRoiCtrlWidget(roi)
             self._roi_ctrls.append(widget)
-            widget.roi_region_change_sgn.connect(mediator.roi_region_change_sgn)
+            widget.roi_region_change_sgn.connect(mediator.onRoiRegionChange)
+            widget.roi_visibility_change_sgn.connect(
+                mediator.onRoiVisibilityChange)
+            widget.notifyRoiParams()
 
         self.initUI()
 
     def initUI(self):
         layout = QtGui.QGridLayout()
-        layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
-        layout.addWidget(self._roi_fom_cb, 0, 1)
-        layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
-        layout.addWidget(self._roi_displayed_range_le, 0, 3)
-        layout.addWidget(self._clear_roi_hist_btn, 0, 4)
-        for i, roi_ctrl in enumerate(self._roi_ctrls, 1):
+        for i, roi_ctrl in enumerate(self._roi_ctrls):
             layout.addWidget(roi_ctrl, i, 0, 1, 5)
         self.setLayout(layout)
 
@@ -221,11 +223,9 @@ class _ImageCtrlWidget(QtGui.QWidget):
         """Initialization"""
         super().__init__(parent=parent)
 
-        self._moving_avg_le = QtGui.QLineEdit(str(1))
-        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 1000000))
+        self._moving_avg_le = SmartLineEdit(str(1))
+        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
         self._moving_avg_le.setMinimumWidth(60)
-        self._moving_avg_le.returnPressed.connect(lambda:
-            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
 
         self.initUI()
 
@@ -239,6 +239,10 @@ class _ImageCtrlWidget(QtGui.QWidget):
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
 
+    def initConnections(self):
+        self._moving_avg_le.returnPressed.connect(lambda:
+            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
+
 
 class _MaskCtrlWidget(QtGui.QWidget):
     """Widget inside the action bar for masking image."""
@@ -249,13 +253,13 @@ class _MaskCtrlWidget(QtGui.QWidget):
         """Initialization"""
         super().__init__(parent=parent)
 
-        self._min_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][0])))
+        self._min_pixel_le = SmartLineEdit(str(int(config["MASK_RANGE"][0])))
         self._min_pixel_le.setValidator(QtGui.QIntValidator())
         # avoid collapse on online and maxwell clusters
         self._min_pixel_le.setMinimumWidth(80)
         self._min_pixel_le.returnPressed.connect(
             self.onThresholdMaskChanged)
-        self._max_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][1])))
+        self._max_pixel_le = SmartLineEdit(str(int(config["MASK_RANGE"][1])))
         self._max_pixel_le.setValidator(QtGui.QIntValidator())
         self._max_pixel_le.setMinimumWidth(80)
         self._max_pixel_le.returnPressed.connect(
@@ -306,7 +310,7 @@ class _ImageProcWidget(QtGui.QGroupBox):
 
         mediator = Mediator()
 
-        self.bkg_le = QtGui.QLineEdit(str(0.0))
+        self.bkg_le = SmartLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
         self.update_image_btn = QtGui.QPushButton("Update image")
@@ -355,7 +359,7 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.rois, parent=self)
         self._image_proc_widget = _ImageProcWidget(parent=self)
 
-        self._image_proc_widget.bkg_le.editingFinished.connect(
+        self._image_proc_widget.bkg_le.returnPressed.connect(
             self._image_view.onBkgChange)
         self._image_proc_widget.update_image_btn.clicked.connect(
             self.updateImage)

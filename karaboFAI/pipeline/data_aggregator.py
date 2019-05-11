@@ -13,13 +13,23 @@ All rights reserved.
 from .data_model import ProcessedData
 from .exceptions import AggregatingError
 
+from ..metadata import MetadataProxy
+
 
 class DataAggregator:
     """Aggregate data other than the detector image data."""
 
     def __init__(self):
-        self.xgm_src = None
-        self.mono_src = None
+        self._xgm_src = None
+        self._mono_src = None
+
+        self._meta = MetadataProxy()
+
+    def update(self):
+        cfg = self._meta.ds_getall()
+
+        self._xgm_src = cfg['xgm_source_name']
+        self._mono_src = cfg['mono_source_name']
 
     def aggregate(self, proc_data, raw_data):
         """Aggregate data.
@@ -29,8 +39,8 @@ class DataAggregator:
 
         :return str: error message.
         """
-        self._aggregate_xgm(self.xgm_src, proc_data, raw_data)
-        self._aggregate_mono(self.mono_src, proc_data, raw_data)
+        self._aggregate_xgm(self._xgm_src, proc_data, raw_data)
+        self._aggregate_mono(self._mono_src, proc_data, raw_data)
 
     @staticmethod
     def _aggregate_xgm(src_name, proc_data, raw_data):

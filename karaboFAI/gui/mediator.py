@@ -9,16 +9,18 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
+from enum import IntEnum
+import json
+
+from PyQt5.QtCore import pyqtSignal,  QObject
+
+from ..metadata import MetadataProxy
+from ..pipeline.data_model import DataManager
+from ..config import CorrelationFom
 
 
 class Mediator(QObject):
     """Mediator for GUI signal-slot connection."""
-
-    bridge_endpoint_sgn = pyqtSignal(str)
-
-    port_change_sgn = pyqtSignal(str)
-    data_folder_change_sgn = pyqtSignal(str)
 
     start_file_server_sgn = pyqtSignal()
     stop_file_server_sgn = pyqtSignal()
@@ -29,53 +31,8 @@ class Mediator(QObject):
     vip_pulse_id2_sgn = pyqtSignal(int)
     # tell the control widget to update VIP pulse IDs
     vip_pulse_ids_connected_sgn = pyqtSignal()
-    photon_energy_change_sgn = pyqtSignal(float)
-    sample_distance_change_sgn = pyqtSignal(float)
-
-    roi_displayed_range_sgn = pyqtSignal(int)
-
-    # index, device ID, property name, resolution
-    correlation_param_change_sgn = pyqtSignal(int, str, str, float)
-    correlation_fom_change_sgn = pyqtSignal(object)
-    correlation_state_reset_sgn = pyqtSignal()
 
     reset_image_level_sgn = pyqtSignal()
-
-    pulse_id_range_sgn = pyqtSignal(int, int)
-
-    # (geometry file, quadrant positions)
-    geometry_sgn = pyqtSignal(str, list)
-
-    source_type_change_sgn = pyqtSignal(int)
-    detector_source_change_sgn = pyqtSignal(str)
-    xgm_source_change_sgn = pyqtSignal(str)
-    mono_source_change_sgn = pyqtSignal(str)
-
-    ai_integ_center_change_sgn = pyqtSignal(int, int)  # (cx, cy)
-    ai_integ_method_change_sgn = pyqtSignal(str)
-    ai_integ_range_change_sgn = pyqtSignal(float, float)
-    ai_integ_pts_change_sgn = pyqtSignal(int)
-    ai_normalizer_change_sgn = pyqtSignal(object)
-    ai_auc_range_change_sgn = pyqtSignal(float, float)
-    ai_fom_integ_range_change_sgn = pyqtSignal(float, float)
-    ai_pulsed_integ_state_sgn = pyqtSignal(bool)
-
-    pp_pulse_ids_sgn = pyqtSignal(object, list, list)
-    pp_ma_window_change_sgn = pyqtSignal(int)
-    pp_abs_difference_sgn = pyqtSignal(bool)
-    pp_analysis_type_sgn = pyqtSignal(object)
-    pp_state_reset_sgn = pyqtSignal()
-
-    proj1d_normalizer_change_sgn = pyqtSignal(object)
-    proj1d_auc_range_change_sgn = pyqtSignal(float, float)
-    proj1d_fom_integ_range_change_sgn = pyqtSignal(float, float)
-
-    xas_state_set_sgn = pyqtSignal()
-    xas_energy_bins_change_sgn = pyqtSignal(int)
-
-    roi_region_change_sgn = pyqtSignal(int, bool, int, int, int, int)
-    roi_fom_change_sgn = pyqtSignal(object)
-    roi_hist_clear_sgn = pyqtSignal()
 
     __instance = None
 
@@ -92,66 +49,146 @@ class Mediator(QObject):
         # this will reset all signal-slot connections
         super().__init__(*args, **kwargs)
 
+        self._meta = MetadataProxy()
+        self._data = DataManager()
+
         self._is_initialized = True
 
-    def connect_scheduler(self, scheduler):
-        # with the scheduler
-        self.source_type_change_sgn.connect(scheduler.onSourceTypeChange)
-        self.detector_source_change_sgn.connect(
-            scheduler.onDetectorSourceChange)
-        self.xgm_source_change_sgn.connect(scheduler.onXgmSourceChange)
-        self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
+    def onBridgeEndpointChange(self, value: str):
+        self._meta.ds_set("endpoint", value)
 
-        self.xas_state_set_sgn.connect(scheduler.onXasReset)
-        self.xas_energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
+    def onDataFolderChange(self, value: str):
+        self._meta.ds_set("data_folder", value)
 
-        self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
-        self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
-        self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
+    def onDetectorSourceNameChange(self, value: str):
+        self._meta.ds_set("detector_source_name", value)
 
-        self.ai_integ_center_change_sgn.connect(
-            scheduler.onAiIntegCenterChange)
-        self.ai_integ_method_change_sgn.connect(
-            scheduler.onAiIntegMethodChange)
-        self.ai_integ_range_change_sgn.connect(
-            scheduler.onAiIntegRangeChange)
-        self.ai_integ_pts_change_sgn.connect(
-            scheduler.onAiIntegPtsChange)
-        self.ai_normalizer_change_sgn.connect(scheduler.onAiNormalizeChange)
-        self.ai_auc_range_change_sgn.connect(scheduler.onAiAucRangeChange)
-        self.ai_fom_integ_range_change_sgn.connect(
-            scheduler.onAiFomIntegRangeChange)
-        self.ai_pulsed_integ_state_sgn.connect(
-            scheduler.onAiPulsedIntegStateChange)
+    def onXgmSourceNameChange(self, value: str):
+        self._meta.ds_set("xgm_source_name", value)
 
-        self.pp_abs_difference_sgn.connect(scheduler.onPpDifferenceTypeChange)
-        self.pp_analysis_type_sgn.connect(scheduler.onPpAnalysisTypeChange)
-        self.pp_pulse_ids_sgn.connect(scheduler.onPpPulseStateChange)
-        self.pp_state_reset_sgn.connect(scheduler.onPumpProbeReset)
-        self.pp_ma_window_change_sgn.connect(
-            scheduler.onPumpProbeMAWindowChange)
+    def onMonoSourceNameChange(self, value: str):
+        self._meta.ds_set("mono_source_name", value)
 
-        self.proj1d_normalizer_change_sgn.connect(
-            scheduler.onProj1dNormalizerChange)
-        self.proj1d_auc_range_change_sgn.connect(
-            scheduler.onProj1dAucXRangeChange)
-        self.proj1d_fom_integ_range_change_sgn.connect(
-            scheduler.onProj1dFomIntegRangeChange)
+    def onSourceTypeChange(self, value: IntEnum):
+        self._meta.ds_set("source_type", int(value))
 
-        self.correlation_fom_change_sgn.connect(
-            scheduler.onCorrelationFomChange)
-        self.correlation_param_change_sgn.connect(
-            scheduler.onCorrelationParamChange)
-        self.correlation_state_reset_sgn.connect(
-            scheduler.onCorrelationReset)
+    def onGeometryFileChange(self, value: str):
+        self._meta.geom_set("geometry_file", value)
 
-        self.pulse_id_range_sgn.connect(scheduler.onPulseIdRangeChange)
-        self.photon_energy_change_sgn.connect(scheduler.onPhotonEnergyChange)
-        self.sample_distance_change_sgn.connect(
-            scheduler.onSampleDistanceChange)
+    def onQuadPositionsChange(self, value: str):
+        self._meta.geom_set("quad_positions", json.dumps(value))
 
-        self.geometry_sgn.connect(scheduler.onGeometryChange)
+    def onSampleDistanceChange(self, value: float):
+        self._meta.ga_set('sample_distance', value)
 
-    def connect_bridge(self, bridge):
-        self.bridge_endpoint_sgn.connect(bridge.onEndpointChange)
-        self.source_type_change_sgn.connect(bridge.onSourceTypeChange)
+    def onPhotonEnergyChange(self, value: float):
+        self._meta.ga_set('photon_energy', value)
+
+    def onPulseIdRangeChange(self, value: tuple):
+        self._meta.ga_set('pulse_id_range', str(value))
+
+    def onAiIntegCenterXChange(self, value: int):
+        self._meta.ai_set('integ_center_x', value)
+
+    def onAiIntegCenterYChange(self, value: int):
+        self._meta.ai_set('integ_center_y', value)
+
+    def onAiIntegMethodChange(self, value: str):
+        self._meta.ai_set('integ_method', value)
+
+    def onAiIntegPointsChange(self, value: int):
+        self._meta.ai_set('integ_points', value)
+
+    def onAiIntegRangeChange(self, value: tuple):
+        self._meta.ai_set('integ_range', str(value))
+
+    def onAiNormalizerChange(self, value: IntEnum):
+        self._meta.ai_set('normalizer', int(value))
+
+    def onAiAucChangeChange(self, value: tuple):
+        self._meta.ai_set('auc_range', str(value))
+
+    def onAiFomIntegRangeChange(self, value: tuple):
+        self._meta.ai_set('fom_integ_range', str(value))
+
+    def onAiPulsedIntegStateChange(self, value: bool):
+        self._meta.ai_set('enable_pulsed_ai', str(value))
+
+    def onPpModeChange(self, value: IntEnum):
+        value = int(value)
+        if self._meta.pp_get('mode') != value:
+            self._data.reset_pp()
+            if self._meta.corr_get('fom_type') == \
+                    int(CorrelationFom.PUMP_PROBE_FOM):
+                self._data.reset_correlation()
+        self._meta.pp_set('mode', value)
+
+    def onPpOnPulseIdsChange(self, value: list):
+        self._meta.pp_set('on_pulse_ids', str(value))
+
+    def onPpOffPulseIdsChange(self, value: list):
+        self._meta.pp_set('off_pulse_ids', str(value))
+
+    def onPpAnalysisTypeChange(self, value: IntEnum):
+        self._meta.pp_set('analysis_type', int(value))
+        self._data.reset_pp()
+        if self._meta.corr_get('fom_type') == \
+                int(CorrelationFom.PUMP_PROBE_FOM):
+            self._data.reset_correlation()
+
+    def onPpAbsDifferenceChange(self, value: bool):
+        self._meta.pp_set("abs_difference", str(value))
+
+    def onPpMaWindowChange(self, value: int):
+        self._meta.pp_set("ma_window", value)
+
+    def onPpReset(self):
+        self._data.reset_pp()
+
+    def onRoiRegionChange(self, value: tuple):
+        rank, x, y, w, h = value
+        self._meta.roi_set(f'region{rank}', str((x, y, w, h)))
+
+    def onRoiVisibilityChange(self, value: tuple):
+        rank, is_visible = value
+        self._meta.roi_set(f'visibility{rank}', str(is_visible))
+
+    def onRoiFomChange(self, value: IntEnum):
+        self._meta.roi_set('fom_type', int(value))
+        self._data.reset_roi()
+
+    def onRoiReset(self):
+        self._data.reset_roi()
+
+    def onProj1dNormalizerChange(self, value: IntEnum):
+        self._meta.roi_set("proj1d:normalizer", int(value))
+
+    def onProj1dAucRangeChange(self, value: tuple):
+        self._meta.roi_set("proj1d:auc_range", str(value))
+
+    def onProj1dFomIntegRangeChange(self, value: tuple):
+        self._meta.roi_set("proj1d:fom_integ_range", str(value))
+
+    def onCorrelationFomChange(self, value: IntEnum):
+        self._meta.corr_set("fom_type", int(value))
+        self._data.reset_correlation()
+
+    def onCorrelationParamChange(self, value: tuple):
+        # index, device ID, property name, resolution
+        # index starts from 1
+        index, device_id, ppt, resolution = value
+        self._data.add_correlation(index, device_id, ppt, resolution)
+        self._meta.corr_set(f'device_id{index}', device_id)
+        self._meta.corr_set(f'property{index}', ppt)
+        self._meta.corr_set(f'resolution{index}', resolution)
+
+    def onCorrelationReset(self):
+        self._data.reset_correlation()
+
+    def onXasEnergyBinsChange(self, value: int):
+        self._meta.xas_set("energy_bins", value)
+
+    def onXasReset(self):
+        # FIXME
+        # reset XAS processor?
+        pass

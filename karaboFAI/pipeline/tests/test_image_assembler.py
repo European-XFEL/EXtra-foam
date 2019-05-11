@@ -17,10 +17,10 @@ class TestAgipdAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
                                "MODULE_SHAPE": [512, 128]})
     def testAssembleBridge(self):
-        self._assembler.source_type = DataSource.BRIDGE
+        self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
         key_name = 'image.data'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((4, 16, 512, 128))}}
         self._assembler.assemble(data)
 
@@ -48,10 +48,10 @@ class TestLpdAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
                                "MODULE_SHAPE": [256, 256]})
     def testAssembleBridge(self):
-        self._assembler.source_type = DataSource.BRIDGE
+        self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
         key_name = 'image.data'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((16, 256, 256, 4))}}
         self._assembler.assemble(data)
 
@@ -75,10 +75,10 @@ class TestJungfrauAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [512, 1024]})
     def testAssembleFile(self):
-        self._assembler.source_type = DataSource.FILE
+        self._assembler._source_type = DataSource.FILE
         src_name = 'detector_data'
         key_name = 'data.adc'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((1, 512, 1024))}}
         self._assembler.assemble(data)
 
@@ -93,10 +93,10 @@ class TestJungfrauAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [512, 1024]})
     def testAssembleBridge(self):
-        self._assembler.source_type = DataSource.BRIDGE
+        self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
         key_name = 'data.adc'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((512, 1024, 1))}}
         self._assembler.assemble(data)
 
@@ -116,10 +116,10 @@ class TestFastccdAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [1934, 960]})
     def testAssembleFile(self):
-        self._assembler.source_type = DataSource.FILE
+        self._assembler._source_type = DataSource.FILE
         src_name = 'detector_data'
         key_name = 'data.image.pixels'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((1934, 960))}}
         self._assembler.assemble(data)
 
@@ -130,10 +130,10 @@ class TestFastccdAssembler(unittest.TestCase):
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [1934, 960]})
     def testAssembleBridge(self):
-        self._assembler.source_type = DataSource.BRIDGE
+        self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
         key_name = 'data.image'
-        self._assembler.source_name = src_name
+        self._assembler._detector_source_name = src_name
         data = {src_name: {key_name: np.ones((1934, 960, 1))}}
         self._assembler.assemble(data)
 
