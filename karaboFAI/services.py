@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import multiprocessing
 import argparse
 
 from PyQt5.QtWidgets import QApplication
@@ -23,6 +24,15 @@ from .offline import FileServer
 from .pipeline import Bridge, Scheduler
 
 
+def check_system_resource():
+    """Check the resource of the current system"""
+    n_cpus = multiprocessing.cpu_count()
+
+    n_gpus = 0
+
+    return n_cpus, n_gpus
+
+
 class FaiServer:
     """FaiServer class.
 
@@ -35,6 +45,10 @@ class FaiServer:
 
     def __init__(self, detector):
         """Initialization."""
+
+        n_cpus, n_gpus = check_system_resource()
+        logger.info(f"Number of available CPUs: {n_cpus}, "
+                    "number of available GPUs: {n_gpus}")
 
         self.qt_app()
 
