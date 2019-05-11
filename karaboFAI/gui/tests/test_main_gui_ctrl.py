@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, NonCallableMagicMock
 import math
 import tempfile
 import os
@@ -7,17 +7,20 @@ import os
 import numpy as np
 
 from PyQt5 import QtCore
-from PyQt5.QtTest import QTest
+from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
+from karaboFAI.gui.ctrl_widgets import (
+    PumpProbeCtrlWidget, AzimuthalIntegCtrlWidget)
 from karaboFAI.services import FaiServer
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
     config, AiNormalizer, FomName, DataSource, Projection1dNormalizer,
     PumpProbeMode, PumpProbeType
 )
+from karaboFAI.logger import logger
 
 
 class TestMainGui(unittest.TestCase):
@@ -30,22 +33,20 @@ class TestMainGui(unittest.TestCase):
         _Config._filename = os.path.join(cls.dir, "config.json")
         ConfigWrapper()  # ensure file
 
-        fai = FaiServer('LPD')
-        cls.gui = fai._gui
-        cls.app = fai.qt_app()
-        cls.scheduler = fai._scheduler
-        cls.bridge = fai._bridge
+        cls.fai = FaiServer('LPD')
+        cls.gui = cls.fai._gui
+        cls.app = cls.fai.qt_app()
+        cls.scheduler = cls.fai._scheduler
+        cls.bridge = cls.fai._bridge
 
         cls._actions = cls.gui._tool_bar.actions()
+        cls._start_action = cls._actions[0]
+        cls._stop_action = cls._actions[1]
         cls._imagetool_action = cls._actions[2]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
         cls._pulsed_ai_action = cls._actions[7]
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.gui.close()
 
     def setUp(self):
         ImageData.clear()
@@ -351,3 +352,77 @@ class TestMainGui(unittest.TestCase):
         self.gui._data.set(data)
         window.update()
         self.app.processEvents()
+
+    @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
+           'updateSharedParameters', MagicMock(return_value=True))
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
+           'updateSharedParameters', MagicMock(return_value=True))
+    def testStartStop1(self):
+        # test updateSharedParameters will be called
+        spy = QSignalSpy(self.gui.start_bridge_sgn)
+
+        self._start_action.trigger()
+        self.gui.pump_probe_ctrl_widget.updateSharedParameters.\
+            assert_called_once()
+        self.gui.azimuthal_integ_ctrl_widget.updateSharedParameters.\
+            assert_called_once()
+        self.assertEqual(1, len(spy))
+
+        # test bridge and scheduler can be started
+
+        self.assertTrue(self.bridge.isRunning())
+        self.assertTrue(self.scheduler.isRunning())
+        self._stop_action.trigger()
+        self.assertTrue(self.bridge.isFinished())
+        # scheduler will not be stopped by the 'stop' button
+        self.assertTrue(self.scheduler.isRunning())
+        # stop scheduler
+        self.fai.stop_scheduler()
+        self.assertTrue(self.scheduler.isFinished())
+
+    @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
+           'onBridgeStopped')
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
+           'onBridgeStopped')
+    def testStartStop2(self, mock_ai, mock_pp):
+        logger.setLevel("CRITICAL")
+
+        # test the behavior of start and stop
+        spy = QSignalSpy(self.gui.start_bridge_sgn)
+        scheduler = self.scheduler
+        bridge = self.bridge
+        bridge_started_spy = QSignalSpy(bridge.started)
+        bridge_finished_spy = QSignalSpy(bridge.finished)
+
+        # test invalid entry in GUI
+        self.gui.azimuthal_integ_ctrl_widget._itgt_range_le.setText('1, 0')
+        self._start_action.trigger()
+        self.assertEqual(0, len(spy))
+        self.assertFalse(bridge.isRunning())
+        self.assertFalse(scheduler.isRunning())
+        self.assertTrue(self._start_action.isEnabled())
+        self.assertFalse(self._stop_action.isEnabled())
+
+        # fix the entry
+        self.gui.azimuthal_integ_ctrl_widget._itgt_range_le.setText('0, 1')
+        self._start_action.trigger()
+        self.assertEqual(1, len(spy))
+        self.assertTrue(bridge.isRunning())
+        self.assertTrue(scheduler.isRunning())
+        self.assertTrue(bridge_started_spy.wait(1000))
+        self.assertFalse(self._start_action.isEnabled())
+        self.assertTrue(self._stop_action.isEnabled())
+
+        # stop is triggered
+        self._stop_action.trigger()
+        self.assertTrue(bridge.isFinished())
+        self.assertEqual(1, len(bridge_finished_spy))
+        mock_pp.assert_called_once()
+        mock_ai.assert_called_once()
+        self.app.processEvents()
+        self.assertTrue(self._start_action.isEnabled())
+        self.assertFalse(self._stop_action.isEnabled())
+
+        # stop scheduler
+        self.fai.stop_scheduler()
+        self.assertTrue(self.scheduler.isFinished())

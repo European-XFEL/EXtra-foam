@@ -272,8 +272,8 @@ class MainGUI(QtGui.QMainWindow):
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
-            info = widget.updateSharedParameters()
-            if not info:
+            succeeded = widget.updateSharedParameters()
+            if not succeeded:
                 return False
         return True
 
