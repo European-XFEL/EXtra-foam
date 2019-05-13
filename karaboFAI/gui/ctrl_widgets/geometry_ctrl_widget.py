@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os.path as osp
+
 from ..pyqtgraph import Qt, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
@@ -90,12 +92,17 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
     def updateSharedParameters(self):
         """Override"""
+        geom_file = self._geom_file_le.text()
+        if not osp.isfile(geom_file):
+            logger.error(f"<Geometry file>: {geom_file} is not a valid file")
+            return False
+
         try:
-            geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self._mediator.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + repr(e))
             return False
+
+        self._mediator.geometry_sgn.emit(geom_file, quad_positions)
 
         return True
