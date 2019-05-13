@@ -24,7 +24,8 @@ from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
     PumpProbeProcessor, RoiProcessor, XasProcessor
 )
-from .exceptions import AggregatingError, AssemblingError, ProcessingError
+from .exceptions import (
+    AggregatingError, AssemblingError, GeometryFileError, ProcessingError)
 from ..config import config, DataSource, FomName, PumpProbeMode
 from ..helpers import profiler
 
@@ -91,10 +92,12 @@ class Scheduler(Worker):
 
     @QtCore.pyqtSlot(str, list)
     def onGeometryChange(self, filename, quad_positions):
-        success, info = self._image_assembler.load_geometry(
-            filename, quad_positions)
-        if not success:
-            self.info(info)
+        try:
+            self._image_assembler.load_geometry(
+                filename, quad_positions)
+            self.info(f"Loaded geometry from {filename}")
+        except GeometryFileError as e:
+            self.error(repr(e))
 
     @QtCore.pyqtSlot(int, int)
     def onPulseIdRangeChange(self, lb, ub):

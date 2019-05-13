@@ -18,7 +18,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
-from .exceptions import AssemblingError
+from .exceptions import AssemblingError, GeometryFileError
 from ..config import config, DataSource
 from ..helpers import profiler
 
@@ -58,7 +58,7 @@ class ImageAssemblerFactory(ABC):
             :param str filepath: path of the geometry file.
             :param tuple quad_positions: quadrant coordinates.
             """
-            return True, ""
+            pass
 
         def _modules_to_assembled(self, modules):
             """Convert modules data to assembled image data."""
@@ -132,10 +132,8 @@ class ImageAssemblerFactory(ABC):
             """Overload."""
             try:
                 self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
-                return True, f"Created Geometry from '{filename}'"
             except (ImportError, ModuleNotFoundError, OSError) as e:
-                info = f"Failed to create Geometry from '{filename}'\n" + repr(e)
-                return False, info
+                raise GeometryFileError(e)
 
     class LpdImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")
@@ -157,10 +155,8 @@ class ImageAssemblerFactory(ABC):
                 with File(filename, 'r') as f:
                     self._geom = LPDGeometry.from_h5_file_and_quad_positions(
                         f, quad_positions)
-                return True, f"Created Geometry from '{filename}'"
             except OSError as e:
-                info = f"Failed to create Geometry from '{filename}'\n" + repr(e)
-                return False, info
+                raise GeometryFileError(e)
 
     class JungFrauImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")
