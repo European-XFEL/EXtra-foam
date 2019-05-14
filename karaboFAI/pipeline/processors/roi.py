@@ -148,8 +148,9 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         # use ROI2 for background
         roi_bkg = processed.roi.roi2
-        if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
-            raise ProcessingError("Shapes of ROI1 and ROI2 are different")
+        if processed.pp.analysis_type != PumpProbeType.ROI1_BY_ROI2:
+            if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
+                raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean
@@ -164,14 +165,18 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
                 roi_bkg, on_image, copy=False)
             off_roi_bkg = RoiProcessor.get_roi_image(
                 roi_bkg, off_image, copy=False)
-            on_roi -= on_roi_bkg
-            off_roi -= off_roi_bkg
+            if processed.pp.analysis_type != PumpProbeType.ROI1_BY_ROI2:
+                on_roi -= on_roi_bkg
+                off_roi -= off_roi_bkg
+            else:
+                on_roi /= np.sum(on_roi_bkg)
+                off_roi /= np.sum(off_roi_bkg)
 
         # set the current on/off ROIs
         processed.pp.on_roi = on_roi
         processed.pp.off_roi = off_roi
 
-        if processed.pp.analysis_type == PumpProbeType.ROI:
+        if processed.pp.analysis_type in {PumpProbeType.ROI, PumpProbeType.ROI1_BY_ROI2}:
             processed.pp.data = (None, on_roi, off_roi)
             _, on_ma, off_ma = processed.pp.data  # get the moving average
 
@@ -181,15 +186,20 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
             norm_on_off_ma = norm_on_ma - norm_off_ma
 
             if processed.pp.abs_difference:
-                fom = self._roi_fom_handler(np.abs(norm_on_off_ma))
+                if processed.pp.analysis_type == PumpProbeType.ROI:
+                    fom = self._roi_fom_handler(np.abs(norm_on_off_ma))
+                else:
+                    fom = np.sum(np.abs(norm_on_off_ma))
             else:
-                fom = self._roi_fom_handler(norm_on_off_ma)
+                if processed.pp.analysis_type == PumpProbeType.ROI:
+                    fom = self._roi_fom_handler(norm_on_off_ma)
+                else:
+                    fom = np.sum(norm_on_off_ma)
 
             processed.pp.norm_on_ma = norm_on_ma
             processed.pp.norm_off_ma = norm_off_ma
             processed.pp.norm_on_off_ma = norm_on_off_ma
             processed.pp.fom = (processed.tid, fom)
-
 
 class RoiPumpProbeProj1dProcessor(LeafProcessor):
     """RoiPumpProbeProj1dProcessor class.

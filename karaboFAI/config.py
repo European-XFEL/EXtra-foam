@@ -37,6 +37,7 @@ class PumpProbeType(IntEnum):
     ROI = 1
     ROI_PROJECTION_X = 2
     ROI_PROJECTION_Y = 3
+    ROI1_BY_ROI2 = 4
 
 
 class FomName(IntEnum):
