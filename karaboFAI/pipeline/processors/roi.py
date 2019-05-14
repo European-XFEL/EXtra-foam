@@ -169,14 +169,20 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
                 on_roi -= on_roi_bkg
                 off_roi -= off_roi_bkg
             else:
-                on_roi /= np.sum(on_roi_bkg)
-                off_roi /= np.sum(off_roi_bkg)
+                denominator_on = np.sum(on_roi_bkg)
+                denominator_off = np.sum(off_roi_bkg)
+                if denominator_on == 0 or denominator_off == 0:
+                    raise ProcessingError(
+                        "Invalid denominator: Total intenstity in ROI2 is 0")
+                on_roi /= denominator_on
+                off_roi /= denominator_off
 
         # set the current on/off ROIs
         processed.pp.on_roi = on_roi
         processed.pp.off_roi = off_roi
 
-        if processed.pp.analysis_type in {PumpProbeType.ROI, PumpProbeType.ROI1_BY_ROI2}:
+        if processed.pp.analysis_type in (PumpProbeType.ROI, 
+                                          PumpProbeType.ROI1_BY_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
             _, on_ma, off_ma = processed.pp.data  # get the moving average
 
