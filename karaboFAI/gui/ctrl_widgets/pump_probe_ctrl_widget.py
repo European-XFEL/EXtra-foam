@@ -35,6 +35,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         "ROI": PumpProbeType.ROI,
         "projection X": PumpProbeType.ROI_PROJECTION_X,
         "projection Y": PumpProbeType.ROI_PROJECTION_Y,
+        "ROI1 / ROI2": PumpProbeType.ROI1_BY_ROI2,
     })
 
     # (mode, on-pulse ids, off-pulse ids)
