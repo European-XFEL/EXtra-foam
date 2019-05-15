@@ -181,7 +181,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         processed.pp.on_roi = on_roi
         processed.pp.off_roi = off_roi
 
-        if processed.pp.analysis_type in (PumpProbeType.ROI, 
+        if processed.pp.analysis_type in (PumpProbeType.ROI,
                                           PumpProbeType.ROI1_BY_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
             _, on_ma, off_ma = processed.pp.data  # get the moving average
