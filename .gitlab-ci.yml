@@ -1,25 +1,14 @@
 image: europeanxfel/karabo-ci:miniconda-3
 
+before_script:
+    - source ci/prepare.sh
+
 stages:
     - unittest
 
 unittest:
     stage: unittest
-    before_script:
-        - echo '*** Set necessary proxies so this machine can access Internet ***'
-        - export http_proxy="http://exflwgs06.desy.de:3128/"
-        - export https_proxy="http://exflwgs06.desy.de:3128/"
-        - set -x
-        - export DISPLAY=:99
-        - start-stop-daemon --start --background --exec /usr/bin/Xvfb -- $DISPLAY -screen 0 1400x900x24
+
     script:
-        - conda create -n test_env python=3.7
-        - source activate test_env
-        - which python
-        - python --version
-        - pip install .[test]
-        - python -m pytest -v karaboFAI/tests
-        - python -m pytest -v karaboFAI/algorithms
-        - python -m pytest -v karaboFAI/pipeline
-        # we have problem (core dumped) with the GUI test in gitlab CI
-        # - python -m pytest -v karaboFAI/gui
+        - source ci/build.sh
+        - source ci/test.sh
