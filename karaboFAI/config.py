@@ -71,6 +71,11 @@ class RoiFom(IntEnum):
     MEAN = 1  # monitor mean of ROI
 
 
+class BinningType(IntEnum):
+    UNDEFINED = 0
+    AZIMUTHAL_INTEG = 1
+
+
 class ImageMaskChange(IntEnum):
     MASK = 0  # mask an area
     UNMASK = 1  # unmask an area

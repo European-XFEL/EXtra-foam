@@ -119,6 +119,14 @@ class MetadataProxy:
             }
         )
 
+        cls.redis().hmset(
+            "analysis:binning", {
+                "n_bins": "",
+                "bin_range": "",
+                "analysis_type": "",
+            }
+        )
+
     @classmethod
     def ds_set(cls, key, value):
         cls.redis().hset("data_source", key, value)
@@ -214,3 +222,15 @@ class MetadataProxy:
     @classmethod
     def xas_getall(cls):
         return cls.redis().hgetall("analysis:XAS")
+
+    @classmethod
+    def binning_set(cls, key, value):
+        cls.redis().hset("analysis:binning", key, value)
+
+    @classmethod
+    def binning_get(cls, key):
+        return cls.redis().hget("analysis:binning", key)
+
+    @classmethod
+    def binning_getall(cls):
+        return cls.redis().hgetall("analysis:binning")

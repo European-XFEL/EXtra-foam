@@ -192,3 +192,15 @@ class Mediator(QObject):
         # FIXME
         # reset XAS processor?
         pass
+
+    def onBinningBinsChange(self, value: int):
+        self._meta.binning_set("n_bins", value)
+
+    def onBinningRangeChange(self, value: tuple):
+        self._meta.binning_set("bin_range", str(value))
+
+    def onBinningReset(self):
+        pass
+
+    def onBinningAnalysisTypeChange(self, value: IntEnum):
+        self._meta.binning_set("analysis_type", int(value))
