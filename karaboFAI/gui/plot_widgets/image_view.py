@@ -526,3 +526,31 @@ class RoiImageView(ImageView):
         x, y, w, h = roi
 
         self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
+
+
+class BinningImageView(ImageView):
+    """BinningImageView class.
+
+    Widget for displaying the image in selected bins.
+    """
+    def __init__(self, index=0, *, parent=None):
+        """Initialization.
+
+        :param int index: index of bins
+        """
+        super().__init__(parent=parent)
+
+        self._index = index
+
+        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
+
+    def update(self, data):
+        """Override."""
+        img = data.image.masked_mean
+
+        self.setImage(img, auto_levels=(not self._is_initialized))
+        if not self._roi:
+            self.updateROI(data)
+
+        if not self._is_initialized:
+            self._is_initialized = True

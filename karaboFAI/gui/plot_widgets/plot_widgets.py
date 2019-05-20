@@ -370,3 +370,48 @@ class XasSpectrumBinCountWidget(PlotWidget):
         bin_count = data.xas.bin_count
 
         self._plot.setData(bin_center, bin_count)
+
+
+class BinningWidget(PlotWidget):
+    """BinningWidget class.
+
+    Widget for displaying the pump and probe signal or their difference.
+    """
+    def __init__(self, diff=False, *, parent=None):
+        """Initialization.
+
+        :param bool diff: True for displaying on-off while False for
+            displaying on and off
+        """
+        super().__init__(parent=parent)
+
+        self.setLabel('left', "y (arb. u.)")
+        self.setLabel('bottom', "x (arb. u.)")
+        self.addLegend(offset=(-40, 20))
+
+    def update(self, data):
+        """Override."""
+        pass
+
+
+class BinningCountWidget(PlotWidget):
+    """BinningCountWidget class.
+
+    Widget for displaying the number of data points in each bins.
+    """
+
+    def __init__(self, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.setLabel('bottom', "x")
+        self.setLabel('left', "Count")
+
+        self._plot = self.plotBar(width=0.8)
+
+    def update(self, data):
+        """Override."""
+        bin_center = data.binning.bin_center
+        bin_count = data.binning.bin_count
+
+        self._plot.setData(bin_center, bin_count)

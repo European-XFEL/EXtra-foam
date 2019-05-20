@@ -94,6 +94,8 @@ class _Config(dict):
         "ROI_COLORS": ['c', 'b', 'o', 'y'],
         # colors for correlation parameters 1 to 4
         "CORRELATION_COLORS": ['c', 'b', 'o', 'y'],
+        # colors for binning plots 1 to 3
+        "BINNING_COLORS": ['c', 'b', 'o'],
         "REDIS": {
             # full path of the Redis server executable
             "EXECUTABLE": osp.join(osp.abspath(

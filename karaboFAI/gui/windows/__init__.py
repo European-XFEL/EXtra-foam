@@ -6,9 +6,11 @@ from .pump_probe import PumpProbeWindow
 from .roi import RoiWindow
 from .xas import XasWindow
 from .base_window import SingletonWindow
+from .binning import BinningWindow
 
 
 __all__ = [
+    "BinningWindow",
     "CorrelationWindow",
     "ImageToolWindow",
     "OverviewWindow",
