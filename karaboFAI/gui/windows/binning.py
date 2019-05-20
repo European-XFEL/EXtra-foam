@@ -42,10 +42,10 @@ class BinningWindow(DockerWindow):
         for i in range(self._n_views):
             self._images.append(BinningImageView(i, parent=self))
 
-        self._bin_count = BinningCountWidget()
+        self._bin_count = BinningCountWidget(parent=self)
 
-        self._plot1 = BinningWidget()
-        self._plot2 = BinningWidget()
+        self._plot1 = BinningWidget(parent=self)
+        self._plot2 = BinningWidget(parent=self)
 
         self.initUI()
 

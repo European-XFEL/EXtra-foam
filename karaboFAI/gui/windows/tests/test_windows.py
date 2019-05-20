@@ -9,15 +9,16 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.windows.base_window import AbstractWindow
 from karaboFAI.gui.windows import (
-    OverviewWindow, PulsedAzimuthalIntegrationWindow, PumpProbeWindow,
-    RoiWindow, SingletonWindow, XasWindow
+    BinningWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
+    PumpProbeWindow, RoiWindow, SingletonWindow, XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
-    AssembledImageView, MultiPulseAiWidget, PumpProbeOnOffWidget,
-    PumpProbeFomWidget, PumpProbeImageView,
+    AssembledImageView, MultiPulseAiWidget,
+    PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
     PulsedFOMWidget, SinglePulseAiWidget, SinglePulseImageView,
-    RoiImageView, RoiValueMonitor, XasSpectrumBinCountWidget,
-    XasSpectrumWidget, XasSpectrumDiffWidget
+    RoiImageView, RoiValueMonitor,
+    XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
+    BinningCountWidget, BinningImageView, BinningWidget,
 )
 
 
@@ -83,6 +84,18 @@ class TestOverviewWindow(unittest.TestCase):
 
         self.assertEqual(counter[RoiImageView], 4)
         self.assertEqual(counter[RoiValueMonitor], 1)
+
+    def testBinningWindow(self):
+        win = BinningWindow(pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(6, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(3, counter[BinningImageView])
+        self.assertEqual(2, counter[BinningWidget])
+        self.assertEqual(1, counter[BinningCountWidget])
 
 
 class TestPulsedAiWindow(unittest.TestCase):
