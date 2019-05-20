@@ -41,49 +41,49 @@ class TestOverviewWindow(unittest.TestCase):
     def testOverviewWindow(self):
         win = OverviewWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(len(win._plot_widgets), 2)
+        self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[BulletinWidget], 1)
-        self.assertEqual(counter[AssembledImageView], 1)
+        self.assertEqual(1, counter[BulletinWidget])
+        self.assertEqual(1, counter[AssembledImageView])
 
     def testPumpProbeWIndow(self):
         win = PumpProbeWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(len(win._plot_widgets), 8)
+        self.assertEqual(8, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[PumpProbeImageView], 5)
-        self.assertEqual(counter[PumpProbeOnOffWidget], 2)
-        self.assertEqual(counter[PumpProbeFomWidget], 1)
+        self.assertEqual(5, counter[PumpProbeImageView])
+        self.assertEqual(2, counter[PumpProbeOnOffWidget])
+        self.assertEqual(1, counter[PumpProbeFomWidget])
 
     def testXasWindow(self):
         win = XasWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(len(win._plot_widgets), 6)
+        self.assertEqual(6, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[RoiImageView], 3)
-        self.assertEqual(counter[XasSpectrumWidget], 1)
-        self.assertEqual(counter[XasSpectrumDiffWidget], 1)
-        self.assertEqual(counter[XasSpectrumBinCountWidget], 1)
+        self.assertEqual(3, counter[RoiImageView])
+        self.assertEqual(1, counter[XasSpectrumWidget])
+        self.assertEqual(1, counter[XasSpectrumDiffWidget])
+        self.assertEqual(1, counter[XasSpectrumBinCountWidget])
 
     def testRoiWindow(self):
         win = RoiWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(len(win._plot_widgets), 5)
+        self.assertEqual(5, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[RoiImageView], 4)
-        self.assertEqual(counter[RoiValueMonitor], 1)
+        self.assertEqual(4, counter[RoiImageView])
+        self.assertEqual(1, counter[RoiValueMonitor])
 
     def testBinningWindow(self):
         win = BinningWindow(pulse_resolved=True, parent=self.gui)
@@ -116,15 +116,15 @@ class TestPulsedAiWindow(unittest.TestCase):
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
 
-        self.assertEqual(len(self._win._plot_widgets), 6)
+        self.assertEqual(6, len(self._win._plot_widgets))
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[MultiPulseAiWidget], 1)
-        self.assertEqual(counter[PulsedFOMWidget], 1)
-        self.assertEqual(counter[SinglePulseAiWidget], 2)
-        self.assertEqual(counter[SinglePulseImageView], 2)
+        self.assertEqual(1, counter[MultiPulseAiWidget])
+        self.assertEqual(1, counter[PulsedFOMWidget])
+        self.assertEqual(2, counter[SinglePulseAiWidget])
+        self.assertEqual(2, counter[SinglePulseImageView])
 
         fai.shutdown()
         gui.close()
@@ -137,12 +137,12 @@ class TestPulsedAiWindow(unittest.TestCase):
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=False, parent=gui)
 
-        self.assertEqual(len(self._win._plot_widgets), 1)
+        self.assertEqual(1, len(self._win._plot_widgets))
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(counter[SinglePulseAiWidget], 1)
+        self.assertEqual(1, counter[SinglePulseAiWidget])
 
         fai.shutdown()
         gui.close()
