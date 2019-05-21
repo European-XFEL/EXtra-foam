@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
 
-pytest karaboFAI
+set -x
+set -e
+
+python -m pytest karaboFAI -v
