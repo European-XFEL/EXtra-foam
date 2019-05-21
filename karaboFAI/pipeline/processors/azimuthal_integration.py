@@ -85,8 +85,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         pass
 
     def update(self):
-        cfg = self._db.hgetall(mt.AZIMUTHAL_INTEG_PROC)
-        gp_cfg = self._db.hgetall(mt.GENERAL_PROC)
+        cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
+        gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
 
         self.sample_distance = float(gp_cfg['sample_distance'])
         self.photon_energy = float(gp_cfg['photon_energy'])

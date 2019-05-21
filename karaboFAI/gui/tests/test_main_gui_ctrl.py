@@ -32,7 +32,7 @@ class TestMainGui(unittest.TestCase):
         cls.fai = Fai('LPD')
         cls.fai.init()
         cls.app = mkQApp()
-        cls.gui = cls.fai.gui
+        cls.gui = cls.fai._gui
         cls.scheduler = cls.fai._scheduler
 
         cls.bridge = cls.fai._bridge
@@ -48,7 +48,7 @@ class TestMainGui(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.fai.shutdown()
+        # cls.fai.shutdown()
         cls.gui.close()
 
     def setUp(self):

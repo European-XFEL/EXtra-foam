@@ -24,8 +24,9 @@ from zmq.error import ZMQError
 from . import __version__
 from .config import config, redis_connection
 from .metadata import Metadata as mt
+from .metadata import MetaProxy
 from .logger import logger
-from .gui import MainGUI, mkQApp, Mediator
+from .gui import MainGUI, mkQApp
 from .offline import FileServer
 from .pipeline import Bridge, ProcessInfo, Scheduler
 
@@ -128,7 +129,8 @@ class Fai:
         # update global configuration
         config.load(detector, redis_port=redis_port)
 
-        self._gui = None
+        mkQApp()
+        self._gui = MainGUI()
 
         self._redis_process_info = None
 
@@ -196,25 +198,16 @@ class Fai:
 
         Mediator().file_server_stopped_sgn.emit()
 
-    @property
-    def gui(self):
-        return self._gui
-
     def init(self):
         if not faulthandler.is_enabled():
             faulthandler.enable(all_threads=False)
 
         self._redis_process_info = start_redis_server()
-        mt.reset()
 
-        mkQApp()
+        MetaProxy().reset()
 
-        mediator = Mediator()  # initialize Mediator
-
-        self._gui = MainGUI()
-
-        mediator.start_file_server_sgn.connect(self._start_fileserver)
-        mediator.stop_file_server_sgn.connect(self._stop_fileserver)
+        self._gui._mediator.start_file_server_sgn.connect(self._start_fileserver)
+        self._gui._mediator.stop_file_server_sgn.connect(self._stop_fileserver)
 
         self._gui.connectInput(self._scheduler)
 

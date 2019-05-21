@@ -20,7 +20,7 @@ class TestMainGui(unittest.TestCase):
         cls.fai = Fai('LPD')
         cls.app = mkQApp()
         cls.fai.init()
-        cls.gui = cls.fai.gui
+        cls.gui = cls.fai._gui
 
     @classmethod
     def tearDownClass(cls):

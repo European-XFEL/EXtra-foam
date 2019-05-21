@@ -12,8 +12,8 @@ All rights reserved.
 import multiprocessing as mp
 from queue import Empty
 
-from ..metadata import Metadata as mt
-from ..config import config, DataSource, redis_connection
+from ..metadata import Metadata as mt, MetaProxy
+from ..config import config, DataSource
 
 
 class ProcessWorker(mp.Process):
@@ -29,7 +29,7 @@ class ProcessWorker(mp.Process):
 
         self._shutdown_event = mp.Event()
 
-        self._db = redis_connection()
+        self._meta = MetaProxy()
 
     @property
     def output(self):
@@ -62,4 +62,4 @@ class ProcessWorker(mp.Process):
 
     def update(self):
         self._source_type = DataSource(
-            int(self._db.hget(mt.DATA_SOURCE, 'source_type')))
+            int(self._meta.get(mt.DATA_SOURCE, 'source_type')))

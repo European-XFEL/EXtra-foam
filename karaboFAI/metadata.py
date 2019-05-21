@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import redis
 
 from .config import redis_connection
 
@@ -107,12 +108,41 @@ class Metadata:
         }
     }
 
-    @classmethod
-    def reset(cls):
-        redis = redis_connection()
 
-        for key, value in cls._meta.items():
-            redis.hmset(key, value)
+class MetaProxy:
+    def __init__(self):
+        self._db = redis_connection()
 
-        for key, value in cls._proc_meta.items():
-            redis.hmset(key, value)
+    def set(self, name, key, value):
+        """Set a Hash.
+
+        :returns: -1 if connection fails;
+                   1 if created a new field;
+                   0 if set on a new field.
+        """
+        try:
+            return self._db.hset(name, key, value)
+        except redis.exceptions.ConnectionError:
+            return -1
+
+    def get(self, name, key):
+        try:
+            return self._db.hget(name, key)
+        except redis.exceptions.ConnectionError:
+            pass
+
+    def get_all(self, name):
+        try:
+            return self._db.hgetall(name)
+        except redis.exceptions.ConnectionError:
+            pass
+
+    def reset(self):
+        try:
+            for key, value in Metadata._meta.items():
+                self._db.hmset(key, value)
+
+            for key, value in Metadata._proc_meta.items():
+                self._db.hmset(key, value)
+        except redis.exceptions.ConnectionError:
+            pass

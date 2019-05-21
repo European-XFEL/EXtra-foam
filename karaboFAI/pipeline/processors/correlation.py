@@ -42,11 +42,11 @@ class CorrelationProcessor(CompositeProcessor):
         self.add(CorrelationFomProcessor())
 
     def update(self):
-        cfg = self._db.hgetall(mt.CORRELATION_PROC)
+        cfg = self._meta.get_all(mt.CORRELATION_PROC)
         self.fom_type = CorrelationFom(int(cfg['fom_type']))
 
         self.fom_integ_range = self.str2tuple(
-            self._db.hget(mt.AZIMUTHAL_INTEG_PROC, 'integ_range'))
+            self._meta.get(mt.AZIMUTHAL_INTEG_PROC, 'integ_range'))
 
         for i in range(len(self.device_ids)):
             self.device_ids[i] = cfg[f'device_id{i+1}']

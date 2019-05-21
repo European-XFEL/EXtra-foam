@@ -12,7 +12,7 @@ All rights reserved.
 from abc import ABC, abstractmethod
 import copy
 
-from ...config import redis_connection
+from ...metadata import MetaProxy
 
 
 class State(ABC):
@@ -144,7 +144,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         self._state = StateOn()
 
-        self._db = redis_connection()
+        self._meta = MetaProxy()
 
         self._params = dict()
 

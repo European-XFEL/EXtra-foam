@@ -28,6 +28,7 @@ from .windows import (
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
     SingletonWindow, XasWindow
 )
+from .mediator import Mediator
 from .. import __version__
 from ..config import config
 from ..logger import logger
@@ -48,6 +49,8 @@ class MainGUI(QtGui.QMainWindow):
     def __init__(self):
         """Initialization."""
         super().__init__()
+
+        self._mediator = Mediator()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
 

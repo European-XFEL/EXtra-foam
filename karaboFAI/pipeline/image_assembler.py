@@ -49,17 +49,17 @@ class ImageAssemblerFactory(ABC):
             self._geom = None
 
         def update(self):
-            ds_cfg = self._db.hgetall(mt.DATA_SOURCE)
+            ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
             self._detector_source_name = ds_cfg["detector_source_name"]
             self._source_type = DataSource(int(ds_cfg["source_type"]))
 
-            gp_cfg = self._db.hgetall(mt.GENERAL_PROC)
+            gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
 
             self._pulse_id_range = self.str2tuple(
                 gp_cfg['pulse_id_range'], handler=int)
 
             if config['REQUIRE_GEOMETRY']:
-                geom_cfg = self._db.hgetall(mt.GEOMETRY_PROC)
+                geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
                 geom_file = geom_cfg["geometry_file"]
                 quad_positions = json.loads(geom_cfg["quad_positions"],
                                             encoding='utf8')

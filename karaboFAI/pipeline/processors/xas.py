@@ -48,7 +48,7 @@ class XasProcessor(LeafProcessor):
         self.reset()
 
     def update(self):
-        cfg = self._db.hgetall(mt.XAS_PROC)
+        cfg = self._meta.get_all(mt.XAS_PROC)
 
         self.n_bins = int(cfg["energy_bins"])
 

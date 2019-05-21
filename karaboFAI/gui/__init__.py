@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QApplication
 
 from .pyqtgraph import mkQApp, setConfigOption
 from .main_gui import MainGUI
-from .mediator import Mediator
 
 setConfigOption("imageAxisOrder", "row-major")
 

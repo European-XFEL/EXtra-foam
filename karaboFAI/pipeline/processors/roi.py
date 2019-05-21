@@ -55,7 +55,7 @@ class RoiProcessor(CompositeProcessor):
         self.add(RoiPumpProbeRoiProcessor())
 
     def update(self):
-        cfg = self._db.hgetall(mt.ROI_PROC)
+        cfg = self._meta.get_all(mt.ROI_PROC)
 
         self.fom_type = RoiFom(int(cfg['fom_type']))
 

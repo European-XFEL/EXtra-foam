@@ -91,7 +91,7 @@ class Bridge(ProcessWorker):
     def update(self):
         super().update()
 
-        endpoint = self._db.hget(mt.DATA_SOURCE, 'endpoint')
+        endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
         if endpoint is None or endpoint in self._clients:
             return
 

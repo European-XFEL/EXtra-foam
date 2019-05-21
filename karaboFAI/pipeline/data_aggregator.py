@@ -12,7 +12,7 @@ All rights reserved.
 from .data_model import ProcessedData
 from .exceptions import AggregatingError
 from ..metadata import Metadata as mt
-from ..config import redis_connection
+from ..metadata import MetaProxy
 
 
 class DataAggregator:
@@ -22,10 +22,10 @@ class DataAggregator:
         self._xgm_src = None
         self._mono_src = None
 
-        self._db = redis_connection()
+        self._meta = MetaProxy()
 
     def update(self):
-        cfg = self._db.hgetall(mt.DATA_SOURCE)
+        cfg = self._meta.get_all(mt.DATA_SOURCE)
 
         self._xgm_src = cfg['xgm_source_name']
         self._mono_src = cfg['mono_source_name']
