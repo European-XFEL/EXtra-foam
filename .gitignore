@@ -3,6 +3,7 @@
 docs/_build
 cmake-build-debug
 build/
+dist/
 
 dump.rdb
 *.so
