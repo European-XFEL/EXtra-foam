@@ -15,6 +15,7 @@ from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
 from ...config import config, CorrelationFom
+from ...metadata import Metadata as mt
 from ...helpers import profiler
 
 
@@ -41,9 +42,11 @@ class CorrelationProcessor(CompositeProcessor):
         self.add(CorrelationFomProcessor())
 
     def update(self):
-        cfg = self._meta.corr_getall()
+        cfg = self._db.hgetall(mt.CORRELATION_PROC)
         self.fom_type = CorrelationFom(int(cfg['fom_type']))
-        self.fom_integ_range = self.str2tuple(self._meta.ai_get('integ_range'))
+
+        self.fom_integ_range = self.str2tuple(
+            self._db.hget(mt.AZIMUTHAL_INTEG_PROC, 'integ_range'))
 
         for i in range(len(self.device_ids)):
             self.device_ids[i] = cfg[f'device_id{i+1}']

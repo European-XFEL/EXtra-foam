@@ -34,7 +34,8 @@ class Scheduler(ProcessWorker):
 
         self._tasks = []
 
-        self._image_assembler = ImageAssemblerFactory.create(config['DETECTOR'])
+        self._image_assembler = ImageAssemblerFactory.create(
+            config['DETECTOR'])
         self._data_aggregator = DataAggregator()
 
         # processor pipeline flow:

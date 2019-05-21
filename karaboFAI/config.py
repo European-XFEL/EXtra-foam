@@ -12,8 +12,11 @@ All rights reserved.
 import copy
 from enum import IntEnum
 import json
+import os
 import os.path as osp
 import collections
+
+import redis
 
 from . import ROOT_PATH
 from .logger import logger
@@ -105,6 +108,8 @@ class _Config(dict):
             # full path of the Redis server executable
             "EXECUTABLE": osp.join(osp.abspath(
                 osp.dirname(__file__)), "thirdparty/bin/redis-server"),
+            # password to access the Redis server
+            "PASSWORD": "karaboFAI",  # FIXME
             # port of the Redis server
             "PORT": 6379,
         }
@@ -327,11 +332,15 @@ class _Config(dict):
             with open(self._filename, 'w') as fp:
                 json.dump(cfg, fp, indent=4)
 
-    def load(self, detector):
+    def load(self, detector, *, redis_port=-1):
         """Update the config from the config file.
 
         :param str detector: detector name.
+        :param int redis_port: port for running the Redis server.
         """
+        if 0 < redis_port <= 65535:
+            self.__getitem__("REDIS")["PORT"] = redis_port
+
         self.__setitem__("DETECTOR", detector)
         self.update(self._detector_readonly_config[detector])
         self.from_file(detector)
@@ -386,8 +395,8 @@ class ConfigWrapper(collections.Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def load(self, detector):
-        self._data.load(detector)
+    def load(self, detector, **kwargs):
+        self._data.load(detector, **kwargs)
 
     @property
     def detectors(self):
@@ -395,3 +404,18 @@ class ConfigWrapper(collections.Mapping):
 
 
 config = ConfigWrapper()  # global configuration
+
+REDIS_CONNECTION = None
+
+
+def redis_connection():
+    """Return a Redis connection."""
+    global REDIS_CONNECTION
+    if REDIS_CONNECTION is None:
+        redis_cfg = config['REDIS']
+        connection = redis.Redis('localhost', redis_cfg['PORT'],
+                                 password=redis_cfg['PASSWORD'],
+                                 decode_responses=True)
+        REDIS_CONNECTION = connection
+
+    return REDIS_CONNECTION

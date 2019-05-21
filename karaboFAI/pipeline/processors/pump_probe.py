@@ -15,6 +15,7 @@ from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import Stack
 from ...config import PumpProbeMode, PumpProbeType
+from ...metadata import Metadata as mt
 from ...helpers import profiler
 
 
@@ -45,7 +46,7 @@ class PumpProbeProcessor(CompositeProcessor):
         self.add(PumpProbeImageProcessor())
 
     def update(self):
-        cfg = self._meta.pp_getall()
+        cfg = self._db.hgetall(mt.PUMP_PROBE_PROC)
 
         self.mode = PumpProbeMode(int(cfg['mode']))
         self.on_pulse_ids = self.str2list(cfg['on_pulse_ids'], handler=int)

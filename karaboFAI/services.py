@@ -22,10 +22,10 @@ import redis
 from zmq.error import ZMQError
 
 from . import __version__
-from .config import config
+from .config import config, redis_connection
+from .metadata import Metadata as mt
 from .logger import logger
 from .gui import MainGUI, mkQApp, Mediator
-from .metadata import MetadataProxy
 from .offline import FileServer
 from .pipeline import Bridge, ProcessInfo, Scheduler
 
@@ -51,7 +51,7 @@ def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
         ConnectionError: raised if the Redis server cannot be connected.
     """
     # Create a Redis client to check whether the server is reachable.
-    client = redis.StrictRedis(host=host, port=port, password=password)
+    client = redis.Redis(host=host, port=port, password=password)
 
     # try 10 times
     for i in range(n_attempts):
@@ -76,32 +76,36 @@ def start_redis_server():
     :rtype: int, ProcessInfo
 
     Raises:
-        FileNOtFoundError: raised if the Redis executable does not exist.
+        FileNotFoundError: raised if the Redis executable does not exist.
     """
     redis_cfg = config["REDIS"]
     executable = redis_cfg["EXECUTABLE"]
     if not os.path.isfile(executable):
         raise FileNotFoundError
+
     port = redis_cfg["PORT"]
+    password = redis_cfg["PASSWORD"]
 
     # Construct the command to start the Redis server.
     command = [executable]
-    command += (["--port", str(port), "--loglevel", "warning"])
+    command += (["--port", str(port),
+                 "--requirepass", password,
+                 "--loglevel", "warning"])
 
     process = subprocess.Popen(command)
 
     # Create a Redis client just for configuring Redis.
-    client = redis.Redis(host="127.0.0.1", port=port)
+    client = redis.Redis("localhost", port, password=password)
 
     # wait for the Redis server to start
-    try_to_connect_redis_server("127.0.0.1", port)
+    try_to_connect_redis_server("localhost", port, password=password)
 
     # Put a time stamp in Redis to indicate when it was started.
     client.set("redis_start_time", time.time())
 
     logger.info(f"\nRedis servert started at '127.0.0.1':{port}")
 
-    return port, ProcessInfo(
+    return ProcessInfo(
         process=process,
         stdout_file=None,
         stderr_file=None,
@@ -115,21 +119,17 @@ class Fai:
     etc.
     """
 
-    def __init__(self, detector):
+    def __init__(self, detector, *, redis_port=-1):
         """Initialization."""
-
         n_cpus, n_gpus = check_system_resource()
         logger.info(f"Number of available CPUs: {n_cpus}, "
                     f"number of available GPUs: {n_gpus}")
 
         # update global configuration
-        config.load(detector)
-
-        self._meta = MetadataProxy()
+        config.load(detector, redis_port=redis_port)
 
         self._gui = None
 
-        self._redis_port = None
         self._redis_process_info = None
 
         # process which runs one or more zmq bridge
@@ -167,8 +167,7 @@ class Fai:
         self._shutdown_redis_server()
 
     def _start_fileserver(self):
-        cfg = self._meta.ds_getall()
-
+        cfg = redis_connection().hgetall(mt.DATA_SOURCE)
         folder = cfg['data_folder']
         port = cfg['endpoint'].split(':')[-1]
         # process can only be start once
@@ -201,16 +200,17 @@ class Fai:
     def gui(self):
         return self._gui
 
-    def init(self, args=None):
+    def init(self):
         if not faulthandler.is_enabled():
             faulthandler.enable(all_threads=False)
 
-        self._redis_port, self._redis_process_info = start_redis_server()
+        self._redis_process_info = start_redis_server()
+        mt.reset()
 
-        self._meta.reset()
+        mkQApp()
 
-        mkQApp(args)
-        mediator = Mediator()
+        mediator = Mediator()  # initialize Mediator
+
         self._gui = MainGUI()
 
         mediator.start_file_server_sgn.connect(self._start_fileserver)
@@ -234,6 +234,8 @@ def application():
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
+    parser.add_argument('--redis_port', type=int, default=-1,
+                        help="Port for start the redis server.")
 
     args = parser.parse_args()
 
@@ -252,10 +254,10 @@ def application():
     else:
         detector = detector.upper()
 
-    fai = Fai(detector)
+    fai = Fai(detector, redis_port=args.redis_port)
 
     try:
-        fai.init(sys.argv)
+        fai.init()
 
         mkQApp().exec_()
     finally:

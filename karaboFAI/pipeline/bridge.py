@@ -18,6 +18,7 @@ from karabo_bridge import Client
 
 from .exceptions import ProcessingError
 from .worker import ProcessWorker
+from ..metadata import Metadata as mt
 from ..config import config, DataSource
 from ..helpers import profiler
 
@@ -54,7 +55,6 @@ class Bridge(ProcessWorker):
                 try:
                     data = self._recv(client)
                     print("data received")
-
                     if self._source_type == DataSource.BRIDGE:
                         # always keep the latest data in the queue
                         try:
@@ -91,7 +91,7 @@ class Bridge(ProcessWorker):
     def update(self):
         super().update()
 
-        endpoint = self._meta.ds_get('endpoint')
+        endpoint = self._db.hget(mt.DATA_SOURCE, 'endpoint')
         if endpoint is None or endpoint in self._clients:
             return
 

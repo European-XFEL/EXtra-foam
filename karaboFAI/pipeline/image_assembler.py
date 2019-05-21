@@ -19,15 +19,15 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
-from .processors.base_processor import _RedisParserMixin
+from .processors.base_processor import _BaseProcessor, _RedisParserMixin
 from .exceptions import AssemblingError
 from ..config import config, DataSource
+from ..metadata import Metadata as mt
 from ..helpers import profiler
-from ..metadata import MetadataProxy
 
 
 class ImageAssemblerFactory(ABC):
-    class BaseAssembler(_RedisParserMixin):
+    class BaseAssembler(_BaseProcessor, _RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:
@@ -38,7 +38,7 @@ class ImageAssemblerFactory(ABC):
         """
         def __init__(self):
             """Initialization."""
-            self._meta = MetadataProxy()
+            super().__init__()
 
             self._detector_source_name = None
             self._source_type = None
@@ -49,17 +49,17 @@ class ImageAssemblerFactory(ABC):
             self._geom = None
 
         def update(self):
-            ds_cfg = self._meta.ds_getall()
+            ds_cfg = self._db.hgetall(mt.DATA_SOURCE)
             self._detector_source_name = ds_cfg["detector_source_name"]
             self._source_type = DataSource(int(ds_cfg["source_type"]))
 
-            ga_cfg = self._meta.ga_getall()
+            gp_cfg = self._db.hgetall(mt.GENERAL_PROC)
 
             self._pulse_id_range = self.str2tuple(
-                ga_cfg['pulse_id_range'], handler=int)
+                gp_cfg['pulse_id_range'], handler=int)
 
             if config['REQUIRE_GEOMETRY']:
-                geom_cfg = self._meta.geom_getall()
+                geom_cfg = self._db.hgetall(mt.GEOMETRY_PROC)
                 geom_file = geom_cfg["geometry_file"]
                 quad_positions = json.loads(geom_cfg["quad_positions"],
                                             encoding='utf8')

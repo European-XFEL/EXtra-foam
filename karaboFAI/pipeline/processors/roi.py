@@ -19,6 +19,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import intersection, normalize_auc, slice_curve
+from ...metadata import Metadata as mt
 from ...config import config, RoiFom, PumpProbeType, Projection1dNormalizer
 from ...helpers import profiler
 
@@ -54,7 +55,7 @@ class RoiProcessor(CompositeProcessor):
         self.add(RoiPumpProbeRoiProcessor())
 
     def update(self):
-        cfg = self._meta.roi_getall()
+        cfg = self._db.hgetall(mt.ROI_PROC)
 
         self.fom_type = RoiFom(int(cfg['fom_type']))
 

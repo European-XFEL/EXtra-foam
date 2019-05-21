@@ -70,7 +70,7 @@ class BinningCtrlWidget(AbstractCtrlWidget):
         self._hist_reset_btn.clicked.connect(mediator.onBinningReset)
 
         self._n_bins_le.returnPressed.connect(
-            mediator.onBinningBinsChange)
+            lambda: mediator.onBinningBinsChange(int(self._n_bins_le.text())))
         self._n_bins_le.returnPressed.emit()
 
         self._bin_range_le.value_changed_sgn.connect(

@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
-from karaboFAI.config import _Config, ConfigWrapper
+from karaboFAI.config import _Config, ConfigWrapper, config
 from karaboFAI.gui import mkQApp
 from karaboFAI.services import Fai
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
@@ -27,13 +27,14 @@ class TestMainGui(unittest.TestCase):
     def setUpClass(cls):
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
+        ConfigWrapper()   # ensure file
 
         cls.fai = Fai('LPD')
         cls.fai.init()
         cls.app = mkQApp()
         cls.gui = cls.fai.gui
         cls.scheduler = cls.fai._scheduler
+
         cls.bridge = cls.fai._bridge
 
         cls._actions = cls.gui._tool_bar.actions()

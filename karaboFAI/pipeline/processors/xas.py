@@ -14,6 +14,7 @@ import numpy as np
 from .base_processor import LeafProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
+from ...metadata import Metadata as mt
 from ...helpers import profiler
 
 
@@ -47,7 +48,7 @@ class XasProcessor(LeafProcessor):
         self.reset()
 
     def update(self):
-        cfg = self._meta.xas_getall()
+        cfg = self._db.hgetall(mt.XAS_PROC)
 
         self.n_bins = int(cfg["energy_bins"])
 

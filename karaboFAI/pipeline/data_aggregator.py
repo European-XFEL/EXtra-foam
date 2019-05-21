@@ -9,11 +9,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-
 from .data_model import ProcessedData
 from .exceptions import AggregatingError
-
-from ..metadata import MetadataProxy
+from ..metadata import Metadata as mt
+from ..config import redis_connection
 
 
 class DataAggregator:
@@ -23,10 +22,10 @@ class DataAggregator:
         self._xgm_src = None
         self._mono_src = None
 
-        self._meta = MetadataProxy()
+        self._db = redis_connection()
 
     def update(self):
-        cfg = self._meta.ds_getall()
+        cfg = self._db.hgetall(mt.DATA_SOURCE)
 
         self._xgm_src = cfg['xgm_source_name']
         self._mono_src = cfg['mono_source_name']

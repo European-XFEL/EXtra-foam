@@ -23,6 +23,7 @@ from .base_processor import (
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
 from ...config import AiNormalizer, PumpProbeType
+from ...metadata import Metadata as mt
 from ...helpers import profiler
 
 
@@ -84,11 +85,11 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         pass
 
     def update(self):
-        cfg = self._meta.ai_getall()
-        ga_cfg = self._meta.ga_getall()
+        cfg = self._db.hgetall(mt.AZIMUTHAL_INTEG_PROC)
+        gp_cfg = self._db.hgetall(mt.GENERAL_PROC)
 
-        self.sample_distance = float(ga_cfg['sample_distance'])
-        self.photon_energy = float(ga_cfg['photon_energy'])
+        self.sample_distance = float(gp_cfg['sample_distance'])
+        self.photon_energy = float(gp_cfg['photon_energy'])
         self.integ_center_x = int(cfg['integ_center_x'])
         self.integ_center_y = int(cfg['integ_center_y'])
         self.integ_method = cfg['integ_method']
