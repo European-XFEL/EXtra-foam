@@ -9,8 +9,7 @@ from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt
 
 from karaboFAI.config import _Config, ConfigWrapper
-from karaboFAI.services import Fai
-from karaboFAI.gui import mkQApp
+from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 
 
@@ -21,10 +20,10 @@ class TestImageTool(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        cls.fai = Fai('LPD')
-        cls.fai.init()
-        cls.gui = cls.fai.gui
-        cls.app = mkQApp()
+        fai = FAI('LPD')
+        fai.init()
+        cls.gui = fai.gui
+        cls.app = fai.app
         cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]
@@ -35,7 +34,6 @@ class TestImageTool(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.fai.shutdown()
         cls.gui.close()
 
     def setUp(self):

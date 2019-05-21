@@ -3,12 +3,10 @@ from unittest.mock import patch, MagicMock, Mock
 import tempfile
 import os
 
-from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
-from karaboFAI.gui import mkQApp
-from karaboFAI.services import Fai
+from karaboFAI.services import FAI
 from karaboFAI.logger import logger
 
 
@@ -21,12 +19,12 @@ class TestMainGui(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        cls.fai = Fai('LPD')
-        cls.fai.init()
-        cls.app = mkQApp()
-        cls.gui = cls.fai.gui
-        cls.scheduler = cls.fai._scheduler
-        cls.bridge = cls.fai._bridge
+        fai = FAI('LPD')
+        fai.init()
+        cls.app = fai.app
+        cls.gui = fai.gui
+        cls.scheduler = fai.scheduler
+        cls.bridge = fai.bridge
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
@@ -34,7 +32,6 @@ class TestMainGui(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.fai.shutdown()
         cls.gui.close()
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'

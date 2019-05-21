@@ -1,7 +1,7 @@
+from .worker import ProcessInfo, ProcessProxy
 from .bridge import Bridge
 from .scheduler import Scheduler
 from .data_model import Data4Visualization
-from .process import ProcessInfo
 from .image_assembler import ImageAssemblerFactory
 from .exceptions import AssemblingError
 
@@ -11,6 +11,7 @@ __all__ = [
     "Data4Visualization",
     "ImageAssemblerFactory",
     "ProcessInfo",
+    "ProcessProxy",
     "Scheduler",
 ]
 

@@ -51,6 +51,7 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._meta = MetaProxy()
+        self._meta.reset()
         self._data = DataManager()
 
         self._is_initialized = True

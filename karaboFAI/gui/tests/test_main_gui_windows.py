@@ -3,8 +3,7 @@ import tempfile
 import os
 
 from karaboFAI.config import _Config, ConfigWrapper
-from karaboFAI.services import Fai
-from karaboFAI.gui import mkQApp
+from karaboFAI.services import FAI
 from karaboFAI.gui.windows import (
     CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
 )
@@ -17,14 +16,13 @@ class TestMainGui(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        cls.fai = Fai('LPD')
-        cls.app = mkQApp()
-        cls.fai.init()
-        cls.gui = cls.fai._gui
+        fai = FAI('LPD')
+        fai.init()
+        cls.app = fai.app
+        cls.gui = fai.gui
 
     @classmethod
     def tearDownClass(cls):
-        cls.fai.shutdown()
         cls.gui.close()
 
     def testOpenCloseWindows(self):

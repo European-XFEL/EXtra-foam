@@ -33,7 +33,8 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..helpers import profiler
-from ..pipeline import Data4Visualization
+from ..pipeline import Data4Visualization, ProcessProxy
+from ..offline import FileServerManager
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -129,6 +130,9 @@ class MainGUI(QtGui.QMainWindow):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.updateAll)
         self.timer.start(config["TIMER_INTERVAL"])
+
+        # a file server which streams data from files
+        self._file_server = FileServerManager()
 
         # *************************************************************
         # control widgets
@@ -308,5 +312,9 @@ class MainGUI(QtGui.QMainWindow):
 
         # useful in unittests
         SingletonWindow._instances.clear()
+
+        self._file_server.shutdown()
+
+        ProcessProxy().shutdown_all()
 
         super().closeEvent(QCloseEvent)

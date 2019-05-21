@@ -47,6 +47,8 @@ class PumpProbeProcessor(CompositeProcessor):
 
     def update(self):
         cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
+        if cfg is None:
+            return
 
         self.mode = PumpProbeMode(int(cfg['mode']))
         self.on_pulse_ids = self.str2list(cfg['on_pulse_ids'], handler=int)

@@ -1,5 +1,5 @@
-from .file_server import FileServer
+from .file_server_manager import FileServerManager
 
 __all__ = [
-    'FileServer'
+    'FileServerManager'
 ]

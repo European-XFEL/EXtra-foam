@@ -14,6 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..misc_widgets import SmartLineEdit
 from ...config import config, DataSource
 
 
@@ -62,7 +63,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
 
-        self._data_folder_le = QtGui.QLineEdit(config["DATA_FOLDER"])
+        self._data_folder_le = SmartLineEdit(config["DATA_FOLDER"])
 
         self._serve_start_btn = QtGui.QPushButton("Stream files")
         self._serve_terminate_btn = QtGui.QPushButton("Terminate")

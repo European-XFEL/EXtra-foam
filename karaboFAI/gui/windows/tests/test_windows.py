@@ -4,7 +4,7 @@ import os
 import tempfile
 
 from karaboFAI.config import _Config, ConfigWrapper
-from karaboFAI.services import Fai
+from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.windows.base_window import AbstractWindow
@@ -29,14 +29,13 @@ class TestOverviewWindow(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        cls.fai = Fai('LPD')
-        cls.fai.init()
-        cls.gui = cls.fai.gui
+        fai = FAI('LPD')
+        fai.init()
+        cls.gui = fai.gui
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-        cls.fai.shutdown()
 
     def testOverviewWindow(self):
         win = OverviewWindow(pulse_resolved=True, parent=self.gui)
@@ -109,7 +108,7 @@ class TestPulsedAiWindow(unittest.TestCase):
         mkQApp()
 
     def testPulseResolved(self):
-        fai = Fai('LPD')
+        fai = FAI('LPD')
         fai.init()
         gui = fai.gui
 
@@ -126,11 +125,10 @@ class TestPulsedAiWindow(unittest.TestCase):
         self.assertEqual(2, counter[SinglePulseAiWidget])
         self.assertEqual(2, counter[SinglePulseImageView])
 
-        fai.shutdown()
         gui.close()
 
     def testTrainResolved(self):
-        fai = Fai('JungFrau')
+        fai = FAI('JungFrau')
         fai.init()
         gui = fai.gui
 
@@ -144,7 +142,6 @@ class TestPulsedAiWindow(unittest.TestCase):
 
         self.assertEqual(1, counter[SinglePulseAiWidget])
 
-        fai.shutdown()
         gui.close()
 
 

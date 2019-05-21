@@ -28,14 +28,13 @@ from ..helpers import profiler
 
 class Scheduler(ProcessWorker):
     """Pipeline scheduler."""
-    def __init__(self, name="scheduler"):
+    def __init__(self, detector, name='scheduler'):
         """Initialization."""
         super().__init__(name)
 
         self._tasks = []
 
-        self._image_assembler = ImageAssemblerFactory.create(
-            config['DETECTOR'])
+        self._image_assembler = ImageAssemblerFactory.create(detector)
         self._data_aggregator = DataAggregator()
 
         # processor pipeline flow:
@@ -57,57 +56,51 @@ class Scheduler(ProcessWorker):
             self._tasks.append(value)
         super().__setattr__(key, value)
 
-    def run(self):
+    def _run_once(self):
         """Run the data processor."""
-        self.empty_output()  # remove old data
+        timeout = self._timeout
 
-        timeout = config['TIMEOUT']
-        print("Scheduler processes started!")
+        try:
+            data = self._input.get(timeout=timeout)
+        except Empty:
+            return
 
-        while not self._shutdown_event.is_set():
+        self.update()
+
+        self._data_aggregator.update()
+        self._image_assembler.update()
+
+        self._ai_proc.update()
+        self._pp_proc.update()
+        self._roi_proc.update()
+        self._xas_proc.update()
+        self._correlation_proc.update()
+
+        processed_data = self._process_core(data)
+        if processed_data is None:
+            return
+
+        if self._source_type == DataSource.BRIDGE:
+            # always keep the latest data in the queue
             try:
-                data = self._input.get(timeout=timeout)
-            except Empty:
-                continue
-
-            self.update()
-
-            self._data_aggregator.update()
-            self._image_assembler.update()
-
-            self._ai_proc.update()
-            self._pp_proc.update()
-            self._roi_proc.update()
-            self._xas_proc.update()
-            self._correlation_proc.update()
-
-            processed_data = self._process(data)
-            print("Data was processed")
-            if processed_data is None:
-                continue
-            if self._source_type == DataSource.BRIDGE:
-                # always keep the latest data in the queue
+                self._output.put(processed_data, timeout=timeout)
+            except Full:
+                self.pop_output()
+                print("Data dropped by the scheduler")
+        elif self._source_type == DataSource.FILE:
+            # wait until data in the queue has been processed
+            while not self.closing:
                 try:
                     self._output.put(processed_data, timeout=timeout)
+                    break
                 except Full:
-                    self.pop_output()
-                    print("Data dropped by the scheduler")
-            elif self._source_type == DataSource.FILE:
-                # wait until data in the queue has been processed
-                while not self._shutdown_event.is_set():
-                    try:
-                        self._output.put(processed_data, timeout=timeout)
-                        break
-                    except Full:
-                        continue
-            else:
-                raise ProcessingError(
-                    f"Unknown source type {self._source_type}!")
-
-        print("Scheduler shutdown cleanly!")
+                    continue
+        else:
+            raise ProcessingError(
+                f"Unknown source type {self._source_type}!")
 
     @profiler("Process Data (total)")
-    def _process(self, data):
+    def _process_core(self, data):
         """Process data received from the bridge."""
         raw, meta = data
 

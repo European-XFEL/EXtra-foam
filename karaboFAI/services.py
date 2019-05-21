@@ -12,22 +12,16 @@ All rights reserved.
 import argparse
 import multiprocessing as mp
 import os
-import sys
 import subprocess
 import time
 import faulthandler
 
 import redis
 
-from zmq.error import ZMQError
-
 from . import __version__
-from .config import config, redis_connection
-from .metadata import Metadata as mt
-from .metadata import MetaProxy
+from .config import config
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .offline import FileServer
 from .pipeline import Bridge, ProcessInfo, Scheduler
 
 
@@ -70,11 +64,12 @@ def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
                           f"{host}:{port}.")
 
 
-def start_redis_server():
+def start_redis_server(port):
     """Start a Redis server.
 
-    :returns: port, process info
-    :rtype: int, ProcessInfo
+    :param int port: Redis server port.
+
+    :return ProcessInfo: process info.
 
     Raises:
         FileNotFoundError: raised if the Redis executable does not exist.
@@ -84,7 +79,8 @@ def start_redis_server():
     if not os.path.isfile(executable):
         raise FileNotFoundError
 
-    port = redis_cfg["PORT"]
+    if port is None or port <= 0:
+        port = redis_cfg["PORT"]
     password = redis_cfg["PASSWORD"]
 
     # Construct the command to start the Redis server.
@@ -104,7 +100,7 @@ def start_redis_server():
     # Put a time stamp in Redis to indicate when it was started.
     client.set("redis_start_time", time.time())
 
-    logger.info(f"\nRedis servert started at '127.0.0.1':{port}")
+    logger.info(f"Try to start Redis server at 'localhost':{port}")
 
     return ProcessInfo(
         process=process,
@@ -113,109 +109,47 @@ def start_redis_server():
     )
 
 
-class Fai:
-    """Fai class.
+class FAI:
+    def __init__(self, detector, *, redis_port=None):
+        # update global configuration
+        config.load(detector)
 
-    It manages all services in karaboFAI: QApplication, Redis, Processors,
-    etc.
-    """
+        # Redis server must be started at first since when the GUI starts,
+        # it needs to write all the configuration into Redis.
+        self._redis_process_info = start_redis_server(redis_port)
 
-    def __init__(self, detector, *, redis_port=-1):
-        """Initialization."""
+        # TODO: check Redis server sub-process started.
+        # Now, if the Redis server is already started, the software will not
+        # complain!
+
+        # process which runs one or more zmq bridge
+        self.bridge = Bridge()
+
+        # process which runs the scheduler
+        self.scheduler = Scheduler(detector)
+        self.scheduler.connect_input(self.bridge)
+
+        self.app = mkQApp()
+        self.gui = MainGUI()
+
+    def init(self):
         n_cpus, n_gpus = check_system_resource()
         logger.info(f"Number of available CPUs: {n_cpus}, "
                     f"number of available GPUs: {n_gpus}")
 
-        # update global configuration
-        config.load(detector, redis_port=redis_port)
+        self.bridge.start()
+        self.scheduler.start()
 
-        mkQApp()
-        self._gui = MainGUI()
+        self.gui.connectInput(self.scheduler)
+        self.gui.start_sgn.connect(self.bridge.activate)
+        self.gui.stop_sgn.connect(self.bridge.pause)
 
-        self._redis_process_info = None
-
-        # process which runs one or more zmq bridge
-        self._bridge = Bridge()
-
-        # process which runs the scheduler
-        self._scheduler = Scheduler()
-        self._scheduler.connect_input(self._bridge)
-
-        # a file server which streams data from files
-        self._file_server = None
-
-    def _shutdown_redis_server(self):
+    def shutdown_redis_server(self):
         logger.info("Shutting down the Redis server...")
         self._redis_process_info.process.terminate()
 
-    def _shutdown_scheduler(self):
-        logger.info("Shutting down the scheduler...")
-        self._scheduler.shutdown()
-        self._scheduler.join()
-        logger.info("Scheduler has been shutdown!")
-
-    def _shutdown_bridge(self):
-        logger.info("Shutting down the bridge...")
-        self._bridge.shutdown()
-        self._bridge.join()
-        logger.info("Bridge has been shutdown!")
-
-    def shutdown(self):
-        self._stop_fileserver()
-
-        self._shutdown_bridge()
-        self._shutdown_scheduler()
-
-        self._shutdown_redis_server()
-
-    def _start_fileserver(self):
-        cfg = redis_connection().hgetall(mt.DATA_SOURCE)
-        folder = cfg['data_folder']
-        port = cfg['endpoint'].split(':')[-1]
-        # process can only be start once
-        self._file_server = FileServer(folder, port)
-        try:
-            # TODO: signal the end of file serving
-            self._file_server.start()
-            logger.info("Start serving file in the folder {} through port {}"
-                        .format(folder, port))
-        except FileNotFoundError:
-            logger.info("{} does not exist!".format(folder))
-            return
-        except ZMQError:
-            logger.info("Port {} is already in use!".format(port))
-            return
-
-        Mediator().file_server_started_sgn.emit()
-
-    def _stop_fileserver(self):
-        if self._file_server is not None and self._file_server.is_alive():
-            # fileserver does not have any shared object
-            self._file_server.terminate()
-
-        if self._file_server is not None:
-            self._file_server.join()
-
-        Mediator().file_server_stopped_sgn.emit()
-
-    def init(self):
-        if not faulthandler.is_enabled():
-            faulthandler.enable(all_threads=False)
-
-        self._redis_process_info = start_redis_server()
-
-        MetaProxy().reset()
-
-        self._gui._mediator.start_file_server_sgn.connect(self._start_fileserver)
-        self._gui._mediator.stop_file_server_sgn.connect(self._stop_fileserver)
-
-        self._gui.connectInput(self._scheduler)
-
-        self._gui.start_sgn.connect(self._bridge.activate)
-        self._gui.stop_sgn.connect(self._bridge.pause)
-
-        self._bridge.start()
-        self._scheduler.start()
+    def __del__(self):
+        self.shutdown_redis_server()
 
 
 def application():
@@ -247,14 +181,14 @@ def application():
     else:
         detector = detector.upper()
 
-    fai = Fai(detector, redis_port=args.redis_port)
+    if not faulthandler.is_enabled():
+        faulthandler.enable(all_threads=False)
 
-    try:
-        fai.init()
+    fai = FAI(detector, redis_port=args.redis_port)
 
-        mkQApp().exec_()
-    finally:
-        fai.shutdown()
+    fai.init()
+
+    mkQApp().exec_()
 
 
 if __name__ == "__main__":

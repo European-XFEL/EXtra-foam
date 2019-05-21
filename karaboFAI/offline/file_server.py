@@ -58,8 +58,6 @@ class FileServer(Process):
         self._folder = folder
         self._port = port
 
-        self._running = True
-
     def run(self):
         """Override."""
         if config["DETECTOR"] in ["LPD", "FXE"]:
@@ -76,7 +74,3 @@ class FileServer(Process):
         # devices.extend([("*XGM*", "*"),])
         # devices.extend([("*MONO*", "actualEnergy"), ])
         serve_files(self._folder, self._port, devices=devices, require_all=True)
-
-    def terminate(self):
-        """Override."""
-        super().terminate()

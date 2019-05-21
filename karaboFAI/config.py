@@ -110,7 +110,7 @@ class _Config(dict):
                 osp.dirname(__file__)), "thirdparty/bin/redis-server"),
             # password to access the Redis server
             "PASSWORD": "karaboFAI",  # FIXME
-            # port of the Redis server
+            # default port of the Redis server
             "PORT": 6379,
         }
     }
@@ -332,15 +332,11 @@ class _Config(dict):
             with open(self._filename, 'w') as fp:
                 json.dump(cfg, fp, indent=4)
 
-    def load(self, detector, *, redis_port=-1):
+    def load(self, detector):
         """Update the config from the config file.
 
         :param str detector: detector name.
-        :param int redis_port: port for running the Redis server.
         """
-        if 0 < redis_port <= 65535:
-            self.__getitem__("REDIS")["PORT"] = redis_port
-
         self.__setitem__("DETECTOR", detector)
         self.update(self._detector_readonly_config[detector])
         self.from_file(detector)

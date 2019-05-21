@@ -10,7 +10,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from queue import Full
-import multiprocessing as mp
 
 from zmq.error import ZMQError
 
@@ -32,60 +31,46 @@ class Bridge(ProcessWorker):
         """Initialization."""
         super().__init__(name)
 
-        self._pause_event = mp.Event()
-
         self._clients = dict()
 
-    def run(self):
-        """Override."""
-        self.empty_output()
+    def _run_once(self):
+        timeout = self._timeout
 
-        timeout = config['TIMEOUT']
+        if not self.running:
+            self.wait()
+            # when the bridge is paused, we empty the output queue to avoid
+            # sending old data when it is resumed.
+            self.empty_output()
+            # update the client when resumed
+            self.update()
 
-        print("Bridge process started")
-
-        while not self._shutdown_event.is_set():
-            if not self._pause_event.is_set():
-                self.empty_output()
-                self.update()
-                self._pause_event.wait(timeout=timeout)
-                continue
-
-            for client in self._clients.values():
-                try:
-                    data = self._recv(client)
-                    print("data received")
-                    if self._source_type == DataSource.BRIDGE:
-                        # always keep the latest data in the queue
+        for client in self._clients.values():
+            try:
+                data = self._recv_imp(client)
+                print("data received")
+                if self._source_type == DataSource.BRIDGE:
+                    # always keep the latest data in the queue
+                    try:
+                        self._output.put(data, timeout=timeout)
+                    except Full:
+                        self.pop_output()
+                        print("Data dropped by the bridge")
+                elif self._source_type == DataSource.FILE:
+                    # wait until data in the queue has been processed
+                    while not self.closing:
                         try:
                             self._output.put(data, timeout=timeout)
+                            break
                         except Full:
-                            self.pop_output()
-                            print("Data dropped by the bridge")
-                    elif self._source_type == DataSource.FILE:
-                        # wait until data in the queue has been processed
-                        while not self._shutdown_event.is_set():
-                            try:
-                                self._output.put(data, timeout=timeout)
-                                break
-                            except Full:
-                                continue
-                    else:
-                        raise ProcessingError(
-                            f"Unknown source type {self._source_type}!")
-                except TimeoutError:
-                    continue
-
-        print("Bridge shutdown cleanly")
-
-    def activate(self):
-        self._pause_event.set()
-
-    def pause(self):
-        self._pause_event.clear()
+                            continue
+                else:
+                    raise ProcessingError(
+                        f"Unknown source type {self._source_type}!")
+            except TimeoutError:
+                continue
 
     @profiler("Receive Data from Bridge")
-    def _recv(self, client):
+    def _recv_imp(self, client):
         return client.next()
 
     def update(self):
