@@ -17,8 +17,7 @@ from PyQt5.QtGui import QValidator
 from .pyqtgraph import ColorMap, intColor, mkPen, mkBrush, QtCore, QtGui
 from .pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
-from .gui_helpers import parse_boundary
-from ..logger import logger
+from .gui_helpers import parse_boundary, parse_ids
 
 
 class Colors:
@@ -175,7 +174,7 @@ class SmartBoundaryLineEdit(SmartLineEdit):
 
     value_changed_sgn = QtCore.pyqtSignal(object)
 
-    class ValidateBoundary(QValidator):
+    class Validator(QValidator):
         def __init__(self, parent=None):
             super().__init__(parent)
 
@@ -188,21 +187,58 @@ class SmartBoundaryLineEdit(SmartLineEdit):
 
         @staticmethod
         def parse(s):
-            parse_boundary(s)
+            return parse_boundary(s)
 
     def __init__(self, content, parent=None):
         super().__init__(content, parent=parent)
 
         try:
-            self.ValidateBoundary.parse(content)
+            self.Validator.parse(content)
         except ValueError:
             raise
 
         self._cached = self.text()
 
-        self.setValidator(self.ValidateBoundary())
+        self.setValidator(self.Validator())
 
     def onReturnPressed(self):
         self._cached = self.text()
         # convert it to str in order to store in Redis
-        self.value_changed_sgn.emit(str(parse_boundary(self.text())))
+        self.value_changed_sgn.emit(str(self.Validator.parse(self.text())))
+
+
+class SmartRangeLineEdit(SmartLineEdit):
+
+    value_changed_sgn = QtCore.pyqtSignal(object)
+
+    class Validator(QValidator):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+        def validate(self, s, pos):
+            try:
+                self.parse(s)
+                return QValidator.Acceptable, s, pos
+            except ValueError:
+                return QValidator.Intermediate, s, pos
+
+        @staticmethod
+        def parse(s):
+            return parse_ids(s)
+
+    def __init__(self, content, parent=None):
+        super().__init__(content, parent=parent)
+
+        try:
+            self.Validator.parse(content)
+        except ValueError:
+            raise
+
+        self._cached = self.text()
+
+        self.setValidator(self.Validator())
+
+    def onReturnPressed(self):
+        self._cached = self.text()
+        # convert it to str in order to store in Redis
+        self.value_changed_sgn.emit(str(self.Validator.parse(self.text())))
