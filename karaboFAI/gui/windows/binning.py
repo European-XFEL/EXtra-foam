@@ -26,11 +26,11 @@ class BinningWindow(DockerWindow):
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
     _UW = _TOTAL_W / 3
-    _UH = _TOTAL_H / 4
+    _UH = _TOTAL_H / 3
     _MW = _TOTAL_W / 2
-    _MH = _TOTAL_H / 2
+    _MH = _TOTAL_H / 3
     _BW = _TOTAL_W
-    _BH = _TOTAL_H / 4
+    _BH = _TOTAL_H / 3
 
     _n_views = len(config['BINNING_COLORS'])
 
