@@ -17,7 +17,7 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_window import AbstractWindow, SingletonWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
-from ..misc_widgets import SmartLineEdit
+from ..misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
 from ...config import config, ImageMaskChange
 
 

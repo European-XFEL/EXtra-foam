@@ -21,6 +21,7 @@ class DataAggregator:
     def __init__(self):
         self._xgm_src = None
         self._mono_src = None
+        self._timing_src = None
 
         self._meta = MetaProxy()
 
@@ -29,6 +30,7 @@ class DataAggregator:
 
         self._xgm_src = cfg['xgm_source_name']
         self._mono_src = cfg['mono_source_name']
+        self._timing_src = cfg['timing_source_name']
 
     def aggregate(self, proc_data, raw_data):
         """Aggregate data.
@@ -40,6 +42,7 @@ class DataAggregator:
         """
         self._aggregate_xgm(self._xgm_src, proc_data, raw_data)
         self._aggregate_mono(self._mono_src, proc_data, raw_data)
+        self._aggregate_timing(self._timing_src, proc_data, raw_data)
 
     @staticmethod
     def _aggregate_xgm(src_name, proc_data, raw_data):
@@ -78,3 +81,21 @@ class DataAggregator:
 
         proc_data.mono.source = src_name
         proc_data.mono.energy = mono_data[ppt]
+
+    @staticmethod
+    def _aggregate_timing(src_name, proc_data, raw_data):
+        if not src_name:
+            proc_data.timing.source = None
+            proc_data.timing.delay = 0
+            return
+
+        if src_name not in raw_data:
+            raise AggregatingError(f"Timing device '{src_name}' is not in the data!")
+
+        timing_data = raw_data[src_name]
+        ppt = 'actualPosition'
+        if ppt not in timing_data:
+            ppt = f"{ppt}.value"  # From the file
+
+        proc_data.timing.source = src_name
+        proc_data.timing.delay = timing_data[ppt]

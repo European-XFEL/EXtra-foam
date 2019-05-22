@@ -319,6 +319,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._source_type_cb.setCurrentIndex(source_type)
         widget._mono_src_cb.setCurrentIndex(1)
         widget._xgm_src_cb.setCurrentIndex(1)
+        widget._timing_src_cb.setCurrentIndex(1)
 
         bridge.update()
         scheduler.update()
@@ -338,6 +339,8 @@ class TestMainGuiCtrl(unittest.TestCase):
                          scheduler._data_aggregator._mono_src)
         self.assertEqual(widget._xgm_src_cb.currentText(),
                          scheduler._data_aggregator._xgm_src)
+        self.assertEqual(widget._timing_src_cb.currentText(),
+                         scheduler._data_aggregator._timing_src)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget

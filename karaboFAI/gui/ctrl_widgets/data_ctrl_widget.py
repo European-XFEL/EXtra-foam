@@ -39,6 +39,11 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "SCS_BLU_XGM/XGM/DOOCS",
     ]
 
+    _timing_motors = [
+        "",
+        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
+    ]
+
     # signal used in updateShareParameters since currentTextChanged
     # will affect other entries
     source_type_sgn = QtCore.pyqtSignal(object)
@@ -66,6 +71,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._xgm_src_cb = QtGui.QComboBox()
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
+
+        self._timing_src_cb = QtGui.QComboBox()
+        for src in self._timing_motors:
+            self._timing_src_cb.addItem(src)
 
         self._data_folder_le = SmartLineEdit(config["DATA_FOLDER"])
 
@@ -100,6 +109,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(self._mono_src_cb, 2, 1, 1, 5)
         src_layout.addWidget(QtGui.QLabel("XGM source name: "), 3, 0, AR)
         src_layout.addWidget(self._xgm_src_cb, 3, 1, 1, 5)
+        src_layout.addWidget(QtGui.QLabel("Timing source name: "), 4, 0, AR)
+        src_layout.addWidget(self._timing_src_cb, 4, 1, 1, 5)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)
@@ -140,6 +151,9 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._xgm_src_cb.currentTextChanged.connect(
             mediator.onXgmSourceNameChange)
 
+        self._timing_src_cb.currentTextChanged.connect(
+            mediator.onTimingSourceNameChange)
+
         self._serve_start_btn.clicked.connect(self.updateSharedParameters)
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
         self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
@@ -161,6 +175,9 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._xgm_src_cb.currentTextChanged.emit(
             self._xgm_src_cb.currentText())
+
+        self._timing_src_cb.currentTextChanged.emit(
+            self._timing_src_cb.currentText())
 
         return True
 

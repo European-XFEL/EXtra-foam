@@ -230,6 +230,13 @@ class MonoData(AbstractData):
         self.energy = 0.0
 
 
+class TimingData(AbstractData):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source = None
+        self.delay = 0.0
+
+
 class XasData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

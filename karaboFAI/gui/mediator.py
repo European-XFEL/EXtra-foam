@@ -64,11 +64,14 @@ class Mediator(QObject):
     def onDetectorSourceNameChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "detector_source_name", value)
 
+    def onMonoSourceNameChange(self, value: str):
+        self._meta.set(mt.DATA_SOURCE, "mono_source_name", value)
+
     def onXgmSourceNameChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "xgm_source_name", value)
 
-    def onMonoSourceNameChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "mono_source_name", value)
+    def onTimingSourceNameChange(self, value: str):
+        self._meta.set(mt.DATA_SOURCE, "timing_source_name", value)
 
     def onSourceTypeChange(self, value: IntEnum):
         self._meta.set(mt.DATA_SOURCE, "source_type", int(value))
