@@ -239,3 +239,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         self._mediator.onCorrelationParamChange(
             (i_row+1, device_id, ppt, res))
+
+    def updateSharedParameters(self):
+        # TODO: emit signals for each row
+        return True

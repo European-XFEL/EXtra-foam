@@ -20,10 +20,13 @@ class TestMainGui(unittest.TestCase):
         fai.init()
         cls.app = fai.app
         cls.gui = fai.gui
+        cls.fai = fai
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+
+        del cls.fai
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()

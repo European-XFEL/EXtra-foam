@@ -68,8 +68,10 @@ class RoiProcessor(CompositeProcessor):
             self.roi_fom_handler = None
 
         for i, _ in enumerate(self.regions, 1):
-            self.visibilities[i-1] = cfg[f'visibility{i}'] == 'True'
-            self.regions[i-1] = self.str2list(cfg[f'region{i}'], handler=int)
+            self.visibilities[i-1] = cfg.get(
+                f'visibility{i}', 'False') == 'True'
+            self.regions[i-1] = self.str2list(
+                cfg.get(f'region{i}', '[0, 0, 0, 0]'), handler=int)
 
         self.proj1d_normalizer = Projection1dNormalizer(int(cfg['proj1d:normalizer']))
         self.proj1d_auc_range = self.str2tuple(cfg['proj1d:auc_range'])

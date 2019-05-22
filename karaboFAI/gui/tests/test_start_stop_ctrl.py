@@ -23,6 +23,7 @@ class TestMainGui(unittest.TestCase):
         fai.init()
         cls.app = fai.app
         cls.gui = fai.gui
+        cls.fai = fai
         cls.scheduler = fai.scheduler
         cls.bridge = fai.bridge
 
@@ -33,6 +34,8 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+
+        del cls.fai
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateSharedParameters', MagicMock(return_value=True))

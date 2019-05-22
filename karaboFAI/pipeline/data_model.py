@@ -1056,6 +1056,14 @@ class DataManager:
     def reset_pp():
         PumpProbeData.clear()
 
+    @staticmethod
+    def reset_xas():
+        XasData.clear()
+
+    @staticmethod
+    def reset_binning():
+        BinningData.clear()
+
 
 class DataProxy:
     """A proxy for reading / writing data to / from the redis server.

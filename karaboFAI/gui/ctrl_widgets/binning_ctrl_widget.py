@@ -29,7 +29,7 @@ class BinningCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Binning analysis setup", *args, **kwargs)
 
-        self._hist_reset_btn = QtGui.QPushButton("Reset")
+        self._reset_btn = QtGui.QPushButton("Reset")
 
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
@@ -56,7 +56,7 @@ class BinningCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
         layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(self._hist_reset_btn, 0, 3, AR)
+        layout.addWidget(self._reset_btn, 0, 3, AR)
         layout.addWidget(QtGui.QLabel("Bin range: "), 1, 0, AR)
         layout.addWidget(self._bin_range_le, 1, 1)
         layout.addWidget(QtGui.QLabel("# of bins: "), 1, 2, AR)
@@ -67,18 +67,25 @@ class BinningCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._hist_reset_btn.clicked.connect(mediator.onBinningReset)
+        self._reset_btn.clicked.connect(mediator.onBinningReset)
 
         self._n_bins_le.returnPressed.connect(
             lambda: mediator.onBinningBinsChange(int(self._n_bins_le.text())))
-        self._n_bins_le.returnPressed.emit()
 
         self._bin_range_le.value_changed_sgn.connect(
             mediator.onBinningRangeChange)
-        self._bin_range_le.returnPressed.emit()
 
         self._analysis_type_cb.currentTextChanged.connect(
             lambda x: mediator.onBinningAnalysisTypeChange(
                 self._analysis_types[x]))
+
+    def updateSharedParameters(self):
+        self._n_bins_le.returnPressed.emit()
+
+        self._bin_range_le.returnPressed.emit()
+
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
+
+        return True
+

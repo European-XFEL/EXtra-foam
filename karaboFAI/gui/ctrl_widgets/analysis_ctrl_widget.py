@@ -106,16 +106,18 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._photon_energy_le.returnPressed.connect(
             lambda: mediator.onPhotonEnergyChange(
                 float(self._photon_energy_le.text())))
-        self._photon_energy_le.returnPressed.emit()
 
         self._sample_dist_le.returnPressed.connect(
             lambda: mediator.onSampleDistanceChange(
                 float(self._sample_dist_le.text())))
-        self._sample_dist_le.returnPressed.emit()
 
     def updateSharedParameters(self):
         """Override"""
         mediator = self._mediator
+
+        self._photon_energy_le.returnPressed.emit()
+
+        self._sample_dist_le.returnPressed.emit()
 
         # Upper bound is not included, Python convention
         pulse_id_range = (int(self._min_pulse_id_le.text()),

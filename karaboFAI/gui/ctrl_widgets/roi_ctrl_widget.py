@@ -37,7 +37,7 @@ class RoiCtrlWidget(AbstractCtrlWidget):
         for v in self._available_roi_foms:
             self._roi_fom_cb.addItem(v)
 
-        self._roi_hist_reset_btn = QtGui.QPushButton("Reset")
+        self._roi_reset_btn = QtGui.QPushButton("Reset")
 
         self._normalizers_cb = QtGui.QComboBox()
         for v in self._available_normalizers:
@@ -59,7 +59,7 @@ class RoiCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("FOM type: "), 0, 0, AR)
         layout.addWidget(self._roi_fom_cb, 0, 1)
-        layout.addWidget(self._roi_hist_reset_btn, 0, 3, AR)
+        layout.addWidget(self._roi_reset_btn, 0, 3, AR)
         layout.addWidget(QtGui.QLabel("Normalized by (Proj 1D): "), 1, 0, AR)
         layout.addWidget(self._normalizers_cb, 1, 1)
         layout.addWidget(QtGui.QLabel("AUC range (Proj 1D): "), 1, 2, AR)
@@ -74,21 +74,28 @@ class RoiCtrlWidget(AbstractCtrlWidget):
 
         self._roi_fom_cb.currentTextChanged.connect(
             lambda x: mediator.onRoiFomChange(self._available_roi_foms[x]))
-        self._roi_fom_cb.currentTextChanged.emit(
-            self._roi_fom_cb.currentText())
 
-        self._roi_hist_reset_btn.clicked.connect(mediator.onRoiReset)
+        self._roi_reset_btn.clicked.connect(mediator.onRoiReset)
 
         self._normalizers_cb.currentTextChanged.connect(
             lambda x: mediator.onProj1dNormalizerChange(
                 self._available_normalizers[x]))
-        self._normalizers_cb.currentTextChanged.emit(
-            self._normalizers_cb.currentText())
 
         self._auc_range_le.value_changed_sgn.connect(
             mediator.onProj1dAucRangeChange)
-        self._auc_range_le.returnPressed.emit()
 
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onProj1dFomIntegRangeChange)
+
+    def updateSharedParameters(self):
+        self._roi_fom_cb.currentTextChanged.emit(
+            self._roi_fom_cb.currentText())
+
+        self._normalizers_cb.currentTextChanged.emit(
+            self._normalizers_cb.currentText())
+
+        self._auc_range_le.returnPressed.emit()
+
         self._fom_integ_range_le.returnPressed.emit()
+
+        return True

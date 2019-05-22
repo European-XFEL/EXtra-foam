@@ -49,8 +49,8 @@ class CorrelationProcessor(CompositeProcessor):
             self._meta.get(mt.AZIMUTHAL_INTEG_PROC, 'integ_range'))
 
         for i in range(len(self.device_ids)):
-            self.device_ids[i] = cfg[f'device_id{i+1}']
-            self.properties[i] = cfg[f'property{i+1}']
+            self.device_ids[i] = cfg.get(f'device_id{i+1}', "")
+            self.properties[i] = cfg.get(f'property{i+1}', "")
 
 
 class CorrelationFomProcessor(LeafProcessor):

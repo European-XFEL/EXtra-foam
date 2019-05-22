@@ -32,10 +32,13 @@ class TestOverviewWindow(unittest.TestCase):
         fai = FAI('LPD')
         fai.init()
         cls.gui = fai.gui
+        cls.fai = fai
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+
+        del cls.fai
 
     def testOverviewWindow(self):
         win = OverviewWindow(pulse_resolved=True, parent=self.gui)

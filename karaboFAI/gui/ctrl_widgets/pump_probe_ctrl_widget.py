@@ -14,7 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..misc_widgets import SmartLineEdit
+from ..misc_widgets import SmartLineEdit, SmartRangeLineEdit
 from ..gui_helpers import parse_ids
 from ...config import PumpProbeMode, PumpProbeType
 from ...logger import logger
@@ -63,9 +63,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
         self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute on-off")
+        self._abs_difference_cb.setChecked(True)
 
-        self._on_pulse_le = QtGui.QLineEdit(on_pulse_ids)
-        self._off_pulse_le = QtGui.QLineEdit(off_pulse_ids)
+        self._on_pulse_le = SmartRangeLineEdit(on_pulse_ids)
+        self._off_pulse_le = SmartRangeLineEdit(off_pulse_ids)
 
         self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
@@ -113,24 +114,48 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le.returnPressed.connect(
             lambda: mediator.onPpMaWindowChange(
                 int(self._ma_window_le.text())))
-        self._ma_window_le.returnPressed.emit()
 
         self._abs_difference_cb.toggled.connect(
             mediator.onPpAbsDifferenceChange)
-        self._abs_difference_cb.setChecked(True)
 
         self._analysis_type_cb.currentTextChanged.connect(
             lambda x: mediator.onPpAnalysisTypeChange(
                 self._analysis_types[x]))
-        self._analysis_type_cb.currentTextChanged.emit(
-            self._analysis_type_cb.currentText())
+
+        self._mode_cb.currentTextChanged.connect(
+            lambda x: mediator.onPpModeChange(self._available_modes[x]))
+
+        self._on_pulse_le.value_changed_sgn.connect(
+            mediator.onPpOnPulseIdsChange)
+
+        self._off_pulse_le.value_changed_sgn.connect(
+            mediator.onPpOffPulseIdsChange)
 
     def updateSharedParameters(self):
         """Override"""
-        mode_str = self._mode_cb.currentText()
-        mode = self._available_modes[mode_str]
+        if not self._checkOnOffIds():
+            return False
 
+        self._ma_window_le.returnPressed.emit()
+
+        self._abs_difference_cb.toggled.emit(
+            self._abs_difference_cb.isChecked())
+
+        self._analysis_type_cb.currentTextChanged.emit(
+            self._analysis_type_cb.currentText())
+
+        self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())
+
+        self._on_pulse_le.returnPressed.emit()
+
+        self._off_pulse_le.returnPressed.emit()
+
+        return True
+
+    def _checkOnOffIds(self):
         try:
+            mode = self._available_modes[self._mode_cb.currentText()]
+
             # check pulse ID only when laser on/off pulses are in the same
             # train (the "normal" mode)
             on_pulse_ids = parse_ids(self._on_pulse_le.text())
@@ -151,9 +176,5 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
             logger.error("Invalid input! Enter on/off pulse IDs separated "
                          "by ',' and/or use the range operator ':'!")
             return False
-
-        self._mediator.onPpModeChange(mode)
-        self._mediator.onPpOnPulseIdsChange(on_pulse_ids)
-        self._mediator.onPpOffPulseIdsChange(off_pulse_ids)
 
         return True

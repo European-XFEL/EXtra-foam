@@ -12,6 +12,8 @@ from karaboFAI.logger import logger
 class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        logger.setLevel("CRITICAL")
+
         mkQApp()
 
         cls._widget = ImageAnalysis(color_map="thermal")
@@ -70,3 +72,5 @@ class TestImageAnalysis(unittest.TestCase):
 
         np.testing.assert_array_equal(mask,
                                       ImageData(imgs).image_mask)
+
+        fp.close()

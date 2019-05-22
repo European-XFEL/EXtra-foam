@@ -146,7 +146,11 @@ class FAI:
 
     def shutdown_redis_server(self):
         logger.info("Shutting down the Redis server...")
-        self._redis_process_info.process.terminate()
+        proc = self._redis_process_info.process
+        proc.terminate()
+        proc.wait(1.0)
+        if proc.poll() is None:
+            proc.kill()
 
     def __del__(self):
         self.shutdown_redis_server()

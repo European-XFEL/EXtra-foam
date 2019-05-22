@@ -51,4 +51,7 @@ class XasCtrlWidget(AbstractCtrlWidget):
         self._nbins_le.returnPressed.connect(
             lambda: mediator.onXasEnergyBinsChange(
                 int(self._nbins_le.text())))
+
+    def updateSharedParameters(self):
         self._nbins_le.returnPressed.emit()
+        return True

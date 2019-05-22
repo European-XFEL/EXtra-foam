@@ -100,43 +100,53 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._cx_le.returnPressed.connect(
             lambda: mediator.onAiIntegCenterXChange(
                 int(self._cx_le.text())))
-        self._cx_le.returnPressed.emit()
 
         self._cy_le.returnPressed.connect(
             lambda: mediator.onAiIntegCenterYChange(
                 int(self._cy_le.text())))
-        self._cy_le.returnPressed.emit()
 
         self._itgt_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)
-        self._itgt_method_cb.currentTextChanged.emit(
-            self._itgt_method_cb.currentText())
 
         self._normalizers_cb.currentTextChanged.connect(
             lambda x: mediator.onAiNormalizerChange(
                 self._available_normalizers[x]))
-        self._normalizers_cb.currentTextChanged.emit(
-            self._normalizers_cb.currentText())
 
         self._pulsed_integ_cb.toggled.connect(
             mediator.onAiPulsedIntegStateChange)
-        # Let toggled emit
-        self._pulsed_integ_cb.setChecked(True)
-        self._pulsed_integ_cb.setChecked(False)
 
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
-        self._integ_range_le.returnPressed.emit()
 
         self._integ_pts_le.returnPressed.connect(
             lambda: mediator.onAiIntegPointsChange(
                 int(self._integ_pts_le.text())))
-        self._integ_pts_le.returnPressed.emit()
 
         self._auc_range_le.value_changed_sgn.connect(
             mediator.onAiAucChangeChange)
-        self._auc_range_le.returnPressed.emit()
 
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onAiFomIntegRangeChange)
+
+    def updateSharedParameters(self):
+        self._cx_le.returnPressed.emit()
+
+        self._cy_le.returnPressed.emit()
+
+        self._itgt_method_cb.currentTextChanged.emit(
+            self._itgt_method_cb.currentText())
+
+        self._normalizers_cb.currentTextChanged.emit(
+            self._normalizers_cb.currentText())
+
+        self._pulsed_integ_cb.toggled.emit(self._pulsed_integ_cb.isChecked())
+
+        self._integ_range_le.returnPressed.emit()
+
+        self._integ_pts_le.returnPressed.emit()
+
+        self._auc_range_le.returnPressed.emit()
+
         self._fom_integ_range_le.returnPressed.emit()
+
+        return True

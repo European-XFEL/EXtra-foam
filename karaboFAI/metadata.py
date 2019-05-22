@@ -136,13 +136,3 @@ class MetaProxy:
             return self._db.hgetall(name)
         except redis.exceptions.ConnectionError:
             pass
-
-    def reset(self):
-        try:
-            for key, value in Metadata._meta.items():
-                self._db.hmset(key, value)
-
-            for key, value in Metadata._proc_meta.items():
-                self._db.hmset(key, value)
-        except redis.exceptions.ConnectionError:
-            pass

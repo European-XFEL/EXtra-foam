@@ -24,6 +24,7 @@ class TestImageTool(unittest.TestCase):
         fai.init()
         cls.gui = fai.gui
         cls.app = fai.app
+        cls.fai = fai
         cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]
@@ -35,6 +36,8 @@ class TestImageTool(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+
+        del cls.fai
 
     def setUp(self):
         self.__class__._tid += 1

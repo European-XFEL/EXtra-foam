@@ -51,7 +51,6 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._meta = MetaProxy()
-        self._meta.reset()
         self._data = DataManager()
 
         self._is_initialized = True
@@ -191,9 +190,7 @@ class Mediator(QObject):
         self._meta.set(mt.XAS_PROC, "energy_bins", value)
 
     def onXasReset(self):
-        # FIXME
-        # reset XAS processor?
-        pass
+        self._data.reset_xas()
 
     def onBinningBinsChange(self, value: int):
         self._meta.set(mt.BINNING_PROC, "n_bins", value)
@@ -202,7 +199,7 @@ class Mediator(QObject):
         self._meta.set(mt.BINNING_PROC, "bin_range", str(value))
 
     def onBinningReset(self):
-        pass
+        self._data.reset_binning()
 
     def onBinningAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.BINNING_PROC, "analysis_type", int(value))

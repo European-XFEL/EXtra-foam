@@ -39,6 +39,10 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "SCS_BLU_XGM/XGM/DOOCS",
     ]
 
+    # signal used in updateShareParameters since currentTextChanged
+    # will affect other entries
+    source_type_sgn = QtCore.pyqtSignal(object)
+
     def __init__(self, *args, **kwargs):
         super().__init__("Data source", *args, **kwargs)
 
@@ -114,39 +118,51 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._source_type_cb.currentTextChanged.connect(
             lambda x: mediator.onSourceTypeChange(
                 self._available_sources[x]))
+        # Emit once to fill the QLineEdit
         self._source_type_cb.currentTextChanged.emit(
             self._source_type_cb.currentText())
+        self.source_type_sgn.connect(lambda x: mediator.onSourceTypeChange(
+                self._available_sources[x]))
 
         # Note: use textChanged signal for non-reconfigurable QLineEdit
         self._hostname_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(self.onEndpointChange)
-        # Since hostname and port have already been set, trigger either of
-        # the signal is enough.
-        self._port_le.textChanged.emit(self._port_le.text())
 
         self._data_folder_le.returnPressed.connect(
             lambda: mediator.onDataFolderChange(self._data_folder_le.text()))
-        self._data_folder_le.returnPressed.emit()
 
         self._detector_src_cb.currentTextChanged.connect(
             mediator.onDetectorSourceNameChange)
-        self._detector_src_cb.currentTextChanged.emit(
-            self._detector_src_cb.currentText())
 
         self._mono_src_cb.currentTextChanged.connect(
             mediator.onMonoSourceNameChange)
-        self._mono_src_cb.currentTextChanged.emit(
-            self._mono_src_cb.currentText())
 
         self._xgm_src_cb.currentTextChanged.connect(
             mediator.onXgmSourceNameChange)
-        self._xgm_src_cb.currentTextChanged.emit(
-            self._xgm_src_cb.currentText())
 
+        self._serve_start_btn.clicked.connect(self.updateSharedParameters)
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
         self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
         mediator.file_server_started_sgn.connect(self.onFileServerStarted)
         mediator.file_server_stopped_sgn.connect(self.onFileServerStopped)
+
+    def updateSharedParameters(self):
+        self.source_type_sgn.emit(self._source_type_cb.currentText())
+
+        self._data_folder_le.returnPressed.emit()
+
+        self._port_le.textChanged.emit(self._port_le.text())
+
+        self._detector_src_cb.currentTextChanged.emit(
+            self._detector_src_cb.currentText())
+
+        self._mono_src_cb.currentTextChanged.emit(
+            self._mono_src_cb.currentText())
+
+        self._xgm_src_cb.currentTextChanged.emit(
+            self._xgm_src_cb.currentText())
+
+        return True
 
     @QtCore.pyqtSlot()
     def onFileServerStarted(self):
