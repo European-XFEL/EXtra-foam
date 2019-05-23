@@ -19,6 +19,7 @@ from .plot_items import ImageItem, MaskItem
 from .roi import CropROI, RectROI
 from ..misc_widgets import colorMapFactory
 from ..mediator import Mediator
+from ..gui_helpers import parse_boundary
 from ...algorithms import intersection, quick_min_max
 from ...config import config, ImageMaskChange
 from ...logger import logger
@@ -312,21 +313,21 @@ class ImageAnalysis(ImageView):
         self._image_data.set_ma_window(v)
         # this change does not affect the displayed image in ImageToolWindow
 
-    @QtCore.pyqtSlot()
-    def onBkgChange(self):
+    @QtCore.pyqtSlot(float)
+    def onBkgChange(self, bkg):
         if self._image_data is None:
             return
 
-        self._image_data.set_background(float(self.sender().text()))
+        self._image_data.set_background(bkg)
         self._image_data.update()
         self.setImage(self._image_data.masked_mean)
 
-    @QtCore.pyqtSlot(int, int)
-    def onThresholdMaskChange(self, lb, ub):
+    @QtCore.pyqtSlot(object)
+    def onThresholdMaskChange(self, mask_range):
         if self._image_data is None:
             return
 
-        self._image_data.set_threshold_mask(lb, ub)
+        self._image_data.set_threshold_mask(*mask_range)
         self._image_data.update()
         self.setImage(self._image_data.masked_mean)
 

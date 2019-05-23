@@ -124,12 +124,14 @@ class SmartLineEdit(QtGui.QLineEdit):
       one must press enter to confirm the value.
     """
 
+    value_changed_sgn = QtCore.pyqtSignal(object)
+
     def __init__(self, *args, **kwargs):
         """Initialization"""
         super().__init__(*args, **kwargs)
 
         self._text_modified = False
-        self._cached = None
+        self._cached = self.text()
 
         self.textChanged.connect(self.onTextChanged)
 
@@ -168,11 +170,13 @@ class SmartLineEdit(QtGui.QLineEdit):
 
     def onReturnPressed(self):
         self._cached = self.text()
+        try:
+            self.value_changed_sgn.emit(self.Validator.parse(self.text()))
+        except AttributeError:
+            self.value_changed_sgn.emit(self.text())
 
 
 class SmartBoundaryLineEdit(SmartLineEdit):
-
-    value_changed_sgn = QtCore.pyqtSignal(object)
 
     class Validator(QValidator):
         def __init__(self, parent=None):
@@ -200,11 +204,6 @@ class SmartBoundaryLineEdit(SmartLineEdit):
         self._cached = self.text()
 
         self.setValidator(self.Validator())
-
-    def onReturnPressed(self):
-        self._cached = self.text()
-        # convert it to str in order to store in Redis
-        self.value_changed_sgn.emit(str(self.Validator.parse(self.text())))
 
 
 class SmartRangeLineEdit(SmartLineEdit):
@@ -237,8 +236,3 @@ class SmartRangeLineEdit(SmartLineEdit):
         self._cached = self.text()
 
         self.setValidator(self.Validator())
-
-    def onReturnPressed(self):
-        self._cached = self.text()
-        # convert it to str in order to store in Redis
-        self.value_changed_sgn.emit(str(self.Validator.parse(self.text())))

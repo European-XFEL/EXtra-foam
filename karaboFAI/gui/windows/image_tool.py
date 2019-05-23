@@ -188,7 +188,7 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
         self.setEditable(True)
 
 
-class _RoisCtrlWidget(QtGui.QGroupBox):
+class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
     """Widget for controlling of a group of ROIs."""
 
     def __init__(self, rois, *, parent=None):
@@ -214,18 +214,45 @@ class _RoisCtrlWidget(QtGui.QGroupBox):
         self.setLayout(layout)
 
 
-class _ImageCtrlWidget(QtGui.QWidget):
-    """Widget inside the action bar for masking image."""
+class _ImageCtrlWidget(QtGui.QGroupBox):
+    def __init__(self, *, parent=None):
+        super().__init__(parent)
 
-    moving_avg_window_sgn = QtCore.pyqtSignal(int)
+        self.update_image_btn = QtGui.QPushButton("Update image")
+        self.auto_level_btn = QtGui.QPushButton("Auto level")
+        self.set_ref_btn = QtGui.QPushButton("Set reference")
+        self.remove_ref_btn = QtGui.QPushButton("Remove reference")
+
+        self.initUI()
+
+    def initUI(self):
+        """Override."""
+        layout = QtGui.QGridLayout()
+
+        layout.addWidget(self.update_image_btn, 0, 0, 1, 2)
+        layout.addWidget(self.auto_level_btn, 0, 2, 1, 2)
+        layout.addWidget(self.set_ref_btn, 1, 0, 1, 2)
+        layout.addWidget(self.remove_ref_btn, 1, 2, 1, 2)
+        self.setLayout(layout)
+
+
+class _ImageActionWidget(QtGui.QWidget):
+    """Image ctrl widget in the action bar."""
 
     def __init__(self, parent=None):
-        """Initialization"""
         super().__init__(parent=parent)
 
-        self._moving_avg_le = SmartLineEdit(str(1))
-        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
-        self._moving_avg_le.setMinimumWidth(60)
+        self.moving_avg_le = SmartLineEdit(str(1))
+        self.moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
+        self.moving_avg_le.setMinimumWidth(60)
+
+        self.threshold_mask_le = SmartBoundaryLineEdit(
+            ', '.join([str(v) for v in config["MASK_RANGE"]]))
+        # avoid collapse on online and maxwell clusters
+        self.threshold_mask_le.setMinimumWidth(160)
+
+        self.bkg_le = SmartLineEdit(str(0.0))
+        self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
         self.initUI()
 
@@ -234,107 +261,14 @@ class _ImageCtrlWidget(QtGui.QWidget):
     def initUI(self):
         layout = QtGui.QHBoxLayout()
         layout.addWidget(QtGui.QLabel("Moving average: "))
-        layout.addWidget(self._moving_avg_le)
+        layout.addWidget(self.moving_avg_le)
+        layout.addWidget(QtGui.QLabel("Threshold mask: "))
+        layout.addWidget(self.threshold_mask_le)
+        layout.addWidget(QtGui.QLabel("Subtract background: "))
+        layout.addWidget(self.bkg_le)
 
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
-
-    def initConnections(self):
-        self._moving_avg_le.returnPressed.connect(lambda:
-            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
-
-
-class _MaskCtrlWidget(QtGui.QWidget):
-    """Widget inside the action bar for masking image."""
-
-    threshold_mask_sgn = QtCore.pyqtSignal(int, int)
-
-    def __init__(self, parent=None):
-        """Initialization"""
-        super().__init__(parent=parent)
-
-        self._min_pixel_le = SmartLineEdit(str(int(config["MASK_RANGE"][0])))
-        self._min_pixel_le.setValidator(QtGui.QIntValidator())
-        # avoid collapse on online and maxwell clusters
-        self._min_pixel_le.setMinimumWidth(80)
-        self._min_pixel_le.returnPressed.connect(
-            self.onThresholdMaskChanged)
-        self._max_pixel_le = SmartLineEdit(str(int(config["MASK_RANGE"][1])))
-        self._max_pixel_le.setValidator(QtGui.QIntValidator())
-        self._max_pixel_le.setMinimumWidth(80)
-        self._max_pixel_le.returnPressed.connect(
-            self.onThresholdMaskChanged)
-
-        self.initUI()
-
-        self.setFixedSize(self.minimumSizeHint())
-
-    def initUI(self):
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(QtGui.QLabel("Min. mask: "))
-        layout.addWidget(self._min_pixel_le)
-        layout.addWidget(QtGui.QLabel("Max. mask: "))
-        layout.addWidget(self._max_pixel_le)
-
-        self.setLayout(layout)
-        self.layout().setContentsMargins(2, 1, 2, 1)
-
-    def onThresholdMaskChanged(self):
-        self.threshold_mask_sgn.emit(int(self._min_pixel_le.text()),
-                                     int(self._max_pixel_le.text()))
-
-
-class _ImageProcWidget(QtGui.QGroupBox):
-
-    class RoiWidget(_RoiCtrlWidgetBase):
-        def __init__(self, roi, *, parent=None):
-            super().__init__(roi, parent=parent)
-
-            self.initUI()
-
-        def initUI(self):
-            """Override."""
-            layout = QtGui.QGridLayout()
-            layout.addWidget(QtGui.QLabel("w: "), 2, 0)
-            layout.addWidget(self._width_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("h: "), 2, 2)
-            layout.addWidget(self._height_le, 2, 3)
-            layout.addWidget(QtGui.QLabel("x: "), 3, 0)
-            layout.addWidget(self._px_le, 3, 1)
-            layout.addWidget(QtGui.QLabel("y: "), 3, 2)
-            layout.addWidget(self._py_le, 3, 3)
-            self.setLayout(layout)
-
-    def __init__(self, *, parent=None):
-        super().__init__(parent)
-
-        mediator = Mediator()
-
-        self.bkg_le = SmartLineEdit(str(0.0))
-        self.bkg_le.setValidator(QtGui.QDoubleValidator())
-
-        self.update_image_btn = QtGui.QPushButton("Update image")
-
-        self._auto_level_btn = QtGui.QPushButton("Auto level")
-        self._auto_level_btn.clicked.connect(mediator.reset_image_level_sgn)
-
-        self.set_ref_btn = QtGui.QPushButton("Set reference")
-        self.remove_ref_btn = QtGui.QPushButton("Remove reference")
-
-        self.initUI()
-
-    def initUI(self):
-        """Override."""
-        AR = QtCore.Qt.AlignRight
-
-        layout = QtGui.QGridLayout()
-        layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
-        layout.addWidget(self.bkg_le, 0, 2, 1, 2)
-        layout.addWidget(self.update_image_btn, 2, 0, 1, 2)
-        layout.addWidget(self._auto_level_btn, 2, 2, 1, 2)
-        layout.addWidget(self.set_ref_btn, 3, 0, 1, 2)
-        layout.addWidget(self.remove_ref_btn, 3, 2, 1, 2)
-        self.setLayout(layout)
 
 
 @SingletonWindow
@@ -355,35 +289,19 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_view = ImageAnalysis(hide_axis=False, parent=self)
 
-        self._roi_ctrl_widget = _RoisCtrlWidget(
-            self._image_view.rois, parent=self)
-        self._image_proc_widget = _ImageProcWidget(parent=self)
-
-        self._image_proc_widget.bkg_le.returnPressed.connect(
-            self._image_view.onBkgChange)
-        self._image_proc_widget.update_image_btn.clicked.connect(
-            self.updateImage)
-        self._image_proc_widget.set_ref_btn.clicked.connect(
-            self._image_view.setImageRef)
-        self._image_proc_widget.remove_ref_btn.clicked.connect(
-            self._image_view.removeImageRef)
-
-        #
-        # image tool bar
-        #
+        # image ctrl widget in the toolbar
 
         self._tool_bar_image = self.addToolBar("image")
 
-        self._image_ctrl = _ImageCtrlWidget()
-        self._image_ctrl.moving_avg_window_sgn.connect(
-            self._image_view.onMovingAverageWindowChange)
-        self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
-        self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
-        self._tool_bar_image.addAction(self._image_ctrl_at)
+        self._image_action = _ImageActionWidget()
+        self._image_action_at = QtGui.QWidgetAction(self._tool_bar_image)
+        self._image_action_at.setDefaultWidget(self._image_action)
+        self._tool_bar_image.addAction(self._image_action_at)
 
-        #
+        # start another line of tool bar
+        self.addToolBarBreak()
+
         # mask tool bar
-        #
 
         self._tool_bar_mask = self.addToolBar("mask")
 
@@ -414,19 +332,7 @@ class ImageToolWindow(AbstractWindow):
             self._tool_bar_mask, "Load image mask", "load_mask.png")
         load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
 
-        self._mask_ctrl = _MaskCtrlWidget()
-        self._mask_ctrl.threshold_mask_sgn.connect(
-            self._image_view.onThresholdMaskChange)
-
-        mask_widget = QtGui.QWidgetAction(self._tool_bar_mask)
-        mask_widget.setDefaultWidget(self._mask_ctrl)
-        self._tool_bar_mask.addAction(mask_widget)
-
-        self.addToolBarBreak()
-
-        #
         # crop tool bar
-        #
 
         self._tool_bar_crop = self.addToolBar("crop")
 
@@ -449,7 +355,15 @@ class ImageToolWindow(AbstractWindow):
 
         self._exclusive_actions = {mask_at, unmask_at, crop_at}
 
+        # ROI and Image ctrl widget
+
+        self._roi_ctrl_widget = _RoiCtrlWidgetGroup(
+            self._image_view.rois, parent=self)
+        self._image_ctrl_widget = _ImageCtrlWidget(parent=self)
+
         self.initUI()
+        self.initConnections()
+
         self.resize(800, 800)
         self.update()
 
@@ -458,10 +372,42 @@ class ImageToolWindow(AbstractWindow):
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 3)
         layout.addWidget(self._roi_ctrl_widget, 1, 0, 1, 2)
-        layout.addWidget(self._image_proc_widget, 1, 2, 1, 1)
+        layout.addWidget(self._image_ctrl_widget, 1, 2, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
+
+    def initConnections(self):
+        mediator = self._mediator
+
+        # signal-slot connections of child widgets should also be set here
+
+        self._image_ctrl_widget.update_image_btn.clicked.connect(
+            self.updateImage)
+
+        self._image_ctrl_widget.set_ref_btn.clicked.connect(
+            self._image_view.setImageRef)
+
+        self._image_ctrl_widget.remove_ref_btn.clicked.connect(
+            self._image_view.removeImageRef)
+
+        self._image_ctrl_widget.auto_level_btn.clicked.connect(
+            mediator.reset_image_level_sgn)
+
+        self._image_action.moving_avg_le.value_changed_sgn.connect(
+            lambda x: self._image_view.onMovingAverageWindowChange(int(x)))
+        self._image_action.moving_avg_le.returnPressed.connect(
+            lambda x: mediator.onImageMaWindowChange(int(x)))
+
+        self._image_action.threshold_mask_le.value_changed_sgn.connect(
+            self._image_view.onThresholdMaskChange)
+        self._image_action.threshold_mask_le.value_changed_sgn.connect(
+            mediator.onImageThresholdMaskChange)
+
+        self._image_action.bkg_le.value_changed_sgn.connect(
+            lambda x: self._image_view.onBkgChange(float(x)))
+        self._image_action.bkg_le.value_changed_sgn.connect(
+            lambda x: mediator.onImageBackgroundChange(float(x)))
 
     def update(self):
         """Update widgets.

@@ -76,6 +76,15 @@ class Mediator(QObject):
     def onSourceTypeChange(self, value: IntEnum):
         self._meta.set(mt.DATA_SOURCE, "source_type", int(value))
 
+    def onImageThresholdMaskChange(self, value: tuple):
+        self._meta.set(mt.IMAGE_PROC, "threshold_mask", str(value))
+
+    def onImageMaWindowChange(self, value: int):
+        self._meta.set(mt.IMAGE_PROC, "ma_window", value)
+
+    def onImageBackgroundChange(self, value: float):
+        self._meta.set(mt.IMAGE_PROC, "background", value)
+
     def onGeometryFileChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 

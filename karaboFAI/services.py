@@ -20,6 +20,7 @@ import redis
 
 from . import __version__
 from .config import config
+from .metadata import MetaProxy
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import Bridge, ProcessInfo, Scheduler

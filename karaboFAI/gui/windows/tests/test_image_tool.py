@@ -1,11 +1,12 @@
 import unittest
+from unittest.mock import patch, MagicMock
 import os
 import tempfile
 
 import numpy as np
 
 from PyQt5 import QtCore
-from PyQt5.QtTest import QTest
+from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
 from karaboFAI.config import _Config, ConfigWrapper
@@ -25,7 +26,6 @@ class TestImageTool(unittest.TestCase):
         cls.gui = fai.gui
         cls.app = fai.app
         cls.fai = fai
-        cls._tid = 0
 
         cls._imagetool_action = cls.gui._tool_bar.actions()[2]
         cls._imagetool_action.trigger()
@@ -40,34 +40,9 @@ class TestImageTool(unittest.TestCase):
         del cls.fai
 
     def setUp(self):
-        self.__class__._tid += 1
         ImageData.clear()
         self.view.setImageData(None)
         self.view._image = None
-
-    def testImageCtrl(self):
-        proc_data = ProcessedData(self._tid,
-                                  np.arange(2*128*128).reshape(2, 128, 128))
-        self.window._data.set(proc_data)
-        self.window.update()
-
-        # ctrl_widget = self.window._image_ctrl
-        # spy = QSignalSpy(ctrl_widget._moving_avg_le)
-        # self.assertEqual(int(ctrl_widget._moving_avg_le.text()),
-        #                  proc_data.image.ma_window)
-        # QTest.keyClicks(ctrl_widget._moving_avg_le, "100")
-        # QTest.keyPress(ctrl_widget._moving_avg_le, Qt.Key_Enter)
-        # self.app.processEvents()
-        # self.assertEqual(1, len(spy))
-        # proc_data.image.update()
-        # self.assertEqual(100, proc_data.image.ma_window)
-        #
-        # mask_ctrl = self.window._mask_ctrl
-        # mask_ctrl._min_pixel_le.setText("1")
-        # # self.assertEqual(1, )
-        #
-        # mask_ctrl._max_pixel_le.setText("100")
-        # self.assertEqual()
 
     def testRoiCtrl(self):
         roi_widget = self.window._roi_ctrl_widget
@@ -137,20 +112,19 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
-    def testImageOperation(self):
-        imgs = np.arange(2*128*128).reshape(2, 128, 128)
-        img_mean = np.mean(imgs, axis=0)
-        proc_data = ProcessedData(self._tid, imgs)
-        self.window._data.set(proc_data)
+    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
+           "onMovingAverageWindowChange")
+    def testImageAction(self, on_ma):
+        widget = self.window._image_action
 
-        self.assertEqual(None, self.view._image)
-        self.window.update()
-        np.testing.assert_array_equal(img_mean, self.view._image)
+        widget.moving_avg_le.clear()
+        QTest.keyClicks(widget.moving_avg_le, "10")
+        QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
+        on_ma.assert_called_once_with(10)
 
-        # test 'update_image_btn'
-        imgs = 2 * np.arange(2*128*128).reshape(2, 128, 128)
-        img_mean = np.mean(imgs, axis=0)
-        proc_data = ProcessedData(self._tid, imgs)
-        self.window._data.set(proc_data)
-        self.window._image_proc_widget.update_image_btn.clicked.emit()
-        np.testing.assert_array_equal(img_mean, self.view._image)
+    def testImageCtrl(self):
+        widget = self.window._image_ctrl_widget
+
+        spy = QSignalSpy(self.window._mediator.reset_image_level_sgn)
+        widget.auto_level_btn.clicked.emit()
+        self.assertEqual(1, len(spy))

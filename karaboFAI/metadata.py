@@ -11,7 +11,7 @@ All rights reserved.
 """
 import redis
 
-from .config import redis_connection
+from .config import config, redis_connection
 
 
 class Metadata:
@@ -26,86 +26,92 @@ class Metadata:
     CORRELATION_PROC = "metadata:proc:correlation"
     XAS_PROC = "metadata:proc:xas"
     BINNING_PROC = "metadata:proc:binning"
+    IMAGE_PROC = "metadata:proc:image"
 
     _meta = {
-        DATA_SOURCE: {
-            "endpoint": "",
-            "data_folder": "",
-            "detector_source_name": "",
-            "source_type": "",
-            "xgm_source_name": "",
-            "mono_source_name": "",
-        }
+        DATA_SOURCE: [
+            "endpoint",
+            "data_folder",
+            "detector_source_name",
+            "source_type",
+            "xgm_source_name",
+            "mono_source_name",
+        ]
     }
 
     _proc_meta = {
-        GENERAL_PROC: {
-            "sample_distance": "",
-            "photon_energy": "",
-            "pulse_id_range": "",
-        },
-        GEOMETRY_PROC: {
-            "geometry_file": ""
-        },
+        GENERAL_PROC: [
+            "sample_distance",
+            "photon_energy",
+            "pulse_id_range",
+        ],
+        IMAGE_PROC: [
+            "threshold_mask",
+            "ma_window",
+            "background",
+        ],
+        GEOMETRY_PROC: [
+            "geometry_file",
+        ],
         # region and visibility must be give first since the image tool window
         # is not opened by default
-        ROI_PROC: {
-            "region1": "[0, 0, 0, 0]",
-            "region2": "[0, 0, 0, 0]",
-            "region3": "[0, 0, 0, 0]",
-            "region4": "[0, 0, 0, 0]",
-            "visibility1": "False",
-            "visibility2": "False",
-            "visibility3": "False",
-            "visibility4": "False",
-            "fom_type": "",
-            "proj1d:normalizer": "",
-            "proj1d:auc_range": "",
-            "proj1d:fom_integ_range": "",
-        },
-        AZIMUTHAL_INTEG_PROC: {
-            "integ_center_x": "",
-            "integ_center_y": "",
-            "integ_method": "",
-            "integ_points": "",
-            "integ_range": "",
-            "normalizer": "",
-            "auc_range": "",
-            "fom_integ_range": "",
-            "enable_pulsed_ai": ""
-        },
-        PUMP_PROBE_PROC: {
-            "mode": "",
-            "on_pulse_ids": "",
-            "off_pulse_ids": "",
-            "abs_difference": "",
-            "analysis_type": "",
-            "ma_window": "",
-        },
-        CORRELATION_PROC: {
-            "fom_type": "",
-            "fom_integ_range": "",
-            "device_id1": "",
-            "device_id2": "",
-            "device_id3": "",
-            "device_id4": "",
-            "property1": "",
-            "property2": "",
-            "property3": "",
-            "property4": "",
-            "resolution1": "",
-            "resolution2": "",
-            "resolution3": "",
-            "resolution4": "",
-        },
-        XAS_PROC: {
-            "energy_bins": "",
-        },
-        BINNING_PROC: {
-            "n_bins": "",
-            "bin_range": "",
-            "analysis_type": "",
-        }
+        ROI_PROC: [
+            "region1",
+            "region2",
+            "region3",
+            "region4",
+            "visibility1",
+            "visibility2",
+            "visibility3",
+            "visibility4",
+            "fom_type",
+            "proj1d:normalizer",
+            "proj1d:auc_range",
+            "proj1d:fom_integ_range",
+        ],
+        AZIMUTHAL_INTEG_PROC: [
+            "integ_center_x",
+            "integ_center_y",
+            "integ_method",
+            "integ_points",
+            "integ_range",
+            "normalizer",
+            "auc_range",
+            "fom_integ_range",
+            "enable_pulsed_ai",
+        ],
+        PUMP_PROBE_PROC: [
+            "mode",
+            "on_pulse_ids",
+            "off_pulse_ids",
+            "abs_difference",
+            "analysis_type",
+            "ma_window",
+        ],
+        CORRELATION_PROC: [
+            "fom_type",
+            "fom_integ_range",
+            "device_id1",
+            "device_id2",
+            "device_id3",
+            "device_id4",
+            "property1",
+            "property2",
+            "property3",
+            "property4",
+            "resolution1",
+            "resolution2",
+            "resolution3",
+            "resolution4",
+        ],
+        XAS_PROC: [
+            "energy_bins",
+        ],
+        BINNING_PROC: [
+            "n_bins",
+            "bin_range",
+            "analysis_type",
+        ]
     }
 
 
