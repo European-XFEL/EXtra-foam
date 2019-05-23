@@ -126,7 +126,7 @@ class AiPulsedProcessor(CompositeProcessor):
         image_mask = processed.image.image_mask
 
         pixel_size = processed.image.pixel_size
-        poni2, poni1 = processed.image.pos_inv(cx, cy)
+        poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
 
         ai = AzimuthalIntegrator(dist=self.sample_distance,
@@ -299,7 +299,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
         image_mask = processed.image.image_mask
 
         pixel_size = processed.image.pixel_size
-        poni2, poni1 = processed.image.pos_inv(cx, cy)
+        poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
 
         ai = AzimuthalIntegrator(dist=self.sample_distance,

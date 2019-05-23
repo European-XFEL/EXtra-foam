@@ -10,7 +10,7 @@ from .plot_widgets import (
     MultiPulseAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
     XasSpectrumWidget, XasSpectrumDiffWidget, XasSpectrumBinCountWidget
 )
-from .roi import CropROI, RectROI
+from .roi import RectROI
 
 # add image view widgets
 __all__ = ([
@@ -40,6 +40,5 @@ __all__.extend([
 
 # add ROI widgets
 __all__.extend([
-    "CropROI",
     "RectROI"
 ])

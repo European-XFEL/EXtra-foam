@@ -275,7 +275,7 @@ class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
 
     This is the second Main GUI which focuses on manipulating the image
-    , e.g. selecting ROI, masking, cropping, normalization, for different
+    , e.g. selecting ROI, masking, normalization, for different
     data analysis scenarios.
     """
 
@@ -356,28 +356,7 @@ class ImageToolWindow(AbstractWindow):
             self._tool_bar_mask, "Load image mask", "load_mask.png")
         load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
 
-        # crop tool bar
-
-        self._tool_bar_crop = self.addToolBar("crop")
-
-        crop_at = self._addAction(
-            self._tool_bar_crop, "Crop", "crop_selection.png")
-        crop_at.setCheckable(True)
-        crop_at.toggled.connect(self._exclude_actions)
-        crop_at.toggled.connect(self._image_view.onCropToggle)
-
-        crop_to_selection_at = self._addAction(
-            self._tool_bar_crop, "Crop to selection", "crop.png")
-        crop_to_selection_at.triggered.connect(
-            self._image_view.onCropConfirmed)
-        crop_to_selection_at.triggered.connect(functools.partial(
-            crop_at.setChecked, False))
-
-        restore_image_at = self._addAction(
-            self._tool_bar_crop, "Restore image", "restore.png")
-        restore_image_at.triggered.connect(self._image_view.onRestoreImage)
-
-        self._exclusive_actions = {mask_at, unmask_at, crop_at}
+        self._exclusive_actions = {mask_at, unmask_at}
 
         # ROI and Image ctrl widget
 

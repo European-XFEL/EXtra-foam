@@ -464,7 +464,7 @@ class ImageData:
 
     Operation flow:
 
-    remove background -> cropping -> calculate mean image -> apply mask
+    remove background -> calculate mean image -> apply mask
 
     Attributes:
         pixel_size (float): detector pixel size.
@@ -474,7 +474,6 @@ class ImageData:
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
         _image_mask (numpy.ndarray): an image mask, default = None.
             Shape = (y, x)
-        _crop_area (tuple): (x, y, w, h) of the cropped image.
     """
     class RawImage:
         def __init__(self):
@@ -638,26 +637,10 @@ class ImageData:
         def initialized(self):
             return self._initialized
 
-    class CropArea:
-        def __init__(self):
-            self._rect = None
-
-        def __get__(self, instance, instance_type):
-            if instance is None:
-                return self
-            return self._rect
-
-        def __set__(self, instance, value):
-            self._rect = value  # (x, y, w, h)
-
-        def __delete__(self, instance):
-            self._rect = None
-
     __raw = RawImage()
     __ref = ImageRef()
     __threshold_mask = ThresholdMask()
     __image_mask = ImageMask()
-    __crop_area = CropArea()
 
     pixel_size = None
 
@@ -688,7 +671,6 @@ class ImageData:
         self._image_ref = self.__ref
         self._threshold_mask = self.__threshold_mask
         self._image_mask = np.copy(self.__image_mask)
-        self._crop_area = self.__crop_area
 
         # cache these two properties
         self.ma_window
@@ -730,20 +712,6 @@ class ImageData:
         # should both be a cached property
         return self.__raw.moving_average_count
 
-    def pos(self, x, y):
-        """current image -> original image."""
-        if self._crop_area is None:
-            return x, y
-        x0, y0, _, _, = self._crop_area
-        return x + x0, y + y0
-
-    def pos_inv(self, x, y):
-        """original image -> current image."""
-        if self._crop_area is None:
-            return x, y
-        x0, y0, _, _, = self._crop_area
-        return x - x0, y - y0
-
     def _set_images(self, imgs):
         self.__raw.set(imgs)
 
@@ -753,14 +721,6 @@ class ImageData:
     def set_background(self, v):
         self.__raw.background = v
         self._registered_ops.add("background")
-
-    def set_crop_area(self, flag, x, y, w, h):
-        if flag:
-            self.__crop_area = (x, y, w, h)
-        else:
-            del self.__crop_area
-
-        self._registered_ops.add("crop")
 
     def set_image_mask(self, flag, x, y, w, h):
         if flag == ImageMaskChange.REPLACE:
@@ -777,12 +737,7 @@ class ImageData:
     def set_reference(self):
         # Reference should be a copy of mean since mean could be modified
         # after a reference was set.
-        if self._crop_area is None:
-            self.__ref = np.copy(self.mean)
-        else:
-            # recalculate the uncropped image
-            self.__ref = np.copy(self._mean_imp(self._images))
-
+        self.__ref = np.copy(self.mean)
         self._registered_ops.add("reference")
 
     def remove_reference(self):
@@ -792,34 +747,22 @@ class ImageData:
 
     @cached_property
     def image_mask(self):
-        if self._crop_area is not None:
-            x, y, w, h = self._crop_area
-            return self._image_mask[y:y+h, x:x+w]
-
         return self._image_mask
 
     @cached_property
     def images(self):
-        """Return the cropped, background-subtracted images.
+        """Return the background-subtracted images.
 
         Warning: it shares the memory space with self._images
         """
-        if self._crop_area is None:
-            return self._images
-
-        x, y, w, h = self._crop_area
-        return self._images[..., y:y+h, x:x+w]
+        return self._images
 
     @cached_property
     def ref(self):
         if self._image_ref is None:
             return None
 
-        if self._crop_area is None:
-            return self._image_ref
-
-        x, y, w, h = self._crop_area
-        return self._image_ref[y:y+h, x:x+w]
+        return self._image_ref
 
     @cached_property
     def masked_ref(self):
@@ -831,7 +774,7 @@ class ImageData:
     def mean(self):
         """Return the average of images over pulses in a train.
 
-        The image is cropped and background-subtracted.
+        The image is background-subtracted.
 
         :return numpy.ndarray: a single image, shape = (y, x)
         """
@@ -849,8 +792,7 @@ class ImageData:
     def masked_mean(self):
         """Return the masked average image.
 
-        The image is cropped and background-subtracted before applying
-        the mask.
+        The image is background-subtracted before applying the mask.
         """
         # keep both mean image and masked mean image so that we can
         # recalculate the masked image
@@ -891,11 +833,6 @@ class ImageData:
         if "background" in self._registered_ops:
             self._images = self.__raw.images
             invalid_caches.update({"images", "mean", "masked_mean"})
-        if "crop" in self._registered_ops:
-            self._crop_area = self.__crop_area
-            invalid_caches.update(
-                {"images", "ref", "masked_ref",
-                 "mean", "masked_mean", "image_mask"})
         if "image_mask" in self._registered_ops:
             self._image_mask = np.copy(self.__image_mask)
             invalid_caches.add("image_mask")
@@ -924,7 +861,6 @@ class ImageData:
         cls.__ref.__delete__(None)
         cls.__threshold_mask.__delete__(None)
         cls.__image_mask.__delete__(None)
-        cls.__crop_area.__delete__(None)
 
 
 class ProcessedData:

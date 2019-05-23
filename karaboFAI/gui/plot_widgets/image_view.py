@@ -16,11 +16,10 @@ from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 
 from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
-from .roi import CropROI, RectROI
+from .roi import RectROI
 from ..misc_widgets import colorMapFactory
 from ..mediator import Mediator
-from ..gui_helpers import parse_boundary
-from ...algorithms import intersection, quick_min_max
+from ...algorithms import quick_min_max
 from ...config import config, ImageMaskChange
 from ...logger import logger
 
@@ -199,7 +198,7 @@ class ImageAnalysis(ImageView):
     """ImageAnalysis widget.
 
     Advance image analysis widget built on top of ImageView widget.
-    It provides tools like masking, cropping, etc.
+    It provides tools like masking, etc.
     """
 
     def __init__(self, *args, **kwargs):
@@ -226,11 +225,6 @@ class ImageAnalysis(ImageView):
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
-        # add cropping widget
-        self.crop = CropROI((0, 0), (100, 100))
-        self.crop.hide()
-        self._plot_widget.addItem(self.crop)
-
         self._image_data = None
         self._moving_average_window = 1
 
@@ -255,55 +249,10 @@ class ImageAnalysis(ImageView):
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
-        x, y = self._image_data.pos(x, y)
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
-
-    @QtCore.pyqtSlot(bool)
-    def onCropToggle(self, checked):
-        if checked:
-            if self._image is not None:
-                self.crop.setPos(0, 0)
-                self.crop.setSize(self._image.shape[::-1])
-            self.crop.show()
-        else:
-            self.crop.hide()
-
-    @QtCore.pyqtSlot()
-    def onCropConfirmed(self):
-        if not self.crop.isVisible():
-            return
-
-        if self._image is None:
-            return
-
-        x, y = self.crop.pos()
-        w, h = self.crop.size()
-        h0, w0 = self._image.shape
-
-        x, y, w, h = [int(v) for v in intersection([x, y, w, h],
-                                                   [0, 0, w0, h0])]
-        if w > 0 and h > 0:
-            self.setImage(self._image[y:y+h, x:x+w], auto_range=True)
-            # convert x, y to position at the original image
-            x, y = self._image_data.pos(x, y)
-            self._image_data.set_crop_area(True, x, y, w, h)
-            self._image_data.update()
-            self._mask_item.updateMask(self._image_data.image_mask)
-
-        self.crop.hide()
-
-    @QtCore.pyqtSlot()
-    def onRestoreImage(self):
-        if self._image_data is None:
-            return
-
-        self._image_data.set_crop_area(False, 0, 0, 0, 0)
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean, auto_range=True)
-        self._mask_item.updateMask(self._image_data.image_mask)
 
     @QtCore.pyqtSlot(int)
     def onMovingAverageWindowChange(self, v):
@@ -336,7 +285,6 @@ class ImageAnalysis(ImageView):
         if self._image_data is None:
             return
 
-        x, y = self._image_data.pos(x, y)
         self._image_data.set_image_mask(flag, x, y, w, h)
 
     @QtCore.pyqtSlot(bool)

@@ -47,23 +47,3 @@ class RectROI(ROI):
         """An alternative to addHandle in parent class."""
         # position, scaling center
         self.addScaleHandle([1, 1], [0, 0])
-
-
-class CropROI(ROI):
-    """Rectangular cropping widget."""
-    def __init__(self, pos, size):
-        """Initialization."""
-        super().__init__(pos, size,
-                         translateSnap=True,
-                         scaleSnap=True,
-                         pen=make_pen('y', width=1, style=QtCore.Qt.DashDotLine))
-
-        self._addHandles()
-
-    def _addHandles(self):
-        # position, scaling center
-        self.addScaleHandle([1, 1], [0, 0])
-        self.addScaleHandle([1, 0.5], [0, 0.5])
-        self.addScaleHandle([0.5, 1], [0.5, 0])
-        self.addScaleHandle([0, 0.5], [1, 0.5])
-        self.addScaleHandle([0.5, 0], [0.5, 1])

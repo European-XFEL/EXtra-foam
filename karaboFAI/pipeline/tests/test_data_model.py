@@ -74,53 +74,6 @@ class TestImageData(unittest.TestCase):
         with self.assertRaises(ValueError):
             ImageData(np.arange(16).reshape(2, 2, 2, 2))
 
-    def test_cropping(self):
-        imgs = np.arange(100, dtype=np.float).reshape(10, 10)
-        img_data = ImageData(imgs)
-        img_data.set_reference()
-
-        self.assertEqual(None, img_data.ref)
-
-        img_data.set_crop_area(True, 1, 2, 6, 7)
-        img_data.update()
-        self.assertTupleEqual((7, 6), img_data.mean.shape)
-        self.assertTupleEqual((7, 6), img_data.ref.shape)
-        self.assertTupleEqual((1, 2), img_data.pos(0, 0))
-        # test the change can be seen by the new instance
-        self.assertTupleEqual((7, 6), ImageData(imgs).mean.shape)
-        self.assertTupleEqual((7, 6), ImageData(imgs).ref.shape)
-        self.assertTupleEqual((1, 2), ImageData(imgs).pos(0, 0))
-
-        img_data.set_crop_area(True, 0, 1, 3, 4)
-        img_data.update()
-        self.assertTupleEqual((4, 3), img_data.mean.shape)
-        self.assertTupleEqual((4, 3), img_data.ref.shape)
-        self.assertTupleEqual((0, 1), img_data.pos(0, 0))
-
-        # Now we have a cropped image, set_reference should set the uncropped
-        # image as the reference
-        img_data.set_reference()
-        img_data.set_crop_area(False, 0, 0, 0, 0)
-        img_data.update()
-        self.assertTupleEqual((10, 10), img_data.ref.shape)
-
-    def test_poni(self):
-        imgs = np.ones((100, 80))
-
-        img_data = ImageData(np.copy(imgs))
-
-        self.assertTupleEqual((0, 0), img_data.pos_inv(0, 0))
-
-        img_data.set_crop_area(True, 0, 10, 30, 20)
-        img_data.update()
-        self.assertTupleEqual((0, -10), img_data.pos_inv(0, 0))
-
-        # The crop area is not calculate based on the previous crop but
-        # on the original image.
-        img_data.set_crop_area(True, 10, 20, 60, 80)
-        img_data.update()
-        self.assertTupleEqual((-12, -8), img_data.pos_inv(-2, 12))
-
     def test_referenceTrainResolved(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
 
@@ -205,11 +158,6 @@ class TestImageData(unittest.TestCase):
         img_data.update()
         np.testing.assert_array_equal(mask, img_data.image_mask)
 
-        # image mask changes as crop area changes
-        img_data.set_crop_area(True, 1, 1, 3, 3)
-        img_data.update()
-        np.testing.assert_array_equal(mask[1:4, 1:4], img_data.image_mask)
-
     def test_thresholdmask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
         img_data = ImageData(np.copy(imgs_orig))
@@ -256,9 +204,7 @@ class TestImageData(unittest.TestCase):
         mask = (1, 4)
         img_data.set_threshold_mask(*mask)
         bkg = 1.0
-        crop_area = (0, 1, 3, 2)
         img_data.set_background(bkg)
-        img_data.set_crop_area(True, *crop_area)
         img_data.update()
 
         self.assertEqual(imgs_orig.shape, img_data.shape)
@@ -268,8 +214,7 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(1, img_data.n_images)
 
         # calculate the ground truth
-        x, y, w, h = crop_area
-        imgs = np.copy(imgs_orig)[y:y+h, x:x+w]
+        imgs = np.copy(imgs_orig)
         imgs -= bkg
 
         np.testing.assert_array_equal(imgs, img_data.images)
@@ -285,13 +230,11 @@ class TestImageData(unittest.TestCase):
         img_data.set_threshold_mask(None, None)
         img_data.update()
 
-        imgs = np.copy(imgs_orig)[y:y+h, x:x+w]  # recalculate the ground truth
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
         masked_imgs = imgs
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
 
-        # clear crop
-        img_data.set_crop_area(False, 0, 0, 0, 0)
         img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
@@ -361,9 +304,8 @@ class TestImageData(unittest.TestCase):
         img_data.update()
         np.testing.assert_array_equal(imgs_orig, img_data.images)
 
-        # the moving average implementation does not affect the cropping
-        # and masking implementation which was first done without moving
-        # average
+        # the moving average implementation does not affect the masking
+        # implementation which was first done without moving average
 
     def test_pulseresolved(self):
         imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
@@ -372,17 +314,14 @@ class TestImageData(unittest.TestCase):
 
         img_data.set_threshold_mask(1, 4)
         bkg = 1.0
-        crop_area = (0, 1, 3, 2)
         img_data.set_background(bkg)
-        img_data.set_crop_area(True, *crop_area)
         img_data.update()
 
         self.assertEqual(imgs_orig.shape[1:], img_data.shape)
         self.assertEqual(imgs_orig.shape[0], img_data.n_images)
 
         # calculate the ground truth
-        x, y, w, h = crop_area
-        imgs = np.copy(imgs_orig)[:, y:y + h, x:x + w]
+        imgs = np.copy(imgs_orig)
         imgs -= bkg
 
         np.testing.assert_array_equal(imgs, img_data.images)
@@ -401,16 +340,12 @@ class TestImageData(unittest.TestCase):
         img_data.set_threshold_mask(*mask)
         img_data.update()
 
-        imgs = np.copy(imgs_orig)[:, y:y+h, x:x+w]  # recalculate the ground truth
+        imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
         masked_imgs = np.copy(imgs.mean(axis=0))
         masked_imgs[(masked_imgs < mask[0])] = mask[0]
         masked_imgs[(masked_imgs > mask[1])] = mask[1]
         np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        # clear crop
-        img_data.set_crop_area(False, 0, 0, 0, 0)
-        img_data.update()
 
         imgs = np.copy(imgs_orig)  # recalculate the ground truth
         imgs -= bkg
