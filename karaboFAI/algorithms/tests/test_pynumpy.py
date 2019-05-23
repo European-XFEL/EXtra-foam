@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.algorithms import nanmean_axis0_para
+from karaboFAI.algorithms import nanmean_axis0_para, first_tensor
 
 
 class TestPynumpy(unittest.TestCase):
@@ -22,3 +22,6 @@ class TestPynumpy(unittest.TestCase):
 
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., 1.]])
         np.testing.assert_array_almost_equal(expected, ret)
+
+    def test_firstTensor(self):
+        self.assertEqual(1.0, first_tensor())
