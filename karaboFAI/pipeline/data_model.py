@@ -963,6 +963,7 @@ class ProcessedData:
 
         self.xgm = XgmData()
         self.mono = MonoData()
+        self.timing = TimingData()
 
     @property
     def tid(self):
