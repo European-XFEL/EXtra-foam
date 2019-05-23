@@ -3,9 +3,9 @@ from collections import Counter
 import os
 import tempfile
 
+from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
-from karaboFAI.services import FAI
-from karaboFAI.gui import mkQApp
+from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.windows.base_window import AbstractWindow
 from karaboFAI.gui.windows import (
@@ -25,20 +25,17 @@ from karaboFAI.gui.plot_widgets import (
 class TestOverviewWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        logger.setLevel('CRITICAL')
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        fai = FAI('LPD')
-        fai.init()
-        cls.gui = fai.gui
-        cls.fai = fai
+        mkQApp()
+        cls.gui = MainGUI()
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-
-        del cls.fai
 
     def testOverviewWindow(self):
         win = OverviewWindow(pulse_resolved=True, parent=self.gui)
@@ -104,16 +101,12 @@ class TestPulsedAiWindow(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
+        logger.setLevel('CRITICAL')
 
         mkQApp()
 
     def testPulseResolved(self):
-        fai = FAI('LPD')
-        fai.init()
-        gui = fai.gui
+        gui = MainGUI()
 
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
@@ -131,9 +124,7 @@ class TestPulsedAiWindow(unittest.TestCase):
         gui.close()
 
     def testTrainResolved(self):
-        fai = FAI('JungFrau')
-        fai.init()
-        gui = fai.gui
+        gui = MainGUI()
 
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=False, parent=gui)

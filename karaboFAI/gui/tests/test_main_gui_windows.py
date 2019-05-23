@@ -2,8 +2,10 @@ import unittest
 import tempfile
 import os
 
+from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
-from karaboFAI.services import FAI
+from karaboFAI.gui.main_gui import MainGUI
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
     CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
 )
@@ -12,21 +14,19 @@ from karaboFAI.gui.windows import (
 class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        logger.setLevel('CRITICAL')
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
+        config = ConfigWrapper()  # ensure file
 
-        fai = FAI('LPD')
-        fai.init()
-        cls.app = fai.app
-        cls.gui = fai.gui
-        cls.fai = fai
+        config.load('LPD')
+
+        mkQApp()
+        cls.gui = MainGUI()
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-
-        del cls.fai
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()

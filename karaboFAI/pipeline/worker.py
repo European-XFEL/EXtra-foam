@@ -137,9 +137,12 @@ class ProcessProxy:
             proc = info.process
             logger.info(f"Shutting down {name}...")
             proc.shutdown()
-            proc.join(timeout=1.0)
+            if proc.is_alive():
+                proc.join(timeout=1.0)
+
             if proc.is_alive():
                 logger.info(f"Terminating {name} after 'join' failed...")
                 proc.terminate()
                 proc.join()
+
             logger.info(f"{name} is down!")
