@@ -396,13 +396,13 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_action.moving_avg_le.value_changed_sgn.connect(
             lambda x: self._image_view.onMovingAverageWindowChange(int(x)))
-        self._image_action.moving_avg_le.returnPressed.connect(
+        self._image_action.moving_avg_le.value_changed_sgn.connect(
             lambda x: mediator.onImageMaWindowChange(int(x)))
 
         self._image_action.threshold_mask_le.value_changed_sgn.connect(
-            self._image_view.onThresholdMaskChange)
+            lambda x: self._image_view.onThresholdMaskChange(x))
         self._image_action.threshold_mask_le.value_changed_sgn.connect(
-            mediator.onImageThresholdMaskChange)
+            lambda x: mediator.onImageThresholdMaskChange(x))
 
         self._image_action.bkg_le.value_changed_sgn.connect(
             lambda x: self._image_view.onBkgChange(float(x)))

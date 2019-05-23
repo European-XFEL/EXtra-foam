@@ -114,13 +114,39 @@ class TestImageTool(unittest.TestCase):
 
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
            "onMovingAverageWindowChange")
-    def testImageAction(self, on_ma):
+    @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
+    def testImageAction(self, on_ma_mediator, on_ma):
         widget = self.window._image_action
 
         widget.moving_avg_le.clear()
         QTest.keyClicks(widget.moving_avg_le, "10")
         QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
         on_ma.assert_called_once_with(10)
+        on_ma_mediator.assert_called_once_with(10)
+
+    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
+           "onThresholdMaskChange")
+    @patch("karaboFAI.gui.mediator.Mediator.onImageThresholdMaskChange")
+    def testImageAction2(self, on_mask_mediator, on_mask):
+        widget = self.window._image_action
+
+        widget.threshold_mask_le.clear()
+        QTest.keyClicks(widget.threshold_mask_le, "1, 10")
+        QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
+        on_mask.assert_called_once_with((1, 10))
+        on_mask_mediator.assert_called_once_with((1, 10))
+
+    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
+           "onBkgChange")
+    @patch("karaboFAI.gui.mediator.Mediator.onImageBackgroundChange")
+    def testImageAction3(self, on_bkg_mediator, on_bkg):
+        widget = self.window._image_action
+
+        widget.bkg_le.clear()
+        QTest.keyClicks(widget.bkg_le, "1.1")
+        QTest.keyPress(widget.bkg_le, Qt.Key_Enter)
+        on_bkg.assert_called_once_with(1.1)
+        on_bkg_mediator.assert_called_once_with(1.1)
 
     def testImageCtrl(self):
         widget = self.window._image_ctrl_widget
