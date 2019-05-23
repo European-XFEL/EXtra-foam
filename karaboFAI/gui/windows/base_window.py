@@ -17,32 +17,6 @@ from ..pyqtgraph.dockarea import DockArea
 from ..mediator import Mediator
 
 
-class SingletonWindow:
-    """SingletonWindow decorator.
-
-    A singleton window is only allowed to have one instance.
-    """
-    _instances = dict()
-
-    def __init__(self, instance_type):
-        self._instance_type = instance_type
-
-    def __call__(self, *args, **kwargs):
-        if self._instance_type not in self._instances:
-            instance = self._instance_type(*args, **kwargs)
-            self._instances[self._instance_type] = instance
-        else:
-            instance = self._instances[self._instance_type]
-            parent = instance.parent()
-            if parent is not None:
-                parent.registerWindow(instance)
-            instance.update()
-
-        instance.show()
-        instance.activateWindow()
-        return instance
-
-
 class AbstractWindow(QtGui.QMainWindow):
     """Base class for various stand-alone windows.
 

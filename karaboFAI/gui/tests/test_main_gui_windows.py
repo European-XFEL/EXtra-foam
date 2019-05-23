@@ -7,7 +7,8 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
-    CorrelationWindow, OverviewWindow, PumpProbeWindow, XasWindow
+    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
+    XasWindow
 )
 
 
@@ -27,6 +28,7 @@ class TestMainGui(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+        ImageToolWindow._reset()
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
@@ -37,8 +39,7 @@ class TestMainGui(unittest.TestCase):
         xas_action = actions[6]
 
         imagetool_window = self._check_open_window(imagetool_action)
-
-        self._check_open_window(imagetool_action, registered=False)
+        self.assertIsInstance(imagetool_window, ImageToolWindow)
 
         overview_window = self._check_open_window(overview_action)
         self.assertIsInstance(overview_window, OverviewWindow)
@@ -58,13 +59,18 @@ class TestMainGui(unittest.TestCase):
         self._check_close_window(correlation_window)
         self._check_close_window(pp_window)
         self._check_close_window(xas_window)
-        # self._check_close_window(imagetool_window)
+        self._check_close_window(imagetool_window)
 
         # if a plot window is closed, it can be re-openned and a new instance
         # will be created
         pp_window_new = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window_new, PumpProbeWindow)
         self.assertIsNot(pp_window_new, pp_window)
+
+        # imagetool_window is a singleton, therefore, the re-openned window
+        # is the same instance
+        imagetool_window_new = self._check_open_window(imagetool_action)
+        self.assertIs(imagetool_window_new, imagetool_window)
 
     def _check_open_window(self, action, registered=True):
         """Check triggering action about opening a window.

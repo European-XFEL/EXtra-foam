@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
+from karaboFAI.gui.windows import ImageToolWindow
 
 
 class TestImageTool(unittest.TestCase):
@@ -36,6 +37,7 @@ class TestImageTool(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+        ImageToolWindow._reset()
 
         del cls.fai
 

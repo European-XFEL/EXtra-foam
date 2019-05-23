@@ -14,7 +14,7 @@ import functools
 
 from ..pyqtgraph import QtCore, QtGui
 
-from .base_window import AbstractWindow, SingletonWindow
+from .base_window import AbstractWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
 from ..misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
@@ -271,7 +271,6 @@ class _ImageActionWidget(QtGui.QWidget):
         self.layout().setContentsMargins(2, 1, 2, 1)
 
 
-@SingletonWindow
 class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
 
@@ -284,7 +283,32 @@ class ImageToolWindow(AbstractWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
+    __instance = None
+
+    @classmethod
+    def _reset(cls):
+        cls.__instance = None
+
+    def __new__(cls, *args, **kwargs):
+        """Create a singleton."""
+        if cls.__instance is None:
+            instance = super().__new__(cls, *args, **kwargs)
+            instance._is_initialized = False
+            cls.__instance = instance
+            return instance
+
+        instance = cls.__instance
+        parent = instance.parent()
+        if parent is not None:
+            parent.registerWindow(instance)
+
+        instance.show()
+        instance.activateWindow()
+        return instance
+
     def __init__(self, *args, **kwargs):
+        if self._is_initialized:
+            return
         super().__init__(*args, **kwargs)
 
         self._image_view = ImageAnalysis(hide_axis=False, parent=self)
@@ -366,6 +390,8 @@ class ImageToolWindow(AbstractWindow):
 
         self.resize(800, 800)
         self.update()
+
+        self._is_initialized = True
 
     def initUI(self):
         """Override."""

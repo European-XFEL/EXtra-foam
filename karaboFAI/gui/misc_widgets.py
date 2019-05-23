@@ -170,9 +170,9 @@ class SmartLineEdit(QtGui.QLineEdit):
 
     def onReturnPressed(self):
         self._cached = self.text()
-        try:
+        if hasattr(self, "Validator"):
             self.value_changed_sgn.emit(self.Validator.parse(self.text()))
-        except AttributeError:
+        else:
             self.value_changed_sgn.emit(self.text())
 
 

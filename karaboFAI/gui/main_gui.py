@@ -26,7 +26,7 @@ from .misc_widgets import GuiLogger
 from .windows import (
     BinningWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
-    SingletonWindow, XasWindow
+    XasWindow
 )
 from .mediator import Mediator
 from .. import __version__
@@ -310,9 +310,6 @@ class MainGUI(QtGui.QMainWindow):
     def closeEvent(self, QCloseEvent):
         # prevent from logging in the GUI when it has been closed
         logging.getLogger().removeHandler(self._logger)
-
-        # useful in unittests
-        SingletonWindow._instances.clear()
 
         self._file_server.shutdown()
 
