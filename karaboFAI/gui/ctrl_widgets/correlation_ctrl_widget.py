@@ -241,5 +241,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             (i_row+1, device_id, ppt, res))
 
     def updateSharedParameters(self):
-        # TODO: emit signals for each row
+        for i_row in range(self._n_params):
+            combo = self._table.cellWidget(i_row, 0)
+            combo.currentTextChanged.emit(combo.currentText())
         return True

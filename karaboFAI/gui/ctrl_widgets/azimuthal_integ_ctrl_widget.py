@@ -15,9 +15,7 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..misc_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ..gui_helpers import parse_boundary
 from ...config import AiNormalizer, config
-from ...logger import logger
 
 
 class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):

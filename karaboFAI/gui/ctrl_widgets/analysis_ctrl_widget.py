@@ -14,7 +14,6 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..misc_widgets import SmartLineEdit
 from ...config import config
-from ...logger import logger
 
 
 class AnalysisCtrlWidget(AbstractCtrlWidget):

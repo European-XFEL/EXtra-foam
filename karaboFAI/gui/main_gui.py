@@ -164,6 +164,7 @@ class MainGUI(QtGui.QMainWindow):
             parent=self, pulse_resolved=self._pulse_resolved)
 
         self.initUI()
+        self.updateSharedParameters()
 
         self.setFixedHeight(self.minimumSizeHint().height())
 
