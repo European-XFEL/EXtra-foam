@@ -63,14 +63,12 @@ class TestImageTool(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
+        ImageToolWindow._reset()
         fai = FAI('LPD')
         fai.init()
         cls.gui = fai.gui
         cls.app = fai.app
         cls.fai = fai
-
-        cls._imagetool_action = cls.gui._tool_bar.actions()[2]
-        cls._imagetool_action.trigger()
 
         cls.window = list(cls.gui._windows.keys())[-1]
         cls.view = cls.window._image_view
@@ -78,7 +76,6 @@ class TestImageTool(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-        ImageToolWindow._reset()
 
         del cls.fai
 

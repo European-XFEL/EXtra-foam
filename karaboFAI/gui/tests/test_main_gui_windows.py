@@ -22,13 +22,13 @@ class TestMainGui(unittest.TestCase):
 
         config.load('LPD')
 
+        ImageToolWindow._reset()
         mkQApp()
         cls.gui = MainGUI()
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-        ImageToolWindow._reset()
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
@@ -38,7 +38,8 @@ class TestMainGui(unittest.TestCase):
         correlation_action = actions[5]
         xas_action = actions[6]
 
-        imagetool_window = self._check_open_window(imagetool_action)
+        # ImageToolWindow is opened together with the MainGUI
+        imagetool_window = list(self.gui._windows.keys())[-1]
         self.assertIsInstance(imagetool_window, ImageToolWindow)
 
         overview_window = self._check_open_window(overview_action)

@@ -4,3 +4,4 @@ from .correlation import CorrelationProcessor
 from .pump_probe import PumpProbeProcessor
 from .roi import RoiProcessor
 from .xas import XasProcessor
+from .image_processor import ImageProcessor

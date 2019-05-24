@@ -14,11 +14,10 @@ from queue import Empty, Full
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
-from .data_model import ProcessedData
 from .worker import ProcessWorker
 from .processors import (
     AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
-    PumpProbeProcessor, RoiProcessor, XasProcessor
+    ImageProcessor, PumpProbeProcessor, RoiProcessor, XasProcessor
 )
 from .exceptions import (
     AggregatingError, AssemblingError, ProcessingError)
@@ -35,9 +34,11 @@ class Scheduler(ProcessWorker):
         self._tasks = []
 
         self._image_assembler = ImageAssemblerFactory.create(detector)
+        self._image_proc = ImageProcessor()
         self._data_aggregator = DataAggregator()
 
         # processor pipeline flow:
+        # ImageProcessor ->
         #
         # PumpProbeProcessor ->
         #
@@ -51,10 +52,10 @@ class Scheduler(ProcessWorker):
         self._correlation_proc = CorrelationProcessor()
         self._xas_proc = XasProcessor()
 
-    def __setattr__(self, key, value):
-        if isinstance(value, _BaseProcessor):
-            self._tasks.append(value)
-        super().__setattr__(key, value)
+        self._tasks = [
+            self._pp_proc, self._roi_proc, self._ai_proc,
+            self._correlation_proc, self._xas_proc
+        ]
 
     def _run_once(self):
         """Run the data processor."""
@@ -70,6 +71,7 @@ class Scheduler(ProcessWorker):
         self._data_aggregator.update()
         self._image_assembler.update()
 
+        self._image_proc.update()
         self._ai_proc.update()
         self._pp_proc.update()
         self._roi_proc.update()
@@ -116,14 +118,16 @@ class Scheduler(ProcessWorker):
             assembled = self._image_assembler.assemble(raw)
         except AssemblingError as e:
             print(f"Train ID: {tid}: " + repr(e))
-            return None
+            return
         except Exception as e:
             print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            return
 
         try:
-            processed = ProcessedData(tid, assembled)
+            processed = self._image_proc.process_image(tid, assembled)
         except Exception as e:
             print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            return
 
         try:
             self._data_aggregator.aggregate(processed, raw)

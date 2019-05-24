@@ -166,6 +166,8 @@ class MainGUI(QtGui.QMainWindow):
         self.initUI()
         self.updateSharedParameters()
 
+        image_tool_at.trigger()
+
         self.setFixedHeight(self.minimumSizeHint().height())
 
         self.show()
@@ -289,6 +291,7 @@ class MainGUI(QtGui.QMainWindow):
             succeeded = widget.updateSharedParameters()
             if not succeeded:
                 return False
+
         return True
 
     @QtCore.pyqtSlot(str)

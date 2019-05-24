@@ -443,6 +443,7 @@ class ImageToolWindow(AbstractWindow):
 
         self.initUI()
         self.initConnections()
+        self.updateSharedParameters()
 
         self.resize(800, 800)
         self.update()
@@ -490,6 +491,11 @@ class ImageToolWindow(AbstractWindow):
             lambda x: self._image_view.onBkgChange(float(x)))
         self._image_action.bkg_le.value_changed_sgn.connect(
             lambda x: mediator.onImageBackgroundChange(float(x)))
+
+    def updateSharedParameters(self):
+        self._image_action.moving_avg_le.returnPressed.emit()
+        self._image_action.threshold_mask_le.returnPressed.emit()
+        self._image_action.bkg_le.returnPressed.emit()
 
     def update(self):
         """Update widgets.
