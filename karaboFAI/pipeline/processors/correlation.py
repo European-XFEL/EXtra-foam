@@ -62,38 +62,25 @@ class CorrelationFomProcessor(LeafProcessor):
 
         if self.fom_type == CorrelationFom.PUMP_PROBE_FOM:
             fom = processed.pp.fom
-            if fom is None:
-                raise ProcessingError(
-                    "Pump-probe result is not available!")
 
         elif self.fom_type == CorrelationFom.ROI1:
             fom = processed.roi.roi1_fom
-            if fom is None:
-                raise ProcessingError("ROI1 result is not available!")
 
         elif self.fom_type == CorrelationFom.ROI2:
             fom = processed.roi.roi2_fom
-            if fom is None:
-                raise ProcessingError("ROI2 result is not available!")
 
         elif self.fom_type == CorrelationFom.ROI_SUM:
             fom1 = processed.roi.roi1_fom
-            if fom1 is None:
-                raise ProcessingError("ROI1 result is not available!")
             fom2 = processed.roi.roi2_fom
-            if fom2 is None:
-                raise ProcessingError("ROI2 result is not available!")
-
+            if fom1 is None or fom2 is None:
+                return
             fom = fom1 + fom2
 
         elif self.fom_type == CorrelationFom.ROI_SUB:
             fom1 = processed.roi.roi1_fom
-            if fom1 is None:
-                raise ProcessingError("ROI1 result is not available!")
             fom2 = processed.roi.roi2_fom
-            if fom2 is None:
-                raise ProcessingError("ROI2 result is not available!")
-
+            if fom1 is None or fom2 is None:
+                return
             fom = fom1 - fom2
 
         elif self.fom_type == CorrelationFom.AZIMUTHAL_INTEG_MEAN:
@@ -110,6 +97,9 @@ class CorrelationFomProcessor(LeafProcessor):
         else:
             name = str(self.fom_type).split(".")[-1]
             raise ProcessingError(f"Unknown FOM name: {name}!")
+
+        if fom is None:
+            return
 
         processed.correlation.fom = fom
 
