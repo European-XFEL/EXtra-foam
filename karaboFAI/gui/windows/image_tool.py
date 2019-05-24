@@ -531,11 +531,11 @@ class ImageToolWindow(AbstractWindow):
         if img_data is None:
             return
 
+        # TODO: prevent _SimpleImageData.setImage from re-calculating "masked"
         self._image_view.setImageData(_SimpleImageData(
             img_data.mean,
             background=img_data.background,
-            threshold_mask=img_data.threshold_mask))
-        self._image_view.setImage(img_data.masked_mean, **kwargs)
+            threshold_mask=img_data.threshold_mask), **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):

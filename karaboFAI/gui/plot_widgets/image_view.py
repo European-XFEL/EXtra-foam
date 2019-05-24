@@ -52,6 +52,8 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
+        self._mediator = Mediator()
+
         self._rois = []
         self._initializeROIs()
 
@@ -84,7 +86,7 @@ class ImageView(QtGui.QWidget):
 
         self.initUI()
 
-        Mediator().reset_image_level_sgn.connect(self._updateImage)
+        self._mediator.reset_image_level_sgn.connect(self._updateImage)
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
@@ -211,7 +213,8 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(self.onMaskRegionChange)
+        self._mask_item.mask_region_change_sgn.connect(
+            self._mediator.onImageMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -226,14 +229,17 @@ class ImageAnalysis(ImageView):
         self._hist_widget.setImageItem(self._image_item)
 
         self._image_data = None
-        self._moving_average_window = 1
 
-    def setImageData(self, image_data):
+    def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
 
-        :param ImageData image_data: ImageData instance
+        :param _SimpleImageData image_data: _SimpleImageData instance.
         """
         self._image_data = image_data
+        if image_data is None:
+            return
+
+        self.setImage(image_data.masked)
 
     def setImageRef(self):
         """Set the displayed image as reference image."""
@@ -275,13 +281,6 @@ class ImageAnalysis(ImageView):
         self._image_data.threshold_mask = mask_range
         self.setImage(self._image_data.masked)
 
-    @QtCore.pyqtSlot(object, int, int, int, int)
-    def onMaskRegionChange(self, flag, x, y, w, h):
-        if self._image_data is None:
-            return
-
-        # self._image_data.set_image_mask(flag, x, y, w, h)
-
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):
         self._mask_item.draw_type = draw_type
@@ -316,21 +315,22 @@ class ImageAnalysis(ImageView):
         self._loadImageMaskImp(file_path)
 
     def _loadImageMaskImp(self, file_path):
-        if self._image_data is None:
+        if self._image is None:
             logger.error("Cannot load image mask without image!")
             return
 
         try:
             image_mask = np.load(file_path)
-            if image_mask.shape != self._image_data.shape:
+            if image_mask.shape != self._image.shape:
                 msg = "The shape of image mask is different from the image!"
                 logger.error(msg)
                 return
 
             logger.info(f"Image mask loaded from {file_path}!")
 
-            self._image_data.set_image_mask(
-                ImageMaskChange.REPLACE, image_mask, 0, 0, 0)
+            # Fix me
+            # self._image_data.set_image_mask(
+            #     ImageMaskChange.REPLACE, image_mask, 0, 0, 0)
             self._mask_item.updateMask(image_mask)
 
         except (IOError, OSError) as e:

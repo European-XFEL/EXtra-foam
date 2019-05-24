@@ -11,7 +11,6 @@ from PyQt5.QtCore import Qt
 
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.services import FAI
-from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
 
@@ -63,6 +62,9 @@ class TestImageTool(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
+        # ImageToolWindow._reset() is not called in other tests
+        ImageToolWindow._reset()
+
         fai = FAI('LPD')
         fai.init()
         cls.gui = fai.gui
@@ -84,7 +86,6 @@ class TestImageTool(unittest.TestCase):
         del cls.fai
 
     def setUp(self):
-        # ImageData.clear()
         ImageToolWindow._reset()
         self._action.trigger()
         self.window = list(self.gui._windows.keys())[-1]

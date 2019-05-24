@@ -137,7 +137,6 @@ class MaskItem(GraphicsObject):
         self._p1 = None
         self._p2 = None
 
-        # TODO: use C++ code
         for i in range(x, x+w):
             for j in range(y, y+h):
                 if self.draw_type == ImageMaskChange.MASK:
@@ -178,7 +177,6 @@ class MaskItem(GraphicsObject):
         w = self._mask.width()
         h = self._mask.height()
 
-        # TODO: to C++
         mask_array = np.zeros((h, w), dtype=bool)
         for i in range(w):
             for j in range(h):
@@ -193,7 +191,7 @@ class MaskItem(GraphicsObject):
         """
         h, w = mask.shape
         self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
-        # TODO: to C++ code
+
         for i in range(w):
             for j in range(h):
                 if mask[j, i]:
