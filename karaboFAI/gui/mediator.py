@@ -85,9 +85,6 @@ class Mediator(QObject):
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
 
-    def onImageMaskRegionChange(self, flag, x, y, w, h):
-        self._image_data.set_image_mask(flag, x, y, w, h)
-
     def onGeometryFileChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 

@@ -213,8 +213,6 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(
-            self._mediator.onImageMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -287,8 +285,8 @@ class ImageAnalysis(ImageView):
         self._image_item.drawing = checked
 
     @QtCore.pyqtSlot()
-    def onClearMask(self):
-        self._mask_item.clear()
+    def onClearImageMask(self):
+        self._mask_item.clearMask()
 
     def saveImageMask(self):
         file_path = QtGui.QFileDialog.getSaveFileName()[0]
@@ -328,10 +326,7 @@ class ImageAnalysis(ImageView):
 
             logger.info(f"Image mask loaded from {file_path}!")
 
-            # Fix me
-            # self._image_data.set_image_mask(
-            #     ImageMaskChange.REPLACE, image_mask, 0, 0, 0)
-            self._mask_item.updateMask(image_mask)
+            self._mask_item.loadMask(image_mask)
 
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {file_path}")

@@ -92,6 +92,7 @@ class MaskItem(GraphicsObject):
         super().__init__()
         if not isinstance(item, pg.ImageItem):
             raise TypeError("Input item must be an ImageItem instance.")
+
         self._image_item = item
         if isinstance(item, ImageItem):
             item.draw_started_sgn.connect(self.onDrawStarted)
@@ -132,7 +133,9 @@ class MaskItem(GraphicsObject):
         y = int(rect.y())
         w = int(rect.width())
         h = int(rect.height())
-        self.mask_region_change_sgn.emit(self.draw_type, x, y, w, h)
+
+        # TODO: publish the message
+        # self.mask_region_change_sgn.emit(self.draw_type, x, y, w, h)
 
         self._p1 = None
         self._p2 = None
@@ -146,10 +149,12 @@ class MaskItem(GraphicsObject):
 
         self._image_item.update()
 
-    def clear(self):
+    def clearMask(self):
+        """Clear the current mask."""
         if self._mask is None:
             return
 
+        # TODO: publish the message
         self.mask_region_change_sgn.emit(ImageMaskChange.CLEAR, 0, 0, 0, 0)
 
         self._mask.fill(self._TRANSPARENT)
@@ -184,11 +189,15 @@ class MaskItem(GraphicsObject):
 
         return mask_array
 
-    def updateMask(self, mask):
-        """Update the image mask.
+    def loadMask(self, mask):
+        """Load a given image mask.
 
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
+        # TODO: publish the new image_mask
+        # Note: since we this is a np.array, we should not put it into
+        #       Redis.
+
         h, w = mask.shape
         self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
 

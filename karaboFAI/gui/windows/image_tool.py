@@ -433,7 +433,7 @@ class ImageToolWindow(AbstractWindow):
 
         clear_mask_at = self._addAction(
             self._tool_bar_mask, "Trash mask", "trash_mask.png")
-        clear_mask_at.triggered.connect(self._image_view.onClearMask)
+        clear_mask_at.triggered.connect(self._image_view.onClearImageMask)
 
         save_img_mask_at = self._addAction(
             self._tool_bar_mask, "Save image mask", "save_mask.png")
