@@ -63,15 +63,19 @@ class TestImageTool(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        ImageToolWindow._reset()
         fai = FAI('LPD')
         fai.init()
         cls.gui = fai.gui
         cls.app = fai.app
         cls.fai = fai
+        cls.scheduler = fai.scheduler
 
-        cls.window = list(cls.gui._windows.keys())[-1]
-        cls.view = cls.window._image_view
+        actions = cls.gui._tool_bar.actions()
+        cls._action = actions[2]
+
+        # close the ImageToolWindow opened together with the MainGUI
+        window = list(cls.gui._windows.keys())[-1]
+        window.close()
 
     @classmethod
     def tearDownClass(cls):
@@ -80,13 +84,35 @@ class TestImageTool(unittest.TestCase):
         del cls.fai
 
     def setUp(self):
-        ImageData.clear()
+        # ImageData.clear()
+        ImageToolWindow._reset()
+        self._action.trigger()
+        self.window = list(self.gui._windows.keys())[-1]
+
+        self.view = self.window._image_view
         self.view.setImageData(None)
         self.view._image = None
 
-    def testRoiCtrl(self):
-        roi_widget = self.window._roi_ctrl_widget
-        roi_ctrls = roi_widget._roi_ctrls
+    def testDefaultValues(self):
+        # This must be the first test method in order to check that the
+        # default values are set correctly
+        proc = self.scheduler._roi_proc
+        widget = self.window._roi_ctrl_widget
+
+        proc.update()
+        self.assertListEqual([False]*4, proc.visibilities)
+
+        for i, ctrl in enumerate(widget._roi_ctrls):
+            roi_region = [int(ctrl._px_le.text()),
+                          int(ctrl._py_le.text()),
+                          int(ctrl._width_le.text()),
+                          int(ctrl._height_le.text())]
+            self.assertListEqual(roi_region, proc.regions[i])
+
+    def testRoiCtrlWidget(self):
+        widget = self.window._roi_ctrl_widget
+        roi_ctrls = widget._roi_ctrls
+        proc = self.scheduler._roi_proc
         self.assertEqual(4, len(roi_ctrls))
 
         for ctrl in roi_ctrls:
@@ -105,6 +131,8 @@ class TestImageTool(unittest.TestCase):
         QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, roi1_ctrl.activate_cb.height()/2))
         self.assertTrue(roi1_ctrl.activate_cb.isChecked())
+        proc.update()
+        self.assertTrue(proc.visibilities[0])
 
         # test default values
         self.assertTupleEqual((float(roi1_ctrl._width_le.text()),
@@ -121,8 +149,8 @@ class TestImageTool(unittest.TestCase):
         roi1_ctrl._height_le.clear()
         QTest.keyClicks(roi1_ctrl._height_le, "30")
         QTest.keyPress(roi1_ctrl._height_le, Qt.Key_Enter)
-
         self.assertTupleEqual((10, 30), tuple(roi1.size()))
+
         # ROI can be outside of the image
         roi1_ctrl._px_le.clear()
         QTest.keyClicks(roi1_ctrl._px_le, "-1")
@@ -131,6 +159,9 @@ class TestImageTool(unittest.TestCase):
         QTest.keyClicks(roi1_ctrl._py_le, "-3")
         QTest.keyPress(roi1_ctrl._py_le, Qt.Key_Enter)
         self.assertTupleEqual((-1, -3), tuple(roi1.pos()))
+
+        proc.update()
+        self.assertListEqual([-1, -3, 10, 30], proc.regions[0])
 
         # lock ROI ctrl
         QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,
@@ -155,7 +186,7 @@ class TestImageTool(unittest.TestCase):
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
            "onMovingAverageWindowChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
-    def testImageAction(self, on_ma_mediator, on_ma):
+    def testImageAction1(self, on_ma_mediator, on_ma):
         widget = self.window._image_action
 
         widget.moving_avg_le.clear()

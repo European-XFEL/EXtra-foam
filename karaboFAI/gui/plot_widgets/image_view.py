@@ -258,7 +258,6 @@ class ImageAnalysis(ImageView):
             return
 
         self._image_data.set_ma_window(v)
-        # this change does not affect the displayed image in ImageToolWindow
 
     @QtCore.pyqtSlot(float)
     def onBkgChange(self, bkg):
@@ -281,7 +280,7 @@ class ImageAnalysis(ImageView):
         if self._image_data is None:
             return
 
-        self._image_data.set_image_mask(flag, x, y, w, h)
+        # self._image_data.set_image_mask(flag, x, y, w, h)
 
     @QtCore.pyqtSlot(bool)
     def onDrawToggled(self, draw_type, checked):

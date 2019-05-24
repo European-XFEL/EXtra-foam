@@ -271,24 +271,34 @@ class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
     def __init__(self, rois, *, parent=None):
         super().__init__(parent)
 
-        mediator = Mediator()
-
         self._roi_ctrls = []
         for roi in rois:
             widget = _SingleRoiCtrlWidget(roi)
             self._roi_ctrls.append(widget)
-            widget.roi_region_change_sgn.connect(mediator.onRoiRegionChange)
-            widget.roi_visibility_change_sgn.connect(
-                mediator.onRoiVisibilityChange)
-            widget.notifyRoiParams()
 
         self.initUI()
+        self.initConnections()
+        self.updateSharedParameters()
 
     def initUI(self):
         layout = QtGui.QGridLayout()
         for i, roi_ctrl in enumerate(self._roi_ctrls):
             layout.addWidget(roi_ctrl, i, 0, 1, 5)
         self.setLayout(layout)
+
+    def initConnections(self):
+        mediator = Mediator()
+
+        for widget in self._roi_ctrls:
+            widget.roi_region_change_sgn.connect(mediator.onRoiRegionChange)
+            widget.roi_visibility_change_sgn.connect(
+                mediator.onRoiVisibilityChange)
+
+    def updateSharedParameters(self):
+        for i, widget in enumerate(self._roi_ctrls, 1):
+            widget.notifyRoiParams()
+            widget.roi_visibility_change_sgn.emit(
+                (i, widget.activate_cb.checkState() == QtCore.Qt.Checked))
 
 
 class _ImageCtrlWidget(QtGui.QGroupBox):
