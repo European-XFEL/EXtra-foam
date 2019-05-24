@@ -228,14 +228,12 @@ class ImageAnalysis(ImageView):
         self._image_data = None
         self._moving_average_window = 1
 
-    def setImageData(self, image_data, **kwargs):
+    def setImageData(self, image_data):
         """Set the ImageData.
 
         :param ImageData image_data: ImageData instance
         """
         self._image_data = image_data
-        if image_data is not None:
-            self.setImage(image_data.masked_mean, **kwargs)
 
     def setImageRef(self):
         """Set the displayed image as reference image."""
@@ -267,18 +265,16 @@ class ImageAnalysis(ImageView):
         if self._image_data is None:
             return
 
-        self._image_data.set_background(bkg)
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean)
+        self._image_data.background = bkg
+        self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(object)
     def onThresholdMaskChange(self, mask_range):
         if self._image_data is None:
             return
 
-        self._image_data.set_threshold_mask(*mask_range)
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean)
+        self._image_data.threshold_mask = mask_range
+        self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(object, int, int, int, int)
     def onMaskRegionChange(self, flag, x, y, w, h):

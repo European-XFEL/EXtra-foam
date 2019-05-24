@@ -12,6 +12,9 @@ All rights reserved.
 import os.path as osp
 import functools
 
+import numpy as np
+from cached_property import cached_property
+
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_window import AbstractWindow
@@ -19,6 +22,80 @@ from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
 from ..misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
 from ...config import config, ImageMaskChange
+
+
+class _SimpleImageData:
+    """Image data which is used by ImageToolWindow."""
+
+    def __init__(self, image, *, background=0.0, threshold_mask=(None, None)):
+        """Initialization.
+
+        :param np.ndarray image: image data with shape (y, x). The data can have
+            NaN values.
+        :param float background: a uniform background to be subtracted.
+        :param tuple/list threshold_mask: threshold mask used to clip the image.
+        """
+        self._pixel_size = config["PIXEL_SIZE"]
+
+        if not isinstance(image, np.ndarray):
+            raise TypeError(r"Image must be a numpy.ndarray!")
+
+        if image.ndim != 2:
+            raise ValueError(f"The shape of images must be (y, x)!")
+
+        self._image = image.astype(np.float32)
+
+        self._bkg = background
+        self._threshold_mask = None
+        self.threshold_mask = threshold_mask
+
+    @property
+    def pixel_size(self):
+        return self._pixel_size
+
+    @property
+    def background(self):
+        return self._bkg
+
+    @background.setter
+    def background(self, v):
+        if v == self._bkg:
+            return
+        self._image -= v - self._bkg
+        self._bkg = v
+
+        try:
+            del self.__dict__['masked']
+        except KeyError:
+            pass
+
+    @property
+    def threshold_mask(self):
+        return self._threshold_mask
+
+    @threshold_mask.setter
+    def threshold_mask(self, v):
+        if v == self._threshold_mask:
+            return
+
+        if not isinstance(v, (tuple, list)):
+            raise TypeError("Threshold mask must be a tuple or a list!")
+
+        if len(v) != 2:
+            raise ValueError("Length of threshold mask must be 2!")
+
+        self._threshold_mask = v
+
+        try:
+            del self.__dict__['masked']
+        except KeyError:
+            pass
+
+    @cached_property
+    def masked(self):
+        if self._threshold_mask == (None, None):
+            return self._image
+        return np.clip(self._image, *self._threshold_mask)
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -433,10 +510,16 @@ class ImageToolWindow(AbstractWindow):
         It is only used for updating the image manually.
         """
         data = self._data.get()
-        if data.image is None:
+        img_data = data.image
+
+        if img_data is None:
             return
 
-        self._image_view.setImageData(data.image, **kwargs)
+        self._image_view.setImageData(_SimpleImageData(
+            img_data.mean,
+            background=img_data.background,
+            threshold_mask=img_data.threshold_mask))
+        self._image_view.setImage(img_data.masked_mean, **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):
