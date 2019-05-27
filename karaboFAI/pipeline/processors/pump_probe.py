@@ -11,7 +11,9 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
+from .base_processor import (
+    LeafProcessor, CompositeProcessor, SharedProperty,
+)
 from ..exceptions import ProcessingError
 from ...algorithms import Stack
 from ...config import PumpProbeMode, PumpProbeType
@@ -42,7 +44,6 @@ class PumpProbeProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self.add(PumpProbePreProcessor())
         self.add(PumpProbeImageProcessor())
 
     def update(self):
@@ -57,29 +58,6 @@ class PumpProbeProcessor(CompositeProcessor):
         self.analysis_type = PumpProbeType(int(cfg['analysis_type']))
         self.ma_window = int(cfg['ma_window'])
         self.abs_difference = cfg['abs_difference'] == 'True'
-
-
-class PumpProbePreProcessor(LeafProcessor):
-
-    def process(self, processed, raw=None):
-        """Override."""
-        if self.mode == PumpProbeMode.UNDEFINED:
-            return
-
-        n_pulses = processed.n_pulses
-
-        max_on_pulse_id = max(self.on_pulse_ids)
-        if max_on_pulse_id >= n_pulses:
-            raise ProcessingError(
-                f"Out of range: on-pulse ID = {max_on_pulse_id}, "
-                f"total number of pulses = {n_pulses}")
-
-        if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
-            max_off_pulse_id = max(self.off_pulse_ids)
-            if max_off_pulse_id >= n_pulses:
-                raise ProcessingError(
-                    f"Out of range: off-pulse ID = {max_off_pulse_id}, "
-                    f"total number of pulses = {n_pulses}")
 
 
 class PumpProbeImageProcessor(LeafProcessor):
@@ -103,8 +81,11 @@ class PumpProbeImageProcessor(LeafProcessor):
 
     @profiler("Pump-probe image processor")
     def process(self, processed, raw=None):
-        if self.mode == PumpProbeMode.UNDEFINED:
+        if self.mode == PumpProbeMode.UNDEFINED or \
+                self.analysis_type == PumpProbeType.UNDEFINED:
             return
+
+        self._check_pulse_ids(processed.n_pulses)
 
         if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
             on_image = processed.image.masked_mean
@@ -141,3 +122,17 @@ class PumpProbeImageProcessor(LeafProcessor):
 
             processed.pp.off_image_mean = self._buffer.pop()[1]
             processed.pp.on_image_mean = self._buffer.pop()[1]
+
+    def _check_pulse_ids(self, n_pulses):
+        max_on_pulse_id = max(self.on_pulse_ids)
+        if max_on_pulse_id >= n_pulses:
+            raise ProcessingError(
+                f"Out of range: on-pulse ID = {max_on_pulse_id}, "
+                f"total number of pulses = {n_pulses}")
+
+        if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
+            max_off_pulse_id = max(self.off_pulse_ids)
+            if max_off_pulse_id >= n_pulses:
+                raise ProcessingError(
+                    f"Out of range: off-pulse ID = {max_off_pulse_id}, "
+                    f"total number of pulses = {n_pulses}")

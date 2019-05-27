@@ -32,6 +32,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     _analysis_types = OrderedDict({
+        "": PumpProbeType.UNDEFINED,
         "azimuthal integ": PumpProbeType.AZIMUTHAL_INTEG,
         "ROI": PumpProbeType.ROI,
         "projection X": PumpProbeType.ROI_PROJECTION_X,

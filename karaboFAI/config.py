@@ -36,11 +36,12 @@ class PumpProbeMode(IntEnum):
 
 
 class PumpProbeType(IntEnum):
-    AZIMUTHAL_INTEG = 0
-    ROI = 1
-    ROI_PROJECTION_X = 2
-    ROI_PROJECTION_Y = 3
-    ROI1_BY_ROI2 = 4
+    UNDEFINED = 0
+    AZIMUTHAL_INTEG = 1
+    ROI = 2
+    ROI_PROJECTION_X = 3
+    ROI_PROJECTION_Y = 4
+    ROI1_BY_ROI2 = 5
 
 
 class AnalysisType(IntEnum):
