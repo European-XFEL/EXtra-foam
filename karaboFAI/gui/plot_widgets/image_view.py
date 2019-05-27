@@ -20,7 +20,7 @@ from .roi import RectROI
 from ..misc_widgets import colorMapFactory
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
-from ...config import config, ImageMaskChange
+from ...config import config, redis_connection
 from ...logger import logger
 
 
@@ -147,7 +147,7 @@ class ImageView(QtGui.QWidget):
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        self._mask_item.updateImage()
+        self._mask_item.onSetImage()
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -213,6 +213,8 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem(border='w')
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
+        self._mask_item.mask_region_change_sgn.connect(
+            self._mediator.onImageMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -280,8 +282,8 @@ class ImageAnalysis(ImageView):
         self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(bool)
-    def onDrawToggled(self, draw_type, checked):
-        self._mask_item.draw_type = draw_type
+    def onDrawToggled(self, masking_state, checked):
+        self._mask_item.masking_state = masking_state
         self._image_item.drawing = checked
 
     @QtCore.pyqtSlot()
@@ -327,9 +329,17 @@ class ImageAnalysis(ImageView):
             logger.info(f"Image mask loaded from {file_path}!")
 
             self._mask_item.loadMask(image_mask)
+            self._publish_image_mask(image_mask)
 
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {file_path}")
+
+    def _publish_image_mask(self, image_mask):
+        r = redis_connection()
+        buf = np.packbits(image_mask).tobytes()
+        h, w = image_mask.shape
+        r.publish("command:image_mask", str((2, 0, 0, w, h, w, h)))
+        r.publish("command:image_mask", buf)
 
 
 class AssembledImageView(ImageView):

@@ -11,6 +11,8 @@ All rights reserved.
 """
 import copy
 from threading import Lock
+from multiprocessing import Array
+import ctypes
 
 import numpy as np
 
@@ -18,7 +20,7 @@ from cached_property import cached_property
 
 from ..algorithms import nanmean_axis0_para
 from ..logger import logger
-from ..config import config, ImageMaskChange
+from ..config import config
 
 
 class PairData:
@@ -464,8 +466,6 @@ class ImageData:
             a train. shape = (pulse_id, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
-        _image_mask (numpy.ndarray): an image mask, default = None.
-            Shape = (y, x)
     """
     class RawImage:
         def __init__(self):
@@ -565,44 +565,6 @@ class ImageData:
         def __delete__(self, instance):
             self._image = None
 
-    class ImageMask:
-        def __init__(self):
-            self._mask = None
-            self._initialized = False
-
-        def __get__(self, instance, instance_type):
-            if instance is None:
-                return self
-            return self._mask
-
-        def __set__(self, instance, value):
-            flag, mask = value
-            if flag == ImageMaskChange.MASK:
-                x, y, w, h = mask
-                # mask area
-                self._mask[y:y + h, x:x + w] = True
-            elif flag == ImageMaskChange.UNMASK:
-                x, y, w, h = mask
-                # unmask area
-                self._mask[y:y + h, x:x + w] = False
-            elif flag == ImageMaskChange.CLEAR:
-                self._mask[:] = False
-            elif flag == ImageMaskChange.REPLACE:
-                # replace the whole mask
-                if self._mask is None:
-                    self._mask = mask
-                else:
-                    self._mask[:] = mask  # avoid reallocate memory
-
-                self._initialized = True
-
-        def __delete__(self, instance):
-            self._mask = None
-            self._initialized = False
-
-        def initialized(self):
-            return self._initialized
-
     class ThresholdMask:
         def __init__(self, lb=None, ub=None):
             self._lower = lb
@@ -632,7 +594,6 @@ class ImageData:
     __raw = RawImage()
     __ref = ImageRef()
     __threshold_mask = ThresholdMask()
-    __image_mask = ImageMask()
 
     pixel_size = None
 
@@ -648,9 +609,6 @@ class ImageData:
             raise ValueError(
                 f"The shape of images must be (y, x) or (n_pulses, y, x)!")
 
-        if not self.__class__.__image_mask.initialized():
-            self.__image_mask = (ImageMaskChange.REPLACE,
-                                 np.zeros(images.shape[-2:], dtype=bool))
         if not self.__class__.__threshold_mask.initialized():
             self.__threshold_mask = config['MASK_RANGE']
 
@@ -662,7 +620,6 @@ class ImageData:
         self._images = self.__raw.images
         self._image_ref = self.__ref
         self._threshold_mask = self.__threshold_mask
-        self._image_mask = np.copy(self.__image_mask)
 
         # cache these two properties
         self.ma_window
@@ -714,14 +671,6 @@ class ImageData:
         self.__raw.background = v
         self._registered_ops.add("background")
 
-    def set_image_mask(self, flag, x, y, w, h):
-        if flag == ImageMaskChange.REPLACE:
-            self.__image_mask = (flag, x)
-        else:
-            self.__image_mask = (flag, (x, y, w, h))
-
-        self._registered_ops.add("image_mask")
-
     def set_threshold_mask(self, lb, ub):
         self.__threshold_mask = (lb, ub)
         self._registered_ops.add("threshold_mask")
@@ -736,10 +685,6 @@ class ImageData:
         self.__ref = None
 
         self._registered_ops.add("reference")
-
-    @cached_property
-    def image_mask(self):
-        return self._image_mask
 
     @cached_property
     def images(self):
@@ -825,9 +770,6 @@ class ImageData:
         if "background" in self._registered_ops:
             self._images = self.__raw.images
             invalid_caches.update({"images", "mean", "masked_mean"})
-        if "image_mask" in self._registered_ops:
-            self._image_mask = np.copy(self.__image_mask)
-            invalid_caches.add("image_mask")
         if "threshold_mask" in self._registered_ops:
             self._threshold_mask = self.__threshold_mask
             invalid_caches.update({"masked_mean", "masked_ref"})
@@ -852,7 +794,6 @@ class ImageData:
         cls.__raw.clear()
         cls.__ref.__delete__(None)
         cls.__threshold_mask.__delete__(None)
-        cls.__image_mask.__delete__(None)
 
 
 class ProcessedData:

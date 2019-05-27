@@ -21,7 +21,7 @@ from .base_window import AbstractWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
 from ..misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
-from ...config import config, ImageMaskChange
+from ...config import config
 
 
 class _SimpleImageData:
@@ -421,7 +421,7 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         mask_at.toggled.connect(self._exclude_actions)
         mask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.MASK))
+            self._image_view.onDrawToggled, 1))
 
         unmask_at = self._addAction(
             self._tool_bar_mask, "Unmask", "un_mask.png")
@@ -429,7 +429,7 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         unmask_at.toggled.connect(self._exclude_actions)
         unmask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
+            self._image_view.onDrawToggled, 0))
 
         clear_mask_at = self._addAction(
             self._tool_bar_mask, "Trash mask", "trash_mask.png")

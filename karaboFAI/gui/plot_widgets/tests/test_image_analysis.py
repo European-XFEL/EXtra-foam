@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 import tempfile
 
 import numpy as np
@@ -39,10 +40,14 @@ class TestImageAnalysis(unittest.TestCase):
         self.assertEqual(cm.output[0].split(':')[-1],
                          'Cannot load mask from abc')
 
+        self._widget._publish_image_mask = MagicMock()
+
         self._widget._saveImageMaskImp(fp)
 
         fp.seek(0)
         self._widget._loadImageMaskImp(fp)
+        self._widget._publish_image_mask.assert_called_once()
+        self._widget._publish_image_mask.reset_mock()
 
         # save and load another mask
         mask[0, 0] = 1
@@ -54,8 +59,7 @@ class TestImageAnalysis(unittest.TestCase):
         self._widget._saveImageMaskImp(fp)
         fp.seek(0)
         self._widget._loadImageMaskImp(fp)
-
-        # TODO: test
+        self._widget._publish_image_mask.assert_called_once()
 
         # load a mask with different shape
         new_mask = np.array((3, 3), dtype=bool)
@@ -64,7 +68,5 @@ class TestImageAnalysis(unittest.TestCase):
         fp.seek(0)
         with self.assertLogs(logger, level='ERROR'):
             self._widget._loadImageMaskImp(fp)
-
-        # TODO: test
 
         fp.close()

@@ -15,9 +15,7 @@ import numpy as np
 
 from .. import pyqtgraph as pg
 from ..pyqtgraph import GraphicsObject, QtCore, QtGui
-
 from ..misc_widgets import make_pen, make_brush
-from ...config import ImageMaskChange
 
 
 class ImageItem(pg.ImageItem):
@@ -75,8 +73,9 @@ class ImageItem(pg.ImageItem):
 
 class MaskItem(GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
-    # ImageMaskChange, x, y, w, h
-    mask_region_change_sgn = QtCore.Signal(object, int, int, int, int)
+
+    # a tuple of (masking_state, x, y, w, h, w_image, h_image)
+    mask_region_change_sgn = QtCore.pyqtSignal(object)
 
     _mask = None  # QImage
     _mask_rect = QtCore.QRectF(0, 0, 0, 0)
@@ -101,7 +100,8 @@ class MaskItem(GraphicsObject):
 
         self._brush = make_brush('b')  # brush for drawing the bounding box
 
-        self.draw_type = None
+        # 1 for masking, 0 for unmasking, -1 for clearing mask
+        self.masking_state = 0
 
         self._p1 = None
         self._p2 = None
@@ -134,15 +134,16 @@ class MaskItem(GraphicsObject):
         w = int(rect.width())
         h = int(rect.height())
 
-        # TODO: publish the message
-        # self.mask_region_change_sgn.emit(self.draw_type, x, y, w, h)
+        h_img, w_img = self._image_item.image.shape
+        self.mask_region_change_sgn.emit(
+            (self.masking_state, x, y, w, h, w_img, h_img))
 
         self._p1 = None
         self._p2 = None
 
         for i in range(x, x+w):
             for j in range(y, y+h):
-                if self.draw_type == ImageMaskChange.MASK:
+                if self.masking_state:
                     self._mask.setPixelColor(i, j, self._OPAQUE)
                 else:
                     self._mask.setPixelColor(i, j, self._TRANSPARENT)
@@ -154,17 +155,17 @@ class MaskItem(GraphicsObject):
         if self._mask is None:
             return
 
-        # TODO: publish the message
-        self.mask_region_change_sgn.emit(ImageMaskChange.CLEAR, 0, 0, 0, 0)
+        h_img, w_img = self._image_item.image.shape
+        self.mask_region_change_sgn.emit((-1, 0, 0, -1, -1, w_img, h_img))
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
 
-    def updateImage(self):
+    def onSetImage(self):
         h, w = self._image_item.image.shape
         if self._mask is None:
-            self.__class__._mask = QtGui.QImage(w, h,
-                                                QtGui.QImage.Format_Alpha8)
+            self.__class__._mask = QtGui.QImage(
+                w, h, QtGui.QImage.Format_Alpha8)
             self._mask.fill(self._TRANSPARENT)
             self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
 
@@ -194,10 +195,6 @@ class MaskItem(GraphicsObject):
 
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
-        # TODO: publish the new image_mask
-        # Note: since we this is a np.array, we should not put it into
-        #       Redis.
-
         h, w = mask.shape
         self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
 

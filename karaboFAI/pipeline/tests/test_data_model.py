@@ -7,7 +7,7 @@ from karaboFAI.pipeline.data_model import (
     DataManager, ProcessedData, PumpProbeData, RoiData, PairData
 )
 from karaboFAI.logger import logger
-from karaboFAI.config import config, ImageMaskChange
+from karaboFAI.config import config
 
 
 class TestRoiData(unittest.TestCase):
@@ -130,33 +130,6 @@ class TestImageData(unittest.TestCase):
         img_data.update()
         self.assertEqual(None, img_data.ref)
         self.assertEqual(None, img_data.masked_ref)
-
-    def test_imagemask(self):
-        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
-        mask = np.zeros_like(imgs_orig, dtype=bool)
-
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_image_mask(ImageMaskChange.MASK, 1, 1, 2, 2)
-        img_data.update()
-        mask[1:3, 1:3] = True
-        np.testing.assert_array_equal(mask, img_data.image_mask)
-        # test the change can be seen by the new instance
-        np.testing.assert_array_equal(mask, ImageData(imgs_orig).image_mask)
-
-        img_data.set_image_mask(ImageMaskChange.UNMASK, 2, 2, 4, 4)
-        img_data.update()
-        mask[2:4, 2:4] = False
-        np.testing.assert_array_equal(mask, img_data.image_mask)
-
-        img_data.set_image_mask(ImageMaskChange.CLEAR, 0, 0, 0, 0)
-        img_data.update()
-        mask[:] = False
-        np.testing.assert_array_equal(mask, img_data.image_mask)
-
-        mask[3:, 3:] = True
-        img_data.set_image_mask(ImageMaskChange.REPLACE, mask, 0, 0, 0)
-        img_data.update()
-        np.testing.assert_array_equal(mask, img_data.image_mask)
 
     def test_thresholdmask(self):
         imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)

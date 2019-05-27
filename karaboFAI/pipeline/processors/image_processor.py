@@ -9,6 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+import pyarrow as pa
+
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt

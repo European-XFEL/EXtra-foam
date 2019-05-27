@@ -17,7 +17,7 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
 from ..pipeline.data_model import DataManager
-from ..config import CorrelationFom
+from ..config import CorrelationFom, redis_connection
 
 
 class Mediator(QObject):
@@ -51,6 +51,7 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._meta = MetaProxy()
+        self._db = redis_connection()
         self._data = DataManager()
 
         self._is_initialized = True
@@ -84,6 +85,9 @@ class Mediator(QObject):
 
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
+
+    def onImageMaskRegionChange(self, value: tuple):
+        self._db.publish("command:image_mask", str(value))
 
     def onGeometryFileChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)

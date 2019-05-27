@@ -86,13 +86,6 @@ class RoiFom(IntEnum):
     MEAN = 1  # monitor mean of ROI
 
 
-class ImageMaskChange(IntEnum):
-    MASK = 0  # mask an area
-    UNMASK = 1  # unmask an area
-    CLEAR = 2  # remove all the mask areas
-    REPLACE = 3  # replace the whole current mask
-
-
 class _Config(dict):
     """Config implementation."""
 
@@ -422,3 +415,19 @@ def redis_connection():
         REDIS_CONNECTION = connection
 
     return REDIS_CONNECTION
+
+
+REDIS_CONNECTION_BYTES = None
+
+
+def redis_connection_bytes():
+    """Return a Redis connection."""
+    global REDIS_CONNECTION_BYTES
+    if REDIS_CONNECTION_BYTES is None:
+        redis_cfg = config['REDIS']
+        connection = redis.Redis('localhost', redis_cfg['PORT'],
+                                 password=redis_cfg['PASSWORD'],
+                                 decode_responses=False)
+        REDIS_CONNECTION_BYTES = connection
+
+    return REDIS_CONNECTION_BYTES

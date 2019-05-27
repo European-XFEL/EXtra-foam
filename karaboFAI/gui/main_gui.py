@@ -42,8 +42,6 @@ class MainGUI(QtGui.QMainWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
-    image_mask_sgn = QtCore.pyqtSignal(str)  # filename
-
     start_sgn = QtCore.pyqtSignal()
     stop_sgn = QtCore.pyqtSignal()
 

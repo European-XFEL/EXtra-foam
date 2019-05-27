@@ -22,7 +22,9 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
-from ...config import AiNormalizer, AnalysisType, PumpProbeType
+from ...config import (
+    AiNormalizer, AnalysisType, PumpProbeType, redis_connection_bytes
+)
 from ...metadata import Metadata as mt
 from ...helpers import profiler
 
@@ -31,6 +33,12 @@ def energy2wavelength(energy):
     # Plank-einstein relation (E=hv)
     HC_E = 1e-3 * constants.c * constants.h / constants.e
     return HC_E / energy
+
+
+def _check_image_mask(mask_shape, image_shape):
+    if mask_shape != image_shape:
+        raise ProcessingError(f"Mask shape {mask_shape} differs "
+                              f"from the image shape {image_shape}")
 
 
 class AzimuthalIntegrationProcessor(CompositeProcessor):
@@ -60,6 +68,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             a normalizer of the azimuthal integration.
         fom_integ_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
+        image_mask (numpy.ndarray): image mask. Shape = (y, x).
     """
 
     sample_distance = SharedProperty()
@@ -75,6 +84,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     enable_pulsed_ai = SharedProperty()
 
+    image_mask = SharedProperty()
+
     def __init__(self):
         super().__init__()
 
@@ -83,8 +94,9 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.add(AiPumpProbeProcessor())
         self.add(AiBinProcessor())
 
-    def process(self, processed, raw):
-        pass
+        self.image_mask = None
+        self._mask_command = redis_connection_bytes().pubsub()
+        self._mask_command.subscribe("command:image_mask")
 
     def update(self):
         """Override."""
@@ -104,6 +116,35 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.auc_range = self.str2tuple(cfg['auc_range'])
         self.fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
         self.enable_pulsed_ai = cfg['enable_pulsed_ai'] == 'True'
+
+        while True:
+            msg = self._mask_command.get_message()
+            if msg is None:
+                break
+            self._image_mask_handler(msg)
+
+    def _image_mask_handler(self, msg):
+        if isinstance(msg['data'], int):
+            # TODO: why there is an additional message?
+            return
+
+        mode, x, y, w, h, w_img, h_img = self.str2list(
+            msg['data'].decode("utf-8"), handler=int)
+
+        if mode in (0, 1):
+            if self.image_mask is None:
+                self.image_mask = np.zeros((h_img, w_img), dtype=np.bool)
+            # 1 for masking and 0 for unmasking
+            self.image_mask[y:y+h, x:x+w] = bool(mode)
+        elif mode == -1:
+            # clear mask
+            self.image_mask = np.zeros((h_img, w_img), dtype=np.bool)
+        else:
+            # the next message contains the bytes for a whole mask
+            msg = self._mask_command.get_message()
+            packed_bits = np.frombuffer(msg['data'], dtype=np.uint8)
+            self.image_mask = np.unpackbits(packed_bits).reshape(h, w).astype(
+                np.bool, casting='unsafe')
 
 
 class AiPulsedProcessor(CompositeProcessor):
@@ -128,7 +169,6 @@ class AiPulsedProcessor(CompositeProcessor):
         integ_range = self.integ_range
 
         assembled = processed.image.images
-        image_mask = processed.image.image_mask
 
         pixel_size = processed.image.pixel_size
         poni2, poni1 = cx, cy
@@ -149,7 +189,14 @@ class AiPulsedProcessor(CompositeProcessor):
             # convert 'nan' to '-inf', as explained above
             assembled[i][np.isnan(assembled[i])] = -np.inf
 
-            mask = np.copy(image_mask)
+            if self.image_mask is None:
+                mask = np.zeros_like(assembled[i], dtype=np.bool)
+            else:
+                mask = np.copy(self.image_mask)
+                # image shape could change due to quadrant movement for
+                # pulse-resolved detectors
+                _check_image_mask(mask.shape, assembled[i].shape)
+
             # merge image mask and threshold mask
             mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
 
@@ -242,7 +289,6 @@ class AiTrainProcessor(CompositeProcessor):
         integ_range = self.integ_range
 
         assembled = processed.image.masked_mean
-        image_mask = processed.image.image_mask
 
         pixel_size = processed.image.pixel_size
         poni2, poni1 = cx, cy
@@ -258,7 +304,14 @@ class AiTrainProcessor(CompositeProcessor):
                                  rot3=0,
                                  wavelength=energy2wavelength(self.photon_energy))
 
-        mask = np.copy(image_mask)
+        if self.image_mask is None:
+            mask = np.zeros_like(assembled, dtype=np.bool)
+        else:
+            mask = np.copy(self.image_mask)
+            # image shape could change due to quadrant movement for
+            # pulse-resolved detectors
+            _check_image_mask(mask.shape, assembled.shape)
+
         # merge image mask and threshold mask
         mask[(assembled < mask_min) | (assembled > mask_max)] = 1
 
@@ -368,8 +421,6 @@ class AiPumpProbeProcessor(CompositeProcessor):
         integ_method = self.integ_method
         integ_range = self.integ_range
 
-        image_mask = processed.image.image_mask
-
         pixel_size = processed.image.pixel_size
         poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
@@ -386,8 +437,15 @@ class AiPumpProbeProcessor(CompositeProcessor):
 
         def _integrate1d_on_off_imp(img):
             """Use for multiprocessing."""
-            mask = np.copy(image_mask)
-            # merge image mask and threshold mask
+            if self.image_mask is None:
+                mask = np.zeros_like(img, dtype=np.bool)
+            else:
+                mask = np.copy(self.image_mask)
+                # image shape could change due to quadrant movement for
+                # pulse-resolved detectors
+                _check_image_mask(mask.shape, img.shape)
+
+        # merge image mask and threshold mask
             mask[(img <= mask_min) | (img >= mask_max)] = 1
 
             # do integration
