@@ -35,7 +35,7 @@ def check_system_resource():
     return n_cpus, n_gpus
 
 
-def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
+def try_to_connect_redis_server(host, port, *, password=None, n_attempts=5):
     """Try to connect to a starting Redis server.
 
     :param str host: IP address of the redis server.
@@ -49,7 +49,6 @@ def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
     # Create a Redis client to check whether the server is reachable.
     client = redis.Redis(host=host, port=port, password=password)
 
-    # try 10 times
     for i in range(n_attempts):
         try:
             logger.info(f"Say hello to Redis server at {host}:{port}")
@@ -65,24 +64,20 @@ def try_to_connect_redis_server(host, port, *, password=None, n_attempts=10):
                           f"{host}:{port}.")
 
 
-def start_redis_server(port):
+def start_redis_server():
     """Start a Redis server.
-
-    :param int port: Redis server port.
 
     :return ProcessInfo: process info.
 
     Raises:
         FileNotFoundError: raised if the Redis executable does not exist.
     """
-    redis_cfg = config["REDIS"]
-    executable = redis_cfg["EXECUTABLE"]
+    executable = config["REDIS_EXECUTABLE"]
     if not os.path.isfile(executable):
         raise FileNotFoundError
 
-    if port is None or port <= 0:
-        port = redis_cfg["PORT"]
-    password = redis_cfg["PASSWORD"]
+    password = config["REDIS_PASSWORD"]
+    port = config["REDIS_PORT"]
 
     # Construct the command to start the Redis server.
     command = [executable]
@@ -111,13 +106,13 @@ def start_redis_server(port):
 
 
 class FAI:
-    def __init__(self, detector, *, redis_port=None):
+    def __init__(self, detector):
         # update global configuration
         config.load(detector)
 
         # Redis server must be started at first since when the GUI starts,
         # it needs to write all the configuration into Redis.
-        self._redis_process_info = start_redis_server(redis_port)
+        self._redis_process_info = start_redis_server()
 
         # TODO: check Redis server sub-process started.
         # Now, if the Redis server is already started, the software will not
@@ -166,8 +161,6 @@ def application():
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
-    parser.add_argument('--redis_port', type=int, default=-1,
-                        help="Port for start the redis server.")
 
     args = parser.parse_args()
 
@@ -189,7 +182,7 @@ def application():
     if not faulthandler.is_enabled():
         faulthandler.enable(all_threads=False)
 
-    fai = FAI(detector, redis_port=args.redis_port)
+    fai = FAI(detector)
 
     fai.init()
 

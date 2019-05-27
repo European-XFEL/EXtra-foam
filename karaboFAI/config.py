@@ -104,15 +104,14 @@ class _Config(dict):
         "CORRELATION_COLORS": ['c', 'b', 'o', 'y'],
         # colors for binning plots 1 to 3
         "BIN_COLORS": ['c', 'b', 'o'],
-        "REDIS": {
-            # full path of the Redis server executable
-            "EXECUTABLE": osp.join(osp.abspath(
-                osp.dirname(__file__)), "thirdparty/bin/redis-server"),
-            # password to access the Redis server
-            "PASSWORD": "karaboFAI",  # FIXME
-            # default port of the Redis server
-            "PORT": 6379,
-        }
+        # full path of the Redis server executable
+        "REDIS_EXECUTABLE": osp.join(osp.abspath(
+            osp.dirname(__file__)), "thirdparty/bin/redis-server"),
+        # default REDIS port used in testing. Each detector has its
+        # dedicated REDIS port.
+        "REDIS_PORT": 6379,
+        # password to access the Redis server
+        "REDIS_PASSWORD": "karaboFAI",  # FIXME
     }
 
     # system configuration which users are allowed to modify
@@ -147,6 +146,7 @@ class _Config(dict):
             "PIXEL_SIZE": None,
         },
         "AGIPD": {
+            "REDIS_PORT": 6378,
             "PULSE_RESOLVED": True,
             "REQUIRE_GEOMETRY": True,
             "NUMBER_OF_MODULES": 16,
@@ -154,6 +154,7 @@ class _Config(dict):
             "PIXEL_SIZE": 0.2e-3,
         },
         "LPD": {
+            "REDIS_PORT": 6379,
             "PULSE_RESOLVED": True,
             "REQUIRE_GEOMETRY": True,
             "NUMBER_OF_MODULES": 16,
@@ -161,6 +162,7 @@ class _Config(dict):
             "PIXEL_SIZE": 0.5e-3,
         },
         "JungFrau": {
+            "REDIS_PORT": 6380,
             "PULSE_RESOLVED": False,
             "REQUIRE_GEOMETRY": False,
             "NUMBER_OF_MODULES": 1,
@@ -168,6 +170,7 @@ class _Config(dict):
             "PIXEL_SIZE": 0.075e-3,
         },
         "FastCCD": {
+            "REDIS_PORT": 6381,
             "PULSE_RESOLVED": False,
             "REQUIRE_GEOMETRY": False,
             "NUMBER_OF_MODULES": 1,
@@ -175,6 +178,7 @@ class _Config(dict):
             "PIXEL_SIZE": 0.030e-3,
         },
         "BaslerCamera": {
+            "REDIS_PORT": 6390,
             "PULSE_RESOLVED": False,
             "REQUIRE_GEOMETRY": False,
             "NUMBER_OF_MODULES": 1,
@@ -408,9 +412,8 @@ def redis_connection():
     """Return a Redis connection."""
     global REDIS_CONNECTION
     if REDIS_CONNECTION is None:
-        redis_cfg = config['REDIS']
-        connection = redis.Redis('localhost', redis_cfg['PORT'],
-                                 password=redis_cfg['PASSWORD'],
+        connection = redis.Redis('localhost', config['REDIS_PORT'],
+                                 password=config['REDIS_PASSWORD'],
                                  decode_responses=True)
         REDIS_CONNECTION = connection
 
@@ -424,9 +427,8 @@ def redis_connection_bytes():
     """Return a Redis connection."""
     global REDIS_CONNECTION_BYTES
     if REDIS_CONNECTION_BYTES is None:
-        redis_cfg = config['REDIS']
-        connection = redis.Redis('localhost', redis_cfg['PORT'],
-                                 password=redis_cfg['PASSWORD'],
+        connection = redis.Redis('localhost', config['REDIS_PORT'],
+                                 password=config['REDIS_PASSWORD'],
                                  decode_responses=False)
         REDIS_CONNECTION_BYTES = connection
 
