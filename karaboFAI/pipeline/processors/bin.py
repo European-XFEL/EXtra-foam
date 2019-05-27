@@ -107,6 +107,7 @@ class BinGeneralProcessor(LeafProcessor):
             if values is None:
                 # initialization
                 values = np.zeros((len(counts), len(new_value)))
+                self._data.values = values
                 values[index-1][:] = new_value
             else:
                 values[index-1][:] += new_value
