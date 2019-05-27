@@ -199,19 +199,25 @@ class Mediator(QObject):
         self._data.reset_correlation()
 
     def onXasEnergyBinsChange(self, value: int):
-        self._meta.set(mt.XAS_PROC, "energy_bins", value)
+        self._meta.set(mt.XAS_PROC, "n_bins", value)
+
+    def onXasBinRangeChange(self, value: tuple):
+        self._meta.set(mt.XAS_PROC, "bin_range", str(value))
 
     def onXasReset(self):
         self._data.reset_xas()
 
-    def onBinningBinsChange(self, value: int):
-        self._meta.set(mt.BINNING_PROC, "n_bins", value)
+    def onBinBinsChange(self, value: int):
+        self._meta.set(mt.BIN_PROC, "n_bins", value)
 
-    def onBinningRangeChange(self, value: tuple):
-        self._meta.set(mt.BINNING_PROC, "bin_range", str(value))
+    def onBinBinRangeChange(self, value: tuple):
+        self._meta.set(mt.BIN_PROC, "bin_range", str(value))
 
-    def onBinningReset(self):
-        self._data.reset_binning()
+    def onBinReset(self):
+        self._meta.set(mt.BIN_PROC, "reset", 1)
 
-    def onBinningAnalysisTypeChange(self, value: IntEnum):
-        self._meta.set(mt.BINNING_PROC, "analysis_type", int(value))
+    def onBinAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.BIN_PROC, "analysis_type", int(value))
+
+    def onBinModeChange(self, value: IntEnum):
+        self._meta.set(mt.BIN_PROC, "mode", int(value))

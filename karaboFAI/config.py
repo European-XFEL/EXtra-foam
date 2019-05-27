@@ -43,6 +43,18 @@ class PumpProbeType(IntEnum):
     ROI1_BY_ROI2 = 4
 
 
+class AnalysisType(IntEnum):
+    UNDEFINED = 0
+    AZIMUTHAL_INTEG = 1
+    ROI_PROJECTION_X = 2
+    ROI_PROJECTION_Y = 3
+
+
+class BinMode(IntEnum):
+    ACCUMULATE = 0
+    AVERAGE = 1
+
+
 class CorrelationFom(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE_FOM = 1
@@ -74,11 +86,6 @@ class RoiFom(IntEnum):
     MEAN = 1  # monitor mean of ROI
 
 
-class BinningType(IntEnum):
-    UNDEFINED = 0
-    AZIMUTHAL_INTEG = 1
-
-
 class ImageMaskChange(IntEnum):
     MASK = 0  # mask an area
     UNMASK = 1  # unmask an area
@@ -103,7 +110,7 @@ class _Config(dict):
         # colors for correlation parameters 1 to 4
         "CORRELATION_COLORS": ['c', 'b', 'o', 'y'],
         # colors for binning plots 1 to 3
-        "BINNING_COLORS": ['c', 'b', 'o'],
+        "BIN_COLORS": ['c', 'b', 'o'],
         "REDIS": {
             # full path of the Redis server executable
             "EXECUTABLE": osp.join(osp.abspath(

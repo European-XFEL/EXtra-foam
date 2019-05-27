@@ -13,8 +13,6 @@ import numpy as np
 
 from .base_plot_widget import PlotWidget
 
-from ..pyqtgraph import QtCore
-
 from ..misc_widgets import make_brush, make_pen
 from ...logger import logger
 from ...config import config
@@ -59,28 +57,23 @@ class SinglePulseAiWidget(PlotWidget):
         if intensities is None:
             return
 
-        if intensities.ndim == 2:
-            # pulse resolved data
-            max_id = data.n_pulses - 1
-            if self.pulse_id <= max_id:
-                self._pulse_plot.setData(momentum,
-                                         intensities[self.pulse_id])
-            else:
-                logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
-                             "pulse ID ({})".format(self.pulse_id, max_id))
-                return
+        max_id = data.n_pulses - 1
+        if self.pulse_id <= max_id:
+            self._pulse_plot.setData(momentum, intensities[self.pulse_id])
         else:
-            self._pulse_plot.setData(momentum, intensities)
+            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
+                         "pulse ID ({})".format(self.pulse_id, max_id))
+            return
 
         if self._mean_plot is not None:
             self._mean_plot.setData(momentum, data.ai.intensity_mean)
 
 
-class MultiPulseAiWidget(PlotWidget):
-    """MultiPulseAiWidget class.
+class TrainAiWidget(PlotWidget):
+    """TrainAiWidget class.
 
     Widget for displaying azimuthal integration result for all
-    the pulses in a train.
+    the pulse(s) in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -95,21 +88,29 @@ class MultiPulseAiWidget(PlotWidget):
         """Override."""
         momentum = data.ai.momentum
         intensities = data.ai.intensities
+        intensity_mean = data.ai.intensity_mean
 
         if intensities is None:
-            return
+            if intensity_mean is None:
+                return
 
-        n_pulses = len(intensities)
-        if n_pulses != self._n_pulses:
-            self._n_pulses = n_pulses
-            # re-plot if number of pulses change
-            self.clear()
-            for i, intensity in enumerate(intensities):
-                self.plotCurve(momentum, intensity,
-                               pen=make_pen(i, hues=9, values=5))
+            if self._n_pulses == 0:
+                # initialize
+                self.plotCurve(momentum, intensity_mean)
+                self._n_pulses = 1
+            else:
+                self.plotItem.items[0].setData(momentum, intensity_mean)
         else:
-            for item, intensity in zip(self.plotItem.items, intensities):
-                item.setData(momentum, intensity)
+            n_pulses = len(intensities)
+            if self._n_pulses != n_pulses:
+                self.clear()
+
+                for i, intensity in enumerate(intensities):
+                    self.plotCurve(momentum, intensity,
+                                   pen=make_pen(i, hues=9, values=5))
+            else:
+                for item, intensity in zip(self.plotItem.items, intensities):
+                    item.setData(momentum, intensity)
 
 
 class PulsedFOMWidget(PlotWidget):
@@ -372,18 +373,16 @@ class XasSpectrumBinCountWidget(PlotWidget):
         self._plot.setData(bin_center, bin_count)
 
 
-class BinningWidget(PlotWidget):
-    """BinningWidget class.
+class BinWidget(PlotWidget):
+    """BinWidget class.
 
     Widget for displaying the pump and probe signal or their difference.
     """
-    def __init__(self, diff=False, *, parent=None):
-        """Initialization.
-
-        :param bool diff: True for displaying on-off while False for
-            displaying on and off
-        """
+    def __init__(self, *, parent=None):
+        """Initialization."""
         super().__init__(parent=parent)
+
+        self._n_bins = 0
 
         self.setLabel('left', "y (arb. u.)")
         self.setLabel('bottom', "x (arb. u.)")
@@ -391,11 +390,30 @@ class BinningWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        pass
+        bin_centers = data.bin.centers
+        values = data.bin.values
+        momentum = data.ai.momentum
+        if values is None:
+            return
+
+        n_bins = len(bin_centers)
+        if self._n_bins != n_bins:
+            self.clear()
+
+            bin_width = bin_centers[1] - bin_centers[0]
+            for i, value in enumerate(values):
+                start = bin_centers[i] - bin_width/2.
+                end = bin_centers[i] + bin_width/2.
+                self.plotCurve(momentum, value,
+                               name=f"{start:>8.2e}, {end:>8.2e}",
+                               pen=make_pen(i, hues=9, values=5))
+        else:
+            for item, value in zip(self.plotItem.items, values):
+                item.setData(momentum, value)
 
 
-class BinningCountWidget(PlotWidget):
-    """BinningCountWidget class.
+class BinCountWidget(PlotWidget):
+    """BinCountWidget class.
 
     Widget for displaying the number of data points in each bins.
     """
@@ -407,11 +425,11 @@ class BinningCountWidget(PlotWidget):
         self.setLabel('bottom', "x")
         self.setLabel('left', "Count")
 
-        self._plot = self.plotBar(width=0.8)
+        self._plot = self.plotBar(width=0.9, brush=make_brush('b'))
 
     def update(self, data):
         """Override."""
-        bin_center = data.binning.bin_center
-        bin_count = data.binning.bin_count
+        centers = data.bin.centers
+        counts = data.bin.counts
 
-        self._plot.setData(bin_center, bin_count)
+        self._plot.setData(centers, counts)

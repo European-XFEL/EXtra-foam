@@ -42,7 +42,11 @@ class CorrelationProcessor(CompositeProcessor):
         self.add(CorrelationFomProcessor())
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.CORRELATION_PROC)
+        if cfg is None:
+            return
+
         self.fom_type = CorrelationFom(int(cfg['fom_type']))
 
         self.fom_integ_range = self.str2tuple(

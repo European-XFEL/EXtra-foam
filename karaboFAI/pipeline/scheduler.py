@@ -16,8 +16,9 @@ from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
 from .worker import ProcessWorker
 from .processors import (
-    AzimuthalIntegrationProcessor, _BaseProcessor, CorrelationProcessor,
-    ImageProcessor, PumpProbeProcessor, RoiProcessor, XasProcessor
+    _BaseProcessor, AzimuthalIntegrationProcessor, BinProcessor,
+    CorrelationProcessor, ImageProcessor, PumpProbeProcessor,
+    RoiProcessor, XasProcessor
 )
 from .exceptions import (
     AggregatingError, AssemblingError, ProcessingError)
@@ -51,10 +52,11 @@ class Scheduler(ProcessWorker):
         self._ai_proc = AzimuthalIntegrationProcessor()
         self._correlation_proc = CorrelationProcessor()
         self._xas_proc = XasProcessor()
+        self._bin_proc = BinProcessor()
 
         self._tasks = [
             self._pp_proc, self._roi_proc, self._ai_proc,
-            self._correlation_proc, self._xas_proc
+            self._correlation_proc, self._bin_proc, self._xas_proc
         ]
 
     def _run_once(self):
@@ -70,13 +72,6 @@ class Scheduler(ProcessWorker):
 
         self._data_aggregator.update()
         self._image_assembler.update()
-
-        self._image_proc.update()
-        self._ai_proc.update()
-        self._pp_proc.update()
-        self._roi_proc.update()
-        self._xas_proc.update()
-        self._correlation_proc.update()
 
         processed_data = self._process_core(data)
         if processed_data is None:

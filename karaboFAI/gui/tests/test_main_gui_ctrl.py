@@ -14,11 +14,13 @@ from karabo_data.geometry import LPDGeometry
 
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.logger import logger
+from karaboFAI.metadata import MetaProxy
+from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
-    config, AiNormalizer, CorrelationFom, DataSource, Projection1dNormalizer,
-    PumpProbeMode, PumpProbeType
+    config, AiNormalizer, AnalysisType, BinMode, CorrelationFom, DataSource,
+    Projection1dNormalizer, PumpProbeMode, PumpProbeType
 )
 
 
@@ -34,6 +36,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         detector = 'LPD'
         fai = FAI(detector)
         fai.init()
+
+        cls.meta = MetaProxy()
 
         cls.app = fai.app
         cls.gui = fai.gui
@@ -251,18 +255,19 @@ class TestMainGuiCtrl(unittest.TestCase):
     def testXasCtrlWidget(self, reset_xas):
         widget = self.gui.xas_ctrl_widget
         proc = self.scheduler._xas_proc
-
         proc.update()
 
         # check initial value is set
-        self.assertEqual(int(widget._nbins_le.text()), proc.n_bins)
+        self.assertEqual(int(widget._n_bins_le.text()), proc.n_bins)
+        self.assertTupleEqual((0.7, 0.9), proc.bin_range)
 
         # set another value
-        widget._nbins_le.setText("40")
-
+        widget._n_bins_le.setText("40")
+        widget._bin_range_le.setText("0.9, 1.0")
         proc.update()
 
         self.assertEqual(40, proc.n_bins)
+        self.assertTupleEqual((0.9, 1.0), proc.bin_range)
 
         widget._reset_btn.clicked.emit()
         reset_xas.assert_called_once()
@@ -425,9 +430,28 @@ class TestMainGuiCtrl(unittest.TestCase):
         window.update()
         self.app.processEvents()
 
-    @patch("karaboFAI.pipeline.data_model.BinningData.clear")
-    def testBinningCtrlWidget(self, reset_binning):
-        widget = self.gui.binning_ctrl_widget
+    def testBinCtrlWidget(self):
+        widget = self.gui.bin_ctrl_widget
+        scheduler = self.scheduler
+        proc = scheduler._bin_proc
+
+        proc.update()
+        self.assertEqual(AnalysisType(0), proc.analysis_type)
+        self.assertEqual(BinMode(0), proc.mode)
+        self.assertTupleEqual((-1, 1), proc.bin_range)
+        self.assertEqual(10, proc.n_bins)
+
+        new_type = AnalysisType.AZIMUTHAL_INTEG
+        widget._analysis_type_cb.setCurrentIndex(new_type)
+        # TODO: test new BinMode value
+        proc.update()
+        self.assertEqual(AnalysisType(new_type), proc.analysis_type)
+
+        widget._n_bins_le.setText("20")
+        widget._bin_range_le.setText("0, 10")
+        proc.update()
+        self.assertEqual(20, proc.n_bins)
+        self.assertTupleEqual((0, 10), proc.bin_range)
 
         widget._reset_btn.clicked.emit()
-        reset_binning.assert_called_once()
+        self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))

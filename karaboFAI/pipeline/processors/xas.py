@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor
+from .base_processor import LeafProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
 from ...metadata import Metadata as mt
@@ -21,14 +21,19 @@ from ...helpers import profiler
 class XasProcessor(LeafProcessor):
     """XasProcessor class.
 
+    Attributes:
+        n_bins (int): number of bins.
+        bin_range (tuple): bin range.
+
     A processor which calculate absorption spectra based on different
     ROIs specified by the user.
     """
 
+    n_bins = SharedProperty()
+    bin_range = SharedProperty()
+
     def __init__(self):
         super().__init__()
-
-        self.n_bins = 10
 
         self._energies = []
         self._xgm = []
@@ -48,13 +53,20 @@ class XasProcessor(LeafProcessor):
         self.reset()
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.XAS_PROC)
+        if cfg is None:
+            return
 
-        self.n_bins = int(cfg["energy_bins"])
+        self.n_bins = int(cfg["n_bins"])
+        self.bin_range = self.str2tuple(cfg['bin_range'])
 
     @profiler("XAS processor")
     def process(self, processed, raw=None):
         """Override."""
+
+        # TODO: FIXME
+
         intensity = processed.xgm.intensity
         if not intensity:
             return

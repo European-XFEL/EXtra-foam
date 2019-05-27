@@ -467,8 +467,8 @@ class RoiImageView(ImageView):
         self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
 
 
-class BinningImageView(ImageView):
-    """BinningImageView class.
+class BinImageView(ImageView):
+    """BinImageView class.
 
     Widget for displaying the image in selected bins.
     """
@@ -485,11 +485,4 @@ class BinningImageView(ImageView):
 
     def update(self, data):
         """Override."""
-        img = data.image.masked_mean
-
-        self.setImage(img, auto_levels=(not self._is_initialized))
-        if not self._roi:
-            self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
+        pass

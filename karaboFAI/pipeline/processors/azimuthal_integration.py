@@ -22,7 +22,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
-from ...config import AiNormalizer, PumpProbeType
+from ...config import AiNormalizer, AnalysisType, PumpProbeType
 from ...metadata import Metadata as mt
 from ...helpers import profiler
 
@@ -79,14 +79,19 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         super().__init__()
 
         self.add(AiPulsedProcessor())
+        self.add(AiTrainProcessor())
         self.add(AiPumpProbeProcessor())
+        self.add(AiBinProcessor())
 
     def process(self, processed, raw):
         pass
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
         gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
+        if cfg is None or gp_cfg is None:
+            return
 
         self.sample_distance = float(gp_cfg['sample_distance'])
         self.photon_energy = float(gp_cfg['photon_energy'])
@@ -139,46 +144,17 @@ class AiPulsedProcessor(CompositeProcessor):
                                  rot3=0,
                                  wavelength=energy2wavelength(self.photon_energy))
 
-        if assembled.ndim == 3:
-            # pulse-resolved
+        def _integrate1d_imp(i):
+            """Use for multiprocessing."""
+            # convert 'nan' to '-inf', as explained above
+            assembled[i][np.isnan(assembled[i])] = -np.inf
 
-            def _integrate1d_imp(i):
-                """Use for multiprocessing."""
-                # convert 'nan' to '-inf', as explained above
-                assembled[i][np.isnan(assembled[i])] = -np.inf
-
-                mask = np.copy(image_mask)
-                # merge image mask and threshold mask
-                mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
-
-                # do integration
-                ret = ai.integrate1d(assembled[i],
-                                     integ_points,
-                                     method=integ_method,
-                                     mask=mask,
-                                     radial_range=integ_range,
-                                     correctSolidAngle=True,
-                                     polarization_factor=1,
-                                     unit="q_A^-1")
-
-                return ret.radial, ret.intensity
-
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
-
-            momentums, intensities = zip(*rets)
-            momentum = momentums[0]
-            intensities = np.array(intensities)
-            intensities_mean = np.mean(intensities, axis=0)
-
-        else:
-            # train-resolved
-
-            mask = image_mask != 0
+            mask = np.copy(image_mask)
             # merge image mask and threshold mask
-            mask[(assembled < mask_min) | (assembled > mask_max)] = 1
+            mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
 
-            ret = ai.integrate1d(assembled,
+            # do integration
+            ret = ai.integrate1d(assembled[i],
                                  integ_points,
                                  method=integ_method,
                                  mask=mask,
@@ -187,13 +163,15 @@ class AiPulsedProcessor(CompositeProcessor):
                                  polarization_factor=1,
                                  unit="q_A^-1")
 
-            momentum = ret.radial
-            # There is only one intensity data, but we use plural here to
-            # be consistent with pulse-resolved data.
-            intensities_mean = ret.intensity
-            # for the convenience of data processing later; use copy() here
-            # to avoid to be normalized twice
-            intensities = np.expand_dims(intensities_mean.copy(), axis=0)
+            return ret.radial, ret.intensity
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
+
+        momentums, intensities = zip(*rets)
+        momentum = momentums[0]
+        intensities = np.array(intensities)
+        intensities_mean = np.mean(intensities, axis=0)
 
         normalized_intensity_mean, normalized_intensities = self._normalize(
             processed, momentum, intensities_mean, intensities)
@@ -239,6 +217,100 @@ class AiPulsedProcessor(CompositeProcessor):
             intensities /= denominator
 
         return intensities_mean, intensities
+
+
+class AiTrainProcessor(CompositeProcessor):
+    """AiPulsedProcessor class.
+
+    Calculate azimuthal integration for individual pulses in a train.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @profiler("Azimuthal integration train processor")
+    def process(self, processed, raw=None):
+        if self.enable_pulsed_ai:
+            return
+
+        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+            return
+
+        cx = self.integ_center_x
+        cy = self.integ_center_y
+        integ_points = self.integ_points
+        integ_method = self.integ_method
+        integ_range = self.integ_range
+
+        assembled = processed.image.masked_mean
+        image_mask = processed.image.image_mask
+
+        pixel_size = processed.image.pixel_size
+        poni2, poni1 = cx, cy
+        mask_min, mask_max = processed.image.threshold_mask
+
+        ai = AzimuthalIntegrator(dist=self.sample_distance,
+                                 poni1=poni1 * pixel_size,
+                                 poni2=poni2 * pixel_size,
+                                 pixel1=pixel_size,
+                                 pixel2=pixel_size,
+                                 rot1=0,
+                                 rot2=0,
+                                 rot3=0,
+                                 wavelength=energy2wavelength(self.photon_energy))
+
+        mask = np.copy(image_mask)
+        # merge image mask and threshold mask
+        mask[(assembled < mask_min) | (assembled > mask_max)] = 1
+
+        ret = ai.integrate1d(assembled,
+                             integ_points,
+                             method=integ_method,
+                             mask=mask,
+                             radial_range=integ_range,
+                             correctSolidAngle=True,
+                             polarization_factor=1,
+                             unit="q_A^-1")
+
+        momentum = ret.radial
+        intensity_mean = ret.intensity
+
+        normalized_intensity_mean = self._normalize(
+            processed, momentum, intensity_mean)
+
+        processed.ai.momentum = momentum
+        processed.ai.intensity_mean = normalized_intensity_mean
+
+    def _normalize(self, processed, momentum, intensity_mean):
+        auc_range = self.auc_range
+
+        if self.normalizer == AiNormalizer.AUC:
+            intensity_mean = normalize_auc(
+                intensity_mean, momentum, *auc_range)
+        else:
+            _, roi1_hist, _ = processed.roi.roi1_hist
+            _, roi2_hist, _ = processed.roi.roi2_hist
+
+            denominator = 0
+            try:
+                if self.normalizer == AiNormalizer.ROI1:
+                    denominator = roi1_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI2:
+                    denominator = roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI_SUM:
+                    denominator = roi1_hist[-1] + roi2_hist[-1]
+                elif self.normalizer == AiNormalizer.ROI_SUB:
+                    denominator = roi1_hist[-1] - roi2_hist[-1]
+
+            except IndexError as e:
+                # this could happen if the history is clear just now
+                raise ProcessingError(e)
+
+            if denominator == 0:
+                raise ProcessingError(
+                    "Invalid normalizer: sum of ROI(s) is zero!")
+            intensity_mean /= denominator
+
+        return intensity_mean
 
 
 class AiPulsedFomProcessor(LeafProcessor):
@@ -396,3 +468,17 @@ class AiPumpProbeFomProcessor(LeafProcessor):
             off /= off_denominator
 
         return on, off
+
+
+class AiBinProcessor(LeafProcessor):
+    """AiBinProcessor class.
+
+    Calculate azimuthal integration for binned image.
+    """
+    def __init__(self):
+        super().__init__()
+
+    @profiler("Azimuthal integration pump-probe processor")
+    def process(self, processed, raw=None):
+        if processed.bin.analysis_type != AnalysisType.AZIMUTHAL_INTEG:
+            return

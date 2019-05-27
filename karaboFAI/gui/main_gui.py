@@ -18,13 +18,13 @@ import functools
 from PyQt5 import QtCore, QtGui
 
 from .ctrl_widgets import (
-    AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinningCtrlWidget,
+    AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, DataCtrlWidget, GeometryCtrlWidget,
     PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    BinningWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
+    BinWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
     XasWindow
 )
@@ -100,9 +100,9 @@ class MainGUI(QtGui.QMainWindow):
         open_pulsed_ai_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulsedAzimuthalIntegrationWindow))
 
-        open_binning_window_at = self._addAction("Binning", "binning.png")
-        open_binning_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, BinningWindow))
+        open_bin_window_at = self._addAction("Bin", "binning.png")
+        open_bin_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, BinWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
@@ -160,7 +160,7 @@ class MainGUI(QtGui.QMainWindow):
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
-        self.binning_ctrl_widget = BinningCtrlWidget(
+        self.bin_ctrl_widget = BinCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
         self.initUI()
@@ -179,7 +179,7 @@ class MainGUI(QtGui.QMainWindow):
         analysis_layout.addWidget(self.roi_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)
-        analysis_layout.addWidget(self.binning_ctrl_widget)
+        analysis_layout.addWidget(self.bin_ctrl_widget)
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)

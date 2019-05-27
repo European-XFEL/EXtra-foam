@@ -5,11 +5,11 @@ from .pulsed_azimuthal_integration import PulsedAzimuthalIntegrationWindow
 from .pump_probe import PumpProbeWindow
 from .roi import RoiWindow
 from .xas import XasWindow
-from .binning import BinningWindow
+from .bin import BinWindow
 
 
 __all__ = [
-    "BinningWindow",
+    "BinWindow",
     "CorrelationWindow",
     "ImageToolWindow",
     "OverviewWindow",

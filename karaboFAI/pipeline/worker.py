@@ -18,7 +18,7 @@ from threading import Thread
 from queue import Empty
 
 from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource
+from ..config import config, DataSource, redis_connection
 from ..logger import logger
 
 

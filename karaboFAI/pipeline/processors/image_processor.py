@@ -29,6 +29,7 @@ class ImageProcessor(CompositeProcessor):
         super().__init__()
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.IMAGE_PROC)
         if cfg is None:
             return
@@ -39,6 +40,9 @@ class ImageProcessor(CompositeProcessor):
         self.ma_window = int(cfg['ma_window'])
 
     def process_image(self, tid, assembled):
+        # TODO: use the Processor interface
+        self.update()
+
         processed = ProcessedData(tid, assembled)
 
         processed.image.set_ma_window(self.ma_window)

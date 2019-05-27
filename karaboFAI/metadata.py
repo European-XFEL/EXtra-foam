@@ -25,7 +25,7 @@ class Metadata:
     ROI_PROC = "metadata:proc:roi"
     CORRELATION_PROC = "metadata:proc:correlation"
     XAS_PROC = "metadata:proc:xas"
-    BINNING_PROC = "metadata:proc:binning"
+    BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
 
     _meta = {
@@ -105,12 +105,14 @@ class Metadata:
             "resolution4",
         ],
         XAS_PROC: [
-            "energy_bins",
+            "n_bins",
+            "bin_range",
         ],
-        BINNING_PROC: [
+        BIN_PROC: [
             "n_bins",
             "bin_range",
             "analysis_type",
+            "mode",
         ]
     }
 
@@ -134,6 +136,12 @@ class MetaProxy:
     def get(self, name, key):
         try:
             return self._db.hget(name, key)
+        except redis.exceptions.ConnectionError:
+            pass
+
+    def delete(self, name, key):
+        try:
+            return self._db.hdel(name, key)
         except redis.exceptions.ConnectionError:
             pass
 

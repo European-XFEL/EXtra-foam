@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 import copy
 
 from ...metadata import MetaProxy
+from ...config import AnalysisType
 
 
 class State(ABC):
@@ -135,12 +136,16 @@ class MetaProcessor(type):
         return cls
 
 
+_analysis_types = {v: 0 for v in AnalysisType if v != AnalysisType.UNDEFINED}
+
+
 class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     """Data processor interface."""
 
     def __init__(self):
 
         self._parent = None
+        self._data = None
 
         self._state = StateOn()
 
@@ -159,6 +164,26 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 return self._params[item]
             else:
                 raise
+
+    @staticmethod
+    def _register_analysis(analysis_type):
+        if analysis_type in _analysis_types:
+            _analysis_types[analysis_type] += 1
+
+    @staticmethod
+    def _unregister_analysis(analysis_type):
+        if analysis_type in _analysis_types:
+            _analysis_types[analysis_type] -= 1
+
+    @staticmethod
+    def _has_analysis(analysis_type):
+        return _analysis_types[analysis_type] > 0
+
+    def _update_analysis(self, analysis_type):
+        if analysis_type != self.analysis_type:
+            self._unregister_analysis(self.analysis_type)
+            self.analysis_type = analysis_type
+            self._register_analysis(analysis_type)
 
     @abstractmethod
     def run_once(self, processed, raw=None):
@@ -180,15 +205,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     def reset(self):
         pass
 
-    def set_parent(self, parent):
-        if parent is not None and not isinstance(parent, _BaseProcessor):
-            raise ValueError(f"Invalid parent: {type(parent)}")
-        self._parent = parent
-
 
 class LeafProcessor(_BaseProcessor):
-    def __init__(self):
-        super().__init__()
 
     def run_once(self, processed, raw=None):
         # self._state = self._state.next()
@@ -208,7 +226,8 @@ class CompositeProcessor(_BaseProcessor):
 
     def add(self, child):
         self._children.append(child)
-        child.set_parent(self)
+        child._parent = self
+        child._data = self._data
 
     def remove(self, child):
         self._children.remove(child)
@@ -218,6 +237,8 @@ class CompositeProcessor(_BaseProcessor):
         return self._children.pop(-1)
 
     def run_once(self, processed, raw=None):
+        self.update()
+
         params = copy.deepcopy(self._params)  # froze all the shared properties
         # StopCompositionProcessing it raises will be handled by its
         # parent processor
@@ -229,6 +250,10 @@ class CompositeProcessor(_BaseProcessor):
                 child.run_once(processed, raw)
             except StopCompositionProcessing:
                 break
+
+    def update(self):
+        """Update metadata."""
+        pass
 
     def reset_all(self):
         self.reset()

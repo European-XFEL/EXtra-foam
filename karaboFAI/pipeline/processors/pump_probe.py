@@ -46,6 +46,7 @@ class PumpProbeProcessor(CompositeProcessor):
         self.add(PumpProbeImageProcessor())
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
         if cfg is None:
             return

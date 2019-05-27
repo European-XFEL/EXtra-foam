@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..misc_widgets import SmartLineEdit
+from ..misc_widgets import SmartBoundaryLineEdit, SmartLineEdit
 
 
 class XasCtrlWidget(AbstractCtrlWidget):
@@ -23,8 +23,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
 
         self._reset_btn = QtGui.QPushButton("Reset")
 
-        self._nbins_le = SmartLineEdit("60")
-        self._nbins_le.setValidator(QtGui.QIntValidator(1, 999))
+        self._n_bins_le = SmartLineEdit("60")
+        self._n_bins_le.setValidator(QtGui.QIntValidator(1, 999))
+        self._bin_range_le = SmartBoundaryLineEdit("0.7, 0.9")
 
         self.initUI()
 
@@ -37,9 +38,11 @@ class XasCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("# of energy bins: "), 0, 0, 1, 1, AR)
-        layout.addWidget(self._nbins_le, 0, 1, 1, 1)
-        layout.addWidget(self._reset_btn, 0, 2, 1, 2)
+        layout.addWidget(self._reset_btn, 0, 3, AR)
+        layout.addWidget(QtGui.QLabel("Bin range (keV): "), 1, 0, AR)
+        layout.addWidget(self._bin_range_le, 1, 1)
+        layout.addWidget(QtGui.QLabel("# of bins: "), 1, 2, AR)
+        layout.addWidget(self._n_bins_le, 1, 3)
 
         self.setLayout(layout)
 
@@ -48,10 +51,16 @@ class XasCtrlWidget(AbstractCtrlWidget):
 
         self._reset_btn.clicked.connect(mediator.onXasReset)
 
-        self._nbins_le.returnPressed.connect(
+        self._n_bins_le.returnPressed.connect(
             lambda: mediator.onXasEnergyBinsChange(
-                int(self._nbins_le.text())))
+                int(self._n_bins_le.text())))
+
+        self._bin_range_le.value_changed_sgn.connect(
+            mediator.onXasBinRangeChange)
 
     def updateSharedParameters(self):
-        self._nbins_le.returnPressed.emit()
+        self._n_bins_le.returnPressed.emit()
+
+        self._bin_range_le.returnPressed.emit()
+
         return True

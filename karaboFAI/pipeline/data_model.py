@@ -205,9 +205,6 @@ class AccumulatedPairData(PairData):
 
 
 class AbstractData:
-    def __init__(self):
-        self._proxy = DataProxy()
-
     @classmethod
     def clear(cls):
         for attr in cls.__dict__.values():
@@ -248,20 +245,15 @@ class XasData(AbstractData):
         self.absorptions = [np.array([]), np.array([])]
 
 
-class BinningData(AbstractData):
+class BinData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.bin_center = np.array([])
-        self.bin_count = np.array([])
-        self.bin_image = []
-        self.bin_number = None
-
-    def update_hist(self):
-        ret = self._proxy.get_all(self._tid, "binning")
-
-        self.bin_number = ret['bin_number']
-        self.bin_count[self.bin_number] += 1
+        self.analysis_type = None
+        self.counts = None
+        self.centers = None
+        self.x = None
+        self.values = None
 
 
 class RoiData(AbstractData):
@@ -896,6 +888,7 @@ class ProcessedData:
         self.xas = XasData()
         self.roi = RoiData()
         self.correlation = CorrelationData()
+        self.bin = BinData()
 
         self.xgm = XgmData()
         self.mono = MonoData()
@@ -1003,39 +996,3 @@ class DataManager:
     @staticmethod
     def reset_xas():
         XasData.clear()
-
-    @staticmethod
-    def reset_binning():
-        BinningData.clear()
-
-
-class DataProxy:
-    """A proxy for reading / writing data to / from the redis server.
-
-    TODO: data proxy should open a client for each process.
-    """
-    _redis = None
-    import redis
-    @classmethod
-    def redis(cls):
-        if cls._redis is None:
-            cls._redis = redis.Redis(decode_responses=True)
-
-        return cls._redis
-
-    def get_all(self, tid, key):
-        """Get data for a given train ID.
-
-        :param int tid: train ID
-        :param str key:
-        """
-        pass
-
-    def set_all(self, tid, key, value):
-        """Set data for a given train ID.
-
-        :param int tid: train ID
-        :param str key:
-        :param value:
-        """
-        pass

@@ -1,6 +1,5 @@
 import unittest
 
-from karaboFAI.config import CorrelationFom
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.pipeline.processors import CorrelationProcessor
 from karaboFAI.pipeline.exceptions import ProcessingError

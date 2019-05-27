@@ -1,13 +1,13 @@
 from .image_view import (
-    AssembledImageView, BinningImageView, ImageAnalysis,
+    AssembledImageView, BinImageView, ImageAnalysis,
     PumpProbeImageView, RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
-    BinningWidget, BinningCountWidget,
+    BinWidget, BinCountWidget,
     CorrelationWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget,
     RoiValueMonitor,
-    MultiPulseAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
+    TrainAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
     XasSpectrumWidget, XasSpectrumDiffWidget, XasSpectrumBinCountWidget
 )
 from .roi import RectROI
@@ -15,7 +15,7 @@ from .roi import RectROI
 # add image view widgets
 __all__ = ([
     "AssembledImageView",
-    "BinningImageView",
+    "BinImageView",
     "ImageAnalysis",
     "PumpProbeImageView",
     "RoiImageView",
@@ -24,12 +24,12 @@ __all__ = ([
 
 # add plot widgets
 __all__.extend([
-    "BinningCountWidget",
-    "BinningWidget",
+    "BinCountWidget",
+    "BinWidget",
     "CorrelationWidget",
     "PumpProbeOnOffWidget",
     "PumpProbeFomWidget",
-    "MultiPulseAiWidget",
+    "TrainAiWidget",
     "RoiValueMonitor",
     "PulsedFOMWidget",
     "SinglePulseAiWidget",

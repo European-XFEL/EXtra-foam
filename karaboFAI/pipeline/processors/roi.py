@@ -55,7 +55,10 @@ class RoiProcessor(CompositeProcessor):
         self.add(RoiPumpProbeRoiProcessor())
 
     def update(self):
+        """Override."""
         cfg = self._meta.get_all(mt.ROI_PROC)
+        if cfg is None:
+            return
 
         self.fom_type = RoiFom(int(cfg['fom_type']))
 

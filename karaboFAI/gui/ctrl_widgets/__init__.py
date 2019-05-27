@@ -1,6 +1,6 @@
 from .azimuthal_integ_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
-from .binning_ctrl_widget import BinningCtrlWidget
+from .bin_ctrl_widget import BinCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
@@ -13,7 +13,7 @@ from .roi_ctrl_widget import RoiCtrlWidget
 __all__ = [
     "AzimuthalIntegCtrlWidget",
     "AnalysisCtrlWidget",
-    "BinningCtrlWidget",
+    "BinCtrlWidget",
     "CorrelationCtrlWidget",
     "DataCtrlWidget",
     "GeometryCtrlWidget",

@@ -14,7 +14,7 @@ from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
 from ..plot_widgets import (
-    MultiPulseAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
+    TrainAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
     SinglePulseImageView
 )
 from ...config import config
@@ -37,7 +37,7 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
         super().__init__(*args, **kwargs)
 
         if self._pulse_resolved:
-            self._ai = MultiPulseAiWidget(parent=self)
+            self._ai = TrainAiWidget(parent=self)
 
             self._sample_degradation = PulsedFOMWidget(parent=self)
 
@@ -55,7 +55,7 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
 
             self.resize(self._TOTAL_W, self._TOTAL_H)
         else:
-            self._ai = SinglePulseAiWidget(parent=self, plot_mean=False)
+            self._ai = TrainAiWidget(parent=self)
 
             self.initUI()
             self.resize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
