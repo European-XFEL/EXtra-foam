@@ -15,15 +15,16 @@ import os
 import subprocess
 import time
 import faulthandler
+import sys
 
 import redis
 
 from . import __version__
 from .config import config
-from .metadata import MetaProxy
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .pipeline import Bridge, ProcessInfo, Scheduler
+from .pipeline import Bridge, Scheduler
+from .pipeline.worker import ProcessProxy
 
 
 def check_system_resource():
@@ -77,32 +78,38 @@ def start_redis_server():
         raise FileNotFoundError
 
     password = config["REDIS_PASSWORD"]
+    host = 'localhost'
     port = config["REDIS_PORT"]
 
     # Construct the command to start the Redis server.
-    command = [executable]
-    command += (["--port", str(port),
-                 "--requirepass", password,
-                 "--loglevel", "warning"])
+    command = [executable,
+               "--port", str(port),
+               "--requirepass", password,
+               "--loglevel", "warning"]
 
     process = subprocess.Popen(command)
 
     # Create a Redis client just for configuring Redis.
-    client = redis.Redis("localhost", port, password=password)
+    client = redis.Redis(host, port, password=password)
 
-    # wait for the Redis server to start
-    try_to_connect_redis_server("localhost", port, password=password)
+    try:
+        # wait for the Redis server to start
+        try_to_connect_redis_server(host, port, password=password)
+    except ConnectionError:
+        logger.error(f"Unable to start a Redis server at {host}:{port}")
+        return False
 
-    # Put a time stamp in Redis to indicate when it was started.
-    client.set("redis_start_time", time.time())
+    time.sleep(0.1)
+    if process.poll() is None:
+        # Put a time stamp in Redis to indicate when it was started.
+        client.set("redis_start_time", time.time())
 
-    logger.info(f"Try to start Redis server at 'localhost':{port}")
+        logger.info(f"Redis server started at {host}:{port}")
+        ProcessProxy().register("redis", process)
+    else:
+        logger.info(f"Found existing Redis server at {host}:{port}")
 
-    return ProcessInfo(
-        process=process,
-        stdout_file=None,
-        stderr_file=None,
-    )
+    return True
 
 
 class FAI:
@@ -112,21 +119,23 @@ class FAI:
 
         # Redis server must be started at first since when the GUI starts,
         # it needs to write all the configuration into Redis.
-        self._redis_process_info = start_redis_server()
+        if not start_redis_server():
+            sys.exit(0)
 
-        # TODO: check Redis server sub-process started.
-        # Now, if the Redis server is already started, the software will not
-        # complain!
+        try:
+            # process which runs one or more zmq bridge
+            self.bridge = Bridge()
 
-        # process which runs one or more zmq bridge
-        self.bridge = Bridge()
+            # process which runs the scheduler
+            self.scheduler = Scheduler(detector)
+            self.scheduler.connect_input(self.bridge)
 
-        # process which runs the scheduler
-        self.scheduler = Scheduler(detector)
-        self.scheduler.connect_input(self.bridge)
-
-        self.app = mkQApp()
-        self.gui = MainGUI()
+            self.app = mkQApp()
+            self.gui = MainGUI()
+        except Exception as e:
+            logger.error(repr(e))
+            ProcessProxy().terminte_popens()
+            sys.exit(0)
 
     def init(self):
         n_cpus, n_gpus = check_system_resource()
@@ -139,17 +148,6 @@ class FAI:
         self.gui.connectInput(self.scheduler)
         self.gui.start_sgn.connect(self.bridge.activate)
         self.gui.stop_sgn.connect(self.bridge.pause)
-
-    def shutdown_redis_server(self):
-        logger.info("Shutting down the Redis server...")
-        proc = self._redis_process_info.process
-        proc.terminate()
-        proc.wait(1.0)
-        if proc.poll() is None:
-            proc.kill()
-
-    def __del__(self):
-        self.shutdown_redis_server()
 
 
 def application():

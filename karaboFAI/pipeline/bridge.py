@@ -47,7 +47,6 @@ class Bridge(ProcessWorker):
         for client in self._clients.values():
             try:
                 data = self._recv_imp(client)
-                print("data received")
                 if self._source_type == DataSource.BRIDGE:
                     # always keep the latest data in the queue
                     try:

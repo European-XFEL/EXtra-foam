@@ -10,26 +10,13 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os
-import signal
-from collections import namedtuple
-from weakref import WeakValueDictionary
 import multiprocessing as mp
 from threading import Thread
 from queue import Empty
 
 from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource, redis_connection
+from ..config import config, DataSource
 from ..logger import logger
-
-
-ProcessInfo = namedtuple("ProcessInfo", [
-    "process",
-    "stdout_file",
-    "stderr_file",
-])
-
-
-_workers = dict()
 
 
 class ProcessWorker(mp.Process):
@@ -37,9 +24,6 @@ class ProcessWorker(mp.Process):
 
     def __init__(self, name):
         super().__init__()
-
-        _workers[name] = ProcessInfo(
-            self, stdout_file=None, stderr_file=None,)
 
         self._name = name
         self._source_type = None
@@ -54,6 +38,8 @@ class ProcessWorker(mp.Process):
         self._meta = MetaProxy()
 
         self._timeout = config["TIMEOUT"]
+
+        ProcessProxy().register(name, self)
 
     @property
     def output(self):
@@ -131,18 +117,33 @@ class ProcessWorker(mp.Process):
             int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
 
 
+_workers = dict()
+_popens = dict()
+
+
 class ProcessProxy:
-    def shutdown_all(self):
-        for name, info in _workers.items():
-            proc = info.process
+    def register(self, name, process):
+        if isinstance(process, ProcessWorker):
+            _workers[name] = process
+        else:
+            _popens[name] = process
+
+    def terminte_workers(self):
+        for name, proc in _workers.items():
             logger.info(f"Shutting down {name}...")
+
             proc.shutdown()
             if proc.is_alive():
-                proc.join(timeout=1.0)
+                proc.join(timeout=0.5)
 
             if proc.is_alive():
-                logger.info(f"Terminating {name} after 'join' failed...")
                 proc.terminate()
-                proc.join()
+                proc.join(0.5)
 
-            logger.info(f"{name} is down!")
+    def terminte_popens(self):
+        for name, proc in _popens.items():
+            logger.info(f"Shutting down {name}...")
+            proc.terminate()
+            proc.wait(0.5)
+            if proc.poll() is None:
+                proc.kill()

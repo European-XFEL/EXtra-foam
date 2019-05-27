@@ -314,6 +314,8 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server.shutdown()
 
-        ProcessProxy().shutdown_all()
+        proxy = ProcessProxy()
+        proxy.terminte_workers()
+        proxy.terminte_popens()
 
         super().closeEvent(QCloseEvent)
