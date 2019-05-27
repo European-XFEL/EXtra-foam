@@ -151,7 +151,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         # use ROI2 for background
         roi_bkg = processed.roi.roi2
         if processed.pp.analysis_type != PumpProbeType.ROI1_BY_ROI2:
-            if roi_bkg is not None and roi_bkg[:2] != roi[:2]:
+            if roi_bkg is not None and roi_bkg[-2:] != roi[-2:]:
                 raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
         on_image = processed.pp.on_image_mean
