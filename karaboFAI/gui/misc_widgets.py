@@ -175,6 +175,12 @@ class SmartLineEdit(QtGui.QLineEdit):
         else:
             self.value_changed_sgn.emit(self.text())
 
+    def value(self):
+        if hasattr(self, "Validator"):
+            return self.Validator.parse(self.text())
+        else:
+            return self.text()
+
 
 class SmartBoundaryLineEdit(SmartLineEdit):
 

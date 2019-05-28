@@ -11,7 +11,9 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
+from .base_processor import (
+    LeafProcessor, CompositeProcessor, _get_slow_data, SharedProperty
+)
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
 from ...config import config, CorrelationFom
@@ -118,27 +120,6 @@ class CorrelationFomProcessor(LeafProcessor):
             if not ppt:
                 continue
 
-            if device_id == "Any":
-                # orig_data cannot be empty here
-                setattr(processed.correlation,
-                        f'correlator{i}',
-                        processed.tid)
-            else:
-                try:
-                    device_data = raw[device_id]
-                except KeyError:
-                    raise ProcessingError(
-                        f"Device '{device_id}' is not in the data!")
+            value = _get_slow_data(processed.tid, raw, device_id, ppt)
 
-                try:
-                    if ppt not in device_data:
-                        # from file
-                        ppt += '.value'
-
-                    setattr(processed.correlation,
-                            f'correlator{i}',
-                            device_data[ppt])
-
-                except KeyError:
-                    raise ProcessingError(
-                        f"'{device_id}'' does not have property '{ppt}'")
+            setattr(processed.correlation, f'correlator{i}', value)

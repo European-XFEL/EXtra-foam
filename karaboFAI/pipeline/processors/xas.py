@@ -22,6 +22,7 @@ class XasProcessor(LeafProcessor):
     """XasProcessor class.
 
     Attributes:
+        mono_source_name (str): monochromator source name.
         n_bins (int): number of bins.
         bin_range (tuple): bin range.
 
@@ -29,6 +30,7 @@ class XasProcessor(LeafProcessor):
     ROIs specified by the user.
     """
 
+    mono_source_name = SharedProperty()
     n_bins = SharedProperty()
     bin_range = SharedProperty()
 
@@ -58,6 +60,7 @@ class XasProcessor(LeafProcessor):
         if cfg is None:
             return
 
+        self.mono_source_name = cfg["mono_source_name"]
         self.n_bins = int(cfg["n_bins"])
         self.bin_range = self.str2tuple(cfg['bin_range'])
 

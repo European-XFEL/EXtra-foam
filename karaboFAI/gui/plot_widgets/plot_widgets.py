@@ -390,9 +390,10 @@ class BinWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        bin_centers = data.bin.centers
+        bin_centers = data.bin.centers_x
         values = data.bin.values
-        momentum = data.ai.momentum
+        x = data.bin.x
+
         if values is None:
             return
 
@@ -404,12 +405,12 @@ class BinWidget(PlotWidget):
             for i, value in enumerate(values):
                 start = bin_centers[i] - bin_width/2.
                 end = bin_centers[i] + bin_width/2.
-                self.plotCurve(momentum, value,
+                self.plotCurve(x, value,
                                name=f"{start:>8.2e}, {end:>8.2e}",
                                pen=make_pen(i, hues=9, values=5))
         else:
             for item, value in zip(self.plotItem.items, values):
-                item.setData(momentum, value)
+                item.setData(x, value)
 
 
 class BinCountWidget(PlotWidget):
@@ -429,7 +430,7 @@ class BinCountWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        centers = data.bin.centers
-        counts = data.bin.counts
+        centers = data.bin.centers_x
+        counts = data.bin.counts_x
 
         self._plot.setData(centers, counts)

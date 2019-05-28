@@ -65,14 +65,8 @@ class Mediator(QObject):
     def onDetectorSourceNameChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "detector_source_name", value)
 
-    def onMonoSourceNameChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "mono_source_name", value)
-
     def onXgmSourceNameChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "xgm_source_name", value)
-
-    def onTimingSourceNameChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "timing_source_name", value)
 
     def onSourceTypeChange(self, value: IntEnum):
         self._meta.set(mt.DATA_SOURCE, "source_type", int(value))
@@ -202,6 +196,9 @@ class Mediator(QObject):
     def onCorrelationReset(self):
         self._data.reset_correlation()
 
+    def onXasMonoSourceNameChange(self, value: str):
+        self._meta.set(mt.XAS_PROC, "mono_source_name", value)
+
     def onXasEnergyBinsChange(self, value: int):
         self._meta.set(mt.XAS_PROC, "n_bins", value)
 
@@ -211,11 +208,19 @@ class Mediator(QObject):
     def onXasReset(self):
         self._data.reset_xas()
 
-    def onBinBinsChange(self, value: int):
-        self._meta.set(mt.BIN_PROC, "n_bins", value)
+    def onBinGroupChange(self, value: tuple):
+        # index, device ID, property name, bin_range, number of bins,
+        # where the index starts from 1
+        index, device_id, ppt, bin_range, n_bins = value
+        if index == 1:
+            suffix = '_x'
+        else:
+            suffix = '_y'
 
-    def onBinBinRangeChange(self, value: tuple):
-        self._meta.set(mt.BIN_PROC, "bin_range", str(value))
+        self._meta.set(mt.BIN_PROC, f'device_id{suffix}', device_id)
+        self._meta.set(mt.BIN_PROC, f'property{suffix}', ppt)
+        self._meta.set(mt.BIN_PROC, f'bin_range{suffix}', str(bin_range))
+        self._meta.set(mt.BIN_PROC, f'n_bins{suffix}', n_bins)
 
     def onBinReset(self):
         self._meta.set(mt.BIN_PROC, "reset", 1)

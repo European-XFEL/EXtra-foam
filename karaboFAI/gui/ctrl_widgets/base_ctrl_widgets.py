@@ -9,9 +9,73 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from ..pyqtgraph import QtGui
 
 from ..mediator import Mediator
+
+
+class CorrelationParam:
+    def __init__(self, device_ids=None, properties=None):
+        if device_ids is None:
+            self.device_ids = []
+        else:
+            self.device_ids = device_ids
+
+        if properties is None:
+            self.properties = []
+        else:
+            self.properties = properties
+
+
+# Leave the default device ID empty since the available devices
+# in different instruments are different.
+#
+_DATA_CATEGORIES = OrderedDict({
+    "": CorrelationParam(),
+    # "XGM": CorrelationParam(
+    #     device_ids=[
+    #         "",
+    #         "SA1_XTD2_XGM/DOOCS/MAIN",
+    #         "SPB_XTD9_XGM/DOOCS/MAIN",
+    #         "SA3_XTD10_XGM/XGM/DOOCS",
+    #         "SCS_BLU_XGM/XGM/DOOCS"
+    #     ],
+    #     properties=["data.intensityTD"],
+    # ),
+    # "Digitizer": CorrelationParam(
+    #     device_ids=[
+    #         "",
+    #         "SCS_UTC1_ADQ/ADC/1"
+    #     ],
+    #     properties=["MCP1", "MCP2", "MCP3", "MCP4"],
+    # ),
+    "Train ID": CorrelationParam(
+        device_ids=["", "Any"],
+        properties=["timestamp.tid"]
+    ),
+    "Motor": CorrelationParam(
+        device_ids=[
+            "",
+            "FXE_SMS_USR/MOTOR/UM01",
+            "FXE_SMS_USR/MOTOR/UM02",
+            "FXE_SMS_USR/MOTOR/UM04",
+            "FXE_SMS_USR/MOTOR/UM05",
+            "FXE_SMS_USR/MOTOR/UM13",
+            "FXE_AUXT_LIC/DOOCS/PPLASER",
+        ],
+        properties=["actualPosition"],
+    ),
+    "MonoChromator": CorrelationParam(
+        device_ids=[
+            "",
+            "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
+        ],
+        properties=["actualEnergy"],
+    ),
+    "User defined": CorrelationParam()
+})
 
 
 class AbstractCtrlWidget(QtGui.QGroupBox):

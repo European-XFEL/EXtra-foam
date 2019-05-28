@@ -109,8 +109,14 @@ class Metadata:
             "bin_range",
         ],
         BIN_PROC: [
-            "n_bins",
-            "bin_range",
+            "device_id_x",
+            "device_id_y",
+            "property_x",
+            "property_y",
+            "n_bins_x",
+            "n_bins_y",
+            "bin_range_x",
+            "bin_range_y",
             "analysis_type",
             "mode",
         ]

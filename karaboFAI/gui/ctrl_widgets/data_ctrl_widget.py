@@ -26,22 +26,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "ZeroMQ bridge": DataSource.BRIDGE,
     })
 
-    _mono_chromators = [
-        "",
-        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
-    ]
-
     _xgms = [
         "",
         "SA1_XTD2_XGM/DOOCS/MAIN",
         "SPB_XTD9_XGM/DOOCS/MAIN",
         "SA3_XTD10_XGM/XGM/DOOCS",
         "SCS_BLU_XGM/XGM/DOOCS",
-    ]
-
-    _timing_motors = [
-        "",
-        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
     ]
 
     # signal used in updateShareParameters since currentTextChanged
@@ -64,17 +54,9 @@ class DataCtrlWidget(AbstractCtrlWidget):
         # fill the combobox in the run time based on the source type
         self._detector_src_cb = QtGui.QComboBox()
 
-        self._mono_src_cb = QtGui.QComboBox()
-        for src in self._mono_chromators:
-            self._mono_src_cb.addItem(src)
-
         self._xgm_src_cb = QtGui.QComboBox()
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
-
-        self._timing_src_cb = QtGui.QComboBox()
-        for src in self._timing_motors:
-            self._timing_src_cb.addItem(src)
 
         self._data_folder_le = SmartLineEdit(config["DATA_FOLDER"])
 
@@ -105,12 +87,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(self._port_le, 0, 5)
         src_layout.addWidget(QtGui.QLabel("Detector source name: "), 1, 0, AR)
         src_layout.addWidget(self._detector_src_cb, 1, 1, 1, 5)
-        src_layout.addWidget(QtGui.QLabel("MonoChromator source name: "), 2, 0, AR)
-        src_layout.addWidget(self._mono_src_cb, 2, 1, 1, 5)
-        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 3, 0, AR)
-        src_layout.addWidget(self._xgm_src_cb, 3, 1, 1, 5)
-        src_layout.addWidget(QtGui.QLabel("Timing source name: "), 4, 0, AR)
-        src_layout.addWidget(self._timing_src_cb, 4, 1, 1, 5)
+        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 2, 0, AR)
+        src_layout.addWidget(self._xgm_src_cb, 2, 1, 1, 5)
 
         serve_file_layout = QtGui.QHBoxLayout()
         serve_file_layout.addWidget(self._serve_start_btn)
@@ -145,14 +123,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._detector_src_cb.currentTextChanged.connect(
             mediator.onDetectorSourceNameChange)
 
-        self._mono_src_cb.currentTextChanged.connect(
-            mediator.onMonoSourceNameChange)
-
         self._xgm_src_cb.currentTextChanged.connect(
             mediator.onXgmSourceNameChange)
-
-        self._timing_src_cb.currentTextChanged.connect(
-            mediator.onTimingSourceNameChange)
 
         self._serve_start_btn.clicked.connect(self.updateSharedParameters)
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
@@ -170,14 +142,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._detector_src_cb.currentTextChanged.emit(
             self._detector_src_cb.currentText())
 
-        self._mono_src_cb.currentTextChanged.emit(
-            self._mono_src_cb.currentText())
-
         self._xgm_src_cb.currentTextChanged.emit(
             self._xgm_src_cb.currentText())
-
-        self._timing_src_cb.currentTextChanged.emit(
-            self._timing_src_cb.currentText())
 
         return True
 

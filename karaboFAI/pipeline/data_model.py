@@ -11,8 +11,6 @@ All rights reserved.
 """
 import copy
 from threading import Lock
-from multiprocessing import Array
-import ctypes
 
 import numpy as np
 
@@ -229,13 +227,6 @@ class MonoData(AbstractData):
         self.energy = 0.0
 
 
-class TimingData(AbstractData):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.source = None
-        self.delay = 0.0
-
-
 class XasData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -252,9 +243,12 @@ class BinData(AbstractData):
         super().__init__(*args, **kwargs)
 
         self.analysis_type = None
-        self.counts = None
-        self.centers = None
+        self.counts_x = None
+        self.counts_y = None
+        self.centers_x = None
+        self.centers_y = None
         self.x = None
+        self.y = None
         self.values = None
 
 
@@ -833,7 +827,6 @@ class ProcessedData:
 
         self.xgm = XgmData()
         self.mono = MonoData()
-        self.timing = TimingData()
 
     @property
     def tid(self):

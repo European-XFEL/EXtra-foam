@@ -258,6 +258,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         proc.update()
 
         # check initial value is set
+        self.assertEqual("", proc.mono_source_name)
         self.assertEqual(int(widget._n_bins_le.text()), proc.n_bins)
         self.assertTupleEqual((0.7, 0.9), proc.bin_range)
 
@@ -313,8 +314,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         for i in range(widget._detector_src_cb.count()):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["A", "B"], items)
-        self.assertEqual(widget._mono_src_cb.currentText(),
-                         scheduler._data_aggregator._mono_src)
         self.assertEqual(widget._xgm_src_cb.currentText(),
                          scheduler._data_aggregator._xgm_src)
 
@@ -322,9 +321,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         source_type = DataSource.BRIDGE
         widget._source_type_cb.setCurrentIndex(source_type)
-        widget._mono_src_cb.setCurrentIndex(1)
         widget._xgm_src_cb.setCurrentIndex(1)
-        widget._timing_src_cb.setCurrentIndex(1)
 
         bridge.update()
         scheduler.update()
@@ -340,12 +337,8 @@ class TestMainGuiCtrl(unittest.TestCase):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["E", "F", "G"], items)
 
-        self.assertEqual(widget._mono_src_cb.currentText(),
-                         scheduler._data_aggregator._mono_src)
         self.assertEqual(widget._xgm_src_cb.currentText(),
                          scheduler._data_aggregator._xgm_src)
-        self.assertEqual(widget._timing_src_cb.currentText(),
-                         scheduler._data_aggregator._timing_src)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
@@ -358,6 +351,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
 
     def testCorrelationCtrlWidget(self):
+        n_params = 4
         widget = self.gui.correlation_ctrl_widget
         scheduler = self.scheduler
         proc = scheduler._correlation_proc
@@ -378,7 +372,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         # test the correlation param table
         expected_correlations = []
-        for i in range(widget._n_params):
+        for i in range(n_params):
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
 
             proc.update()
@@ -414,7 +408,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.app.processEvents()
 
         # change the resolutions
-        for i in range(widget._n_params):
+        for i in range(n_params):
             resolution = (i+1)*5 if i >= 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
@@ -431,27 +425,49 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.app.processEvents()
 
     def testBinCtrlWidget(self):
+        from karaboFAI.pipeline.processors import StopCompositionProcessing
+
+        n_params = 2
         widget = self.gui.bin_ctrl_widget
         scheduler = self.scheduler
         proc = scheduler._bin_proc
 
-        proc.update()
+        # test default
+        with self.assertRaises(StopCompositionProcessing):
+            proc.update()
         self.assertEqual(AnalysisType(0), proc.analysis_type)
         self.assertEqual(BinMode(0), proc.mode)
-        self.assertTupleEqual((-1, 1), proc.bin_range)
-        self.assertEqual(10, proc.n_bins)
+        self.assertEqual("", proc.device_id_x)
+        self.assertEqual("", proc.property_x)
+        self.assertEqual(None, proc.bin_range_x)
+        self.assertEqual(None, proc.n_bins_x)
+        self.assertEqual(None, proc.device_id_y)
+        self.assertEqual(None, proc.property_y)
+        self.assertEqual(None, proc.bin_range_y)
+        self.assertEqual(None, proc.n_bins_y)
+
+        for i in range(n_params):
+            widget._table.cellWidget(i, 0).setCurrentIndex(1)
+            self.assertEqual("", widget._table.cellWidget(i, 1).currentText())
+            widget._table.cellWidget(i, 1).setCurrentIndex(1)
 
         new_type = AnalysisType.AZIMUTHAL_INTEG
         widget._analysis_type_cb.setCurrentIndex(new_type)
-        # TODO: test new BinMode value
         proc.update()
         self.assertEqual(AnalysisType(new_type), proc.analysis_type)
 
-        widget._n_bins_le.setText("20")
-        widget._bin_range_le.setText("0, 10")
+        # Now we should have device_ids and properties for both x and y
+        widget._table.cellWidget(0, 3).setText("0, 10")
+        widget._table.cellWidget(0, 4).setText("20")
+        widget._table.cellWidget(1, 3).setText("-1, 1")
+        widget._table.cellWidget(1, 4).setText("30")
         proc.update()
-        self.assertEqual(20, proc.n_bins)
-        self.assertTupleEqual((0, 10), proc.bin_range)
 
+        self.assertEqual(20, proc.n_bins_x)
+        self.assertTupleEqual((0, 10), proc.bin_range_x)
+        # self.assertEqual(30, proc.n_bins_y)
+        # self.assertTupleEqual((-1, 1), proc.bin_range_y)
+
+        # test reset
         widget._reset_btn.clicked.emit()
         self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))

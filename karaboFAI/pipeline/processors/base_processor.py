@@ -12,8 +12,37 @@ All rights reserved.
 from abc import ABC, abstractmethod
 import copy
 
+from ..exceptions import ProcessingError
 from ...metadata import MetaProxy
 from ...config import AnalysisType
+
+
+def _get_slow_data(tid, raw, device_id, ppt):
+    """Get slow data from raw data.
+
+    :param int tid: train ID.
+    :param dict raw: raw data.
+    :param str device_id: device ID.
+    :param str ppt: property name.
+    """
+    if device_id == "Any":
+        return tid
+    else:
+        try:
+            device_data = raw[device_id]
+        except KeyError:
+            raise ProcessingError(
+                f"Device '{device_id}' is not in the data!")
+
+        try:
+            if ppt not in device_data:
+                # from file
+                ppt += '.value'
+            return device_data[ppt]
+
+        except KeyError:
+            raise ProcessingError(
+                f"'{device_id}'' does not have property '{ppt}'")
 
 
 class State(ABC):
@@ -237,7 +266,10 @@ class CompositeProcessor(_BaseProcessor):
         return self._children.pop(-1)
 
     def run_once(self, processed, raw=None):
-        self.update()
+        try:
+            self.update()
+        except StopCompositionProcessing:
+            return
 
         params = copy.deepcopy(self._params)  # froze all the shared properties
         # StopCompositionProcessing it raises will be handled by its

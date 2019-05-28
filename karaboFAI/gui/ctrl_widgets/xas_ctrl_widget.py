@@ -18,10 +18,19 @@ from ..misc_widgets import SmartBoundaryLineEdit, SmartLineEdit
 class XasCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
+    _monochromators = [
+        "",
+        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
+    ]
+
     def __init__(self, *args, **kwargs):
         super().__init__("XAS analysis setup", *args, **kwargs)
 
         self._reset_btn = QtGui.QPushButton("Reset")
+
+        self._mono_src_cb = QtGui.QComboBox()
+        for src in self._monochromators:
+            self._mono_src_cb.addItem(src)
 
         self._n_bins_le = SmartLineEdit("60")
         self._n_bins_le.setValidator(QtGui.QIntValidator(1, 999))
@@ -38,11 +47,13 @@ class XasCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self._reset_btn, 0, 3, AR)
+        layout.addWidget(QtGui.QLabel("Monochromator: "), 0, 0, AR)
+        layout.addWidget(self._mono_src_cb, 0, 1, 1, 3)
         layout.addWidget(QtGui.QLabel("Bin range (keV): "), 1, 0, AR)
         layout.addWidget(self._bin_range_le, 1, 1)
         layout.addWidget(QtGui.QLabel("# of bins: "), 1, 2, AR)
         layout.addWidget(self._n_bins_le, 1, 3)
+        layout.addWidget(self._reset_btn, 2, 3, AR)
 
         self.setLayout(layout)
 
@@ -50,6 +61,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._reset_btn.clicked.connect(mediator.onXasReset)
+
+        self._mono_src_cb.currentTextChanged.connect(
+            mediator.onXasMonoSourceNameChange)
 
         self._n_bins_le.returnPressed.connect(
             lambda: mediator.onXasEnergyBinsChange(
@@ -59,6 +73,9 @@ class XasCtrlWidget(AbstractCtrlWidget):
             mediator.onXasBinRangeChange)
 
     def updateSharedParameters(self):
+        self._mono_src_cb.currentTextChanged.emit(
+            self._mono_src_cb.currentText())
+
         self._n_bins_le.returnPressed.emit()
 
         self._bin_range_le.returnPressed.emit()

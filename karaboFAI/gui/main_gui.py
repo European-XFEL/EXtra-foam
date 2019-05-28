@@ -177,10 +177,10 @@ class MainGUI(QtGui.QMainWindow):
         analysis_layout.addWidget(self.roi_ctrl_widget)
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)
-        analysis_layout.addWidget(self.bin_ctrl_widget)
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
+        misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)
         if config['REQUIRE_GEOMETRY']:
             misc_layout.addWidget(self.geometry_ctrl_widget)

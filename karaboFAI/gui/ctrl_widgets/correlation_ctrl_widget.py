@@ -14,76 +14,16 @@ import functools
 
 from ..pyqtgraph import Qt, QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
 from ..misc_widgets import SmartLineEdit
 from ...config import CorrelationFom
+
+_N_PARAMS = 4  # maximum number of correlated parameters
+_DEFAULT_RESOLUTION = "0.0"
 
 
 class CorrelationCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the correlation analysis parameters."""
-
-    class CorrelationParam:
-        def __init__(self, device_ids=None, properties=None):
-            if device_ids is None:
-                self.device_ids = []
-            else:
-                self.device_ids = device_ids
-
-            if properties is None:
-                self.properties = []
-            else:
-                self.properties = properties
-
-    _n_params = 4  # maximum number of correlated parameters
-
-    # Leave the default device ID empty since the available devices
-    # in different instruments are different.
-    #
-    # TODO: move this to a separate config file
-    _available_categories = OrderedDict({
-        "": CorrelationParam(),
-        "XGM": CorrelationParam(
-            device_ids=[
-                "",
-                "SA1_XTD2_XGM/DOOCS/MAIN",
-                "SPB_XTD9_XGM/DOOCS/MAIN",
-                "SA3_XTD10_XGM/XGM/DOOCS",
-                "SCS_BLU_XGM/XGM/DOOCS"
-            ],
-            properties=["data.intensityTD"],
-        ),
-        "MonoChromator": CorrelationParam(
-            device_ids=[
-                "",
-                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
-            ],
-            properties=["actualEnergy"],
-        ),
-        "Digitizer": CorrelationParam(
-            device_ids=[
-                "",
-                "SCS_UTC1_ADQ/ADC/1"
-            ],
-            properties=["MCP1", "MCP2", "MCP3", "MCP4"],
-        ),
-        "Motor": CorrelationParam(
-            device_ids=[
-                "",
-                "FXE_SMS_USR/MOTOR/UM01",
-                "FXE_SMS_USR/MOTOR/UM02",
-                "FXE_SMS_USR/MOTOR/UM04",
-                "FXE_SMS_USR/MOTOR/UM05",
-                "FXE_SMS_USR/MOTOR/UM13",
-                "FXE_AUXT_LIC/DOOCS/PPLASER",
-            ],
-            properties=["actualPosition"],
-        ),
-        "Train ID": CorrelationParam(
-            device_ids=["", "Any"],
-            properties=["timestamp.tid"]
-        ),
-        "User defined": CorrelationParam()
-    })
 
     _available_foms = OrderedDict({
         "": CorrelationFom.UNDEFINED,
@@ -140,17 +80,17 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         """Initialize the correlation parameter table widget."""
         table = self._table
 
-        n_row = self._n_params
+        n_row = _N_PARAMS
         n_col = 4
 
         table.setColumnCount(n_col)
         table.setRowCount(n_row)
         table.setHorizontalHeaderLabels([
             'Category', 'Karabo Device ID', 'Property Name', 'Resolution'])
-        table.setVerticalHeaderLabels(['1', '2', '3', '4'])
-        for i_row in range(self._n_params):
+        table.setVerticalHeaderLabels([str(i+1) for i in range(_N_PARAMS)])
+        for i_row in range(_N_PARAMS):
             combo = QtGui.QComboBox()
-            for t in self._available_categories.keys():
+            for t in _DATA_CATEGORIES.keys():
                 combo.addItem(t)
             table.setCellWidget(i_row, 0, combo)
             combo.currentTextChanged.connect(
@@ -171,13 +111,15 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
 
         header_height = self._table.horizontalHeader().height()
-        self._table.setMinimumHeight(header_height * (self._n_params + 2))
-        self._table.setMaximumHeight(header_height * (self._n_params + 3))
+        self._table.setMinimumHeight(header_height * (_N_PARAMS + 2))
+        self._table.setMaximumHeight(header_height * (_N_PARAMS + 3))
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):
-        resolution_le = SmartLineEdit("0.0")
-        resolution_le.setValidator(QtGui.QDoubleValidator(0.0, 99999.9, 6))
+        resolution_le = SmartLineEdit(_DEFAULT_RESOLUTION)
+        validator = QtGui.QDoubleValidator()
+        validator.setBottom(0.0)
+        resolution_le.setValidator(validator)
         # i_row is the row number in the QTableWidget
         if not text or text == "User defined":
             # '' or 'User defined'
@@ -202,14 +144,14 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self._table.setCellWidget(i_row, 3, resolution_le)
         else:
             combo_device_ids = QtGui.QComboBox()
-            for device_id in self._available_categories[text].device_ids:
+            for device_id in _DATA_CATEGORIES[text].device_ids:
                 combo_device_ids.addItem(device_id)
             combo_device_ids.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
             combo_properties = QtGui.QComboBox()
-            for ppt in self._available_categories[text].properties:
+            for ppt in _DATA_CATEGORIES[text].properties:
                 combo_properties.addItem(ppt)
             combo_properties.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
@@ -241,7 +183,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             (i_row+1, device_id, ppt, res))
 
     def updateSharedParameters(self):
-        for i_row in range(self._n_params):
+        for i_row in range(_N_PARAMS):
             combo = self._table.cellWidget(i_row, 0)
             combo.currentTextChanged.emit(combo.currentText())
         return True
