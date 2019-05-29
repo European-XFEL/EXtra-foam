@@ -151,6 +151,7 @@ setup(
         'cached-property>=1.5.1',
         'redis',
         'pyarrow>=0.13.0',
+        'psutil',
     ],
     extras_require={
         'docs': [
