@@ -18,7 +18,7 @@ from ..exceptions import ProcessingError
 from ...algorithms import Stack
 from ...config import PumpProbeMode, PumpProbeType
 from ...metadata import Metadata as mt
-from ...helpers import profiler
+from ...utils import profiler
 
 
 class PumpProbeProcessor(CompositeProcessor):

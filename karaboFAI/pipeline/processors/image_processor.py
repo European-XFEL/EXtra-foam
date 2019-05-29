@@ -15,7 +15,7 @@ import pyarrow as pa
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
-from ...helpers import profiler
+from ...utils import profiler
 from ..data_model import ProcessedData
 
 

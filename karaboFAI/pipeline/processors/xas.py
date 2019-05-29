@@ -15,7 +15,7 @@ from .base_processor import LeafProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
 from ...metadata import Metadata as mt
-from ...helpers import profiler
+from ...utils import profiler
 
 
 class XasProcessor(LeafProcessor):

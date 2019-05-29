@@ -18,7 +18,7 @@ from ..exceptions import ProcessingError
 from ...algorithms import slice_curve
 from ...config import config, CorrelationFom
 from ...metadata import Metadata as mt
-from ...helpers import profiler
+from ...utils import profiler
 
 
 class CorrelationProcessor(CompositeProcessor):

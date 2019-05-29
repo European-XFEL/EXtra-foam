@@ -18,7 +18,7 @@ from zmq.error import ZMQError
 from karabo_bridge import Client
 
 from ..config import config, DataSource
-from ..helpers import profiler
+from ..utils import profiler
 
 
 class QThreadWorker(QThread):

@@ -26,7 +26,7 @@ from ...config import (
     AiNormalizer, AnalysisType, PumpProbeType, redis_connection_bytes
 )
 from ...metadata import Metadata as mt
-from ...helpers import profiler
+from ...utils import profiler
 
 
 def energy2wavelength(energy):

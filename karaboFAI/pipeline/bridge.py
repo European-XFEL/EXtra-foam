@@ -19,7 +19,7 @@ from .exceptions import ProcessingError
 from .worker import ProcessWorker
 from ..metadata import Metadata as mt
 from ..config import config, DataSource
-from ..helpers import profiler
+from ..utils import profiler
 
 
 class Bridge(ProcessWorker):

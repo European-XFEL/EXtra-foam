@@ -18,7 +18,7 @@ from .base_processor import (
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
 from ...config import AnalysisType, BinMode
-from ...helpers import profiler
+from ...utils import profiler
 
 
 class BinProcessor(CompositeProcessor):

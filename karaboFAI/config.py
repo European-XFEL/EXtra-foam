@@ -111,6 +111,8 @@ class _Config(dict):
         # default REDIS port used in testing. Each detector has its
         # dedicated REDIS port.
         "REDIS_PORT": 6379,
+        # maximum allowed REDIS memory (fraction of system memory)
+        "REDIS_MAX_MEMORY_FRAC": 0.2,
         # password to access the Redis server
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
     }

@@ -21,7 +21,7 @@ from ..exceptions import ProcessingError
 from ...algorithms import intersection, normalize_auc, slice_curve
 from ...metadata import Metadata as mt
 from ...config import config, RoiFom, PumpProbeType, Projection1dNormalizer
-from ...helpers import profiler
+from ...utils import profiler
 
 
 class RoiProcessor(CompositeProcessor):

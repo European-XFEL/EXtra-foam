@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import psutil
+import multiprocessing as mp
 import functools
 import time
 
@@ -32,3 +34,19 @@ def profiler(info):
             return result
         return timed_f
     return wrap
+
+
+def get_system_memory():
+    """Get the total system memory."""
+    return psutil.virtual_memory().total
+
+
+def check_system_resource():
+    """Check the resource of the current system"""
+    n_cpus = mp.cpu_count()
+
+    n_gpus = 0
+
+    total_memory = get_system_memory()
+
+    return n_cpus, n_gpus, total_memory

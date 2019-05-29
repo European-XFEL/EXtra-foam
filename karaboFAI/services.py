@@ -25,15 +25,9 @@ from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import Bridge, Scheduler
 from .pipeline.worker import ProcessProxy
+from .utils import check_system_resource
 
-
-def check_system_resource():
-    """Check the resource of the current system"""
-    n_cpus = mp.cpu_count()
-
-    n_gpus = 0
-
-    return n_cpus, n_gpus
+_N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
 
 
 def try_to_connect_redis_server(host, port, *, password=None, n_attempts=5):
@@ -72,6 +66,7 @@ def start_redis_server():
 
     Raises:
         FileNotFoundError: raised if the Redis executable does not exist.
+        ConnectionError: raised if failed to start Redis server.
     """
     executable = config["REDIS_EXECUTABLE"]
     if not os.path.isfile(executable):
@@ -97,7 +92,7 @@ def start_redis_server():
         try_to_connect_redis_server(host, port, password=password)
     except ConnectionError:
         logger.error(f"Unable to start a Redis server at {host}:{port}")
-        return False
+        raise
 
     time.sleep(0.1)
     if process.poll() is None:
@@ -106,10 +101,22 @@ def start_redis_server():
 
         logger.info(f"Redis server started at {host}:{port}")
         ProcessProxy().register("redis", process)
+
+        try:
+            mem_frac = config["REDIS_MAX_MEMORY_FRAC"]
+            if mem_frac < 0.001 or mem_frac > 0.5:
+                mem_frac = 0.3
+            client.config_set("maxmemory", int(mem_frac * _SYS_MEMORY))
+            mem_in_bytes = int(client.config_get('maxmemory')['maxmemory'])
+            logger.info(f"Redis memory is capped at "
+                        f"{mem_in_bytes / 1024 ** 3:.1f} GB")
+        except Exception as e:
+            logger.error(f"Failed to config the Redis server.\n" + repr(e))
+            ProcessProxy().terminte_popens()
+            sys.exit(0)
+
     else:
         logger.info(f"Found existing Redis server at {host}:{port}")
-
-    return True
 
 
 class FAI:
@@ -119,7 +126,9 @@ class FAI:
 
         # Redis server must be started at first since when the GUI starts,
         # it needs to write all the configuration into Redis.
-        if not start_redis_server():
+        try:
+            start_redis_server()
+        except (ConnectionError, FileNotFoundError):
             sys.exit(0)
 
         try:
@@ -138,9 +147,9 @@ class FAI:
             sys.exit(0)
 
     def init(self):
-        n_cpus, n_gpus = check_system_resource()
-        logger.info(f"Number of available CPUs: {n_cpus}, "
-                    f"number of available GPUs: {n_gpus}")
+        logger.info(f"Number of available CPUs: {_N_CPUS}, "
+                    f"number of available GPUs: {_N_GPUS}, "
+                    f"total system memory: {_SYS_MEMORY/1024**3:.1f} GB")
 
         self.bridge.start()
         self.scheduler.start()

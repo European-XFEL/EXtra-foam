@@ -32,7 +32,7 @@ from .mediator import Mediator
 from .. import __version__
 from ..config import config
 from ..logger import logger
-from ..helpers import profiler
+from ..utils import profiler
 from ..pipeline import Data4Visualization, ProcessProxy
 from ..offline import FileServerManager
 

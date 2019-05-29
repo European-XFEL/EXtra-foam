@@ -23,7 +23,7 @@ from .processors.base_processor import _BaseProcessor, _RedisParserMixin
 from .exceptions import AssemblingError
 from ..config import config, DataSource
 from ..metadata import Metadata as mt
-from ..helpers import profiler
+from ..utils import profiler
 
 
 class ImageAssemblerFactory(ABC):

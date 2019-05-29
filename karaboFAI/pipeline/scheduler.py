@@ -23,7 +23,7 @@ from .processors import (
 from .exceptions import (
     AggregatingError, AssemblingError, ProcessingError)
 from ..config import config, DataSource
-from ..helpers import profiler
+from ..utils import profiler
 
 
 class Scheduler(ProcessWorker):
