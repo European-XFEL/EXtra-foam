@@ -394,6 +394,7 @@ class PumpProbeData(AbstractData):
         self.on_roi = None
         self.off_roi = None
 
+        self.x = None
         # normalized on/off/on-off moving average
         self.norm_on_ma = None
         self.norm_off_ma = None

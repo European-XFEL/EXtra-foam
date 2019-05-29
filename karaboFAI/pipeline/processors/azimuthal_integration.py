@@ -490,6 +490,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
         else:
             fom = np.sum(fom)
 
+        processed.pp.x = momentum
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma
         processed.pp.norm_on_off_ma = norm_on_off_ma

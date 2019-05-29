@@ -186,7 +186,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         if processed.pp.analysis_type in (PumpProbeType.ROI,
                                           PumpProbeType.ROI1_BY_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
-            _, on_ma, off_ma = processed.pp.data  # get the moving average
+            x, on_ma, off_ma = processed.pp.data  # get the moving average
 
             # for now, no normalization is applied
             norm_on_ma = np.copy(on_ma)
@@ -198,6 +198,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
             else:
                 fom = self.roi_fom_handler(norm_on_off_ma)
 
+            processed.pp.x = x
             processed.pp.norm_on_ma = norm_on_ma
             processed.pp.norm_off_ma = norm_off_ma
             processed.pp.norm_on_off_ma = norm_on_off_ma
@@ -230,7 +231,7 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
 
         # set data and calculate moving average
         processed.pp.data = (x_data, on_data, off_data)
-        _, on_ma, off_ma = processed.pp.data
+        x, on_ma, off_ma = processed.pp.data
 
         try:
             norm_on_ma = normalize_auc(
@@ -249,6 +250,7 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         else:
             fom = np.sum(sliced)
 
+        processed.pp.x = x
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma
         processed.pp.norm_on_off_ma = norm_on_off_ma
