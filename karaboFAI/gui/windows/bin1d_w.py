@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-BinWindow
+Bin1DWindow
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -16,8 +16,8 @@ from ..plot_widgets import BinImageView, BinCountWidget, BinWidget
 from ...config import config
 
 
-class BinWindow(DockerWindow):
-    """BinWindow class.
+class Bin1DWindow(DockerWindow):
+    """Bin1DWindow class.
 
     Plot data in selected bins.
     """

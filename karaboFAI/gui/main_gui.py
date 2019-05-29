@@ -24,7 +24,7 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    BinWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
+    Bin1DWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
     XasWindow
 )
@@ -100,7 +100,7 @@ class MainGUI(QtGui.QMainWindow):
 
         open_bin_window_at = self._addAction("Bin", "binning.png")
         open_bin_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, BinWindow))
+            functools.partial(self.onOpenPlotWindow, Bin1DWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(

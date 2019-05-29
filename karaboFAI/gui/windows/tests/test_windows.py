@@ -8,7 +8,7 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.bulletin_widget import BulletinWidget
 from karaboFAI.gui.windows import (
-    BinWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
+    Bin1DWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
     PumpProbeWindow, RoiWindow, XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
@@ -83,8 +83,8 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(4, counter[RoiImageView])
         self.assertEqual(1, counter[RoiValueMonitor])
 
-    def testBinWindow(self):
-        win = BinWindow(pulse_resolved=True, parent=self.gui)
+    def testBin1DWindow(self):
+        win = Bin1DWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
