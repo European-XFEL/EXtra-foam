@@ -17,7 +17,7 @@ import numpy as np
 def nanmean_axis0_para(data, *, chunk_size=10, max_workers=4):
     """Parallel implementation of nanmean.
 
-    :param numpy.ndarray x: 3D data array. (pulse ID, x, y)
+    :param numpy.ndarray x: 3D data array. (pulse indices, x, y)
     :param int chunk_size: the slice size of along the second dimension
         of the input data.
     :param int max_workers: The maximum number of threads that can be

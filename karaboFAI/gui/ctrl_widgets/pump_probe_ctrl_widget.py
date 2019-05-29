@@ -52,13 +52,13 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
             self._mode_cb.addItems(all_keys)
-            on_pulse_ids = "0:8:2"
-            off_pulse_ids = "1:8:2"
+            on_pulse_indices = "0:64:2"
+            off_pulse_indices = "1:64:2"
         else:
             all_keys.remove("same train")
             self._mode_cb.addItems(all_keys)
-            on_pulse_ids = "0"
-            off_pulse_ids = "0"
+            on_pulse_indices = "0"
+            off_pulse_indices = "0"
 
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
@@ -66,8 +66,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute on-off")
         self._abs_difference_cb.setChecked(True)
 
-        self._on_pulse_le = SmartRangeLineEdit(on_pulse_ids)
-        self._off_pulse_le = SmartRangeLineEdit(off_pulse_ids)
+        self._on_pulse_le = SmartRangeLineEdit(on_pulse_indices)
+        self._off_pulse_le = SmartRangeLineEdit(off_pulse_indices)
 
         self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
@@ -95,9 +95,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 2, AR)
         layout.addWidget(self._analysis_type_cb, 0, 3)
         if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("On-pulse IDs: "), 2, 0, AR)
+            layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
             layout.addWidget(self._on_pulse_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("Off-pulse IDs: "), 2, 2, AR)
+            layout.addWidget(QtGui.QLabel("Off-pulse indices: "), 2, 2, AR)
             layout.addWidget(self._off_pulse_le, 2, 3)
 
         layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
@@ -157,24 +157,24 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         try:
             mode = self._available_modes[self._mode_cb.currentText()]
 
-            # check pulse ID only when laser on/off pulses are in the same
+            # check pulse index only when laser on/off pulses are in the same
             # train (the "normal" mode)
-            on_pulse_ids = parse_ids(self._on_pulse_le.text())
+            on_pulse_indices = parse_ids(self._on_pulse_le.text())
             if mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_pulse_ids = []
+                off_pulse_indices = []
             else:
-                off_pulse_ids = parse_ids(self._off_pulse_le.text())
+                off_pulse_indices = parse_ids(self._off_pulse_le.text())
 
             if mode == PumpProbeMode.SAME_TRAIN and self._pulse_resolved:
-                common = set(on_pulse_ids).intersection(off_pulse_ids)
+                common = set(on_pulse_indices).intersection(off_pulse_indices)
                 if common:
-                    logger.error("Pulse IDs {} are found in both on- and "
+                    logger.error("Pulse indices {} are found in both on- and "
                                  "off- pulses.".
                                  format(','.join([str(v) for v in common])))
                     return False
 
         except ValueError:
-            logger.error("Invalid input! Enter on/off pulse IDs separated "
+            logger.error("Invalid input! Enter on/off pulse indices separated "
                          "by ',' and/or use the range operator ':'!")
             return False
 

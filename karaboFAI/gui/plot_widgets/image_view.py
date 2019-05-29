@@ -422,11 +422,11 @@ class SinglePulseImageView(ImageView):
 
     Widget for displaying the assembled image of a single pulse.
     """
-    def __init__(self, *, pulse_id=0, parent=None):
+    def __init__(self, *, pulse_index=0, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_id = pulse_id
+        self.pulse_index = pulse_index
 
     def update(self, data):
         """Override."""
@@ -434,15 +434,15 @@ class SinglePulseImageView(ImageView):
         threshold_mask = data.image.threshold_mask
 
         max_id = data.n_pulses - 1
-        if self.pulse_id <= max_id:
-            np.clip(images[self.pulse_id], *threshold_mask,
-                    images[self.pulse_id])
+        if self.pulse_index <= max_id:
+            np.clip(images[self.pulse_index], *threshold_mask,
+                    images[self.pulse_index])
         else:
-            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
-                         "pulse ID ({})".format(self.pulse_id, max_id))
+            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+                         "pulse index ({})".format(self.pulse_index, max_id))
             return
 
-        self.setImage(images[self.pulse_id],
+        self.setImage(images[self.pulse_index],
                       auto_levels=(not self._is_initialized))
 
         self.updateROI(data)

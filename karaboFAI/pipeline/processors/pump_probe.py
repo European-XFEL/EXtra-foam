@@ -27,16 +27,16 @@ class PumpProbeProcessor(CompositeProcessor):
     Attributes:
         mode (PumpProbeMode): pump-probe mode.
         analysis_type (PumpProbeType): pump-probe analysis type.
-        on_pulse_ids (list): a list of laser-on pulse IDs.
-        off_pulse_ids (list): a list of laser-off pulse IDs.
+        on_pulse_indices (list): a list of laser-on pulse indices.
+        off_pulse_indices (list): a list of laser-off pulse indices.
         abs_difference (bool): True for calculating absolute different
             between on/off pulses.
         ma_window (int): moving average window size.
     """
     mode = SharedProperty()
     analysis_type = SharedProperty()
-    on_pulse_ids = SharedProperty()
-    off_pulse_ids = SharedProperty()
+    on_pulse_indices = SharedProperty()
+    off_pulse_indices = SharedProperty()
 
     abs_difference = SharedProperty()
     ma_window = SharedProperty()
@@ -53,8 +53,8 @@ class PumpProbeProcessor(CompositeProcessor):
             return
 
         self.mode = PumpProbeMode(int(cfg['mode']))
-        self.on_pulse_ids = self.str2list(cfg['on_pulse_ids'], handler=int)
-        self.off_pulse_ids = self.str2list(cfg['off_pulse_ids'], handler=int)
+        self.on_pulse_indices = self.str2list(cfg['on_pulse_indices'], handler=int)
+        self.off_pulse_indices = self.str2list(cfg['off_pulse_indices'], handler=int)
         self.analysis_type = PumpProbeType(int(cfg['analysis_type']))
         self.ma_window = int(cfg['ma_window'])
         self.abs_difference = cfg['abs_difference'] == 'True'
@@ -85,7 +85,7 @@ class PumpProbeImageProcessor(LeafProcessor):
                 self.analysis_type == PumpProbeType.UNDEFINED:
             return
 
-        self._check_pulse_ids(processed.n_pulses)
+        self._check_pulse_indices(processed.n_pulses)
 
         if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
             on_image = processed.image.masked_mean
@@ -98,8 +98,8 @@ class PumpProbeImageProcessor(LeafProcessor):
             handler = processed.image.sliced_masked_mean
 
             if self.mode == PumpProbeMode.SAME_TRAIN:
-                self._buffer_image(('on', handler(self.on_pulse_ids)))
-                self._buffer_image(('off', handler(self.off_pulse_ids)))
+                self._buffer_image(('on', handler(self.on_pulse_indices)))
+                self._buffer_image(('off', handler(self.off_pulse_indices)))
             else:
                 if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
                     flag = 0
@@ -110,9 +110,9 @@ class PumpProbeImageProcessor(LeafProcessor):
                         f"Unknown pump-probe mode: {self.mode}")
 
                 if processed.tid % 2 == 1 ^ flag:
-                    self._buffer_image(('on', handler(self.on_pulse_ids)))
+                    self._buffer_image(('on', handler(self.on_pulse_indices)))
                 else:
-                    self._buffer_image(('off', handler(self.off_pulse_ids)))
+                    self._buffer_image(('off', handler(self.off_pulse_indices)))
 
         if len(self._buffer) == 2:
             processed.pp.analysis_type = self.analysis_type
@@ -123,16 +123,16 @@ class PumpProbeImageProcessor(LeafProcessor):
             processed.pp.off_image_mean = self._buffer.pop()[1]
             processed.pp.on_image_mean = self._buffer.pop()[1]
 
-    def _check_pulse_ids(self, n_pulses):
-        max_on_pulse_id = max(self.on_pulse_ids)
-        if max_on_pulse_id >= n_pulses:
+    def _check_pulse_indices(self, n_pulses):
+        max_on_pulse_index = max(self.on_pulse_indices)
+        if max_on_pulse_index >= n_pulses:
             raise ProcessingError(
-                f"Out of range: on-pulse ID = {max_on_pulse_id}, "
+                f"Out of range: on-pulse index = {max_on_pulse_index}, "
                 f"total number of pulses = {n_pulses}")
 
         if self.mode != PumpProbeMode.PRE_DEFINED_OFF:
-            max_off_pulse_id = max(self.off_pulse_ids)
-            if max_off_pulse_id >= n_pulses:
+            max_off_pulse_index = max(self.off_pulse_indices)
+            if max_off_pulse_index >= n_pulses:
                 raise ProcessingError(
-                    f"Out of range: off-pulse ID = {max_off_pulse_id}, "
+                    f"Out of range: off-pulse index = {max_off_pulse_index}, "
                     f"total number of pulses = {n_pulses}")

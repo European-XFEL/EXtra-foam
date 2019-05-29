@@ -73,29 +73,29 @@ class TestMainGuiCtrl(unittest.TestCase):
         proc = scheduler._ai_proc
 
         # --------------------------
-        # test setting VIP pulse IDs
+        # test setting VIP pulse indices
         # --------------------------
         self._pulsed_ai_action.trigger()
         window = list(self.gui._windows.keys())[-1]
 
         # default values
-        vip_pulse_id1 = int(widget._vip_pulse_id1_le.text())
-        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
-        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
-        vip_pulse_id2 = int(widget._vip_pulse_id2_le.text())
-        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
-        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+        vip_pulse_index1 = int(widget._vip_pulse_index1_le.text())
+        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
+        vip_pulse_index2 = int(widget._vip_pulse_index2_le.text())
+        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
         # set new values
-        vip_pulse_id1 = 10
-        widget._vip_pulse_id1_le.setText(str(vip_pulse_id1))
-        self.assertEqual(vip_pulse_id1, window._vip1_ai.pulse_id)
-        self.assertEqual(vip_pulse_id1, window._vip1_img.pulse_id)
+        vip_pulse_index1 = 10
+        widget._vip_pulse_index1_le.setText(str(vip_pulse_index1))
+        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
 
-        vip_pulse_id2 = 20
-        widget._vip_pulse_id2_le.setText(str(vip_pulse_id2))
-        self.assertEqual(vip_pulse_id2, window._vip2_ai.pulse_id)
-        self.assertEqual(vip_pulse_id2, window._vip2_img.pulse_id)
+        vip_pulse_index2 = 20
+        widget._vip_pulse_index2_le.setText(str(vip_pulse_index2))
+        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
         # test params sent to AzimuthalIntegrationProcessor
         proc.update()
@@ -108,15 +108,12 @@ class TestMainGuiCtrl(unittest.TestCase):
         proc.update()
         self.assertAlmostEqual(12.4, proc.photon_energy)
         self.assertAlmostEqual(0.3, proc.sample_distance)
-
-        widget.updateSharedParameters()
         assembler.update()
-        self.assertEqual((0, 2700), assembler._pulse_id_range)
+        self.assertListEqual([-1], assembler._pulse_indices)
 
-        widget._max_pulse_id_le.setText("1000")
-        widget.updateSharedParameters()
+        widget._pulse_index_filter_le.setText("1:5:2")
         assembler.update()
-        self.assertEqual((0, 1001), assembler._pulse_id_range)
+        self.assertListEqual([1, 3], assembler._pulse_indices)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -203,10 +200,10 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc.abs_difference)
         self.assertEqual(PumpProbeType(0), proc.analysis_type)
         self.assertEqual(PumpProbeMode.UNDEFINED, proc.mode)
-        self.assertListEqual([0, 2, 4, 6], proc.on_pulse_ids)
-        self.assertIsInstance(proc.on_pulse_ids[0], int)
-        self.assertListEqual([1, 3, 5, 7], proc.off_pulse_ids)
-        self.assertIsInstance(proc.off_pulse_ids[0], int)
+        self.assertListEqual(list(range(0, 64, 2)), proc.on_pulse_indices)
+        self.assertIsInstance(proc.on_pulse_indices[0], int)
+        self.assertListEqual(list(range(1, 64, 2)), proc.off_pulse_indices)
+        self.assertIsInstance(proc.off_pulse_indices[0], int)
 
         # change assigning params
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
@@ -234,8 +231,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(10, proc.ma_window)
         self.assertEqual(PumpProbeType(new_fom), proc.analysis_type)
         self.assertEqual(PumpProbeMode(new_mode), proc.mode)
-        self.assertListEqual([0, 2, 4, 6, 8], proc.on_pulse_ids)
-        self.assertListEqual([1, 3, 5, 7, 9], proc.off_pulse_ids)
+        self.assertListEqual([0, 2, 4, 6, 8], proc.on_pulse_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], proc.off_pulse_indices)
 
         # check invalid params
         widget._mode_cb.setCurrentIndex(PumpProbeMode.SAME_TRAIN)

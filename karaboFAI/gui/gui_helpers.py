@@ -72,6 +72,9 @@ def parse_ids(text):
         if not v:
             return []
 
+        if v.strip() == ':':
+            return [-1]
+
         if ':' in v:
             try:
                 x = v.split(':')
@@ -80,7 +83,7 @@ def parse_ids(text):
 
                 start = int(x[0].strip())
                 if start < 0:
-                    raise ValueError("Pulse ID cannot be negative!")
+                    raise ValueError("Pulse index cannot be negative!")
                 end = int(x[1].strip())
 
                 if len(x) == 3:
@@ -100,7 +103,7 @@ def parse_ids(text):
             try:
                 v = int(v)
                 if v < 0:
-                    raise ValueError("Pulse ID cannot be negative!")
+                    raise ValueError("Pulse index cannot be negative!")
             except Exception as e:
                 raise ValueError("Invalid input: " + repr(e))
 

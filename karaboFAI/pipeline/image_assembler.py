@@ -33,8 +33,7 @@ class ImageAssemblerFactory(ABC):
         Attributes:
             _detector_source_name (str): detector data source name.
             _source_type (DataSource): detector data source type.
-            _pulse_id_range (tuple): (min, max) pulse ID to be processed.
-                (int, int)
+            _pulse_indices (list): selected pulse indices.
         """
         def __init__(self):
             """Initialization."""
@@ -42,7 +41,7 @@ class ImageAssemblerFactory(ABC):
 
             self._detector_source_name = None
             self._source_type = None
-            self._pulse_id_range = None
+            self._pulse_indices = None
 
             self._geom_file = None
             self._quad_position = None
@@ -55,8 +54,8 @@ class ImageAssemblerFactory(ABC):
 
             gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
 
-            self._pulse_id_range = self.str2tuple(
-                gp_cfg['pulse_id_range'], handler=int)
+            self._pulse_indices = self.str2list(
+                gp_cfg['selected_pulse_indices'], handler=int)
 
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
@@ -139,7 +138,8 @@ class ImageAssemblerFactory(ABC):
 
             assembled = self._modules_to_assembled(modules_data)
             if assembled.ndim == 3:
-                assembled = assembled[slice(*self._pulse_id_range)]
+                if self._pulse_indices[0] != -1:
+                    assembled = assembled[self._pulse_indices]
 
             return assembled
 

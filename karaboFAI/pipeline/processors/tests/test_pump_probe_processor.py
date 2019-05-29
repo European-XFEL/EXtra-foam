@@ -31,17 +31,17 @@ class TestPumpProbeProcessor(unittest.TestCase):
             self._data[i].ai.intensities = (i+1)*intensity
 
     def testExceptions(self):
-        # test raises when pulse IDs are out of range
+        # test raises when pulse indices are out of range
         self._proc.mode = PumpProbeMode.SAME_TRAIN
         data = self._data[0]
 
-        self._proc.on_pulse_ids = [0, 2]
-        self._proc.off_pulse_ids = [1, 3, 5]
+        self._proc.on_pulse_indices = [0, 2]
+        self._proc.off_pulse_indices = [1, 3, 5]
         with self.assertRaisesRegex(ProcessingError, "Out of range: off"):
             self._proc.run_once(data)
 
-        self._proc.on_pulse_ids = [0, 2, 4]
-        self._proc.off_pulse_ids = [1, 3]
+        self._proc.on_pulse_indices = [0, 2, 4]
+        self._proc.off_pulse_indices = [1, 3]
         with self.assertRaisesRegex(ProcessingError, "Out of range: on"):
             self._proc.run_once(data)
 
@@ -53,8 +53,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
     #
     # def testSameTrain(self):
     #     self._proc.mode = PumpProbeMode.SAME_TRAIN
-    #     self._proc.on_pulse_ids = [0, 2]
-    #     self._proc.off_pulse_ids = [1, 3]
+    #     self._proc.on_pulse_indices = [0, 2]
+    #     self._proc.off_pulse_indices = [1, 3]
     #
     #     fom_hist_gt = []
     #     train_ids_gt = []
@@ -113,8 +113,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
     # def _run_same_train_moving_average_test(self):
     #     self._proc.mode = PumpProbeMode.SAME_TRAIN
     #     self._proc.ma_window = 3
-    #     self._proc.on_pulse_ids = [0, 2]
-    #     self._proc.off_pulse_ids = [1, 3]
+    #     self._proc.on_pulse_indices = [0, 2]
+    #     self._proc.off_pulse_indices = [1, 3]
     #
     #     fom_hist_gt = []
     #     train_ids_gt = []
@@ -188,8 +188,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
     # def testEvenTrainOn(self):
     #     """On-pulse has even id."""
     #     self._proc.mode = PumpProbeMode.EVEN_TRAIN_ON
-    #     self._proc.on_pulse_ids = [0, 2]
-    #     self._proc.off_pulse_ids = [1, 3]
+    #     self._proc.on_pulse_indices = [0, 2]
+    #     self._proc.off_pulse_indices = [1, 3]
     #
     #     fom_hist_gt = []
     #     train_ids_gt = []
@@ -316,8 +316,8 @@ class TestPumpProbeProcessor(unittest.TestCase):
     # def testOddTrainOn(self):
     #     """On-pulse has odd id."""
     #     self._proc.mode = PumpProbeMode.ODD_TRAIN_ON
-    #     self._proc.on_pulse_ids = [0, 2]
-    #     self._proc.off_pulse_ids = [1, 3]
+    #     self._proc.on_pulse_indices = [0, 2]
+    #     self._proc.off_pulse_indices = [1, 3]
     #
     #     fom_hist_gt = []
     #     train_ids_gt = []

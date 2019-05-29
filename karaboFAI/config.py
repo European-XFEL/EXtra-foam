@@ -22,6 +22,9 @@ from . import ROOT_PATH
 from .logger import logger
 
 
+MAX_NUMBER_OF_PULSES_PER_TRAIN = 2700
+
+
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge

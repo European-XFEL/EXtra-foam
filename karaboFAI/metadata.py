@@ -43,7 +43,7 @@ class Metadata:
         GENERAL_PROC: [
             "sample_distance",
             "photon_energy",
-            "pulse_id_range",
+            "selected_pulse_indices",
         ],
         IMAGE_PROC: [
             "threshold_mask",
@@ -82,8 +82,8 @@ class Metadata:
         ],
         PUMP_PROBE_PROC: [
             "mode",
-            "on_pulse_ids",
-            "off_pulse_ids",
+            "on_pulse_indices",
+            "off_pulse_indices",
             "abs_difference",
             "analysis_type",
             "ma_window",

@@ -25,16 +25,16 @@ class SinglePulseAiWidget(PlotWidget):
     result of a single pulse. The azimuthal integration result is also
     compared with the average azimuthal integration of all the pulses.
     """
-    def __init__(self, *, pulse_id=0, plot_mean=True, parent=None):
+    def __init__(self, *, pulse_index=0, plot_mean=True, parent=None):
         """Initialization.
 
-        :param int pulse_id: ID of the pulse to be plotted.
+        :param int pulse_index: ID of the pulse to be plotted.
         :param bool plot_mean: whether to plot the mean AI of all pulses
             if the data is pulse resolved.
         """
         super().__init__(parent=parent)
 
-        self.pulse_id = pulse_id
+        self.pulse_index = pulse_index
 
         self.setLabel('left', "Scattering signal (arb. u.)")
         self.setLabel('bottom', "Momentum transfer (1/A)")
@@ -58,11 +58,11 @@ class SinglePulseAiWidget(PlotWidget):
             return
 
         max_id = data.n_pulses - 1
-        if self.pulse_id <= max_id:
-            self._pulse_plot.setData(momentum, intensities[self.pulse_id])
+        if self.pulse_index <= max_id:
+            self._pulse_plot.setData(momentum, intensities[self.pulse_index])
         else:
-            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
-                         "pulse ID ({})".format(self.pulse_id, max_id))
+            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+                         "pulse index ({})".format(self.pulse_index, max_id))
             return
 
         if self._mean_plot is not None:
@@ -126,7 +126,7 @@ class PulsedFOMWidget(PlotWidget):
         self._plot = self.plotBar(width=0.6, brush=make_brush('b'))
 
         self.setLabel('left', "Integrated difference (arb.)")
-        self.setLabel('bottom', "Pulse ID")
+        self.setLabel('bottom', "Pulse index")
         self.setTitle('FOM with respect to the first pulse')
 
     def update(self, data):

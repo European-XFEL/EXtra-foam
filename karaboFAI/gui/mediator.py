@@ -28,10 +28,10 @@ class Mediator(QObject):
     file_server_started_sgn = pyqtSignal()
     file_server_stopped_sgn = pyqtSignal()
 
-    vip_pulse_id1_sgn = pyqtSignal(int)
-    vip_pulse_id2_sgn = pyqtSignal(int)
-    # tell the control widget to update VIP pulse IDs
-    vip_pulse_ids_connected_sgn = pyqtSignal()
+    vip_pulse_index1_sgn = pyqtSignal(int)
+    vip_pulse_index2_sgn = pyqtSignal(int)
+    # tell the control widget to update VIP pulse indices
+    vip_pulse_indices_connected_sgn = pyqtSignal()
 
     reset_image_level_sgn = pyqtSignal()
 
@@ -83,20 +83,20 @@ class Mediator(QObject):
     def onImageMaskRegionChange(self, value: tuple):
         self._db.publish("command:image_mask", str(value))
 
-    def onGeometryFileChange(self, value: str):
+    def onGeomFilenameChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 
-    def onQuadPositionsChange(self, value: str):
+    def onGeomQuadPositionsChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
+
+    def onPulseIndexSelectorChange(self, value: list):
+        self._meta.set(mt.GENERAL_PROC, 'selected_pulse_indices', str(value))
 
     def onSampleDistanceChange(self, value: float):
         self._meta.set(mt.GENERAL_PROC, 'sample_distance', value)
 
     def onPhotonEnergyChange(self, value: float):
         self._meta.set(mt.GENERAL_PROC, 'photon_energy', value)
-
-    def onPulseIdRangeChange(self, value: tuple):
-        self._meta.set(mt.GENERAL_PROC, 'pulse_id_range', str(value))
 
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
@@ -135,10 +135,10 @@ class Mediator(QObject):
         self._meta.set(mt.PUMP_PROBE_PROC, 'mode', value)
 
     def onPpOnPulseIdsChange(self, value: list):
-        self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_ids', str(value))
+        self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
 
     def onPpOffPulseIdsChange(self, value: list):
-        self._meta.set(mt.PUMP_PROBE_PROC, 'off_pulse_ids', str(value))
+        self._meta.set(mt.PUMP_PROBE_PROC, 'off_pulse_indices', str(value))
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))

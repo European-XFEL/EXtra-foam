@@ -124,20 +124,20 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
         """Override."""
         if self._pulse_resolved:
             mediator = self._mediator
-            mediator.vip_pulse_id1_sgn.connect(self.onPulseID1Updated)
-            mediator.vip_pulse_id2_sgn.connect(self.onPulseID2Updated)
-            mediator.vip_pulse_ids_connected_sgn.emit()
+            mediator.vip_pulse_index1_sgn.connect(self.onPulseID1Updated)
+            mediator.vip_pulse_index2_sgn.connect(self.onPulseID2Updated)
+            mediator.vip_pulse_indices_connected_sgn.emit()
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, value):
         self._vip1_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
         self._vip1_img_dock.setTitle("VIP pulse {:04d}".format(value))
-        self._vip1_ai.pulse_id = value
-        self._vip1_img.pulse_id = value
+        self._vip1_ai.pulse_index = value
+        self._vip1_img.pulse_index = value
 
     @QtCore.pyqtSlot(int)
     def onPulseID2Updated(self, value):
         self._vip2_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
         self._vip2_img_dock.setTitle("VIP pulse {:04d}".format(value))
-        self._vip2_ai.pulse_id = value
-        self._vip2_img.pulse_id = value
+        self._vip2_ai.pulse_index = value
+        self._vip2_img.pulse_index = value

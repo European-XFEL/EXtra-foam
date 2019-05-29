@@ -457,7 +457,7 @@ class ImageData:
     Attributes:
         pixel_size (float): detector pixel size.
         _images (numpy.ndarray): detector images for all the pulses in
-            a train. shape = (pulse_id, y, x) for pulse-resolved
+            a train. shape = (pulse_index, y, x) for pulse-resolved
             detectors and shape = (y, x) for train-resolved detectors.
         _threshold_mask (tuple): (min, max) threshold of the pixel value.
     """
@@ -801,7 +801,7 @@ class ProcessedData:
         momentum (numpy.ndarray): x-axis of azimuthal integration result.
             Shape = (momentum,)
         intensities (numpy.ndarray): y-axis of azimuthal integration result.
-            Shape = (pulse_id, intensity)
+            Shape = (pulse_index, intensity)
         intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
             integration result over pulses. Shape = (intensity,)
         roi (RoiData): stores ROI related data.
