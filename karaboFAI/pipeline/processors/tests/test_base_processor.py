@@ -1,12 +1,17 @@
+import os
 import unittest
 from unittest.mock import MagicMock
 from threading import Thread
+import tempfile
 import time
 
+from karaboFAI.config import _Config, ConfigWrapper, AnalysisType
+from karaboFAI.logger import logger
+from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.pipeline.processors.base_processor import (
-    LeafProcessor, CompositeProcessor, SharedProperty,
-    StopCompositionProcessing
+    LeafProcessor, CompositeProcessor, ProcessingError,
+    SharedProperty, StopCompositionProcessing
 )
 
 
@@ -29,11 +34,13 @@ class _DummyLeafProcessor4(LeafProcessor):
 
 class _DummyCompProcessor1(CompositeProcessor):
     param1 = SharedProperty()
+    analysis_type = SharedProperty()
 
 
 class _DummyCompProcessor2(CompositeProcessor):
     param1 = SharedProperty()
     param2 = SharedProperty()
+    analysis_type = SharedProperty()
 
     def process(self, processed, raw=None):
         time.sleep(0.02)  # simulating data processing
@@ -48,7 +55,7 @@ class _DummyCompProcessor4(CompositeProcessor):
     pass
 
 
-class TestBaseProcessor(unittest.TestCase):
+class TestProcessorComposition(unittest.TestCase):
     def setUp(self):
         self._leaf1 = _DummyLeafProcessor1()
         self._leaf2 = _DummyLeafProcessor2()
@@ -214,3 +221,82 @@ class TestRedisParserMixin(unittest.TestCase):
         self.assertListEqual([1.0, 2.0], proc.str2list('[1, 2]'))
         self.assertListEqual([1], proc.str2list('[1]'))
         self.assertListEqual([], proc.str2list('[]'))
+
+
+class TestBaseProcessor(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        logger.setLevel("CRITICAL")
+
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()   # ensure file
+
+        fai = FAI('LPD')
+        fai.init()
+
+        cls.app = fai.app
+        cls.gui = fai.gui
+        cls.mediator = cls.gui._mediator
+        cls.fai = fai
+        cls.scheduler = fai.scheduler
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.gui.close()
+
+    def testAnalysisType(self):
+        self._comp1 = _DummyCompProcessor1()
+        self._comp2 = _DummyCompProcessor2()
+        self._leaf1 = _DummyLeafProcessor1()
+
+        with self.assertRaises(ProcessingError):
+            self._comp1._update_analysis(1)
+
+        self._comp1._update_analysis(AnalysisType.UNDEFINED)
+        self._check_has_no_analysis(AnalysisType.UNDEFINED)
+
+        # set new analysis type for comp2
+        self._comp2._update_analysis(AnalysisType.ROI)
+        self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
+        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI)
+
+        # set new analysis type for comp1
+        self._comp1._update_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._check_has_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
+        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG, self._comp1.analysis_type)
+
+        # unset analysis type for comp1
+        self._comp1._update_analysis(AnalysisType.UNDEFINED)
+        self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
+        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI)
+        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
+
+        # unset analysis type for comp2
+        self._comp2._update_analysis(AnalysisType.UNDEFINED)
+        self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
+        self.assertEqual(AnalysisType.UNDEFINED, self._comp2.analysis_type)
+        self._check_has_no_analysis(AnalysisType.ROI)
+        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
+
+        # set same analysis type for comp1 and comp2
+        self._comp1._update_analysis(AnalysisType.ROI)
+        self._comp2._update_analysis(AnalysisType.ROI)
+        self._check_has_analysis(AnalysisType.ROI)
+        self._comp2._update_analysis(AnalysisType.UNDEFINED)
+        self._check_has_analysis(AnalysisType.ROI)
+        self._comp1._update_analysis(AnalysisType.UNDEFINED)
+        self._check_has_no_analysis(AnalysisType.ROI)
+
+    def _check_has_analysis(self, analysis_type):
+        self.assertTrue(self._comp2._has_analysis(analysis_type))
+        self.assertTrue(self._comp2._has_analysis(analysis_type))
+        self.assertTrue(self._leaf1._has_analysis(analysis_type))
+
+    def _check_has_no_analysis(self, analysis_type):
+        self.assertFalse(self._comp2._has_analysis(analysis_type))
+        self.assertFalse(self._comp2._has_analysis(analysis_type))
+        self.assertFalse(self._leaf1._has_analysis(analysis_type))

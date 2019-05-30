@@ -59,8 +59,6 @@ class TestMainGuiCtrl(unittest.TestCase):
     def tearDownClass(cls):
         cls.gui.close()
 
-        del cls.fai
-
     def setUp(self):
         self.assertTrue(self.gui.updateSharedParameters())
 

@@ -194,9 +194,13 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
     def _has_analysis(self, analysis_type):
         count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
-        return count and int(count) > 0
+        return bool(count) and int(count) > 0
 
     def _update_analysis(self, analysis_type):
+        if not isinstance(analysis_type, AnalysisType):
+            raise ProcessingError(
+                f"Unknown analysis type: {str(analysis_type)}")
+
         if analysis_type != self.analysis_type:
             if self.analysis_type is not None:
                 # unregister the old
@@ -204,10 +208,12 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                     mt.ANALYSIS_TYPE, self.analysis_type, -1)
 
             # register new type
-            if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
-                # set analysis type if it does not exist
-                self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
-            self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
+            if analysis_type != AnalysisType.UNDEFINED:
+                if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
+                    # set analysis type if it does not exist
+                    self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
+                self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
+
             self.analysis_type = analysis_type
 
     @abstractmethod
