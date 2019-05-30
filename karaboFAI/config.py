@@ -38,20 +38,13 @@ class PumpProbeMode(IntEnum):
     ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
 
 
-class PumpProbeType(IntEnum):
+class AnalysisType(IntEnum):
     UNDEFINED = 0
     AZIMUTHAL_INTEG = 1
     ROI = 2
     ROI_PROJECTION_X = 3
     ROI_PROJECTION_Y = 4
     ROI1_BY_ROI2 = 5
-
-
-class AnalysisType(IntEnum):
-    UNDEFINED = 0
-    AZIMUTHAL_INTEG = 1
-    ROI_PROJECTION_X = 2
-    ROI_PROJECTION_Y = 3
 
 
 class BinMode(IntEnum):
@@ -415,7 +408,7 @@ REDIS_CONNECTION = None
 
 
 def redis_connection():
-    """Return a Redis connection."""
+    """Return a Redis connection with automatic decoding."""
     global REDIS_CONNECTION
     if REDIS_CONNECTION is None:
         connection = redis.Redis('localhost', config['REDIS_PORT'],

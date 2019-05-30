@@ -20,7 +20,7 @@ from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
     config, AiNormalizer, AnalysisType, BinMode, CorrelationFom, DataSource,
-    Projection1dNormalizer, PumpProbeMode, PumpProbeType
+    Projection1dNormalizer, PumpProbeMode
 )
 
 
@@ -198,7 +198,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         # check default reconfigurable params
         self.assertEqual(1, proc.ma_window)
         self.assertTrue(proc.abs_difference)
-        self.assertEqual(PumpProbeType(0), proc.analysis_type)
+        self.assertEqual(AnalysisType(0), proc.analysis_type)
         self.assertEqual(PumpProbeMode.UNDEFINED, proc.mode)
         self.assertListEqual(list(range(0, 64, 2)), proc.on_pulse_indices)
         self.assertIsInstance(proc.on_pulse_indices[0], int)
@@ -209,7 +209,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
         widget._ma_window_le.setText(str(10))
-        new_fom = PumpProbeType.ROI
+        new_fom = AnalysisType.ROI
 
         pp_reset.reset_mock()
         widget._analysis_type_cb.setCurrentIndex(new_fom)
@@ -229,7 +229,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         self.assertFalse(proc.abs_difference)
         self.assertEqual(10, proc.ma_window)
-        self.assertEqual(PumpProbeType(new_fom), proc.analysis_type)
+        self.assertEqual(AnalysisType(new_fom), proc.analysis_type)
         self.assertEqual(PumpProbeMode(new_mode), proc.mode)
         self.assertListEqual([0, 2, 4, 6, 8], proc.on_pulse_indices)
         self.assertListEqual([1, 3, 5, 7, 9], proc.off_pulse_indices)

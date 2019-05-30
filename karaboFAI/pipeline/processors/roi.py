@@ -20,7 +20,7 @@ from .base_processor import (
 from ..exceptions import ProcessingError
 from ...algorithms import intersection, normalize_auc, slice_curve
 from ...metadata import Metadata as mt
-from ...config import config, RoiFom, PumpProbeType, Projection1dNormalizer
+from ...config import config, RoiFom, AnalysisType, Projection1dNormalizer
 from ...utils import profiler
 
 
@@ -150,7 +150,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         # use ROI2 for background
         roi_bkg = processed.roi.roi2
-        if processed.pp.analysis_type != PumpProbeType.ROI1_BY_ROI2:
+        if processed.pp.analysis_type != AnalysisType.ROI1_BY_ROI2:
             if roi_bkg is not None and roi_bkg[-2:] != roi[-2:]:
                 raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
@@ -167,7 +167,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
                 roi_bkg, on_image, copy=False)
             off_roi_bkg = RoiProcessor.get_roi_image(
                 roi_bkg, off_image, copy=False)
-            if processed.pp.analysis_type != PumpProbeType.ROI1_BY_ROI2:
+            if processed.pp.analysis_type != AnalysisType.ROI1_BY_ROI2:
                 on_roi -= on_roi_bkg
                 off_roi -= off_roi_bkg
             else:
@@ -183,8 +183,8 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         processed.pp.on_roi = on_roi
         processed.pp.off_roi = off_roi
 
-        if processed.pp.analysis_type in (PumpProbeType.ROI,
-                                          PumpProbeType.ROI1_BY_ROI2):
+        if processed.pp.analysis_type in (AnalysisType.ROI,
+                                          AnalysisType.ROI1_BY_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
             x, on_ma, off_ma = processed.pp.data  # get the moving average
 
@@ -214,9 +214,9 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
         super().__init__()
 
     def process(self, processed, raw=None):
-        if processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_X:
+        if processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_X:
             axis = -2
-        elif processed.pp.analysis_type == PumpProbeType.ROI_PROJECTION_Y:
+        elif processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_Y:
             axis = -1
         else:
             return

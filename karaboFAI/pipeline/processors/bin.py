@@ -76,8 +76,7 @@ class BinProcessor(CompositeProcessor):
             self._meta.delete(mt.BIN_PROC, 'reset')
             reset = True
 
-        analysis_type = AnalysisType(int(cfg['analysis_type']))
-        self._update_analysis(analysis_type)
+        self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
 
         self.mode = AnalysisType(int(cfg['mode']))
 
@@ -122,7 +121,7 @@ class Bin1DProcessor(LeafProcessor):
         if len(centers) >= index > 0:
             counts[index-1] += 1
 
-            if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+            if self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
                 new_value = processed.ai.intensity_mean
                 x = processed.ai.momentum
             else:

@@ -23,7 +23,7 @@ from .base_processor import (
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
 from ...config import (
-    AiNormalizer, AnalysisType, PumpProbeType, redis_connection_bytes
+    AiNormalizer, AnalysisType, redis_connection_bytes
 )
 from ...metadata import Metadata as mt
 from ...utils import profiler
@@ -407,7 +407,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
 
     @profiler("Azimuthal integration pump-probe processor")
     def process(self, processed, raw=None):
-        if processed.pp.analysis_type != PumpProbeType.AZIMUTHAL_INTEG:
+        if processed.pp.analysis_type != AnalysisType.AZIMUTHAL_INTEG:
             raise StopCompositionProcessing
 
         on_image = processed.pp.on_image_mean

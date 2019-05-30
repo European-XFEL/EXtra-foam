@@ -18,6 +18,8 @@ class Metadata:
 
     DATA_SOURCE = "metadata:source"
 
+    ANALYSIS_TYPE = "metadata:analysis_type"
+
     GENERAL_PROC = "metadata:proc:general"
     GEOMETRY_PROC = "metadata:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "metadata:proc:azimuthal_integration"
@@ -29,13 +31,15 @@ class Metadata:
     IMAGE_PROC = "metadata:proc:image"
 
     _meta = {
+        ANALYSIS_TYPE: [
+            "analysis_types",
+        ],
         DATA_SOURCE: [
             "endpoint",
             "data_folder",
             "detector_source_name",
             "source_type",
             "xgm_source_name",
-            "mono_source_name",
         ]
     }
 
@@ -154,5 +158,17 @@ class MetaProxy:
     def get_all(self, name):
         try:
             return self._db.hgetall(name)
+        except redis.exceptions.ConnectionError:
+            pass
+
+    def increase_by(self, name, key, amount=1):
+        try:
+            return self._db.hincrby(name, key, amount)
+        except redis.exceptions.ConnectionError:
+            pass
+
+    def increase_by_float(self, name, key, amount=1):
+        try:
+            return self._db.hincrbyfloat(name, key, amount)
         except redis.exceptions.ConnectionError:
             pass

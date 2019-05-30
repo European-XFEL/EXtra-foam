@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.config import config, PumpProbeMode, PumpProbeType
+from karaboFAI.config import config, PumpProbeMode, AnalysisType
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.data_model import (
     PumpProbeData, ProcessedData
@@ -13,7 +13,7 @@ from karaboFAI.pipeline.processors import PumpProbeProcessor
 class TestPumpProbeProcessor(unittest.TestCase):
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc.analysis_type = PumpProbeType.AZIMUTHAL_INTEG
+        self._proc.analysis_type = AnalysisType.AZIMUTHAL_INTEG
         PumpProbeData.clear()
 
         self._proc.fom_itgt_range = (1, 5)

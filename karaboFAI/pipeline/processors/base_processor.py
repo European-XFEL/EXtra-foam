@@ -14,6 +14,7 @@ import copy
 
 from ..exceptions import ProcessingError
 from ...metadata import MetaProxy
+from ...metadata import Metadata as mt
 from ...config import AnalysisType
 
 
@@ -165,9 +166,6 @@ class MetaProcessor(type):
         return cls
 
 
-_analysis_types = {v: 0 for v in AnalysisType if v != AnalysisType.UNDEFINED}
-
-
 class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     """Data processor interface."""
 
@@ -194,25 +192,23 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             else:
                 raise
 
-    @staticmethod
-    def _register_analysis(analysis_type):
-        if analysis_type in _analysis_types:
-            _analysis_types[analysis_type] += 1
-
-    @staticmethod
-    def _unregister_analysis(analysis_type):
-        if analysis_type in _analysis_types:
-            _analysis_types[analysis_type] -= 1
-
-    @staticmethod
-    def _has_analysis(analysis_type):
-        return _analysis_types[analysis_type] > 0
+    def _has_analysis(self, analysis_type):
+        count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+        return count and int(count) > 0
 
     def _update_analysis(self, analysis_type):
         if analysis_type != self.analysis_type:
-            self._unregister_analysis(self.analysis_type)
+            if self.analysis_type is not None:
+                # unregister the old
+                self._meta.increase_by(
+                    mt.ANALYSIS_TYPE, self.analysis_type, -1)
+
+            # register new type
+            if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
+                # set analysis type if it does not exist
+                self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
+            self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
             self.analysis_type = analysis_type
-            self._register_analysis(analysis_type)
 
     @abstractmethod
     def run_once(self, processed, raw=None):

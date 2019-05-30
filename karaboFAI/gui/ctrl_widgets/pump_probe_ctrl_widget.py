@@ -16,7 +16,7 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..misc_widgets import SmartLineEdit, SmartRangeLineEdit
 from ..gui_helpers import parse_ids
-from ...config import PumpProbeMode, PumpProbeType
+from ...config import PumpProbeMode, AnalysisType
 from ...logger import logger
 
 
@@ -32,12 +32,12 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     _analysis_types = OrderedDict({
-        "": PumpProbeType.UNDEFINED,
-        "azimuthal integ": PumpProbeType.AZIMUTHAL_INTEG,
-        "ROI": PumpProbeType.ROI,
-        "projection X": PumpProbeType.ROI_PROJECTION_X,
-        "projection Y": PumpProbeType.ROI_PROJECTION_Y,
-        "ROI1 / ROI2": PumpProbeType.ROI1_BY_ROI2,
+        "": AnalysisType.UNDEFINED,
+        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
+        "ROI": AnalysisType.ROI,
+        "projection X": AnalysisType.ROI_PROJECTION_X,
+        "projection Y": AnalysisType.ROI_PROJECTION_Y,
+        "ROI1 / ROI2": AnalysisType.ROI1_BY_ROI2,
     })
 
     def __init__(self, *args, **kwargs):

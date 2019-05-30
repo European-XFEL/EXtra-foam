@@ -16,7 +16,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import Stack
-from ...config import PumpProbeMode, PumpProbeType
+from ...config import PumpProbeMode, AnalysisType
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
@@ -26,7 +26,7 @@ class PumpProbeProcessor(CompositeProcessor):
 
     Attributes:
         mode (PumpProbeMode): pump-probe mode.
-        analysis_type (PumpProbeType): pump-probe analysis type.
+        analysis_type (AnalysisType): pump-probe analysis type.
         on_pulse_indices (list): a list of laser-on pulse indices.
         off_pulse_indices (list): a list of laser-off pulse indices.
         abs_difference (bool): True for calculating absolute different
@@ -55,7 +55,7 @@ class PumpProbeProcessor(CompositeProcessor):
         self.mode = PumpProbeMode(int(cfg['mode']))
         self.on_pulse_indices = self.str2list(cfg['on_pulse_indices'], handler=int)
         self.off_pulse_indices = self.str2list(cfg['off_pulse_indices'], handler=int)
-        self.analysis_type = PumpProbeType(int(cfg['analysis_type']))
+        self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
         self.ma_window = int(cfg['ma_window'])
         self.abs_difference = cfg['abs_difference'] == 'True'
 
@@ -82,7 +82,7 @@ class PumpProbeImageProcessor(LeafProcessor):
     @profiler("Pump-probe image processor")
     def process(self, processed, raw=None):
         if self.mode == PumpProbeMode.UNDEFINED or \
-                self.analysis_type == PumpProbeType.UNDEFINED:
+                self.analysis_type == AnalysisType.UNDEFINED:
             return
 
         self._check_pulse_indices(processed.n_pulses)
