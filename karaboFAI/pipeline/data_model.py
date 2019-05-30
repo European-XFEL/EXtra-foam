@@ -220,13 +220,6 @@ class XgmData(AbstractData):
         self.intensity = 0.0
 
 
-class MonoData(AbstractData):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.source = None
-        self.energy = 0.0
-
-
 class XasData(AbstractData):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -243,13 +236,35 @@ class BinData(AbstractData):
         super().__init__(*args, **kwargs)
 
         self.analysis_type = None
-        self.counts_x = None
-        self.counts_y = None
-        self.centers_x = None
-        self.centers_y = None
+        self.count_x = None
+        self.count_y = None
+        self.center_x = None
+        self.center_y = None
         self.x = None
         self.y = None
-        self.values = None
+        # 1D curve in each x/y bin
+        self.data_x = None
+        self.data_y = None
+        self.fom = None
+
+
+class CorrelationData(AbstractData):
+    """Correlation data model."""
+
+    n_params = len(config["CORRELATION_COLORS"])
+
+    def __init__(self):
+        super().__init__()
+        self.fom = None
+        for i in range(1, self.n_params+1):
+            setattr(self, f"correlator{i}", None)
+
+    def update_hist(self, tid):
+        fom = self.fom
+        for i in range(1, self.n_params+1):
+            corr = getattr(self, f"correlator{i}")
+            if corr is not None:
+                setattr(self, f"correlation{i}", (corr, fom))
 
 
 class RoiData(AbstractData):
@@ -427,25 +442,6 @@ class PumpProbeData(AbstractData):
     def clear(cls):
         super().clear()
         cls.__dict__['data'].reset()
-
-
-class CorrelationData(AbstractData):
-    """Correlation data model."""
-
-    n_params = len(config["CORRELATION_COLORS"])
-
-    def __init__(self):
-        super().__init__()
-        self.fom = None
-        for i in range(1, self.n_params+1):
-            setattr(self, f"correlator{i}", None)
-
-    def update_hist(self, tid):
-        fom = self.fom
-        for i in range(1, self.n_params+1):
-            corr = getattr(self, f"correlator{i}")
-            if corr is not None:
-                setattr(self, f"correlation{i}", (corr, fom))
 
 
 class ImageData:
@@ -827,7 +823,6 @@ class ProcessedData:
         self.bin = BinData()
 
         self.xgm = XgmData()
-        self.mono = MonoData()
 
     @property
     def tid(self):

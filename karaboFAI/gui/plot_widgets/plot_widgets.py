@@ -390,27 +390,27 @@ class BinWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        bin_centers = data.bin.centers_x
-        values = data.bin.values
+        bin_center = data.bin.center_x
+        data_x = data.bin.data_x
         x = data.bin.x
 
-        if values is None:
+        if data_x is None:
             return
 
-        n_bins = len(bin_centers)
+        n_bins = len(bin_center)
         if self._n_bins != n_bins:
             self.clear()
 
-            bin_width = bin_centers[1] - bin_centers[0]
-            for i, value in enumerate(values):
-                start = bin_centers[i] - bin_width/2.
-                end = bin_centers[i] + bin_width/2.
-                self.plotCurve(x, value,
+            bin_width = bin_center[1] - bin_center[0]
+            for i, v in enumerate(data_x):
+                start = bin_center[i] - bin_width/2.
+                end = bin_center[i] + bin_width/2.
+                self.plotCurve(x, v,
                                name=f"{start:>8.2e}, {end:>8.2e}",
                                pen=make_pen(i, hues=9, values=5))
         else:
-            for item, value in zip(self.plotItem.items, values):
-                item.setData(x, value)
+            for item, v in zip(self.plotItem.items, data_x):
+                item.setData(x, v)
 
 
 class BinCountWidget(PlotWidget):
@@ -430,7 +430,7 @@ class BinCountWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        centers = data.bin.centers_x
-        counts = data.bin.counts_x
+        center = data.bin.center_x
+        count = data.bin.count_x
 
-        self._plot.setData(centers, counts)
+        self._plot.setData(center, count)

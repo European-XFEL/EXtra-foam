@@ -129,10 +129,8 @@ class Mediator(QObject):
         value = int(value)
         if self._meta.get(mt.PUMP_PROBE_PROC, 'mode') != value:
             self._data.reset_pp()
-            if self._meta.get(mt.CORRELATION_PROC, 'fom_type') == \
-                    int(CorrelationFom.PUMP_PROBE_FOM):
-                self._data.reset_correlation()
         self._meta.set(mt.PUMP_PROBE_PROC, 'mode', value)
+        # TODO: reset correlation if FOM in correlation is pump-probe
 
     def onPpOnPulseIdsChange(self, value: list):
         self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
@@ -143,9 +141,7 @@ class Mediator(QObject):
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
         self._data.reset_pp()
-        if self._meta.get(mt.CORRELATION_PROC, 'fom_type') == \
-                int(CorrelationFom.PUMP_PROBE_FOM):
-            self._data.reset_correlation()
+        # TODO: reset correlation if FOM in correlation is pump-probe
 
     def onPpAbsDifferenceChange(self, value: bool):
         self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))

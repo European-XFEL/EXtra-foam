@@ -12,15 +12,14 @@ from PyQt5.QtCore import Qt
 
 from karabo_data.geometry import LPDGeometry
 
-from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.logger import logger
 from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import (
-    config, AiNormalizer, AnalysisType, BinMode, CorrelationFom, DataSource,
-    Projection1dNormalizer, PumpProbeMode
+    _Config, ConfigWrapper, config, AiNormalizer, AnalysisType, BinMode,
+    CorrelationFom, DataSource, Projection1dNormalizer, PumpProbeMode
 )
 
 
@@ -346,7 +345,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
 
     def testCorrelationCtrlWidget(self):
-        n_params = 4
+        from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (
+            _N_PARAMS, _DEFAULT_RESOLUTION)
+
         widget = self.gui.correlation_ctrl_widget
         scheduler = self.scheduler
         proc = scheduler._correlation_proc
@@ -354,26 +355,28 @@ class TestMainGuiCtrl(unittest.TestCase):
         window = list(self.gui._windows.keys())[-1]
 
         proc.update()
-        self.assertEqual(CorrelationFom(0), proc.fom_type)
 
+        # test default
+        self.assertEqual(CorrelationFom(0), proc.fom_type)
+        self.assertEqual([""] * 4, proc.device_ids)
+        self.assertEqual([""] * 4, proc.properties)
+
+        # set new FOM
         new_fom = CorrelationFom.ROI1
         widget._fom_type_cb.setCurrentIndex(new_fom)
         proc.update()
-        self.assertEqual(CorrelationFom(new_fom),
-                         scheduler._correlation_proc.fom_type)
-
-        # test default FOM type
-        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertEqual(CorrelationFom(new_fom), proc.fom_type)
 
         # test the correlation param table
         expected_correlations = []
-        for i in range(n_params):
+        for i in range(_N_PARAMS):
+            # change category
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
 
-            proc.update()
             for item in expected_correlations:
                 self.assertTrue(hasattr(ProcessedData(1).correlation, item))
 
+            # change device id
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
             correlation = f'correlation{i+1}'
             expected_correlations.append(correlation)
@@ -382,13 +385,19 @@ class TestMainGuiCtrl(unittest.TestCase):
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
 
-            proc.update()
             if resolution > 0:
                 _, _, info = getattr(ProcessedData(1).correlation, correlation)
                 self.assertEqual(resolution, info['resolution'])
             else:
                 _, _, info = getattr(ProcessedData(1).correlation, correlation)
                 self.assertNotIn('resolution', info)
+
+        proc.update()
+        for i in range(_N_PARAMS):
+            device_id = widget._table.cellWidget(i, 1).currentText()
+            self.assertEqual(device_id, proc.device_ids[i])
+            ppt = widget._table.cellWidget(i, 1).currentText()
+            self.assertEqual(ppt, proc.device_ids[i])
 
         # test data visualization
         # the upper two plots have error bars
@@ -403,7 +412,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.app.processEvents()
 
         # change the resolutions
-        for i in range(n_params):
+        for i in range(_N_PARAMS):
             resolution = (i+1)*5 if i >= 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
@@ -420,28 +429,31 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.app.processEvents()
 
     def testBinCtrlWidget(self):
-        from karaboFAI.pipeline.processors import StopCompositionProcessing
+        from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (
+            _N_PARAMS, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+        )
 
-        n_params = 2
         widget = self.gui.bin_ctrl_widget
         scheduler = self.scheduler
         proc = scheduler._bin_proc
+        proc.update()
+
+        default_bin_range = tuple(float(v) for v in
+                                  _DEFAULT_BIN_RANGE.split(','))
 
         # test default
-        with self.assertRaises(StopCompositionProcessing):
-            proc.update()
         self.assertEqual(AnalysisType(0), proc.analysis_type)
         self.assertEqual(BinMode(0), proc.mode)
         self.assertEqual("", proc.device_id_x)
         self.assertEqual("", proc.property_x)
-        self.assertEqual(None, proc.bin_range_x)
-        self.assertEqual(None, proc.n_bins_x)
-        self.assertEqual(None, proc.device_id_y)
-        self.assertEqual(None, proc.property_y)
-        self.assertEqual(None, proc.bin_range_y)
-        self.assertEqual(None, proc.n_bins_y)
+        self.assertTupleEqual(default_bin_range, proc.bin_range_x)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_x)
+        self.assertEqual("", proc.device_id_y)
+        self.assertEqual("", proc.property_y)
+        self.assertEqual(default_bin_range, proc.bin_range_y)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_y)
 
-        for i in range(n_params):
+        for i in range(_N_PARAMS):
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
             self.assertEqual("", widget._table.cellWidget(i, 1).currentText())
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
@@ -454,14 +466,14 @@ class TestMainGuiCtrl(unittest.TestCase):
         # Now we should have device_ids and properties for both x and y
         widget._table.cellWidget(0, 3).setText("0, 10")
         widget._table.cellWidget(0, 4).setText("20")
-        widget._table.cellWidget(1, 3).setText("-1, 1")
+        widget._table.cellWidget(1, 3).setText("-1, 20")
         widget._table.cellWidget(1, 4).setText("30")
         proc.update()
 
         self.assertEqual(20, proc.n_bins_x)
         self.assertTupleEqual((0, 10), proc.bin_range_x)
-        # self.assertEqual(30, proc.n_bins_y)
-        # self.assertTupleEqual((-1, 1), proc.bin_range_y)
+        self.assertEqual(30, proc.n_bins_y)
+        self.assertTupleEqual((-1, 20), proc.bin_range_y)
 
         # test reset
         widget._reset_btn.clicked.emit()

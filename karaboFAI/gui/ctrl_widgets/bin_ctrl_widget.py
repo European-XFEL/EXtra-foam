@@ -110,10 +110,16 @@ class BinCtrlWidget(AbstractCtrlWidget):
             combo.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            for i_col in range(1, n_col):
+            for i_col in range(1, 3):
                 widget = SmartLineEdit()
                 table.setCellWidget(i_row, i_col, widget)
                 widget.setReadOnly(True)
+
+            widget = self._get_default_bin_range_widget()
+            table.setCellWidget(i_row, 3, widget)
+
+            widget = self._get_default_n_bins_widget()
+            table.setCellWidget(i_row, 4, widget)
 
         header = table.horizontalHeader()
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
@@ -130,9 +136,8 @@ class BinCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):
-        range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
-        n_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
-        n_bins_le.setValidator(QtGui.QIntValidator(1, _MAX_N_BINS))
+        range_le = self._get_default_bin_range_widget()
+        n_bins_le = self._get_default_n_bins_widget()
 
         # i_row is the row number in the QTableWidget
         if not text or text == "User defined":
@@ -143,8 +148,6 @@ class BinCtrlWidget(AbstractCtrlWidget):
             if not text:
                 device_id_le.setReadOnly(True)
                 property_le.setReadOnly(True)
-                range_le.setReadOnly(True)
-                n_bins_le.setReadOnly(True)
             else:
                 device_id_le.returnPressed.connect(functools.partial(
                     self.onBinGroupChangeLe, i_row))
@@ -159,6 +162,8 @@ class BinCtrlWidget(AbstractCtrlWidget):
             self._table.setCellWidget(i_row, 2, property_le)
             self._table.setCellWidget(i_row, 3, range_le)
             self._table.setCellWidget(i_row, 4, n_bins_le)
+
+            self.onBinGroupChangeLe(i_row)
         else:
             combo_device_ids = QtGui.QComboBox()
             for device_id in _DATA_CATEGORIES[text].device_ids:
@@ -182,8 +187,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
                 self.onBinGroupChangeCb, i_row))
             self._table.setCellWidget(i_row, 4, n_bins_le)
 
-        # we always have invalid (empty) input when the category changes
-        self._mediator.onBinGroupChange((i_row+1, '', '', '', ''))
+            self.onBinGroupChangeCb(i_row)
 
     @QtCore.pyqtSlot()
     def onBinGroupChangeLe(self, i_row):
@@ -211,9 +215,18 @@ class BinCtrlWidget(AbstractCtrlWidget):
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())
 
         for i_row in range(_N_PARAMS):
-            combo = self._table.cellWidget(i_row, 0)
-            # It cleans device_id, property, bin_range and n_bins during
-            # initialization.
-            combo.currentTextChanged.emit(combo.currentText())
+            category = self._table.cellWidget(i_row, 0).currentText()
+            if not category or category == "User defined":
+                self.onBinGroupChangeLe(i_row)
+            else:
+                self.onBinGroupChangeCb(i_row)
 
         return True
+
+    def _get_default_bin_range_widget(self):
+        return SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
+
+    def _get_default_n_bins_widget(self):
+        widget = SmartLineEdit(_DEFAULT_N_BINS)
+        widget.setValidator(QtGui.QIntValidator(1, _MAX_N_BINS))
+        return widget

@@ -12,7 +12,7 @@ All rights reserved.
 from collections import OrderedDict
 import functools
 
-from ..pyqtgraph import Qt, QtCore, QtGui
+from PyQt5 import QtWidgets, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
 from ..misc_widgets import SmartLineEdit
@@ -96,19 +96,22 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             combo.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            for i_col in range(1, n_col):
-                widget = QtGui.QLineEdit()
+            for i_col in range(1, 3):
+                widget = SmartLineEdit()
                 table.setCellWidget(i_row, i_col, widget)
                 widget.setReadOnly(True)
 
+            widget = self._get_default_resolution_widget()
+            table.setCellWidget(i_row, 3, widget)
+
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, Qt.QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, Qt.QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(2, Qt.QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
 
         header = table.verticalHeader()
         for i in range(n_row):
-            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header_height = self._table.horizontalHeader().height()
         self._table.setMinimumHeight(header_height * (_N_PARAMS + 2))
@@ -116,10 +119,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):
-        resolution_le = SmartLineEdit(_DEFAULT_RESOLUTION)
-        validator = QtGui.QDoubleValidator()
-        validator.setBottom(0.0)
-        resolution_le.setValidator(validator)
+        resolution_le = self._get_default_resolution_widget()
+
         # i_row is the row number in the QTableWidget
         if not text or text == "User defined":
             # '' or 'User defined'
@@ -129,8 +130,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             if not text:
                 device_id_le.setReadOnly(True)
                 property_le.setReadOnly(True)
-                resolution_le.setReadOnly(True)
-                resolution_le.setText("")
             else:
                 device_id_le.returnPressed.connect(functools.partial(
                     self.onCorrelationParamChangeLe, i_row))
@@ -142,6 +141,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self._table.setCellWidget(i_row, 1, device_id_le)
             self._table.setCellWidget(i_row, 2, property_le)
             self._table.setCellWidget(i_row, 3, resolution_le)
+
+            self.onCorrelationParamChangeLe(i_row)
         else:
             combo_device_ids = QtGui.QComboBox()
             for device_id in _DATA_CATEGORIES[text].device_ids:
@@ -161,8 +162,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
                 self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 3, resolution_le)
 
-        # we always have invalid (empty) input when the category changes
-        self._mediator.onCorrelationParamChange((i_row+1, '', '', 0.0))
+            self.onCorrelationParamChangeCb(i_row)
 
     @QtCore.pyqtSlot()
     def onCorrelationParamChangeLe(self, i_row):
@@ -183,7 +183,20 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             (i_row+1, device_id, ppt, res))
 
     def updateSharedParameters(self):
+        self._fom_type_cb.currentTextChanged.emit(
+            self._fom_type_cb.currentText())
+
         for i_row in range(_N_PARAMS):
-            combo = self._table.cellWidget(i_row, 0)
-            combo.currentTextChanged.emit(combo.currentText())
+            category = self._table.cellWidget(i_row, 0).currentText()
+            if not category or category == "User defined":
+                self.onCorrelationParamChangeLe(i_row)
+            else:
+                self.onCorrelationParamChangeCb(i_row)
         return True
+
+    def _get_default_resolution_widget(self):
+        resolution_le = SmartLineEdit(_DEFAULT_RESOLUTION)
+        validator = QtGui.QDoubleValidator()
+        validator.setBottom(0.0)
+        resolution_le.setValidator(validator)
+        return resolution_le
