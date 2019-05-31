@@ -16,13 +16,13 @@ from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
 from .worker import ProcessWorker
 from .processors import (
-    _BaseProcessor, AzimuthalIntegrationProcessor, BinProcessor,
+    AzimuthalIntegrationProcessor, BinProcessor,
     CorrelationProcessor, ImageProcessor, PumpProbeProcessor,
     RoiProcessor, XasProcessor
 )
 from .exceptions import (
     AggregatingError, AssemblingError, ProcessingError)
-from ..config import config, DataSource
+from ..config import DataSource
 from ..utils import profiler
 
 
@@ -83,7 +83,7 @@ class Scheduler(ProcessWorker):
                 self._output.put(processed_data, timeout=timeout)
             except Full:
                 self.pop_output()
-                print("Data dropped by the scheduler")
+                self.log.info("Data dropped by the scheduler")
         elif self._source_type == DataSource.FILE:
             # wait until data in the queue has been processed
             while not self.closing:
@@ -112,35 +112,39 @@ class Scheduler(ProcessWorker):
         try:
             assembled = self._image_assembler.assemble(raw)
         except AssemblingError as e:
-            print(f"Train ID: {tid}: " + repr(e))
+            self.log.error(f"Train ID: {tid}: " + repr(e))
             return
         except Exception as e:
-            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.log.error(
+                f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             return
 
         try:
             processed = self._image_proc.process_image(tid, assembled)
         except Exception as e:
-            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.log.error(
+                f"Unexpected Exception: Train ID: {tid}: " + repr(e))
             return
 
         try:
             self._data_aggregator.aggregate(processed, raw)
         except AggregatingError as e:
-            print(f"Train ID: {tid}: " + repr(e))
+            self.log.error(f"Train ID: {tid}: " + repr(e))
         except Exception as e:
-            print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+            self.log.error(
+                f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         for task in self._tasks:
             try:
                 task.run_once(processed, raw)
             except ProcessingError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print(repr(traceback.format_tb(exc_traceback)))
-                print(f"Train ID: {tid}: " + repr(e))
+                self.log.debug(repr(traceback.format_tb(exc_traceback)))
+                self.log.error(f"Train ID: {tid}: " + repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print(repr(traceback.format_tb(exc_traceback)))
-                print(f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+                self.log.debug(repr(traceback.format_tb(exc_traceback)))
+                self.log.error(
+                    f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
         return processed

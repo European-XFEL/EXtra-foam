@@ -10,24 +10,26 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from queue import Empty, Full, Queue
+import time
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QThread
+from redis import ConnectionError
+
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, QThread
 
 from zmq.error import ZMQError
 
 from karabo_bridge import Client
 
-from ..config import config, DataSource
+from ..config import config, DataSource, redis_connection
 from ..utils import profiler
 
 
 class QThreadWorker(QThread):
     """Base worker class for small online data analysis."""
-    # post messages in the main GUI
-    debug_sgn = pyqtSignal(str)
-    info_sgn = pyqtSignal(str)
-    warning_sgn = pyqtSignal(str)
-    error_sgn = pyqtSignal(str)
+    log_debug_sgn = pyqtSignal(str)
+    log_info_sgn = pyqtSignal(str)
+    log_warning_sgn = pyqtSignal(str)
+    log_error_sgn = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -62,11 +64,12 @@ class QThreadWorker(QThread):
         """Log error information in the main GUI."""
         self.error_sgn.emit(msg)
 
-    def log_on_main_thread(self, instance):
-        self.debug_sgn.connect(instance.onDebugReceived)
-        self.info_sgn.connect(instance.onInfoReceived)
-        self.warning_sgn.connect(instance.onWarningReceived)
-        self.error_sgn.connect(instance.onErrorReceived)
+    def connectToMainThread(self, instance):
+        """Connect all log signals to slots in the Main Thread."""
+        self.log_debug_sgn.connect(instance.onLogDebugReceived)
+        self.log_info_sgn.connect(instance.onLogInfoReceived)
+        self.log_warning_sgn.connect(instance.onLogWarningReceived)
+        self.log_error_sgn.connect(instance.onLogErrorReceived)
 
     def empty_output(self):
         """Empty the output queue."""
@@ -148,3 +151,51 @@ class QThreadBridge(QThreadWorker):
     @pyqtSlot(int)
     def onSourceTypeChange(self, value):
         self._source_type = value
+
+
+class ThreadLoggerBridge(QObject):
+    """QThread which subscribes logs the Redis server.
+
+    This QThread forward the message from the Redis server and send
+    it to the MainGUI via signal-slot connection.
+    """
+    log_debug_sgn = pyqtSignal(str)
+    log_info_sgn = pyqtSignal(str)
+    log_warning_sgn = pyqtSignal(str)
+    log_error_sgn = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+    def recv_messages(self):
+        sub = redis_connection().pubsub()
+        sub.psubscribe("log:*")
+
+        while True:
+            try:
+                msg = sub.get_message()
+                if msg and isinstance(msg['data'], str):
+                    channel = msg['channel']
+                    log_msg = msg['data']
+
+                    if channel == 'log:debug':
+                        self.log_debug_sgn.emit(log_msg)
+                    elif channel == 'log:info':
+                        self.log_info_sgn.emit(log_msg)
+                    elif channel == 'log:warning':
+                        self.log_warning_sgn.emit(log_msg)
+                    elif channel == 'log:error':
+                        self.log_error_sgn.emit(log_msg)
+
+            except ConnectionError:
+                pass
+
+            # TODO: find a magic number
+            time.sleep(0.001)
+
+    def connectToMainThread(self, instance):
+        """Connect all log signals to slots in the Main Thread."""
+        self.log_debug_sgn.connect(instance.onLogDebugReceived)
+        self.log_info_sgn.connect(instance.onLogInfoReceived)
+        self.log_warning_sgn.connect(instance.onLogWarningReceived)
+        self.log_error_sgn.connect(instance.onLogErrorReceived)

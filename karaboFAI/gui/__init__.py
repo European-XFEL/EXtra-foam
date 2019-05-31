@@ -1,9 +1,11 @@
 from PyQt5.QtWidgets import QApplication
 
-from .pyqtgraph import mkQApp, setConfigOption
+from .pyqtgraph import setConfigOptions
 from .main_gui import MainGUI
 
-setConfigOption("imageAxisOrder", "row-major")
+setConfigOptions(
+    imageAxisOrder="row-major",
+)
 
 __QApp = None
 

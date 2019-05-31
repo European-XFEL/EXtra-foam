@@ -38,6 +38,7 @@ from ..logger import logger
 from ..utils import profiler
 from ..pipeline import Data4Visualization
 from ..pipeline.worker import ProcessManager, list_fai_processes
+from .thread_worker import ThreadLoggerBridge
 from ..offline import FileServerManager
 
 
@@ -51,8 +52,13 @@ class MainGUI(QtGui.QMainWindow):
 
     process_info_sgn = QtCore.pyqtSignal(object)
 
-    def __init__(self):
-        """Initialization."""
+    def __init__(self, *, start_thread_logger=False):
+        """Initialization.
+
+        :param bool start_thread_logger: True for starting ThreadLogger
+            thread which allows processes to log in the MainGUI. For the
+            convenience of testing, it is False by default.
+        """
         super().__init__()
 
         self._mediator = Mediator()
@@ -132,8 +138,17 @@ class MainGUI(QtGui.QMainWindow):
 
         self._mask_image = None
 
-        self._logger = GuiLogger(self)
+        self._logger = GuiLogger(parent=self)
         logging.getLogger().addHandler(self._logger)
+
+        self._thread_logger = ThreadLoggerBridge()
+        self._thread_logger_t = QtCore.QThread()
+        self._thread_logger.moveToThread(self._thread_logger_t)
+        self._thread_logger_t.started.connect(
+            self._thread_logger.recv_messages)
+        self._thread_logger.connectToMainThread(self)
+        if start_thread_logger:
+            self._thread_logger_t.start()
 
         # For real time plot
         self._running = False
@@ -326,19 +341,19 @@ class MainGUI(QtGui.QMainWindow):
         return True
 
     @QtCore.pyqtSlot(str)
-    def onDebugReceived(self, msg):
+    def onLogDebugReceived(self, msg):
         logger.debug(msg)
 
     @QtCore.pyqtSlot(str)
-    def onInfoReceived(self, msg):
+    def onLogInfoReceived(self, msg):
         logger.info(msg)
 
     @QtCore.pyqtSlot(str)
-    def onWarningReceived(self, msg):
+    def onLogWarningReceived(self, msg):
         logger.warning(msg)
 
     @QtCore.pyqtSlot(str)
-    def onErrorReceived(self, msg):
+    def onLogErrorReceived(self, msg):
         logger.error(msg)
 
     def closeEvent(self, QCloseEvent):
@@ -346,6 +361,8 @@ class MainGUI(QtGui.QMainWindow):
         logging.getLogger().removeHandler(self._logger)
 
         self._file_server.shutdown()
+
+        self._thread_logger_t.quit()
 
         ProcessManager.shutdown_pipeline()
         ProcessManager.shutdown_redis()

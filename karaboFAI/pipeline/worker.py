@@ -19,8 +19,26 @@ from threading import Thread
 from queue import Empty
 
 from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource
+from ..config import config, DataSource, _MetaSingleton, redis_connection
 from ..logger import logger
+
+
+class ProcessWorkerLogger(metaclass=_MetaSingleton):
+    """Worker which publishes log message in another Process."""
+    def __init__(self):
+        self._db = redis_connection()
+
+    def debug(self, msg):
+        self._db.publish("log:debug", msg)
+
+    def info(self, msg):
+        self._db.publish("log:info", msg)
+
+    def warning(self, msg):
+        self._db.publish("log:warning", msg)
+
+    def error(self, msg):
+        self._db.publish("log:error", msg)
 
 
 class ProcessWorker(mp.Process):
@@ -32,6 +50,8 @@ class ProcessWorker(mp.Process):
         self._name = name
         self._source_type = None
 
+        self.log = ProcessWorkerLogger()
+
         # each Manager instance will start a process
         self._input = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
         self._output = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
@@ -40,6 +60,7 @@ class ProcessWorker(mp.Process):
         self._shutdown_event = mp.Event()
 
         self._meta = MetaProxy()
+        self._db = redis_connection()
 
         self._timeout = config["TIMEOUT"]
 
@@ -60,7 +81,6 @@ class ProcessWorker(mp.Process):
         th.daemon = True
         th.start()
 
-        print(f"{self._name} process started")
         while not self.closing:
             try:
                 self._run_once()
@@ -144,8 +164,6 @@ _fai_processes = FaiProcesses({}, {})
 
 def register_fai_process(process_info):
     """Register a new process."""
-    global _fai_processes
-
     proc = process_info.process
     name = process_info.name
     if name == 'redis':
@@ -248,8 +266,6 @@ class ProcessManager:
 
     @staticmethod
     def shutdown_pipeline():
-        global _fai_processes
-
         logger.info(f"Shutting down pipeline processors ...")
 
         for _, proc in _fai_processes.pipeline.items():

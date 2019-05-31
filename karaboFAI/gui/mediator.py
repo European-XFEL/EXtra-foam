@@ -17,7 +17,7 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
 from ..pipeline.data_model import DataManager
-from ..config import CorrelationFom, redis_connection
+from ..config import redis_connection
 
 
 class Mediator(QObject):

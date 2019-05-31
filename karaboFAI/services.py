@@ -142,7 +142,7 @@ class FAI:
             self.scheduler.connect_input(self.bridge)
 
             self.app = mkQApp()
-            self.gui = MainGUI()
+            self.gui = MainGUI(start_thread_logger=True)
         except Exception as e:
             logger.error(repr(e))
             sys.exit(1)

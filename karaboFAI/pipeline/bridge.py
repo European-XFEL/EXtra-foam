@@ -18,7 +18,7 @@ from karabo_bridge import Client
 from .exceptions import ProcessingError
 from .worker import ProcessWorker
 from ..metadata import Metadata as mt
-from ..config import config, DataSource
+from ..config import DataSource
 from ..utils import profiler
 
 
@@ -53,7 +53,7 @@ class Bridge(ProcessWorker):
                         self._output.put(data, timeout=timeout)
                     except Full:
                         self.pop_output()
-                        print("Data dropped by the bridge")
+                        self.log.info("Data dropped by the bridge")
                 elif self._source_type == DataSource.FILE:
                     # wait until data in the queue has been processed
                     while not self.closing:
@@ -85,7 +85,7 @@ class Bridge(ProcessWorker):
                 client._context.destroy(linger=0)
             self._clients.clear()
 
-            client = Client(endpoint, timeout=config['TIMEOUT'])
+            client = Client(endpoint, timeout=self._timeout)
             self._clients[endpoint] = client
         except ZMQError:
             return

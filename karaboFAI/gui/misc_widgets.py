@@ -104,7 +104,7 @@ class GuiLogger(logging.Handler):
         self.setFormatter(formatter)
 
         logger_font = QtGui.QFont()
-        logger_font.setPointSize(12)
+        logger_font.setPointSize(11)
         self.widget.setFont(logger_font)
 
         self.widget.setReadOnly(True)
