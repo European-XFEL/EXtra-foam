@@ -20,8 +20,8 @@ __all__ = [
 ]
 
 
-from .process_monitor_w import ProcessMonitorWidget
+from .process_monitor_w import ProcessMonitor
 
 __all__ += [
-    ProcessMonitorWidget
+    ProcessMonitor
 ]

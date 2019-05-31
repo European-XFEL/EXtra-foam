@@ -29,7 +29,7 @@ from .windows import (
     XasWindow
 )
 from .windows import (
-    ProcessMonitorWidget,
+    ProcessMonitor,
 )
 from .mediator import Mediator
 from .. import __version__
@@ -48,6 +48,8 @@ class MainGUI(QtGui.QMainWindow):
 
     start_sgn = QtCore.pyqtSignal()
     stop_sgn = QtCore.pyqtSignal()
+
+    process_info_sgn = QtCore.pyqtSignal(object)
 
     def __init__(self):
         """Initialization."""
@@ -114,9 +116,7 @@ class MainGUI(QtGui.QMainWindow):
 
         open_process_monitor_at = self._addAction(
             "Process monitor", "process_monitor.png")
-        open_process_monitor_at.triggered.connect(
-            functools.partial(self.onOpenSatelliteWindow,
-                              ProcessMonitorWidget))
+        open_process_monitor_at.triggered.connect(self.openProcessMonitor)
 
         # *************************************************************
         # Miscellaneous
@@ -143,7 +143,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # For process monitoring
         self._proc_monitor_timer = QtCore.QTimer()
-        self._proc_monitor_timer.timeout.connect(self._get_process_info)
+        self._proc_monitor_timer.timeout.connect(self._publish_process_info)
         self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
         # a file server which streams data from files
@@ -240,8 +240,8 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._windows.keys():
             w.update()
 
-    def _get_process_info(self):
-        print(list_fai_processes())
+    def _publish_process_info(self):
+        self.process_info_sgn.emit(list_fai_processes())
 
     def _addAction(self, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
@@ -254,25 +254,25 @@ class MainGUI(QtGui.QMainWindow):
 
         Otherwise bring the opened window to the table top.
         """
-        for key in self._windows:
-            if isinstance(key, instance_type):
-                key.activateWindow()
-                return
+        if self._checkWindowExistence(instance_type):
+            return
 
         instance_type(self._data,
                       pulse_resolved=self._pulse_resolved, parent=self)
 
-    def onOpenSatelliteWindow(self, instance_type):
-        """Open a satellite window if it does not exist.
+    def openProcessMonitor(self):
+        if self._checkWindowExistence(ProcessMonitor):
+            return
 
-        Otherwise bring the opened window to the table top.
-        """
+        w = ProcessMonitor(parent=self)
+        self.process_info_sgn.connect(w.onProcessInfoUpdate)
+
+    def _checkWindowExistence(self, instance_type):
         for key in self._windows:
             if isinstance(key, instance_type):
                 key.activateWindow()
-                return
-
-        instance_type(parent=self)
+                return True
+        return False
 
     def registerWindow(self, instance):
         self._windows[instance] = 1

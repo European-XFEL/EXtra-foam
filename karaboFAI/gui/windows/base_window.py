@@ -179,10 +179,6 @@ class AbstractSatelliteWindow(QtGui.QMainWindow):
             # for unit test where parent is None
             self.setWindowTitle(self.title)
 
-        self.show()
-
-        self.setMinimumSize(400, 300)
-
     def initUI(self):
         """Initialization of UI.
 
