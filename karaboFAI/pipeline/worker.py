@@ -9,8 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import namedtuple
 import atexit
+from collections import namedtuple
 import psutil
 from psutil import NoSuchProcess
 
@@ -125,55 +125,78 @@ ProcessInfo = namedtuple("ProcessInfo", [
 ])
 
 
+ProcessInfoList = namedtuple("ProcessInfoList", [
+    "name",
+    "fai_name",
+    "fai_type",
+    "pid",
+    "status"
+])
+
+
 # key: process_type
-# value: a list of processes
-_fai_processes = {
-    'redis': [],
-    'pipeline': [],
-}
+# value: a dictionary, process name in karaboFAI:Process instance
+FaiProcesses = namedtuple("FaiProcesses",
+                          ['redis', 'pipeline'])
+
+_fai_processes = FaiProcesses({}, {})
 
 
 def register_fai_process(process_info):
+    """Register a new process."""
     global _fai_processes
 
     proc = process_info.process
     name = process_info.name
     if name == 'redis':
-        _fai_processes['redis'].append(proc)
+        _fai_processes.redis[name] = proc
     else:
-        _fai_processes['pipeline'].append(proc)
+        assert isinstance(proc, ProcessWorker)
+        _fai_processes.pipeline[name] = proc
 
 
 def list_fai_processes():
     """List the current FAI processes."""
-    info = list()
 
-    for proc in _fai_processes['redis']:
-        info.append([proc.name,
-                     proc.pid])
+    def get_proc_info(fai_name, fai_type, proc):
+        with proc.oneshot():
+            return ProcessInfoList(
+                proc.name(),
+                fai_name,
+                fai_type,
+                proc.pid,
+                proc.status(),
+            )
 
-    for proc in _fai_processes['pipeline']:
-        info.append(proc)
-    return info
+    info_list = []
+
+    for name, p in _fai_processes.redis.items():
+        info_list.append(get_proc_info(name, 'redis', p))
+
+    for name, p in _fai_processes.pipeline.items():
+        info_list.append(
+            get_proc_info(name, 'pipeline', psutil.Process(p.pid)))
+
+    return info_list
 
 
 def find_process_type_by_pid(pid):
-    """Find the key in _fai_processes by pid."""
-    for key, procs in _fai_processes.items():
-        for proc in procs:
-            if proc.pid == pid:
-                return key
+    """Find the name of a process in _fai_processes by pid."""
+    for procs in _fai_processes:
+        for name, p in procs.items():
+            if p.pid == pid:
+                return name
 
 
 def shutdown_all():
     """Shutdown all child processes."""
     def on_terminate(proc):
-        process_type = find_process_type_by_pid(proc.pid)
-        if process_type is None:
+        name = find_process_type_by_pid(proc.pid)
+        if name is None:
             logger.warning(f"Unknown process {proc} terminated with exit code "
                            f"{proc.returncode}")
         else:
-            logger.warning(f"'{process_type}' process {proc} terminated with "
+            logger.warning(f"'{name}' process {proc} terminated with "
                            f"exit code {proc.returncode}")
 
     logger.info("Clean up all child processes ...")
@@ -209,13 +232,11 @@ atexit.register(shutdown_all)
 class ProcessManager:
     @staticmethod
     def shutdown_redis():
-        global _fai_processes
-
         logger.info(f"Shutting down Redis server ...")
-        if not _fai_processes['redis']:
+        if not _fai_processes.redis:
             return
 
-        for proc in _fai_processes['redis']:
+        for _, proc in _fai_processes.redis.items():
             try:
                 proc.terminate()
             except NoSuchProcess:
@@ -231,7 +252,7 @@ class ProcessManager:
 
         logger.info(f"Shutting down Karabo bridge client ...")
 
-        for proc in _fai_processes['pipeline']:
+        for _, proc in _fai_processes.pipeline.items():
             proc.shutdown()
             if proc.is_alive():
                 proc.join(timeout=0.5)
