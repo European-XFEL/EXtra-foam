@@ -250,11 +250,11 @@ class ProcessManager:
     def shutdown_pipeline():
         global _fai_processes
 
-        logger.info(f"Shutting down Karabo bridge client ...")
+        logger.info(f"Shutting down pipeline processors ...")
 
         for _, proc in _fai_processes.pipeline.items():
-            proc.shutdown()
             if proc.is_alive():
+                proc.shutdown()
                 proc.join(timeout=0.5)
 
             if proc.is_alive():
