@@ -9,7 +9,11 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import os
+from collections import namedtuple
+import atexit
+import psutil
+from psutil import NoSuchProcess
+
 import multiprocessing as mp
 from threading import Thread
 from queue import Empty
@@ -38,8 +42,6 @@ class ProcessWorker(mp.Process):
         self._meta = MetaProxy()
 
         self._timeout = config["TIMEOUT"]
-
-        ProcessProxy().register(name, self)
 
     @property
     def output(self):
@@ -117,21 +119,90 @@ class ProcessWorker(mp.Process):
             int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
 
 
-_workers = dict()
-_popens = dict()
+ProcessInfo = namedtuple("ProcessInfo", [
+    "name",
+    "process",
+])
 
 
-class ProcessProxy:
-    def register(self, name, process):
-        if isinstance(process, ProcessWorker):
-            _workers[name] = process
+# key: process_type
+# value: a list of processes
+_fai_processes = {
+    'redis': [],
+    'pipeline': [],
+}
+
+
+def register_fai_process(process_info):
+    global _fai_processes
+
+    proc = process_info.process
+    name = process_info.name
+    if name == 'redis':
+        _fai_processes['redis'].append(proc)
+    else:
+        _fai_processes['pipeline'].append(proc)
+
+
+def find_process_type_by_pid(pid):
+    for key, procs in _fai_processes.items():
+        for proc in procs:
+            if proc.pid == pid:
+                return key
+
+
+def shutdown_all():
+    """Shutdown all child processes."""
+    def on_terminate(proc):
+        process_type = find_process_type_by_pid(proc.pid)
+        if process_type is None:
+            logger.warning(f"Unknown process {proc} terminated with exit code "
+                           f"{proc.returncode}")
         else:
-            _popens[name] = process
+            logger.warning(f"'{process_type}' process {proc} terminated with "
+                           f"exit code {proc.returncode}")
 
-    def terminte_workers(self):
-        for name, proc in _workers.items():
-            logger.info(f"Shutting down {name}...")
+    logger.info("Clean up all child processes ...")
 
+    procs = psutil.Process().children()
+    for p in procs:
+        p.terminate()
+
+    gone, alive = psutil.wait_procs(procs, timeout=1, callback=on_terminate)
+
+    for p in alive:
+        p.kill()
+
+
+atexit.register(shutdown_all)
+
+
+class ProcessManager:
+    @staticmethod
+    def shutdown_redis():
+        global _fai_processes
+
+        logger.info(f"Shutting down Redis server ...")
+        if not _fai_processes['redis']:
+            return
+
+        for proc in _fai_processes['redis']:
+            try:
+                proc.terminate()
+            except NoSuchProcess:
+                continue
+
+            proc.wait(0.5)
+            if proc.poll() is None:
+                proc.kill()
+
+    @staticmethod
+    def shutdown_pipeline():
+        global _fai_processes
+
+        logger.info(f"Shutting down Karabo bridge client ...")
+
+        for proc in _fai_processes['pipeline']:
             proc.shutdown()
             if proc.is_alive():
                 proc.join(timeout=0.5)
@@ -139,11 +210,3 @@ class ProcessProxy:
             if proc.is_alive():
                 proc.terminate()
                 proc.join(0.5)
-
-    def terminte_popens(self):
-        for name, proc in _popens.items():
-            logger.info(f"Shutting down {name}...")
-            proc.terminate()
-            proc.wait(0.5)
-            if proc.poll() is None:
-                proc.kill()

@@ -409,7 +409,6 @@ class TestMainGuiCtrl(unittest.TestCase):
             data.correlation.correlation4 = (i, -i)
         self.gui._data.set(data)
         window.update()
-        self.app.processEvents()
 
         # change the resolutions
         for i in range(_N_PARAMS):
@@ -426,7 +425,6 @@ class TestMainGuiCtrl(unittest.TestCase):
             data.correlation.correlation2 = (i, -i)
         self.gui._data.set(data)
         window.update()
-        self.app.processEvents()
 
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (

@@ -35,8 +35,6 @@ class TestMainGui(unittest.TestCase):
     def tearDownClass(cls):
         cls.gui.close()
 
-        del cls.fai
-
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateSharedParameters', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'

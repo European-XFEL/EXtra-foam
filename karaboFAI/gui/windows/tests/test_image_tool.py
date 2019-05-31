@@ -83,8 +83,6 @@ class TestImageTool(unittest.TestCase):
     def tearDownClass(cls):
         cls.gui.close()
 
-        del cls.fai
-
     def setUp(self):
         ImageToolWindow._reset()
         self._action.trigger()

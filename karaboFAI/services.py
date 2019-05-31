@@ -10,12 +10,12 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import argparse
-import multiprocessing as mp
 import os
-import subprocess
 import time
 import faulthandler
 import sys
+
+import psutil
 
 import redis
 
@@ -24,7 +24,7 @@ from .config import config
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import Bridge, Scheduler
-from .pipeline.worker import ProcessProxy
+from .pipeline.worker import ProcessInfo, register_fai_process
 from .utils import check_system_resource
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
@@ -82,7 +82,7 @@ def start_redis_server():
                "--requirepass", password,
                "--loglevel", "warning"]
 
-    process = subprocess.Popen(command)
+    process = psutil.Popen(command)
 
     # Create a Redis client just for configuring Redis.
     client = redis.Redis(host, port, password=password)
@@ -100,7 +100,9 @@ def start_redis_server():
         client.set("redis_start_time", time.time())
 
         logger.info(f"Redis server started at {host}:{port}")
-        ProcessProxy().register("redis", process)
+
+        register_fai_process(ProcessInfo(name="redis",
+                                         process=process))
 
         try:
             mem_frac = config["REDIS_MAX_MEMORY_FRAC"]
@@ -112,7 +114,6 @@ def start_redis_server():
                         f"{mem_in_bytes / 1024 ** 3:.1f} GB")
         except Exception as e:
             logger.error(f"Failed to config the Redis server.\n" + repr(e))
-            ProcessProxy().terminte_popens()
             sys.exit(0)
 
     else:
@@ -121,6 +122,7 @@ def start_redis_server():
 
 class FAI:
     def __init__(self, detector):
+
         # update global configuration
         config.load(detector)
 
@@ -129,7 +131,7 @@ class FAI:
         try:
             start_redis_server()
         except (ConnectionError, FileNotFoundError):
-            sys.exit(0)
+            sys.exit(1)
 
         try:
             # process which runs one or more zmq bridge
@@ -143,8 +145,7 @@ class FAI:
             self.gui = MainGUI()
         except Exception as e:
             logger.error(repr(e))
-            ProcessProxy().terminte_popens()
-            sys.exit(0)
+            sys.exit(1)
 
     def init(self):
         logger.info(f"Number of available CPUs: {_N_CPUS}, "
@@ -152,11 +153,21 @@ class FAI:
                     f"total system memory: {_SYS_MEMORY/1024**3:.1f} GB")
 
         self.bridge.start()
-        self.scheduler.start()
+        register_fai_process(ProcessInfo(name='bridge',
+                                         process=self.bridge))
 
+        self.scheduler.start()
+        register_fai_process(ProcessInfo(name='scheduler',
+                                         process=self.scheduler))
         self.gui.connectInput(self.scheduler)
-        self.gui.start_sgn.connect(self.bridge.activate)
-        self.gui.stop_sgn.connect(self.bridge.pause)
+        self.gui.start_sgn.connect(self.start)
+        self.gui.stop_sgn.connect(self.pause)
+
+    def start(self):
+        self.bridge.activate()
+
+    def pause(self):
+        self.bridge.pause()
 
 
 def application():

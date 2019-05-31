@@ -33,7 +33,8 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..utils import profiler
-from ..pipeline import Data4Visualization, ProcessProxy
+from ..pipeline import Data4Visualization
+from ..pipeline.worker import ProcessManager
 from ..offline import FileServerManager
 
 
@@ -314,8 +315,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._file_server.shutdown()
 
-        proxy = ProcessProxy()
-        proxy.terminte_workers()
-        proxy.terminte_popens()
+        ProcessManager.shutdown_pipeline()
+        ProcessManager.shutdown_redis()
 
         super().closeEvent(QCloseEvent)
