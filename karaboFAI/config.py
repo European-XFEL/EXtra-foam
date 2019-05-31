@@ -89,8 +89,10 @@ class _Config(dict):
     _system_readonly_config = {
         # detector name, leave it empty
         "DETECTOR": "",
-        # QTimer interval in milliseconds
-        "TIMER_INTERVAL": 20,
+        # QTimer interval for updating plots, in milliseconds
+        "PLOT_UPDATE_INTERVAL": 20,
+        # QTimer interval for monitoring processes, in milliseconds
+        "PROCESS_MONITOR_HEART_BEAT": 5000,
         # maximum length of a queue in data pipeline
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue

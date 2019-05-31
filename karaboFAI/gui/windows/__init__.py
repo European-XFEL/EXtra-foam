@@ -18,3 +18,10 @@ __all__ = [
     "RoiWindow",
     'XasWindow',
 ]
+
+
+from .process_monitor_w import ProcessMonitorWidget
+
+__all__ += [
+    ProcessMonitorWidget
+]

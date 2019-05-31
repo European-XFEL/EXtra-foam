@@ -28,13 +28,16 @@ from .windows import (
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
     XasWindow
 )
+from .windows import (
+    ProcessMonitorWidget,
+)
 from .mediator import Mediator
 from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..utils import profiler
 from ..pipeline import Data4Visualization
-from ..pipeline.worker import ProcessManager
+from ..pipeline.worker import ProcessManager, list_fai_processes
 from ..offline import FileServerManager
 
 
@@ -107,6 +110,14 @@ class MainGUI(QtGui.QMainWindow):
         open_roi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, RoiWindow))
 
+        self._tool_bar.addSeparator()
+
+        open_process_monitor_at = self._addAction(
+            "Process monitor", "process_monitor.png")
+        open_process_monitor_at.triggered.connect(
+            functools.partial(self.onOpenSatelliteWindow,
+                              ProcessMonitorWidget))
+
         # *************************************************************
         # Miscellaneous
         # *************************************************************
@@ -126,9 +137,14 @@ class MainGUI(QtGui.QMainWindow):
 
         # For real time plot
         self._running = False
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.updateAll)
-        self.timer.start(config["TIMER_INTERVAL"])
+        self._plot_timer = QtCore.QTimer()
+        self._plot_timer.timeout.connect(self.updateAll)
+        self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
+
+        # For process monitoring
+        self._proc_monitor_timer = QtCore.QTimer()
+        self._proc_monitor_timer.timeout.connect(self._get_process_info)
+        self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
         # a file server which streams data from files
         self._file_server = FileServerManager()
@@ -224,6 +240,9 @@ class MainGUI(QtGui.QMainWindow):
         for w in self._windows.keys():
             w.update()
 
+    def _get_process_info(self):
+        print(list_fai_processes())
+
     def _addAction(self, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
         action = QtGui.QAction(icon, description, self)
@@ -242,6 +261,18 @@ class MainGUI(QtGui.QMainWindow):
 
         instance_type(self._data,
                       pulse_resolved=self._pulse_resolved, parent=self)
+
+    def onOpenSatelliteWindow(self, instance_type):
+        """Open a satellite window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
+        for key in self._windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return
+
+        instance_type(parent=self)
 
     def registerWindow(self, instance):
         self._windows[instance] = 1

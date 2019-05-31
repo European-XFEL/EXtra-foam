@@ -11,7 +11,8 @@ All rights reserved.
 """
 from weakref import WeakKeyDictionary
 
-from ..pyqtgraph import QtGui
+from PyQt5 import QtWidgets, QtGui
+
 from ..pyqtgraph.dockarea import DockArea
 
 from ..mediator import Mediator
@@ -150,3 +151,55 @@ class DockerWindow(AbstractWindow):
 
     def unregisterPlotWidget(self, instance):
         del self._plot_widgets[instance]
+
+
+class AbstractSatelliteWindow(QtGui.QMainWindow):
+    """Base class for Satellite windows.
+
+    A satellite window does not need to access the data.
+    """
+    title = ""
+
+    def __init__(self, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+        if parent is not None:
+            parent.registerWindow(self)
+
+        self._mediator = Mediator()
+
+        try:
+            if self.title:
+                title = parent.title + " - " + self.title
+            else:
+                title = parent.title
+
+            self.setWindowTitle(title)
+        except AttributeError:
+            # for unit test where parent is None
+            self.setWindowTitle(self.title)
+
+        self.show()
+
+        self.setMinimumSize(400, 300)
+
+    def initUI(self):
+        """Initialization of UI.
+
+        This method should call 'initCtrlUI' and 'initPlotUI'.
+        """
+        pass
+
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        pass
+
+    def addToolBar(self):
+        """Toolbar is not allowed."""
+        raise NotImplementedError
+
+    def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterWindow(self)
+        super().closeEvent(QCloseEvent)

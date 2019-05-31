@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Abstract process worker class.
+Abstract process worker class as well as process management.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -142,6 +142,19 @@ def register_fai_process(process_info):
         _fai_processes['redis'].append(proc)
     else:
         _fai_processes['pipeline'].append(proc)
+
+
+def list_fai_processes():
+    """List the current FAI processes."""
+    info = list()
+
+    for proc in _fai_processes['redis']:
+        info.append([proc.name,
+                     proc.pid])
+
+    for proc in _fai_processes['pipeline']:
+        info.append(proc)
+    return info
 
 
 def find_process_type_by_pid(pid):
