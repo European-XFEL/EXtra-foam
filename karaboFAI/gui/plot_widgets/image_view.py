@@ -258,13 +258,6 @@ class ImageAnalysis(ImageView):
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
-    @QtCore.pyqtSlot(int)
-    def onMovingAverageWindowChange(self, v):
-        if self._image_data is None:
-            return
-
-        self._image_data.set_ma_window(v)
-
     @QtCore.pyqtSlot(float)
     def onBkgChange(self, bkg):
         if self._image_data is None:
