@@ -266,6 +266,7 @@ class MainGUI(QtGui.QMainWindow):
 
         w = ProcessMonitor(parent=self)
         self.process_info_sgn.connect(w.onProcessInfoUpdate)
+        return w
 
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:
