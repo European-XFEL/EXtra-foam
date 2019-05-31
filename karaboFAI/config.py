@@ -93,6 +93,8 @@ class _Config(dict):
         "PLOT_UPDATE_INTERVAL": 20,
         # QTimer interval for monitoring processes, in milliseconds
         "PROCESS_MONITOR_HEART_BEAT": 5000,
+        # timeout when cleaning up remnant processes, in second
+        "PROCESS_CLEANUP_TIMEOUT": 1,
         # maximum length of a queue in data pipeline
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue

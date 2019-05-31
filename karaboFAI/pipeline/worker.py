@@ -158,6 +158,7 @@ def list_fai_processes():
 
 
 def find_process_type_by_pid(pid):
+    """Find the key in _fai_processes by pid."""
     for key, procs in _fai_processes.items():
         for proc in procs:
             if proc.pid == pid:
@@ -176,15 +177,30 @@ def shutdown_all():
                            f"exit code {proc.returncode}")
 
     logger.info("Clean up all child processes ...")
+    timeout = config["PROCESS_CLEANUP_TIMEOUT"]
 
     procs = psutil.Process().children()
     for p in procs:
-        p.terminate()
+        try:
+            p.terminate()
+        except NoSuchProcess:
+            pass
 
-    gone, alive = psutil.wait_procs(procs, timeout=1, callback=on_terminate)
+    gone, alive = psutil.wait_procs(
+        procs, timeout=timeout, callback=on_terminate)
 
     for p in alive:
-        p.kill()
+        try:
+            p.kill()
+        except NoSuchProcess:
+            pass
+
+    gone, alive = psutil.wait_procs(
+        alive, timeout=timeout, callback=on_terminate)
+
+    if alive:
+        for p in alive:
+            print(f"process {p} survived SIGKILL, please clean it manually")
 
 
 atexit.register(shutdown_all)
