@@ -182,16 +182,13 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
-    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
-           "onMovingAverageWindowChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
-    def testImageAction1(self, on_ma_mediator, on_ma):
+    def testImageAction1(self, on_ma_mediator):
         widget = self.window._image_action
 
         widget.moving_avg_le.clear()
         QTest.keyClicks(widget.moving_avg_le, "10")
         QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
-        on_ma.assert_called_once_with(10)
         on_ma_mediator.assert_called_once_with(10)
 
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
