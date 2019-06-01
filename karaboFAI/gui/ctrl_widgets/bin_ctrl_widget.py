@@ -209,7 +209,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
         self._mediator.onBinGroupChange(
             (i_row+1, device_id, ppt, bin_range, n_bins))
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())

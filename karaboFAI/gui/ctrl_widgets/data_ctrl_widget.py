@@ -126,13 +126,13 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._xgm_src_cb.currentTextChanged.connect(
             mediator.onXgmSourceNameChange)
 
-        self._serve_start_btn.clicked.connect(self.updateSharedParameters)
+        self._serve_start_btn.clicked.connect(self.updateMetaData)
         self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
         self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
         mediator.file_server_started_sgn.connect(self.onFileServerStarted)
         mediator.file_server_stopped_sgn.connect(self.onFileServerStopped)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self.source_type_sgn.emit(self._source_type_cb.currentText())
 
         self._data_folder_le.returnPressed.emit()

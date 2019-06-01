@@ -99,7 +99,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._pulse_index_filter_le.value_changed_sgn.connect(
             mediator.onPulseIndexSelectorChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         """Override"""
         self._photon_energy_le.returnPressed.emit()
 

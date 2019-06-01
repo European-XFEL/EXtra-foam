@@ -128,7 +128,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onAiFomIntegRangeChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._cx_le.returnPressed.emit()
 
         self._cy_le.returnPressed.emit()

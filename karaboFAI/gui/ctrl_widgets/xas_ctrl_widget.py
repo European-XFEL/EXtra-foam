@@ -72,7 +72,7 @@ class XasCtrlWidget(AbstractCtrlWidget):
         self._bin_range_le.value_changed_sgn.connect(
             mediator.onXasBinRangeChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._mono_src_cb.currentTextChanged.emit(
             self._mono_src_cb.currentText())
 

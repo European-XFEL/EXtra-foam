@@ -132,7 +132,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._off_pulse_le.value_changed_sgn.connect(
             mediator.onPpOffPulseIdsChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         """Override"""
         if not self._checkOnOffIds():
             return False

@@ -163,7 +163,7 @@ class FaiQuickView(QtGui.QMainWindow):
         logger.info("Updated train with ID: {}".format(self._data.get().tid))
 
     def onStart(self):
-        if not self.updateSharedParameters():
+        if not self.updateMetaData():
             return
 
         self.start_sgn.emit()
@@ -188,14 +188,14 @@ class FaiQuickView(QtGui.QMainWindow):
         for widget in self._ctrl_widgets:
             widget.onBridgeStopped()
 
-    def updateSharedParameters(self):
-        """Update shared parameters for all child windows.
+    def updateMetaData(self):
+        """Update metadata from all the ctrl widgets.
 
-        :returns bool: True if all shared parameters successfully parsed
+        :returns bool: True if all metadata successfully parsed
             and emitted, otherwise False.
         """
         for widget in self._ctrl_widgets:
-            succeeded = widget.updateSharedParameters()
+            succeeded = widget.updateMetaData()
             if not succeeded:
                 return False
         return True

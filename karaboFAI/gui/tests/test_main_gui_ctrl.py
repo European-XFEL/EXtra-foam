@@ -58,7 +58,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         cls.gui.close()
 
     def setUp(self):
-        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertTrue(self.gui.updateMetaData())
 
         ImageData.clear()
 
@@ -220,7 +220,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
 
-        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertTrue(self.gui.updateMetaData())
         proc.update()
 
         self.assertFalse(proc.abs_difference)
@@ -233,12 +233,12 @@ class TestMainGuiCtrl(unittest.TestCase):
         # check invalid params
         widget._mode_cb.setCurrentIndex(PumpProbeMode.SAME_TRAIN)
         widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertFalse(self.gui.updateSharedParameters())
+        self.assertFalse(self.gui.updateMetaData())
 
         # change to valid params
         widget._mode_cb.setCurrentIndex(PumpProbeMode.ODD_TRAIN_ON)
         widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertTrue(self.gui.updateMetaData())
 
         pp_reset.reset_mock()
         widget._reset_btn.clicked.emit()
@@ -339,7 +339,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
-        self.assertTrue(self.gui.updateSharedParameters())
+        self.assertTrue(self.gui.updateMetaData())
 
         self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
 
@@ -477,9 +477,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
-           'updateSharedParameters', MagicMock(return_value=True))
+           'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
-           'updateSharedParameters', MagicMock(return_value=True))
+           'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
@@ -498,9 +498,9 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         self._start_action.trigger()
 
-        self.gui.pump_probe_ctrl_widget.updateSharedParameters. \
+        self.gui.pump_probe_ctrl_widget.updateMetaData. \
             assert_called_once()
-        self.gui.azimuthal_integ_ctrl_widget.updateSharedParameters. \
+        self.gui.azimuthal_integ_ctrl_widget.updateMetaData. \
             assert_called_once()
 
         self.assertEqual(1, len(start_spy))

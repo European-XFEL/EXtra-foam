@@ -90,7 +90,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         if filename:
             self._geom_file_le.setText(filename)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         """Override"""
         geom_file = self._geom_file_le.text()
         if not osp.isfile(geom_file):

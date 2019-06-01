@@ -280,7 +280,7 @@ class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
 
         self.initUI()
         self.initConnections()
-        self.updateSharedParameters()
+        self.updateMetaData()
 
     def initUI(self):
         layout = QtGui.QGridLayout()
@@ -296,7 +296,7 @@ class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
             widget.roi_visibility_change_sgn.connect(
                 mediator.onRoiVisibilityChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         for i, widget in enumerate(self._roi_ctrls, 1):
             widget.notifyRoiParams()
             widget.roi_visibility_change_sgn.emit(
@@ -455,7 +455,7 @@ class ImageToolWindow(AbstractWindow):
 
         self.initUI()
         self.initConnections()
-        self.updateSharedParameters()
+        self.updateMetaData()
 
         self.resize(800, 800)
         self.update()
@@ -502,7 +502,7 @@ class ImageToolWindow(AbstractWindow):
         self._image_action.bkg_le.value_changed_sgn.connect(
             lambda x: mediator.onImageBackgroundChange(float(x)))
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._image_action.moving_avg_le.returnPressed.emit()
         self._image_action.threshold_mask_le.returnPressed.emit()
         self._image_action.bkg_le.returnPressed.emit()

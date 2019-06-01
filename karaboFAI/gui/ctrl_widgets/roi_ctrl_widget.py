@@ -87,7 +87,7 @@ class RoiCtrlWidget(AbstractCtrlWidget):
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onProj1dFomIntegRangeChange)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._roi_fom_cb.currentTextChanged.emit(
             self._roi_fom_cb.currentText())
 

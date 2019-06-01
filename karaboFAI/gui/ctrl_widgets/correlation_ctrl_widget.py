@@ -182,7 +182,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self._mediator.onCorrelationParamChange(
             (i_row+1, device_id, ppt, res))
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         self._fom_type_cb.currentTextChanged.emit(
             self._fom_type_cb.currentText())
 

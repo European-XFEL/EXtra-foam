@@ -122,8 +122,8 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
 
-    def updateSharedParameters(self):
-        """Update shared parameters for control widget.
+    def updateMetaData(self):
+        """Update metadata belong to this control widget.
 
         :return: None if any of the parameters is invalid. Otherwise, a
             string of to be logged information.
