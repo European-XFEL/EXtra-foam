@@ -26,23 +26,23 @@ from .gui import MainGUI, mkQApp
 from .pipeline import Bridge, Scheduler
 from .pipeline.worker import ProcessInfo, register_fai_process
 from .utils import check_system_resource
+from .ipc import redis_connection
+
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
 
 
-def try_to_connect_redis_server(host, port, *, password=None, n_attempts=5):
+def try_to_connect_redis_server(host, port, *, n_attempts=5):
     """Try to connect to a starting Redis server.
 
     :param str host: IP address of the redis server.
     :param int port:: Port of the redis server.
-    :param str password: Password of the redis server.
     :param int n_attempts: Number of attempts to connect to the redis server.
 
     Raises:
         ConnectionError: raised if the Redis server cannot be connected.
     """
-    # Create a Redis client to check whether the server is reachable.
-    client = redis.Redis(host=host, port=port, password=password)
+    client = redis_connection()
 
     for i in range(n_attempts):
         try:
@@ -84,12 +84,12 @@ def start_redis_server():
 
     process = psutil.Popen(command)
 
-    # Create a Redis client just for configuring Redis.
-    client = redis.Redis(host, port, password=password)
+    # The global redis client is created
+    client = redis_connection()
 
     try:
         # wait for the Redis server to start
-        try_to_connect_redis_server(host, port, password=password)
+        try_to_connect_redis_server(host, port)
     except ConnectionError:
         logger.error(f"Unable to start a Redis server at {host}:{port}")
         raise

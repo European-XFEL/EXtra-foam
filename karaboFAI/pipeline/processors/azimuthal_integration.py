@@ -22,9 +22,8 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
-from ...config import (
-    AiNormalizer, AnalysisType, redis_connection_bytes
-)
+from ...config import AiNormalizer, AnalysisType
+from ...ipc import redis_subscribe
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
@@ -95,8 +94,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.add(AiBinProcessor())
 
         self.image_mask = None
-        self._mask_command = redis_connection_bytes().pubsub()
-        self._mask_command.subscribe("command:image_mask")
+        self._mask_command = redis_subscribe("command:image_mask",
+                                             decode_responses=False)
 
     def update(self):
         """Override."""

@@ -15,8 +15,6 @@ import json
 import os.path as osp
 import collections
 
-import redis
-
 from . import ROOT_PATH
 from .logger import logger
 
@@ -416,44 +414,3 @@ class _MetaSingleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
-
-
-_REDIS_CONNECTION = None
-
-
-def redis_connection():
-    """Return a Redis connection with automatic decoding."""
-    global _REDIS_CONNECTION
-    if _REDIS_CONNECTION is None:
-        connection = redis.Redis('localhost', config['REDIS_PORT'],
-                                 password=config['REDIS_PASSWORD'],
-                                 decode_responses=True)
-        _REDIS_CONNECTION = connection
-
-    return _REDIS_CONNECTION
-
-
-class RedisConnection:
-    """Lazy evaluated Redis connection on access."""
-    def __init__(self):
-        self._db = None
-
-    def __get__(self, instance, instance_type):
-        if self._db is None:
-            self._db = redis_connection()
-        return self._db
-
-
-_REDIS_CONNECTION_BYTES = None
-
-
-def redis_connection_bytes():
-    """Return a Redis connection."""
-    global _REDIS_CONNECTION_BYTES
-    if _REDIS_CONNECTION_BYTES is None:
-        connection = redis.Redis('localhost', config['REDIS_PORT'],
-                                 password=config['REDIS_PASSWORD'],
-                                 decode_responses=False)
-        _REDIS_CONNECTION_BYTES = connection
-
-    return _REDIS_CONNECTION_BYTES

@@ -20,7 +20,8 @@ from zmq.error import ZMQError
 
 from karabo_bridge import Client
 
-from ..config import config, DataSource, redis_connection
+from ..config import config, DataSource
+from ..ipc import redis_psubscribe
 from ..utils import profiler
 
 
@@ -168,8 +169,7 @@ class ThreadLoggerBridge(QObject):
         super().__init__()
 
     def recv_messages(self):
-        sub = redis_connection().pubsub()
-        sub.psubscribe("log:*")
+        sub = redis_psubscribe("log:*")
 
         while True:
             try:

@@ -20,7 +20,8 @@ from .roi import RectROI
 from ..misc_widgets import colorMapFactory
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
-from ...config import config, redis_connection
+from ...config import config
+from ...ipc import redis_connection
 from ...logger import logger
 
 

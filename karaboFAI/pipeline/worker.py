@@ -19,7 +19,8 @@ from threading import Thread
 from queue import Empty
 
 from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource, _MetaSingleton, RedisConnection
+from ..config import config, DataSource, _MetaSingleton
+from ..ipc import RedisConnection
 from ..logger import logger
 
 
@@ -258,12 +259,14 @@ class ProcessManager:
         for _, proc in _fai_processes.redis.items():
             try:
                 proc.terminate()
+                proc.wait(0.5)
             except NoSuchProcess:
                 continue
 
-            proc.wait(0.5)
+        for _, proc in _fai_processes.redis.items():
             if proc.poll() is None:
                 proc.kill()
+                proc.wait(0.5)
 
     @staticmethod
     def shutdown_pipeline():
@@ -274,6 +277,7 @@ class ProcessManager:
                 proc.shutdown()
                 proc.join(timeout=0.5)
 
+        for _, proc in _fai_processes.pipeline.items():
             if proc.is_alive():
                 proc.terminate()
                 proc.join(0.5)

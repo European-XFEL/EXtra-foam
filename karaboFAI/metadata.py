@@ -11,7 +11,7 @@ All rights reserved.
 """
 import redis
 
-from .config import RedisConnection
+from .ipc import RedisConnection
 
 
 class Metadata:

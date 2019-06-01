@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 import math
 import tempfile
 import os
@@ -475,3 +475,58 @@ class TestMainGuiCtrl(unittest.TestCase):
         # test reset
         widget._reset_btn.clicked.emit()
         self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))
+
+    @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
+           'updateSharedParameters', MagicMock(return_value=True))
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
+           'updateSharedParameters', MagicMock(return_value=True))
+    @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
+    @patch('karaboFAI.pipeline.bridge.Bridge.activate', Mock())
+    @patch('karaboFAI.pipeline.bridge.Bridge.pause', Mock())
+    def testStartStop(self):
+        logger.setLevel("CRITICAL")
+
+        start_spy = QSignalSpy(self.gui.start_sgn)
+        stop_spy = QSignalSpy(self.gui.stop_sgn)
+
+        # -------------------------------------------------------------
+        # test when the start action button is clicked
+        # -------------------------------------------------------------
+
+        self._start_action.trigger()
+
+        self.gui.pump_probe_ctrl_widget.updateSharedParameters. \
+            assert_called_once()
+        self.gui.azimuthal_integ_ctrl_widget.updateSharedParameters. \
+            assert_called_once()
+
+        self.assertEqual(1, len(start_spy))
+
+        self.gui.azimuthal_integ_ctrl_widget.onStart.assert_called_once()
+        self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
+
+        self.assertFalse(self._start_action.isEnabled())
+        self.assertTrue(self._stop_action.isEnabled())
+
+        # FIXME
+        # self.bridge.activate.assert_called_once()
+
+        # -------------------------------------------------------------
+        # test when the start action button is clicked
+        # -------------------------------------------------------------
+
+        self._stop_action.trigger()
+
+        self.gui.azimuthal_integ_ctrl_widget.onStop.assert_called_once()
+        self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
+
+        self.assertEqual(1, len(stop_spy))
+
+        self.assertTrue(self._start_action.isEnabled())
+        self.assertFalse(self._stop_action.isEnabled())
+
+        # FIXME
+        # self.bridge.pause.assert_called_once()
