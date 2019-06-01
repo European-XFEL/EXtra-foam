@@ -867,7 +867,7 @@ class Data4Visualization:
         self.__value = value
 
 
-class DataManager:
+class DataManagerMixin:
     """Interface for manipulating data model."""
     @staticmethod
     def add_correlation(idx, device_id, ppt, resolution=0.0):
@@ -890,7 +890,7 @@ class DataManager:
                 setattr(CorrelationData, corr, PairData(
                     device_id=device_id, property=ppt))
         else:
-            DataManager.remove_correlation(idx)
+            DataManagerMixin.remove_correlation(idx)
 
     @staticmethod
     def get_correlations():
@@ -909,7 +909,7 @@ class DataManager:
     @staticmethod
     def remove_correlations():
         for i in range(CorrelationData.n_params):
-            DataManager.remove_correlation(i+1)
+            DataManagerMixin.remove_correlation(i+1)
 
     @staticmethod
     def reset_correlation():

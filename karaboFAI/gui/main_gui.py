@@ -31,7 +31,6 @@ from .windows import (
 from .windows import (
     ProcessMonitor,
 )
-from .mediator import Mediator
 from .. import __version__
 from ..config import config
 from ..logger import logger
@@ -52,7 +51,7 @@ class MainGUI(QtGui.QMainWindow):
 
     process_info_sgn = QtCore.pyqtSignal(object)
 
-    def __init__(self):
+    def __init__(self, *, start_thread_logger=False):
         """Initialization.
 
         :param bool start_thread_logger: True for starting ThreadLogger
@@ -60,8 +59,6 @@ class MainGUI(QtGui.QMainWindow):
             convenience of testing, it is False by default.
         """
         super().__init__()
-
-        self._mediator = Mediator()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
 

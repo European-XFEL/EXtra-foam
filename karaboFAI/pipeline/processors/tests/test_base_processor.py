@@ -237,7 +237,6 @@ class TestBaseProcessor(unittest.TestCase):
 
         cls.app = fai.app
         cls.gui = fai.gui
-        cls.mediator = cls.gui._mediator
         cls.fai = fai
         cls.scheduler = fai.scheduler
 

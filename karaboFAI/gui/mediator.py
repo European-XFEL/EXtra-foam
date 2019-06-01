@@ -16,12 +16,16 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
-from ..pipeline.data_model import DataManager
+from ..pipeline.data_model import DataManagerMixin
 from ..config import RedisConnection
 
 
-class Mediator(QObject):
-    """Mediator for GUI signal-slot connection."""
+class Mediator(DataManagerMixin, QObject):
+    """Mediator for GUI signal-slot connection.
+
+    The behavior of the code should not be affected by when the
+    Mediator() is instantiated.
+    """
 
     start_file_server_sgn = pyqtSignal()
     stop_file_server_sgn = pyqtSignal()
@@ -37,7 +41,10 @@ class Mediator(QObject):
 
     __instance = None
 
+    # TODO: make a command interface
     _db = RedisConnection()
+
+    _meta = MetaProxy()
 
     def __new__(cls, *args, **kwargs):
         """Create a singleton."""
@@ -51,9 +58,6 @@ class Mediator(QObject):
             return
         # this will reset all signal-slot connections
         super().__init__(*args, **kwargs)
-
-        self._meta = MetaProxy()
-        self._data = DataManager()
 
         self._is_initialized = True
 
@@ -129,7 +133,7 @@ class Mediator(QObject):
     def onPpModeChange(self, value: IntEnum):
         value = int(value)
         if self._meta.get(mt.PUMP_PROBE_PROC, 'mode') != value:
-            self._data.reset_pp()
+            self.reset_pp()
         self._meta.set(mt.PUMP_PROBE_PROC, 'mode', value)
         # TODO: reset correlation if FOM in correlation is pump-probe
 
@@ -141,7 +145,7 @@ class Mediator(QObject):
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
-        self._data.reset_pp()
+        self.reset_pp()
         # TODO: reset correlation if FOM in correlation is pump-probe
 
     def onPpAbsDifferenceChange(self, value: bool):
@@ -151,7 +155,7 @@ class Mediator(QObject):
         self._meta.set(mt.PUMP_PROBE_PROC, "ma_window", value)
 
     def onPpReset(self):
-        self._data.reset_pp()
+        self.reset_pp()
 
     def onRoiRegionChange(self, value: tuple):
         rank, x, y, w, h = value
@@ -163,10 +167,10 @@ class Mediator(QObject):
 
     def onRoiFomChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, 'fom_type', int(value))
-        self._data.reset_roi()
+        self.reset_roi()
 
     def onRoiReset(self):
-        self._data.reset_roi()
+        self.reset_roi()
 
     def onProj1dNormalizerChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, "proj1d:normalizer", int(value))
@@ -179,19 +183,19 @@ class Mediator(QObject):
 
     def onCorrelationFomChange(self, value: IntEnum):
         self._meta.set(mt.CORRELATION_PROC, "fom_type", int(value))
-        self._data.reset_correlation()
+        self.reset_correlation()
 
     def onCorrelationParamChange(self, value: tuple):
         # index, device ID, property name, resolution
         # index starts from 1
         index, device_id, ppt, resolution = value
-        self._data.add_correlation(index, device_id, ppt, resolution)
+        self.add_correlation(index, device_id, ppt, resolution)
         self._meta.set(mt.CORRELATION_PROC, f'device_id{index}', device_id)
         self._meta.set(mt.CORRELATION_PROC, f'property{index}', ppt)
         self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)
 
     def onCorrelationReset(self):
-        self._data.reset_correlation()
+        self.reset_correlation()
 
     def onXasMonoSourceNameChange(self, value: str):
         self._meta.set(mt.XAS_PROC, "mono_source_name", value)
@@ -203,7 +207,7 @@ class Mediator(QObject):
         self._meta.set(mt.XAS_PROC, "bin_range", str(value))
 
     def onXasReset(self):
-        self._data.reset_xas()
+        self.reset_xas()
 
     def onBinGroupChange(self, value: tuple):
         # index, device ID, property name, bin_range, number of bins,

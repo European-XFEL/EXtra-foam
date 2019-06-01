@@ -4,7 +4,7 @@ import numpy as np
 
 from karaboFAI.pipeline.data_model import (
     AbstractData, AccumulatedPairData, ImageData,
-    DataManager, ProcessedData, PumpProbeData, RoiData, PairData
+    DataManagerMixin, ProcessedData, PumpProbeData, RoiData, PairData
 )
 from karaboFAI.logger import logger
 from karaboFAI.config import config
@@ -442,7 +442,7 @@ class TestPairData(unittest.TestCase):
 class TestCorrelationData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._manager = DataManager()
+        cls._manager = DataManagerMixin()
 
     def setUp(self):
         self._manager.reset_correlation()
@@ -608,7 +608,7 @@ class TestCorrelationData(unittest.TestCase):
 
 class TestProcessedData(unittest.TestCase):
     def setUp(self):
-        DataManager().reset_roi()
+        DataManagerMixin().reset_roi()
 
     def testGeneral(self):
         data = ProcessedData(1234)
@@ -627,7 +627,7 @@ class TestProcessedData(unittest.TestCase):
 
 class TestPumpProbeData(unittest.TestCase):
     def setUp(self):
-        DataManager().reset_pp()
+        DataManagerMixin().reset_pp()
 
     def testGeneral(self):
         data = PumpProbeData()
