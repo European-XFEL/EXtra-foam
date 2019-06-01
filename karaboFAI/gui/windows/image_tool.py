@@ -20,7 +20,9 @@ from ..pyqtgraph import QtCore, QtGui
 from .base_window import AbstractWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
-from ..misc_widgets import SmartLineEdit, SmartBoundaryLineEdit
+from ..ctrl_widgets.smart_widgets import (
+    SmartLineEdit, SmartBoundaryLineEdit
+)
 from ...config import config
 
 

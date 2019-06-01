@@ -15,6 +15,7 @@ import numpy as np
 
 from .. import pyqtgraph as pg
 from ..pyqtgraph import GraphicsObject, QtCore, QtGui
+
 from ..misc_widgets import make_pen, make_brush
 
 

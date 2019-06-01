@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..misc_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 
 
 class XasCtrlWidget(AbstractCtrlWidget):

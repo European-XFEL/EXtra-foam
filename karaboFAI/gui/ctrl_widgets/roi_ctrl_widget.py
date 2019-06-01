@@ -14,7 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..misc_widgets import SmartBoundaryLineEdit
+from .smart_widgets import SmartBoundaryLineEdit
 from ...config import Projection1dNormalizer, RoiFom
 
 

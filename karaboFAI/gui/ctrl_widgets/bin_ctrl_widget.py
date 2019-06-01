@@ -15,7 +15,7 @@ import functools
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
-from ..misc_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import AnalysisType, BinMode
 
 

@@ -15,7 +15,7 @@ import functools
 from PyQt5 import QtWidgets, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
-from ..misc_widgets import SmartLineEdit
+from .smart_widgets import SmartLineEdit
 from ...config import CorrelationFom
 
 _N_PARAMS = 4  # maximum number of correlated parameters

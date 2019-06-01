@@ -4,7 +4,7 @@ from PyQt5.QtTest import QSignalSpy, QTest
 from PyQt5.QtCore import Qt
 
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.misc_widgets import (
+from karaboFAI.gui.ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit, SmartRangeLineEdit
 )
 

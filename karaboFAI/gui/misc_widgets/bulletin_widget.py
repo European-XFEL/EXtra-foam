@@ -9,9 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .pyqtgraph import QtGui
+from ..pyqtgraph import QtGui
 
-from .misc_widgets import Colors
+from ..misc_widgets import Colors
 
 
 class BulletinWidget(QtGui.QWidget):

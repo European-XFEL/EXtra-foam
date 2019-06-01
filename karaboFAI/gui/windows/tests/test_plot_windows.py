@@ -6,7 +6,7 @@ import tempfile
 from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
-from karaboFAI.gui.bulletin_widget import BulletinWidget
+from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
     Bin1DWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
     PumpProbeWindow, RoiWindow, XasWindow

@@ -14,7 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..misc_widgets import SmartLineEdit, SmartRangeLineEdit
+from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
 from ..gui_helpers import parse_ids
 from ...config import PumpProbeMode, AnalysisType
 from ...logger import logger

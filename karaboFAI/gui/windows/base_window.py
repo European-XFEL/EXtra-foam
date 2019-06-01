@@ -11,7 +11,7 @@ All rights reserved.
 """
 from weakref import WeakKeyDictionary
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtGui
 
 from ..pyqtgraph.dockarea import DockArea
 

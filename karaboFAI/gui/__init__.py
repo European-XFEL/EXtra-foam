@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QApplication
 from .pyqtgraph import setConfigOptions
 from .main_gui import MainGUI
 
+
 setConfigOptions(
     imageAxisOrder="row-major",
 )

@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..plot_widgets import BinImageView, BinCountWidget, BinWidget
+from ..plot_widgets import BinCountWidget, BinWidget
 from ...config import config
 
 

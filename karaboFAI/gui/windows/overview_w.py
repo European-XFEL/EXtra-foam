@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..bulletin_widget import BulletinWidget
+from ..misc_widgets import BulletinWidget
 from ..plot_widgets import AssembledImageView
 from ...config import config
 
