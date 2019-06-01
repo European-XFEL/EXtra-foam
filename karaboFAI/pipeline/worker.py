@@ -19,14 +19,14 @@ from threading import Thread
 from queue import Empty
 
 from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource, _MetaSingleton, redis_connection
+from ..config import config, DataSource, _MetaSingleton, RedisConnection
 from ..logger import logger
 
 
 class ProcessWorkerLogger(metaclass=_MetaSingleton):
     """Worker which publishes log message in another Process."""
-    def __init__(self):
-        self._db = redis_connection()
+
+    _db = RedisConnection()
 
     def debug(self, msg):
         self._db.publish("log:debug", msg)
@@ -44,6 +44,8 @@ class ProcessWorkerLogger(metaclass=_MetaSingleton):
 class ProcessWorker(mp.Process):
     """Base worker class for heavy online data analysis."""
 
+    _db = RedisConnection()
+
     def __init__(self, name):
         super().__init__()
 
@@ -60,7 +62,6 @@ class ProcessWorker(mp.Process):
         self._shutdown_event = mp.Event()
 
         self._meta = MetaProxy()
-        self._db = redis_connection()
 
         self._timeout = config["TIMEOUT"]
 

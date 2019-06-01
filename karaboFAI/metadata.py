@@ -11,7 +11,7 @@ All rights reserved.
 """
 import redis
 
-from .config import config, redis_connection
+from .config import RedisConnection
 
 
 class Metadata:
@@ -128,8 +128,7 @@ class Metadata:
 
 
 class MetaProxy:
-    def __init__(self):
-        self._db = redis_connection()
+    _db = RedisConnection()
 
     def set(self, name, key, value):
         """Set a Hash.

@@ -418,31 +418,42 @@ class _MetaSingleton(type):
         return cls._instances[cls]
 
 
-REDIS_CONNECTION = None
+_REDIS_CONNECTION = None
 
 
 def redis_connection():
     """Return a Redis connection with automatic decoding."""
-    global REDIS_CONNECTION
-    if REDIS_CONNECTION is None:
+    global _REDIS_CONNECTION
+    if _REDIS_CONNECTION is None:
         connection = redis.Redis('localhost', config['REDIS_PORT'],
                                  password=config['REDIS_PASSWORD'],
                                  decode_responses=True)
-        REDIS_CONNECTION = connection
+        _REDIS_CONNECTION = connection
 
-    return REDIS_CONNECTION
+    return _REDIS_CONNECTION
 
 
-REDIS_CONNECTION_BYTES = None
+class RedisConnection:
+    """Lazy evaluated Redis connection on access."""
+    def __init__(self):
+        self._db = None
+
+    def __get__(self, instance, instance_type):
+        if self._db is None:
+            self._db = redis_connection()
+        return self._db
+
+
+_REDIS_CONNECTION_BYTES = None
 
 
 def redis_connection_bytes():
     """Return a Redis connection."""
-    global REDIS_CONNECTION_BYTES
-    if REDIS_CONNECTION_BYTES is None:
+    global _REDIS_CONNECTION_BYTES
+    if _REDIS_CONNECTION_BYTES is None:
         connection = redis.Redis('localhost', config['REDIS_PORT'],
                                  password=config['REDIS_PASSWORD'],
                                  decode_responses=False)
-        REDIS_CONNECTION_BYTES = connection
+        _REDIS_CONNECTION_BYTES = connection
 
-    return REDIS_CONNECTION_BYTES
+    return _REDIS_CONNECTION_BYTES

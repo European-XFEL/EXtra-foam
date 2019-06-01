@@ -17,7 +17,7 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
 from ..pipeline.data_model import DataManager
-from ..config import redis_connection
+from ..config import RedisConnection
 
 
 class Mediator(QObject):
@@ -37,6 +37,8 @@ class Mediator(QObject):
 
     __instance = None
 
+    _db = RedisConnection()
+
     def __new__(cls, *args, **kwargs):
         """Create a singleton."""
         if cls.__instance is None:
@@ -51,7 +53,6 @@ class Mediator(QObject):
         super().__init__(*args, **kwargs)
 
         self._meta = MetaProxy()
-        self._db = redis_connection()
         self._data = DataManager()
 
         self._is_initialized = True

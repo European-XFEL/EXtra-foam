@@ -52,7 +52,7 @@ class MainGUI(QtGui.QMainWindow):
 
     process_info_sgn = QtCore.pyqtSignal(object)
 
-    def __init__(self, *, start_thread_logger=False):
+    def __init__(self):
         """Initialization.
 
         :param bool start_thread_logger: True for starting ThreadLogger
