@@ -97,7 +97,7 @@ def start_redis_server():
     time.sleep(0.1)
     if process.poll() is None:
         # Put a time stamp in Redis to indicate when it was started.
-        client.set("redis_start_time", time.time())
+        client.set(f"{config['DETECTOR']}:redis_start_time", time.time())
 
         logger.info(f"Redis server started at {host}:{port}")
 
@@ -118,6 +118,39 @@ def start_redis_server():
 
     else:
         logger.info(f"Found existing Redis server at {host}:{port}")
+
+
+def health_check():
+    residual = []
+    for proc in psutil.process_iter(attrs=["name", "pid", "cmdline"]):
+        if proc.info['pid'] == os.getpid():
+            continue
+
+        if 'redis-server' in proc.info['name'] or \
+                'karaboFAI.services' in proc.info['cmdline']:
+            residual.append(proc)
+
+    if residual:
+        ret = input(
+            "Warning: Found old karaboFAI instance(s) running in this "
+            "machine!!!\n\n"
+            "Running more than two karaboFAI instances with the same \n"
+            "detector can result in undefined behavior. You can try to \n"
+            "kill the other instances if it is owned by you. \n"
+            "Note: you are not able to kill other users' instances! \n\n"
+            "Send SIGKILL? (y/n)")
+
+        if ret.lower() == 'y':
+            for p in residual:
+                p.kill()
+
+        gone, alive = psutil.wait_procs(residual, timeout=1.0)
+        if alive:
+            for p in alive:
+                print(f"process {p} survived SIGKILL, "
+                      f"please contact the user: {p.username()}")
+        else:
+            print("Residual processes have been terminated!!!")
 
 
 class FAI:
@@ -181,6 +214,8 @@ def application():
                         help="Run in debug mode")
 
     args = parser.parse_args()
+
+    health_check()
 
     if args.debug:
         logger.debug("'faulthandler enabled")
