@@ -44,7 +44,6 @@ class ProcessMonitor(AbstractSatelliteWindow):
 
     @QtCore.pyqtSlot(object)
     def onProcessInfoUpdate(self, proc_info):
-        print(proc_info)
         self._cw.clear()
         info = "{:<20s}{:<16s}{:<16s}{:<12s}{:<16s}\n".format(
             "Process name", "FAI name", "FAI type", "pid", "status")

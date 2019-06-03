@@ -61,7 +61,8 @@ class Bridge(ProcessWorker):
                     self._output.put(data, timeout=timeout)
                 except Full:
                     self.pop_output()
-                    self.log.info("Data dropped by the bridge")
+                    self.log.warning("Data dropped by the bridge due to the "
+                                     "slowness of data processing!")
             elif self._source_type == DataSource.FILE:
                 # wait until data in the queue has been processed
                 while not self.closing:

@@ -220,7 +220,7 @@ def shutdown_all():
             logger.warning(f"'{name}' process {proc} terminated with "
                            f"exit code {proc.returncode}")
 
-    logger.info("Clean up all child processes ...")
+    logger.info("Clean up child processes ...")
     timeout = config["PROCESS_CLEANUP_TIMEOUT"]
 
     procs = psutil.Process().children()

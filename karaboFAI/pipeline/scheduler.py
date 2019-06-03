@@ -9,9 +9,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import sys, traceback
 from queue import Empty, Full
+import sys
 import time
+import traceback
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
@@ -92,7 +93,8 @@ class Scheduler(ProcessWorker):
                 self._output.put(processed_data, timeout=timeout)
             except Full:
                 self.pop_output()
-                self.log.info("Data dropped by the scheduler")
+                self.log.warning("Data dropped by the scheduler due to the "
+                                 "slowness of data visualization!")
         elif self._source_type == DataSource.FILE:
             # wait until data in the queue has been processed
             while not self.closing:
