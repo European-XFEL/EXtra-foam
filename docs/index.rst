@@ -13,7 +13,6 @@ Contents:
    start
    gui
    windows
-   ai
 
 
 Indices and tables

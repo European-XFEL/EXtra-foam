@@ -2,24 +2,30 @@ Data Analysis with karaboFAI
 ============================
 
 
-To start **karaboFAI** on online or `Maxwell` clusters:
+Choose the correct version
+--------------------------
+
+**karaboFAI** can be started on both online and `Maxwell` clusters. Since we often
+receive feature requests within a few days before user experiments, in order to avoid
+conflict between different instruments, there are three versions of **karaboFAI**
+deployed. Please always consult your contact person if you are not sure which version
+to use.
+
+
+I. Stable version
++++++++++++++++++
+
+This is the latest version which has been successfully used in at least one
+commissioning shift or user experiment.
+
+To start the **stable** version on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    # stable version
     module load exfel exfel_anaconda3
     karaboFAI DETECTOR_NAME
 
 Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
-
-You are also encouraged to try the latest version (more features). However, the
-latest version is **not** supported by OCD.
-
-.. code-block:: bash
-
-    # latest version
-    module load exfel exfel_anaconda3/beta
-    karaboFAI DETECTOR_NAME
 
 .. note::
     It usually takes some time to start **karaboFAI** for the first time! This
@@ -34,6 +40,35 @@ latest version is **not** supported by OCD.
 
 .. _FastX2: https://confluence.desy.de/display/IS/FastX2
 .. _max-display: https://max-display.desy.de:3443/
+
+
+II. Pre-release version
++++++++++++++++++++++++
+
+This is the release candidate which has passed our unittest and integration test, but is
+still being tested by beamline scientists. This version usually contains (much) more
+features than the **stable** version. Normally, the **pre-release** version should be as
+stable as the **stable** version.
+
+.. code-block:: bash
+
+    module load exfel exfel_anaconda3/beta
+    karaboFAI DETECTOR_NAME
+
+
+III. Temporary version
+++++++++++++++++++++++
+
+If there is any **critical** feature requested in a short notice but DA do not have
+enough time to follow the standard development procedure (code review, unittest, etc.),
+we will deploy this **temporary** solution. As a result, the stability and correctness
+of this version cannot be guaranteed.
+
+
+.. code-block:: bash
+
+    module load exfel karaboFAI
+    karaboFAI DETECTOR_NAME
 
 
 Data analysis in real time
