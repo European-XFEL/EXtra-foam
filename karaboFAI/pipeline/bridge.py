@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from queue import Full
+import time
 
 from karabo_bridge import Client
 
@@ -32,6 +33,9 @@ class Bridge(ProcessWorker):
         self._endpoint = None
         self._client = None
 
+        # the time when the previous data was received
+        self._last_data_arrive_time = None
+
     def _run_once(self):
         timeout = self._timeout
 
@@ -45,6 +49,12 @@ class Bridge(ProcessWorker):
 
         try:
             data = self._recv_imp(self._client)
+
+            if self._last_data_arrive_time is not None:
+                fps = 1.0 / (time.time() - self._last_data_arrive_time)
+                self.log.debug(f"Bridge recv FPS: {fps:>4.1f} Hz")
+            self._last_data_arrive_time = time.time()
+
             if self._source_type == DataSource.BRIDGE:
                 # always keep the latest data in the queue
                 try:

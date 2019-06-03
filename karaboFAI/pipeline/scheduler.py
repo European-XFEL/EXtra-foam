@@ -11,6 +11,7 @@ All rights reserved.
 """
 import sys, traceback
 from queue import Empty, Full
+import time
 
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
@@ -59,6 +60,9 @@ class Scheduler(ProcessWorker):
             self._correlation_proc, self._bin_proc, self._xas_proc
         ]
 
+        # the time when the previous data processing was finished
+        self._last_data_processed_time = None
+
     def _run_once(self):
         """Run the data processor."""
         timeout = self._timeout
@@ -74,6 +78,11 @@ class Scheduler(ProcessWorker):
         self._image_assembler.update()
 
         processed_data = self._process_core(data)
+        if self._last_data_processed_time is not None:
+            fps = 1.0 / (time.time() - self._last_data_processed_time)
+            self.log.debug(f"Scheduler processing FPS: {fps:>4.1f} Hz")
+        self._last_data_processed_time = time.time()
+
         if processed_data is None:
             return
 
