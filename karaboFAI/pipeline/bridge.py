@@ -11,8 +11,6 @@ All rights reserved.
 """
 from queue import Full
 
-from zmq.error import ZMQError
-
 from karabo_bridge import Client
 
 from .exceptions import ProcessingError
@@ -31,7 +29,7 @@ class Bridge(ProcessWorker):
         """Initialization."""
         super().__init__(name)
 
-        self._clients = dict()
+        self._client = None
 
     def _run_once(self):
         timeout = self._timeout
@@ -44,52 +42,40 @@ class Bridge(ProcessWorker):
             # update the client when resumed
             self.update()
 
-        for client in self._clients.values():
-            try:
-                data = self._recv_imp(client)
-                if self._source_type == DataSource.BRIDGE:
-                    # always keep the latest data in the queue
+        try:
+            data = self._recv_imp(self._client)
+            if self._source_type == DataSource.BRIDGE:
+                # always keep the latest data in the queue
+                try:
+                    self._output.put(data, timeout=timeout)
+                except Full:
+                    self.pop_output()
+                    self.log.info("Data dropped by the bridge")
+            elif self._source_type == DataSource.FILE:
+                # wait until data in the queue has been processed
+                while not self.closing:
                     try:
                         self._output.put(data, timeout=timeout)
+                        break
                     except Full:
-                        self.pop_output()
-                        self.log.info("Data dropped by the bridge")
-                elif self._source_type == DataSource.FILE:
-                    # wait until data in the queue has been processed
-                    while not self.closing:
-                        try:
-                            self._output.put(data, timeout=timeout)
-                            break
-                        except Full:
-                            continue
-                else:
-                    raise ProcessingError(
-                        f"Unknown source type {self._source_type}!")
-            except TimeoutError:
-                continue
+                        continue
+            else:
+                raise ProcessingError(
+                    f"Unknown source type {self._source_type}!")
+        except TimeoutError:
+            pass
 
     @profiler("Receive Data from Bridge")
     def _recv_imp(self, client):
         return client.next()
 
     def update(self):
+        # get source type
         super().update()
 
         endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
-        if endpoint is None or endpoint in self._clients:
-            return
 
-        try:
-            # destroy the old connections
-            for client in self._clients.values():
-                client._context.destroy(linger=0)
-            self._clients.clear()
-
-            client = Client(endpoint, timeout=self._timeout)
-            self._clients[endpoint] = client
-        except ZMQError:
-            return
-
-    def __del__(self):
-        for client in self._clients.values():
-            client._context.destroy(linger=0)
+        # destroy the old connection and make a new one
+        if self._client is not None:
+            del self._client
+        self._client = Client(endpoint, timeout=self._timeout)

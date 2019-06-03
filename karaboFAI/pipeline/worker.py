@@ -87,7 +87,7 @@ class ProcessWorker(mp.Process):
             try:
                 self._run_once()
             except Exception as e:
-                print(repr(e))
+                self.log.error(repr(e))
 
     def _run_once(self):
         raise NotImplementedError
@@ -137,6 +137,7 @@ class ProcessWorker(mp.Process):
             pass
 
     def update(self):
+        """Update metadata."""
         self._source_type = DataSource(
             int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
 
