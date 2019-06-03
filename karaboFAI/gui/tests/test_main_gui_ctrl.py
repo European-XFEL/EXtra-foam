@@ -280,15 +280,13 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         hostname = config['SERVER_ADDR']
         port = config['SERVER_PORT']
-        self.assertListEqual([f"tcp://{hostname}:{port}"],
-                             list(bridge._clients.keys()))
+        self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
 
         widget._hostname_le.setText('127.0.0.1')
         widget._port_le.setText('12345')
 
         bridge.update()
-        self.assertListEqual([f"tcp://127.0.0.1:12345"],
-                             list(bridge._clients.keys()))
+        self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
 
         # test passing data source types and detector source name
 

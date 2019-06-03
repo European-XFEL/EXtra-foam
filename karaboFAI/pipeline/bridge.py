@@ -29,6 +29,7 @@ class Bridge(ProcessWorker):
         """Initialization."""
         super().__init__(name)
 
+        self._endpoint = None
         self._client = None
 
     def _run_once(self):
@@ -73,9 +74,8 @@ class Bridge(ProcessWorker):
         # get source type
         super().update()
 
-        endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
-
         # destroy the old connection and make a new one
         if self._client is not None:
             del self._client
-        self._client = Client(endpoint, timeout=self._timeout)
+        self._endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
+        self._client = Client(self._endpoint, timeout=self._timeout)
