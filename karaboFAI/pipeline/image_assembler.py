@@ -125,7 +125,7 @@ class ImageAssemblerFactory(ABC):
             try:
                 n_modules = config["NUMBER_OF_MODULES"]
                 module_shape = config["MODULE_SHAPE"]
-                if list(shape[-2:]) != module_shape:
+                if module_shape[0] > 0 and list(shape[-2:]) != module_shape:
                     raise ValueError(f"Expected module shape {module_shape}, "
                                      f"but get {shape[-2:]} instead!")
                 elif ndim >= 3 and shape[-3] != n_modules:

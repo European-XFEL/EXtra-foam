@@ -182,7 +182,7 @@ class _Config(dict):
             "PULSE_RESOLVED": False,
             "REQUIRE_GEOMETRY": False,
             "NUMBER_OF_MODULES": 1,
-            "MODULE_SHAPE": [1024, 1024],
+            "MODULE_SHAPE": [-1, -1],
             "PIXEL_SIZE": 0.0022e-3,
         }
     }
