@@ -23,7 +23,9 @@ class ProcessMonitor(AbstractSatelliteWindow):
         super().__init__(*args, **kwargs)
 
         self._cw = QPlainTextEdit()
-        logger_font = QtGui.QFont()
+        self._cw.setReadOnly(True)
+        logger_font = QtGui.QFont("monospace")
+        logger_font.setStyleHint(QtGui.QFont.TypeWriter)
         logger_font.setPointSize(11)
         self._cw.setFont(logger_font)
 
@@ -41,7 +43,18 @@ class ProcessMonitor(AbstractSatelliteWindow):
         pass
 
     @QtCore.pyqtSlot(object)
-    def onProcessInfoUpdate(self, info):
+    def onProcessInfoUpdate(self, proc_info):
+        print(proc_info)
         self._cw.clear()
-        for item in info:
-            self._cw.appendPlainText(str(item))
+        info = "{:<20s}{:<16s}{:<16s}{:<12s}{:<16s}\n".format(
+            "Process name", "FAI name", "FAI type", "pid", "status")
+        info += "-" * 80 + "\n"
+        for p in proc_info:
+            info += f"{p.name:<20s}" \
+                f"{p.fai_name:<16s}" \
+                f"{p.fai_type:<16s}" \
+                f"{p.pid:<12d}" \
+                f"{p.status:<16s}" \
+                f"\n"
+
+        self._cw.appendPlainText(info)
