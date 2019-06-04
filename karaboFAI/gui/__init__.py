@@ -6,6 +6,8 @@ from .main_gui import MainGUI
 
 setConfigOptions(
     imageAxisOrder="row-major",
+    foreground="k",
+    background=None,
 )
 
 __QApp = None

@@ -62,7 +62,7 @@ class ImageView(QtGui.QWidget):
         if hide_axis:
             self._plot_widget.hideAxis()
 
-        self._image_item = pg.ImageItem(border='w')
+        self._image_item = pg.ImageItem()
         self._mask_item = MaskItem(self._image_item)
 
         self._plot_widget.addItem(self._image_item)
@@ -211,7 +211,7 @@ class ImageAnalysis(ImageView):
         self._plot_widget.setTitle('')  # reserve space for displaying
 
         # set the customized ImageItem
-        self._image_item = ImageItem(border='w')
+        self._image_item = ImageItem()
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
         self._mask_item.mask_region_change_sgn.connect(
