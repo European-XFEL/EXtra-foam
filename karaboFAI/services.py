@@ -23,7 +23,7 @@ from . import __version__
 from .config import config
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .pipeline import Bridge, Scheduler
+from .pipeline import Scheduler
 from .pipeline.worker import ProcessInfo, register_fai_process
 from .utils import check_system_resource
 from .ipc import redis_connection
@@ -167,12 +167,8 @@ class FAI:
             sys.exit(1)
 
         try:
-            # process which runs one or more zmq bridge
-            self.bridge = Bridge()
-
             # process which runs the scheduler
             self.scheduler = Scheduler(detector)
-            self.scheduler.connect_input(self.bridge)
 
             self.app = mkQApp()
             self.gui = MainGUI(start_thread_logger=True)
@@ -185,22 +181,19 @@ class FAI:
                     f"number of available GPUs: {_N_GPUS}, "
                     f"total system memory: {_SYS_MEMORY/1024**3:.1f} GB")
 
-        self.bridge.start()
-        register_fai_process(ProcessInfo(name='bridge',
-                                         process=self.bridge))
-
         self.scheduler.start()
         register_fai_process(ProcessInfo(name='scheduler',
                                          process=self.scheduler))
-        self.gui.connectInput(self.scheduler)
+
+        self.gui.connectInputToOutput(self.scheduler.output)
         self.gui.start_sgn.connect(self.start)
         self.gui.stop_sgn.connect(self.pause)
 
     def start(self):
-        self.bridge.activate()
+        self.scheduler.resume()
 
     def pause(self):
-        self.bridge.pause()
+        self.scheduler.pause()
 
 
 def application():

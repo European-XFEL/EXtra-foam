@@ -42,7 +42,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         cls.gui = fai.gui
         cls.fai = fai
         cls.scheduler = fai.scheduler
-        cls.bridge = fai.bridge
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
@@ -273,33 +272,31 @@ class TestMainGuiCtrl(unittest.TestCase):
         scheduler = self.scheduler
         assembler = scheduler._image_assembler
         aggregtor = scheduler._data_aggregator
-        bridge = self.bridge
-        bridge.update()
 
         # test passing tcp hostname and port
 
-        hostname = config['SERVER_ADDR']
-        port = config['SERVER_PORT']
-        self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
-
-        widget._hostname_le.setText('127.0.0.1')
-        widget._port_le.setText('12345')
-
-        bridge.update()
-        self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
+        # hostname = config['SERVER_ADDR']
+        # port = config['SERVER_PORT']
+        # self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
+        #
+        # widget._hostname_le.setText('127.0.0.1')
+        # widget._port_le.setText('12345')
+        #
+        # bridge.update()
+        # self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
 
         # test passing data source types and detector source name
 
         source_type = DataSource.FILE
         widget._source_type_cb.setCurrentIndex(source_type)
-        bridge.update()
+        # bridge.update()
         scheduler.update()
         assembler.update()
         aggregtor.update()
 
         self.assertEqual(source_type, assembler._source_type)
         self.assertEqual(source_type, scheduler._source_type)
-        self.assertEqual(source_type, bridge._source_type)
+        # self.assertEqual(source_type, bridge._source_type)
         self.assertEqual("A", assembler._detector_source_name)
         items = []
         for i in range(widget._detector_src_cb.count()):
@@ -314,14 +311,14 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._source_type_cb.setCurrentIndex(source_type)
         widget._xgm_src_cb.setCurrentIndex(1)
 
-        bridge.update()
+        # bridge.update()
         scheduler.update()
         assembler.update()
         aggregtor.update()
 
         self.assertEqual(source_type, assembler._source_type)
         self.assertEqual(source_type, scheduler._source_type)
-        self.assertEqual(source_type, bridge._source_type)
+        # self.assertEqual(source_type, bridge._source_type)
         self.assertEqual("E", assembler._detector_source_name)
         items = []
         for i in range(widget._detector_src_cb.count()):
@@ -482,8 +479,8 @@ class TestMainGuiCtrl(unittest.TestCase):
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
-    @patch('karaboFAI.pipeline.bridge.Bridge.activate', Mock())
-    @patch('karaboFAI.pipeline.bridge.Bridge.pause', Mock())
+    @patch('karaboFAI.pipeline.Scheduler.resume', Mock())
+    @patch('karaboFAI.pipeline.Scheduler.pause', Mock())
     def testStartStop(self):
         logger.setLevel("CRITICAL")
 

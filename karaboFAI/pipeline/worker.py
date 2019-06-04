@@ -11,35 +11,15 @@ All rights reserved.
 """
 import atexit
 from collections import namedtuple
+import multiprocessing as mp
+
 import psutil
 from psutil import NoSuchProcess
 
-import multiprocessing as mp
-from threading import Thread
-from queue import Empty
-
-from ..metadata import Metadata as mt, MetaProxy
-from ..config import config, DataSource, _MetaSingleton
-from ..ipc import RedisConnection
+from ..metadata import MetaProxy
+from ..config import config
+from ..ipc import ProcessWorkerLogger, RedisConnection
 from ..logger import logger
-
-
-class ProcessWorkerLogger(metaclass=_MetaSingleton):
-    """Worker which publishes log message in another Process."""
-
-    _db = RedisConnection()
-
-    def debug(self, msg):
-        self._db.publish("log:debug", msg)
-
-    def info(self, msg):
-        self._db.publish("log:info", msg)
-
-    def warning(self, msg):
-        self._db.publish("log:warning", msg)
-
-    def error(self, msg):
-        self._db.publish("log:error", msg)
 
 
 class ProcessWorker(mp.Process):
@@ -51,16 +31,15 @@ class ProcessWorker(mp.Process):
         super().__init__()
 
         self._name = name
-        self._source_type = None
+        self.source_type = None
 
         self.log = ProcessWorkerLogger()
 
-        # each Manager instance will start a process
-        self._input = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
-        self._output = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._inputs = []  # pipe-ins
+        self._output = None  # pipe-out
 
-        self._pause_event = mp.Event()
-        self._shutdown_event = mp.Event()
+        self._pause_ev = mp.Event()
+        self._close_ev = mp.Event()
 
         self._meta = MetaProxy()
 
@@ -70,21 +49,25 @@ class ProcessWorker(mp.Process):
     def output(self):
         return self._output
 
-    def connect_input(self, worker):
-        if not isinstance(worker, ProcessWorker):
-            raise TypeError("QThreadWorker is only allowed to connect "
-                            "QThreadWorker instance.")
-
-        self._input = worker.output
-
     def run(self):
         """Override."""
-        th = Thread(target=self._monitor_queue)
-        th.daemon = True
-        th.start()
+        for inp in self._inputs:
+            inp.run_in_thread(self._close_ev)
+        self._output.run_in_thread(self._close_ev)
 
         while not self.closing:
             try:
+                if not self.running:
+                    self._pause_ev.wait()
+
+                    # update metadata
+                    self.update()
+
+                    # tell input and output channels to update
+                    for inp in self._inputs:
+                        inp.update()
+                    self._output.update()
+
                 self._run_once()
             except Exception as e:
                 self.log.error(repr(e))
@@ -92,54 +75,38 @@ class ProcessWorker(mp.Process):
     def _run_once(self):
         raise NotImplementedError
 
-    def _monitor_queue(self):
-        self.empty_output()  # remove old data
-
-        self._shutdown_event.wait()
-
-        self._input.cancel_join_thread()
-        self._output.cancel_join_thread()
-
-    def shutdown(self):
-        self._shutdown_event.set()
-        self._pause_event.set()
+    def close(self):
+        self._close_ev.set()
+        self._pause_ev.set()
 
     @property
     def closing(self):
-        return self._shutdown_event.is_set()
-
-    def activate(self):
-        self._pause_event.set()
-
-    def pause(self):
-        self._pause_event.clear()
+        return self._close_ev.is_set()
 
     @property
     def running(self):
-        return self._pause_event.is_set()
+        return self._pause_ev.is_set()
 
     def wait(self):
-        self._pause_event.wait()
+        self._pause_ev.wait()
 
-    def empty_output(self):
-        """Empty the output queue."""
-        while not self._output.empty():
-            try:
-                self._output.get_nowait()
-            except Empty:
-                break
+    def resume(self):
+        """Resume the worker.
 
-    def pop_output(self):
-        """Remove and return an item from the output queue"""
-        try:
-            return self._output.get_nowait()
-        except Empty:
-            pass
+        Note: this method is called by the main process.
+        """
+        self._pause_ev.set()
+
+    def pause(self):
+        """Pause the worker.
+
+        Note: this method is called by the main process.
+        """
+        self._pause_ev.clear()
 
     def update(self):
         """Update metadata."""
-        self._source_type = DataSource(
-            int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
+        pass
 
 
 ProcessInfo = namedtuple("ProcessInfo", [
@@ -209,8 +176,7 @@ def find_process_type_by_pid(pid):
                 return name
 
 
-def shutdown_all():
-    """Shutdown all child processes."""
+def close_all_child_processes():
     def on_terminate(proc):
         name = find_process_type_by_pid(proc.pid)
         if name is None:
@@ -247,7 +213,7 @@ def shutdown_all():
             print(f"process {p} survived SIGKILL, please clean it manually")
 
 
-atexit.register(shutdown_all)
+atexit.register(close_all_child_processes)
 
 
 class ProcessManager:
@@ -275,7 +241,7 @@ class ProcessManager:
 
         for _, proc in _fai_processes.pipeline.items():
             if proc.is_alive():
-                proc.shutdown()
+                proc.close()
                 proc.join(timeout=0.5)
 
         for _, proc in _fai_processes.pipeline.items():

@@ -9,13 +9,18 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import time
 import logging
 import os.path as osp
 from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
+import multiprocessing as mp
 
 from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
+
+from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
@@ -35,10 +40,57 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..utils import profiler
-from ..pipeline import Data4Visualization
-from ..pipeline.worker import ProcessManager, list_fai_processes
-from .thread_worker import ThreadLoggerBridge
+from ..ipc import redis_psubscribe
+from ..pipeline import Data4Visualization, MpInQueue
+from ..pipeline.worker import list_fai_processes, ProcessManager
 from ..offline import FileServerManager
+
+
+class ThreadLoggerBridge(QObject):
+    """QThread which subscribes logs the Redis server.
+
+    This QThread forward the message from the Redis server and send
+    it to the MainGUI via signal-slot connection.
+    """
+    log_debug_sgn = pyqtSignal(str)
+    log_info_sgn = pyqtSignal(str)
+    log_warning_sgn = pyqtSignal(str)
+    log_error_sgn = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+    def recv_messages(self):
+        sub = redis_psubscribe("log:*")
+
+        while True:
+            try:
+                msg = sub.get_message()
+                if msg and isinstance(msg['data'], str):
+                    channel = msg['channel']
+                    log_msg = msg['data']
+
+                    if channel == 'log:debug':
+                        self.log_debug_sgn.emit(log_msg)
+                    elif channel == 'log:info':
+                        self.log_info_sgn.emit(log_msg)
+                    elif channel == 'log:warning':
+                        self.log_warning_sgn.emit(log_msg)
+                    elif channel == 'log:error':
+                        self.log_error_sgn.emit(log_msg)
+
+            except ConnectionError:
+                pass
+
+            # TODO: find a magic number
+            time.sleep(0.001)
+
+    def connectToMainThread(self, instance):
+        """Connect all log signals to slots in the Main Thread."""
+        self.log_debug_sgn.connect(instance.onLogDebugReceived)
+        self.log_info_sgn.connect(instance.onLogInfoReceived)
+        self.log_warning_sgn.connect(instance.onLogWarningReceived)
+        self.log_error_sgn.connect(instance.onLogErrorReceived)
 
 
 class MainGUI(QtGui.QMainWindow):
@@ -46,10 +98,10 @@ class MainGUI(QtGui.QMainWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
-    start_sgn = QtCore.pyqtSignal()
-    stop_sgn = QtCore.pyqtSignal()
+    start_sgn = pyqtSignal()
+    stop_sgn = pyqtSignal()
 
-    process_info_sgn = QtCore.pyqtSignal(object)
+    process_info_sgn = pyqtSignal(object)
 
     def __init__(self, *, start_thread_logger=False):
         """Initialization.
@@ -61,6 +113,10 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
+
+        self._input = MpInQueue("gui:input")
+        self._close_ev = mp.Event()
+        self._input.run_in_thread(self._close_ev)
 
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
@@ -220,8 +276,8 @@ class MainGUI(QtGui.QMainWindow):
         layout.addLayout(misc_layout, 3)
         self._cw.setLayout(layout)
 
-    def connectInput(self, worker):
-        self._input = worker.output
+    def connectInputToOutput(self, output):
+        self._input.connect(output)
 
     @profiler("Update Plots")
     def updateAll(self):
@@ -334,25 +390,27 @@ class MainGUI(QtGui.QMainWindow):
 
         return True
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onLogDebugReceived(self, msg):
         logger.debug(msg)
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onLogInfoReceived(self, msg):
         logger.info(msg)
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onLogWarningReceived(self, msg):
         logger.warning(msg)
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onLogErrorReceived(self, msg):
         logger.error(msg)
 
     def closeEvent(self, QCloseEvent):
         # prevent from logging in the GUI when it has been closed
         logging.getLogger().removeHandler(self._logger)
+
+        self._close_ev.set()
 
         self._file_server.shutdown()
 

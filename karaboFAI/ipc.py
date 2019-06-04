@@ -14,6 +14,7 @@ import json
 import redis
 
 from .config import config
+from .utils import _MetaSingleton
 
 
 class _RedisQueueBase:
@@ -108,3 +109,21 @@ def redis_psubscribe(pattern, *, decode_responses=True):
     sub = redis_connection(decode_responses=decode_responses).pubsub()
     sub.psubscribe(pattern)
     return sub
+
+
+class ProcessWorkerLogger(metaclass=_MetaSingleton):
+    """Worker which publishes log message in another Process."""
+
+    _db = RedisConnection()
+
+    def debug(self, msg):
+        self._db.publish("log:debug", msg)
+
+    def info(self, msg):
+        self._db.publish("log:info", msg)
+
+    def warning(self, msg):
+        self._db.publish("log:warning", msg)
+
+    def error(self, msg):
+        self._db.publish("log:error", msg)

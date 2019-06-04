@@ -17,6 +17,7 @@ import traceback
 from .image_assembler import ImageAssemblerFactory
 from .data_aggregator import DataAggregator
 from .worker import ProcessWorker
+from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
     AzimuthalIntegrationProcessor, BinProcessor,
     CorrelationProcessor, ImageProcessor, PumpProbeProcessor,
@@ -25,6 +26,7 @@ from .processors import (
 from .exceptions import (
     AggregatingError, AssemblingError, ProcessingError)
 from ..config import DataSource
+from ..metadata import Metadata as mt
 from ..utils import profiler
 
 
@@ -33,6 +35,11 @@ class Scheduler(ProcessWorker):
     def __init__(self, detector, name='scheduler'):
         """Initialization."""
         super().__init__(name)
+
+        self._inputs = [KaraboBridge("scheduler:input")]
+        self._output = MpOutQueue("scheduler:output")
+
+        self._source_type = None
 
         self._tasks = []
 
@@ -64,48 +71,50 @@ class Scheduler(ProcessWorker):
         # the time when the previous data processing was finished
         self._last_data_processed_time = None
 
+    def update(self):
+        self._source_type = DataSource(
+            int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
+
     def _run_once(self):
-        """Run the data processor."""
+        """Override."""
         timeout = self._timeout
 
-        try:
-            data = self._input.get(timeout=timeout)
-        except Empty:
-            return
-
-        self.update()
-
-        self._data_aggregator.update()
-        self._image_assembler.update()
-
-        processed_data = self._process_core(data)
-        if self._last_data_processed_time is not None:
-            fps = 1.0 / (time.time() - self._last_data_processed_time)
-            self.log.debug(f"Scheduler processing FPS: {fps:>4.1f} Hz")
-        self._last_data_processed_time = time.time()
-
-        if processed_data is None:
-            return
-
-        if self._source_type == DataSource.BRIDGE:
-            # always keep the latest data in the queue
+        for inp in self._inputs:
             try:
-                self._output.put(processed_data, timeout=timeout)
-            except Full:
-                self.pop_output()
-                self.log.warning("Data dropped by the scheduler due to the "
-                                 "slowness of data visualization!")
-        elif self._source_type == DataSource.FILE:
-            # wait until data in the queue has been processed
-            while not self.closing:
+                # get the data from pipe-in
+                data = inp.get(timeout=timeout)
+            except Empty:
+                return
+
+            self._data_aggregator.update()
+            self._image_assembler.update()
+
+            processed_data = self._process_core(data)
+            if self._last_data_processed_time is not None:
+                fps = 1.0 / (time.time() - self._last_data_processed_time)
+                self.log.debug(f"Scheduler processing FPS: {fps:>4.1f} Hz")
+            self._last_data_processed_time = time.time()
+
+            if processed_data is None:
+                return
+
+            if self._source_type == DataSource.BRIDGE:
+                # always keep the latest data in the queue
                 try:
-                    self._output.put(processed_data, timeout=timeout)
-                    break
-                except Full:
+                    self._output.put_pop(processed_data, timeout=timeout)
+                except Empty:
                     continue
-        else:
-            raise ProcessingError(
-                f"Unknown source type {self._source_type}!")
+            elif self._source_type == DataSource.FILE:
+                # wait until data in the queue has been processed
+                while not self.closing:
+                    try:
+                        self._output.put(processed_data, timeout=timeout)
+                        break
+                    except Full:
+                        continue
+            else:
+                raise ProcessingError(
+                    f"Unknown source type {self._source_type}!")
 
     @profiler("Process Data (total)")
     def _process_core(self, data):
