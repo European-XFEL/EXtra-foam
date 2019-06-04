@@ -169,8 +169,9 @@ class CorrelationWidget(PlotWidget):
     Widget for displaying correlations between FOM and different parameters.
     """
     _colors = config["CORRELATION_COLORS"]
-    _brushes = {i: make_brush(color, 120) for i, color in enumerate(_colors)}
-    _opaque_brushes = {i: make_brush(color) for i, color in enumerate(_colors)}
+    _pens = [make_pen(color) for color in _colors]
+    _brushes = [make_brush(color, 120) for color in _colors]
+    _opaque_brushes = [make_brush(color) for color in _colors]
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
@@ -181,7 +182,7 @@ class CorrelationWidget(PlotWidget):
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
 
-        self._bar = self.plotErrorBar()
+        self._bar = self.plotErrorBar(pen=self._pens[self._idx-1])
         self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
         self._device_id = None

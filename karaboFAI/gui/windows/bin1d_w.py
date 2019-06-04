@@ -30,8 +30,6 @@ class Bin1DWindow(DockerWindow):
     _BW = _TOTAL_W
     _BH = _TOTAL_H / 4
 
-    _n_views = len(config['BIN_COLORS'])
-
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)

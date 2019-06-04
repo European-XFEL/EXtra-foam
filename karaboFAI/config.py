@@ -97,11 +97,9 @@ class _Config(dict):
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
         # colors of for ROI 1 to 4
-        "ROI_COLORS": ['c', 'b', 'o', 'y'],
+        "ROI_COLORS": ['b', 'g', 'o', 'p'],
         # colors for correlation parameters 1 to 4
-        "CORRELATION_COLORS": ['c', 'b', 'o', 'y'],
-        # colors for binning plots 1 to 3
-        "BIN_COLORS": ['c', 'b', 'o'],
+        "CORRELATION_COLORS": ['b', 'o', 'g', 'p'],
         # full path of the Redis server executable
         "REDIS_EXECUTABLE": osp.join(osp.abspath(
             osp.dirname(__file__)), "thirdparty/bin/redis-server"),
