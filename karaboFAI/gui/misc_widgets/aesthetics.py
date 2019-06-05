@@ -32,10 +32,15 @@ class QualitativeColors:
 Colors = QualitativeColors
 
 
-def make_pen(color, width=2, alpha=255, **kwargs):
+def make_pen(color, alpha=255, **kwargs):
     """Convenient function for making QPen."""
     if color is None:
         return mkPen(None)
+
+    # Due to a bug in Qt, setting width greater than 1 will significantly
+    # degrade the performance.
+    # https://github.com/pyqtgraph/pyqtgraph/issues/533
+    width = 1
 
     if isinstance(color, int):
         return mkPen(intColor(color, **kwargs), width=width)

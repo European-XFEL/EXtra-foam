@@ -175,7 +175,7 @@ class MaskItem(GraphicsObject):
             return
 
         p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setPen(make_pen('b', width=4))
+        p.setPen(make_pen('b'))
 
         p.drawImage(self.boundingRect(), self._mask)
         p.drawRect(self._selectedRect())
