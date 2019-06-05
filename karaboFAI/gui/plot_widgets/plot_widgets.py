@@ -42,12 +42,12 @@ class SinglePulseAiWidget(PlotWidget):
         if plot_mean:
             self.addLegend(offset=(-40, 20))
 
-        self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("y"))
-
         if plot_mean:
-            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("b"))
+            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("c"))
         else:
             self._mean_plot = None
+
+        self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("p"))
 
     def update(self, data):
         """Override."""
@@ -251,10 +251,10 @@ class PumpProbeOnOffWidget(PlotWidget):
 
         self._is_diff = diff
         if diff:
-            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("y"))
+            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("b"))
         else:
-            self._on_pulse = self.plotCurve(name="On", pen=make_pen("d"))
-            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
+            self._on_pulse = self.plotCurve(name="On", pen=make_pen("g"))
+            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("p"))
 
     def update(self, data):
         """Override."""
@@ -291,7 +291,7 @@ class PumpProbeFomWidget(PlotWidget):
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "FOM (arb. u.)")
 
-        self._plot = self.plotScatter(brush=make_brush('o'))
+        self._plot = self.plotScatter(brush=make_brush('w'))
 
     def update(self, data):
         """Override."""
@@ -313,9 +313,9 @@ class XasSpectrumWidget(PlotWidget):
         self.setLabel('left', "Absorption")
 
         self._spectrum1 = self.plotScatter(
-            name="ROI2/ROI1", brush=make_brush('p'), size=12)
+            name="ROI2/ROI1", brush=make_brush('g'), size=12)
         self._spectrum2 = self.plotScatter(
-            name="ROI3/ROI1", brush=make_brush('g'), size=12)
+            name="ROI3/ROI1", brush=make_brush('p'), size=12)
 
         self.addLegend(offset=(-40, 20))
 
