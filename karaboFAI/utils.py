@@ -26,11 +26,11 @@ def profiler(info):
     def wrap(f):
         @functools.wraps(f)
         def timed_f(*args, **kwargs):
-            t0 = time.perf_counter()
+            t0 = time.process_time()
             result = f(*args, **kwargs)
-            dt_ms = 1000 * (time.perf_counter() - t0)
+            dt_ms = 1000 * (time.process_time() - t0)
             if dt_ms > PROFILER_THREASHOLD:
-                logger.debug(f"Time spent on {info}: {dt_ms:.3f} ms")
+                logger.debug(f"Process time spent on {info}: {dt_ms:.3f} ms")
             return result
         return timed_f
     return wrap

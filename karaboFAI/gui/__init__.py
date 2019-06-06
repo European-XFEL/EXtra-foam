@@ -7,7 +7,7 @@ from .main_gui import MainGUI
 setConfigOptions(
     imageAxisOrder="row-major",
     foreground="k",
-    background=None,
+    background=(225, 225, 225, 255),
 )
 
 __QApp = None

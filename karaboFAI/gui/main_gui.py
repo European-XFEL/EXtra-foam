@@ -223,6 +223,7 @@ class MainGUI(QtGui.QMainWindow):
     def connectInput(self, worker):
         self._input = worker.output
 
+    @profiler("Update Plots")
     def updateAll(self):
         """Update all the plots in the main and child windows."""
         if not self._running:
@@ -243,14 +244,10 @@ class MainGUI(QtGui.QMainWindow):
             logger.info("Bad train with ID: {}".format(self._data.get().tid))
             return
 
-        self._updateAllPlots()
-
-        logger.info("Updated train with ID: {}".format(self._data.get().tid))
-
-    @profiler("Update Plots")
-    def _updateAllPlots(self):
         for w in self._windows.keys():
             w.update()
+
+        logger.info("Updated train with ID: {}".format(self._data.get().tid))
 
     def _publish_process_info(self):
         self.process_info_sgn.emit(list_fai_processes())

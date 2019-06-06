@@ -87,7 +87,7 @@ class _Config(dict):
         # detector name, leave it empty
         "DETECTOR": "",
         # QTimer interval for updating plots, in milliseconds
-        "PLOT_UPDATE_INTERVAL": 20,
+        "PLOT_UPDATE_INTERVAL": 10,
         # QTimer interval for monitoring processes, in milliseconds
         "PROCESS_MONITOR_HEART_BEAT": 5000,
         # timeout when cleaning up remnant processes, in second
@@ -97,9 +97,9 @@ class _Config(dict):
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
         # colors of for ROI 1 to 4
-        "ROI_COLORS": ['b', 'g', 'o', 'p'],
+        "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4
-        "CORRELATION_COLORS": ['b', 'o', 'g', 'p'],
+        "CORRELATION_COLORS": ['b', 'o', 'g', 'r'],
         # full path of the Redis server executable
         "REDIS_EXECUTABLE": osp.join(osp.abspath(
             osp.dirname(__file__)), "thirdparty/bin/redis-server"),

@@ -33,13 +33,9 @@ class RoiWindow(DockerWindow):
         super().__init__(*args, **kwargs)
 
         self._roi1_image = RoiImageView(1, parent=self)
-        self._roi1_image.setBorder(make_pen(config["ROI_COLORS"][0]))
         self._roi2_image = RoiImageView(2, parent=self)
-        self._roi2_image.setBorder(make_pen(config["ROI_COLORS"][1]))
         self._roi3_image = RoiImageView(3, parent=self)
-        self._roi3_image.setBorder(make_pen(config["ROI_COLORS"][2]))
         self._roi4_image = RoiImageView(4, parent=self)
-        self._roi4_image.setBorder(make_pen(config["ROI_COLORS"][3]))
 
         self._roi_intensity = RoiValueMonitor(parent=self)
 

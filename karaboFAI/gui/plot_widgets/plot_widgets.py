@@ -13,7 +13,7 @@ import numpy as np
 
 from .base_plot_widget import PlotWidget
 
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import make_brush, make_pen, SequentialColors
 from ...logger import logger
 from ...config import config
 
@@ -43,7 +43,7 @@ class SinglePulseAiWidget(PlotWidget):
             self.addLegend(offset=(-40, 20))
 
         if plot_mean:
-            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("c"))
+            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("g"))
         else:
             self._mean_plot = None
 
@@ -96,7 +96,8 @@ class TrainAiWidget(PlotWidget):
 
             if self._n_pulses == 0:
                 # initialize
-                self.plotCurve(momentum, intensity_mean)
+                self.plotCurve(momentum, intensity_mean,
+                               pen=make_pen(SequentialColors().r[0]))
                 self._n_pulses = 1
             else:
                 self.plotItem.items[0].setData(momentum, intensity_mean)
@@ -105,9 +106,9 @@ class TrainAiWidget(PlotWidget):
             if self._n_pulses != n_pulses:
                 self.clear()
 
+                colors = SequentialColors().s1(n_pulses)
                 for i, intensity in enumerate(intensities):
-                    self.plotCurve(momentum, intensity,
-                                   pen=make_pen(i, hues=9, values=5))
+                    self.plotCurve(momentum, intensity, pen=make_pen(colors[i]))
             else:
                 for item, intensity in zip(self.plotItem.items, intensities):
                     item.setData(momentum, intensity)
@@ -123,7 +124,7 @@ class PulsedFOMWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._plot = self.plotBar(width=0.6, brush=make_brush('b'))
+        self._plot = self.plotBar()
 
         self.setLabel('left', "Integrated difference (arb.)")
         self.setLabel('bottom', "Pulse index")
@@ -251,10 +252,10 @@ class PumpProbeOnOffWidget(PlotWidget):
 
         self._is_diff = diff
         if diff:
-            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("b"))
+            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("p"))
         else:
-            self._on_pulse = self.plotCurve(name="On", pen=make_pen("g"))
-            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("p"))
+            self._on_pulse = self.plotCurve(name="On", pen=make_pen("r"))
+            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("b"))
 
     def update(self, data):
         """Override."""
@@ -291,7 +292,7 @@ class PumpProbeFomWidget(PlotWidget):
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "FOM (arb. u.)")
 
-        self._plot = self.plotScatter(brush=make_brush('w'))
+        self._plot = self.plotScatter(brush=make_brush('g'))
 
     def update(self, data):
         """Override."""
@@ -313,9 +314,9 @@ class XasSpectrumWidget(PlotWidget):
         self.setLabel('left', "Absorption")
 
         self._spectrum1 = self.plotScatter(
-            name="ROI2/ROI1", brush=make_brush('g'), size=12)
+            name="ROI2/ROI1", brush=make_brush('r'), size=12)
         self._spectrum2 = self.plotScatter(
-            name="ROI3/ROI1", brush=make_brush('p'), size=12)
+            name="ROI3/ROI1", brush=make_brush('b'), size=12)
 
         self.addLegend(offset=(-40, 20))
 
@@ -364,7 +365,7 @@ class XasSpectrumBinCountWidget(PlotWidget):
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Count")
 
-        self._plot = self.plotBar(width=0.8)
+        self._plot = self.plotBar()
 
     def update(self, data):
         """Override."""
@@ -402,13 +403,17 @@ class BinWidget(PlotWidget):
         if self._n_bins != n_bins:
             self.clear()
 
+            self._n_bins = n_bins
+
+            colors = SequentialColors().s1(n_bins)
+
             bin_width = bin_center[1] - bin_center[0]
             for i, v in enumerate(data_x):
                 start = bin_center[i] - bin_width/2.
                 end = bin_center[i] + bin_width/2.
                 self.plotCurve(x, v,
                                name=f"{start:>8.2e}, {end:>8.2e}",
-                               pen=make_pen(i, hues=9, values=5))
+                               pen=make_pen(colors[i]))
         else:
             for item, v in zip(self.plotItem.items, data_x):
                 item.setData(x, v)
@@ -427,7 +432,7 @@ class BinCountWidget(PlotWidget):
         self.setLabel('bottom', "x")
         self.setLabel('left', "Count")
 
-        self._plot = self.plotBar(width=0.9, brush=make_brush('b'))
+        self._plot = self.plotBar()
 
     def update(self, data):
         """Override."""
