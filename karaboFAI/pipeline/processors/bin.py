@@ -94,7 +94,6 @@ class BinProcessor(CompositeProcessor):
 
         if reset or n_bins_x != self.n_bins_x \
                 or bin_range_x != self.bin_range_x:
-
             edge_x = np.linspace(bin_range_x[0], bin_range_x[1], n_bins_x+1)
 
             self._data.edge_x = edge_x
@@ -125,7 +124,6 @@ class Bin1DProcessorX(LeafProcessor):
     def process(self, processed, raw=None):
         if not self.device_id_x or not self.property_x:
             return
-
         edge = self._data.edge_x
         center = self._data.center_x
         count = self._data.count_x
@@ -153,7 +151,7 @@ class Bin1DProcessorX(LeafProcessor):
             if data_x is None:
                 # initialization
                 data_x = np.zeros((len(count), len(new_value)))
-                self._data.values = data_x
+                self._data.data_x = data_x
                 data_x[index-1][:] = new_value
             else:
                 data_x[index-1][:] += new_value
@@ -198,7 +196,7 @@ class Bin1DProcessorY(LeafProcessor):
             if data_y is None:
                 # initialization
                 data_y = np.zeros((len(count), len(new_value)))
-                self._data.values = data_y
+                self._data.data_y = data_y
                 data_y[index-1][:] = new_value
             else:
                 data_y[index-1][:] += new_value
