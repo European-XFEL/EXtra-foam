@@ -148,7 +148,6 @@ setup(
         'karabo-bridge>=0.3.0',
         'toolz',
         'silx>=0.9.0',
-        'cached-property>=1.5.1',
         'redis',
         'pyarrow>=0.13.0',
         'psutil',

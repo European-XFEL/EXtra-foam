@@ -87,21 +87,12 @@ class TrainAiWidget(PlotWidget):
     def update(self, data):
         """Override."""
         momentum = data.ai.momentum
-        intensities = data.ai.intensities
-        intensity_mean = data.ai.intensity_mean
 
-        if intensities is None:
-            if intensity_mean is None:
+        if data.pulse_resolved:
+            intensities = data.ai.intensities
+            if intensities is None:
                 return
 
-            if self._n_pulses == 0:
-                # initialize
-                self.plotCurve(momentum, intensity_mean,
-                               pen=make_pen(SequentialColors().r[0]))
-                self._n_pulses = 1
-            else:
-                self.plotItem.items[0].setData(momentum, intensity_mean)
-        else:
             n_pulses = len(intensities)
             if self._n_pulses != n_pulses:
                 self.clear()
@@ -112,6 +103,19 @@ class TrainAiWidget(PlotWidget):
             else:
                 for item, intensity in zip(self.plotItem.items, intensities):
                     item.setData(momentum, intensity)
+
+        else:
+            intensity_mean = data.ai.intensity_mean
+            if intensity_mean is None:
+                return
+
+            if self._n_pulses == 0:
+                # initialize
+                self.plotCurve(momentum, intensity_mean,
+                               pen=make_pen(SequentialColors().r[0]))
+                self._n_pulses = 1
+            else:
+                self.plotItem.items[0].setData(momentum, intensity_mean)
 
 
 class PulsedFOMWidget(PlotWidget):

@@ -41,8 +41,6 @@ class CorrelationProcessor(CompositeProcessor):
         self.device_ids = [None] * n_params
         self.properties = [None] * n_params
 
-        self.add(CorrelationFomProcessor())
-
     def update(self):
         """Override."""
         cfg = self._meta.get_all(mt.CORRELATION_PROC)
@@ -58,13 +56,13 @@ class CorrelationProcessor(CompositeProcessor):
             self.device_ids[i] = cfg[f'device_id{i+1}']
             self.properties[i] = cfg[f'property{i+1}']
 
-
-class CorrelationFomProcessor(LeafProcessor):
-    @profiler("Correlation processor")
-    def process(self, processed):
+    @profiler("Correlation Processor")
+    def process(self, data):
         """Override."""
         if self.fom_type is None or self.fom_type == CorrelationFom.UNDEFINED:
             return
+
+        processed = data['processed']
 
         if self.fom_type == CorrelationFom.PUMP_PROBE_FOM:
             fom = processed.pp.fom
@@ -120,6 +118,6 @@ class CorrelationFomProcessor(LeafProcessor):
             if not ppt:
                 continue
 
-            value = _get_slow_data(processed, device_id, ppt)
+            value = _get_slow_data(processed.tid, data['raw'], device_id, ppt)
 
             setattr(processed.correlation, f'correlator{i}', value)

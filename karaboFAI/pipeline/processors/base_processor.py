@@ -18,16 +18,14 @@ from ...metadata import Metadata as mt
 from ...config import AnalysisType
 
 
-def _get_slow_data(processed, device_id, ppt):
+def _get_slow_data(tid, raw, device_id, ppt):
     """Get slow data.
 
-    :param dict processed: processed data.
+    :param int tid: train ID.
+    :param dict raw: raw data.
     :param str device_id: device ID.
     :param str ppt: property name.
     """
-    tid = processed.tid
-    raw = processed.raw
-
     if device_id == "Any":
         return tid
     else:
@@ -152,8 +150,7 @@ class _RedisParserMixin:
 class StopCompositionProcessing(Exception):
     """StopCompositionProcessing
 
-    Exception raise in the process() method which will be called by the
-    parent processor to stop the rest child processors.
+    Exception raised to stop the process train of a Composite processor.
     """
     pass
 
@@ -197,6 +194,26 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     def _has_analysis(self, analysis_type):
         count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
         return bool(count) and int(count) > 0
+
+    def _has_any_analysis(self, analysis_type_list):
+        if not isinstance(analysis_type_list, (tuple, list)):
+            raise TypeError("Input must be a tuple or list!")
+
+        for analysis_type in analysis_type_list:
+            count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+            if bool(count) and int(count) > 0:
+                return True
+        return False
+
+    def _has_all_analysis(self, analysis_type_list):
+        if not isinstance(analysis_type_list, (tuple, list)):
+            raise TypeError("Input must be a tuple or list!")
+
+        for analysis_type in analysis_type_list:
+            count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+            if not (bool(count) and int(count) > 0):
+                return False
+        return True
 
     def _update_analysis(self, analysis_type):
         if not isinstance(analysis_type, AnalysisType):
@@ -257,6 +274,9 @@ class CompositeProcessor(_BaseProcessor):
         self._children = []
 
     def add(self, child):
+        if not isinstance(child, LeafProcessor):
+            raise TypeError("Child processors must be LeafProcessor!")
+
         self._children.append(child)
         child._parent = self
         child._data = self._data
@@ -268,27 +288,25 @@ class CompositeProcessor(_BaseProcessor):
         """Remove and return the last child."""
         return self._children.pop(-1)
 
-    def run_once(self, processed):
-        try:
-            self.update()
-        except StopCompositionProcessing:
-            return
-
-        params = copy.deepcopy(self._params)  # froze all the shared properties
-        # StopCompositionProcessing it raises will be handled by its
-        # parent processor
-        self.process(processed)
-
-        for child in self._children:
-            child._params.update(params)
-            try:
-                child.run_once(processed)
-            except StopCompositionProcessing:
-                break
-
     def update(self):
         """Update metadata."""
         pass
+
+    def run_once(self, processed):
+        try:
+            self.update()
+
+            # froze all the shared properties
+            params = copy.deepcopy(self._params)
+
+            self.process(processed)
+
+            for child in self._children:
+                child._params.update(params)
+                child.run_once(processed)
+
+        except StopCompositionProcessing:
+            pass
 
     def reset_all(self):
         self.reset()

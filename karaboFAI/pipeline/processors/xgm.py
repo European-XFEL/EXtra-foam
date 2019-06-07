@@ -23,21 +23,18 @@ class XgmProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self.add(XgmTrainProcessor())
-
     def update(self):
         cfg = self._meta.get_all(mt.DATA_SOURCE)
 
         self.xgm_src = cfg['xgm_source_name']
 
-
-class XgmTrainProcessor(LeafProcessor):
-
-    @profiler("XGM processor")
-    def process(self, processed):
+    @profiler("XGM Processor")
+    def process(self, data):
         """Processor XGM train data."""
         xgm_src = self.xgm_src
-        raw = processed.raw
+
+        processed = data['processed']
+        raw = data['raw']
 
         if not xgm_src:
             processed.xgm.source = None

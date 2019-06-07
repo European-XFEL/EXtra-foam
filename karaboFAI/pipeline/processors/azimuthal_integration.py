@@ -81,16 +81,17 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
     auc_range = SharedProperty()
     fom_integ_range = SharedProperty()
 
-    enable_pulsed_ai = SharedProperty()
-
     image_mask = SharedProperty()
+
+    analysis_type = SharedProperty()
 
     def __init__(self):
         super().__init__()
 
-        self.add(AiPulsedProcessor())
-        self.add(AiTrainProcessor())
-        self.add(AiPumpProbeProcessor())
+        self.add(AiProcessor())
+        self.add(AiProcessorPulsedFom())
+        self.add(AiProcessorPumpProbe())
+        self.add(AiProcessorPumpProbeFom())
 
         self.image_mask = None
         self._mask_command = redis_subscribe("command:image_mask",
@@ -113,7 +114,11 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.normalizer = AiNormalizer(int(cfg['normalizer']))
         self.auc_range = self.str2tuple(cfg['auc_range'])
         self.fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
-        self.enable_pulsed_ai = cfg['enable_pulsed_ai'] == 'True'
+
+        if cfg['enable_pulsed_ai'] == 'True':
+            self._update_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG)
+        else:
+            self._update_analysis(AnalysisType.UNDEFINED)
 
         while True:
             msg = self._mask_command.get_message()
@@ -145,26 +150,20 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
                 np.bool, casting='unsafe')
 
 
-class AiPulsedProcessor(CompositeProcessor):
-    """AiPulsedProcessor class.
+class AiProcessor(LeafProcessor):
+    """AiProcessor class.
 
-    Calculate azimuthal integration for individual pulses in a train.
+    Calculate azimuthal integration in a train.
     """
-    def __init__(self):
-        super().__init__()
-
-        self.add(AiPulsedFomProcessor())
-
-    @profiler("Azimuthal integration pulsed processor")
-    def process(self, processed):
-        if not self.enable_pulsed_ai:
-            return
-
+    @profiler("Azimuthal Integration Processor")
+    def process(self, data):
         cx = self.integ_center_x
         cy = self.integ_center_y
         integ_points = self.integ_points
         integ_method = self.integ_method
         integ_range = self.integ_range
+
+        processed = data['processed']
 
         assembled = processed.image.images
 
@@ -182,24 +181,63 @@ class AiPulsedProcessor(CompositeProcessor):
                                  rot3=0,
                                  wavelength=energy2wavelength(self.photon_energy))
 
-        def _integrate1d_imp(i):
-            """Use for multiprocessing."""
-            # convert 'nan' to '-inf', as explained above
-            assembled[i][np.isnan(assembled[i])] = -np.inf
+        if self.image_mask is None:
+            mask = np.zeros(processed.image.shape, dtype=np.bool)
+        else:
+            mask = np.copy(self.image_mask)
+            # image shape could change due to quadrant movement for
+            # pulse-resolved detectors
+            _check_image_mask(mask.shape, assembled[-2:].shape)
 
-            if self.image_mask is None:
-                mask = np.zeros_like(assembled[i], dtype=np.bool)
-            else:
-                mask = np.copy(self.image_mask)
-                # image shape could change due to quadrant movement for
-                # pulse-resolved detectors
-                _check_image_mask(mask.shape, assembled[i].shape)
+        # -------------------------------------------------------------
+        # pulsed azimuthal integration is only applied to
+        # pulsed-resolved detectors
+        # -------------------------------------------------------------
 
+        if self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
+
+            def _integrate1d_imp(i):
+                """Use for multiprocessing."""
+                # convert 'nan' to '-inf', as explained above
+                assembled[i][np.isnan(assembled[i])] = -np.inf
+
+                # merge image mask and threshold mask
+                mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
+
+                # do integration
+                ret = ai.integrate1d(assembled[i],
+                                     integ_points,
+                                     method=integ_method,
+                                     mask=mask,
+                                     radial_range=integ_range,
+                                     correctSolidAngle=True,
+                                     polarization_factor=1,
+                                     unit="q_A^-1")
+
+                return ret.radial, ret.intensity
+
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
+
+            # intensities is a tuple
+            momentums, intensities = zip(*rets)
+            momentum = momentums[0]
+            intensities = self._normalize(processed, momentum, np.array(intensities))
+
+            processed.ai.momentum = momentum
+            processed.ai.intensities = intensities
+
+        # -------------------------------------------------------------
+        # perform azimuthal integration on the masked mean
+        # -------------------------------------------------------------
+
+        masked_mean = processed.image.masked_mean
+
+        if self._has_any_analysis([AnalysisType.TRAIN_AZIMUTHAL_INTEG,
+                                   AnalysisType.PULSE_AZIMUTHAL_INTEG]):
             # merge image mask and threshold mask
-            mask[(assembled[i] < mask_min) | (assembled[i] > mask_max)] = 1
-
-            # do integration
-            ret = ai.integrate1d(assembled[i],
+            mask[(masked_mean < mask_min) | (masked_mean > mask_max)] = 1
+            ret = ai.integrate1d(masked_mean,
                                  integ_points,
                                  method=integ_method,
                                  mask=mask,
@@ -208,34 +246,25 @@ class AiPulsedProcessor(CompositeProcessor):
                                  polarization_factor=1,
                                  unit="q_A^-1")
 
-            return ret.radial, ret.intensity
+            momentum = ret.radial
+            intensity_mean = self._normalize(
+                processed, momentum, ret.intensity)
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            rets = executor.map(_integrate1d_imp, range(assembled.shape[0]))
+            processed.ai.momentum = momentum
+            processed.ai.intensity_mean = intensity_mean
 
-        momentums, intensities = zip(*rets)
-        momentum = momentums[0]
-        intensities = np.array(intensities)
-        intensities_mean = np.mean(intensities, axis=0)
-
-        normalized_intensity_mean, normalized_intensities = self._normalize(
-            processed, momentum, intensities_mean, intensities)
-
-        processed.ai.momentum = momentum
-        processed.ai.intensities = normalized_intensities
-        processed.ai.intensity_mean = normalized_intensity_mean
-
-    def _normalize(self, processed, momentum, intensities_mean, intensities):
+    def _normalize(self, processed, momentum, intensity):
         auc_range = self.auc_range
 
         if self.normalizer == AiNormalizer.AUC:
-            intensities_mean = normalize_auc(
-                intensities_mean, momentum, *auc_range)
 
-            # normalize azimuthal integration curves for each pulse
-            for i, intensity in enumerate(intensities):
-                intensities[i][:] = normalize_auc(
-                    intensity, momentum, *auc_range)
+            if intensity.ndim == 2:
+                # normalize azimuthal integration curves for each pulse
+                for i, item in enumerate(intensity):
+                    intensity[i][:] = normalize_auc(item, momentum, *auc_range)
+            else:
+                intensity = normalize_auc(intensity, momentum, *auc_range)
+
         else:
             _, roi1_hist, _ = processed.roi.roi1_hist
             _, roi2_hist, _ = processed.roi.roi2_hist
@@ -258,123 +287,23 @@ class AiPulsedProcessor(CompositeProcessor):
             if denominator == 0:
                 raise ProcessingError(
                     "Invalid normalizer: sum of ROI(s) is zero!")
-            intensities_mean /= denominator
-            intensities /= denominator
+            intensity /= denominator
 
-        return intensities_mean, intensities
-
-
-class AiTrainProcessor(CompositeProcessor):
-    """AiPulsedProcessor class.
-
-    Calculate azimuthal integration for individual pulses in a train.
-    """
-    def __init__(self):
-        super().__init__()
-
-    @profiler("Azimuthal integration train processor")
-    def process(self, processed):
-        if self.enable_pulsed_ai:
-            return
-
-        if not self._has_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG):
-            return
-
-        cx = self.integ_center_x
-        cy = self.integ_center_y
-        integ_points = self.integ_points
-        integ_method = self.integ_method
-        integ_range = self.integ_range
-
-        assembled = processed.image.masked_mean
-
-        pixel_size = config['PIXEL_SIZE']
-        poni2, poni1 = cx, cy
-        mask_min, mask_max = processed.image.threshold_mask
-
-        ai = AzimuthalIntegrator(dist=self.sample_distance,
-                                 poni1=poni1 * pixel_size,
-                                 poni2=poni2 * pixel_size,
-                                 pixel1=pixel_size,
-                                 pixel2=pixel_size,
-                                 rot1=0,
-                                 rot2=0,
-                                 rot3=0,
-                                 wavelength=energy2wavelength(self.photon_energy))
-
-        if self.image_mask is None:
-            mask = np.zeros_like(assembled, dtype=np.bool)
-        else:
-            mask = np.copy(self.image_mask)
-            # image shape could change due to quadrant movement for
-            # pulse-resolved detectors
-            _check_image_mask(mask.shape, assembled.shape)
-
-        # merge image mask and threshold mask
-        mask[(assembled < mask_min) | (assembled > mask_max)] = 1
-
-        ret = ai.integrate1d(assembled,
-                             integ_points,
-                             method=integ_method,
-                             mask=mask,
-                             radial_range=integ_range,
-                             correctSolidAngle=True,
-                             polarization_factor=1,
-                             unit="q_A^-1")
-
-        momentum = ret.radial
-        intensity_mean = ret.intensity
-
-        normalized_intensity_mean = self._normalize(
-            processed, momentum, intensity_mean)
-
-        processed.ai.momentum = momentum
-        processed.ai.intensity_mean = normalized_intensity_mean
-
-    def _normalize(self, processed, momentum, intensity_mean):
-        auc_range = self.auc_range
-
-        if self.normalizer == AiNormalizer.AUC:
-            intensity_mean = normalize_auc(
-                intensity_mean, momentum, *auc_range)
-        else:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
-
-            denominator = 0
-            try:
-                if self.normalizer == AiNormalizer.ROI1:
-                    denominator = roi1_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI2:
-                    denominator = roi2_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI_SUM:
-                    denominator = roi1_hist[-1] + roi2_hist[-1]
-                elif self.normalizer == AiNormalizer.ROI_SUB:
-                    denominator = roi1_hist[-1] - roi2_hist[-1]
-
-            except IndexError as e:
-                # this could happen if the history is clear just now
-                raise ProcessingError(e)
-
-            if denominator == 0:
-                raise ProcessingError(
-                    "Invalid normalizer: sum of ROI(s) is zero!")
-            intensity_mean /= denominator
-
-        return intensity_mean
+        return intensity
 
 
-class AiPulsedFomProcessor(LeafProcessor):
-    """AiPulsedFomProcessor class.
+class AiProcessorPulsedFom(LeafProcessor):
+    """AiProcessorPulsedFom class.
 
     Calculate azimuthal integration FOM for pulse-resolved detectors.
     """
-    @profiler("Azimuthal integration pulsed FOM processor")
-    def process(self, processed):
+    @profiler("Azimuthal Integration Pulsed FOM Processor")
+    def process(self, data):
         """Override."""
-        if processed.n_pulses == 1:
-            # train-resolved
+        if not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
             return
+
+        processed = data['processed']
 
         momentum = processed.ai.momentum
         if momentum is None:
@@ -393,20 +322,20 @@ class AiPulsedFomProcessor(LeafProcessor):
         processed.ai.pulse_fom = foms
 
 
-class AiPumpProbeProcessor(CompositeProcessor):
-    """AiPumpProbeProcessor class.
+class AiProcessorPumpProbe(LeafProcessor):
+    """AiProcessorPumpProbe class.
 
     Calculate azimuthal integration FOM for a pair of on and off images.
     """
     def __init__(self):
         super().__init__()
 
-        self.add(AiPumpProbeFomProcessor())
-
-    @profiler("Azimuthal integration pump-probe processor")
-    def process(self, processed):
+    @profiler("Azimuthal Integration Pump-probe Processor")
+    def process(self, data):
         if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
             raise StopCompositionProcessing
+
+        processed = data['processed']
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean
@@ -469,13 +398,16 @@ class AiPumpProbeProcessor(CompositeProcessor):
         processed.pp.data = (momentum, on_intensity, off_intensity)
 
 
-class AiPumpProbeFomProcessor(LeafProcessor):
-    """AiPumpProbeFomProcessor class.
+class AiProcessorPumpProbeFom(LeafProcessor):
+    """AiProcessorPumpProbeFom class.
 
     Calculate the pump-probe FOM.
     """
     @profiler("Azimuthal integration pump-probe FOM processor")
-    def process(self, processed):
+    def process(self, data):
+
+        processed = data['processed']
+
         momentum, on_ma, off_ma = processed.pp.data
 
         norm_on_ma, norm_off_ma = self._normalize(

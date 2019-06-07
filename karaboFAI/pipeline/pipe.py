@@ -32,15 +32,17 @@ class Pipe:
     this Queue.
     """
 
-    def __init__(self, name, *, daemon=True):
+    def __init__(self, name, *, daemon=True, gui=False):
         """Initialization.
 
         :param str name: name of the pipe
         :param bool daemon: daemonness of the pipe thread.
+        :param bool gui: True for connecting to GUI and False for not.
         """
         self._name = name
 
         self._daemon = daemon
+        self._gui = gui
 
         self._data = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -124,8 +126,8 @@ class PipeOut(Pipe):
 
 class KaraboBridge(PipeIn):
     """Karabo bridge client which is an input pipe."""
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
 
     def work(self, close_ev, update_ev):
         """Override."""
@@ -159,6 +161,8 @@ class KaraboBridge(PipeIn):
                     self.log.debug(f"Bridge recv FPS: {fps:>4.1f} Hz")
                 prev_data_arrival_time = time.time()
 
+                data = self._preprocess(data)
+
                 # wait until data in the queue has been processed
                 # Note: if the queue is full, whether the data should be dropped
                 #       is determined by the main thread of its owner process.
@@ -176,11 +180,27 @@ class KaraboBridge(PipeIn):
     def _recv_imp(self, client):
         return client.next()
 
+    def _preprocess(self, data):
+        raw, meta = data
+
+        # get the train ID of the first metadata
+        # Note: this is better than meta[src_name] because:
+        #       1. For streaming AGIPD/LPD data from files, 'src_name' does
+        #          not work;
+        #       2. Prepare for the scenario where a 2D detector is not
+        #          mandatory.
+        tid = next(iter(meta.values()))["timestamp.tid"]
+
+        return {
+            "tid": tid,
+            "raw": raw
+        }
+
 
 class MpInQueue(PipeIn):
     """A pipe which uses a multi-processing queue to receive data."""
-    def __init__(self, name):
-        super().__init__(name, daemon=True)
+    def __init__(self, name, **kwargs):
+        super().__init__(name, daemon=True, **kwargs)
 
         self._client = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -214,8 +234,8 @@ class MpInQueue(PipeIn):
 
 class MpOutQueue(PipeOut):
     """A pipe which uses a multi-processing queue to dispatch data."""
-    def __init__(self, name):
-        super().__init__(name, daemon=True)
+    def __init__(self, name, **kwargs):
+        super().__init__(name, daemon=True, **kwargs)
 
         self._client = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -228,6 +248,9 @@ class MpOutQueue(PipeOut):
                 data = self._data.get(timeout=timeout)
             except Empty:
                 continue
+
+            if self._gui:
+                data = data['processed']
 
             while not close_ev.is_set():
                 # push the stored data into client

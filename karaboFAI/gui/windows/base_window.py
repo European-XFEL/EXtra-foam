@@ -132,7 +132,7 @@ class DockerWindow(AbstractWindow):
             return
 
         data = self._data.get()
-        if data.image is None:
+        if data is None:
             return
 
         for widget in self._plot_widgets:

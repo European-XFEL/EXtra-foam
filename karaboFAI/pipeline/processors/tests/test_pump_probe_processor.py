@@ -7,13 +7,15 @@ from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.data_model import (
     PumpProbeData, ProcessedData
 )
-from karaboFAI.pipeline.processors import PumpProbeProcessor
+from karaboFAI.pipeline.processors import PumpProbeImageExtractor
 
 
 class TestPumpProbeProcessor(unittest.TestCase):
     def setUp(self):
-        self._proc = PumpProbeProcessor()
+        self._proc = PumpProbeImageExtractor()
         self._proc.analysis_type = AnalysisType.PP_AZIMUTHAL_INTEG
+        self._proc.ma_window = 1
+        self._proc.abs_difference = True
         PumpProbeData.clear()
 
         self._proc.fom_itgt_range = (1, 5)
@@ -26,23 +28,24 @@ class TestPumpProbeProcessor(unittest.TestCase):
         # a train with 4 pulses
         imgs = np.arange(16, dtype=np.float).reshape(4, 2, 2)
         for i in range(10):
-            self._data.append(ProcessedData(i, imgs))
-            self._data[i].ai.momentum = np.linspace(1, 5, 5)
-            self._data[i].ai.intensities = (i+1)*intensity
+            processed = ProcessedData(i, imgs)
+            processed.ai.momentum = np.linspace(1, 5, 5)
+            processed.ai.intensities = (i+1)*intensity
+            self._data.append({'processed': processed})
 
     def testExceptions(self):
         # test raises when pulse indices are out of range
         self._proc.mode = PumpProbeMode.SAME_TRAIN
         data = self._data[0]
 
-        self._proc.on_pulse_indices = [0, 2]
-        self._proc.off_pulse_indices = [1, 3, 5]
-        with self.assertRaisesRegex(ProcessingError, "Out of range: off"):
+        self._proc.on_indices = [0, 2]
+        self._proc.off_indices = [1, 3, 5]
+        with self.assertRaisesRegex(ProcessingError, "IndexError"):
             self._proc.run_once(data)
 
-        self._proc.on_pulse_indices = [0, 2, 4]
-        self._proc.off_pulse_indices = [1, 3]
-        with self.assertRaisesRegex(ProcessingError, "Out of range: on"):
+        self._proc.on_indices = [0, 2, 4]
+        self._proc.off_indices = [1, 3]
+        with self.assertRaisesRegex(ProcessingError, "IndexError"):
             self._proc.run_once(data)
 
     # TODO: the following tests do no make sense since pump-probe processing

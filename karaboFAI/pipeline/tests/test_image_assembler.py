@@ -8,12 +8,6 @@ from karaboFAI.pipeline.exceptions import AssemblingError
 from karaboFAI.config import config, DataSource
 
 
-def _new_processed(raw):
-    processed = ProcessedData(1)
-    processed.raw = raw
-    return processed
-
-
 class TestAgipdAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
@@ -35,19 +29,16 @@ class TestAgipdAssembler(unittest.TestCase):
         # self._assembler.process(processed)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((4, 16, 100, 100))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((4, 16, 100, 100))}}}
+            self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((4, 12, 512, 128))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((4, 12, 512, 128))}}}
+            self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((0, 16, 512, 128))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((0, 16, 512, 128))}}}
+            self._assembler.process(data)
 
 
 class TestLpdAssembler(unittest.TestCase):
@@ -72,19 +63,16 @@ class TestLpdAssembler(unittest.TestCase):
         # self._assembler.process(processed)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((16, 100, 100, 4))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((16, 100, 100, 4))}}}
+            self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((15, 256, 256, 4))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((15, 256, 256, 4))}}}
+            self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((16, 256, 256, 0))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 0))}}}
+            self._assembler.process(data)
 
 
 class TestJungfrauAssembler(unittest.TestCase):
@@ -99,19 +87,16 @@ class TestJungfrauAssembler(unittest.TestCase):
         key_name = 'data.adc'
         self._assembler._detector_source_name = src_name
 
-        processed = _new_processed(
-            {src_name: {key_name: np.ones((1, 512, 1024))}})
-        self._assembler.process(processed)
+        data = {'raw': {src_name: {key_name: np.ones((1, 512, 1024))}}}
+        self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((1, 100, 100))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((1, 100, 100))}}}
+            self._assembler.process(data)
 
         with self.assertRaises(NotImplementedError):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((2, 512, 1024))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024))}}}
+            self._assembler.process(data)
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [512, 1024]})
@@ -120,19 +105,16 @@ class TestJungfrauAssembler(unittest.TestCase):
         src_name = 'detector_data'
         key_name = 'data.adc'
         self._assembler._detector_source_name = src_name
-        processed = _new_processed(
-            {src_name: {key_name: np.ones((512, 1024, 1))}})
-        self._assembler.process(processed)
+        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}}}
+        self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((100, 100, 1))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}}}
+            self._assembler.process(data)
 
         with self.assertRaises(NotImplementedError):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((512, 1024, 2))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((512, 1024, 2))}}}
+            self._assembler.process(data)
 
 
 class TestFastccdAssembler(unittest.TestCase):
@@ -147,14 +129,12 @@ class TestFastccdAssembler(unittest.TestCase):
         key_name = 'data.image.pixels'
         self._assembler._detector_source_name = src_name
 
-        processed = _new_processed(
-            {src_name: {key_name: np.ones((1934, 960))}})
-        self._assembler.process(processed)
+        data = {'raw': {src_name: {key_name: np.ones((1934, 960))}}}
+        self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((100, 100))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((100, 100))}}}
+            self._assembler.process(data)
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [1934, 960]})
@@ -163,11 +143,9 @@ class TestFastccdAssembler(unittest.TestCase):
         src_name = 'detector_data'
         key_name = 'data.image'
         self._assembler._detector_source_name = src_name
-        processed = _new_processed(
-            {src_name: {key_name: np.ones((1934, 960, 1))}})
-        self._assembler.process(processed)
+        data = {'raw': {src_name: {key_name: np.ones((1934, 960, 1))}}}
+        self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            processed = _new_processed(
-                {src_name: {key_name: np.ones((100, 100, 1))}})
-            self._assembler.process(processed)
+            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}}}
+            self._assembler.process(data)

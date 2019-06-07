@@ -13,7 +13,6 @@ import os.path as osp
 import functools
 
 import numpy as np
-from cached_property import cached_property
 
 from ..pyqtgraph import QtCore, QtGui
 
@@ -23,33 +22,45 @@ from ..plot_widgets import ImageAnalysis
 from ..ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
+from ...pipeline.data_model import ImageData
+from ...utils import cached_property
 from ...config import config
 
 
 class _SimpleImageData:
-    """Image data which is used by ImageToolWindow."""
+    """SimpleImageData which is used by ImageToolWindow.
 
-    def __init__(self, image, *, background=0.0, threshold_mask=(None, None)):
+    In ImageToolWindow, some properties of the image can be changed, for
+    instance, background, threshold mask, etc.
+
+    Attributes:
+        pixel_size (float): pixel size of the detector.
+        threshold_mask (tuple): (lower, upper) boundaries of the
+            threshold mask.
+        background (float): a uniform background value.
+        masked (numpy.ndarray): image with threshold mask.
+    """
+
+    def __init__(self, image_data):
         """Initialization.
 
-        :param np.ndarray image: image data with shape (y, x). The data can have
-            NaN values.
-        :param float background: a uniform background to be subtracted.
-        :param tuple/list threshold_mask: threshold mask used to clip the image.
+        Construct a _SimpleImageData instance from an ImageData instance.
+
+        :param ImageData image_data: an ImageData instance.
         """
-        self._pixel_size = config["PIXEL_SIZE"]
+        if not isinstance(image_data, ImageData):
+            raise TypeError("Input must be an ImageData instance.")
 
-        if not isinstance(image, np.ndarray):
-            raise TypeError(r"Image must be a numpy.ndarray!")
+        self._pixel_size = image_data.pixel_size
 
-        if image.ndim != 2:
-            raise ValueError(f"The shape of images must be (y, x)!")
+        # copy an image is expensive but we should make sure that other
+        # GUI code cannot modify the image data.
+        self._image = image_data.mean
+        # set the cached property
+        self.__dict__['masked'] = image_data.masked_mean
 
-        self._image = image.astype(np.float32)
-
-        self._bkg = background
-        self._threshold_mask = None
-        self.threshold_mask = threshold_mask
+        self._bkg = image_data.background
+        self._threshold_mask = image_data.threshold_mask
 
     @property
     def pixel_size(self):
@@ -63,41 +74,54 @@ class _SimpleImageData:
     def background(self, v):
         if v == self._bkg:
             return
-        self._image -= v - self._bkg
+        self._image -= v - self._bkg  # in-place operation
         self._bkg = v
 
-        try:
-            del self.__dict__['masked']
-        except KeyError:
-            pass
+        # invalid cache
+        del self.__dict__['masked']
 
     @property
     def threshold_mask(self):
         return self._threshold_mask
 
     @threshold_mask.setter
-    def threshold_mask(self, v):
-        if v == self._threshold_mask:
+    def threshold_mask(self, mask):
+        if mask == self._threshold_mask:
             return
 
-        if not isinstance(v, (tuple, list)):
+        if not isinstance(mask, (tuple, list)):
             raise TypeError("Threshold mask must be a tuple or a list!")
 
-        if len(v) != 2:
+        if len(mask) != 2:
             raise ValueError("Length of threshold mask must be 2!")
 
-        self._threshold_mask = v
+        self._threshold_mask = mask
 
-        try:
-            del self.__dict__['masked']
-        except KeyError:
-            pass
+        # invalid cache
+        del self.__dict__['masked']
 
     @cached_property
     def masked(self):
-        if self._threshold_mask == (None, None):
-            return self._image
         return np.clip(self._image, *self._threshold_mask)
+
+    @classmethod
+    def from_array(cls, arr):
+        """Instantiate from an array.
+
+        This is the second constructor.
+        """
+        instance = cls.__new__(cls)
+
+        image_data = ImageData(arr)
+
+        instance._pixel_size = image_data.pixel_size
+        instance._image = ImageData.mean
+        # set the cached property
+        instance.__dict__['masked'] = image_data.masked_mean
+        instance._bkg = image_data.background
+        instance._threshold_mask = image_data.threshold_mask
+
+        return instance
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -526,16 +550,11 @@ class ImageToolWindow(AbstractWindow):
         It is only used for updating the image manually.
         """
         data = self._data.get()
-        img_data = data.image
 
-        if img_data is None:
+        if data is None:
             return
 
-        # TODO: prevent _SimpleImageData.setImage from re-calculating "masked"
-        self._image_view.setImageData(_SimpleImageData(
-            img_data.mean,
-            background=img_data.background,
-            threshold_mask=img_data.threshold_mask), **kwargs)
+        self._image_view.setImageData(_SimpleImageData(data.image), **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):

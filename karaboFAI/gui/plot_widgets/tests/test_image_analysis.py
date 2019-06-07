@@ -32,7 +32,7 @@ class TestImageAnalysis(unittest.TestCase):
 
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         mask = np.zeros_like(imgs, dtype=bool)
-        self._widget.setImageData(_SimpleImageData(imgs))
+        self._widget.setImageData(_SimpleImageData.from_array(imgs))
 
         # the IOError
         with self.assertLogs(logger, level="ERROR") as cm:

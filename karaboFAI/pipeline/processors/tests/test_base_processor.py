@@ -20,15 +20,11 @@ class _DummyLeafProcessor1(LeafProcessor):
 
 
 class _DummyLeafProcessor2(LeafProcessor):
-    pass
-
-
-class _DummyLeafProcessor3(LeafProcessor):
     def process(self, processed):
         raise StopCompositionProcessing
 
 
-class _DummyLeafProcessor4(LeafProcessor):
+class _DummyLeafProcessor3(LeafProcessor):
     pass
 
 
@@ -38,21 +34,7 @@ class _DummyCompProcessor1(CompositeProcessor):
 
 
 class _DummyCompProcessor2(CompositeProcessor):
-    param1 = SharedProperty()
-    param2 = SharedProperty()
     analysis_type = SharedProperty()
-
-    def process(self, processed):
-        time.sleep(0.02)  # simulating data processing
-
-
-class _DummyCompProcessor3(CompositeProcessor):
-    def process(self, processed):
-        raise StopCompositionProcessing
-
-
-class _DummyCompProcessor4(CompositeProcessor):
-    pass
 
 
 class TestProcessorComposition(unittest.TestCase):
@@ -60,40 +42,35 @@ class TestProcessorComposition(unittest.TestCase):
         self._leaf1 = _DummyLeafProcessor1()
         self._leaf2 = _DummyLeafProcessor2()
         self._leaf3 = _DummyLeafProcessor3()
-        self._leaf4 = _DummyLeafProcessor4()
 
         self._comp1 = _DummyCompProcessor1()
         self._comp2 = _DummyCompProcessor2()
-        self._comp3 = _DummyCompProcessor3()
-        self._comp4 = _DummyCompProcessor4()
 
-        # comp2 -> comp1 -> leaf1
-        #       -> leaf2
         self._comp1.add(self._leaf1)
-        self._comp2.add(self._comp1)
-        self._comp2.add(self._leaf2)
+        self._comp1.add(self._leaf2)
+        self._comp1.add(self._leaf3)
 
-        self._processed = ProcessedData(1)
+    def testRaises(self):
+        with self.assertRaises(TypeError):
+            self._comp1.add(self._comp2)
 
     def testComposition(self):
         self.assertIs(self._leaf1._parent, self._comp1)
-        self.assertIs(self._leaf2._parent, self._comp2)
-        self.assertIs(self._comp1._parent, self._comp2)
+        self.assertIs(self._leaf2._parent, self._comp1)
 
+        self.assertListEqual([self._leaf1, self._leaf2, self._leaf3],
+                             self._comp1._children)
+
+        leaf3 = self._comp1.pop()
+        self.assertListEqual([self._leaf1, self._leaf2], self._comp1._children)
+        self.assertIs(leaf3, self._leaf3)
+
+        leaf2 = self._comp1.pop()
         self.assertListEqual([self._leaf1], self._comp1._children)
-        # sequence matters
-        self.assertListEqual([self._comp1, self._leaf2], self._comp2._children)
-
-        leaf1 = self._comp1.pop()
-        self.assertListEqual([], self._comp1._children)
-        self.assertIs(leaf1, self._leaf1)
-
-        leaf2 = self._comp2.pop()
-        self.assertListEqual([self._comp1], self._comp2._children)
         self.assertIs(leaf2, self._leaf2)
 
-        self._comp2.remove(self._comp1)
-        self.assertListEqual([], self._comp2._children)
+        self._comp1.remove(self._leaf1)
+        self.assertListEqual([], self._comp1._children)
 
     def testSharedPropertyInitialization(self):
         self.assertEqual(0, len(self._comp1._params))
@@ -102,27 +79,18 @@ class TestProcessorComposition(unittest.TestCase):
         self.assertEqual(None, self._comp1._params['param1'])
         self.assertEqual(1, len(self._comp1._params))
 
-        self.assertEqual(0, len(self._comp2._params))
-        self.assertEqual(None, self._comp2.param1)
-        self.assertEqual(None, self._comp2._params['param1'])
-        self.assertEqual(None, self._comp2.param2)
-        self.assertEqual(None, self._comp2._params['param2'])
-        self.assertEqual(2, len(self._comp2._params))
-
     def testProcessInterface(self):
         self._leaf1.process = MagicMock()
-        self._leaf1.run_once(self._processed)
-        self._leaf1.process.assert_called_once_with(self._processed)
+        self._leaf1.run_once({})
+        self._leaf1.process.assert_called_once_with({})
         self._leaf1.process.reset_mock()
 
         self._leaf2.process = MagicMock()
         self._comp1.process = MagicMock()
-        self._comp2.process = MagicMock()
-        self._comp2.run_once(self._processed)
-        self._leaf1.process.assert_called_once_with(self._processed)
-        self._leaf2.process.assert_called_once_with(self._processed)
-        self._comp1.process.assert_called_once_with(self._processed)
-        self._comp2.process.assert_called_once_with(self._processed)
+        self._comp1.run_once({})
+        self._comp1.process.assert_called_once_with({})
+        self._leaf1.process.assert_called_once_with({})
+        self._leaf2.process.assert_called_once_with({})
 
     def testResetInterface(self):
         self._leaf1.reset = MagicMock()
@@ -132,28 +100,19 @@ class TestProcessorComposition(unittest.TestCase):
 
         self._leaf2.reset = MagicMock()
         self._comp1.reset = MagicMock()
-        self._comp2.reset = MagicMock()
-        self._comp2.reset_all()
+        self._comp1.reset_all()
         self._leaf1.reset.assert_called_once_with()
         self._leaf2.reset.assert_called_once_with()
         self._comp1.reset.assert_called_once_with()
-        self._comp2.reset.assert_called_once_with()
 
     def testSharedPropertyPropagation(self):
-        self._comp1.param1 = 1
-        self._comp1.run_once(self._processed)
-        self.assertEqual(1, self._leaf1.param1)
-
-        self._comp2.param1 = 2
-        self._comp2.param2 = 3
-        self._comp2.run_once(self._processed)
-        # overridden by the parent class
-        self.assertEqual(2, self._leaf1.param1)
-        self.assertEqual(3, self._leaf1.param2)
-        self.assertEqual(2, self._comp1.param1)
-        self.assertEqual(3, self._comp1.param2)
-        self.assertEqual(2, self._leaf2.param1)
-        self.assertEqual(3, self._leaf2.param2)
+        self._comp1.param1 = 5
+        self._comp1.run_once({})
+        self.assertEqual(5, self._leaf1.param1)
+        self.assertEqual(5, self._leaf2.param1)
+        with self.assertRaises(AttributeError):
+            # composition process was stopped by LeafProcessor2
+            self._leaf3.param1
 
         def setter(obj, attr):
             for i in range(10):
@@ -165,61 +124,33 @@ class TestProcessorComposition(unittest.TestCase):
         # this period. After the processing is finished, the modified
         # shared properties will be passed to its children processors.
         # The following code tests this race condition!!!
-        t = Thread(target=setter, args=(self._comp2, 'param2'))
+        t = Thread(target=setter, args=(self._comp1, 'param1'))
         t.start()
-        value = self._comp2.param2
-        self._comp2.run_once(self._processed)
-        self.assertEqual(value, self._comp1.param2)
-        self.assertEqual(value, self._leaf2.param2)
-        self.assertEqual(value, self._leaf1.param2)
+        value = self._comp1.param1
+        self._comp1.run_once({})
+        self.assertEqual(value, self._leaf1.param1)
+        self.assertEqual(value, self._leaf2.param1)
         t.join()
 
-    def testStopProcessing1(self):
-        # comp4 -> leaf3
-        #       -> leaf4
-        #
-        # a LeafProcessor stops the following LeafProcessors after
-        # raising StopCompositionProcessing
-        self._comp4.add(self._leaf3)
-        self._comp4.add(self._leaf4)
+    def testStopProcessing(self):
+        self._leaf3.process = MagicMock()
 
-        self._leaf4.process = MagicMock()
-        self.assertFalse(self._leaf4.process.called)
-
-    def testStopProcessing2(self):
-        # comp2 -> comp1 -> leaf1
-        #       -> comp4 -> comp3 -> leaf3
-        #                -> leaf4
-        #       -> leaf2
-        self._comp2.remove(self._leaf2)
-        self.assertListEqual([self._comp1], self._comp2._children)
-
-        self._comp2.add(self._comp4)
-        self._comp4.add(self._comp3)
-        self._comp4.add(self._leaf4)
-        self._comp3.add(self._leaf3)
-        self._comp2.add(self._leaf2)
-        self._leaf2.process = MagicMock()
-        self._leaf4.process = MagicMock()
-        # comp3 raises StopCompositionProcessing, Leaf4 will not be called,
-        # but leaf2 will still be called
-        self._comp2.run_once(self._processed)
-        self._leaf2.process.assert_called_once_with(self._processed)
-        self.assertFalse(self._leaf4.process.called)
+        self._comp1.run_once({})
+        self.assertFalse(self._leaf3.process.called)
 
 
 class TestRedisParserMixin(unittest.TestCase):
-    def testStr2Tuple(self):
-        proc = CompositeProcessor()
+    @classmethod
+    def setUpClass(cls):
+        cls._proc = _DummyLeafProcessor1()
 
-        self.assertTupleEqual((1.0, 2.0), proc.str2tuple('(1, 2)'))
+    def testStr2Tuple(self):
+        self.assertTupleEqual((1.0, 2.0), self._proc.str2tuple('(1, 2)'))
 
     def testStr2List(self):
-        proc = CompositeProcessor()
-
-        self.assertListEqual([1.0, 2.0], proc.str2list('[1, 2]'))
-        self.assertListEqual([1], proc.str2list('[1]'))
-        self.assertListEqual([], proc.str2list('[]'))
+        self.assertListEqual([1.0, 2.0], self._proc.str2list('[1, 2]'))
+        self.assertListEqual([1], self._proc.str2list('[1]'))
+        self.assertListEqual([], self._proc.str2list('[]'))
 
 
 class TestBaseProcessor(unittest.TestCase):

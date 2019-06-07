@@ -11,14 +11,14 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor, SharedProperty
+from .base_processor import CompositeProcessor, LeafProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
 
-class XasProcessor(LeafProcessor):
+class XasProcessor(CompositeProcessor):
     """XasProcessor class.
 
     Attributes:
@@ -64,9 +64,11 @@ class XasProcessor(LeafProcessor):
         self.n_bins = int(cfg["n_bins"])
         self.bin_range = self.str2tuple(cfg['bin_range'])
 
-    @profiler("XAS processor")
-    def process(self, processed):
+    @profiler("XAS Processor")
+    def process(self, data):
         """Override."""
+
+        processed = data['processed']
 
         # TODO: FIXME
 

@@ -12,7 +12,7 @@ All rights reserved.
 import atexit
 from collections import namedtuple
 import multiprocessing as mp
-from queue import Empty, Full
+from queue import Empty, Full, Queue
 import sys
 import traceback
 import time
@@ -20,7 +20,7 @@ import time
 import psutil
 from psutil import NoSuchProcess
 
-from .exceptions import AssemblingError, ProcessingError
+from .exceptions import _StopPipelineError, _ProcessingError, ProcessingError
 from ..metadata import MetaProxy
 from ..metadata import Metadata as mt
 from ..config import config, DataSource
@@ -79,6 +79,7 @@ class ProcessWorker(mp.Process):
         timeout = self._timeout
         src_type = None
 
+        # start input and output pipes
         for inp in self._inputs:
             inp.run_in_thread(self._close_ev)
         self._output.run_in_thread(self._close_ev)
@@ -105,12 +106,11 @@ class ProcessWorker(mp.Process):
                     except Empty:
                         continue
 
-                    processed = self._preprocess(data)
-
-                    self._run_tasks(processed)
-
-                    if processed is None or processed.image is None:
-                        continue
+                    try:
+                        self._run_tasks(data)
+                    except _StopPipelineError:
+                        self._prev_processed_time = time.time()
+                        break
 
                     if self._prev_processed_time is not None:
                         fps = 1.0 / (time.time() - self._prev_processed_time)
@@ -120,16 +120,14 @@ class ProcessWorker(mp.Process):
                     if src_type == DataSource.BRIDGE:
                         # always keep the latest data in the queue
                         try:
-                            self._output.put_pop(processed,
-                                                 timeout=timeout)
+                            self._output.put_pop(data, timeout=timeout)
                         except Empty:
                             continue
                     elif src_type == DataSource.FILE:
                         # wait until data in the queue has been processed
                         while not self.closing:
                             try:
-                                self._output.put(processed,
-                                                 timeout=timeout)
+                                self._output.put(data, timeout=timeout)
                                 break
                             except Full:
                                 continue
@@ -139,32 +137,34 @@ class ProcessWorker(mp.Process):
             except Exception as e:
                 self.log.error(repr(e))
 
-    def _preprocess(self, data):
-        """Pre-process received data.
+    def _run_tasks(self, data):
+        """Run all tasks for once:
 
-        For example, if the worker has a PipeIn which is a KaraboBridge,
-        the received data is a raw data. But for other types of PipeIn, the
-        received data is a processed data.
-
-        :param data: data received from the input pipe.
+        :param dict data: a dictionary which is passed around processors.
         """
-        return data
-
-    def _run_tasks(self, processed):
-        tid = processed.tid
+        tid = data['tid']
 
         for task in self._tasks:
+            # TODO: improve
             try:
-                task.run_once(processed)
-            except (ProcessingError, AssemblingError) as e:
+                task.run_once(data)
+            except _StopPipelineError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(repr(traceback.format_tb(exc_traceback)))
-                self.log.error(f"Train ID: {tid}: " + repr(e))
+                self.log.debug(repr(traceback.format_tb(exc_traceback))
+                               + repr(e))
+                self.log.error(repr(e))
+                raise
+            except _ProcessingError as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                self.log.debug(repr(traceback.format_tb(exc_traceback))
+                               + repr(e))
+                self.log.error(repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(repr(traceback.format_tb(exc_traceback)))
-                self.log.error(
-                    f"Unexpected Exception: Train ID: {tid}: " + repr(e))
+                self.log.debug(f"Unexpected Exception! Train ID: {tid}: " +
+                               repr(traceback.format_tb(exc_traceback)) +
+                               repr(e))
+                self.log.error(repr(e))
 
     def close(self):
         self._close_ev.set()

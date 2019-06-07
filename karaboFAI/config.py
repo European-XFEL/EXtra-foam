@@ -28,11 +28,10 @@ class DataSource(IntEnum):
 
 
 class PumpProbeMode(IntEnum):
-    UNDEFINED = 0
-    PRE_DEFINED_OFF = 1  # use pre-defined reference image
-    SAME_TRAIN = 2  # on-/off- pulses in the same train
-    EVEN_TRAIN_ON = 3  # on-/off- pulses have even/odd train IDs, respectively
-    ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
+    PRE_DEFINED_OFF = 0  # use pre-defined reference image
+    SAME_TRAIN = 1  # on-/off- pulses in the same train
+    EVEN_TRAIN_ON = 2  # on-/off- pulses have even/odd train IDs, respectively
+    ODD_TRAIN_ON = 3  # on/-off- pulses have odd/even train IDs, respectively
 
 
 class AnalysisType(IntEnum):
@@ -43,6 +42,7 @@ class AnalysisType(IntEnum):
     ROI_PROJECTION_Y = 4
     ROI1_BY_ROI2 = 5
     TRAIN_AZIMUTHAL_INTEG = 6
+    PULSE_AZIMUTHAL_INTEG = 7
 
 
 class BinMode(IntEnum):

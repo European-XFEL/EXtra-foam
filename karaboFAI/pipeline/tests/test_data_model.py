@@ -1,413 +1,13 @@
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AbstractData, AccumulatedPairData, ImageData,
-    DataManagerMixin, ProcessedData, PumpProbeData, RoiData, PairData
+    AbstractData, AccumulatedPairData, DataManagerMixin,
+    ImageData, ProcessedData, PumpProbeData, RoiData, PairData
 )
-from karaboFAI.logger import logger
 from karaboFAI.config import config
-
-
-class TestRoiData(unittest.TestCase):
-    def test_general(self):
-        data = RoiData()
-
-        n_rois = len(config["ROI_COLORS"])
-        for i in range(1, n_rois+1):
-            self.assertTrue(hasattr(RoiData, f"roi{i}_hist"))
-            self.assertIsInstance(getattr(RoiData, f"roi{i}_hist"), PairData)
-            self.assertTrue(hasattr(data, f"roi{i}"))
-
-        with self.assertRaises(AttributeError):
-            getattr(RoiData, f"roi{n_rois+1}_hist")
-
-        with self.assertRaises(AttributeError):
-            getattr(data, f"roi{n_rois+1}")
-
-
-class TestImageData(unittest.TestCase):
-    def setUp(self):
-        ImageData.clear()
-
-    def test_memoryTrainResolved(self):
-        imgs_orig = np.arange(100, dtype=np.float).reshape(10, 10)
-        img_data = ImageData(imgs_orig)
-        img_data.set_reference()
-        img_data.update()
-
-        imgs = img_data.images
-        img_mean = img_data.mean
-        masked_mean = img_data.masked_mean
-        ref = img_data.ref
-        np.testing.assert_array_equal(imgs, img_mean)
-        imgs[0, 0] = 123456
-        self.assertEqual(img_mean[0, 0], imgs[0, 0])
-        # masked_mean and mean do not share memory space
-        self.assertNotEqual(masked_mean[0, 0], img_mean[0, 0])
-        self.assertNotEqual(ref[0, 0], img_mean[0, 0])
-
-    def test_memoryPulseResolved(self):
-        imgs_orig = np.arange(100, dtype=np.float).reshape(4, 5, 5)
-        img_data = ImageData(imgs_orig)
-        img_data.set_reference()
-        img_data.update()
-
-        img_mean = img_data.mean
-        masked_mean = img_data.masked_mean
-        ref = img_data.ref
-        np.testing.assert_array_equal(img_mean, ref)
-        img_mean[0, 0] = 123456
-        # Note: this is different from train-resolved data!!!
-        # masked_mean and mean do not share memory space
-        self.assertNotEqual(masked_mean[0, 0], img_mean[0, 0])
-        self.assertNotEqual(ref[0, 0], img_mean[0, 0])
-
-    def test_invalidInput(self):
-        with self.assertRaises(TypeError):
-            ImageData([1, 2, 3])
-
-        with self.assertRaises(ValueError):
-            ImageData(np.arange(2))
-
-        with self.assertRaises(ValueError):
-            ImageData(np.arange(16).reshape(2, 2, 2, 2))
-
-    def test_referenceTrainResolved(self):
-        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
-
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_threshold_mask(5, 20)
-        img_data.set_reference()
-        img_data.update()
-
-        masked_gt = np.copy(imgs_orig)
-        masked_gt[masked_gt < 5] = 5
-        masked_gt[masked_gt > 20] = 20
-        np.testing.assert_array_equal(imgs_orig, img_data.ref)
-        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
-
-        # test new instance
-        img_data.set_threshold_mask(20, None)
-        img_data = ImageData(np.copy(imgs_orig))
-        masked_gt = np.copy(imgs_orig)
-        masked_gt[masked_gt < 20] = 20
-        np.testing.assert_array_equal(imgs_orig, img_data.ref)
-        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
-
-        # test remove reference
-        img_data.remove_reference()
-        img_data.update()
-        self.assertEqual(None, img_data.ref)
-        self.assertEqual(None, img_data.masked_ref)
-
-    def test_referencePulseResolved(self):
-        imgs_orig = np.arange(32, dtype=np.float).reshape(2, 4, 4)
-        imgs_mean = np.mean(imgs_orig, axis=0)
-
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_threshold_mask(5, 20)
-        img_data.set_reference()
-        img_data.update()
-
-        masked_gt = np.copy(imgs_mean)
-        masked_gt[masked_gt < 5] = 5
-        masked_gt[masked_gt > 20] = 20
-        np.testing.assert_array_equal(imgs_mean, img_data.ref)
-        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
-
-        # test new instance
-        img_data.set_threshold_mask(20, None)
-        img_data = ImageData(np.copy(imgs_orig))
-        masked_gt = np.copy(imgs_mean)
-        masked_gt[masked_gt < 20] = 20
-        np.testing.assert_array_equal(imgs_mean, img_data.ref)
-        np.testing.assert_array_equal(masked_gt, img_data.masked_ref)
-
-        # test remove reference
-        img_data.remove_reference()
-        img_data.update()
-        self.assertEqual(None, img_data.ref)
-        self.assertEqual(None, img_data.masked_ref)
-
-    def test_thresholdmask(self):
-        imgs_orig = np.arange(25, dtype=np.float).reshape(5, 5)
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_reference()
-        img_data.update()
-
-        self.assertTupleEqual((-1e5, 1e5), img_data.threshold_mask)
-        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
-        np.testing.assert_array_equal(imgs_orig, img_data.masked_ref)
-
-        img_data.set_threshold_mask(None, 5)
-        img_data.update()
-        self.assertTupleEqual((-np.inf, 5), img_data.threshold_mask)
-        # test the change can be seen by the new instance
-        self.assertTupleEqual((-np.inf, 5),
-                              ImageData(imgs_orig).threshold_mask)
-        imgs = np.copy(imgs_orig)
-        imgs[imgs > 5] = 5
-        np.testing.assert_array_equal(imgs, img_data.masked_mean)
-        np.testing.assert_array_equal(imgs, img_data.masked_ref)
-
-        img_data.set_threshold_mask(1, None)
-        img_data.update()
-        self.assertTupleEqual((1, np.inf), img_data.threshold_mask)
-        imgs = np.copy(imgs_orig)
-        imgs[imgs < 1] = 1
-        np.testing.assert_array_equal(imgs, img_data.masked_mean)
-        np.testing.assert_array_equal(imgs, img_data.masked_ref)
-
-        img_data.set_threshold_mask(3, 8)
-        img_data.update()
-        self.assertTupleEqual((3, 8), img_data.threshold_mask)
-        imgs = np.copy(imgs_orig)
-        imgs[imgs < 3] = 3
-        imgs[imgs > 8] = 8
-        np.testing.assert_array_equal(imgs, img_data.masked_mean)
-        np.testing.assert_array_equal(imgs, img_data.masked_ref)
-
-    def test_trainresolved(self):
-        imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
-
-        img_data = ImageData(np.copy(imgs_orig))
-        self.assertFalse(img_data.pulse_resolved())
-        mask = (1, 4)
-        img_data.set_threshold_mask(*mask)
-        bkg = 1.0
-        img_data.set_background(bkg)
-        img_data.update()
-
-        self.assertEqual(imgs_orig.shape, img_data.shape)
-        self.assertEqual(bkg, img_data.background)
-        # test the change can be seen by the new instance
-        self.assertEqual(bkg, ImageData(imgs_orig).background)
-        self.assertEqual(1, img_data.n_images)
-
-        # calculate the ground truth
-        imgs = np.copy(imgs_orig)
-        imgs -= bkg
-
-        np.testing.assert_array_equal(imgs, img_data.images)
-        np.testing.assert_array_equal(imgs, img_data.mean)
-
-        # test threshold mask
-        masked_imgs = np.copy(imgs)
-        masked_imgs[(masked_imgs < mask[0])] = mask[0]
-        masked_imgs[(masked_imgs > mask[1])] = mask[1]
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        # clear threshold mask
-        img_data.set_threshold_mask(None, None)
-        img_data.update()
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = imgs
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        img_data.update()
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = np.copy(imgs)
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        # change background
-        bkg = -1.0
-        img_data.set_background(bkg)
-        img_data.update()
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = np.copy(imgs)
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-    def test_trainresolved_ma(self):
-        """Test the case with moving average of image."""
-        imgs_orig = np.arange(16, dtype=np.float).reshape(4, 4)
-
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_ma_window(3)
-        img_data = ImageData(imgs_orig - 2)
-        self.assertEqual(2, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
-        img_data = ImageData(imgs_orig + 2)
-        self.assertEqual(3, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
-        img_data = ImageData(np.copy(imgs_orig))
-        self.assertEqual(3, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig, img_data.masked_mean)
-
-        # with background
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_background(1.0)
-        img_data.update()
-        np.testing.assert_array_equal(imgs_orig - 1, img_data.masked_mean)
-
-        img_data.set_background(2.0)
-        img_data.update()
-        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
-
-        # test moving average window size change
-        img_data.set_ma_window(4)
-        img_data = ImageData(imgs_orig - 4)
-        img_data.set_background(1.0)
-        img_data.update()
-        self.assertEqual(4, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
-
-        img_data.set_ma_window(2)
-        self.assertEqual(4, img_data.ma_window)
-        self.assertEqual(4, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
-        img_data.update()
-        # ma_window and ma_count should not be updated even if "update"
-        # method is called
-        self.assertEqual(4, img_data.ma_window)
-        self.assertEqual(4, img_data.ma_count)
-        np.testing.assert_array_equal(imgs_orig - 2, img_data.masked_mean)
-        # we will see the change when new data is received
-        img_data = ImageData(np.copy(imgs_orig))
-        self.assertEqual(2, img_data.ma_window)
-        self.assertEqual(1, img_data.ma_count)
-        img_data.set_background(0)
-        img_data.update()
-        np.testing.assert_array_equal(imgs_orig, img_data.images)
-
-        # the moving average implementation does not affect the masking
-        # implementation which was first done without moving average
-
-    def test_pulseresolved(self):
-        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
-        img_data = ImageData(np.copy(imgs_orig))
-        self.assertTrue(img_data.pulse_resolved())
-
-        img_data.set_threshold_mask(1, 4)
-        bkg = 1.0
-        img_data.set_background(bkg)
-        img_data.update()
-
-        self.assertEqual(imgs_orig.shape[1:], img_data.shape)
-        self.assertEqual(imgs_orig.shape[0], img_data.n_images)
-
-        # calculate the ground truth
-        imgs = np.copy(imgs_orig)
-        imgs -= bkg
-
-        np.testing.assert_array_equal(imgs, img_data.images)
-        np.testing.assert_array_equal(imgs.mean(axis=0), img_data.mean)
-        # test the change can be seen by the new instance
-        np.testing.assert_array_equal(imgs, ImageData(imgs_orig).images)
-
-        # test threshold mask
-        masked_imgs = imgs.mean(axis=0)
-        masked_imgs[(masked_imgs < 1)] = 1.0
-        masked_imgs[(masked_imgs > 4)] = 4.0
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        # change threshold mask
-        mask = (2, 12)
-        img_data.set_threshold_mask(*mask)
-        img_data.update()
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = np.copy(imgs.mean(axis=0))
-        masked_imgs[(masked_imgs < mask[0])] = mask[0]
-        masked_imgs[(masked_imgs > mask[1])] = mask[1]
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = imgs.mean(axis=0)
-        masked_imgs[(masked_imgs < mask[0])] = mask[0]
-        masked_imgs[(masked_imgs > mask[1])] = mask[1]
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-        # change background
-        bkg = 0
-        img_data.set_background(bkg)
-        img_data.update()
-
-        imgs = np.copy(imgs_orig)  # recalculate the ground truth
-        imgs -= bkg
-        masked_imgs = imgs.mean(axis=0)
-        masked_imgs[(masked_imgs < mask[0])] = mask[0]
-        masked_imgs[(masked_imgs > mask[1])] = mask[1]
-        np.testing.assert_array_equal(masked_imgs, img_data.masked_mean)
-
-    def test_pulseresolved_ma(self):
-        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
-        mean_orig = np.mean(imgs_orig, axis=0)
-
-        img_data = ImageData(np.copy(imgs_orig[0, ...]))
-        img_data.set_ma_window(10)
-        with self.assertLogs(logger, "ERROR"):
-            ImageData(np.copy(imgs_orig))
-
-        ImageData.clear()
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_ma_window(3)
-        img_data = ImageData(imgs_orig - 2)
-        self.assertEqual(2, img_data.ma_count)
-        np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
-        img_data = ImageData(imgs_orig + 2)
-        self.assertEqual(3, img_data.ma_count)
-        np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
-        img_data = ImageData(np.copy(imgs_orig))
-        self.assertEqual(3, img_data.ma_count)
-        np.testing.assert_array_equal(mean_orig, img_data.masked_mean)
-
-        # with background
-        img_data = ImageData(np.copy(imgs_orig))
-        img_data.set_background(1)
-        img_data.update()
-        np.testing.assert_array_equal(mean_orig - 1, img_data.masked_mean)
-
-        img_data.set_background(2)
-        img_data.update()
-        np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
-
-        img_data.set_ma_window(4)
-        img_data = ImageData(imgs_orig - 4)
-        img_data.set_background(1)
-        img_data.update()
-        self.assertEqual(4, img_data.ma_count)
-        np.testing.assert_array_equal(mean_orig - 2, img_data.masked_mean)
-
-    def test_pulseResolvedSliceMaskedMean(self):
-        imgs_orig = np.arange(32, dtype=np.float).reshape((2, 4, 4))
-        mean_orig = np.mean(imgs_orig, axis=0)
-        img_data = ImageData(np.copy(imgs_orig))
-        mask_range = (1, 4)
-        img_data.set_threshold_mask(*mask_range)
-        img_data.update()
-
-        with self.assertRaises(IndexError):
-            img_data.sliced_masked_mean([1, 3])
-
-        np.testing.assert_array_equal(np.clip(mean_orig, *mask_range),
-                                      img_data.sliced_masked_mean([0, 1]))
-        np.testing.assert_array_equal(np.clip(imgs_orig[0], *mask_range),
-                                      img_data.sliced_masked_mean([0]))
-
-    def test_trainResolvedSliceMaskedMean(self):
-        imgs_orig = np.arange(16, dtype=np.float).reshape((4, 4))
-        img_data = ImageData(np.copy(imgs_orig))
-        mask_range = (1, 4)
-        img_data.set_threshold_mask(*mask_range)
-        img_data.update()
-
-        with self.assertRaises(IndexError):
-            img_data.sliced_masked_mean([1, 2])
-        with self.assertRaises(IndexError):
-            img_data.sliced_masked_mean([1])
-
-        np.testing.assert_array_equal(np.clip(imgs_orig, *mask_range),
-                                      img_data.sliced_masked_mean([0]))
 
 
 class TestPairData(unittest.TestCase):
@@ -449,7 +49,8 @@ class TestCorrelationData(unittest.TestCase):
         self._manager.remove_correlations()
 
     def testPairData(self):
-        data = ProcessedData(1)
+        data = ProcessedData(1, np.zeros((2, 2)))
+
         with self.assertRaises(ValueError):
             self._manager.add_correlation(0, "device1", "property1")
 
@@ -533,7 +134,7 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual(max_len + overflow - 1, fom[-1])
 
     def testAccumulatedPairData(self):
-        data = ProcessedData(1)
+        data = ProcessedData(1, np.zeros((2, 2)))
         self.assertEqual(2, AccumulatedPairData._min_count)
 
         self._manager.add_correlation(1, "device1", "property1", 0.1)
@@ -611,18 +212,153 @@ class TestProcessedData(unittest.TestCase):
         DataManagerMixin().reset_roi()
 
     def testGeneral(self):
-        data = ProcessedData(1234)
+        # ---------------------
+        # pulse-resolved data
+        # ---------------------
+
+        data = ProcessedData(1234, np.zeros((1, 2, 2)))
+
         self.assertEqual(1234, data.tid)
+        self.assertEqual(1, data.n_pulses)
+        self.assertTrue(data.pulse_resolved)
 
-        data.roi.roi1_hist = (1234, None)
-        tids, roi1_hist, _ = data.roi.roi1_hist
-        np.testing.assert_array_equal([1234], tids)
-        np.testing.assert_array_equal([None], roi1_hist)
+        data = ProcessedData(1235, np.zeros((3, 2, 2)))
 
-        data.roi.roi1_hist = (1235, 2.0)
-        tids, roi1_hist, _ = data.roi.roi1_hist
-        np.testing.assert_array_equal([1234, 1235], tids)
-        np.testing.assert_array_equal([None, 2.0], roi1_hist)
+        self.assertEqual(3, data.n_pulses)
+        self.assertTrue(data.pulse_resolved)
+
+        # ---------------------
+        # train-resolved data
+        # ---------------------
+
+        data = ProcessedData(1236, np.zeros((2, 2)))
+
+        self.assertEqual(1236, data.tid)
+        self.assertEqual(1, data.n_pulses)
+        self.assertFalse(data.pulse_resolved)
+
+
+class TestImageData(unittest.TestCase):
+
+    def testInvalidInput(self):
+        with self.assertRaises(TypeError):
+            ImageData()
+
+        with self.assertRaises(ValueError):
+            ImageData(np.arange(2))
+
+        with self.assertRaises(ValueError):
+            ImageData(np.arange(16).reshape((2, 2, 2, 2)))
+
+    @patch.dict(config._data, {'PIXEL_SIZE': 1e-3})
+    def testInitWithDefaultParameters(self):
+
+        # ---------------------
+        # pulse-resolved data
+        # ---------------------
+
+        # test automatically convert dtype to np.float32
+        self.assertEqual(ImageData(np.arange(4).reshape((2, 2))).images.dtype,
+                         np.float32)
+
+        image_data = ImageData(np.ones((4, 2, 2)))
+        self.assertEqual(1e-3, image_data.pixel_size)
+        self.assertEqual(4, image_data.n_images)
+        self.assertTupleEqual((2, 2), image_data.shape)
+        np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
+        np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked_mean)
+        self.assertEqual(0.0, image_data.background)
+        self.assertEqual((-np.inf, np.inf), image_data.threshold_mask)
+        self.assertEqual(1, image_data.ma_window)
+        self.assertEqual(1, image_data.ma_count)
+
+        # ---------------------
+        # train-resolved data
+        # ---------------------
+
+        image_data = ImageData(np.ones((3, 3)))
+
+        self.assertEqual(1, image_data.n_images)
+        self.assertTupleEqual((3, 3), image_data.shape)
+        np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
+        self.assertIs(image_data.mean, image_data.images)
+        np.testing.assert_array_equal(np.ones((3, 3)), image_data.masked_mean)
+        self.assertIsNot(image_data.masked_mean, image_data.mean)
+
+    @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
+    def testInitWithSpecifiedParameters(self):
+
+        # ---------------------
+        # pulse-resolved data
+        # ---------------------
+
+        image_data = ImageData(np.ones((2, 2, 2)),
+                               threshold_mask=(0, 0.5),
+                               ma_window=4,
+                               ma_count=2,
+                               background=-100)
+        self.assertEqual(2e-3, image_data.pixel_size)
+        self.assertEqual(2, image_data.n_images)
+        np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
+        np.testing.assert_array_equal(0.5*np.ones((2, 2)),
+                                      image_data.masked_mean)
+        self.assertEqual(-100, image_data.background)
+        self.assertEqual((0, 0.5), image_data.threshold_mask)
+        self.assertEqual(4, image_data.ma_window)
+        self.assertEqual(2, image_data.ma_count)
+
+        # ---------------------
+        # train-resolved data
+        # ---------------------
+
+        image_data = ImageData(np.ones((3, 3)), threshold_mask=(0, 0.5))
+
+        self.assertEqual(1, image_data.n_images)
+        self.assertTupleEqual((3, 3), image_data.shape)
+        np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
+        np.testing.assert_array_equal(0.5*np.ones((3, 3)), image_data.masked_mean)
+
+    def testSlicedMean(self):
+        # ---------------------
+        # pulse-resolved data
+        # ---------------------
+
+        image_data = ImageData(np.arange(16).reshape((4, 2, 2)),
+                               threshold_mask=(1, 2))
+
+        # test sliced_mean
+        np.testing.assert_array_equal(
+            np.mean(np.arange(4, 12).reshape((2, 2, 2)), axis=0),
+            image_data.sliced_mean([1, 2]))
+
+        # test sliced_masked_mean
+        np.testing.assert_array_equal(
+            2 * np.ones((2, 2)), image_data.sliced_masked_mean([1, 2]))
+
+        with self.assertRaises(TypeError):
+            image_data.sliced_mean(1)
+
+        with self.assertRaises(IndexError):
+            image_data.sliced_mean([5, 6])
+
+        # ---------------------
+        # train-resolved data
+        # ---------------------
+
+        image_data = ImageData(np.arange(16).reshape((4, 4)),
+                               threshold_mask=(3, 4))
+
+        # test sliced_mean
+        np.testing.assert_array_equal(
+            np.arange(16).reshape((4, 4)), image_data.sliced_mean([1, 2]))
+        self.assertIs(image_data.sliced_mean([0]), image_data.mean)
+
+        # test sliced_masked_mean
+        gt = 4 * np.ones((4, 4))
+        gt[0, :4] = 3
+        np.testing.assert_array_equal(
+            gt, image_data.sliced_masked_mean())
+        self.assertIs(image_data.sliced_masked_mean(), image_data.masked_mean)
 
 
 class TestPumpProbeData(unittest.TestCase):
@@ -676,3 +412,20 @@ class TestPumpProbeData(unittest.TestCase):
         x, on, off = data.data
         np.testing.assert_array_equal(9 * np.ones(10), on)  # 10 + (4 - 10)/6
         np.testing.assert_array_equal(4.5 * np.ones(10), off)  # 5 + (2 - 5)/6
+
+
+class TestRoiData(unittest.TestCase):
+    def test_general(self):
+        data = RoiData()
+
+        n_rois = len(config["ROI_COLORS"])
+        for i in range(1, n_rois+1):
+            self.assertTrue(hasattr(RoiData, f"roi{i}_hist"))
+            self.assertIsInstance(getattr(RoiData, f"roi{i}_hist"), PairData)
+            self.assertTrue(hasattr(data, f"roi{i}"))
+
+        with self.assertRaises(AttributeError):
+            getattr(RoiData, f"roi{n_rois+1}_hist")
+
+        with self.assertRaises(AttributeError):
+            getattr(data, f"roi{n_rois+1}")

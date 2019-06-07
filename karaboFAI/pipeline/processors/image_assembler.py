@@ -19,13 +19,11 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
-from karaboFAI.pipeline.processors.base_processor import (
-    CompositeProcessor, _RedisParserMixin
-)
-from karaboFAI.pipeline.exceptions import AssemblingError
-from karaboFAI.config import config, DataSource
-from karaboFAI.metadata import Metadata as mt
-from karaboFAI.utils import profiler
+from .base_processor import CompositeProcessor, _RedisParserMixin
+from ..exceptions import AssemblingError
+from ...config import config, DataSource
+from ...metadata import Metadata as mt
+from ...utils import profiler
 
 
 class ImageAssemblerFactory(ABC):
@@ -103,8 +101,8 @@ class ImageAssemblerFactory(ABC):
             # like data['metadata'] is writeable.
             return np.copy(modules)
 
-        @profiler("Assemble Image Data")
-        def process(self, processed):
+        @profiler("Image Assembler")
+        def process(self, data):
             """Assemble the image data.
 
             :returns assembled: assembled detector image data.
@@ -112,7 +110,7 @@ class ImageAssemblerFactory(ABC):
             src_name = self._detector_source_name
             src_type = self._source_type
 
-            raw = processed.raw
+            raw = data['raw']
 
             try:
                 if src_type == DataSource.FILE:
@@ -146,11 +144,8 @@ class ImageAssemblerFactory(ABC):
                 if self._pulse_indices[0] != -1:
                     assembled = assembled[self._pulse_indices]
 
-            processed.image = assembled
-
-            # delete the raw image data since we don't want to pass it around
-            # FIXME: find a way to delete pulsed-resolved detector data
-            processed.raw = dict()
+            # assembled is a temporary item which will be need in ImageProcessor
+            data['assembled'] = assembled
 
     class AgipdImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")

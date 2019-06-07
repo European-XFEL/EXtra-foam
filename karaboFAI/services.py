@@ -14,6 +14,7 @@ import os
 import time
 import faulthandler
 import sys
+import traceback
 
 import psutil
 
@@ -176,7 +177,9 @@ class FAI:
             self.app = mkQApp()
             self.gui = MainGUI(start_thread_logger=True)
         except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
             logger.error(repr(e))
+            logger.error(repr((traceback.format_tb(exc_traceback))))
             sys.exit(1)
 
     def init(self):

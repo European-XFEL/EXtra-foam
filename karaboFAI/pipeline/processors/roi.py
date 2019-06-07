@@ -51,8 +51,8 @@ class RoiProcessor(CompositeProcessor):
 
         self.roi_fom_handler = None
 
-        self.add(RoiFomProcessor())
-        self.add(RoiPumpProbeRoiProcessor())
+        self.add(RoiProcessorFom())
+        self.add(RoiProcessorPumpProbe())
 
     def update(self):
         """Override."""
@@ -86,22 +86,24 @@ class RoiProcessor(CompositeProcessor):
         return np.array(img[y:y + h, x:x + w], copy=copy)
 
 
-class RoiFomProcessor(LeafProcessor):
-    """RoiFomProcessor class.
+class RoiProcessorFom(LeafProcessor):
+    """RoiProcessorFom class.
 
     Take the on and off images calculated by the PumpProbeProcessor
     and extract the ROIs of both on and off images using ROI1. The
     figure-of-merit is sum or mean of the difference between these
     two ROI images.
     """
-    @profiler("ROI processor")
-    def process(self, processed):
+    @profiler("ROI Processor")
+    def process(self, data):
         """Override.
 
         Note: We need to put some data in the history, even if ROI is not
         activated. This is required for the case that different ROIs are
         activated at different times.
         """
+        processed = data['processed']
+
         tid = processed.tid
         if tid > 0:
             img = processed.image.masked_mean
@@ -131,18 +133,15 @@ class RoiFomProcessor(LeafProcessor):
                         setattr(processed.roi, f"roi{i+1}_fom", fom)
 
 
-class RoiPumpProbeRoiProcessor(CompositeProcessor):
-    """RoiPumpProbeRoiProcessor class.
+class RoiProcessorPumpProbe(LeafProcessor):
+    """RoiProcessorPumpprobe class.
 
     Extract the ROI image for on/off pulses respectively.
     """
-    def __init__(self):
-        super().__init__()
+    @profiler("Pump-probe ROI Processor")
+    def process(self, data):
+        processed = data['processed']
 
-        self.add(RoiPumpProbeProj1dProcessor())
-
-    @profiler("ROI processor")
-    def process(self, processed):
         # use ROI1 for signal
         roi = processed.roi.roi1
         if roi is None:
@@ -156,6 +155,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
 
         on_image = processed.pp.on_image_mean
         off_image = processed.pp.off_image_mean
+
         if on_image is None or off_image is None:
             return StopCompositionProcessing
 
@@ -179,10 +179,6 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
                 on_roi /= denominator_on
                 off_roi /= denominator_off
 
-        # set the current on/off ROIs
-        processed.pp.on_roi = on_roi
-        processed.pp.off_roi = off_roi
-
         if processed.pp.analysis_type in (AnalysisType.ROI,
                                           AnalysisType.ROI1_BY_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
@@ -198,58 +194,42 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
             else:
                 fom = self.roi_fom_handler(norm_on_off_ma)
 
-            processed.pp.x = x
-            processed.pp.norm_on_ma = norm_on_ma
-            processed.pp.norm_off_ma = norm_off_ma
-            processed.pp.norm_on_off_ma = norm_on_off_ma
-            processed.pp.fom = fom
-
-
-class RoiPumpProbeProj1dProcessor(LeafProcessor):
-    """RoiPumpProbeProj1dProcessor class.
-
-    Calculate the 1D projection for on/off ROIs.
-    """
-    def __init__(self):
-        super().__init__()
-
-    def process(self, processed):
-        if processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_X:
-            axis = -2
-        elif processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_Y:
-            axis = -1
         else:
-            return
+            if processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_X:
+                axis = -2
+            elif processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_Y:
+                axis = -1
+            else:
+                return
 
-        on_roi = processed.pp.on_roi
-        off_roi = processed.pp.off_roi
+            x_data = np.arange(on_roi.shape[::-1][axis])
+            # 1D projection
+            on_data = np.sum(on_roi, axis=axis)
+            off_data = np.sum(off_roi, axis=axis)
 
-        x_data = np.arange(on_roi.shape[::-1][axis])
-        # 1D projection
-        on_data = np.sum(on_roi, axis=axis)
-        off_data = np.sum(off_roi, axis=axis)
+            # set data and calculate moving average
+            processed.pp.data = (x_data, on_data, off_data)
+            x, on_ma, off_ma = processed.pp.data
 
-        # set data and calculate moving average
-        processed.pp.data = (x_data, on_data, off_data)
-        x, on_ma, off_ma = processed.pp.data
+            try:
+                norm_on_ma = normalize_auc(
+                    on_ma, x_data, *self.proj1d_auc_range)
+                norm_off_ma = normalize_auc(
+                    off_ma, x_data, *self.proj1d_auc_range)
+            except ValueError as e:
+                raise ProcessingError(str(e))
 
-        try:
-            norm_on_ma = normalize_auc(
-                on_ma, x_data, *self.proj1d_auc_range)
-            norm_off_ma = normalize_auc(
-                off_ma, x_data, *self.proj1d_auc_range)
-        except ValueError as e:
-            raise ProcessingError(str(e))
+            norm_on_off_ma = norm_on_ma - norm_off_ma
 
-        norm_on_off_ma = norm_on_ma - norm_off_ma
+            sliced = slice_curve(norm_on_off_ma, x_data,
+                                 *self.proj1d_fom_integ_range)[0]
+            if processed.pp.abs_difference:
+                fom = np.sum(np.abs(sliced))
+            else:
+                fom = np.sum(sliced)
 
-        sliced = slice_curve(norm_on_off_ma, x_data,
-                             *self.proj1d_fom_integ_range)[0]
-        if processed.pp.abs_difference:
-            fom = np.sum(np.abs(sliced))
-        else:
-            fom = np.sum(sliced)
-
+        processed.pp.on_roi = on_roi
+        processed.pp.off_roi = off_roi
         processed.pp.x = x
         processed.pp.norm_on_ma = norm_on_ma
         processed.pp.norm_off_ma = norm_off_ma

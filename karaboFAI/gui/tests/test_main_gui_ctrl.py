@@ -16,7 +16,7 @@ from karaboFAI.logger import logger
 from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
-from karaboFAI.pipeline.data_model import ImageData, ProcessedData
+from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AiNormalizer, AnalysisType, BinMode,
     CorrelationFom, DataSource, Projection1dNormalizer, PumpProbeMode
@@ -59,8 +59,6 @@ class TestMainGuiCtrl(unittest.TestCase):
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
-
-        ImageData.clear()
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
@@ -116,12 +114,11 @@ class TestMainGuiCtrl(unittest.TestCase):
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
         scheduler = self.scheduler
-        image_worker = self.image_worker
         proc = scheduler._ai_proc
 
         proc.update()
 
-        self.assertFalse(proc.enable_pulsed_ai)
+        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(proc.integ_method, default_integ_method)
         default_normalizer = AiNormalizer.AUC
@@ -149,7 +146,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._cy_le.setText("1000")
 
         proc.update()
-        self.assertTrue(proc.enable_pulsed_ai)
+        self.assertEqual(AnalysisType.PULSE_AZIMUTHAL_INTEG,
+                         proc.analysis_type)
         self.assertEqual(proc.integ_method, itgt_method)
         self.assertEqual(proc.normalizer, ai_normalizer)
         self.assertEqual(1024, proc.integ_points)
@@ -191,18 +189,18 @@ class TestMainGuiCtrl(unittest.TestCase):
     @patch("karaboFAI.pipeline.data_model.PumpProbeData.clear")
     def testPumpProbeCtrlWidget(self, pp_reset):
         widget = self.gui.pump_probe_ctrl_widget
-        proc = self.scheduler._pp_proc
+        proc = self.image_worker._pp_image_ext
         proc.update()
 
         # check default reconfigurable params
         self.assertEqual(1, proc.ma_window)
         self.assertTrue(proc.abs_difference)
         self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual(PumpProbeMode.UNDEFINED, proc.mode)
-        self.assertListEqual(list(range(0, 64, 2)), proc.on_pulse_indices)
-        self.assertIsInstance(proc.on_pulse_indices[0], int)
-        self.assertListEqual(list(range(1, 64, 2)), proc.off_pulse_indices)
-        self.assertIsInstance(proc.off_pulse_indices[0], int)
+        self.assertEqual(PumpProbeMode.PRE_DEFINED_OFF, proc.mode)
+        self.assertListEqual(list(range(0, 64, 2)), proc.on_indices)
+        self.assertIsInstance(proc.on_indices[0], int)
+        self.assertListEqual(list(range(1, 64, 2)), proc.off_indices)
+        self.assertIsInstance(proc.off_indices[0], int)
 
         # change assigning params
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
@@ -230,8 +228,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(10, proc.ma_window)
         self.assertEqual(AnalysisType(new_fom), proc.analysis_type)
         self.assertEqual(PumpProbeMode(new_mode), proc.mode)
-        self.assertListEqual([0, 2, 4, 6, 8], proc.on_pulse_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], proc.off_pulse_indices)
+        self.assertListEqual([0, 2, 4, 6, 8], proc.on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], proc.off_indices)
 
         # check invalid params
         widget._mode_cb.setCurrentIndex(PumpProbeMode.SAME_TRAIN)
@@ -361,7 +359,9 @@ class TestMainGuiCtrl(unittest.TestCase):
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
 
             for item in expected_correlations:
-                self.assertTrue(hasattr(ProcessedData(1).correlation, item))
+                self.assertTrue(
+                    hasattr(ProcessedData(1, np.zeros((2, 2))).correlation,
+                            item))
 
             # change device id
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
@@ -373,10 +373,12 @@ class TestMainGuiCtrl(unittest.TestCase):
             resolution_le.setText(str(resolution))
 
             if resolution > 0:
-                _, _, info = getattr(ProcessedData(1).correlation, correlation)
+                _, _, info = getattr(
+                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
                 self.assertEqual(resolution, info['resolution'])
             else:
-                _, _, info = getattr(ProcessedData(1).correlation, correlation)
+                _, _, info = getattr(
+                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
                 self.assertNotIn('resolution', info)
 
         proc.update()
@@ -388,7 +390,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         # test data visualization
         # the upper two plots have error bars
-        data = ProcessedData(1, images=np.arange(480).reshape(120, 2, 2))
+        data = ProcessedData(1, np.arange(480).reshape(120, 2, 2))
         for i in range(1000):
             data.correlation.correlation1 = (int(i/5), 100*i)
             data.correlation.correlation2 = (int(i/5), -100*i)

@@ -14,10 +14,7 @@ from threading import Lock
 
 import numpy as np
 
-from cached_property import cached_property
-
-from ..algorithms import nanmean_axis0_para
-from ..logger import logger
+from ..algorithms import nanmean_axis0_para, mask_by_threshold
 from ..config import config
 
 
@@ -299,7 +296,16 @@ class RoiData(AbstractData):
 
 
 class AzimuthalIntegrationData(AbstractData):
-    """Azimuthal integration data model."""
+    """Azimuthal integration data model.
+
+    momentum (numpy.ndarray): x-axis of azimuthal integration result.
+        Shape = (momentum,)
+    intensities (numpy.ndarray): y-axis of azimuthal integration result.
+        Shape = (pulse_index, intensity)
+    intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
+        integration result over pulses. Shape = (intensity,)
+    pulse_fom
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -447,340 +453,152 @@ class PumpProbeData(AbstractData):
 class ImageData:
     """Image data model.
 
-    Operation flow:
-
-    remove background -> calculate mean image -> apply mask
+    ImageData is a container for storing self-consistent image data.
+    Once constructed, the internal data are not allowed to be modified.
 
     Attributes:
-        pixel_size (float): detector pixel size.
-        _images (numpy.ndarray): detector images for all the pulses in
-            a train. shape = (pulse_index, y, x) for pulse-resolved
-            detectors and shape = (y, x) for train-resolved detectors.
-        _threshold_mask (tuple): (min, max) threshold of the pixel value.
+        images (numpy.ndarray): all images in the train.
+        pixel_size (float): pixel size of the detector.
+        n_images (int): number of images in the train.
+        background (float): a uniform background value.
+        ma_window (int): moving average window size.
+        ma_count (int): current moving average count.
+        threshold_mask (tuple): (lower, upper) boundaries of the
+            threshold mask.
+        mean (numpy.ndarray): average image over the train.
+        masked_mean (numpy.ndarray): average image over the train with
+            threshold mask applied.
+        ref (numpy.ndarray): reference image.
+        masked_ref (numpy.ndarray): reference image with threshold mask
+            applied.
     """
-    class RawImage:
-        def __init__(self):
-            self._images = None  # moving average (original data)
-            self._ma_window = 1
-            self._ma_count = 0
 
-            self._bkg = 0.0  # current background value
+    def __init__(self, data, *,
+                 background=0.0,
+                 threshold_mask=(-np.inf, np.inf),
+                 ma_window=1,
+                 ma_count=1):
+        """Initialization.
 
-        def _invalid_image_cached(self):
-            try:
-                del self.__dict__['images']
-            except KeyError:
-                pass
+        :param numpy.ndarray data: image data in a train.
+        :param float background: a uniform background value.
+        :param tuple threshold_mask: threshold mask.
+        :param int ma_window: moving average window size.
+        :param int ma_count: current moving average count.
+        """
+        if not isinstance(data, np.ndarray):
+            raise TypeError(r"Image data must be numpy.ndarray!")
 
-        @property
-        def background(self):
-            return self._bkg
+        if data.ndim <= 1 or data.ndim > 3:
+            raise ValueError(f"The shape of image data must be (y, x) or "
+                             f"(n_pulses, y, x)!")
 
-        @background.setter
-        def background(self, v):
-            if self._bkg != v:
-                self._bkg = v
-                self._invalid_image_cached()
+        self._pixel_size = config['PIXEL_SIZE']
 
-        @cached_property
-        def images(self):
-            if self._images is None:
-                return None
-            # return a new constructed array
-            return self._images - self._bkg
+        if data.dtype != np.float32:
+            # dtype of the incoming data could be integer
+            self._images = data.astype(np.float32)
+        else:
+            self._images = data
 
-        def set(self, imgs):
-            """Set new image data."""
-            if self._images is not None and self._ma_window > 1:
-                if imgs.shape != self._images.shape:
-                    logger.error(
-                        f"The shape {imgs.shape} of the new image is "
-                        f"different from the current one "
-                        f"{self._images.shape}!")
-                    return
+        if data.ndim == 3:
+            self._n_images = self._images.shape[0]
+        else:
+            self._n_images = 1
 
-                if self._ma_count < self._ma_window:
-                    self._ma_count += 1
-                    self._images += (imgs - self._images) / self._ma_count
-                else:  # self._ma_count == self._ma_window
-                    # here is an approximation
-                    self._images += (imgs - self._images) / self._ma_window
+        self._shape = self._images.shape[-2:]
 
-            else:  # self._images is None or self._ma_window == 1
-                self._images = imgs
-                self._ma_count = 1
+        self._mean = nanmean_axis0_para(self._images)
+        self._threshold_mask = threshold_mask
+        # self._masked_mean does not share memory with self._mean
+        self._masked_mean = mask_by_threshold(self._mean, *threshold_mask)
 
-            self._invalid_image_cached()
+        # TODO: design how to deal with reference image
+        self._ref = None
+        self._masked_ref = None
 
-        @property
-        def moving_average_window(self):
-            return self._ma_window
+        self._bkg = background
 
-        @moving_average_window.setter
-        def moving_average_window(self, v):
-            if not isinstance(v, int) or v <= 0:
-                v = 1
+        self._ma_window = ma_window
+        self._ma_count = ma_count
 
-            if v < self._ma_window:
-                # if the new window size is smaller than the current one,
-                # we reset the original image sum and count
-                self._ma_window = v
-                self._ma_count = 0
-                self._images = None
-                self._invalid_image_cached()
+    @property
+    def images(self):
+        return self._images
 
-            self._ma_window = v
-
-        @property
-        def moving_average_count(self):
-            return self._ma_count
-
-        def clear(self):
-            self._images = None
-            self._ma_window = 1
-            self._ma_count = 0
-            self._bkg = 0.0
-
-    class ImageRef:
-        def __init__(self):
-            self._image = None
-
-        def __get__(self, instance, instance_type):
-            if instance is None:
-                return self
-            return self._image
-
-        def __set__(self, instance, value):
-            self._image = value
-
-        def __delete__(self, instance):
-            self._image = None
-
-    class ThresholdMask:
-        def __init__(self, lb=None, ub=None):
-            self._lower = lb
-            self._upper = ub
-            self._initialized = False
-
-        def __get__(self, instance, instance_type):
-            if instance is None:
-                return self
-            lower = -np.inf if self._lower is None else self._lower
-            upper = np.inf if self._upper is None else self._upper
-            return lower, upper
-
-        def __set__(self, instance, value):
-            self._lower = value[0]
-            self._upper = value[1]
-            self._initialized = True
-
-        def __delete__(self, instance):
-            self._lower = None
-            self._upper = None
-            self._initialized = False
-
-        def initialized(self):
-            return self._initialized
-
-    __raw = RawImage()
-    __ref = ImageRef()
-    __threshold_mask = ThresholdMask()
-
-    def __init__(self, images):
-        """Initialization."""
-
-        if not isinstance(images, np.ndarray):
-            raise TypeError(r"Images must be numpy.ndarray!")
-
-        if images.ndim <= 1 or images.ndim > 3:
-            raise ValueError(
-                f"The shape of images must be (y, x) or (n_pulses, y, x)!")
-
-        if not self.__class__.__threshold_mask.initialized():
-            self.__threshold_mask = config['MASK_RANGE']
-
-        # update moving average
-        self._set_images(images)
-
-        # Instance attributes should be "frozen" after created. Otherwise,
-        # the data used in different plot widgets could be different.
-        self._images = self.__raw.images
-        self._image_ref = self.__ref
-        self._threshold_mask = self.__threshold_mask
-
-        # cache these two properties
-        self.ma_window
-        self.ma_count
-
-        self._registered_ops = set()
+    @property
+    def pixel_size(self):
+        return self._pixel_size
 
     @property
     def n_images(self):
-        if self._images.ndim == 3:
-            return self._images.shape[0]
-        return 1
-
-    def pulse_resolved(self):
-        return self._images.ndim == 3
+        return self._n_images
 
     @property
     def shape(self):
-        return self._images.shape[-2:]
+        return self._shape
 
     @property
     def background(self):
-        return self.__raw.background
+        return self._bkg
+
+    @property
+    def ma_window(self):
+        return self._ma_window
+
+    @property
+    def ma_count(self):
+        return self._ma_count
 
     @property
     def threshold_mask(self):
         return self._threshold_mask
 
-    @cached_property
-    def ma_window(self):
-        # Updating ma_window could set __raw._images to None. Since there
-        # is no cache being deleted. '_images' in this instance will not
-        # be set to None. Note: '_images' is not allowed to be None.
-        return self.__raw.moving_average_window
-
-    @cached_property
-    def ma_count(self):
-        # Updating ma_window could reset ma_count. Therefore, 'ma_count'
-        # should both be a cached property
-        return self.__raw.moving_average_count
-
-    def _set_images(self, imgs):
-        self.__raw.set(imgs)
-
-    def set_ma_window(self, v):
-        self.__raw.moving_average_window = v
-
-    def set_background(self, v):
-        self.__raw.background = v
-        self._registered_ops.add("background")
-
-    def set_threshold_mask(self, lb, ub):
-        self.__threshold_mask = (lb, ub)
-        self._registered_ops.add("threshold_mask")
-
-    def set_reference(self):
-        # Reference should be a copy of mean since mean could be modified
-        # after a reference was set.
-        self.__ref = np.copy(self.mean)
-        self._registered_ops.add("reference")
-
-    def remove_reference(self):
-        self.__ref = None
-
-        self._registered_ops.add("reference")
-
-    @cached_property
-    def images(self):
-        """Return the background-subtracted images.
-
-        Warning: it shares the memory space with self._images
-        """
-        return self._images
-
-    @cached_property
-    def ref(self):
-        if self._image_ref is None:
-            return None
-
-        return self._image_ref
-
-    @cached_property
-    def masked_ref(self):
-        if self.ref is None:
-            return None
-        return self._masked_mean_imp(np.copy(self.ref))
-
-    @cached_property
+    @property
     def mean(self):
-        """Return the average of images over pulses in a train.
+        return self._mean
 
-        The image is background-subtracted.
-
-        :return numpy.ndarray: a single image, shape = (y, x)
-        """
-        return self._mean_imp(self.images)
-
-    def _mean_imp(self, imgs):
-        """Return the average of a stack of images."""
-        if imgs.ndim == 3:
-            # pulse resolved
-            return nanmean_axis0_para(imgs, max_workers=8, chunk_size=20)
-        # train resolved
-        return imgs
-
-    @cached_property
+    @property
     def masked_mean(self):
-        """Return the masked average image.
+        return self._masked_mean
 
-        The image is background-subtracted before applying the mask.
+    @property
+    def ref(self):
+        return self._ref
+
+    @property
+    def masked_ref(self):
+        return self._masked_ref
+
+    def sliced_mean(self, indices):
+        """Return average image over given indices.
+
+        :param list indices: a list of indices. Ignored if data is
+            train-resolved.
+
+        :raise IndexError if any index is out of bounds
         """
-        # keep both mean image and masked mean image so that we can
-        # recalculate the masked image
-        return self._masked_mean_imp(np.copy(self.mean))
+        if not isinstance(indices, (tuple, list, np.ndarray)):
+            raise TypeError("Indices must be either a tuple, a list or "
+                            "a numpy.ndarray")
 
-    def _masked_mean_imp(self, mean_image):
-        # Convert 'nan' to '-inf' and it will later be converted to the
-        # lower range of mask, which is usually 0.
-        # We do not convert 'nan' to 0 because: if the lower range of
-        # mask is a negative value, 0 will be converted to a value
-        # between 0 and 255 later.
-        mean_image[np.isnan(mean_image)] = -np.inf
-        # clip the array, which now will contain only numerical values
-        # within the mask range
-        np.clip(mean_image, *self._threshold_mask, out=mean_image)
+        if self._images.ndim == 3:
+            return nanmean_axis0_para(self._images[indices])
+        return self._mean
 
-        return mean_image
+    def sliced_masked_mean(self, indices=None):
+        """Return masked average image over given indices.
 
-    def sliced_masked_mean(self, indices):
-        """Get masked mean by indices of images.
+        :param list indices: a list of indices. Ignored if data is
+            train-resolved.
 
-        :param list indices: a list of integers.
+        :raise IndexError if any index is out of bounds
         """
-        imgs = self.images
-
-        if imgs.ndim == 3:
-            sliced_imgs = imgs[indices]
-        else:
-            if len(indices) > 1 or indices[0] != 0:
-                raise IndexError(
-                    f"{indices} is out of bound for train-resolved image data")
-            sliced_imgs = imgs
-
-        return self._masked_mean_imp(self._mean_imp(sliced_imgs))
-
-    def update(self):
-        invalid_caches = set()
-        if "background" in self._registered_ops:
-            self._images = self.__raw.images
-            invalid_caches.update({"images", "mean", "masked_mean"})
-        if "threshold_mask" in self._registered_ops:
-            self._threshold_mask = self.__threshold_mask
-            invalid_caches.update({"masked_mean", "masked_ref"})
-        if "reference" in self._registered_ops:
-            self._image_ref = self.__ref
-            invalid_caches.update({"ref", "masked_ref"})
-
-        for cache in invalid_caches:
-            try:
-                del self.__dict__[cache]
-            except KeyError:
-                pass
-
-        self._registered_ops.clear()
-
-    @classmethod
-    def clear(cls):
-        """Reset all the class attributes.
-
-        Used in unittest only.
-        """
-        cls.__raw.clear()
-        cls.__ref.__delete__(None)
-        cls.__threshold_mask.__delete__(None)
+        if self._images.ndim == 3:
+            return mask_by_threshold(self.sliced_mean(indices),
+                                     *self._threshold_mask)
+        # do not re-calculate!
+        return self._masked_mean
 
 
 class ProcessedData:
@@ -791,36 +609,29 @@ class ProcessedData:
 
     Attributes:
         tid (int): train ID.
-        momentum (numpy.ndarray): x-axis of azimuthal integration result.
-            Shape = (momentum,)
-        intensities (numpy.ndarray): y-axis of azimuthal integration result.
-            Shape = (pulse_index, intensity)
-        intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
-            integration result over pulses. Shape = (intensity,)
-        roi (RoiData): stores ROI related data.
-        pp (PumpProbeData): stores laser on-off related data.
+        image (ImageData): image data.
+        xgm (XgmData): XGM data.
+        ai (AzimuthalIntegrationData): azimuthal integration data.
+        pp (PumpProbeData): pump-probe data.
+        roi (RoiData): ROI data.
         correlation (CorrelationData): correlation related data.
+        bin (BinData): binning data.
+        xas (XasData): XAS data.
     """
 
-    def __init__(self, tid, images=None):
+    def __init__(self, tid, images, **kwargs):
         """Initialization."""
         self._tid = tid  # current Train ID
 
-        self.raw = None
-
-        if images is None:
-            self._image_data = None
-        else:
-            self._image_data = ImageData(images)
+        self._image = ImageData(images, **kwargs)
+        self.xgm = XgmData()
 
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
-        self.xas = XasData()
         self.roi = RoiData()
         self.correlation = CorrelationData()
         self.bin = BinData()
-
-        self.xgm = XgmData()
+        self.xas = XasData()
 
     @property
     def tid(self):
@@ -828,45 +639,20 @@ class ProcessedData:
 
     @property
     def image(self):
-        return self._image_data
+        return self._image
 
-    @image.setter
-    def image(self, images):
-        self._image_data = ImageData(images)
+    @property
+    def pulse_resolved(self):
+        return self.image.images.ndim == 3
 
     @property
     def n_pulses(self):
-        if self._image_data is None:
-            return 0
-
-        return self._image_data.n_images
-
-    def empty(self):
-        """Check the goodness of the data."""
-        logger.debug("Deprecated! use self.n_pulses!")
-        if self.image is None:
-            return True
-        return False
+        return self._image.n_images
 
     def update_hist(self):
         self.roi.update_hist(self._tid)
         self.pp.update_hist(self._tid)
         self.correlation.update_hist(self._tid)
-
-
-class Data4Visualization:
-    """Data shared between all the windows and widgets.
-
-    The internal data is only modified in MainGUI.updateAll()
-    """
-    def __init__(self):
-        self.__value = ProcessedData(-1)
-
-    def get(self):
-        return self.__value
-
-    def set(self, value):
-        self.__value = value
 
 
 class DataManagerMixin:

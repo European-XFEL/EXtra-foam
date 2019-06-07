@@ -11,16 +11,34 @@ All rights reserved.
 """
 
 
-class AggregatingError(Exception):
+class _ProcessingError(Exception):
+    """Base Exception for non-fatal errors in pipeline.
+
+    The error must not be fatal and the rest of the data processing pipeline
+    can still resume.
+    """
+    pass
+
+
+class AggregatingError(_ProcessingError):
     """Raised when data aggregating fails."""
     pass
 
 
-class AssemblingError(Exception):
-    """Raised when image assembling fails."""
+class ProcessingError(_ProcessingError):
+    """Raised when data processor fails."""
     pass
 
 
-class ProcessingError(Exception):
-    """Raised when data processor fails."""
+class _StopPipelineError(Exception):
+    """Base Exception for fatal errors in pipeline.
+
+    The error is fatal so once it is raised, the pipeline should be stopped
+    since it does not make sense to continue.
+    """
+    pass
+
+
+class AssemblingError(_StopPipelineError):
+    """Raised when image assembling fails."""
     pass

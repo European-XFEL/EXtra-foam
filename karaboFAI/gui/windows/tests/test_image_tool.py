@@ -9,27 +9,26 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
-from karaboFAI.config import _Config, ConfigWrapper
+from karaboFAI.config import config, _Config, ConfigWrapper
 from karaboFAI.services import FAI
+from karaboFAI.pipeline.data_model import ImageData
 from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
 
 
 class TestSimpleImageData(unittest.TestCase):
+    @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
     def testGeneral(self):
         with self.assertRaises(TypeError):
             _SimpleImageData([1, 2, 3])
 
-        with self.assertRaises(ValueError):
-            _SimpleImageData(np.ones([2, 2, 2]))
-
-        orig_data = np.arange(9).reshape(3, 3)
-        img_data = _SimpleImageData(orig_data)
+        gt_data = np.arange(9).reshape(3, 3)
+        img_data = _SimpleImageData(ImageData(gt_data))
 
         img_data.background = 1
-        np.testing.assert_array_equal(orig_data - 1, img_data.masked)
+        np.testing.assert_array_equal(gt_data - 1, img_data.masked)
         img_data.background = 0
-        np.testing.assert_array_equal(orig_data, img_data.masked)
+        np.testing.assert_array_equal(gt_data, img_data.masked)
 
         with self.assertRaises(TypeError):
             img_data.threshold_mask = 1
@@ -38,13 +37,15 @@ class TestSimpleImageData(unittest.TestCase):
             img_data.threshold_mask = [1, 2, 3]
 
         img_data.threshold_mask = (3, 6)
-        np.testing.assert_array_equal(np.clip(orig_data, 3, 6), img_data.masked)
+        np.testing.assert_array_equal(np.clip(gt_data, 3, 6), img_data.masked)
         img_data.background = 3
-        np.testing.assert_array_equal(np.clip(orig_data-3, 3, 6), img_data.masked)
+        np.testing.assert_array_equal(np.clip(gt_data-3, 3, 6), img_data.masked)
+
+        self.assertEqual(1.0e-3, img_data.pixel_size)
 
     def testImageWithNan(self):
-        orig_data = np.array([[1, 0], [np.nan, np.nan]])
-        img_data = _SimpleImageData(orig_data)
+        gt_data = np.array([[1, 0], [np.nan, np.nan]])
+        img_data = _SimpleImageData(ImageData(gt_data))
 
         img_data.background = -1
         np.testing.assert_array_equal(np.array([[2, 1], [np.nan, np.nan]]),
@@ -53,6 +54,17 @@ class TestSimpleImageData(unittest.TestCase):
         img_data.threshold_mask = (1.1, 1.6)
         np.testing.assert_array_almost_equal(
             np.array([[1.6, 1.1], [np.nan, np.nan]]), img_data.masked)
+
+    @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
+    def testInstantiateFromArray(self):
+        gt_data = np.ones((2, 2, 2))
+
+        image_data = _SimpleImageData.from_array(gt_data)
+
+        np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked)
+        self.assertEqual(1e-3, image_data.pixel_size)
+        self.assertEqual(0, image_data.background)
+        self.assertEqual((-np.inf, np.inf), image_data.threshold_mask)
 
 
 class TestImageTool(unittest.TestCase):

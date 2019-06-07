@@ -41,9 +41,24 @@ from ..config import config
 from ..logger import logger
 from ..utils import profiler
 from ..ipc import redis_psubscribe
-from ..pipeline import Data4Visualization, MpInQueue
+from ..pipeline import MpInQueue
 from ..pipeline.worker import list_fai_processes, ProcessManager
 from ..offline import FileServerManager
+
+
+class Data4Visualization:
+    """Data shared between all the windows and widgets.
+
+    The internal data is only modified in MainGUI.updateAll()
+    """
+    def __init__(self):
+        self.__value = None
+
+    def get(self):
+        return self.__value
+
+    def set(self, value):
+        self.__value = value
 
 
 class ThreadLoggerBridge(QObject):

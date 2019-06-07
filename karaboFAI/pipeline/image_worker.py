@@ -11,8 +11,9 @@ All rights reserved.
 """
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
-from .processors import ImageAssemblerFactory, ImageProcessor
-from .data_model import ProcessedData
+from .processors import (
+    ImageAssemblerFactory, ImageProcessor, PumpProbeImageExtractor
+)
 
 
 class ImageWorker(ProcessWorker):
@@ -25,27 +26,11 @@ class ImageWorker(ProcessWorker):
         self._output = MpOutQueue(f"{self._name}:output")
 
         # processor pipeline flow:
-        # ImageAssembler ->
-        #
-        # ImageProcessor ->
+        # ImageAssembler -> ImageProcessor -> PumpProbeImageProcessor
         self._assembler = ImageAssemblerFactory.create(detector)
-        self._processor = ImageProcessor()
+        self._image_proc = ImageProcessor()
+        self._pp_image_ext = PumpProbeImageExtractor()
 
         self._tasks = [
-            self._assembler, self._processor
+            self._assembler, self._image_proc, self._pp_image_ext
         ]
-
-    def _preprocess(self, data):
-        """Override."""
-        raw, meta = data
-
-        # get the train ID of the first metadata
-        # Note: this is better than meta[src_name] because:
-        #       1. For streaming AGIPD/LPD data from files, 'src_name' does
-        #          not work;
-        #       2. Prepare for the scenario where a 2D detector is not
-        #          mandatory.
-        tid = next(iter(meta.values()))["timestamp.tid"]
-        processed = ProcessedData(tid)
-        processed.raw = raw
-        return processed
