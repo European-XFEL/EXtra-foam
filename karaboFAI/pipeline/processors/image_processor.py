@@ -9,14 +9,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-import pyarrow as pa
-
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
 from ...utils import profiler
-from ..data_model import ProcessedData
 
 
 class ImageProcessor(CompositeProcessor):
@@ -42,14 +38,13 @@ class ImageProcessor(CompositeProcessor):
                                              handler=float)
         self.ma_window = int(cfg['ma_window'])
 
-    def process_image(self, tid, assembled):
-        # TODO: use the Processor interface
-        self.update()
+    @profiler("Process Image")
+    def process(self, processed):
+        if processed.image is None:
+            return
 
-        processed = ProcessedData(tid, assembled)
+        self.update()
 
         processed.image.set_ma_window(self.ma_window)
         processed.image.set_background(self.background)
         processed.image.set_threshold_mask(*self.threshold_mask)
-
-        return processed

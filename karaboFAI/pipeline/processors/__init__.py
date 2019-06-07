@@ -8,3 +8,5 @@ from .roi import RoiProcessor
 from .xas import XasProcessor
 from .bin import BinProcessor
 from .image_processor import ImageProcessor
+from .image_assembler import ImageAssemblerFactory
+from .xgm import XgmProcessor

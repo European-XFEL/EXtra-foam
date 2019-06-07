@@ -42,6 +42,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         cls.gui = fai.gui
         cls.fai = fai
         cls.scheduler = fai.scheduler
+        cls.image_worker = fai.image_worker
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
@@ -64,7 +65,9 @@ class TestMainGuiCtrl(unittest.TestCase):
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
         scheduler = self.scheduler
-        assembler = scheduler._image_assembler
+        image_worker = self.image_worker
+
+        assembler = image_worker._assembler
         proc = scheduler._ai_proc
 
         # --------------------------
@@ -113,6 +116,7 @@ class TestMainGuiCtrl(unittest.TestCase):
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
         scheduler = self.scheduler
+        image_worker = self.image_worker
         proc = scheduler._ai_proc
 
         proc.update()
@@ -270,8 +274,9 @@ class TestMainGuiCtrl(unittest.TestCase):
     def testDataCtrlWidget(self):
         widget = self.gui.data_ctrl_widget
         scheduler = self.scheduler
-        assembler = scheduler._image_assembler
-        aggregtor = scheduler._data_aggregator
+        image_worker = self.image_worker
+        assembler = image_worker._assembler
+        xgm = scheduler._xgm_proc
 
         # test passing tcp hostname and port
 
@@ -289,21 +294,16 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         source_type = DataSource.FILE
         widget._source_type_cb.setCurrentIndex(source_type)
-        # bridge.update()
-        scheduler.update()
-        assembler.update()
-        aggregtor.update()
 
-        self.assertEqual(source_type, assembler._source_type)
-        self.assertEqual(source_type, scheduler._source_type)
-        # self.assertEqual(source_type, bridge._source_type)
+        assembler.update()
         self.assertEqual("A", assembler._detector_source_name)
         items = []
         for i in range(widget._detector_src_cb.count()):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["A", "B"], items)
-        self.assertEqual(widget._xgm_src_cb.currentText(),
-                         scheduler._data_aggregator._xgm_src)
+
+        xgm.update()
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
 
         # change source_type from FILE to BRIDGE
 
@@ -311,32 +311,25 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._source_type_cb.setCurrentIndex(source_type)
         widget._xgm_src_cb.setCurrentIndex(1)
 
-        # bridge.update()
-        scheduler.update()
         assembler.update()
-        aggregtor.update()
-
-        self.assertEqual(source_type, assembler._source_type)
-        self.assertEqual(source_type, scheduler._source_type)
-        # self.assertEqual(source_type, bridge._source_type)
         self.assertEqual("E", assembler._detector_source_name)
         items = []
         for i in range(widget._detector_src_cb.count()):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["E", "F", "G"], items)
 
-        self.assertEqual(widget._xgm_src_cb.currentText(),
-                         scheduler._data_aggregator._xgm_src)
+        xgm.update()
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
-        scheduler = self.scheduler
+        image_worker = self.image_worker
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
         self.assertTrue(self.gui.updateMetaData())
 
-        self.assertIsInstance(scheduler._image_assembler._geom, LPDGeometry)
+        self.assertIsInstance(image_worker._assembler._geom, LPDGeometry)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -450,10 +443,10 @@ class TestMainGuiCtrl(unittest.TestCase):
             self.assertEqual("", widget._table.cellWidget(i, 1).currentText())
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
 
-        new_type = AnalysisType.AZIMUTHAL_INTEG
-        widget._analysis_type_cb.setCurrentIndex(new_type)
+        widget._analysis_type_cb.setCurrentIndex(1)
         proc.update()
-        self.assertEqual(AnalysisType(new_type), proc.analysis_type)
+        self.assertEqual(AnalysisType(AnalysisType.TRAIN_AZIMUTHAL_INTEG),
+                         proc.analysis_type)
 
         # Now we should have device_ids and properties for both x and y
         widget._table.cellWidget(0, 3).setText("0, 10")

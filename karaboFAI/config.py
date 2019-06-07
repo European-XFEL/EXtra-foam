@@ -37,11 +37,12 @@ class PumpProbeMode(IntEnum):
 
 class AnalysisType(IntEnum):
     UNDEFINED = 0
-    AZIMUTHAL_INTEG = 1
+    PP_AZIMUTHAL_INTEG = 1
     ROI = 2
     ROI_PROJECTION_X = 3
     ROI_PROJECTION_Y = 4
     ROI1_BY_ROI2 = 5
+    TRAIN_AZIMUTHAL_INTEG = 6
 
 
 class BinMode(IntEnum):

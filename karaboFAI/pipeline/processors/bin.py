@@ -121,7 +121,7 @@ class BinProcessor(CompositeProcessor):
 class Bin1DProcessorX(LeafProcessor):
     """Bin data based to the x parameter."""
     @profiler("Bin 1D processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if not self.device_id_x or not self.property_x:
             return
         edge = self._data.edge_x
@@ -133,13 +133,13 @@ class Bin1DProcessorX(LeafProcessor):
         device_id = self.device_id_x
         ppt = self.property_x
 
-        group_v = _get_slow_data(processed.tid, raw, device_id, ppt)
+        group_v = _get_slow_data(processed, device_id, ppt)
 
         index = np.digitize(group_v, edge)
         if len(center) >= index > 0:
             count[index-1] += 1
 
-            if self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
                 new_value = processed.ai.intensity_mean
                 x = processed.ai.momentum
             else:
@@ -165,7 +165,7 @@ class Bin1DProcessorX(LeafProcessor):
 class Bin1DProcessorY(LeafProcessor):
     """Bin data based to the y parameter."""
     @profiler("Bin 1D processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if not self.device_id_y or not self.property_y:
             return
 
@@ -178,13 +178,13 @@ class Bin1DProcessorY(LeafProcessor):
         device_id = self.device_id_y
         ppt = self.property_y
 
-        group_v = _get_slow_data(processed.tid, raw, device_id, ppt)
+        group_v = _get_slow_data(processed, device_id, ppt)
 
         index = np.digitize(group_v, edge)
         if len(center) >= index > 0:
             count[index-1] += 1
 
-            if self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
                 new_value = processed.ai.intensity_mean
                 y = processed.ai.momentum
             else:

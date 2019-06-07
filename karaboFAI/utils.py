@@ -22,13 +22,18 @@ from .logger import logger
 PROFILER_THREASHOLD = 10.0  # in ms
 
 
-def profiler(info):
+def profiler(info, *, process_time=False):
     def wrap(f):
         @functools.wraps(f)
         def timed_f(*args, **kwargs):
-            t0 = time.process_time()
+            if process_time:
+                timer = time.process_time
+            else:
+                timer = time.perf_counter
+
+            t0 = timer()
             result = f(*args, **kwargs)
-            dt_ms = 1000 * (time.process_time() - t0)
+            dt_ms = 1000 * (timer() - t0)
             if dt_ms > PROFILER_THREASHOLD:
                 logger.debug(f"Process time spent on {info}: {dt_ms:.3f} ms")
             return result

@@ -95,7 +95,7 @@ class RoiFomProcessor(LeafProcessor):
     two ROI images.
     """
     @profiler("ROI processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         """Override.
 
         Note: We need to put some data in the history, even if ROI is not
@@ -142,7 +142,7 @@ class RoiPumpProbeRoiProcessor(CompositeProcessor):
         self.add(RoiPumpProbeProj1dProcessor())
 
     @profiler("ROI processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         # use ROI1 for signal
         roi = processed.roi.roi1
         if roi is None:
@@ -213,7 +213,7 @@ class RoiPumpProbeProj1dProcessor(LeafProcessor):
     def __init__(self):
         super().__init__()
 
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_X:
             axis = -2
         elif processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_Y:

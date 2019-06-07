@@ -80,7 +80,7 @@ class PumpProbeImageProcessor(LeafProcessor):
             self._buffer.push(item)
 
     @profiler("Pump-probe image processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if self.mode == PumpProbeMode.UNDEFINED or \
                 self.analysis_type == AnalysisType.UNDEFINED:
             return
@@ -90,8 +90,10 @@ class PumpProbeImageProcessor(LeafProcessor):
         if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
             on_image = processed.image.masked_mean
             off_image = processed.image.masked_ref
+
             if off_image is None:
                 off_image = np.zeros_like(on_image)
+
             self._buffer_image(('on', on_image))
             self._buffer_image(('off', off_image))
         else:

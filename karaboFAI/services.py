@@ -23,7 +23,7 @@ from . import __version__
 from .config import config
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .pipeline import Scheduler
+from .pipeline import ImageWorker, Scheduler
 from .pipeline.worker import ProcessInfo, register_fai_process
 from .utils import check_system_resource
 from .ipc import redis_connection
@@ -167,8 +167,11 @@ class FAI:
             sys.exit(1)
 
         try:
+            #
+            self.image_worker = ImageWorker(detector)
             # process which runs the scheduler
             self.scheduler = Scheduler(detector)
+            self.scheduler.connectInputToOutput(self.image_worker.output)
 
             self.app = mkQApp()
             self.gui = MainGUI(start_thread_logger=True)
@@ -180,9 +183,11 @@ class FAI:
         logger.info(f"Number of available CPUs: {_N_CPUS}, "
                     f"number of available GPUs: {_N_GPUS}, "
                     f"total system memory: {_SYS_MEMORY/1024**3:.1f} GB")
-
+        self.image_worker.start()
+        register_fai_process(ProcessInfo(name=self.image_worker.name,
+                                         process=self.image_worker))
         self.scheduler.start()
-        register_fai_process(ProcessInfo(name='scheduler',
+        register_fai_process(ProcessInfo(name=self.scheduler.name,
                                          process=self.scheduler))
 
         self.gui.connectInputToOutput(self.scheduler.output)
@@ -191,9 +196,11 @@ class FAI:
 
     def start(self):
         self.scheduler.resume()
+        self.image_worker.resume()
 
     def pause(self):
         self.scheduler.pause()
+        self.image_worker.pause()
 
 
 def application():

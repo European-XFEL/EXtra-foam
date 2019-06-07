@@ -30,7 +30,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
+        "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
     })
 
     _bin_modes = OrderedDict({

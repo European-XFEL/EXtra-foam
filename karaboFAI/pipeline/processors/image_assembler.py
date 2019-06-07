@@ -19,15 +19,17 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
 from karabo_data.geometry2 import AGIPD_1MGeometry
 
-from .processors.base_processor import _BaseProcessor, _RedisParserMixin
-from .exceptions import AssemblingError
-from ..config import config, DataSource
-from ..metadata import Metadata as mt
-from ..utils import profiler
+from karaboFAI.pipeline.processors.base_processor import (
+    CompositeProcessor, _RedisParserMixin
+)
+from karaboFAI.pipeline.exceptions import AssemblingError
+from karaboFAI.config import config, DataSource
+from karaboFAI.metadata import Metadata as mt
+from karaboFAI.utils import profiler
 
 
 class ImageAssemblerFactory(ABC):
-    class BaseAssembler(_BaseProcessor, _RedisParserMixin):
+    class BaseAssembler(CompositeProcessor, _RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:
@@ -102,19 +104,21 @@ class ImageAssemblerFactory(ABC):
             return np.copy(modules)
 
         @profiler("Assemble Image Data")
-        def assemble(self, data):
-            """Assembled the image data.
+        def process(self, processed):
+            """Assemble the image data.
 
             :returns assembled: assembled detector image data.
             """
             src_name = self._detector_source_name
             src_type = self._source_type
 
+            raw = processed.raw
+
             try:
                 if src_type == DataSource.FILE:
-                    modules_data = self._get_modules_file(data, src_name)
+                    modules_data = self._get_modules_file(raw, src_name)
                 elif src_type == DataSource.BRIDGE:
-                    modules_data = self._get_modules_bridge(data, src_name)
+                    modules_data = self._get_modules_bridge(raw, src_name)
                 else:
                     raise ValueError(f"Unknown source type: {src_type}")
             except (ValueError, IndexError, KeyError) as e:
@@ -137,11 +141,16 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             assembled = self._modules_to_assembled(modules_data)
+
             if assembled.ndim == 3:
                 if self._pulse_indices[0] != -1:
                     assembled = assembled[self._pulse_indices]
 
-            return assembled
+            processed.image = assembled
+
+            # delete the raw image data since we don't want to pass it around
+            # FIXME: find a way to delete pulsed-resolved detector data
+            processed.raw = dict()
 
     class AgipdImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")

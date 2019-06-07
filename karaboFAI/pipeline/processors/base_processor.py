@@ -18,14 +18,16 @@ from ...metadata import Metadata as mt
 from ...config import AnalysisType
 
 
-def _get_slow_data(tid, raw, device_id, ppt):
-    """Get slow data from raw data.
+def _get_slow_data(processed, device_id, ppt):
+    """Get slow data.
 
-    :param int tid: train ID.
-    :param dict raw: raw data.
+    :param dict processed: processed data.
     :param str device_id: device ID.
     :param str ppt: property name.
     """
+    tid = processed.tid
+    raw = processed.raw
+
     if device_id == "Any":
         return tid
     else:
@@ -217,15 +219,14 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             self.analysis_type = analysis_type
 
     @abstractmethod
-    def run_once(self, processed, raw=None):
+    def run_once(self, processed):
         """Composition interface.
 
         :param ProcessedData processed: processed data.
-        :param dict raw: raw data.
         """
         pass
 
-    def process(self, processed, raw):
+    def process(self, processed):
         """Process data."""
         pass
 
@@ -239,10 +240,10 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
 class LeafProcessor(_BaseProcessor):
 
-    def run_once(self, processed, raw=None):
+    def run_once(self, processed):
         # self._state = self._state.next()
         # self._state.update(self)
-        self.process(processed, raw)
+        self.process(processed)
         # self._state = self._state.next()
 
     def reset_all(self):
@@ -267,7 +268,7 @@ class CompositeProcessor(_BaseProcessor):
         """Remove and return the last child."""
         return self._children.pop(-1)
 
-    def run_once(self, processed, raw=None):
+    def run_once(self, processed):
         try:
             self.update()
         except StopCompositionProcessing:
@@ -276,12 +277,12 @@ class CompositeProcessor(_BaseProcessor):
         params = copy.deepcopy(self._params)  # froze all the shared properties
         # StopCompositionProcessing it raises will be handled by its
         # parent processor
-        self.process(processed, raw)
+        self.process(processed)
 
         for child in self._children:
             child._params.update(params)
             try:
-                child.run_once(processed, raw)
+                child.run_once(processed)
             except StopCompositionProcessing:
                 break
 

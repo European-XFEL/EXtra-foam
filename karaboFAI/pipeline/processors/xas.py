@@ -65,7 +65,7 @@ class XasProcessor(LeafProcessor):
         self.bin_range = self.str2tuple(cfg['bin_range'])
 
     @profiler("XAS processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         """Override."""
 
         # TODO: FIXME

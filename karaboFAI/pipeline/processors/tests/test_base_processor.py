@@ -24,7 +24,7 @@ class _DummyLeafProcessor2(LeafProcessor):
 
 
 class _DummyLeafProcessor3(LeafProcessor):
-    def process(self, processed, raw=None):
+    def process(self, processed):
         raise StopCompositionProcessing
 
 
@@ -42,12 +42,12 @@ class _DummyCompProcessor2(CompositeProcessor):
     param2 = SharedProperty()
     analysis_type = SharedProperty()
 
-    def process(self, processed, raw=None):
+    def process(self, processed):
         time.sleep(0.02)  # simulating data processing
 
 
 class _DummyCompProcessor3(CompositeProcessor):
-    def process(self, processed, raw=None):
+    def process(self, processed):
         raise StopCompositionProcessing
 
 
@@ -74,7 +74,6 @@ class TestProcessorComposition(unittest.TestCase):
         self._comp2.add(self._leaf2)
 
         self._processed = ProcessedData(1)
-        self._raw = {"timestamp.tid": 1000000}
 
     def testComposition(self):
         self.assertIs(self._leaf1._parent, self._comp1)
@@ -112,18 +111,18 @@ class TestProcessorComposition(unittest.TestCase):
 
     def testProcessInterface(self):
         self._leaf1.process = MagicMock()
-        self._leaf1.run_once(self._processed, self._raw)
-        self._leaf1.process.assert_called_once_with(self._processed, self._raw)
+        self._leaf1.run_once(self._processed)
+        self._leaf1.process.assert_called_once_with(self._processed)
         self._leaf1.process.reset_mock()
 
         self._leaf2.process = MagicMock()
         self._comp1.process = MagicMock()
         self._comp2.process = MagicMock()
-        self._comp2.run_once(self._processed, self._raw)
-        self._leaf1.process.assert_called_once_with(self._processed, self._raw)
-        self._leaf2.process.assert_called_once_with(self._processed, self._raw)
-        self._comp1.process.assert_called_once_with(self._processed, self._raw)
-        self._comp2.process.assert_called_once_with(self._processed, self._raw)
+        self._comp2.run_once(self._processed)
+        self._leaf1.process.assert_called_once_with(self._processed)
+        self._leaf2.process.assert_called_once_with(self._processed)
+        self._comp1.process.assert_called_once_with(self._processed)
+        self._comp2.process.assert_called_once_with(self._processed)
 
     def testResetInterface(self):
         self._leaf1.reset = MagicMock()
@@ -204,8 +203,8 @@ class TestProcessorComposition(unittest.TestCase):
         self._leaf4.process = MagicMock()
         # comp3 raises StopCompositionProcessing, Leaf4 will not be called,
         # but leaf2 will still be called
-        self._comp2.run_once(self._processed, self._raw)
-        self._leaf2.process.assert_called_once_with(self._processed, self._raw)
+        self._comp2.run_once(self._processed)
+        self._leaf2.process.assert_called_once_with(self._processed)
         self.assertFalse(self._leaf4.process.called)
 
 
@@ -262,24 +261,24 @@ class TestBaseProcessor(unittest.TestCase):
         self._check_has_analysis(AnalysisType.ROI)
 
         # set new analysis type for comp1
-        self._comp1._update_analysis(AnalysisType.AZIMUTHAL_INTEG)
-        self._check_has_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._comp1._update_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
+        self._check_has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
         self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
-        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG, self._comp1.analysis_type)
+        self.assertEqual(AnalysisType.PP_AZIMUTHAL_INTEG, self._comp1.analysis_type)
 
         # unset analysis type for comp1
         self._comp1._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
         self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
         self._check_has_analysis(AnalysisType.ROI)
-        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._check_has_no_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
 
         # unset analysis type for comp2
         self._comp2._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp2.analysis_type)
         self._check_has_no_analysis(AnalysisType.ROI)
-        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._check_has_no_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
 
         # set same analysis type for comp1 and comp2
         self._comp1._update_analysis(AnalysisType.ROI)

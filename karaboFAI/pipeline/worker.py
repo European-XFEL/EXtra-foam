@@ -12,12 +12,18 @@ All rights reserved.
 import atexit
 from collections import namedtuple
 import multiprocessing as mp
+from queue import Empty, Full
+import sys
+import traceback
+import time
 
 import psutil
 from psutil import NoSuchProcess
 
+from .exceptions import AssemblingError, ProcessingError
 from ..metadata import MetaProxy
-from ..config import config
+from ..metadata import Metadata as mt
+from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
 from ..logger import logger
 
@@ -31,12 +37,13 @@ class ProcessWorker(mp.Process):
         super().__init__()
 
         self._name = name
-        self.source_type = None
 
         self.log = ProcessWorkerLogger()
 
         self._inputs = []  # pipe-ins
         self._output = None  # pipe-out
+
+        self._tasks = []
 
         self._pause_ev = mp.Event()
         self._close_ev = mp.Event()
@@ -45,12 +52,33 @@ class ProcessWorker(mp.Process):
 
         self._timeout = config["TIMEOUT"]
 
+        # the time when the previous data processing was finished
+        self._prev_processed_time = None
+
+    @property
+    def name(self):
+        return self._name
+
     @property
     def output(self):
         return self._output
 
+    def connectInputToOutput(self, output):
+        if isinstance(output, list):
+            if len(self._inputs) != len(output):
+                raise ValueError
+
+            for inp, oup in zip(self._inputs, output):
+                inp.connect(oup)
+
+        for inp in self._inputs:
+            inp.connect(output)
+
     def run(self):
         """Override."""
+        timeout = self._timeout
+        src_type = None
+
         for inp in self._inputs:
             inp.run_in_thread(self._close_ev)
         self._output.run_in_thread(self._close_ev)
@@ -60,20 +88,83 @@ class ProcessWorker(mp.Process):
                 if not self.running:
                     self._pause_ev.wait()
 
-                    # update metadata
-                    self.update()
+                    # update source type, which determines the behavior of
+                    # pipeline
+                    src_type = DataSource(
+                        int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
 
                     # tell input and output channels to update
                     for inp in self._inputs:
                         inp.update()
                     self._output.update()
 
-                self._run_once()
+                for inp in self._inputs:
+                    try:
+                        # get the data from pipe-in
+                        data = inp.get(timeout=timeout)
+                    except Empty:
+                        continue
+
+                    processed = self._preprocess(data)
+
+                    self._run_tasks(processed)
+
+                    if processed is None or processed.image is None:
+                        continue
+
+                    if self._prev_processed_time is not None:
+                        fps = 1.0 / (time.time() - self._prev_processed_time)
+                        self.log.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
+                    self._prev_processed_time = time.time()
+
+                    if src_type == DataSource.BRIDGE:
+                        # always keep the latest data in the queue
+                        try:
+                            self._output.put_pop(processed,
+                                                 timeout=timeout)
+                        except Empty:
+                            continue
+                    elif src_type == DataSource.FILE:
+                        # wait until data in the queue has been processed
+                        while not self.closing:
+                            try:
+                                self._output.put(processed,
+                                                 timeout=timeout)
+                                break
+                            except Full:
+                                continue
+                    else:
+                        raise ProcessingError(
+                            f"Unknown source type {src_type}!")
             except Exception as e:
                 self.log.error(repr(e))
 
-    def _run_once(self):
-        raise NotImplementedError
+    def _preprocess(self, data):
+        """Pre-process received data.
+
+        For example, if the worker has a PipeIn which is a KaraboBridge,
+        the received data is a raw data. But for other types of PipeIn, the
+        received data is a processed data.
+
+        :param data: data received from the input pipe.
+        """
+        return data
+
+    def _run_tasks(self, processed):
+        tid = processed.tid
+
+        for task in self._tasks:
+            try:
+                task.run_once(processed)
+            except (ProcessingError, AssemblingError) as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                self.log.debug(repr(traceback.format_tb(exc_traceback)))
+                self.log.error(f"Train ID: {tid}: " + repr(e))
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                self.log.debug(repr(traceback.format_tb(exc_traceback)))
+                self.log.error(
+                    f"Unexpected Exception: Train ID: {tid}: " + repr(e))
 
     def close(self):
         self._close_ev.set()
@@ -103,10 +194,6 @@ class ProcessWorker(mp.Process):
         Note: this method is called by the main process.
         """
         self._pause_ev.clear()
-
-    def update(self):
-        """Update metadata."""
-        pass
 
 
 ProcessInfo = namedtuple("ProcessInfo", [

@@ -279,7 +279,7 @@ class MainGUI(QtGui.QMainWindow):
     def connectInputToOutput(self, output):
         self._input.connect(output)
 
-    @profiler("Update Plots")
+    @profiler("Update Plots", process_time=True)
     def updateAll(self):
         """Update all the plots in the main and child windows."""
         if not self._running:

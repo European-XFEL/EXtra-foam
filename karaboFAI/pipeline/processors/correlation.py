@@ -61,7 +61,7 @@ class CorrelationProcessor(CompositeProcessor):
 
 class CorrelationFomProcessor(LeafProcessor):
     @profiler("Correlation processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         """Override."""
         if self.fom_type is None or self.fom_type == CorrelationFom.UNDEFINED:
             return
@@ -120,6 +120,6 @@ class CorrelationFomProcessor(LeafProcessor):
             if not ppt:
                 continue
 
-            value = _get_slow_data(processed.tid, raw, device_id, ppt)
+            value = _get_slow_data(processed, device_id, ppt)
 
             setattr(processed.correlation, f'correlator{i}', value)

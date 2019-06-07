@@ -586,12 +586,8 @@ class ImageData:
     __ref = ImageRef()
     __threshold_mask = ThresholdMask()
 
-    pixel_size = None
-
     def __init__(self, images):
         """Initialization."""
-        if self.pixel_size is None:
-            self.__class__.pixel_size = config["PIXEL_SIZE"]
 
         if not isinstance(images, np.ndarray):
             raise TypeError(r"Images must be numpy.ndarray!")
@@ -810,6 +806,8 @@ class ProcessedData:
         """Initialization."""
         self._tid = tid  # current Train ID
 
+        self.raw = None
+
         if images is None:
             self._image_data = None
         else:
@@ -831,6 +829,10 @@ class ProcessedData:
     @property
     def image(self):
         return self._image_data
+
+    @image.setter
+    def image(self, images):
+        self._image_data = ImageData(images)
 
     @property
     def n_pulses(self):

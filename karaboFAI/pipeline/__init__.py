@@ -1,11 +1,11 @@
+from .image_worker import ImageWorker
 from .scheduler import Scheduler
 from .data_model import Data4Visualization
-from .image_assembler import ImageAssemblerFactory
 
 
 __all__ = [
     "Data4Visualization",
-    "ImageAssemblerFactory",
+    "ImageWorker",
     "Scheduler",
 ]
 

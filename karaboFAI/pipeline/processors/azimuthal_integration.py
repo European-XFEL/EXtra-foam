@@ -22,7 +22,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
-from ...config import AiNormalizer, AnalysisType
+from ...config import AiNormalizer, AnalysisType, config
 from ...ipc import redis_subscribe
 from ...metadata import Metadata as mt
 from ...utils import profiler
@@ -91,7 +91,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.add(AiPulsedProcessor())
         self.add(AiTrainProcessor())
         self.add(AiPumpProbeProcessor())
-        self.add(AiBinProcessor())
 
         self.image_mask = None
         self._mask_command = redis_subscribe("command:image_mask",
@@ -157,7 +156,7 @@ class AiPulsedProcessor(CompositeProcessor):
         self.add(AiPulsedFomProcessor())
 
     @profiler("Azimuthal integration pulsed processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if not self.enable_pulsed_ai:
             return
 
@@ -169,7 +168,7 @@ class AiPulsedProcessor(CompositeProcessor):
 
         assembled = processed.image.images
 
-        pixel_size = processed.image.pixel_size
+        pixel_size = config['PIXEL_SIZE']
         poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
 
@@ -274,11 +273,11 @@ class AiTrainProcessor(CompositeProcessor):
         super().__init__()
 
     @profiler("Azimuthal integration train processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         if self.enable_pulsed_ai:
             return
 
-        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+        if not self._has_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG):
             return
 
         cx = self.integ_center_x
@@ -289,7 +288,7 @@ class AiTrainProcessor(CompositeProcessor):
 
         assembled = processed.image.masked_mean
 
-        pixel_size = processed.image.pixel_size
+        pixel_size = config['PIXEL_SIZE']
         poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
 
@@ -371,7 +370,7 @@ class AiPulsedFomProcessor(LeafProcessor):
     Calculate azimuthal integration FOM for pulse-resolved detectors.
     """
     @profiler("Azimuthal integration pulsed FOM processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         """Override."""
         if processed.n_pulses == 1:
             # train-resolved
@@ -405,8 +404,8 @@ class AiPumpProbeProcessor(CompositeProcessor):
         self.add(AiPumpProbeFomProcessor())
 
     @profiler("Azimuthal integration pump-probe processor")
-    def process(self, processed, raw=None):
-        if processed.pp.analysis_type != AnalysisType.AZIMUTHAL_INTEG:
+    def process(self, processed):
+        if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
             raise StopCompositionProcessing
 
         on_image = processed.pp.on_image_mean
@@ -420,7 +419,7 @@ class AiPumpProbeProcessor(CompositeProcessor):
         integ_method = self.integ_method
         integ_range = self.integ_range
 
-        pixel_size = processed.image.pixel_size
+        pixel_size = config['PIXEL_SIZE']
         poni2, poni1 = cx, cy
         mask_min, mask_max = processed.image.threshold_mask
 
@@ -476,7 +475,7 @@ class AiPumpProbeFomProcessor(LeafProcessor):
     Calculate the pump-probe FOM.
     """
     @profiler("Azimuthal integration pump-probe FOM processor")
-    def process(self, processed, raw=None):
+    def process(self, processed):
         momentum, on_ma, off_ma = processed.pp.data
 
         norm_on_ma, norm_off_ma = self._normalize(
@@ -526,17 +525,3 @@ class AiPumpProbeFomProcessor(LeafProcessor):
             off /= off_denominator
 
         return on, off
-
-
-class AiBinProcessor(LeafProcessor):
-    """AiBinProcessor class.
-
-    Calculate azimuthal integration for binned image.
-    """
-    def __init__(self):
-        super().__init__()
-
-    @profiler("Azimuthal integration pump-probe processor")
-    def process(self, processed, raw=None):
-        if processed.bin.analysis_type != AnalysisType.AZIMUTHAL_INTEG:
-            return
