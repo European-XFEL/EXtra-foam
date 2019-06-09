@@ -81,15 +81,17 @@ class SequentialColors:
         return c[:n]
 
 
-def make_pen(color, alpha=255, **kwargs):
-    """Convenient function for making QPen."""
+def make_pen(color, *, width=1, alpha=255, **kwargs):
+    """Convenient function for making QPen.
+
+    :param int width: width of QPen.
+
+    Note: due to a bug in Qt, setting width greater than 1 will significantly
+          degrade the performance.
+          https://github.com/pyqtgraph/pyqtgraph/issues/533
+    """
     if color is None:
         return mkPen(None)
-
-    # Due to a bug in Qt, setting width greater than 1 will significantly
-    # degrade the performance.
-    # https://github.com/pyqtgraph/pyqtgraph/issues/533
-    width = 1
 
     if isinstance(color, int):
         return mkPen(intColor(color, **kwargs), width=width)

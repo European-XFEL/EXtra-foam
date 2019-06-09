@@ -248,8 +248,9 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
+        rank = self._roi.rank
         layout.addWidget(QtGui.QLabel(
-            f"ROI{self._roi.rank} ({self._roi.color[0]}): "))
+            f"ROI{rank} ({config['ROI_COLORS'][rank-1]}): "))
         layout.addWidget(self.activate_cb)
         layout.addWidget(self.lock_cb)
         layout.addWidget(QtGui.QLabel("w: "))

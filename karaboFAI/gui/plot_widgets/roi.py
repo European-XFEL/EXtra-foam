@@ -9,9 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import QtCore, ROI
-
-from ..misc_widgets import make_pen
+from ..pyqtgraph import ROI
 
 
 class RectROI(ROI):
@@ -19,19 +17,18 @@ class RectROI(ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, rank, color, pos, size, *, style=QtCore.Qt.SolidLine):
+    def __init__(self, rank, *, pos=(0, 0), size=(1, 1), **kwargs):
         """Initialization.
 
         :param int rank: rank of the ROI.
-        :param str color: color of the ROI.
+        :param tuple pos: (x, y) of the left-upper corner.
+        :param tuple size: (w, h) of the ROI.
         """
         super().__init__(pos, size,
                          translateSnap=True,
-                         scaleSnap=True,
-                         pen=make_pen(color, style=style))
+                         scaleSnap=True, **kwargs)
 
         self.rank = rank
-        self.color = color
 
     def setLocked(self, locked):
         if locked:

@@ -17,7 +17,7 @@ from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem
 from .roi import RectROI
-from ..misc_widgets import colorMapFactory
+from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
 from ...config import config
@@ -107,9 +107,10 @@ class ImageView(QtGui.QWidget):
 
     def _initializeROIs(self):
         for i, color in enumerate(config["ROI_COLORS"], 1):
-            roi = RectROI(i, color,
-                          (self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
-                          self.ROI_SIZE0)
+            roi = RectROI(i,
+                          pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
+                          size=self.ROI_SIZE0,
+                          pen=make_pen(color, width=2, style=QtCore.Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)
 
