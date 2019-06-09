@@ -443,4 +443,7 @@ class BinCountWidget(PlotWidget):
         center = data.bin.center_x
         count = data.bin.count_x
 
+        if count is None:
+            return
+
         self._plot.setData(center, count)
