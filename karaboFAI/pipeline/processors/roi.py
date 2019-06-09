@@ -15,10 +15,12 @@ from .base_processor import (
     CompositeProcessor, LeafProcessor, SharedProperty,
 )
 from ..exceptions import ProcessingError
-from ...algorithms import intersection, normalize_auc, slice_curve
+from ...algorithms import normalize_auc, slice_curve
 from ...metadata import Metadata as mt
 from ...config import config, RoiFom, AnalysisType, CurveNormalizer
 from ...utils import profiler
+
+from karaboFAI.algo import intersection
 
 
 class RoiProcessor(CompositeProcessor):

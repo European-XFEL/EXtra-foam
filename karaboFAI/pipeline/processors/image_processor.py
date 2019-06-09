@@ -20,6 +20,8 @@ from ...command import CommandProxy
 from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
+from karaboFAI.xtnumpy import xt_nanmean_image
+
 
 class RawImageData:
     """Stores moving average of raw images."""

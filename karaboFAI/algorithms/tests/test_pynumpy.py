@@ -2,9 +2,7 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.algorithms import (
-    first_tensor, mask_image, nanmean_image
-)
+from karaboFAI.algorithms import mask_image, nanmean_image
 
 
 class TestPynumpy(unittest.TestCase):
@@ -33,9 +31,6 @@ class TestPynumpy(unittest.TestCase):
         ret = nanmean_image(data, chunk_size=1, max_workers=1)
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
         np.testing.assert_array_almost_equal(expected, ret)
-
-    def test_firstTensor(self):
-        self.assertEqual(1.0, first_tensor())
 
     def testMaskImage(self):
         # test not in-place

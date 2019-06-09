@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 import platform
 import re
 import shutil
@@ -6,7 +7,9 @@ import sys
 import subprocess
 from setuptools import setup, find_packages, Distribution, Extension
 from setuptools.command.build_ext import build_ext
+from distutils.command.clean import clean
 from distutils.version import LooseVersion
+from distutils.util import strtobool
 
 
 def find_version():
@@ -35,6 +38,19 @@ class BuildExt(build_ext):
         "karaboFAI/thirdparty/bin/redis-server",
     ]
 
+    description = "Build the C++ extensions for karaboFAI"
+    user_options = build_ext.user_options.extend([
+        ('with-tbb', None, 'build xtensor with intel TBB'),
+        # https://quantstack.net/xsimd.html
+        ('with-xsimd', None, 'build xtensor with XSIMD'),
+    ])
+
+    def initialize_options(self):
+        super().initialize_options()
+
+        self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '0'))
+        self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '0'))
+
     def run(self):
         try:
             out = subprocess.check_output(['cmake', '--version'])
@@ -44,39 +60,37 @@ class BuildExt(build_ext):
                 e.name for e in self.extensions))
 
         if platform.system() == "Windows":
-            cmake_version = LooseVersion(re.search(r'version\s*([\d.]+)',
-                                                   out.decode()).group(1))
+            cmake_version = LooseVersion(
+                re.search(r'version\s*([\d.]+)', out.decode()).group(1))
             if cmake_version < '3.1.0':
                 raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
         for ext in self.extensions:
             self.build_cmake(ext)
 
+        # build third-party libraries, for example, Redis
         command = ["./build.sh", "-p", sys.executable]
         subprocess.check_call(command)
         for filename in self._thirdparty_files:
             self._move_file(filename)
 
     def build_cmake(self, ext):
-        ext_dir = os.path.abspath(os.path.dirname(
-            self.get_ext_fullpath(ext.name)))
-        cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' +
-                      os.path.join(ext_dir, "karaboFAI/src/"),
-                      '-DPYTHON_EXECUTABLE=' + sys.executable]
+        ext_dir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
+        build_type = 'debug' if self.debug else 'release'
 
-        cfg = 'Debug' if self.debug else 'Release'
-        build_args = ['--config', cfg]
+        cmake_options = [
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'karaboFAI/')}",
+            f"-DPYTHON_EXECUTABLE={sys.executable}",
+            f"-DCMAKE_BUILD_TYPE={build_type}",
+        ]
 
-        if platform.system() == "Windows":
-            # not tested
-            cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}'.format(
-                cfg.upper(), ext_dir)]
-            if sys.maxsize > 2**32:
-                cmake_args += ['-A', 'x64']
-            build_args += ['--', '/m']
-        else:
-            cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
-            build_args += ['--', '-j2']
+        if self.with_tbb:
+            cmake_options.append('-DXTENSOR_USE_TBB=ON')
+
+        if self.with_xsimd:
+            cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
+
+        build_options = ['--', '-j4']
 
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(
@@ -84,10 +98,13 @@ class BuildExt(build_ext):
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
-        subprocess.check_call(['cmake', ext.source_dir] + cmake_args,
+
+        subprocess.check_call(['cmake', ext.source_dir] + cmake_options,
                               cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args,
+        subprocess.check_call(['cmake', '--build', '.'] + build_options,
                               cwd=self.build_temp)
+
+        print()  # add an empty line to improve output readability
 
     def _move_file(self, filename):
         """Move file to the system folder."""
@@ -129,6 +146,7 @@ setup(
     },
     ext_modules=ext_modules,
     cmdclass={
+        'clean': clean,
         'build_ext': BuildExt,
     },
     distclass=BinaryDistribution,

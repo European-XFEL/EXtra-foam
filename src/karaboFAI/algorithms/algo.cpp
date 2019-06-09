@@ -30,12 +30,8 @@ intersection(const std::array<int, 4>& rect1, const std::array<int, 4>& rect2) {
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(geometry, m) {
-  m.def("intersection", &intersection);
+PYBIND11_MODULE(algo, m) {
+  m.doc() = "General algorithms in cpp";
 
-#ifdef VERSION_INFO
-  m.attr("__version__") = VERSION_INFO;
-#else
-  m.attr("__version__") = "dev";
-#endif
+  m.def("intersection", &intersection);
 }

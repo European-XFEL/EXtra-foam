@@ -17,6 +17,8 @@ import numpy as np
 from ..algorithms import nanmean_image, mask_image
 from ..config import config
 
+from karaboFAI.xtnumpy import xt_nanmean_image
+
 
 class PairData:
     """Store the history pair data.
@@ -514,7 +516,8 @@ class ImageData:
         self._pixel_size = config['PIXEL_SIZE']
 
         if data.dtype != self._DEFAULT_DTYPE:
-            # dtype of the incoming data could be integer
+            # FIXME: dtype of the incoming data could be integer, but integer
+            #        array does not have nanmean.
             images = data.astype(self._DEFAULT_DTYPE)
         else:
             images = data

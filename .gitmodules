@@ -7,3 +7,10 @@
 [submodule "thirdparty/xtl"]
 	path = thirdparty/xtl
 	url = https://github.com/QuantStack/xtl.git
+[submodule "thirdparty/xtensor-python"]
+	path = thirdparty/xtensor-python
+	url = https://github.com/QuantStack/xtensor-python.git
+	branch = master
+[submodule "thirdparty/xsimd"]
+	path = thirdparty/xsimd
+	url = https://github.com/QuantStack/xsimd.git

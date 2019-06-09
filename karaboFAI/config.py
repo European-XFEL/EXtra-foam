@@ -143,6 +143,9 @@ class _Config(dict):
         # set all default value to None
         "DEFAULT": {
             # image data dtype
+            # Note: the cpp code must have the corresponding overload!!!
+            #       np.float32 -> float
+            #       np.float64 -> double
             "IMAGE_DTYPE": np.float32,
             # whether the data is pulse resolved
             "PULSE_RESOLVED": None,

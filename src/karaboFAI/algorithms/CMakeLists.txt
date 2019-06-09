@@ -1,8 +1,9 @@
-pybind11_add_module(geometry geometry.cpp)
-pybind11_add_module(pynumpy pynumpy.cpp)
+pybind11_add_module(algo algo.cpp)
 
-target_include_directories(pynumpy
+pybind11_add_module(xtnumpy xtnumpy.cpp)
+
+target_include_directories(xtnumpy
     PRIVATE
-        ${PROJECT_SOURCE_DIR}/thirdparty/xtl/include
-        ${PROJECT_SOURCE_DIR}/thirdparty/xtensor/include
-)
+        ${xtensor-python_INCLUDE_DIRS})
+
+target_link_libraries(xtnumpy PRIVATE xtensor-python)
