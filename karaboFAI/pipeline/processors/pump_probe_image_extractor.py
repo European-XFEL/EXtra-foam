@@ -84,37 +84,39 @@ class PumpProbeImageProcessor(LeafProcessor):
         processed.pp.ma_window = self.ma_window
         processed.pp.abs_difference = self.abs_difference
 
+        mode = self.mode
         handler = processed.image.sliced_masked_mean
-        if self.mode == PumpProbeMode.PRE_DEFINED_OFF:
+
+        # on and off are not from different trains
+        if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             on_image = self._slice_pulses(handler, self.on_indices)
-            off_image = processed.image.masked_ref
 
-            if off_image is None:
-                off_image = np.zeros_like(on_image)
-
-            self._buffer_image(('on', on_image))
-            self._buffer_image(('off', off_image))
-        else:
-            if self.mode == PumpProbeMode.SAME_TRAIN:
-                self._buffer_image(
-                    ('on', self._slice_pulses(handler, self.on_indices)))
-                self._buffer_image((
-                    'off', self._slice_pulses(handler, self.off_indices)))
+            if mode == PumpProbeMode.PRE_DEFINED_OFF:
+                off_image = processed.image.masked_ref
+                if off_image is None:
+                    off_image = np.zeros_like(on_image)
             else:
-                if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
-                    flag = 0
-                elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
-                    flag = 1
-                else:
-                    raise ProcessingError(
-                        f"Unknown pump-probe mode: {self.mode}")
+                off_image = self._slice_pulses(handler, self.off_indices)
 
-                if processed.tid % 2 == 1 ^ flag:
-                    self._buffer_image(
-                        ('on', self._slice_pulses(handler, self.on_indices)))
-                else:
-                    self._buffer_image(
-                        ('off', self._slice_pulses(handler, self.off_indices)))
+            processed.pp.on_image_mean = on_image
+            processed.pp.off_image_mean = off_image
+
+            return
+
+        # on and off are from different trains
+        if self.mode == PumpProbeMode.EVEN_TRAIN_ON:
+            flag = 0
+        elif self.mode == PumpProbeMode.ODD_TRAIN_ON:
+            flag = 1
+        else:
+            raise ProcessingError(f"Unknown pump-probe mode: {self.mode}")
+
+        if processed.tid % 2 == 1 ^ flag:
+            self._buffer_image(
+                ('on', self._slice_pulses(handler, self.on_indices)))
+        else:
+            self._buffer_image(
+                ('off', self._slice_pulses(handler, self.off_indices)))
 
         if len(self._buffer) == 2:
             processed.pp.off_image_mean = self._buffer.pop()[1]
