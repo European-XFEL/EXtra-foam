@@ -98,8 +98,8 @@ class TrainAiWidget(PlotWidget):
                 self.clear()
 
                 colors = SequentialColors().s1(n_pulses)
-                for i, intensity in enumerate(intensities):
-                    self.plotCurve(momentum, intensity, pen=make_pen(colors[i]))
+                for key, value in intensities.items():
+                    self.plotCurve(momentum, value, pen=make_pen(colors[key]))
             else:
                 for item, intensity in zip(self.plotItem.items, intensities):
                     item.setData(momentum, intensity)
