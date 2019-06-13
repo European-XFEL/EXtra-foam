@@ -351,7 +351,7 @@ class AiProcessorPumpProbeFom(LeafProcessor):
         processed = data['processed']
         momentum = processed.ai.momentum
         norm_on_off_ma = processed.pp.norm_on_off_ma
-        if norm_on_off_ma is None:
+        if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
             return
 
         fom = slice_curve(norm_on_off_ma, momentum, *self.fom_integ_range)[0]
