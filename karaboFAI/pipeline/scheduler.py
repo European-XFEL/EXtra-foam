@@ -13,7 +13,7 @@ from .worker import ProcessWorker
 from .pipe import MpInQueue, MpOutQueue
 from .processors import (
     AzimuthalIntegrationProcessor, BinProcessor, CorrelationProcessor,
-    XgmProcessor, RoiProcessor, XasProcessor
+    PumpProbeProcessor, XgmProcessor, RoiProcessor, XasProcessor
 )
 
 
@@ -26,22 +26,17 @@ class Scheduler(ProcessWorker):
         self._inputs = [MpInQueue(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output", gui=True)
 
-        # processor pipeline flow:
-        #
-        # XgmProcessor ->
-        #
-        # RoiProcessor, AzimuthalIntegrationProcessor ->
-        #
-        # CorrelationProcessor, XasProcessor, BinProcessor
-
         self._xgm_proc = XgmProcessor()
-        self._roi_proc = RoiProcessor()
-        self._ai_proc = AzimuthalIntegrationProcessor()
+
+        self._pp_proc = PumpProbeProcessor()
         self._correlation_proc = CorrelationProcessor()
-        self._xas_proc = XasProcessor()
         self._bin_proc = BinProcessor()
 
+        self._roi_proc = RoiProcessor()
+        self._ai_proc = AzimuthalIntegrationProcessor()
+        self._xas_proc = XasProcessor()
+
         self._tasks = [
-            self._xgm_proc, self._roi_proc, self._ai_proc,
+            self._xgm_proc, self._pp_proc, self._roi_proc, self._ai_proc,
             self._correlation_proc, self._bin_proc, self._xas_proc
         ]

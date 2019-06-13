@@ -30,7 +30,8 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Azimuthal integration setup", *args, **kwargs)
+        super().__init__("Azimuthal integration analysis setup",
+                         *args, **kwargs)
 
         self._cx_le = SmartLineEdit(str(config["CENTER_X"]))
         self._cx_le.setValidator(QtGui.QIntValidator())

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.processors.image_processor import (
-    _RawImageData
+    _RawImageData, PumpProbeImageProcessor
 )
 
 
@@ -78,3 +78,8 @@ class TestRawImageData(unittest.TestCase):
         self.assertEqual(1, img_data.ma_window)
         self.assertEqual(0, img_data.ma_count)
         self.assertIsNone(img_data.images)
+
+
+class TestPumpProbeImageProcessor(unittest.TestCase):
+    def setUp(self):
+        self._proc = PumpProbeImageProcessor()

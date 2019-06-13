@@ -171,7 +171,6 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     def __init__(self):
 
         self._parent = None
-        self._data = None
 
         self._state = StateOn()
 
@@ -279,7 +278,6 @@ class CompositeProcessor(_BaseProcessor):
 
         self._children.append(child)
         child._parent = self
-        child._data = self._data
 
     def remove(self, child):
         self._children.remove(child)

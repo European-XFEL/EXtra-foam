@@ -273,9 +273,9 @@ class MainGUI(QtGui.QMainWindow):
     def initUI(self):
         analysis_layout = QtGui.QVBoxLayout()
         analysis_layout.addWidget(self.analysis_ctrl_widget)
+        analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.azimuthal_integ_ctrl_widget)
         analysis_layout.addWidget(self.roi_ctrl_widget)
-        analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.xas_ctrl_widget)
 
         misc_layout = QtGui.QVBoxLayout()

@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data acquisition.
+Data pipes.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -21,6 +21,7 @@ from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
 from ..metadata import MetaProxy
 from ..metadata import Metadata as mt
+from ..pipeline.data_model import ProcessedData
 
 
 class Pipe:
@@ -59,8 +60,9 @@ class Pipe:
     def run_in_thread(self, close_ev):
         """Run pipe in a thread.
 
-        For input pipe, it starts to receive data and put it into the queue.
-        For output pipe, it starts to get data from the queue and send it out.
+        For input pipe, it starts to receive data from the client and put it
+        into the internal queue; for output pipe, it starts to get data from
+        the internal queue and send it to the client.
         """
         # clean the residual data
         self.clean()
@@ -250,12 +252,15 @@ class MpOutQueue(PipeOut):
                 continue
 
             if self._gui:
-                data = data['processed']
+                data_out = data['processed']
+            else:
+                data_out = {key: data[key]
+                            for key in ['tid', 'processed', 'raw']}
 
             while not close_ev.is_set():
                 # push the stored data into client
                 try:
-                    self._client.put(data, timeout=timeout)
+                    self._client.put(data_out, timeout=timeout)
                     break
                 except Full:
                     continue

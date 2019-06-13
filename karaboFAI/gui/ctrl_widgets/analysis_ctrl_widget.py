@@ -22,7 +22,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     _pulse_index_validator = QtGui.QIntValidator(0, 2699)
 
     def __init__(self, *args, **kwargs):
-        super().__init__("General analysis setup", *args, **kwargs)
+        super().__init__("General setup", *args, **kwargs)
 
         # We keep the definitions of attributes which are not used in the
         # PULSE_RESOLVED = True case. It makes sense since these attributes
@@ -79,14 +79,15 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._vip_pulse_index1_le.returnPressed.connect(
-            lambda: mediator.vip_pulse_index1_sgn.emit(
+            lambda: mediator.onVipPulseIndexChange(1,
                 int(self._vip_pulse_index1_le.text())))
 
         self._vip_pulse_index2_le.returnPressed.connect(
-            lambda: mediator.vip_pulse_index2_sgn.emit(
+            lambda: mediator.onVipPulseIndexChange(2,
                 int(self._vip_pulse_index2_le.text())))
 
-        mediator.vip_pulse_indices_connected_sgn.connect(self.updateVipPulseIDs)
+        mediator.vip_pulse_indices_connected_sgn.connect(
+            self.updateVipPulseIDs)
 
         self._photon_energy_le.returnPressed.connect(
             lambda: mediator.onPhotonEnergyChange(
@@ -101,6 +102,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
+        self._vip_pulse_index1_le.returnPressed.emit()
+        self._vip_pulse_index2_le.returnPressed.emit()
+
         self._photon_energy_le.returnPressed.emit()
 
         self._sample_dist_le.returnPressed.emit()

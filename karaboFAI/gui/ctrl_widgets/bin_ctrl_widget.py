@@ -39,7 +39,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Binning analysis setup", *args, **kwargs)
+        super().__init__("Binning setup", *args, **kwargs)
 
         self._reset_btn = QtGui.QPushButton("Reset")
 

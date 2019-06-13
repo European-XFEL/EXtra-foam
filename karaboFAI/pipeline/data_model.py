@@ -457,7 +457,9 @@ class ImageData:
     Once constructed, the internal data are not allowed to be modified.
 
     Attributes:
-        images (numpy.ndarray): all images in the train.
+        _images (list): a list of pulse images in the train. A value of
+            None only indicates that the corresponding pulse image is
+            not needed (in the main process).
         pixel_size (float): pixel size of the detector.
         n_images (int): number of images in the train.
         background (float): a uniform background value.
@@ -477,7 +479,8 @@ class ImageData:
                  background=0.0,
                  threshold_mask=(-np.inf, np.inf),
                  ma_window=1,
-                 ma_count=1):
+                 ma_count=1,
+                 keep=None):
         """Initialization.
 
         :param numpy.ndarray data: image data in a train.
@@ -485,6 +488,8 @@ class ImageData:
         :param tuple threshold_mask: threshold mask.
         :param int ma_window: moving average window size.
         :param int ma_count: current moving average count.
+        :param None/list keep: pulse image indices to keep. None for
+            keeping nothing.
         """
         if not isinstance(data, np.ndarray):
             raise TypeError(r"Image data must be numpy.ndarray!")
@@ -497,18 +502,29 @@ class ImageData:
 
         if data.dtype != np.float32:
             # dtype of the incoming data could be integer
-            self._images = data.astype(np.float32)
+            images = data.astype(np.float32)
         else:
-            self._images = data
+            images = data
+
+        self._shape = images.shape[-2:]
 
         if data.ndim == 3:
-            self._n_images = self._images.shape[0]
+            self._n_images = images.shape[0]
+            self._pulse_resolved = True
+            self._images = [None] * self._n_images
+            self._mean = nanmean_axis0_para(images)
+            if keep is not None:
+                if not isinstance(keep, (tuple, list)):
+                    raise TypeError("'keep' must be a tuple or list!")
+
+                for i in keep:
+                    self._images[i] = data[i]
         else:
             self._n_images = 1
+            self._pulse_resolved = False
+            self._mean = images
+            self._images = []  # not used for train-resolved data
 
-        self._shape = self._images.shape[-2:]
-
-        self._mean = nanmean_axis0_para(self._images)
         self._threshold_mask = threshold_mask
         # self._masked_mean does not share memory with self._mean
         self._masked_mean = mask_by_threshold(self._mean, *threshold_mask)
@@ -524,7 +540,9 @@ class ImageData:
 
     @property
     def images(self):
-        return self._images
+        if self.pulse_resolved:
+            return self._images
+        return self._mean
 
     @property
     def pixel_size(self):
@@ -533,6 +551,10 @@ class ImageData:
     @property
     def n_images(self):
         return self._n_images
+
+    @property
+    def pulse_resolved(self):
+        return self._pulse_resolved
 
     @property
     def shape(self):
@@ -570,36 +592,6 @@ class ImageData:
     def masked_ref(self):
         return self._masked_ref
 
-    def sliced_mean(self, indices):
-        """Return average image over given indices.
-
-        :param list indices: a list of indices. Ignored if data is
-            train-resolved.
-
-        :raise IndexError if any index is out of bounds
-        """
-        if not isinstance(indices, (tuple, list, np.ndarray)):
-            raise TypeError("Indices must be either a tuple, a list or "
-                            "a numpy.ndarray")
-
-        if self._images.ndim == 3:
-            return nanmean_axis0_para(self._images[indices])
-        return self._mean
-
-    def sliced_masked_mean(self, indices=None):
-        """Return masked average image over given indices.
-
-        :param list indices: a list of indices. Ignored if data is
-            train-resolved.
-
-        :raise IndexError if any index is out of bounds
-        """
-        if self._images.ndim == 3:
-            return mask_by_threshold(self.sliced_mean(indices),
-                                     *self._threshold_mask)
-        # do not re-calculate!
-        return self._masked_mean
-
 
 class ProcessedData:
     """A class which stores the processed data.
@@ -608,8 +600,8 @@ class ProcessedData:
     dataset, e.g. RoiData, CorrelationData, PumpProbeData.
 
     Attributes:
-        tid (int): train ID.
-        image (ImageData): image data.
+        _tid (int): train ID.
+        _image (ImageData): image data.
         xgm (XgmData): XGM data.
         ai (AzimuthalIntegrationData): azimuthal integration data.
         pp (PumpProbeData): pump-probe data.
@@ -621,9 +613,9 @@ class ProcessedData:
 
     def __init__(self, tid, images, **kwargs):
         """Initialization."""
-        self._tid = tid  # current Train ID
-
+        self._tid = tid  # train ID
         self._image = ImageData(images, **kwargs)
+
         self.xgm = XgmData()
 
         self.ai = AzimuthalIntegrationData()
@@ -643,7 +635,7 @@ class ProcessedData:
 
     @property
     def pulse_resolved(self):
-        return self.image.images.ndim == 3
+        return self.image.pulse_resolved
 
     @property
     def n_pulses(self):

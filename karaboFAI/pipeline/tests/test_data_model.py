@@ -258,13 +258,15 @@ class TestImageData(unittest.TestCase):
         # ---------------------
 
         # test automatically convert dtype to np.float32
-        self.assertEqual(ImageData(np.arange(4).reshape((2, 2))).images.dtype,
+        self.assertEqual(ImageData(np.arange(4).reshape((2, 2))).mean.dtype,
                          np.float32)
 
         image_data = ImageData(np.ones((4, 2, 2)))
         self.assertEqual(1e-3, image_data.pixel_size)
         self.assertEqual(4, image_data.n_images)
         self.assertTupleEqual((2, 2), image_data.shape)
+        self.assertTrue(image_data.pulse_resolved)
+        self.assertListEqual([None] * 4, image_data.images)
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked_mean)
         self.assertEqual(0.0, image_data.background)
@@ -280,6 +282,7 @@ class TestImageData(unittest.TestCase):
 
         self.assertEqual(1, image_data.n_images)
         self.assertTupleEqual((3, 3), image_data.shape)
+        self.assertFalse(image_data.pulse_resolved)
         np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
         self.assertIs(image_data.mean, image_data.images)
         np.testing.assert_array_equal(np.ones((3, 3)), image_data.masked_mean)
@@ -287,6 +290,10 @@ class TestImageData(unittest.TestCase):
 
     @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
     def testInitWithSpecifiedParameters(self):
+
+        # test raise
+        with self.assertRaises(TypeError):
+            ImageData(np.ones((2, 2, 2)), keep=1)
 
         # ---------------------
         # pulse-resolved data
@@ -317,48 +324,6 @@ class TestImageData(unittest.TestCase):
         self.assertTupleEqual((3, 3), image_data.shape)
         np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
         np.testing.assert_array_equal(0.5*np.ones((3, 3)), image_data.masked_mean)
-
-    def testSlicedMean(self):
-        # ---------------------
-        # pulse-resolved data
-        # ---------------------
-
-        image_data = ImageData(np.arange(16).reshape((4, 2, 2)),
-                               threshold_mask=(1, 2))
-
-        # test sliced_mean
-        np.testing.assert_array_equal(
-            np.mean(np.arange(4, 12).reshape((2, 2, 2)), axis=0),
-            image_data.sliced_mean([1, 2]))
-
-        # test sliced_masked_mean
-        np.testing.assert_array_equal(
-            2 * np.ones((2, 2)), image_data.sliced_masked_mean([1, 2]))
-
-        with self.assertRaises(TypeError):
-            image_data.sliced_mean(1)
-
-        with self.assertRaises(IndexError):
-            image_data.sliced_mean([5, 6])
-
-        # ---------------------
-        # train-resolved data
-        # ---------------------
-
-        image_data = ImageData(np.arange(16).reshape((4, 4)),
-                               threshold_mask=(3, 4))
-
-        # test sliced_mean
-        np.testing.assert_array_equal(
-            np.arange(16).reshape((4, 4)), image_data.sliced_mean([1, 2]))
-        self.assertIs(image_data.sliced_mean([0]), image_data.mean)
-
-        # test sliced_masked_mean
-        gt = 4 * np.ones((4, 4))
-        gt[0, :4] = 3
-        np.testing.assert_array_equal(
-            gt, image_data.sliced_masked_mean())
-        self.assertIs(image_data.sliced_masked_mean(), image_data.masked_mean)
 
 
 class TestPumpProbeData(unittest.TestCase):

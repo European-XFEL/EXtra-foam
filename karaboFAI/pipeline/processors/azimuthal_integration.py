@@ -354,6 +354,9 @@ class AiProcessorPumpProbeFom(LeafProcessor):
         if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
             return
 
+        if momentum is None or norm_on_off_ma is None:
+            return
+
         fom = slice_curve(norm_on_off_ma, momentum, *self.fom_integ_range)[0]
         if processed.pp.abs_difference:
             fom = np.sum(np.abs(fom))

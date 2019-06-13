@@ -11,9 +11,7 @@ All rights reserved.
 """
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
-from .processors import (
-    ImageAssemblerFactory, ImageProcessor, PumpProbeImageExtractor
-)
+from .processors import ImageAssemblerFactory, ImageProcessor
 
 
 class ImageWorker(ProcessWorker):
@@ -25,12 +23,7 @@ class ImageWorker(ProcessWorker):
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
 
-        # processor pipeline flow:
-        # ImageAssembler -> ImageProcessor -> PumpProbeImageProcessor
         self._assembler = ImageAssemblerFactory.create(detector)
         self._image_proc = ImageProcessor()
-        self._pp_image_ext = PumpProbeImageExtractor()
 
-        self._tasks = [
-            self._assembler, self._image_proc, self._pp_image_ext
-        ]
+        self._tasks = [self._assembler, self._image_proc]

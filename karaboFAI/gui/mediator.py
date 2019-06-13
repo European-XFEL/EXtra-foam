@@ -34,7 +34,9 @@ class Mediator(DataManagerMixin, QObject):
 
     vip_pulse_index1_sgn = pyqtSignal(int)
     vip_pulse_index2_sgn = pyqtSignal(int)
-    # tell the control widget to update VIP pulse indices
+    # When pulsed azimuthal integration window is opened, it first connect
+    # the above two signals to its two slots. Then it informs the
+    # AnalysisCtrlWidget to update the VIP pulse indices.
     vip_pulse_indices_connected_sgn = pyqtSignal()
 
     reset_image_level_sgn = pyqtSignal()
@@ -96,6 +98,14 @@ class Mediator(DataManagerMixin, QObject):
 
     def onPulseIndexSelectorChange(self, value: list):
         self._meta.set(mt.GENERAL_PROC, 'selected_pulse_indices', str(value))
+
+    def onVipPulseIndexChange(self, vip_id: int, value: int):
+        self._meta.set(mt.GENERAL_PROC, f"vip_pulse{vip_id}_index", str(value))
+
+        if vip_id == 1:
+            self.vip_pulse_index1_sgn.emit(value)
+        else:  # vip_id == 2:
+            self.vip_pulse_index2_sgn.emit(value)
 
     def onSampleDistanceChange(self, value: float):
         self._meta.set(mt.GENERAL_PROC, 'sample_distance', value)

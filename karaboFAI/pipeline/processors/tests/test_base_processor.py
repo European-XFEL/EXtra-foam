@@ -8,7 +8,6 @@ import time
 from karaboFAI.config import _Config, ConfigWrapper, AnalysisType
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
-from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.pipeline.processors.base_processor import (
     LeafProcessor, CompositeProcessor, ProcessingError,
     SharedProperty, StopCompositionProcessing

@@ -33,7 +33,6 @@ class ImageAssemblerFactory(ABC):
         Attributes:
             _detector_source_name (str): detector data source name.
             _source_type (DataSource): detector data source type.
-            _pulse_indices (list): selected pulse indices.
         """
         def __init__(self):
             """Initialization."""
@@ -41,7 +40,6 @@ class ImageAssemblerFactory(ABC):
 
             self._detector_source_name = None
             self._source_type = None
-            self._pulse_indices = None
 
             self._geom_file = None
             self._quad_position = None
@@ -51,11 +49,6 @@ class ImageAssemblerFactory(ABC):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
             self._detector_source_name = ds_cfg["detector_source_name"]
             self._source_type = DataSource(int(ds_cfg["source_type"]))
-
-            gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
-
-            self._pulse_indices = self.str2list(
-                gp_cfg['selected_pulse_indices'], handler=int)
 
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
@@ -138,14 +131,8 @@ class ImageAssemblerFactory(ABC):
             except ValueError as e:
                 raise AssemblingError(e)
 
-            assembled = self._modules_to_assembled(modules_data)
-
-            if assembled.ndim == 3:
-                if self._pulse_indices[0] != -1:
-                    assembled = assembled[self._pulse_indices]
-
             # assembled is a temporary item which will be need in ImageProcessor
-            data['assembled'] = assembled
+            data['assembled'] = self._modules_to_assembled(modules_data)
 
     class AgipdImageAssembler(BaseAssembler):
         @profiler("Prepare Module Data")

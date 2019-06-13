@@ -24,6 +24,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({
+        "": PumpProbeMode.UNDEFINED,
         "predefined off": PumpProbeMode.PRE_DEFINED_OFF,
         "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
@@ -40,7 +41,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Pump-probe analysis setup", *args, **kwargs)
+        super().__init__("Pump-probe setup", *args, **kwargs)
 
         self._mode_cb = QtGui.QComboBox()
 

@@ -36,7 +36,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Correlation analysis setup", *args, **kwargs)
+        super().__init__("Correlation setup", *args, **kwargs)
 
         self._fom_type_cb = QtGui.QComboBox()
         for v in self._available_foms:

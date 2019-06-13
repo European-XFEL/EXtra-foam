@@ -65,8 +65,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
 
-        assembler = image_worker._assembler
-        proc = scheduler._ai_proc
+        image_proc = image_worker._image_proc
+        ai_proc = scheduler._ai_proc
 
         # --------------------------
         # test setting VIP pulse indices
@@ -82,6 +82,10 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
         self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
+        image_proc.update()
+        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
+        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+
         # set new values
         vip_pulse_index1 = 10
         widget._vip_pulse_index1_le.setText(str(vip_pulse_index1))
@@ -93,23 +97,29 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
         self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
+        image_proc.update()
+        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
+        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+
         # test params sent to AzimuthalIntegrationProcessor
-        proc.update()
-        self.assertAlmostEqual(config['SAMPLE_DISTANCE'], proc.sample_distance)
-        self.assertAlmostEqual(config['PHOTON_ENERGY'], proc.photon_energy)
+        ai_proc.update()
+        self.assertAlmostEqual(config['SAMPLE_DISTANCE'],
+                               ai_proc.sample_distance)
+        self.assertAlmostEqual(config['PHOTON_ENERGY'],
+                               ai_proc.photon_energy)
 
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
 
-        proc.update()
-        self.assertAlmostEqual(12.4, proc.photon_energy)
-        self.assertAlmostEqual(0.3, proc.sample_distance)
-        assembler.update()
-        self.assertListEqual([-1], assembler._pulse_indices)
+        ai_proc.update()
+        self.assertAlmostEqual(12.4, ai_proc.photon_energy)
+        self.assertAlmostEqual(0.3, ai_proc.sample_distance)
+        image_proc.update()
+        self.assertListEqual([-1], image_proc.pulse_index_filter)
 
         widget._pulse_index_filter_le.setText("1:5:2")
-        assembler.update()
-        self.assertListEqual([1, 3], assembler._pulse_indices)
+        image_proc.update()
+        self.assertListEqual([1, 3], image_proc.pulse_index_filter)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -189,18 +199,21 @@ class TestMainGuiCtrl(unittest.TestCase):
     @patch("karaboFAI.pipeline.data_model.PumpProbeData.clear")
     def testPumpProbeCtrlWidget(self, pp_reset):
         widget = self.gui.pump_probe_ctrl_widget
-        proc = self.image_worker._pp_image_ext
-        proc.update()
+        image_proc = self.image_worker._image_proc
+        pp_proc = self.scheduler._pp_proc
 
         # check default reconfigurable params
-        self.assertEqual(1, proc.ma_window)
-        self.assertTrue(proc.abs_difference)
-        self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual(PumpProbeMode.PRE_DEFINED_OFF, proc.mode)
-        self.assertListEqual(list(range(0, 64, 2)), proc.on_indices)
-        self.assertIsInstance(proc.on_indices[0], int)
-        self.assertListEqual(list(range(1, 64, 2)), proc.off_indices)
-        self.assertIsInstance(proc.off_indices[0], int)
+        pp_proc.update()
+        self.assertEqual(1, pp_proc.ma_window)
+        self.assertTrue(pp_proc.abs_difference)
+        self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
+
+        image_proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
+        self.assertListEqual(list(range(0, 64, 2)), image_proc.on_indices)
+        self.assertIsInstance(image_proc.on_indices[0], int)
+        self.assertListEqual(list(range(1, 64, 2)), image_proc.off_indices)
+        self.assertIsInstance(image_proc.off_indices[0], int)
 
         # change assigning params
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
@@ -222,14 +235,16 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._off_pulse_le.setText('1:10:2')
 
         self.assertTrue(self.gui.updateMetaData())
-        proc.update()
 
-        self.assertFalse(proc.abs_difference)
-        self.assertEqual(10, proc.ma_window)
-        self.assertEqual(AnalysisType(new_fom), proc.analysis_type)
-        self.assertEqual(PumpProbeMode(new_mode), proc.mode)
-        self.assertListEqual([0, 2, 4, 6, 8], proc.on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], proc.off_indices)
+        pp_proc.update()
+        self.assertFalse(pp_proc.abs_difference)
+        self.assertEqual(10, pp_proc.ma_window)
+        self.assertEqual(AnalysisType(new_fom), pp_proc.analysis_type)
+
+        image_proc.update()
+        self.assertEqual(PumpProbeMode(new_mode), image_proc.pp_mode)
+        self.assertListEqual([0, 2, 4, 6, 8], image_proc.on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], image_proc.off_indices)
 
         # check invalid params
         widget._mode_cb.setCurrentIndex(PumpProbeMode.SAME_TRAIN)
