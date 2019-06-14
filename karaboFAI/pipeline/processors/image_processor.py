@@ -21,11 +21,7 @@ from ...config import AnalysisType, PumpProbeMode
 
 
 class _RawImageData:
-    """Stores moving average of raw images.
-
-    Be careful: the internal image share the memory with the first
-    data!!!
-    """
+    """Stores moving average of raw images."""
     def __init__(self, images=None):
         self._images = None  # moving average (original data)
         self._ma_window = 1
@@ -110,9 +106,9 @@ class _RawImageData:
 
 
 class ImageProcessor(CompositeProcessor):
-    """ImageProcessor.
+    """ImageProcessor class.
 
-    A group of image processor. ProcessedData is constructed here.
+    A group of image processors. ProcessedData is constructed here.
 
     Attributes:
         ma_window (int): moving average window size.
@@ -125,8 +121,8 @@ class ImageProcessor(CompositeProcessor):
         off_indices (list): a list of laser-off pulse indices.
 
         _pulse_indices (list): selected pulse indices.
-        _raw_image_data (_RawImageData): store the moving average of the
-            raw image data.
+        _raw_data (_RawImageData): store the moving average of the
+            raw images in a train.
     """
     ma_window = SharedProperty()
     background = SharedProperty()
@@ -175,10 +171,15 @@ class ImageProcessor(CompositeProcessor):
 
 
 class GeneralImageProcessor(LeafProcessor):
+    """GeneralImageProcessor class.
+
+    The GeneralImageProcessor manages the lifetime of raw image data.
+    Construct the processed data with index filter applied.
+    """
     def __init__(self):
         super().__init__()
 
-        self._raw_image_data = _RawImageData()
+        self._raw_data = _RawImageData()
 
     @profiler("Image Processor")
     def process(self, data):
@@ -187,10 +188,11 @@ class GeneralImageProcessor(LeafProcessor):
             # apply the pulse index filter
             assembled = assembled[self.pulse_index_filter]
 
-        self._raw_image_data.ma_window = self.ma_window
-        self._raw_image_data.images = assembled
+        self._raw_data.ma_window = self.ma_window
+        self._raw_data.images = assembled
         # make it the moving average
-        data['assembled'] = self._raw_image_data.images
+        # be careful, data['assembled'] and self._raw_data share memory
+        data['assembled'] = self._raw_data.images
 
         # 'keep' is only required by pulsed-resolved data
         if assembled.ndim == 3:
@@ -204,11 +206,11 @@ class GeneralImageProcessor(LeafProcessor):
             keep = None
 
         data['processed'] = ProcessedData(
-            data['tid'], self._raw_image_data.images,
+            data['tid'], self._raw_data.images,
             background=self.background,
             threshold_mask=self.threshold_mask,
-            ma_window=self._raw_image_data.ma_window,
-            ma_count=self._raw_image_data.ma_count,
+            ma_window=self._raw_data.ma_window,
+            ma_count=self._raw_data.ma_count,
             keep=keep
         )
 
@@ -286,3 +288,5 @@ class PumpProbeImageProcessor(LeafProcessor):
                             assembled[self.off_indices]), *threshold_mask)
                 else:
                     processed.pp.off_image_mean = processed.image.masked_mean
+
+        del data['assembled']

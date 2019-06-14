@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 
 from karaboFAI.pipeline.processors.image_processor import (
-    _RawImageData, PumpProbeImageProcessor
+    _RawImageData, GeneralImageProcessor, ImageProcessor,
+    PumpProbeImageProcessor
 )
 
 
@@ -17,7 +19,7 @@ class TestRawImageData(unittest.TestCase):
             _RawImageData(np.arange(2))
 
         with self.assertRaises(ValueError):
-            _RawImageData(np.arange(16).reshape(2, 2, 2, 2))
+            _RawImageData(np.arange(16).reshape((2, 2, 2, 2)))
 
     def test_trainresolved_ma(self):
         """Test the case with moving average of image."""
@@ -80,6 +82,124 @@ class TestRawImageData(unittest.TestCase):
         self.assertIsNone(img_data.images)
 
 
-class TestPumpProbeImageProcessor(unittest.TestCase):
-    def setUp(self):
+class TestImageProcessor(unittest.TestCase):
+    def testImageProcessor(self):
+        proc = ImageProcessor()
+
+        self.assertIsInstance(proc._children[0], GeneralImageProcessor)
+        self.assertIsInstance(proc._children[1], PumpProbeImageProcessor)
+
+    def testGeneralProcPulseResolved(self):
+        proc = GeneralImageProcessor()
+
+        proc.ma_window = 3
+        proc.background = -10
+        proc.threshold_mask = (-100, 100)
+
+        proc.pulse_index_filter = [-1]
+        proc.vip_pulse_indices = [0, 2]
+
+        imgs1 = np.random.randn(4, 2, 2)
+        imgs1_gt = imgs1.copy()
+        data = {
+            'tid': 1,
+            'assembled': imgs1,
+        }
+
+        proc.process(data)
+
+        np.testing.assert_array_equal(imgs1_gt, proc._raw_data.images)
+
+        imgs2 = np.random.randn(4, 2, 2)
+        imgs2_gt = imgs2.copy()
+        data = {
+            'tid': 2,
+            'assembled': imgs2,
+        }
+
+        proc.process(data)
+
+        processed = data['processed']
+        self.assertEqual(proc.background, processed.image.background)
+        self.assertEqual(proc.ma_window, processed.image.ma_window)
+        self.assertTupleEqual(proc.threshold_mask,
+                              processed.image.threshold_mask)
+        self.assertEqual(2, processed.image.ma_count)
+        # test only VIP pulses are kept
+        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
+        np.testing.assert_array_almost_equal(ma_gt[0],
+                                             processed.image.images[0])
+        self.assertIsNone(processed.image.images[1])
+        np.testing.assert_array_almost_equal(ma_gt[2],
+                                             processed.image.images[2])
+        self.assertIsNone(processed.image.images[3])
+
+        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data.images)
+
+        # test the internal data of _raw_data shares memory with the first data
+        self.assertIs(imgs1, proc._raw_data.images)
+
+        # test keep all pulse images
+        proc._has_analysis = MagicMock(return_value=True)
+
+        imgs3 = np.random.randn(4, 2, 2)
+        imgs3_gt = imgs3.copy()
+        data = {
+            'tid': 3,
+            'assembled': imgs3,
+        }
+
+        proc.process(data)
+        processed = data['processed']
+
+        ma_gt = (imgs1_gt + imgs2_gt + imgs3_gt) / 3.0
+        for i in range(4):
+            np.testing.assert_array_almost_equal(ma_gt[i],
+                                                 processed.image.images[i])
+
+    def testGeneralProcTrainResolved(self):
+        proc = GeneralImageProcessor()
+
+        proc.ma_window = 2
+        proc.background = 0
+        proc.threshold_mask = (-100, 100)
+
+        proc.pulse_index_filter = [-1]
+        proc.vip_pulse_indices = [0, 1]
+
+        imgs1 = np.random.randn(2, 2)
+        imgs1_gt = imgs1.copy()
+        data = {
+            'tid': 1,
+            'assembled': imgs1,
+        }
+
+        proc.process(data)
+        processed = data['processed']
+
+        np.testing.assert_array_almost_equal(imgs1_gt,
+                                             processed.image.images)
+        np.testing.assert_array_almost_equal(imgs1_gt,
+                                             proc._raw_data.images)
+
+        imgs2 = np.random.randn(2, 2)
+        imgs2_gt = imgs2.copy()
+        data = {
+            'tid': 2,
+            'assembled': imgs2,
+        }
+
+        proc.process(data)
+        processed = data['processed']
+
+        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
+        np.testing.assert_array_almost_equal(ma_gt,
+                                             processed.image.images)
+        np.testing.assert_array_almost_equal(ma_gt,
+                                             proc._raw_data.images)
+
+        # test the internal data of _raw_data shares memory with the first data
+        self.assertIs(imgs1, proc._raw_data.images)
+
+    def testPumpProbeProc(self):
         self._proc = PumpProbeImageProcessor()
