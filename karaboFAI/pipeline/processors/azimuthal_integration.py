@@ -18,7 +18,6 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .base_processor import (
     LeafProcessor, CompositeProcessor, SharedProperty,
-    StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
@@ -92,13 +91,11 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
         gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
-        if cfg is None or gp_cfg is None:
-            return
-
         self.sample_distance = float(gp_cfg['sample_distance'])
         self.photon_energy = float(gp_cfg['photon_energy'])
+
+        cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
         self.integ_center_x = int(cfg['integ_center_x'])
         self.integ_center_y = int(cfg['integ_center_y'])
         self.integ_method = cfg['integ_method']
@@ -150,21 +147,13 @@ class AiProcessor(LeafProcessor):
     """
     @profiler("Azimuthal Integration Processor")
     def process(self, data):
-        cx = self.integ_center_x
-        cy = self.integ_center_y
-        integ_points = self.integ_points
-        integ_method = self.integ_method
-        integ_range = self.integ_range
-
         processed = data['processed']
 
+        # instantiate the azimuthal integrator
         pixel_size = config['PIXEL_SIZE']
-        poni2, poni1 = cx, cy
-        mask_min, mask_max = processed.image.threshold_mask
-
         ai = AzimuthalIntegrator(dist=self.sample_distance,
-                                 poni1=poni1 * pixel_size,
-                                 poni2=poni2 * pixel_size,
+                                 poni1=self.integ_center_y * pixel_size,
+                                 poni2=self.integ_center_x * pixel_size,
                                  pixel1=pixel_size,
                                  pixel2=pixel_size,
                                  rot1=0,
@@ -172,6 +161,7 @@ class AiProcessor(LeafProcessor):
                                  rot3=0,
                                  wavelength=energy2wavelength(self.photon_energy))
 
+        # instantiate the image mask
         if self.image_mask is None:
             mask = np.zeros(processed.image.shape, dtype=np.bool)
         else:
@@ -182,12 +172,12 @@ class AiProcessor(LeafProcessor):
                 raise ProcessingError(f"Mask shape {mask.shape} differs "
                                       f"from the image shape {processed.image.shape}")
 
-        # collect images
-        assembled = dict()
+        # collect images which are needed to perform azimuthal integration
+        integratee = dict()
 
         if self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
             for i, img in enumerate(processed.image.images):
-                assembled[i] = img
+                integratee[i] = img
 
         # TODO: for train-resolved detectors, if TRAIN_AZIMUTHAL_INTEG
         #       and PP_AZIMUTHAL_INTEG are activated at the same time,
@@ -195,28 +185,33 @@ class AiProcessor(LeafProcessor):
 
         if self._has_any_analysis([AnalysisType.TRAIN_AZIMUTHAL_INTEG,
                                    AnalysisType.PULSE_AZIMUTHAL_INTEG]):
-            assembled['masked_mean'] = processed.image.masked_mean
+            integratee['masked_mean'] = processed.image.masked_mean
 
         if self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
             on_image = processed.pp.on_image_mean
             off_image = processed.pp.off_image_mean
             if on_image is not None and off_image is not None:
-                assembled['pp_on'] = on_image
-                assembled['pp_off'] = off_image
+                integratee['pp_on'] = on_image
+                integratee['pp_off'] = off_image
 
-        if not assembled:
+        if not integratee:
             return
+
+        integ_points = self.integ_points
+        integ_method = self.integ_method
+        integ_range = self.integ_range
+        mask_min, mask_max = processed.image.threshold_mask
 
         def _integrate1d_imp(key):
             """Use for multiprocessing."""
             # convert 'nan' to '-inf', as explained above
-            assembled[key][np.isnan(assembled[key])] = -np.inf
+            integratee[key][np.isnan(integratee[key])] = -np.inf
 
             # merge image mask and threshold mask
-            mask[(assembled[key] < mask_min) | (assembled[key] > mask_max)] = 1
+            mask[(integratee[key] <= mask_min) | (integratee[key] >= mask_max)] = 1
 
             # do integration
-            ret = ai.integrate1d(assembled[key],
+            ret = ai.integrate1d(integratee[key],
                                  integ_points,
                                  method=integ_method,
                                  mask=mask,
@@ -228,8 +223,8 @@ class AiProcessor(LeafProcessor):
 
         intensities = dict()  # for pulsed A.I.
         with ThreadPoolExecutor(max_workers=4) as executor:
-            for key, ret in zip(assembled.keys(),
-                                executor.map(_integrate1d_imp, assembled.keys())):
+            for key, ret in zip(integratee.keys(),
+                                executor.map(_integrate1d_imp, integratee.keys())):
 
                 momentum = ret.radial
                 if processed.ai.momentum is None:
@@ -253,14 +248,12 @@ class AiProcessor(LeafProcessor):
         if intensities:
             processed.ai.intensities = intensities
 
-        if "pp_on" in assembled and "pp_off" in assembled:
+        if "pp_on" in integratee and "pp_off" in integratee:
             processed.pp.data = (momentum, on_intensity, off_intensity)
             momentum, on_ma, off_ma = processed.pp.data
 
-            norm_on_ma = self._normalize(
-                processed, momentum, on_ma)
-            norm_off_ma = self._normalize(
-                processed, momentum, off_ma)
+            norm_on_ma = self._normalize(processed, momentum, on_ma)
+            norm_off_ma = self._normalize(processed, momentum, off_ma)
             norm_on_off_ma = norm_on_ma - norm_off_ma
 
             processed.pp.norm_on_ma = norm_on_ma
@@ -323,6 +316,9 @@ class AiProcessorPulsedFom(LeafProcessor):
     @profiler("Azimuthal Integration Pulsed FOM Processor")
     def process(self, data):
         """Override."""
+        if not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
+            return
+
         processed = data['processed']
         momentum = processed.ai.momentum
         intensities = processed.ai.intensities
@@ -348,11 +344,12 @@ class AiProcessorPumpProbeFom(LeafProcessor):
     """
     @profiler("Azimuthal integration pump-probe FOM processor")
     def process(self, data):
+        if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
+            return
+
         processed = data['processed']
         momentum = processed.ai.momentum
         norm_on_off_ma = processed.pp.norm_on_off_ma
-        if not self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
-            return
 
         if momentum is None or norm_on_off_ma is None:
             return
