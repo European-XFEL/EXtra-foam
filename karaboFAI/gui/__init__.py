@@ -10,17 +10,12 @@ setConfigOptions(
     background=(225, 225, 225, 255),
 )
 
-__QApp = None
-
 
 def mkQApp(args=None):
-    global __QApp
-
-    __QApp = QApplication.instance()
-    if __QApp is None:
+    app = QApplication.instance()
+    if app is None:
         if args is None:
-            __QApp = QApplication([])
-        else:
-            __QApp = QApplication(args)
+            return QApplication([])
+        return QApplication(args)
 
-    return __QApp
+    return app
