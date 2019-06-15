@@ -5,13 +5,19 @@ from threading import Thread
 import tempfile
 import time
 
-from karaboFAI.config import _Config, ConfigWrapper, AnalysisType
+from karaboFAI.config import _Config, config, ConfigWrapper, AnalysisType
+from karaboFAI.gui import mkQApp
 from karaboFAI.logger import logger
-from karaboFAI.services import FAI
 from karaboFAI.pipeline.processors.base_processor import (
     LeafProcessor, CompositeProcessor, ProcessingError,
     SharedProperty, StopCompositionProcessing
 )
+from karaboFAI.processes import wait_until_redis_shutdown
+from karaboFAI.services import FAI
+
+app = mkQApp()
+
+logger.setLevel("CRITICAL")
 
 
 class _DummyLeafProcessor1(LeafProcessor):
@@ -155,23 +161,22 @@ class TestRedisParserMixin(unittest.TestCase):
 class TestBaseProcessor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logger.setLevel("CRITICAL")
-
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
+        config.load('LPD')
 
-        fai = FAI('LPD')
+        fai = FAI()
         fai.init()
 
-        cls.app = fai.app
-        cls.gui = fai.gui
-        cls.fai = fai
+        cls._fai = fai
         cls.scheduler = fai.scheduler
 
     @classmethod
     def tearDownClass(cls):
-        cls.gui.close()
+        cls._fai.terminate()
+
+        wait_until_redis_shutdown()
 
     def testAnalysisType(self):
         self._comp1 = _DummyCompProcessor1()

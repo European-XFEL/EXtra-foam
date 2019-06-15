@@ -84,6 +84,10 @@ class AbstractWindow(QtGui.QMainWindow):
         """Initialization of signal-slot connections."""
         pass
 
+    def updateMetaData(self):
+        """Update metadata affected by this window."""
+        return True
+
     def reset(self):
         """Reset data in widgets.
 

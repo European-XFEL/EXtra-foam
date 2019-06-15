@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.pipeline.processors.image_assembler import ImageAssemblerFactory
 from karaboFAI.pipeline.exceptions import AssemblingError
 from karaboFAI.config import config, DataSource

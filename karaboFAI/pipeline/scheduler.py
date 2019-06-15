@@ -19,7 +19,7 @@ from .processors import (
 
 class Scheduler(ProcessWorker):
     """Pipeline scheduler."""
-    def __init__(self, detector):
+    def __init__(self):
         """Initialization."""
         super().__init__('scheduler')
 

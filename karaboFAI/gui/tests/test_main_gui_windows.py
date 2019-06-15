@@ -11,11 +11,14 @@ from karaboFAI.gui.windows import (
     XasWindow
 )
 
+app = mkQApp()
+
+logger.setLevel('CRITICAL')
+
 
 class TestMainGui(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logger.setLevel('CRITICAL')
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         config = ConfigWrapper()  # ensure file
@@ -23,7 +26,6 @@ class TestMainGui(unittest.TestCase):
         config.load('LPD')
 
         ImageToolWindow._reset()
-        mkQApp()
         cls.gui = MainGUI()
 
     @classmethod

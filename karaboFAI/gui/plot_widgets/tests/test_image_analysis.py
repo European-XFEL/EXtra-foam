@@ -9,14 +9,14 @@ from karaboFAI.gui.windows.image_tool import _SimpleImageData
 from karaboFAI.gui.plot_widgets.image_view import ImageAnalysis
 from karaboFAI.logger import logger
 
+app = mkQApp()
+
+logger.setLevel("CRITICAL")
+
 
 class TestImageAnalysis(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logger.setLevel("CRITICAL")
-
-        mkQApp()
-
         cls._widget = ImageAnalysis(color_map="thermal")
 
     def testSaveLoadImageMask(self):

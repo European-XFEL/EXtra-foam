@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 import numpy as np
 from scipy import constants
@@ -22,7 +23,7 @@ from .base_processor import (
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
 from ...config import AiNormalizer, AnalysisType, config
-from ...ipc import redis_subscribe
+from ...ipc import RedisSubscriber
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
@@ -78,6 +79,8 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     analysis_type = SharedProperty()
 
+    __mask_sub = RedisSubscriber("command:image_mask", decode_responses=False)
+
     def __init__(self):
         super().__init__()
 
@@ -86,8 +89,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.add(AiProcessorPumpProbeFom())
 
         self.image_mask = None
-        self._mask_command = redis_subscribe("command:image_mask",
-                                             decode_responses=False)
 
     def update(self):
         """Override."""
@@ -110,8 +111,9 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         else:
             self._update_analysis(AnalysisType.UNDEFINED)
 
+        # process all messages related to mask
         while True:
-            msg = self._mask_command.get_message()
+            msg = self.__mask_sub.get_message()
             if msg is None:
                 break
             self._image_mask_handler(msg)
@@ -134,7 +136,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             self.image_mask = np.zeros((h_img, w_img), dtype=np.bool)
         else:
             # the next message contains the bytes for a whole mask
-            msg = self._mask_command.get_message()
+            msg = self.__mask_sub.get_message()
             packed_bits = np.frombuffer(msg['data'], dtype=np.uint8)
             self.image_mask = np.unpackbits(packed_bits).reshape(h, w).astype(
                 np.bool, casting='unsafe')

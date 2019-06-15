@@ -1,11 +1,15 @@
 import unittest
 import time
 
+from karaboFAI.logger import logger
 from karaboFAI.services import start_redis_server
 from karaboFAI.ipc import (
-    redis_connection, redis_subscribe, redis_psubscribe
+    redis_connection, RedisConnection, RedisSubscriber, RedisPSubscriber
 )
-from karaboFAI.pipeline.worker import ProcessWorker, ProcessManager
+from karaboFAI.pipeline.worker import ProcessWorker
+from karaboFAI.processes import wait_until_redis_shutdown
+
+logger.setLevel("CRITICAL")
 
 
 class TestRedisConnection(unittest.TestCase):
@@ -15,7 +19,7 @@ class TestRedisConnection(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        ProcessManager.shutdown_redis()
+        wait_until_redis_shutdown
 
     def testCreateConnection(self):
         # TODO: clean the clients from other tests
@@ -40,6 +44,17 @@ class TestRedisConnection(unittest.TestCase):
 
         self.assertIsNot(db1, db1_bytes)
 
+    def testCreateConnectionLazily(self):
+        class Host:
+            db = RedisConnection()
+
+        n_clients = len(redis_connection().client_list())
+        host = Host()
+        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        host.db.ping()
+        # connection was already created when the server was started
+        self.assertEqual(n_clients, len(redis_connection().client_list()))
+
     def testCreateConnectionInProcess(self):
         class DumpyProcess(ProcessWorker):
             def run(self):
@@ -57,11 +72,23 @@ class TestRedisConnection(unittest.TestCase):
         proc.join()
 
     def testCreatePubSub(self):
+        class SubHost:
+            sub = RedisSubscriber('abc')
+
         n_clients = len(redis_connection().client_list())
-        redis_subscribe('abc')
+        sub_host = SubHost()
+        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        # add a connection when first called
+        sub_host.sub.get_message()
         n_clients += 1
         self.assertEqual(n_clients, len(redis_connection().client_list()))
 
-        redis_psubscribe('abc?')
+        class PSubHost:
+            sub = RedisPSubscriber('abc')
+
+        psub_host = PSubHost()
+        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        # add a connection when first called
+        psub_host.sub.get_message()
         n_clients += 1
         self.assertEqual(n_clients, len(redis_connection().client_list()))

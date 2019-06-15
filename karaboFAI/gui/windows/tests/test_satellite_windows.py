@@ -1,16 +1,17 @@
 import unittest
 
 from karaboFAI.gui import mkQApp, MainGUI
-from karaboFAI.gui.windows import (
-    ProcessMonitor
-)
-from karaboFAI.pipeline.worker import ProcessInfoList
+from karaboFAI.logger import logger
+from karaboFAI.processes import ProcessInfoList
+
+app = mkQApp()
+
+logger.setLevel('CRITICAL')
 
 
 class TestProcessMonitor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        mkQApp()
         cls.gui = MainGUI()
 
     @classmethod

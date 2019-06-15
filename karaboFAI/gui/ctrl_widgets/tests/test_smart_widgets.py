@@ -7,13 +7,14 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit, SmartRangeLineEdit
 )
+from karaboFAI.logger import logger
+
+app = mkQApp()
+
+logger.setLevel("CRITICAL")
 
 
 class TestSmartLineEdit(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = mkQApp()
-
     def testSmartLineEdit(self):
         widget = SmartLineEdit()
 

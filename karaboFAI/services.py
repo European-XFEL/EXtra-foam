@@ -23,12 +23,12 @@ import redis
 
 from . import __version__
 from .config import config
+from .ipc import redis_connection
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
-from .pipeline.worker import ProcessInfo, register_fai_process
+from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource
-from .ipc import redis_connection
 
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
@@ -156,10 +156,9 @@ def health_check():
 
 
 class FAI:
-    def __init__(self, detector):
+    def __init__(self):
 
-        # update global configuration
-        config.load(detector)
+        self._gui = None
 
         # Redis server must be started at first since when the GUI starts,
         # it needs to write all the configuration into Redis.
@@ -169,14 +168,13 @@ class FAI:
             sys.exit(1)
 
         try:
-            #
-            self.image_worker = ImageWorker(detector)
+            # process which runs the image assembler and processor
+            self.image_worker = ImageWorker()
             # process which runs the scheduler
-            self.scheduler = Scheduler(detector)
+            self.scheduler = Scheduler()
             self.scheduler.connectInputToOutput(self.image_worker.output)
 
-            self.app = mkQApp()
-            self.gui = MainGUI(start_thread_logger=True)
+            self._gui = MainGUI(start_thread_logger=True)
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             logger.error(repr(e))
@@ -194,9 +192,9 @@ class FAI:
         register_fai_process(ProcessInfo(name=self.scheduler.name,
                                          process=self.scheduler))
 
-        self.gui.connectInputToOutput(self.scheduler.output)
-        self.gui.start_sgn.connect(self.start)
-        self.gui.stop_sgn.connect(self.pause)
+        self._gui.connectInputToOutput(self.scheduler.output)
+        self._gui.start_sgn.connect(self.start)
+        self._gui.stop_sgn.connect(self.pause)
 
     def start(self):
         self.scheduler.resume()
@@ -205,6 +203,14 @@ class FAI:
     def pause(self):
         self.scheduler.pause()
         self.image_worker.pause()
+
+    def terminate(self):
+        if self._gui is not None:
+            self._gui.close()
+
+    @property
+    def gui(self):
+        return self._gui
 
 
 def application():
@@ -239,11 +245,15 @@ def application():
     if not faulthandler.is_enabled():
         faulthandler.enable(all_threads=False)
 
-    fai = FAI(detector)
+    app = mkQApp()
 
+    # update global configuration
+    config.load(detector)
+
+    fai = FAI()
     fai.init()
 
-    mkQApp().exec_()
+    app.exec_()
 
 
 def kill_application():

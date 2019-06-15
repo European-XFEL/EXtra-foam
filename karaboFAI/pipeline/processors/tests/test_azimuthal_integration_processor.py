@@ -18,3 +18,6 @@ class TestAzimuthalIntegrationProcessor(unittest.TestCase):
         self._proc.auc_range = (1, 5)
         self._proc.fom_itgt_range = (1, 5)
         self._proc.moving_avg_window = 100
+
+    def testAiProcessor(self):
+        pass

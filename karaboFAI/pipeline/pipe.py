@@ -21,7 +21,6 @@ from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
 from ..metadata import MetaProxy
 from ..metadata import Metadata as mt
-from ..pipeline.data_model import ProcessedData
 
 
 class Pipe:
@@ -142,6 +141,7 @@ class KaraboBridge(PipeIn):
         while not close_ev.is_set():
             if update_ev.is_set():
                 endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
+
                 if client is None:
                     # destroy the zmq socket
                     del client

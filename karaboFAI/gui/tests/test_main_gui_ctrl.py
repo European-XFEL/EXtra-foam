@@ -16,38 +16,41 @@ from karaboFAI.logger import logger
 from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
+from karaboFAI.gui import mkQApp
+from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AiNormalizer, AnalysisType, BinMode,
     CorrelationFom, DataSource, Projection1dNormalizer, PumpProbeMode
 )
+from karaboFAI.processes import wait_until_redis_shutdown
+
+app = mkQApp()
+
+logger.setLevel("CRITICAL")
 
 
-class TestMainGuiCtrl(unittest.TestCase):
+class TestMainGuiCtrlPulseResolved(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logger.setLevel("CRITICAL")
-
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
+        config.load('LPD')
 
-        detector = 'LPD'
-        fai = FAI(detector)
+        fai = FAI()
         fai.init()
+        cls._fai = fai
 
         cls.meta = MetaProxy()
 
-        cls.app = fai.app
-        cls.gui = fai.gui
-        cls.fai = fai
+        cls.gui = fai._gui
         cls.scheduler = fai.scheduler
         cls.image_worker = fai.image_worker
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
         cls._stop_action = cls._actions[1]
-        cls._imagetool_action = cls._actions[2]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
@@ -55,7 +58,9 @@ class TestMainGuiCtrl(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.gui.close()
+        cls._fai.terminate()
+
+        wait_until_redis_shutdown()
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
@@ -202,6 +207,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         image_proc = self.image_worker._image_proc
         pp_proc = self.scheduler._pp_proc
 
+        all_modes = {value: key for key, value in
+                     widget._available_modes.items()}
+
         # check default reconfigurable params
         pp_proc.update()
         self.assertEqual(1, pp_proc.ma_window)
@@ -225,10 +233,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._analysis_type_cb.setCurrentIndex(new_fom)
         pp_reset.assert_called_once()
 
-        new_mode = PumpProbeMode.EVEN_TRAIN_ON
-
         pp_reset.reset_mock()
-        widget._mode_cb.setCurrentIndex(new_mode)
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         pp_reset.assert_called_once()
 
         widget._on_pulse_le.setText('0:10:2')
@@ -242,17 +248,17 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType(new_fom), pp_proc.analysis_type)
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode(new_mode), image_proc.pp_mode)
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc.pp_mode)
         self.assertListEqual([0, 2, 4, 6, 8], image_proc.on_indices)
         self.assertListEqual([1, 3, 5, 7, 9], image_proc.off_indices)
 
         # check invalid params
-        widget._mode_cb.setCurrentIndex(PumpProbeMode.SAME_TRAIN)
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         widget._off_pulse_le.setText('1, 3, 4, 7, 9')
         self.assertFalse(self.gui.updateMetaData())
 
         # change to valid params
-        widget._mode_cb.setCurrentIndex(PumpProbeMode.ODD_TRAIN_ON)
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.ODD_TRAIN_ON])
         widget._off_pulse_le.setText('1, 3, 4, 7, 9')
         self.assertTrue(self.gui.updateMetaData())
 
@@ -492,8 +498,6 @@ class TestMainGuiCtrl(unittest.TestCase):
     @patch('karaboFAI.pipeline.Scheduler.resume', Mock())
     @patch('karaboFAI.pipeline.Scheduler.pause', Mock())
     def testStartStop(self):
-        logger.setLevel("CRITICAL")
-
         start_spy = QSignalSpy(self.gui.start_sgn)
         stop_spy = QSignalSpy(self.gui.stop_sgn)
 
@@ -535,3 +539,79 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         # FIXME
         # self.bridge.pause.assert_called_once()
+
+
+class TestMainGuiCtrlTrainResolved(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        ImageToolWindow._reset()
+
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()   # ensure file
+        config.load('JungFrau')
+        # the global Redis client already has a port of 6379
+        config._data['REDIS_PORT'] = 6379
+
+        fai = FAI()
+        fai.init()
+
+        cls._fai = fai
+        cls.meta = MetaProxy()
+
+        cls.gui = fai._gui
+
+        cls.scheduler = fai.scheduler
+        cls.image_worker = fai.image_worker
+
+        cls._actions = cls.gui._tool_bar.actions()
+        cls._start_action = cls._actions[0]
+        cls._stop_action = cls._actions[1]
+        cls._pp_action = cls._actions[4]
+        cls._correlation_action = cls._actions[5]
+        cls._xas_action = cls._actions[6]
+        cls._pulsed_ai_action = cls._actions[7]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._fai.terminate()
+
+        wait_until_redis_shutdown()
+
+    def setUp(self):
+        self.assertTrue(self.gui.updateMetaData())
+
+    def testPumpProbeCtrlWidget(self):
+        self.gui.updateMetaData()
+
+        widget = self.gui.pump_probe_ctrl_widget
+        image_proc = self.image_worker._image_proc
+
+        all_modes = {value: key for key, value in
+                     widget._available_modes.items()}
+
+        # we only test train-resolved detector specific configuration
+
+        image_proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
+        self.assertListEqual([0], image_proc.on_indices)
+        self.assertListEqual([0], image_proc.off_indices)
+
+        spy = QSignalSpy(widget._mode_cb.currentTextChanged)
+
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        self.assertEqual(1, len(spy))
+
+        image_proc.update()
+        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON),
+                         image_proc.pp_mode)
+        self.assertListEqual([0], image_proc.on_indices)
+        self.assertListEqual([0], image_proc.off_indices)
+
+        # PumpProbeMode.SAME_TRAIN is not available
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
+        self.assertEqual(1, len(spy))
+
+    def testGeometryCtrlWidget(self):
+        with self.assertRaises(AttributeError):
+            self.gui.geometry_ctrl_widget

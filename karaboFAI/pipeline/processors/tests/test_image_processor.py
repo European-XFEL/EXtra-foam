@@ -7,6 +7,7 @@ from karaboFAI.pipeline.processors.image_processor import (
     _RawImageData, GeneralImageProcessor, ImageProcessor,
     PumpProbeImageProcessor
 )
+from karaboFAI.config import PumpProbeMode
 
 
 class TestRawImageData(unittest.TestCase):
@@ -201,5 +202,16 @@ class TestImageProcessor(unittest.TestCase):
         # test the internal data of _raw_data shares memory with the first data
         self.assertIs(imgs1, proc._raw_data.images)
 
-    def testPumpProbeProc(self):
-        self._proc = PumpProbeImageProcessor()
+    def testPumpProbeProcPulseResolved(self):
+        proc = PumpProbeImageProcessor()
+
+        proc.pp_mode = PumpProbeMode.UNDEFINED
+        proc.on_indices = [0]
+        proc.off_indices = [0]
+
+    def testPumpProbeProcTrainResolved(self):
+        proc = PumpProbeImageProcessor()
+
+        proc.pp_mode = PumpProbeMode.UNDEFINED
+        proc.on_indices = [0]
+        proc.off_indices = [0]

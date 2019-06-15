@@ -87,7 +87,7 @@ def redis_connection(decode_responses=True):
 
 
 class RedisConnection:
-    """Lazy evaluated Redis connection on access."""
+    """Lazily evaluated Redis connection on access."""
     def __init__(self, decode_responses=True):
         self._db = None
         self._decode_responses = decode_responses
@@ -99,16 +99,34 @@ class RedisConnection:
         return self._db
 
 
-def redis_subscribe(channel, *, decode_responses=True):
-    sub = redis_connection(decode_responses=decode_responses).pubsub()
-    sub.subscribe(channel)
-    return sub
+class RedisSubscriber:
+    """Lazily evaluated Redis subscriber."""
+    def __init__(self, channel, decode_responses=True):
+        self._sub = None
+        self._decode_responses = decode_responses
+        self._channel = channel
+
+    def __get__(self, instance, instance_type):
+        if self._sub is None:
+            self._sub = redis_connection(
+                decode_responses=self._decode_responses).pubsub()
+            self._sub.subscribe(self._channel)
+        return self._sub
 
 
-def redis_psubscribe(pattern, *, decode_responses=True):
-    sub = redis_connection(decode_responses=decode_responses).pubsub()
-    sub.psubscribe(pattern)
-    return sub
+class RedisPSubscriber:
+    """Lazily evaluated Redis psubscriber."""
+    def __init__(self, pattern, decode_responses=True):
+        self._sub = None
+        self._decode_responses = decode_responses
+        self._pattern = pattern
+
+    def __get__(self, instance, instance_type):
+        if self._sub is None:
+            self._sub = redis_connection(
+                decode_responses=self._decode_responses).pubsub()
+            self._sub.psubscribe(self._pattern)
+        return self._sub
 
 
 class ProcessWorkerLogger(metaclass=_MetaSingleton):

@@ -528,9 +528,11 @@ class ImageToolWindow(AbstractWindow):
             lambda x: mediator.onImageBackgroundChange(float(x)))
 
     def updateMetaData(self):
+        """Override."""
         self._image_action.moving_avg_le.returnPressed.emit()
         self._image_action.threshold_mask_le.returnPressed.emit()
         self._image_action.bkg_le.returnPressed.emit()
+        return True
 
     def update(self):
         """Update widgets.

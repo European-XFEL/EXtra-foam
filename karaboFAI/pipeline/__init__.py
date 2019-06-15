@@ -1,7 +1,6 @@
 from .image_worker import ImageWorker
 from .scheduler import Scheduler
 
-
 __all__ = [
     "ImageWorker",
     "Scheduler",

@@ -10,10 +10,17 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
 from karaboFAI.config import config, _Config, ConfigWrapper
-from karaboFAI.services import FAI
-from karaboFAI.pipeline.data_model import ImageData
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
+from karaboFAI.logger import logger
+from karaboFAI.pipeline.data_model import ImageData
+from karaboFAI.processes import wait_until_redis_shutdown
+from karaboFAI.services import FAI
+
+app = mkQApp()
+
+logger.setLevel('CRITICAL')
 
 
 class TestSimpleImageData(unittest.TestCase):
@@ -73,15 +80,16 @@ class TestImageTool(unittest.TestCase):
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
+        config.load('LPD')
 
         # ImageToolWindow._reset() is not called in other tests
         ImageToolWindow._reset()
 
-        fai = FAI('LPD')
+        fai = FAI()
         fai.init()
-        cls.gui = fai.gui
-        cls.app = fai.app
-        cls.fai = fai
+
+        cls._fai = fai
+        cls.gui = fai._gui
         cls.scheduler = fai.scheduler
 
         actions = cls.gui._tool_bar.actions()
@@ -93,7 +101,9 @@ class TestImageTool(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.gui.close()
+        cls._fai.terminate()
+
+        wait_until_redis_shutdown()
 
     def setUp(self):
         ImageToolWindow._reset()

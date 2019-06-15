@@ -40,10 +40,10 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..utils import profiler
-from ..ipc import redis_psubscribe
-from ..pipeline import MpInQueue
-from ..pipeline.worker import list_fai_processes, ProcessManager
+from ..ipc import RedisPSubscriber
 from ..offline import FileServerManager
+from ..pipeline import MpInQueue
+from ..processes import list_fai_processes, shutdown_all
 
 
 class Data4Visualization:
@@ -72,15 +72,16 @@ class ThreadLoggerBridge(QObject):
     log_warning_sgn = pyqtSignal(str)
     log_error_sgn = pyqtSignal(str)
 
+    __sub = RedisPSubscriber("log:*")
+
     def __init__(self):
         super().__init__()
 
     def recv_messages(self):
-        sub = redis_psubscribe("log:*")
-
         while True:
             try:
-                msg = sub.get_message()
+                msg = self.__sub.get_message()
+
                 if msg and isinstance(msg['data'], str):
                     channel = msg['channel']
                     log_msg = msg['data']
@@ -94,7 +95,7 @@ class ThreadLoggerBridge(QObject):
                     elif channel == 'log:error':
                         self.log_error_sgn.emit(log_msg)
 
-            except ConnectionError:
+            except (ConnectionError, RuntimeError, AttributeError, IndexError):
                 pass
 
             # TODO: find a magic number
@@ -367,7 +368,6 @@ class MainGUI(QtGui.QMainWindow):
     def onStart(self):
         if not self.updateMetaData():
             return
-
         self.start_sgn.emit()
 
         self._start_at.setEnabled(False)
@@ -431,7 +431,6 @@ class MainGUI(QtGui.QMainWindow):
 
         self._thread_logger_t.quit()
 
-        ProcessManager.shutdown_pipeline()
-        ProcessManager.shutdown_redis()
+        shutdown_all()
 
         super().closeEvent(QCloseEvent)

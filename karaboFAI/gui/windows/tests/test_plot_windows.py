@@ -20,16 +20,18 @@ from karaboFAI.gui.plot_widgets import (
     BinCountWidget, BinWidget,
 )
 
+app = mkQApp()
+
+logger.setLevel('CRITICAL')
+
 
 class TestOverviewWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        logger.setLevel('CRITICAL')
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
 
-        mkQApp()
         cls.gui = MainGUI()
 
     @classmethod
@@ -96,13 +98,6 @@ class TestOverviewWindow(unittest.TestCase):
 
 
 class TestPulsedAiWindow(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        logger.setLevel('CRITICAL')
-
-        mkQApp()
-
     def testPulseResolved(self):
         gui = MainGUI()
 
