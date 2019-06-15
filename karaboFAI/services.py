@@ -15,6 +15,7 @@ import time
 import faulthandler
 import sys
 import traceback
+import itertools
 
 import psutil
 
@@ -243,6 +244,40 @@ def application():
     fai.init()
 
     mkQApp().exec_()
+
+
+def kill_application():
+    """KIll the application processes in case the app was shutdown unusually.
+
+    If there is SEGFAULT, the child processes won't be clean up.
+    """
+    logger.setLevel('CRITICAL')
+
+    py_procs = []  # Python processes
+    thirdparty_procs = []  # thirdparty processes like redis-server
+    for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
+        cmdline = proc.info['cmdline']
+        if cmdline and 'karaboFAI' in cmdline[0]:
+            thirdparty_procs.append(proc)
+        elif len(cmdline) > 2 and 'karaboFAI.services' in cmdline[2]:
+            py_procs.append(proc)
+
+    # kill Python processes first
+    for proc in py_procs:
+        proc.kill()
+        print(f"Sent SIGKILL to {proc} ...")
+
+    for proc in thirdparty_procs:
+        proc.kill()
+        print(f"Sent SIGKILL to {proc} ...")
+
+    gone, alive = psutil.wait_procs(
+        itertools.chain(py_procs, thirdparty_procs), timeout=1.0)
+
+    if alive:
+        for p in alive:
+            print(f"{p} survived SIGKILL, "
+                  f"please try again or clean it manually")
 
 
 if __name__ == "__main__":

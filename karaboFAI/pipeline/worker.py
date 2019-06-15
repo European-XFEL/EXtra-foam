@@ -267,10 +267,10 @@ def close_all_child_processes():
     def on_terminate(proc):
         name = find_process_type_by_pid(proc.pid)
         if name is None:
-            logger.warning(f"Unknown process {proc} terminated with exit code "
+            logger.warning(f"Unknown {proc} terminated with exit code "
                            f"{proc.returncode}")
         else:
-            logger.warning(f"'{name}' process {proc} terminated with "
+            logger.warning(f"'{name}' {proc} terminated with "
                            f"exit code {proc.returncode}")
 
     logger.info("Clean up child processes ...")
@@ -297,7 +297,7 @@ def close_all_child_processes():
 
     if alive:
         for p in alive:
-            print(f"process {p} survived SIGKILL, please clean it manually")
+            print(f"{p} survived SIGKILL, please clean it manually")
 
 
 atexit.register(close_all_child_processes)
