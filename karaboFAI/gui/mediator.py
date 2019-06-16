@@ -128,7 +128,7 @@ class Mediator(DataManagerMixin, QObject):
     def onAiIntegRangeChange(self, value: tuple):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_range', str(value))
 
-    def onAiNormalizerChange(self, value: IntEnum):
+    def onCurveNormalizerChange(self, value: IntEnum):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'normalizer', int(value))
 
     def onAiAucChangeChange(self, value: tuple):

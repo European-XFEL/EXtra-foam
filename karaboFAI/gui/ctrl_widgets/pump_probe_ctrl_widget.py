@@ -34,10 +34,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
         "azimuthal integ": AnalysisType.PP_AZIMUTHAL_INTEG,
-        "ROI": AnalysisType.ROI,
-        "projection X": AnalysisType.ROI_PROJECTION_X,
-        "projection Y": AnalysisType.ROI_PROJECTION_Y,
-        "ROI1 / ROI2": AnalysisType.ROI1_BY_ROI2,
+        "proj X (ROI1 - ROI2)": AnalysisType.ROI_PROJECTION_X,
+        "proj Y (ROI2 - ROI2)": AnalysisType.ROI_PROJECTION_Y,
+        "ROI1 - ROI2": AnalysisType.ROI1_SUB_ROI2,
+        "ROI1 / ROI2": AnalysisType.ROI1_DIV_ROI2,
     })
 
     def __init__(self, *args, **kwargs):

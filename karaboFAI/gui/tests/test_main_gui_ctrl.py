@@ -20,8 +20,8 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
-    _Config, ConfigWrapper, config, AiNormalizer, AnalysisType, BinMode,
-    CorrelationFom, DataSource, Projection1dNormalizer, PumpProbeMode
+    _Config, ConfigWrapper, config, CurveNormalizer, AnalysisType, BinMode,
+    CorrelationFom, DataSource, CurveNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 
@@ -136,7 +136,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(proc.integ_method, default_integ_method)
-        default_normalizer = AiNormalizer.AUC
+        default_normalizer = CurveNormalizer.AUC
         self.assertEqual(proc.normalizer, default_normalizer)
         self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"],
                          proc.integ_points)
@@ -151,7 +151,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = AiNormalizer.ROI2
+        ai_normalizer = CurveNormalizer.ROI2
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -180,7 +180,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # test default reconfigurable values
         self.assertEqual(np.sum, proc.roi_fom_handler)
-        self.assertEqual(Projection1dNormalizer.AUC, proc.proj1d_normalizer)
+        self.assertEqual(CurveNormalizer.AUC, proc.proj1d_normalizer)
         self.assertEqual((0, math.inf), proc.proj1d_fom_integ_range)
         self.assertEqual((0, math.inf), proc.proj1d_auc_range)
 
@@ -227,7 +227,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
         widget._ma_window_le.setText(str(10))
-        new_fom = AnalysisType.ROI
+        new_fom = AnalysisType.ROI1_SUB_ROI2
 
         pp_reset.reset_mock()
         widget._analysis_type_cb.setCurrentIndex(new_fom)

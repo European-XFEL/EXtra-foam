@@ -11,11 +11,11 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from ..pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import Projection1dNormalizer, RoiFom
+from ...config import CurveNormalizer, RoiFom
 
 
 class RoiCtrlWidget(AbstractCtrlWidget):
@@ -27,7 +27,7 @@ class RoiCtrlWidget(AbstractCtrlWidget):
     })
 
     _available_normalizers = OrderedDict({
-        "AUC": Projection1dNormalizer.AUC,
+        "AUC": CurveNormalizer.AUC,
     })
 
     def __init__(self, *args, **kwargs):
@@ -57,15 +57,15 @@ class RoiCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("FOM type: "), 0, 0, AR)
-        layout.addWidget(self._roi_fom_cb, 0, 1)
+        layout.addWidget(QtGui.QLabel("Normalizer (proj X/Y): "), 0, 0, AR)
+        layout.addWidget(self._normalizers_cb, 0, 1)
         layout.addWidget(self._roi_reset_btn, 0, 3, AR)
-        layout.addWidget(QtGui.QLabel("Normalized by (Proj 1D): "), 1, 0, AR)
-        layout.addWidget(self._normalizers_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("AUC range (Proj 1D): "), 1, 2, AR)
-        layout.addWidget(self._auc_range_le, 1, 3)
-        layout.addWidget(QtGui.QLabel("FOM range (Proj 1D): "), 2, 2, AR)
-        layout.addWidget(self._fom_integ_range_le, 2, 3)
+        layout.addWidget(QtGui.QLabel("AUC range (proj X/Y): "), 1, 0, AR)
+        layout.addWidget(self._auc_range_le, 1, 1)
+        layout.addWidget(QtGui.QLabel("      ROI FOM: "), 1, 2, AR)
+        layout.addWidget(self._roi_fom_cb, 1, 3)
+        layout.addWidget(QtGui.QLabel("FOM range (proj X/Y): "), 2, 0, AR)
+        layout.addWidget(self._fom_integ_range_le, 2, 1)
 
         self.setLayout(layout)
 

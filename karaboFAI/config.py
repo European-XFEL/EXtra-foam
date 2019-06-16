@@ -38,10 +38,10 @@ class PumpProbeMode(IntEnum):
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PP_AZIMUTHAL_INTEG = 1
-    ROI = 2
-    ROI_PROJECTION_X = 3
-    ROI_PROJECTION_Y = 4
-    ROI1_BY_ROI2 = 5
+    ROI_PROJECTION_X = 2
+    ROI_PROJECTION_Y = 3
+    ROI1_SUB_ROI2 = 4
+    ROI1_DIV_ROI2 = 5
     TRAIN_AZIMUTHAL_INTEG = 6
     PULSE_AZIMUTHAL_INTEG = 7
 
@@ -63,7 +63,7 @@ class CorrelationFom(IntEnum):
     AZIMUTHAL_INTEG_MEAN = 6
 
 
-class AiNormalizer(IntEnum):
+class CurveNormalizer(IntEnum):
     # Normalize the azimuthal integration curve by the area under the curve.
     AUC = 0
     # Normalize the azimuthal integration curve by the sum of ROI(s).
@@ -71,10 +71,6 @@ class AiNormalizer(IntEnum):
     ROI1 = 2
     ROI2 = 3
     ROI_SUM = 4  # ROI1 + ROI2
-
-
-class Projection1dNormalizer(IntEnum):
-    AUC = 0
 
 
 class RoiFom(IntEnum):

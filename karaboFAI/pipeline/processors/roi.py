@@ -9,18 +9,15 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import copy
-
 import numpy as np
 
 from .base_processor import (
     CompositeProcessor, LeafProcessor, SharedProperty,
-    StopCompositionProcessing
 )
 from ..exceptions import ProcessingError
 from ...algorithms import intersection, normalize_auc, slice_curve
 from ...metadata import Metadata as mt
-from ...config import config, RoiFom, AnalysisType, Projection1dNormalizer
+from ...config import config, RoiFom, AnalysisType, CurveNormalizer
 from ...utils import profiler
 
 
@@ -30,14 +27,22 @@ class RoiProcessor(CompositeProcessor):
     Process region of interest.
 
     Attributes:
-        regions (list): a list of ROI regions (x, y, w, h) or None if the
-            corresponding ROI is not activated.
-        fom_type (RoiFom): type of ROI FOM.
+        regions (list): a list of ROI regions (x, y, w, h).
+        visibilities (list): a list of boolean which indicates whether the
+            corresponding ROI is visible.
+        roi_fom_handler (callable): hanlder used to calculate the FOM of a
+            given ROI.
+        proj1d_normalizer (CurveNormalizer): normalizer type for calculating
+            FOM from 1D projection result.
+        proj1d_auc_range (tuple): x range for calculating AUC, which is
+            used as a normalizer of 1D projection.
+        proj1d_fom_integ_range (tuple): integration range for calculating
+            FOM from the normalized 1D projection.
     """
     regions = SharedProperty()
     visibilities = SharedProperty()
     roi_fom_handler = SharedProperty()
-    fom_type = SharedProperty()
+
     proj1d_normalizer = SharedProperty()
     proj1d_auc_range = SharedProperty()
     proj1d_fom_integ_range = SharedProperty()
@@ -45,10 +50,10 @@ class RoiProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
+        n_rois = len(config["ROI_COLORS"])
         # initialization
-        self.regions = [None] * len(config["ROI_COLORS"])
-        self.visibilities = copy.copy(self.regions)
-
+        self.regions = [(0, 0, -1, -1)] * n_rois
+        self.visibilities = [False] * n_rois
         self.roi_fom_handler = None
 
         self.add(RoiProcessorFom())
@@ -57,24 +62,18 @@ class RoiProcessor(CompositeProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.get_all(mt.ROI_PROC)
-        if cfg is None:
-            return
 
-        self.fom_type = RoiFom(int(cfg['fom_type']))
-
-        if self.fom_type == RoiFom.SUM:
+        fom_type = RoiFom(int(cfg['fom_type']))
+        if fom_type == RoiFom.SUM:
             self.roi_fom_handler = np.sum
-        elif self.fom_type == RoiFom.MEAN:
+        else:  # fom_type == RoiFom.MEAN:
             self.roi_fom_handler = np.mean
-        else:
-            self.fom_type.fom_type = None
-            self.roi_fom_handler = None
 
         for i, _ in enumerate(self.regions, 1):
             self.visibilities[i-1] = cfg[f'visibility{i}'] == 'True'
             self.regions[i-1] = self.str2list(cfg[f'region{i}'], handler=int)
 
-        self.proj1d_normalizer = Projection1dNormalizer(
+        self.proj1d_normalizer = CurveNormalizer(
             int(cfg['proj1d:normalizer']))
         self.proj1d_auc_range = self.str2tuple(cfg['proj1d:auc_range'])
         self.proj1d_fom_integ_range = self.str2tuple(
@@ -108,14 +107,11 @@ class RoiProcessorFom(LeafProcessor):
         if tid > 0:
             img = processed.image.masked_mean
 
-            rois = copy.copy(self.regions)
-            for i, roi in enumerate(rois):
-                # it should be valid to set ROI intensity to zero if the data
-                # is not available
-                fom = 0
+            for i, roi in enumerate(self.regions):
                 if self.visibilities[i]:
-                    x, y, w, h = roi
-                    roi = intersection([x, y, w, h], [0, 0, *img.shape[::-1]])
+                    # find the intersection between the ROI and the image
+                    roi = intersection([*roi], [0, 0, *img.shape[::-1]])
+                    # get the new ROI parameters
                     x, y, w, h = roi
                     if w > 0 and h > 0:
                         # set the corrected roi
@@ -124,17 +120,19 @@ class RoiProcessorFom(LeafProcessor):
                         roi_img = RoiProcessor.get_roi_image(
                             roi, img, copy=False)
 
+                        # calculate the 1D projection no matter it is needed
+                        # or not since the calculation is cheap
                         proj_x = np.sum(roi_img, axis=-2)
                         proj_y = np.sum(roi_img, axis=-1)
                         setattr(processed.roi, f"roi{i+1}_proj_x", proj_x)
                         setattr(processed.roi, f"roi{i+1}_proj_y", proj_y)
-
+                        # calculate the FOM of the ROI
                         fom = self.roi_fom_handler(roi_img)
                         setattr(processed.roi, f"roi{i+1}_fom", fom)
 
 
 class RoiProcessorPumpProbe(LeafProcessor):
-    """RoiProcessorPumpprobe class.
+    """RoiProcessorPumpProbe class.
 
     Extract the ROI image for on/off pulses respectively.
     """
@@ -145,11 +143,11 @@ class RoiProcessorPumpProbe(LeafProcessor):
         # use ROI1 for signal
         roi = processed.roi.roi1
         if roi is None:
-            raise StopCompositionProcessing
+            return
 
         # use ROI2 for background
         roi_bkg = processed.roi.roi2
-        if processed.pp.analysis_type != AnalysisType.ROI1_BY_ROI2:
+        if processed.pp.analysis_type != AnalysisType.ROI1_DIV_ROI2:
             if roi_bkg is not None and roi_bkg[-2:] != roi[-2:]:
                 raise ProcessingError("Shapes of ROI1 and ROI2 are different")
 
@@ -157,7 +155,7 @@ class RoiProcessorPumpProbe(LeafProcessor):
         off_image = processed.pp.off_image_mean
 
         if on_image is None or off_image is None:
-            return StopCompositionProcessing
+            return
 
         on_roi = RoiProcessor.get_roi_image(roi, on_image)
         off_roi = RoiProcessor.get_roi_image(roi, off_image)
@@ -167,7 +165,7 @@ class RoiProcessorPumpProbe(LeafProcessor):
                 roi_bkg, on_image, copy=False)
             off_roi_bkg = RoiProcessor.get_roi_image(
                 roi_bkg, off_image, copy=False)
-            if processed.pp.analysis_type != AnalysisType.ROI1_BY_ROI2:
+            if processed.pp.analysis_type != AnalysisType.ROI1_DIV_ROI2:
                 on_roi -= on_roi_bkg
                 off_roi -= off_roi_bkg
             else:
@@ -179,8 +177,8 @@ class RoiProcessorPumpProbe(LeafProcessor):
                 on_roi /= denominator_on
                 off_roi /= denominator_off
 
-        if processed.pp.analysis_type in (AnalysisType.ROI,
-                                          AnalysisType.ROI1_BY_ROI2):
+        if processed.pp.analysis_type in (AnalysisType.ROI1_SUB_ROI2,
+                                          AnalysisType.ROI1_DIV_ROI2):
             processed.pp.data = (None, on_roi, off_roi)
             x, on_ma, off_ma = processed.pp.data  # get the moving average
 

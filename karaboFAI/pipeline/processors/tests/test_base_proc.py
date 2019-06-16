@@ -190,39 +190,39 @@ class TestBaseProcessor(unittest.TestCase):
         self._check_has_no_analysis(AnalysisType.UNDEFINED)
 
         # set new analysis type for comp2
-        self._comp2._update_analysis(AnalysisType.ROI)
+        self._comp2._update_analysis(AnalysisType.ROI1_SUB_ROI2)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
-        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
-        self._check_has_analysis(AnalysisType.ROI)
+        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, self._comp2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI1_SUB_ROI2)
 
         # set new analysis type for comp1
         self._comp1._update_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
         self._check_has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
-        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
+        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, self._comp2.analysis_type)
         self.assertEqual(AnalysisType.PP_AZIMUTHAL_INTEG, self._comp1.analysis_type)
 
         # unset analysis type for comp1
         self._comp1._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
-        self.assertEqual(AnalysisType.ROI, self._comp2.analysis_type)
-        self._check_has_analysis(AnalysisType.ROI)
+        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, self._comp2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI1_SUB_ROI2)
         self._check_has_no_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
 
         # unset analysis type for comp2
         self._comp2._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp2.analysis_type)
-        self._check_has_no_analysis(AnalysisType.ROI)
+        self._check_has_no_analysis(AnalysisType.ROI1_SUB_ROI2)
         self._check_has_no_analysis(AnalysisType.PP_AZIMUTHAL_INTEG)
 
         # set same analysis type for comp1 and comp2
-        self._comp1._update_analysis(AnalysisType.ROI)
-        self._comp2._update_analysis(AnalysisType.ROI)
-        self._check_has_analysis(AnalysisType.ROI)
+        self._comp1._update_analysis(AnalysisType.ROI1_SUB_ROI2)
+        self._comp2._update_analysis(AnalysisType.ROI1_SUB_ROI2)
+        self._check_has_analysis(AnalysisType.ROI1_SUB_ROI2)
         self._comp2._update_analysis(AnalysisType.UNDEFINED)
-        self._check_has_analysis(AnalysisType.ROI)
+        self._check_has_analysis(AnalysisType.ROI1_SUB_ROI2)
         self._comp1._update_analysis(AnalysisType.UNDEFINED)
-        self._check_has_no_analysis(AnalysisType.ROI)
+        self._check_has_no_analysis(AnalysisType.ROI1_SUB_ROI2)
 
     def _check_has_analysis(self, analysis_type):
         self.assertTrue(self._comp2._has_analysis(analysis_type))

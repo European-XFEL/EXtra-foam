@@ -15,18 +15,18 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ...config import AiNormalizer, config
+from ...config import CurveNormalizer, config
 
 
 class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
-        "AUC": AiNormalizer.AUC,
-        "ROI1 - ROI2": AiNormalizer.ROI_SUB,
-        "ROI1": AiNormalizer.ROI1,
-        "ROI2": AiNormalizer.ROI2,
-        "ROI1 + ROI2": AiNormalizer.ROI_SUM,
+        "AUC": CurveNormalizer.AUC,
+        "ROI1 - ROI2": CurveNormalizer.ROI_SUB,
+        "ROI1": CurveNormalizer.ROI1,
+        "ROI2": CurveNormalizer.ROI2,
+        "ROI1 + ROI2": CurveNormalizer.ROI_SUM,
     })
 
     def __init__(self, *args, **kwargs):
@@ -83,7 +83,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._integ_pts_le, 1, 3)
         layout.addWidget(QtGui.QLabel("Integ range (1/A): "), 2, 0, AR)
         layout.addWidget(self._integ_range_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("Normalized by: "), 2, 2, AR)
+        layout.addWidget(QtGui.QLabel("Normalizer: "), 2, 2, AR)
         layout.addWidget(self._normalizers_cb, 2, 3)
         layout.addWidget(QtGui.QLabel("AUC range (1/A): "), 3, 0, AR)
         layout.addWidget(self._auc_range_le, 3, 1)
@@ -109,7 +109,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
             mediator.onAiIntegMethodChange)
 
         self._normalizers_cb.currentTextChanged.connect(
-            lambda x: mediator.onAiNormalizerChange(
+            lambda x: mediator.onCurveNormalizerChange(
                 self._available_normalizers[x]))
 
         if self._pulsed_integ_cb is not None:
