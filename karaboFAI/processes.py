@@ -68,13 +68,19 @@ def list_fai_processes():
             )
 
     info_list = []
+    children = psutil.Process().children()
 
     for name, p in _fai_processes.redis.items():
         info_list.append(get_proc_info(name, 'redis', p))
+        children.remove(p)
 
     for name, p in _fai_processes.pipeline.items():
-        info_list.append(
-            get_proc_info(name, 'pipeline', psutil.Process(p.pid)))
+        p_psutil = psutil.Process(p.pid)
+        info_list.append(get_proc_info(name, 'pipeline', p_psutil))
+        children.remove(p_psutil)
+
+    for child in children:
+        info_list.append(get_proc_info(child.name(), 'other', child))
 
     return info_list
 
