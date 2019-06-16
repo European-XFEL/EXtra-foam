@@ -266,9 +266,9 @@ class PumpProbeImageProcessor(LeafProcessor):
         # on and off are from different trains
 
         if mode == PumpProbeMode.EVEN_TRAIN_ON:
-            flag = 0
-        else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
             flag = 1
+        else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
+            flag = 0
 
         if processed.tid % 2 == 1 ^ flag:
             if processed.pulse_resolved:

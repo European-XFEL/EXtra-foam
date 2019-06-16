@@ -1,8 +1,20 @@
+"""
+Offline and online data analysis and visualization tool for azimuthal
+integration of different data acquired with various detectors at
+European XFEL.
+
+Unittest for ImageProcessor.
+
+Author: Jun Zhu <jun.zhu@xfel.eu>
+Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+All rights reserved.
+"""
 import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
 
+from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.pipeline.processors.image_processor import (
     _RawImageData, GeneralImageProcessor, ImageProcessor,
     PumpProbeImageProcessor
@@ -202,16 +214,226 @@ class TestImageProcessor(unittest.TestCase):
         # test the internal data of _raw_data shares memory with the first data
         self.assertIs(imgs1, proc._raw_data.images)
 
-    def testPumpProbeProcPulseResolved(self):
-        proc = PumpProbeImageProcessor()
 
-        proc.pp_mode = PumpProbeMode.UNDEFINED
-        proc.on_indices = [0]
-        proc.off_indices = [0]
+class TestPumpProbeImageProcessorPs(unittest.TestCase):
+    def setUp(self):
+        self.proc = PumpProbeImageProcessor()
+        self.proc.on_indices = [0, 2]
+        self.proc.off_indices = [1, 3]
+        self.proc.threshold_mask = (-np.inf, np.inf)
 
-    def testPumpProbeProcTrainResolved(self):
-        proc = PumpProbeImageProcessor()
+    def _gen_data(self, tid):
+        imgs = np.random.randn(4, 2, 2)
+        data = {'tid': tid,
+                'processed': ProcessedData(tid, imgs),
+                'assembled': imgs.copy()}
+        return data
 
-        proc.pp_mode = PumpProbeMode.UNDEFINED
-        proc.on_indices = [0]
-        proc.off_indices = [0]
+    def testPsUndefined(self):
+        self.proc.pp_mode = PumpProbeMode.UNDEFINED
+
+        data = self._gen_data(1001)
+        processed = data['processed']
+
+        self.proc.process(processed)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+    def testPsPredefinedOff(self):
+        self.proc.pp_mode = PumpProbeMode.PRE_DEFINED_OFF
+
+        data = self._gen_data(1001)
+        processed = data['processed']
+        assembled = data['assembled']
+
+        self.proc.process(data)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, np.mean(assembled[::2, :, :], axis=0))
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, np.zeros((2, 2)))
+
+    def testPPsSameTrain(self):
+        self.proc.pp_mode = PumpProbeMode.SAME_TRAIN
+
+        data = self._gen_data(1001)
+        processed = data['processed']
+        assembled = data['assembled']
+
+        self.proc.process(data)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, np.mean(assembled[::2, :, :], axis=0))
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, np.mean(assembled[1::2, :, :], axis=0))
+
+    def testPsEvenOn(self):
+        self.proc.pp_mode = PumpProbeMode.EVEN_TRAIN_ON
+
+        # test off will not be acknowledged without on
+        data = self._gen_data(1001)  # off
+        processed = data['processed']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+        data = self._gen_data(1002)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(
+            np.mean(assembled[::2, :, :], axis=0), self.proc._prev_on)
+        prev_on = self.proc._prev_on
+
+        data = self._gen_data(1003)  # off
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(self.proc._prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, np.mean(assembled[1::2, :, :], axis=0))
+
+    def testPsOddOn(self):
+        self.proc.pp_mode = PumpProbeMode.ODD_TRAIN_ON
+
+        # test off will not be acknowledged without on
+        data = self._gen_data(1002)  # off
+        processed = data['processed']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+        data = self._gen_data(1003)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(
+            np.mean(assembled[::2, :, :], axis=0), self.proc._prev_on)
+        prev_on = self.proc._prev_on
+
+        data = self._gen_data(1004)  # off
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(self.proc._prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, np.mean(assembled[1::2, :, :], axis=0))
+
+
+class TestPumpProbeImageProcessorTs(unittest.TestCase):
+    def setUp(self):
+        self.proc = PumpProbeImageProcessor()
+        self.proc.on_indices = [0]
+        self.proc.off_indices = [0]
+        self.proc.threshold_mask = (-np.inf, np.inf)
+
+    def _gen_data(self, tid):
+        imgs = np.random.randn(2, 2)
+        data = {'tid': tid,
+                'processed': ProcessedData(tid, imgs),
+                'assembled': imgs}
+        return data
+
+    def testPsUndefined(self):
+        self.proc.pp_mode = PumpProbeMode.UNDEFINED
+
+        data = self._gen_data(1001)
+        processed = data['processed']
+
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+    def testPsPredefinedOff(self):
+        self.proc.pp_mode = PumpProbeMode.PRE_DEFINED_OFF
+
+        data = self._gen_data(1001)
+        processed = data['processed']
+        assembled = data['assembled']
+
+        self.proc.process(data)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, assembled)
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, np.zeros((2, 2)))
+
+    def testPsEvenOn(self):
+        self.proc.pp_mode = PumpProbeMode.EVEN_TRAIN_ON
+
+        # test off will not be acknowledged without on
+        data = self._gen_data(1001)  # off
+        processed = data['processed']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+        data = self._gen_data(1002)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(assembled, self.proc._prev_on)
+
+        # test when two 'on' are received successively
+        data = self._gen_data(1004)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(assembled, self.proc._prev_on)
+        prev_on = self.proc._prev_on
+
+        data = self._gen_data(1005)  # off
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(self.proc._prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, assembled)
+
+    def testTsOddOn(self):
+        self.proc.pp_mode = PumpProbeMode.ODD_TRAIN_ON
+
+        # test off will not be acknowledged without on
+        data = self._gen_data(1002)  # off
+        processed = data['processed']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+
+        data = self._gen_data(1003)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(assembled, self.proc._prev_on)
+
+        data = self._gen_data(1005)  # on
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(processed.pp.on_image_mean)
+        self.assertIsNone(processed.pp.off_image_mean)
+        np.testing.assert_array_almost_equal(assembled, self.proc._prev_on)
+        prev_on = self.proc._prev_on
+
+        data = self._gen_data(1006)  # off
+        processed = data['processed']
+        assembled = data['assembled']
+        self.proc.process(data)
+        self.assertIsNone(self.proc._prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.on_image_mean, prev_on)
+        np.testing.assert_array_almost_equal(
+            processed.pp.off_image_mean, assembled)
