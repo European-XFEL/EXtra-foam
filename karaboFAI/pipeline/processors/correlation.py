@@ -64,34 +64,41 @@ class CorrelationProcessor(CompositeProcessor):
 
         processed = data['processed']
 
-        if self.fom_type == CorrelationFom.PUMP_PROBE_FOM:
+        if self.fom_type == CorrelationFom.PUMP_PROBE:
             fom = processed.pp.fom
+            if fom is None:
+                raise ProcessingError(
+                    "[Correlation] Pump-probe result is not available!")
 
         elif self.fom_type == CorrelationFom.ROI1:
             fom = processed.roi.roi1_fom
+            if fom is None:
+                raise ProcessingError("[Correlation] ROI1 is not activated!")
 
         elif self.fom_type == CorrelationFom.ROI2:
             fom = processed.roi.roi2_fom
+            if fom is None:
+                raise ProcessingError("[Correlation] ROI2 is not activated!")
 
-        elif self.fom_type == CorrelationFom.ROI_SUM:
+        elif self.fom_type in (CorrelationFom.ROI_SUM, CorrelationFom.ROI_SUB):
             fom1 = processed.roi.roi1_fom
+            if fom1 is None:
+                raise ProcessingError("[Correlation] ROI1 is not activated!")
             fom2 = processed.roi.roi2_fom
-            if fom1 is None or fom2 is None:
-                return
-            fom = fom1 + fom2
+            if fom2 is None:
+                raise ProcessingError("[Correlation] ROI2 is not activated!")
 
-        elif self.fom_type == CorrelationFom.ROI_SUB:
-            fom1 = processed.roi.roi1_fom
-            fom2 = processed.roi.roi2_fom
-            if fom1 is None or fom2 is None:
-                return
-            fom = fom1 - fom2
+            if self.fom_type == CorrelationFom.ROI_SUM:
+                fom = fom1 + fom2
+            else:
+                fom = fom1 - fom2
 
         elif self.fom_type == CorrelationFom.AZIMUTHAL_INTEG_MEAN:
             momentum = processed.ai.momentum
             if momentum is None:
                 raise ProcessingError(
-                    "Azimuthal integration result is not available!")
+                    "[Correlation] Azimuthal integration result is not "
+                    "available!")
             intensity = processed.ai.intensity_mean
 
             # calculate figure-of-merit
@@ -100,24 +107,21 @@ class CorrelationProcessor(CompositeProcessor):
 
         else:
             name = str(self.fom_type).split(".")[-1]
-            raise ProcessingError(f"Unknown FOM name: {name}!")
+            raise ProcessingError(f"[Correlation] Unknown FOM name: {name}!")
 
         if fom is None:
             return
 
+        # set the FOM and correlator values
         processed.correlation.fom = fom
-
-        # get the correlator values
-
-        for i in range(1, len(self.device_ids)+1):
-            device_id = self.device_ids[i-1]
-            if not device_id:
+        for i, (dev_id, ppt) in enumerate(zip(self.device_ids,
+                                              self.properties)):
+            if not dev_id or not ppt:
                 continue
 
-            ppt = self.properties[i-1]
-            if not ppt:
-                continue
+            try:
+                ret = _get_slow_data(processed.tid, data['raw'], dev_id, ppt)
+            except ProcessingError as e:
+                raise ProcessingError(f"[Correlation] {str(e)}")
 
-            value = _get_slow_data(processed.tid, data['raw'], device_id, ppt)
-
-            setattr(processed.correlation, f'correlator{i}', value)
+            setattr(processed.correlation, f'correlator{i+1}', ret)

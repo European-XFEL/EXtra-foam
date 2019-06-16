@@ -27,12 +27,12 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
     _available_foms = OrderedDict({
         "": CorrelationFom.UNDEFINED,
-        "pump-probe FOM": CorrelationFom.PUMP_PROBE_FOM,
+        "pump-probe": CorrelationFom.PUMP_PROBE,
         "ROI1 - ROI2": CorrelationFom.ROI_SUB,
         "ROI1": CorrelationFom.ROI1,
         "ROI2": CorrelationFom.ROI2,
         "ROI1 + ROI2": CorrelationFom.ROI_SUM,
-        "azimuthal integ mean": CorrelationFom.AZIMUTHAL_INTEG_MEAN,
+        "azimuthal integ": CorrelationFom.AZIMUTHAL_INTEG_MEAN,
     })
 
     def __init__(self, *args, **kwargs):

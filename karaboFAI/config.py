@@ -53,7 +53,7 @@ class BinMode(IntEnum):
 
 class CorrelationFom(IntEnum):
     UNDEFINED = 0
-    PUMP_PROBE_FOM = 1
+    PUMP_PROBE = 1
     ROI_SUB = 2  # ROI1 - ROI2
     ROI1 = 3
     ROI2 = 4
