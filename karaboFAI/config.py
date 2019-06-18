@@ -178,7 +178,11 @@ class _Config(dict):
             "PULSE_RESOLVED": False,
             "REQUIRE_GEOMETRY": False,
             "NUMBER_OF_MODULES": 1,
+            # BaslerCamera has quite a few different models with different
+            # module shapes and pixel sizes. Therefore, we do not apply the
+            # module shape check.
             "MODULE_SHAPE": [-1, -1],
+            # TODO: how to deal with the pixel size?
             "PIXEL_SIZE": 0.0022e-3,
         }
     }

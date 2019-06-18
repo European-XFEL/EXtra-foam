@@ -120,6 +120,7 @@ class ImageAssemblerFactory(ABC):
             try:
                 n_modules = config["NUMBER_OF_MODULES"]
                 module_shape = config["MODULE_SHAPE"]
+                # BaslerCamera has module shape [-1, -1]
                 if module_shape[0] > 0 and list(shape[-2:]) != module_shape:
                     raise ValueError(f"Expected module shape {module_shape}, "
                                      f"but get {shape[-2:]} instead!")
@@ -215,6 +216,7 @@ class ImageAssemblerFactory(ABC):
         @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
+            # (y, x)
             return data[src_name]["data.image.data"]
 
         @profiler("Prepare Module Data")
