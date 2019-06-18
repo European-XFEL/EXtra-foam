@@ -15,6 +15,7 @@ from threading import Lock
 import numpy as np
 
 from ..algorithms import mask_image
+
 from ..config import config
 
 from karaboFAI.cpp import xt_nanmean_images
@@ -231,20 +232,104 @@ class XasData(AbstractData):
 
 
 class BinData(AbstractData):
+    """Binning data model."""
+
+    # 1D binning
+    vec1_hist = None
+    fom1_hist = None
+    count1_hist = None
+    vec2_hist = None
+    fom2_hist = None
+    count2_hist = None
+
+    # 2D binning
+    fom12_hist = None
+    count12_hist = None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.analysis_type = None
-        self.count_x = None
-        self.count_y = None
-        self.center_x = None
-        self.center_y = None
-        self.x = None
-        self.y = None
-        # 1D curve in each x/y bin
-        self.data_x = None
-        self.data_y = None
-        self.fom = None
+        self.mode = None
+
+        self.reset1 = False
+        self.reset2 = False
+
+        # shared between 1D binning and 2D binning:
+        # 1. For 1D binning, they both are y coordinates;
+        # 2. For 2D binning, center1 is the x coordinate and center2 is the
+        #    y coordinate.
+        self.n_bins1 = 0
+        self.n_bins2 = 0
+        self.center1 = None
+        self.center2 = None
+
+        self.label1 = None
+        self.label2 = None
+
+        self.iloc1 = -1
+        self.fom1 = None
+        self.vec1 = None
+        self.iloc2 = -1
+        self.fom2 = None
+        self.vec2 = None
+
+        self.vec_x = None
+        self.vec_label = None
+
+        self.fom12 = None
+
+    def update_hist(self):
+        n1 = self.n_bins1
+        n2 = self.n_bins2
+
+        # reset and initialization
+        if self.reset1:
+            self.__class__.fom1_hist = np.zeros(n1, dtype=np.float32)
+            self.__class__.count1_hist = np.zeros(n1, dtype=np.uint32)
+            # Real initialization could take place later then valid vec
+            # is received.
+            self.__class__.vec1_hist = None
+
+        if self.reset2:
+            self.__class__.fom2_hist = np.zeros(n2, dtype=np.float32)
+            self.__class__.count2_hist = np.zeros(n2, dtype=np.uint32)
+            # Real initialization could take place later then valid vec
+            # is received.
+            self.__class__.vec2_hist = None
+
+        if (self.reset1 or self.reset2) and n1 > 0 and n2 > 0:
+            self.__class__.fom12_hist = np.zeros((n2, n1), dtype=np.float32)
+            self.__class__.count12_hist = np.zeros((n2, n1), dtype=np.float32)
+
+        # update history
+
+        if 0 <= self.iloc1 < n1:
+            self.__class__.count1_hist[self.iloc1] += 1
+            self.__class__.fom1_hist[self.iloc1] = self.fom1
+
+            if self.vec1 is not None:
+                if self.vec1_hist is None or len(self.vec_x) != self.vec1_hist.shape[0]:
+                    # initialization
+                    self.__class__.vec1_hist = np.zeros(
+                        (len(self.vec_x), n1), dtype=np.float32)
+
+                self.__class__.vec1_hist[:, self.iloc1] = self.vec1
+
+        if 0 <= self.iloc2 < n2:
+            self.__class__.count2_hist[self.iloc2] += 1
+            self.__class__.fom2_hist[self.iloc2] = self.fom2
+
+            if self.vec2 is not None:
+                if self.vec2_hist is None or len(self.vec_x) != self.vec2_hist.shape[0]:
+                    # initialization
+                    self.__class__.vec2_hist = np.zeros(
+                        (len(self.vec_x), n2), dtype=np.float32)
+
+                self.__class__.vec2_hist[:, self.iloc2] = self.vec2
+
+        if 0 <= self.iloc1 < n1 and 0 <= self.iloc2 < n2:
+            self.__class__.count12_hist[self.iloc2, self.iloc1] += 1
+            self.__class__.fom12_hist[self.iloc2, self.iloc1] = self.fom12
 
 
 class CorrelationData(AbstractData):
@@ -318,6 +403,9 @@ class AzimuthalIntegrationData(AbstractData):
         self.intensities_foms = None
         self.intensity = None
         self.intensity_fom = None
+
+        self.momentum_label = "Momentum transfer (1/A)"
+        self.intensity_label = "Scattering signal (arb.u.)"
 
 
 class PumpProbeData(AbstractData):
@@ -655,6 +743,7 @@ class ProcessedData:
     def __init__(self, tid, images, **kwargs):
         """Initialization."""
         self._tid = tid  # train ID
+
         self._image = ImageData(images, **kwargs)
 
         self.xgm = XgmData()
@@ -682,10 +771,11 @@ class ProcessedData:
     def n_pulses(self):
         return self._image.n_images
 
-    def update_hist(self):
+    def update(self):
         self.roi.update_hist(self._tid)
         self.pp.update_hist(self._tid)
         self.correlation.update_hist(self._tid)
+        self.bin.update_hist()
 
 
 class DataManagerMixin:

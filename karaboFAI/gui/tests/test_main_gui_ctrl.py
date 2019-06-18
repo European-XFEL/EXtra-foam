@@ -17,7 +17,7 @@ from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import ImageToolWindow
+from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, CurveNormalizer, AnalysisType, BinMode,
@@ -55,8 +55,10 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._stop_action = cls._actions[1]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
-        cls._xas_action = cls._actions[6]
-        cls._pulsed_ai_action = cls._actions[7]
+        cls._bin1d_action = cls._actions[6]
+        cls._bin2d_action = cls._actions[7]
+        cls._xas_action = cls._actions[8]
+        cls._pulsed_ai_action = cls._actions[9]
 
     @classmethod
     def tearDownClass(cls):
@@ -79,7 +81,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # test setting VIP pulse indices
         # --------------------------
         self._pulsed_ai_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
+        window = [w for w in self.gui._windows
+                  if isinstance(w, PulsedAzimuthalIntegrationWindow)][0]
 
         # default values
         vip_pulse_index1 = int(widget._vip_pulse_index1_le.text())
@@ -431,7 +434,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (
-            _N_PARAMS, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
         )
 
         widget = self.gui.bin_ctrl_widget
@@ -439,46 +442,99 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc = scheduler._bin_proc
         proc.update()
 
-        default_bin_range = tuple(float(v) for v in
-                                  _DEFAULT_BIN_RANGE.split(','))
+        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
 
         # test default
-        self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual(BinMode(0), proc.mode)
-        self.assertEqual("", proc.device_id_x)
-        self.assertEqual("", proc.property_x)
-        self.assertTupleEqual(default_bin_range, proc.bin_range_x)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_x)
-        self.assertEqual("", proc.device_id_y)
-        self.assertEqual("", proc.property_y)
-        self.assertEqual(default_bin_range, proc.bin_range_y)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_y)
+        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
+        self.assertEqual(BinMode.AVERAGE, proc._mode)
+        self.assertEqual("", proc._device_id1)
+        self.assertEqual("", proc._property1)
+        self.assertTupleEqual(default_bin_range, proc._range1)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
+        self.assertEqual("", proc._device_id2)
+        self.assertEqual("", proc._property2)
+        self.assertEqual(default_bin_range, proc._range2)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
 
-        for i in range(_N_PARAMS):
-            widget._table.cellWidget(i, 0).setCurrentIndex(1)
-            self.assertEqual("", widget._table.cellWidget(i, 1).currentText())
-            widget._table.cellWidget(i, 1).setCurrentIndex(1)
-
+        # test analysis type change
+        proc._reset1 = False
+        proc._reset2 = False
         widget._analysis_type_cb.setCurrentIndex(1)
         proc.update()
-        self.assertEqual(AnalysisType(AnalysisType.TRAIN_AZIMUTHAL_INTEG),
+        self.assertEqual(AnalysisType(AnalysisType.PUMP_PROBE),
                          proc.analysis_type)
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
-        # Now we should have device_ids and properties for both x and y
-        widget._table.cellWidget(0, 3).setText("0, 10")
-        widget._table.cellWidget(0, 4).setText("20")
-        widget._table.cellWidget(1, 3).setText("-1, 20")
-        widget._table.cellWidget(1, 4).setText("30")
+        # test device id and property change
+        proc._reset1 = False
+        proc._reset2 = False
+        # bin parameter 1
+        widget._table.cellWidget(0, 0).setCurrentIndex(1)
+        widget._table.cellWidget(0, 1).setCurrentIndex(1)
         proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertFalse(proc._reset2)
+        # bin parameter 2
+        widget._table.cellWidget(1, 0).setCurrentIndex(1)
+        widget._table.cellWidget(1, 1).setCurrentIndex(1)
+        proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
-        self.assertEqual(20, proc.n_bins_x)
-        self.assertTupleEqual((0, 10), proc.bin_range_x)
-        self.assertEqual(30, proc.n_bins_y)
-        self.assertTupleEqual((-1, 20), proc.bin_range_y)
+        # test bin range and number of bins change
+        proc._reset1 = False
+        proc._reset2 = False
+        proc._fom1_hist = None
+        proc._count1_hist = None
+        proc._vec1_hist = np.array([])
+        proc._fom2_hist = None
+        proc._count2_hist = None
+        proc._vec2_hist = np.array([])
+        proc._fom12_hist = None
+        proc._count12_hist = None
+        # bin parameter 1
+        widget._table.cellWidget(0, 3).setText("0, 10")  # range
+        widget._table.cellWidget(0, 4).setText("5")  # n_bins
+        proc.update()
+        self.assertEqual(5, proc._n_bins1)
+        self.assertTupleEqual((0, 10), proc._range1)
+        np.testing.assert_array_equal(np.array([0, 2, 4, 6, 8, 10]), proc._edge1)
+        np.testing.assert_array_equal(np.array([1, 3, 5, 7, 9]), proc._center1)
+        self.assertTrue(proc._reset1)
+        self.assertFalse(proc._reset2)
+        np.testing.assert_array_equal(np.zeros(5), proc._fom1_hist)
+        self.assertEqual(np.float32, proc._fom1_hist.dtype)
+        np.testing.assert_array_equal(np.zeros(5), proc._count1_hist)
+        self.assertEqual(np.uint32, proc._count1_hist.dtype)
+        self.assertIsNone(proc._vec1_hist)
+        # bin parameter 2
+        widget._table.cellWidget(1, 3).setText("-4, 4")  # range
+        widget._table.cellWidget(1, 4).setText("2")  # n_bins
+        proc.update()
+        self.assertEqual(2, proc._n_bins2)
+        self.assertTupleEqual((-4, 4), proc._range2)
+        np.testing.assert_array_equal(np.array([-4, 0, 4]), proc._edge2)
+        np.testing.assert_array_equal(np.array([-2, 2]), proc._center2)
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
+        np.testing.assert_array_equal(np.zeros(2), proc._fom2_hist)
+        self.assertEqual(np.float32, proc._fom2_hist.dtype)
+        np.testing.assert_array_equal(np.zeros(2), proc._count2_hist)
+        self.assertEqual(np.uint32, proc._count2_hist.dtype)
+        self.assertIsNone(proc._vec2_hist)
+        np.testing.assert_array_equal(np.zeros((2, 5)), proc._fom12_hist)
+        self.assertEqual(np.float32, proc._fom12_hist.dtype)
+        np.testing.assert_array_equal(np.zeros((2, 5)), proc._count12_hist)
+        self.assertEqual(np.uint32, proc._count12_hist.dtype)
 
-        # test reset
+        # test reset button
+        proc._reset1 = False
+        proc._reset2 = False
         widget._reset_btn.clicked.emit()
-        self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))
+        proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))

@@ -12,8 +12,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import (
-    CompositeProcessor, _get_slow_data, LeafProcessor, SharedProperty,
-    StopCompositionProcessing
+    CompositeProcessor, _get_slow_data
 )
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
@@ -21,195 +20,300 @@ from ...config import AnalysisType, BinMode
 from ...utils import profiler
 
 
+def compute_bin_edge(n_bins, bin_range):
+    edge = np.linspace(bin_range[0], bin_range[1], n_bins+1)
+    center = (edge[1:] + edge[:-1]) / 2.0
+    return edge, center
+
+
 class BinProcessor(CompositeProcessor):
     """BinProcessor class.
 
-    Bing data.
+    Bin data based on 1 and/or 2 scalar data.
 
     Attributes:
         analysis_type (AnalysisType): binning analysis type.
-        mode (BinMode): binning mode.
-        device_id_x (str): device ID x.
-        property_x (str): property of the device x.
-        n_bins_x (int): number of x bins.
-        bin_range_x (tuple): bin x range.
-        device_id_y (str): device ID y.
-        property_y (str): property of the device y.
-        n_bins_y (int): number of y bins.
-        bin_range_y (tuple): bin y range.
+        _mode (BinMode): binning mode.
+        _device_id1 (str): device ID 1.
+        _property1 (str): property of the device 1.
+        _device_id2 (str): device ID 2.
+        _property2 (str): property of the device 2.
+        _range1 (tuple): bin 1 range.
+        _range2 (tuple): bin 2 range.
+        _n_bins1 (int): number of 1 bins.
+        _n_bins2 (int): number of 2 bins.
+        _edge1 (numpy.array): bin edges for parameter 1.
+        _edge2 (numpy.array): bin edges for parameter 2.
+        _center1 (numpy.array): bin centers for parameter 1.
+        _center2 (numpy.array): bin centers for parameter 2.
+        _reset1 (bool): True for resetting history data for param1.
+        _reset2 (bool): True for resetting history data for param2.
+        _vec1_hist (numpy.array): vector heatmap for 1D binning with param1.
+            shape = (vector length, _n_bins1)
+        _fom1_hist (numpy.array): 1D FOM array for 1D binning with param1.
+            shape = (_n_bins1,)
+        _count1_hist (numpy.array): 1D count array for 1D binning with param1.
+            shape = (_n_bins1,)
+        _vec2_hist (numpy.array): vector heatmap for 1D binning with param2.
+            shape = (vector length, _n_bins2)
+        _fom2_hist (numpy.array): 1D FOM array for 1D binning with param2.
+            shape = (_n_bins2,)
+        _count2_hist (numpy.array): 1D count array for 1D binning with param2.
+            shape = (_n_bins2,)
+        _fom12_hist (numpy.array): FOM heatmap for 2D binning.
+            shape = (_n_bins2, _n_bins1)
+        _count12_hist (numpy.array): count heatmap for 2D binning.
+            shape = (_n_bins2, _n_bins1)
     """
-    analysis_type = SharedProperty()
-    mode = SharedProperty()
-    device_id_x = SharedProperty()
-    device_id_y = SharedProperty()
-    property_x = SharedProperty()
-    property_y = SharedProperty()
-    n_bins_x = SharedProperty()
-    n_bins_y = SharedProperty()
-    bin_range_x = SharedProperty()
-    bin_range_y = SharedProperty()
-
-    class Data:
-        def __init__(self):
-            self.edge_x = None
-            self.edge_y = None
-            self.center_x = None
-            self.center_y = None
-            self.count_x = None
-            self.count_y = None
-            self.data_x = None
-            self.data_y = None
 
     def __init__(self):
         super().__init__()
 
-        self._data = self.Data()
+        self.analysis_type = None
 
-        self.add(Bin1DProcessorX())
-        self.add(Bin1DProcessorY())
-        self.add(Bin2DProcessor())
+        self._mode = None
+
+        self._device_id1 = ''
+        self._device_id2 = ''
+        self._property1 = ''
+        self._property2 = ''
+
+        self._range1 = None
+        self._range2 = None
+        self._n_bins1 = None
+        self._n_bins2 = None
+        self._edge1 = None
+        self._edge2 = None
+        self._center1 = None
+        self._center2 = None
+
+        self._reset1 = False
+        self._reset2 = False
+
+        # 1D binning
+        self._vec1_hist = None
+        self._fom1_hist = None
+        self._count1_hist = None
+        self._vec2_hist = None
+        self._fom2_hist = None
+        self._count2_hist = None
+
+        # 2D binning
+        self._fom12_hist = None
+        self._count12_hist = None
 
     def update(self):
         """Override."""
         cfg = self._meta.get_all(mt.BIN_PROC)
 
-        reset = False
+        if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
+            # reset when analysis type changes
+            self._reset1 = True
+            self._reset2 = True
+
+        mode = BinMode(int(cfg['mode']))
+        if mode != self._mode:
+            # reset when bin mode changes
+            self._reset1 = True
+            self._reset2 = True
+            self._mode = mode
+
+        device_id1 = cfg['device_id1']
+        property1 = cfg['property1']
+        if device_id1 != self._device_id1 or property1 != self._property1:
+            self._device_id1 = device_id1
+            self._property1 = property1
+            # reset when slow data source changes
+            self._reset1 = True
+
+        device_id2 = cfg['device_id2']
+        property2 = cfg['property2']
+        if device_id2 != self._device_id2 or property2 != self._property2:
+            self._device_id2 = device_id2
+            self._property2 = property2
+            # reset when slow data source changes
+            self._reset2 = True
+
+        n_bins1 = int(cfg['n_bins1'])
+        bin_range1 = self.str2tuple(cfg['bin_range1'])
+        if n_bins1 != self._n_bins1 or bin_range1 != self._range1:
+            self._edge1, self._center1 = compute_bin_edge(n_bins1, bin_range1)
+            self._n_bins1 = n_bins1
+            self._range1 = bin_range1
+            # reset when number of bins and bin range change
+            self._reset1 = True
+
+        n_bins2 = int(cfg['n_bins2'])
+        bin_range2 = self.str2tuple(cfg['bin_range2'])
+        if n_bins2 != self._n_bins2 or bin_range2 != self._range2:
+            self._edge2, self._center2 = compute_bin_edge(n_bins2, bin_range2)
+            self._n_bins2 = n_bins2
+            self._range2 = bin_range2
+            # reset when number of bins and bin range change
+            self._reset2 = True
+
         if 'reset' in cfg:
             self._meta.delete(mt.BIN_PROC, 'reset')
-            reset = True
+            # reset when commanded by the GUI
+            self._reset1 = True
+            self._reset2 = True
 
-        self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
+        # reset history data
 
-        self.mode = AnalysisType(int(cfg['mode']))
+        if self._reset1:
+            self._fom1_hist = np.zeros(self._n_bins1, dtype=np.float32)
+            self._count1_hist = np.zeros(self._n_bins1, dtype=np.uint32)
+            # Real initialization could take place later then valid vec
+            # is received.
+            self._vec1_hist = None
 
-        self.device_id_x = cfg['device_id_x']
-        self.property_x = cfg['property_x']
-        self.device_id_y = cfg['device_id_y']
-        self.property_y = cfg['property_y']
+        if self._reset2:
+            self._fom2_hist = np.zeros(self._n_bins2, dtype=np.float32)
+            self._count2_hist = np.zeros(self._n_bins2, dtype=np.uint32)
+            # Real initialization could take place later then valid vec
+            # is received.
+            self._vec2_hist = None
 
-        n_bins_x = int(cfg['n_bins_x'])
-        bin_range_x = self.str2tuple(cfg['bin_range_x'])
-        n_bins_y = int(cfg['n_bins_y'])
-        bin_range_y = self.str2tuple(cfg['bin_range_y'])
+        if self._reset1 or self._reset2:
+            self._fom12_hist = np.zeros((self._n_bins2, self._n_bins1),
+                                        dtype=np.float32)
+            self._count12_hist = np.zeros((self._n_bins2, self._n_bins1),
+                                          dtype=np.uint32)
 
-        if reset or n_bins_x != self.n_bins_x \
-                or bin_range_x != self.bin_range_x:
-            edge_x = np.linspace(bin_range_x[0], bin_range_x[1], n_bins_x+1)
-
-            self._data.edge_x = edge_x
-            self._data.center_x = (edge_x[1:] + edge_x[:-1])/2.0
-            self._data.count_x = np.zeros(n_bins_x)
-            self._data.data_x = None
-
-            self.n_bins_x = n_bins_x
-            self.bin_range_x = bin_range_x
-
-        if reset or n_bins_y != self.n_bins_y \
-                or bin_range_y != self.bin_range_y:
-
-            edge_y = np.linspace(bin_range_y[0], bin_range_y[1], n_bins_y+1)
-
-            self._data.edge_y = edge_y
-            self._data.center_y = (edge_y[1:] + edge_y[:-1])/2.0
-            self._data.count_y = np.zeros(n_bins_y)
-            self._data.data_y = None
-
-            self.n_bins_y = n_bins_y
-            self.bin_range_y = bin_range_y
-
-
-class Bin1DProcessorX(LeafProcessor):
-    """Bin data based to the x parameter."""
-    @profiler("1D-bin X Processor")
+    @profiler("Binning Processor")
     def process(self, data):
-        if not self.device_id_x or not self.property_x:
-            return
-        edge = self._data.edge_x
-        center = self._data.center_x
-        count = self._data.count_x
-        data_x = self._data.data_x
-
-        # get the group value
-        device_id = self.device_id_x
-        ppt = self.property_x
-
         processed = data['processed']
 
-        group_v = _get_slow_data(processed.tid, data['raw'], device_id, ppt)
+        # Guarantee initialization and reset arrays in the main process.
 
-        index = np.digitize(group_v, edge)
-        if len(center) >= index > 0:
-            count[index-1] += 1
+        processed.mode = self._mode
 
-            if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
-                new_value = processed.ai.intensity
-                x = processed.ai.momentum
-            else:
-                return
+        processed.bin.n_bins1 = self._n_bins1
+        processed.bin.center1 = self._center1
+        processed.bin.edge1 = self._edge1
+        processed.bin.label1 = self._device_id1 + ":" + self._property1
+        processed.bin.reset1 = self._reset1
+        self._reset1 = False
 
-            if new_value is None:
-                return
+        processed.bin.n_bins2 = self._n_bins2
+        processed.bin.center2 = self._center2
+        processed.bin.edge2 = self._edge2
+        processed.bin.label2 = self._device_id2 + ":" + self._property2
+        processed.bin.reset2 = self._reset2
+        self._reset2 = False
 
-            if data_x is None:
-                # initialization
-                data_x = np.zeros((len(count), len(new_value)))
-                self._data.data_x = data_x
-                data_x[index-1][:] = new_value
-            else:
-                data_x[index-1][:] += new_value
+        # Try to get FOM first.
 
-            processed.bin.center_x = center
-            processed.bin.count_x = count
-            processed.bin.x = x
-            processed.bin.data_x = data_x
-
-
-class Bin1DProcessorY(LeafProcessor):
-    """Bin data based to the y parameter."""
-    @profiler("1D-bin Y processor")
-    def process(self, data):
-        if not self.device_id_y or not self.property_y:
+        if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
+            vec_x = processed.ai.momentum
+            vec = processed.ai.intensity
+            vec_label = processed.ai.momentum_label
+            fom = processed.ai.intensity_fom
+        elif self.analysis_type == AnalysisType.PUMP_PROBE:
+            vec_x = processed.pp.x
+            vec = processed.pp.norm_on_off_ma
+            fom = processed.pp.fom
+            vec_label = 'Pump-probe'  # FIXME
+        else:
             return
 
-        edge = self._data.edge_y
-        center = self._data.center_y
-        count = self._data.count_y
-        data_y = self._data.data_y
+        if fom is None:
+            # If it is not available, we stop getting slow data.
+            return
 
-        # get the group value
-        device_id = self.device_id_y
-        ppt = self.property_y
+        # try to get slow data.
 
-        processed = data['processed']
+        iloc1 = -1
+        iloc2 = -1
+        error_messages = []
+        if self._device_id1 and self._property1:
+            try:
+                slow1 = _get_slow_data(processed.tid,
+                                       data['raw'],
+                                       self._device_id1,
+                                       self._property1)
 
-        group_v = _get_slow_data(processed.tid, data['raw'], device_id, ppt)
+                iloc1 = np.searchsorted(self._edge1, slow1) - 1
+            except ProcessingError as e:
+                error_messages.append(repr(e))
 
-        index = np.digitize(group_v, edge)
-        if len(center) >= index > 0:
-            count[index-1] += 1
+        if self._device_id2 and self._property2:
+            try:
+                slow2 = _get_slow_data(processed.tid,
+                                       data['raw'],
+                                       self._device_id2,
+                                       self._property2)
 
-            if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
-                new_value = processed.ai.intensity
-                y = processed.ai.momentum
-            else:
-                return
+                iloc2 = np.searchsorted(self._edge2, slow2) - 1
+            except ProcessingError as e:
+                error_messages.append(repr(e))
 
-            if new_value is None:
-                return
+        # 1d binning
 
-            if data_y is None:
-                # initialization
-                data_y = np.zeros((len(count), len(new_value)))
-                self._data.data_y = data_y
-                data_y[index-1][:] = new_value
-            else:
-                data_y[index-1][:] += new_value
+        if 0 <= iloc1 < self._n_bins1:
+            self._count1_hist[iloc1] += 1
+            if self._mode == BinMode.ACCUMULATE:
+                self._fom1_hist[iloc1] += fom
+            else:  # self._mode == BinMode.AVERAGE
+                self._fom1_hist[iloc1] += \
+                    (fom - self._fom1_hist[iloc1]) / self._count1_hist[iloc1]
 
-            processed.bin.center_y = center
-            processed.bin.count_y = count
-            processed.bin.y = y
-            processed.bin.data_y = data_y
+            processed.bin.iloc1 = iloc1
+            processed.bin.fom1 = self._fom1_hist[iloc1]
 
+            if vec is not None:
+                if self._vec1_hist is None or len(vec_x) != self._vec1_hist.shape[0]:
+                    # initialization
+                    self._vec1_hist = np.zeros(
+                        (len(vec_x), self._n_bins1), dtype=np.float32)
 
-class Bin2DProcessor(LeafProcessor):
-    pass
+                if self._mode == BinMode.ACCUMULATE:
+                    self._vec1_hist[:, iloc1] += vec
+                else:  # self._mode == BinMode.AVERAGE
+                    self._vec1_hist[:, iloc1] += \
+                        (vec - self._vec1_hist[:, iloc1]) / self._count1_hist[iloc1]
+
+                processed.bin.vec1 = self._vec1_hist[:, iloc1]
+
+        if 0 <= iloc2 < self._n_bins2:
+            self._count2_hist[iloc2] += 1
+
+            if self._mode == BinMode.ACCUMULATE:
+                self._fom2_hist[iloc2] += fom
+            else:  # self._mode == BinMode.AVERAGE
+                self._fom2_hist[iloc2] += \
+                    (fom - self._fom2_hist[iloc2]) / self._count2_hist[iloc2]
+
+            processed.bin.iloc2 = iloc2
+            processed.bin.fom2 = self._fom2_hist[iloc2]
+
+            if vec is not None:
+                if self._vec2_hist is None or len(vec_x) != self._vec2_hist.shape[0]:
+                    # initialization
+                    self._vec2_hist = np.zeros(
+                        (len(vec_x), self._n_bins2), dtype=np.float32)
+
+                if self._mode == BinMode.ACCUMULATE:
+                    self._vec2_hist[:, iloc2] += vec
+                else:  # self._mode == BinMode.AVERAGE
+                    self._vec2_hist[:, iloc2] += \
+                        (vec - self._vec2_hist[:, iloc2]) / self._count2_hist[iloc2]
+
+                processed.bin.vec2 = self._vec2_hist[:, iloc2]
+
+        # 2D binning
+        if 0 <= iloc1 < self._n_bins1 and 0 <= iloc2 < self._n_bins2:
+            self._count12_hist[iloc2, iloc1] += 1
+            if self._mode == BinMode.ACCUMULATE:
+                self._fom12_hist[iloc2, iloc1] += fom
+            else:  # self._mode == BinMode.AVERAGE
+                self._fom12_hist[iloc2, iloc1] += \
+                    (fom - self._fom12_hist[iloc2, iloc1]) / self._count12_hist[iloc2, iloc1]
+
+            processed.bin.fom12 = self._fom12_hist[iloc2, iloc1]
+
+        processed.bin.vec_x = vec_x
+        processed.bin.vec_label = vec_label
+
+        for msg in error_messages:
+            raise ProcessingError(msg)

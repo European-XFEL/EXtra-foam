@@ -22,7 +22,7 @@ from ...config import AnalysisType, BinMode
 _N_PARAMS = 2
 _DEFAULT_BIN_RANGE = "-1, 1"
 _DEFAULT_N_BINS = "10"
-_MAX_N_BINS = 20
+_MAX_N_BINS = 1e5
 
 
 class BinCtrlWidget(AbstractCtrlWidget):
@@ -30,12 +30,13 @@ class BinCtrlWidget(AbstractCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
+        "pump-probe": AnalysisType.PUMP_PROBE,
         "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
     })
 
     _bin_modes = OrderedDict({
+        "average": BinMode. AVERAGE,
         "accumulcate": BinMode.ACCUMULATE,
-        # "average": BinMode. AVERAGE,
     })
 
     def __init__(self, *args, **kwargs):
@@ -101,7 +102,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
             'Value range',
             '# of bins'
         ])
-        table.setVerticalHeaderLabels(['x', 'y'])
+        table.setVerticalHeaderLabels(['1', '2'])
         for i_row in range(n_row):
             combo = QtGui.QComboBox()
             for t in _DATA_CATEGORIES.keys():

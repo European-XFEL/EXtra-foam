@@ -13,8 +13,10 @@ All rights reserved.
 """
 import numpy as np
 
+from PyQt5 import QtCore, QtGui
+
 from .. import pyqtgraph as pg
-from ..pyqtgraph import GraphicsObject, QtCore, QtGui
+from ..pyqtgraph import GraphicsObject
 
 from ..misc_widgets import make_pen
 from ...config import config, MaskState

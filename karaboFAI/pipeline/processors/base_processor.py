@@ -215,6 +215,10 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         return True
 
     def _update_analysis(self, analysis_type):
+        """Update analysis type.
+
+        :return: True if the analysis type has changed and False for not.
+        """
         if not isinstance(analysis_type, AnalysisType):
             raise ProcessingError(
                 f"Unknown analysis type: {str(analysis_type)}")
@@ -233,6 +237,9 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
 
             self.analysis_type = analysis_type
+            return True
+
+        return False
 
     @abstractmethod
     def run_once(self, processed):

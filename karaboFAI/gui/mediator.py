@@ -212,21 +212,17 @@ class Mediator(DataManagerMixin, QObject):
         # index, device ID, property name, bin_range, number of bins,
         # where the index starts from 1
         index, device_id, ppt, bin_range, n_bins = value
-        if index == 1:
-            suffix = '_x'
-        else:
-            suffix = '_y'
 
-        self._meta.set(mt.BIN_PROC, f'device_id{suffix}', device_id)
-        self._meta.set(mt.BIN_PROC, f'property{suffix}', ppt)
-        self._meta.set(mt.BIN_PROC, f'bin_range{suffix}', str(bin_range))
-        self._meta.set(mt.BIN_PROC, f'n_bins{suffix}', n_bins)
-
-    def onBinReset(self):
-        self._meta.set(mt.BIN_PROC, "reset", 1)
+        self._meta.set(mt.BIN_PROC, f'device_id{index}', device_id)
+        self._meta.set(mt.BIN_PROC, f'property{index}', ppt)
+        self._meta.set(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
+        self._meta.set(mt.BIN_PROC, f'n_bins{index}', n_bins)
 
     def onBinAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.BIN_PROC, "analysis_type", int(value))
 
     def onBinModeChange(self, value: IntEnum):
         self._meta.set(mt.BIN_PROC, "mode", int(value))
+
+    def onBinReset(self):
+        self._meta.set(mt.BIN_PROC, "reset", 1)

@@ -9,9 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import (
-    LeafProcessor, CompositeProcessor, SharedProperty,
-)
+from .base_processor import CompositeProcessor, SharedProperty
 from ...config import AnalysisType
 from ...metadata import Metadata as mt
 

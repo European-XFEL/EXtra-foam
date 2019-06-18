@@ -46,6 +46,7 @@ class AnalysisType(IntEnum):
     ROI1_DIV_ROI2 = 5
     TRAIN_AZIMUTHAL_INTEG = 6
     PULSE_AZIMUTHAL_INTEG = 7
+    PUMP_PROBE = 101
 
 
 class BinMode(IntEnum):

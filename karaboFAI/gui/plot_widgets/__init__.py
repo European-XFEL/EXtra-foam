@@ -1,9 +1,9 @@
 from .image_view import (
-    AssembledImageView, BinImageView, ImageAnalysis,
+    AssembledImageView, Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
     PumpProbeImageView, RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
-    BinWidget, BinCountWidget,
+    Bin1dHist,
     CorrelationWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget,
     RoiValueMonitor,
@@ -15,7 +15,8 @@ from .plot_widgets import (
 # add image view widgets
 __all__ = ([
     "AssembledImageView",
-    "BinImageView",
+    "Bin1dHeatmap",
+    "Bin2dHeatmap",
     "ImageAnalysis",
     "PumpProbeImageView",
     "RoiImageView",
@@ -24,8 +25,7 @@ __all__ = ([
 
 # add plot widgets
 __all__.extend([
-    "BinCountWidget",
-    "BinWidget",
+    "Bin1dHist",
     "CorrelationWidget",
     "PumpProbeOnOffWidget",
     "PumpProbeFomWidget",
