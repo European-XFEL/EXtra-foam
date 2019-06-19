@@ -365,8 +365,6 @@ class AssembledImageView(ImageView):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
-
     def update(self, data):
         """Override."""
         self.setImage(data.image.masked_mean,
@@ -400,8 +398,6 @@ class PumpProbeImageView(ImageView):
         self._diff = diff
         if self._roi:
             self._plot_widget.removeItem(self._mask_item)
-
-        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
