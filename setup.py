@@ -123,7 +123,8 @@ setup(
     entry_points={
         'console_scripts': [
             'karaboFAI=karaboFAI.services:application',
-            'karaboFAI-kill=karaboFAI.services:kill_application'
+            'karaboFAI-kill=karaboFAI.services:kill_application',
+            'karaboFAI-stream=karaboFAI.services:karaboFAI_stream'
         ],
     },
     ext_modules=ext_modules,

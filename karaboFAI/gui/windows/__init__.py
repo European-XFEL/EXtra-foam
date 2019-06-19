@@ -1,4 +1,5 @@
 from .correlation_w import CorrelationWindow
+from .file_stream_controller_w import FileStreamControllerWindow
 from .image_tool import ImageToolWindow
 from .overview_w import OverviewWindow
 from .pulsed_azimuthal_integration_w import PulsedAzimuthalIntegrationWindow
@@ -17,6 +18,7 @@ __all__ = [
     "PumpProbeWindow",
     "RoiWindow",
     'XasWindow',
+    "FileStreamControllerWindow",
 ]
 
 

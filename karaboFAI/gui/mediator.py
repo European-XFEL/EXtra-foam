@@ -27,11 +27,6 @@ class Mediator(DataManagerMixin, QObject):
     Mediator() is instantiated.
     """
 
-    start_file_server_sgn = pyqtSignal()
-    stop_file_server_sgn = pyqtSignal()
-    file_server_started_sgn = pyqtSignal()
-    file_server_stopped_sgn = pyqtSignal()
-
     vip_pulse_index1_sgn = pyqtSignal(int)
     vip_pulse_index2_sgn = pyqtSignal(int)
     # When pulsed azimuthal integration window is opened, it first connect
@@ -65,9 +60,6 @@ class Mediator(DataManagerMixin, QObject):
 
     def onBridgeEndpointChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "endpoint", value)
-
-    def onDataFolderChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "data_folder", value)
 
     def onDetectorSourceNameChange(self, value: str):
         self._meta.set(mt.DATA_SOURCE, "detector_source_name", value)
