@@ -28,8 +28,8 @@ from ...logger import logger
 class ImageView(QtGui.QWidget):
     """ImageView class.
 
-    A widget used for displaying a single image. Two ROI widgets are
-    embedded in this widget.
+    A widget used for displaying a single image. Four ROIs and one MaskItem
+    are included in this widget by default.
 
     Note: it is different from the ImageView in pyqtgraph!
     """
@@ -37,14 +37,23 @@ class ImageView(QtGui.QWidget):
     ROI_Y0 = 50
     ROI_SIZE0 = (100, 100)
 
-    def __init__(self, *, level_mode='mono',
-                 hide_axis=True, color_map=None, parent=None):
+    def __init__(self, *,
+                 level_mode='mono',
+                 has_mask=True,
+                 has_roi=True,
+                 hide_axis=True,
+                 color_map=None,
+                 parent=None):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
+        :param bool has_mask: True for adding a MaskItem on top of the
+            ImageItem.
+        :param bool has_roi: True for adding 4 ROIs on top of the other
+            PlotItems.
         :param bool hide_axis: True for hiding left and bottom axes.
         """
         super().__init__(parent=parent)
@@ -56,19 +65,27 @@ class ImageView(QtGui.QWidget):
         self._mediator = Mediator()
 
         self._rois = []
-        self._initializeROIs()
+        if has_roi:
+            self._initializeROIs()
 
         self._plot_widget = PlotWidget()
         if hide_axis:
             self._plot_widget.hideAxis()
 
         self._image_item = pg.ImageItem()
-        self._mask_item = MaskItem(self._image_item)
+        if has_mask:
+            self._mask_item = MaskItem(self._image_item)
+        else:
+            self._mask_item = None
 
         self._plot_widget.addItem(self._image_item)
-        self._plot_widget.addItem(self._mask_item)
+
+        if self._mask_item is not None:
+            self._plot_widget.addItem(self._mask_item)
+
         for roi in self._rois:
             self._plot_widget.addItem(roi)
+
         self.invertY(True)
         self.setAspectLocked(True)
 
@@ -149,7 +166,8 @@ class ImageView(QtGui.QWidget):
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        self._mask_item.onSetImage()
+        if self._mask_item is not None:
+            self._mask_item.onSetImage()
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -453,9 +471,7 @@ class RoiImageView(ImageView):
     """
     def __init__(self, rank, **kwargs):
         """Initialization."""
-        super().__init__(**kwargs)
-
-        self._plot_widget.removeItem(self._mask_item)
+        super().__init__(has_mask=False, has_roi=False, **kwargs)
 
         self._rank = rank
 
@@ -482,11 +498,9 @@ class BinImageView(ImageView):
 
         :param int index: index of bins
         """
-        super().__init__(parent=parent)
+        super().__init__(has_mask=False, has_roi=False, parent=parent)
 
         self._index = index
-
-        self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
