@@ -66,9 +66,8 @@ class CorrelationProcessor(CompositeProcessor):
 
         if self.fom_type == CorrelationFom.PUMP_PROBE:
             fom = processed.pp.fom
-            if fom is None:
-                raise ProcessingError(
-                    "[Correlation] Pump-probe result is not available!")
+            # Don't raise an Exception here if fom is None since it does not
+            # work well if on- and off- pulses are in different trains.
 
         elif self.fom_type == CorrelationFom.ROI1:
             fom = processed.roi.roi1_fom

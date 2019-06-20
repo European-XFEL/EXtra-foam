@@ -33,9 +33,6 @@ class TestCorrelationProcessor(unittest.TestCase):
 
         # PUMP_PROBE_FOM
         self._proc.fom_type = CorrelationFom.PUMP_PROBE
-        processed.pp.fom = None
-        with self.assertRaisesRegex(ProcessingError, 'Correlation'):
-            self._proc.process(data)
         processed.pp.fom = 10
         self._proc.process(data)
         self.assertEqual(10, processed.correlation.fom)
