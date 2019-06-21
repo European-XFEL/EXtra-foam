@@ -15,6 +15,8 @@ import json
 import os.path as osp
 import collections
 
+import numpy as np
+
 from . import ROOT_PATH
 from .logger import logger
 
@@ -130,6 +132,8 @@ class _Config(dict):
     _detector_readonly_config = {
         # set all default value to None
         "DEFAULT": {
+            # image data dtype
+            "IMAGE_DTYPE": np.float32,
             # whether the data is pulse resolved
             "PULSE_RESOLVED": None,
             # whether geometry is required to assemble the detector

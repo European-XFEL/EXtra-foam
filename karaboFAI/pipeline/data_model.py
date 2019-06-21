@@ -475,7 +475,13 @@ class ImageData:
             applied.
     """
 
+    if 'IMAGE_DTYPE' in config:
+        _DEFAULT_DTYPE = config['IMAGE_DTYPE']
+    else:
+        _DEFAULT_DTYPE = np.float32
+
     def __init__(self, data, *,
+                 reference=None,
                  background=0.0,
                  threshold_mask=(-np.inf, np.inf),
                  ma_window=1,
@@ -484,6 +490,7 @@ class ImageData:
         """Initialization.
 
         :param numpy.ndarray data: image data in a train.
+        :param numpy.ndarray None: reference image.
         :param float background: a uniform background value.
         :param tuple threshold_mask: threshold mask.
         :param int ma_window: moving average window size.
@@ -500,9 +507,9 @@ class ImageData:
 
         self._pixel_size = config['PIXEL_SIZE']
 
-        if data.dtype != np.float32:
+        if data.dtype != self._DEFAULT_DTYPE:
             # dtype of the incoming data could be integer
-            images = data.astype(np.float32)
+            images = data.astype(self._DEFAULT_DTYPE)
         else:
             images = data
 
@@ -529,9 +536,7 @@ class ImageData:
         # self._masked_mean does not share memory with self._mean
         self._masked_mean = mask_by_threshold(self._mean, *threshold_mask)
 
-        # TODO: design how to deal with reference image
-        self._ref = None
-        self._masked_ref = None
+        self._ref = reference
 
         self._bkg = background
 
@@ -543,6 +548,10 @@ class ImageData:
         if self.pulse_resolved:
             return self._images
         return self._mean
+
+    @property
+    def reference(self):
+        return self._ref
 
     @property
     def pixel_size(self):
@@ -583,14 +592,6 @@ class ImageData:
     @property
     def masked_mean(self):
         return self._masked_mean
-
-    @property
-    def ref(self):
-        return self._ref
-
-    @property
-    def masked_ref(self):
-        return self._masked_ref
 
 
 class ProcessedData:

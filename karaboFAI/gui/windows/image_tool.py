@@ -506,10 +506,10 @@ class ImageToolWindow(AbstractWindow):
             self.updateImage)
 
         self._image_ctrl_widget.set_ref_btn.clicked.connect(
-            self._image_view.setImageRef)
+            self._image_view.setReferenceImage)
 
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
-            self._image_view.removeImageRef)
+            self._image_view.removeReferenceImage)
 
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)

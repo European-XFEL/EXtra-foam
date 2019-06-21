@@ -16,6 +16,7 @@ from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
 from ...algorithms import nanmean_axis0_para, mask_by_threshold
 from ...metadata import Metadata as mt
+from ...command import CommandProxy
 from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
@@ -176,10 +177,14 @@ class GeneralImageProcessor(LeafProcessor):
     The GeneralImageProcessor manages the lifetime of raw image data.
     Construct the processed data with index filter applied.
     """
+
     def __init__(self):
         super().__init__()
 
         self._raw_data = _RawImageData()
+        self._reference = None
+
+        self._cmd_proxy = CommandProxy()
 
     @profiler("Image Processor")
     def process(self, data):
@@ -205,8 +210,17 @@ class GeneralImageProcessor(LeafProcessor):
         else:
             keep = None
 
+        # update the reference image
+        ref = self._cmd_proxy.get_ref_image()
+        if ref is not None:
+            if isinstance(ref, np.ndarray):
+                self._reference = ref
+            else:
+                self._reference = None
+
         data['processed'] = ProcessedData(
             data['tid'], self._raw_data.images,
+            reference=self._reference,
             background=self.background,
             threshold_mask=self.threshold_mask,
             ma_window=self._raw_data.ma_window,
@@ -225,6 +239,7 @@ class PumpProbeImageProcessor(LeafProcessor):
     Attributes:
         _prev_on (None/numpy.ndarray): the most recent on-pulse image.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -250,7 +265,7 @@ class PumpProbeImageProcessor(LeafProcessor):
                 on_image = processed.image.masked_mean
 
             if mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_image = processed.image.masked_ref
+                off_image = processed.image.reference
                 if off_image is None:
                     off_image = np.zeros_like(on_image)
             else:

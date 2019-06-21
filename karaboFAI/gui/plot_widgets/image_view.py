@@ -19,6 +19,7 @@ from .plot_items import ImageItem, MaskItem
 from .roi import RectROI
 from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
+from ...command import CommandProxy
 from ...algorithms import quick_min_max
 from ...config import config
 from ...ipc import redis_connection
@@ -250,6 +251,8 @@ class ImageAnalysis(ImageView):
 
         self._image_data = None
 
+        self._cmd_proxy = CommandProxy()
+
     def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
 
@@ -261,15 +264,13 @@ class ImageAnalysis(ImageView):
 
         self.setImage(image_data.masked)
 
-    def setImageRef(self):
+    def setReferenceImage(self):
         """Set the displayed image as reference image."""
-        if self._image_data is not None:
-            self._image_data.set_reference()
+        self._cmd_proxy.set_ref_image(self._image)
 
-    def removeImageRef(self):
+    def removeReferenceImage(self):
         """Remove reference image."""
-        if self._image_data is not None:
-            self._image_data.remove_reference()
+        self._cmd_proxy.remove_ref_image()
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):

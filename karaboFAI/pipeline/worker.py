@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import multiprocessing as mp
-from queue import Empty, Full, Queue
+from queue import Empty, Full
 import sys
 import traceback
 import time
