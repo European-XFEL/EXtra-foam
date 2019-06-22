@@ -6,8 +6,7 @@ import numpy as np
 
 from karaboFAI.gui import mkQApp, pyqtgraph
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
-from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem
-from karaboFAI.gui.plot_widgets.roi import RectROI
+from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
 from karaboFAI.gui.plot_widgets.image_view import ImageView, ImageAnalysis
 from karaboFAI.logger import logger
 
