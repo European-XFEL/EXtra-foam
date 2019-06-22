@@ -21,7 +21,6 @@ from ..mediator import Mediator
 from ...command import CommandProxy
 from ...algorithms import quick_min_max
 from ...config import config
-from ...ipc import redis_connection
 from ...logger import logger
 
 
@@ -39,7 +38,6 @@ class ImageView(QtGui.QWidget):
 
     def __init__(self, *,
                  level_mode='mono',
-                 has_mask=True,
                  has_roi=True,
                  hide_axis=True,
                  color_map=None,
@@ -50,8 +48,6 @@ class ImageView(QtGui.QWidget):
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
-        :param bool has_mask: True for adding a MaskItem on top of the
-            ImageItem.
         :param bool has_roi: True for adding 4 ROIs on top of the other
             PlotItems.
         :param bool hide_axis: True for hiding left and bottom axes.
@@ -73,15 +69,7 @@ class ImageView(QtGui.QWidget):
             self._plot_widget.hideAxis()
 
         self._image_item = pg.ImageItem()
-        if has_mask:
-            self._mask_item = MaskItem(self._image_item)
-        else:
-            self._mask_item = None
-
         self._plot_widget.addItem(self._image_item)
-
-        if self._mask_item is not None:
-            self._plot_widget.addItem(self._mask_item)
 
         for roi in self._rois:
             self._plot_widget.addItem(roi)
@@ -166,8 +154,6 @@ class ImageView(QtGui.QWidget):
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        if self._mask_item is not None:
-            self._mask_item.onSetImage()
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -233,8 +219,6 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem()
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(
-            self._mediator.onImageMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -251,6 +235,11 @@ class ImageAnalysis(ImageView):
         self._image_data = None
 
         self._cmd_proxy = CommandProxy()
+
+    def setImage(self, *args, **kwargs):
+        """Overload."""
+        super().setImage(*args, **kwargs)
+        self._mask_item.onSetImage()
 
     def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
@@ -295,8 +284,8 @@ class ImageAnalysis(ImageView):
         self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(bool)
-    def onDrawToggled(self, masking_state, checked):
-        self._mask_item.masking_state = masking_state
+    def onDrawToggled(self, state, checked):
+        self._mask_item.state = state
         self._image_item.drawing = checked
 
     @QtCore.pyqtSlot()
@@ -335,24 +324,16 @@ class ImageAnalysis(ImageView):
         try:
             image_mask = np.load(file_path)
             if image_mask.shape != self._image.shape:
-                msg = "The shape of image mask is different from the image!"
-                logger.error(msg)
+                logger.error(f"The shape of image mask {image_mask.shape} is "
+                             f"different from the image {self._image.shape}!")
                 return
 
             logger.info(f"Image mask loaded from {file_path}!")
 
             self._mask_item.loadMask(image_mask)
-            self._publish_image_mask(image_mask)
 
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {file_path}")
-
-    def _publish_image_mask(self, image_mask):
-        r = redis_connection()
-        buf = np.packbits(image_mask).tobytes()
-        h, w = image_mask.shape
-        r.publish("command:image_mask", str((2, 0, 0, w, h, w, h)))
-        r.publish("command:image_mask", buf)
 
 
 class AssembledImageView(ImageView):
@@ -396,8 +377,6 @@ class PumpProbeImageView(ImageView):
         self._on = on
         self._roi = roi
         self._diff = diff
-        if self._roi:
-            self._plot_widget.removeItem(self._mask_item)
 
     def update(self, data):
         """Override."""
@@ -467,7 +446,7 @@ class RoiImageView(ImageView):
     """
     def __init__(self, rank, **kwargs):
         """Initialization."""
-        super().__init__(has_mask=False, has_roi=False, **kwargs)
+        super().__init__(has_roi=False, **kwargs)
 
         self._rank = rank
 
@@ -494,7 +473,7 @@ class BinImageView(ImageView):
 
         :param int index: index of bins
         """
-        super().__init__(has_mask=False, has_roi=False, parent=parent)
+        super().__init__(has_roi=False, parent=parent)
 
         self._index = index
 

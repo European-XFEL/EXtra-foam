@@ -14,7 +14,7 @@ from threading import Lock
 
 import numpy as np
 
-from ..algorithms import nanmean_axis0_para, mask_by_threshold
+from ..algorithms import nanmean_axis0_para, mask_image
 from ..config import config
 
 
@@ -298,13 +298,14 @@ class RoiData(AbstractData):
 class AzimuthalIntegrationData(AbstractData):
     """Azimuthal integration data model.
 
-    momentum (numpy.ndarray): x-axis of azimuthal integration result.
-        Shape = (momentum,)
-    intensities (numpy.ndarray): y-axis of azimuthal integration result.
-        Shape = (pulse_index, intensity)
-    intensity_mean (numpy.ndarray): average of the y-axis of azimuthal
-        integration result over pulses. Shape = (intensity,)
-    pulse_fom
+    momentum (numpy.ndarray): azimuthal integration momentum.
+        Shape = (integ_points,)
+    intensities (list): azimuthal integration intensities for
+        all individual pulse images in a train.
+    intensities_fom (list): FOM of intensities.
+    intensity (numpy.ndarray): azimuthal integration intensity for the
+        average of all pulse images in a train. Shape = (intensity,)
+    intensity_fom (float): FOM of intensity.
     """
 
     def __init__(self, *args, **kwargs):
@@ -312,8 +313,9 @@ class AzimuthalIntegrationData(AbstractData):
 
         self.momentum = None
         self.intensities = None
-        self.intensity_mean = None
-        self.pulse_fom = None
+        self.intensities_foms = None
+        self.intensity = None
+        self.intensity_fom = None
 
 
 class PumpProbeData(AbstractData):
@@ -483,6 +485,7 @@ class ImageData:
     def __init__(self, data, *,
                  reference=None,
                  background=0.0,
+                 image_mask=None,
                  threshold_mask=(-np.inf, np.inf),
                  ma_window=1,
                  ma_count=1,
@@ -490,13 +493,16 @@ class ImageData:
         """Initialization.
 
         :param numpy.ndarray data: image data in a train.
-        :param numpy.ndarray None: reference image.
+        :param numpy.ndarray reference: reference image.
         :param float background: a uniform background value.
+        :param numpy.ndarray image_mask: image mask.
         :param tuple threshold_mask: threshold mask.
         :param int ma_window: moving average window size.
         :param int ma_count: current moving average count.
         :param None/list keep: pulse image indices to keep. None for
             keeping nothing.
+
+        Note: data, reference and image_mask must not be modified in-place.
         """
         if not isinstance(data, np.ndarray):
             raise TypeError(r"Image data must be numpy.ndarray!")
@@ -518,23 +524,42 @@ class ImageData:
         if data.ndim == 3:
             self._n_images = images.shape[0]
             self._pulse_resolved = True
-            self._images = [None] * self._n_images
-            self._mean = nanmean_axis0_para(images)
-            if keep is not None:
+
+            # No matter 'keep' is None or a list, the interface for accessing a
+            # single image is the same.
+            if keep is None:
+                # _images is an numpy.ndarray
+                self._images = data
+            else:
                 if not isinstance(keep, (tuple, list)):
                     raise TypeError("'keep' must be a tuple or list!")
+                # _images is a list of numpy.ndarray
+                self._images = [None] * self._n_images
 
                 for i in keep:
                     self._images[i] = data[i]
         else:
             self._n_images = 1
             self._pulse_resolved = False
-            self._mean = images
+
             self._images = []  # not used for train-resolved data
 
+        # Note: _mean is _images for train-resolved detectors
+        self._mean = nanmean_axis0_para(images)
+
         self._threshold_mask = threshold_mask
+
+        # if image_mask is given, we assume that the shape of the image
+        # mask is the same as the image. This is guaranteed in
+        # ImageProcessor.
+        self._image_mask = image_mask
+
         # self._masked_mean does not share memory with self._mean
-        self._masked_mean = mask_by_threshold(self._mean, *threshold_mask)
+        self._masked_mean = self._mean.copy()
+        mask_image(self._masked_mean,
+                   threshold_mask=threshold_mask,
+                   image_mask=image_mask,
+                   inplace=True)
 
         self._ref = reference
 
@@ -584,6 +609,10 @@ class ImageData:
     @property
     def threshold_mask(self):
         return self._threshold_mask
+
+    @property
+    def image_mask(self):
+        return self._image_mask
 
     @property
     def mean(self):

@@ -138,13 +138,11 @@ class ImageAssemblerFactory(ABC):
             data['assembled'] = self._modules_to_assembled(modules_data)
 
     class AgipdImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
             return data[src_name]["image.data"]
 
-        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
@@ -158,14 +156,12 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
     class LpdImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
             return np.moveaxis(
                 np.moveaxis(data[src_name]["image.data"], 3, 0), 3, 2)
 
-        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
@@ -181,7 +177,6 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
     class JungFrauImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             modules_data = data[src_name]["data.adc"]
@@ -191,7 +186,6 @@ class ImageAssemblerFactory(ABC):
             else:
                 raise NotImplementedError("Number of modules > 1")
 
-        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             modules_data = data[src_name]['data.adc']
@@ -202,26 +196,22 @@ class ImageAssemblerFactory(ABC):
                 raise NotImplementedError("Number of modules > 1")
 
     class FastCCDImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (y, x, 1) -> (y, x)
             return data[src_name]["data.image"].squeeze(axis=-1)
 
-        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (y, x)
             return data[src_name]['data.image.pixels']
 
     class BaslerCameraImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (y, x)
             return data[src_name]["data.image.data"]
 
-        @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
             raise NotImplementedError

@@ -14,7 +14,7 @@ import numpy as np
 from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
 from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
-from ...algorithms import nanmean_axis0_para, mask_by_threshold
+from ...algorithms import nanmean_axis0_para, mask_image
 from ...metadata import Metadata as mt
 from ...command import CommandProxy
 from ...utils import profiler
@@ -183,6 +183,7 @@ class GeneralImageProcessor(LeafProcessor):
 
         self._raw_data = _RawImageData()
         self._reference = None
+        self._image_mask = None
 
         self._cmd_proxy = CommandProxy()
 
@@ -199,16 +200,12 @@ class GeneralImageProcessor(LeafProcessor):
         # be careful, data['assembled'] and self._raw_data share memory
         data['assembled'] = self._raw_data.images
 
+        keep = None  # keep all
         # 'keep' is only required by pulsed-resolved data
-        if assembled.ndim == 3:
-            if self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
-                # keep all
-                keep = list(range(len(assembled)))
-            else:
-                # keep only the VIPs
-                keep = self.vip_pulse_indices
-        else:
-            keep = None
+        if assembled.ndim == 3 and \
+                not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
+            # keep only the VIPs
+            keep = self.vip_pulse_indices
 
         # update the reference image
         ref = self._cmd_proxy.get_ref_image()
@@ -218,10 +215,26 @@ class GeneralImageProcessor(LeafProcessor):
             else:
                 self._reference = None
 
+        image_shape = self._raw_data.images.shape[-2:]
+        if self._image_mask is None or self._image_mask.shape != image_shape:
+            # initialize or check the existing image mask
+            self._image_mask = np.zeros(image_shape, dtype=np.bool)
+
+        # update image mask
+        self._image_mask = self._cmd_proxy.update_mask(self._image_mask)
+        if self._image_mask is not None \
+                and self._image_mask.shape != image_shape:
+            # This could only happen when the mask is loaded from the files
+            # and the image shapes in the ImageTool is different from the
+            # shape of the live images.
+            raise ProcessingError("The shape of the image mask {} is "
+                                  "different from the shape of the image {}!")
+
         data['processed'] = ProcessedData(
             data['tid'], self._raw_data.images,
             reference=self._reference,
             background=self.background,
+            image_mask=self._image_mask,
             threshold_mask=self.threshold_mask,
             ma_window=self._raw_data.ma_window,
             ma_count=self._raw_data.ma_count,
@@ -253,14 +266,18 @@ class PumpProbeImageProcessor(LeafProcessor):
 
         assembled = data['assembled']
         processed = data['processed']
-        threshold_mask = self.threshold_mask
+        image_mask = processed.image.image_mask
+        threshold_mask = processed.image.threshold_mask
 
         # on and off are not from different trains
         if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             if assembled.ndim == 3:
                 # pulse resolved
-                on_image = mask_by_threshold(nanmean_axis0_para(
-                    assembled[self.on_indices]), *threshold_mask)
+                on_image = nanmean_axis0_para(assembled[self.on_indices])
+                mask_image(on_image,
+                           threshold_mask=threshold_mask,
+                           image_mask=image_mask,
+                           inplace=True)
             else:
                 on_image = processed.image.masked_mean
 
@@ -268,10 +285,20 @@ class PumpProbeImageProcessor(LeafProcessor):
                 off_image = processed.image.reference
                 if off_image is None:
                     off_image = np.zeros_like(on_image)
+                else:
+                    # do not operate on the original reference image
+                    off_image = off_image.copy()
+                    mask_image(off_image,
+                               threshold_mask=threshold_mask,
+                               image_mask=image_mask,
+                               inplace=True)
             else:
                 # train-resolved data does not have the mode 'SAME_TRAIN'
-                off_image = mask_by_threshold(nanmean_axis0_para(
-                    assembled[self.off_indices]), *threshold_mask)
+                off_image = nanmean_axis0_para(assembled[self.off_indices])
+                mask_image(off_image,
+                           threshold_mask=threshold_mask,
+                           image_mask=image_mask,
+                           inplace=True)
 
             processed.pp.on_image_mean = on_image
             processed.pp.off_image_mean = off_image
@@ -287,8 +314,11 @@ class PumpProbeImageProcessor(LeafProcessor):
 
         if processed.tid % 2 == 1 ^ flag:
             if processed.pulse_resolved:
-                self._prev_on = mask_by_threshold(nanmean_axis0_para(
-                    assembled[self.on_indices]), *threshold_mask)
+                self._prev_on = nanmean_axis0_para(assembled[self.on_indices])
+                mask_image(self._prev_on,
+                           threshold_mask=threshold_mask,
+                           image_mask=image_mask,
+                           inplace=True)
             else:
                 self._prev_on = processed.image.masked_mean
         else:
@@ -298,9 +328,12 @@ class PumpProbeImageProcessor(LeafProcessor):
 
                 # acknowledge off image only if on image has been received
                 if processed.pulse_resolved:
-                    processed.pp.off_image_mean = mask_by_threshold(
-                        nanmean_axis0_para(
-                            assembled[self.off_indices]), *threshold_mask)
+                    off_image = nanmean_axis0_para(assembled[self.off_indices])
+                    mask_image(off_image,
+                               threshold_mask=threshold_mask,
+                               image_mask=image_mask,
+                               inplace=True)
+                    processed.pp.off_image_mean = off_image
                 else:
                     processed.pp.off_image_mean = processed.image.masked_mean
 

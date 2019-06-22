@@ -24,6 +24,8 @@ from karaboFAI.config import (
     CorrelationFom, DataSource, CurveNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
+from karaboFAI.pipeline.processors.azimuthal_integration import \
+    energy2wavelength
 
 app = mkQApp()
 
@@ -109,16 +111,16 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'],
-                               ai_proc.sample_distance)
-        self.assertAlmostEqual(config['PHOTON_ENERGY'],
-                               ai_proc.photon_energy)
+                               ai_proc.sample_dist)
+        self.assertAlmostEqual(energy2wavelength(config['PHOTON_ENERGY']),
+                               ai_proc.wavelength)
 
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
 
         ai_proc.update()
-        self.assertAlmostEqual(12.4, ai_proc.photon_energy)
-        self.assertAlmostEqual(0.3, ai_proc.sample_distance)
+        self.assertAlmostEqual(1e-10, ai_proc.wavelength)
+        self.assertAlmostEqual(0.3, ai_proc.sample_dist)
         image_proc.update()
         self.assertListEqual([-1], image_proc.pulse_index_filter)
 
@@ -145,8 +147,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
                               proc.integ_range)
         self.assertTupleEqual(default_integ_range, proc.auc_range)
         self.assertTupleEqual(default_integ_range, proc.fom_integ_range)
-        self.assertEqual(config["CENTER_X"], proc.integ_center_x)
-        self.assertEqual(config["CENTER_Y"], proc.integ_center_y)
+        pixel_size = config["PIXEL_SIZE"]
+        self.assertEqual(config["CENTER_Y"] * pixel_size, proc.poni1)
+        self.assertEqual(config["CENTER_X"] * pixel_size, proc.poni2)
 
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
@@ -169,8 +172,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertTupleEqual((0.1, 0.2), proc.integ_range)
         self.assertTupleEqual((0.2, 0.3), proc.auc_range)
         self.assertTupleEqual((0.3, 0.4), proc.fom_integ_range)
-        self.assertEqual(-1000, proc.integ_center_x)
-        self.assertEqual(1000, proc.integ_center_y)
+        self.assertEqual(-1000*pixel_size, proc.poni2)
+        self.assertEqual(1000*pixel_size, proc.poni1)
 
     @patch("karaboFAI.pipeline.data_model.RoiData.clear")
     def testRoiCtrlWidget(self, roi_reset):

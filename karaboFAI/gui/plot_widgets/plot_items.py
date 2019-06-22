@@ -16,7 +16,9 @@ import numpy as np
 from .. import pyqtgraph as pg
 from ..pyqtgraph import GraphicsObject, QtCore, QtGui
 
-from ..misc_widgets import make_pen, make_brush
+from ..misc_widgets import make_pen
+from ...config import config, MaskState
+from ...command import CommandProxy
 
 
 class ImageItem(pg.ImageItem):
@@ -75,9 +77,6 @@ class ImageItem(pg.ImageItem):
 class MaskItem(GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
 
-    # a tuple of (masking_state, x, y, w, h, w_image, h_image)
-    mask_region_change_sgn = QtCore.pyqtSignal(object)
-
     _mask = None  # QImage
     _mask_rect = QtCore.QRectF(0, 0, 0, 0)
 
@@ -87,22 +86,22 @@ class MaskItem(GraphicsObject):
     def __init__(self, item):
         """Initialization.
 
-        :param ImageItem item: a reference to the masked image.
+        :param ImageItem item: a reference to the masked image item.
         """
         super().__init__()
-        if not isinstance(item, pg.ImageItem):
+        if not isinstance(item, ImageItem):
             raise TypeError("Input item must be an ImageItem instance.")
 
         self._image_item = item
-        if isinstance(item, ImageItem):
-            item.draw_started_sgn.connect(self.onDrawStarted)
-            item.draw_region_changed_sgn.connect(self.onDrawRegionChanged)
-            item.draw_finished_sgn.connect(self.onDrawFinished)
+        item.draw_started_sgn.connect(self.onDrawStarted)
+        item.draw_region_changed_sgn.connect(self.onDrawRegionChanged)
+        item.draw_finished_sgn.connect(self.onDrawFinished)
 
-        self._brush = make_brush('b')  # brush for drawing the bounding box
+        # pen for drawing the bounding box
+        self._pen = make_pen(config['MASK_BOUNDING_BOX_COLOR'])
 
-        # 1 for masking, 0 for unmasking, -1 for clearing mask
-        self.masking_state = 0
+        self.state = MaskState.UNMASK
+        self._cmd_proxy = CommandProxy()
 
         self._p1 = None
         self._p2 = None
@@ -135,18 +134,19 @@ class MaskItem(GraphicsObject):
         w = int(rect.width())
         h = int(rect.height())
 
-        h_img, w_img = self._image_item.image.shape
-        self.mask_region_change_sgn.emit(
-            (self.masking_state, x, y, w, h, w_img, h_img))
+        if self.state == MaskState.MASK:
+            self._cmd_proxy.add_mask((x, y, w, h))
+        elif self.state == MaskState.UNMASK:
+            self._cmd_proxy.remove_mask((x, y, w, h))
 
         self._p1 = None
         self._p2 = None
 
         for i in range(x, x+w):
             for j in range(y, y+h):
-                if self.masking_state:
+                if self.state == MaskState.MASK:
                     self._mask.setPixelColor(i, j, self._OPAQUE)
-                else:
+                elif self.state == MaskState.UNMASK:
                     self._mask.setPixelColor(i, j, self._TRANSPARENT)
 
         self._image_item.update()
@@ -156,8 +156,7 @@ class MaskItem(GraphicsObject):
         if self._mask is None:
             return
 
-        h_img, w_img = self._image_item.image.shape
-        self.mask_region_change_sgn.emit((-1, 0, 0, -1, -1, w_img, h_img))
+        self._cmd_proxy.clear_mask()
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
@@ -175,7 +174,7 @@ class MaskItem(GraphicsObject):
             return
 
         p.setRenderHint(QtGui.QPainter.Antialiasing)
-        p.setPen(make_pen('b'))
+        p.setPen(self._pen)
 
         p.drawImage(self.boundingRect(), self._mask)
         p.drawRect(self._selectedRect())
@@ -196,6 +195,8 @@ class MaskItem(GraphicsObject):
 
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
+        self._cmd_proxy.set_mask(mask)
+
         h, w = mask.shape
         self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
 

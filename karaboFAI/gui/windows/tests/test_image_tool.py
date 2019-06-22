@@ -9,6 +9,7 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
+from karaboFAI.algorithms import mask_image
 from karaboFAI.config import config, _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow
@@ -44,23 +45,13 @@ class TestSimpleImageData(unittest.TestCase):
             img_data.threshold_mask = [1, 2, 3]
 
         img_data.threshold_mask = (3, 6)
-        np.testing.assert_array_equal(np.clip(gt_data, 3, 6), img_data.masked)
+        np.testing.assert_array_equal(mask_image(gt_data, threshold_mask=(3, 6)),
+                                      img_data.masked)
         img_data.background = 3
-        np.testing.assert_array_equal(np.clip(gt_data-3, 3, 6), img_data.masked)
-
-        self.assertEqual(1.0e-3, img_data.pixel_size)
-
-    def testImageWithNan(self):
-        gt_data = np.array([[1, 0], [np.nan, np.nan]])
-        img_data = _SimpleImageData(ImageData(gt_data))
-
-        img_data.background = -1
-        np.testing.assert_array_equal(np.array([[2, 1], [np.nan, np.nan]]),
+        np.testing.assert_array_equal(mask_image(gt_data-3, threshold_mask=(3, 6)),
                                       img_data.masked)
 
-        img_data.threshold_mask = (1.1, 1.6)
-        np.testing.assert_array_almost_equal(
-            np.array([[1.6, 1.1], [np.nan, np.nan]]), img_data.masked)
+        self.assertEqual(1.0e-3, img_data.pixel_size)
 
     @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
     def testInstantiateFromArray(self):

@@ -31,21 +31,34 @@ class TestSerialization(unittest.TestCase):
 
     def testGeneral(self):
         # test serializing and deserializing a single image
-        shape = (100, 120)
-        orig_img = np.ones(shape, dtype=np.float32)
+        orig_img = np.array([[1, 2, 3],
+                             [4, 5, 6]], dtype=np.float32)
 
         img_bytes = serialize_image(orig_img)
-
         img = deserialize_image(img_bytes)
-        self.assertEqual(shape, img.shape)
+
+        np.testing.assert_array_equal(orig_img, img)
+        self.assertEqual(orig_img.shape, img.shape)
         self.assertEqual(np.float32, img.dtype)
 
+        # test serializing and deserializing an image mask
+        orig_mask = np.array([[1, 1, 0],
+                              [0, 1, 1]], dtype=np.bool)
+
+        mask_bytes = serialize_image(orig_mask, is_mask=True)
+        mask = deserialize_image(mask_bytes, is_mask=True)
+
+        np.testing.assert_array_equal(orig_mask, mask)
+        self.assertEqual(orig_mask.shape, mask.shape)
+        self.assertEqual(np.bool, mask.dtype)
+
         # test serializing and deserializing a group of images
-        shape = (4, 100, 120)
-        orig_imgs = np.ones(shape, dtype=np.float32)
+        orig_imgs = np.array([[[1, 2], [3, 4]],
+                              [[1, 2], [3, 4]]], dtype=np.int32)
 
         imgs_bytes = serialize_images(orig_imgs)
+        imgs = deserialize_images(imgs_bytes, dtype=np.int32)
 
-        imgs = deserialize_images(imgs_bytes)
-        self.assertEqual(shape, imgs.shape)
+        np.testing.assert_array_equal(orig_imgs, imgs)
+        self.assertEqual(orig_imgs.shape, imgs.shape)
         self.assertEqual(np.float32, img.dtype)

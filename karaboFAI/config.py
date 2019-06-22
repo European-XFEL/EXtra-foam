@@ -80,6 +80,14 @@ class RoiFom(IntEnum):
     MEAN = 1  # monitor mean of ROI
 
 
+# a simple class saves the trouble when the attribute needs to be read/write
+# from/at Redis.
+class MaskState:
+    UNMASK = 0
+    MASK = 1
+    CLEAR_MASK = -1
+
+
 class _Config(dict):
     """Config implementation."""
 
@@ -100,6 +108,8 @@ class _Config(dict):
         "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4
         "CORRELATION_COLORS": ['b', 'o', 'g', 'r'],
+        # color of the bounding box used in masking and unmasking
+        "MASK_BOUNDING_BOX_COLOR": 'b',
         # full path of the Redis server executable
         "REDIS_EXECUTABLE": osp.join(osp.abspath(
             osp.dirname(__file__)), "thirdparty/bin/redis-server"),

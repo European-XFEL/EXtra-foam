@@ -79,9 +79,6 @@ class Mediator(DataManagerMixin, QObject):
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
 
-    def onImageMaskRegionChange(self, value: tuple):
-        self._db.publish("command:image_mask", str(value))
-
     def onGeomFilenameChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 

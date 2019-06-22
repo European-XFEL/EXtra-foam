@@ -98,7 +98,7 @@ class CorrelationProcessor(CompositeProcessor):
                 raise ProcessingError(
                     "[Correlation] Azimuthal integration result is not "
                     "available!")
-            intensity = processed.ai.intensity_mean
+            intensity = processed.ai.intensity
 
             # calculate figure-of-merit
             fom = slice_curve(intensity, momentum, *self.fom_integ_range)[0]

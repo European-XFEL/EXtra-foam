@@ -142,7 +142,7 @@ class Bin1DProcessorX(LeafProcessor):
             count[index-1] += 1
 
             if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
-                new_value = processed.ai.intensity_mean
+                new_value = processed.ai.intensity
                 x = processed.ai.momentum
             else:
                 return
@@ -189,7 +189,7 @@ class Bin1DProcessorY(LeafProcessor):
             count[index-1] += 1
 
             if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
-                new_value = processed.ai.intensity_mean
+                new_value = processed.ai.intensity
                 y = processed.ai.momentum
             else:
                 return

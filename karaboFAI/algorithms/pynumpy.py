@@ -27,9 +27,6 @@ def nanmean_axis0_para(data, *, chunk_size=10, max_workers=4):
         the dimension of input data is larger than 3, otherwise the
         original data.
     """
-    if data.ndim < 3:
-        return data
-
     def nanmean_imp(out, start, end):
         """Implementation of parallelized nanmean.
 
@@ -42,42 +39,51 @@ def nanmean_axis0_para(data, *, chunk_size=10, max_workers=4):
 
             out[start:end, :] = np.nanmean(data[:, start:end, :], axis=0)
 
-    ret = np.zeros_like(data[0, ...])
+    if data.ndim < 3:
+        ret = data
+    else:
+        ret = np.zeros_like(data[0, ...])
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        start = 0
-        max_idx = data.shape[1]
-        while start < max_idx:
-            executor.submit(nanmean_imp,
-                            ret, start, min(start + chunk_size, max_idx))
-            start += chunk_size
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            start = 0
+            max_idx = data.shape[1]
+            while start < max_idx:
+                executor.submit(nanmean_imp,
+                                ret, start, min(start + chunk_size, max_idx))
+                start += chunk_size
 
     return ret
 
 
-def mask_by_threshold(data, a_min=-np.inf, a_max=np.inf, inplace=False):
+def mask_image(image, *,
+               threshold_mask=None,
+               image_mask=None,
+               inplace=False):
     """Mask an array by threshold.
 
-    :param numpy.ndarray data: array to be masked.
-    :param float a_min: lower boundary of the threshold mask.
-    :param float a_max: upper boundary of the threshold mask.
+    The masked pixel value will will be set to 0.
+
+    :param numpy.ndarray image: array to be masked.
+    :param tuple/None threshold_mask: (min, max) of the threshold mask.
+    :param numpy.ndarray/None image_mask: image mask. It assumes the shape
+        of the image_mask is the same as the image.
     :param bool inplace: True for apply the mask in-place.
 
     :return numpy.ndarray: masked data.
     """
     if not inplace:
-        masked = data.copy()
+        masked = image.copy()
     else:
-        masked = data
+        masked = image
 
-    # Convert 'nan' to '-inf' and it will later be converted to the
-    # lower range of mask, which is usually 0.
-    # We do not convert 'nan' to 0 because: if the lower range of
-    # mask is a negative value, 0 will be converted to a value
-    # between 0 and 255 later.
-    masked[np.isnan(masked)] = -np.inf
-    # clip the array, which now will contain only numerical values
-    # within the mask range
-    np.clip(masked, a_min, a_max, out=masked)
+    if image_mask is not None:
+        masked[image_mask] = 0
+
+    # it is reasonable to set NaN to zero after nanmean
+    masked[np.isnan(masked)] = 0
+
+    if threshold_mask is not None:
+        a_min, a_max = threshold_mask
+        masked[(masked > a_max) | (masked < a_min)] = 0
 
     return masked

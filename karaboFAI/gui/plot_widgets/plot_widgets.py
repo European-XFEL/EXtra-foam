@@ -66,7 +66,7 @@ class SinglePulseAiWidget(PlotWidget):
             return
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.intensity_mean)
+            self._mean_plot.setData(momentum, data.ai.intensity)
 
 
 class TrainAiWidget(PlotWidget):
@@ -98,24 +98,24 @@ class TrainAiWidget(PlotWidget):
                 self.clear()
 
                 colors = SequentialColors().s1(n_pulses)
-                for key, value in intensities.items():
-                    self.plotCurve(momentum, value, pen=make_pen(colors[key]))
+                for i, intensity in enumerate(intensities):
+                    self.plotCurve(momentum, intensity, pen=make_pen(colors[i]))
             else:
                 for item, intensity in zip(self.plotItem.items, intensities):
                     item.setData(momentum, intensity)
 
         else:
-            intensity_mean = data.ai.intensity_mean
-            if intensity_mean is None:
+            intensity = data.ai.intensity
+            if intensity is None:
                 return
 
             if self._n_pulses == 0:
                 # initialize
-                self.plotCurve(momentum, intensity_mean,
+                self.plotCurve(momentum, intensity,
                                pen=make_pen(SequentialColors().r[0]))
                 self._n_pulses = 1
             else:
-                self.plotItem.items[0].setData(momentum, intensity_mean)
+                self.plotItem.items[0].setData(momentum, intensity)
 
 
 class PulsedFOMWidget(PlotWidget):
@@ -136,7 +136,7 @@ class PulsedFOMWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.ai.pulse_fom
+        foms = data.ai.intensities_foms
         if foms is None:
             return
 

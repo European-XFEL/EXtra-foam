@@ -12,8 +12,6 @@ All rights reserved.
 import os.path as osp
 import functools
 
-import numpy as np
-
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_window import AbstractWindow
@@ -24,7 +22,8 @@ from ..ctrl_widgets.smart_widgets import (
 )
 from ...pipeline.data_model import ImageData
 from ...utils import cached_property
-from ...config import config
+from ...config import config, MaskState
+from ...algorithms import mask_image
 
 
 class _SimpleImageData:
@@ -55,9 +54,10 @@ class _SimpleImageData:
 
         # copy an image is expensive but we should make sure that other
         # GUI code cannot modify the image data.
+        # Note: image_data.mean does not contain any NaN
         self._image = image_data.mean
-        # set the cached property
-        self.__dict__['masked'] = image_data.masked_mean
+
+        # image mask is plotted on top of the image in ImageTool
 
         self._bkg = image_data.background
         self._threshold_mask = image_data.threshold_mask
@@ -78,7 +78,10 @@ class _SimpleImageData:
         self._bkg = v
 
         # invalid cache
-        del self.__dict__['masked']
+        try:
+            del self.__dict__['masked']
+        except KeyError:
+            pass
 
     @property
     def threshold_mask(self):
@@ -102,7 +105,9 @@ class _SimpleImageData:
 
     @cached_property
     def masked(self):
-        return np.clip(self._image, *self._threshold_mask)
+        return mask_image(self._image,
+                          threshold_mask=self._threshold_mask,
+                          inplace=False)
 
     @classmethod
     def from_array(cls, arr):
@@ -448,7 +453,7 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         mask_at.toggled.connect(self._exclude_actions)
         mask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, 1))
+            self._image_view.onDrawToggled, MaskState.MASK))
 
         unmask_at = self._addAction(
             self._tool_bar_mask, "Unmask", "un_mask.png")
@@ -456,7 +461,7 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         unmask_at.toggled.connect(self._exclude_actions)
         unmask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, 0))
+            self._image_view.onDrawToggled, MaskState.UNMASK))
 
         clear_mask_at = self._addAction(
             self._tool_bar_mask, "Trash mask", "trash_mask.png")
