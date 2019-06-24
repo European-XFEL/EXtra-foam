@@ -36,7 +36,6 @@ class Metadata:
         ],
         DATA_SOURCE: [
             "endpoint",
-            "data_folder",
             "detector_source_name",
             "source_type",
             "xgm_source_name",

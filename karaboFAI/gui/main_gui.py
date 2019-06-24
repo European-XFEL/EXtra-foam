@@ -31,7 +31,7 @@ from .misc_widgets import GuiLogger
 from .windows import (
     Bin1DWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
     PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
-    XasWindow
+    XasWindow, FileStreamControllerWindow
 )
 from .windows import (
     ProcessMonitor,
@@ -41,7 +41,6 @@ from ..config import config
 from ..logger import logger
 from ..utils import profiler
 from ..ipc import RedisPSubscriber
-from ..offline import FileServerManager
 from ..pipeline import MpInQueue
 from ..processes import list_fai_processes, shutdown_all
 
@@ -175,7 +174,8 @@ class MainGUI(QtGui.QMainWindow):
         open_xas_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, XasWindow))
 
-        open_pulsed_ai_window_at = self._addAction("Pulsed A.I", "pulsed_ai.png")
+        open_pulsed_ai_window_at = self._addAction(
+            "Pulsed A.I", "pulsed_ai.png")
         open_pulsed_ai_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulsedAzimuthalIntegrationWindow))
 
@@ -192,6 +192,10 @@ class MainGUI(QtGui.QMainWindow):
         open_process_monitor_at = self._addAction(
             "Process monitor", "process_monitor.png")
         open_process_monitor_at.triggered.connect(self.openProcessMonitor)
+
+        open_file_stream_window_at = self._addAction("Offline", "offline.png")
+        open_file_stream_window_at.triggered.connect(
+            self.openFileStreamControllerWindow)
 
         # *************************************************************
         # Miscellaneous
@@ -231,13 +235,13 @@ class MainGUI(QtGui.QMainWindow):
         self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
         # a file server which streams data from files
-        self._file_server = FileServerManager()
 
         # *************************************************************
         # control widgets
         # *************************************************************
 
-        self.azimuthal_integ_ctrl_widget = AzimuthalIntegCtrlWidget(parent=self)
+        self.azimuthal_integ_ctrl_widget = AzimuthalIntegCtrlWidget(
+            parent=self)
         if config['REQUIRE_GEOMETRY']:
             self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
 
@@ -349,6 +353,13 @@ class MainGUI(QtGui.QMainWindow):
         self.process_info_sgn.connect(w.onProcessInfoUpdate)
         return w
 
+    def openFileStreamControllerWindow(self):
+        if self._checkWindowExistence(FileStreamControllerWindow):
+            return
+
+        w = FileStreamControllerWindow(parent=self)
+        return w
+
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:
             if isinstance(key, instance_type):
@@ -427,10 +438,12 @@ class MainGUI(QtGui.QMainWindow):
 
         self._close_ev.set()
 
-        self._file_server.shutdown()
-
         self._thread_logger_t.quit()
 
         shutdown_all()
+        for window in list(self._windows):
+            # Close all open child windows to make sure their resources
+            # (any running process etc.) are released gracefully
+            window.close()
 
         super().closeEvent(QCloseEvent)

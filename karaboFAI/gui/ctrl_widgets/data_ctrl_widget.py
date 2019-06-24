@@ -58,12 +58,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
 
-        self._data_folder_le = SmartLineEdit(config["DATA_FOLDER"])
-
-        self._serve_start_btn = QtGui.QPushButton("Stream files")
-        self._serve_terminate_btn = QtGui.QPushButton("Terminate")
-        self._serve_terminate_btn.setEnabled(False)
-
         self._non_reconfigurable_widgets = [
             self._source_type_cb,
             self._detector_src_cb,
@@ -90,13 +84,7 @@ class DataCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(QtGui.QLabel("XGM source name: "), 2, 0, AR)
         src_layout.addWidget(self._xgm_src_cb, 2, 1, 1, 5)
 
-        serve_file_layout = QtGui.QHBoxLayout()
-        serve_file_layout.addWidget(self._serve_start_btn)
-        serve_file_layout.addWidget(self._serve_terminate_btn)
-        serve_file_layout.addWidget(self._data_folder_le)
-
         layout.addLayout(src_layout)
-        layout.addLayout(serve_file_layout)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -117,25 +105,14 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._hostname_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(self.onEndpointChange)
 
-        self._data_folder_le.returnPressed.connect(
-            lambda: mediator.onDataFolderChange(self._data_folder_le.text()))
-
         self._detector_src_cb.currentTextChanged.connect(
             mediator.onDetectorSourceNameChange)
 
         self._xgm_src_cb.currentTextChanged.connect(
             mediator.onXgmSourceNameChange)
 
-        self._serve_start_btn.clicked.connect(self.updateMetaData)
-        self._serve_start_btn.clicked.connect(mediator.start_file_server_sgn)
-        self._serve_terminate_btn.clicked.connect(mediator.stop_file_server_sgn)
-        mediator.file_server_started_sgn.connect(self.onFileServerStarted)
-        mediator.file_server_stopped_sgn.connect(self.onFileServerStopped)
-
     def updateMetaData(self):
         self.source_type_sgn.emit(self._source_type_cb.currentText())
-
-        self._data_folder_le.returnPressed.emit()
 
         self._port_le.textChanged.emit(self._port_le.text())
 
@@ -146,18 +123,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
             self._xgm_src_cb.currentText())
 
         return True
-
-    @QtCore.pyqtSlot()
-    def onFileServerStarted(self):
-        self._serve_start_btn.setEnabled(False)
-        self._serve_terminate_btn.setEnabled(True)
-        self._data_folder_le.setEnabled(False)
-
-    @QtCore.pyqtSlot()
-    def onFileServerStopped(self):
-        self._serve_start_btn.setEnabled(True)
-        self._serve_terminate_btn.setEnabled(False)
-        self._data_folder_le.setEnabled(True)
 
     @QtCore.pyqtSlot()
     def onEndpointChange(self):

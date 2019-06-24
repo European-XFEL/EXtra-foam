@@ -29,7 +29,7 @@ from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
 from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource
-
+from .gui.windows import FileStreamControllerWindow
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
 
@@ -288,6 +288,31 @@ def kill_application():
         for p in alive:
             print(f"{p} survived SIGKILL, "
                   f"please try again or clean it manually")
+
+
+def karaboFAI_stream():
+    ap = argparse.ArgumentParser(prog="karaboFAI-stream")
+    ap.add_argument("detector", help="detector name (case insensitive)",
+                    choices=[det.upper() for det in config.detectors],
+                    type=lambda s: s.upper())
+    ap.add_argument("port", help="TCP port to run server on")
+
+    args = ap.parse_args()
+
+    detector = args.detector
+    if detector == 'JUNGFRAU':
+        detector = 'JungFrau'
+    elif detector == 'FASTCCD':
+        detector = 'FastCCD'
+    elif detector == 'BASLERCAMERA':
+        detector = 'BaslerCamera'
+    else:
+        detector = detector.upper()
+
+    app = mkQApp()
+    file_streamer = FileStreamControllerWindow(detector=detector,
+                                               port=args.port)
+    app.exec_()
 
 
 if __name__ == "__main__":

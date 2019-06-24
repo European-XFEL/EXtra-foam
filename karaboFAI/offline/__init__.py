@@ -1,5 +1,6 @@
-from .file_server_manager import FileServerManager
+from .file_server import gather_sources, FileServer
 
 __all__ = [
-    'FileServerManager'
+    'gather_sources',
+    'FileServer'
 ]
