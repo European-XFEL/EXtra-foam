@@ -221,3 +221,70 @@ class TestBaslerCameraAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1024, 1024))}}}
         self._assembler.process(data)
+
+
+class TestDSSCAssembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()   # ensure file
+        config.load('DSSC')
+
+        cls._geom_file = config["GEOMETRY_FILE"]
+        cls._quad_positions = config["QUAD_POSITIONS"]
+
+    def setUp(self):
+        self._assembler = ImageAssemblerFactory.create("DSSC")
+        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+
+    def testAssembleFile(self):
+        self._assembler._source_type = DataSource.FILE
+        key_name = 'image.data'
+
+        data = {'raw': {
+            'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
+                {key_name: np.ones((4, 128, 512))},
+            'SCS_DET_DSSC1M-1/DET/7CH0:xtdf':
+                {key_name: np.ones((4, 128, 512))},
+            'SCS_DET_DSSC1M-1/DET/8CH0:xtdf':
+                {key_name: np.ones((4, 128, 512))},
+            'SCS_DET_DSSC1M-1/DET/3CH0:xtdf':
+                {key_name: np.ones((4, 128, 512))},
+        }}
+        self._assembler.process(data)
+
+        self.assertEqual(3, data['assembled'].ndim)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(4, assembled_shape[0])
+        self.assertGreater(assembled_shape[1], 1024)
+        self.assertGreater(assembled_shape[2], 1024)
+
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
+                               "MODULE_SHAPE": [128, 512]})
+    def testAssembleBridge(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'dssc_modules'
+        key_name = 'image.data'
+        self._assembler._detector_source_name = src_name
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data = {'raw': {src_name: {key_name: np.ones((16, 100, 100, 4))}}}
+            self._assembler.process(data)
+
+        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
+            data = {'raw': {src_name: {key_name: np.ones((15, 512, 128, 4))}}}
+            self._assembler.process(data)
+
+        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
+            data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 0))}}}
+            self._assembler.process(data)
+
+        # (modules, x, y, memory cells)
+        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4))}}}
+        self._assembler.process(data)
+
+        self.assertEqual(3, data['assembled'].ndim)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(4, assembled_shape[0])
+        self.assertGreater(assembled_shape[1], 1024)
+        self.assertGreater(assembled_shape[2], 1024)

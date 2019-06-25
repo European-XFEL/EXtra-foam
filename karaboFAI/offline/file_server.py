@@ -147,7 +147,7 @@ class FileServer(Process):
         detector = \
             self._detector if self._detector is not None else config["DETECTOR"]
 
-        if detector in ["LPD", "FXE"]:
+        if detector in ["LPD", "FXE", "DSSC"]:
             fast_devices = [("*DET/*CH0:xtdf", "image.data")]
         elif detector == "JungFrau":
             fast_devices = [("*/DET/*:daqOutput", "data.adc")]

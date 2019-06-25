@@ -184,7 +184,17 @@ class _Config(dict):
             "MODULE_SHAPE": [-1, -1],
             # TODO: how to deal with the pixel size?
             "PIXEL_SIZE": 0.0022e-3,
-        }
+        },
+        "DSSC": {
+            "REDIS_PORT": 6382,
+            "PULSE_RESOLVED": True,
+            "REQUIRE_GEOMETRY": True,
+            "NUMBER_OF_MODULES": 16,
+            "MODULE_SHAPE": [128, 512],
+            # Hexagonal pixels, 236 μm step in fast-scan axis, 204 μm in slow-scan
+            "PIXEL_SIZE": 0.22e-3,
+        },
+
     }
 
     _detector_reconfigurable_config = {
@@ -305,7 +315,30 @@ class _Config(dict):
             "SAMPLE_DISTANCE": 1.0,
             "CENTER_Y": 512,
             "CENTER_X": 512,
-        }
+        },
+        "DSSC": {
+            "SERVER_ADDR": '10.253.0.140',
+            "SERVER_PORT": 4511,
+            "SOURCE_NAME_BRIDGE": [
+                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED'],
+            "SOURCE_NAME_FILE": ['SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED'],
+            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
+                                      'geometries/dssc_geo_photometrology_simple_inverted.h5'),
+            "QUAD_POSITIONS": [[-5.0, 140.0],
+                               [-5.0, -5.0],
+                               [130.0, -5.0],
+                               [130, 140]],
+            "AZIMUTHAL_INTEG_METHODS": [
+                'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
+                'lut',
+                'lut_ocl'
+            ],
+            "AZIMUTHAL_INTEG_RANGE": [0, 0.18],
+            "SAMPLE_DISTANCE": 0.6,
+            "CENTER_Y": 686,
+            "CENTER_X": 550,
+            "PHOTON_ENERGY": 0.780,
+        },
     }
 
     _filename = osp.join(ROOT_PATH, "config.json")
