@@ -17,7 +17,7 @@ from h5py import File
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
-from karabo_data.geometry2 import AGIPD_1MGeometry, DSSC_Geometry
+from karabo_data.geometry2 import AGIPD_1MGeometry, DSSC_1MGeometry
 
 from .base_processor import CompositeProcessor, _RedisParserMixin
 from ..exceptions import AssemblingError
@@ -148,7 +148,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="AGIPD")
+            return stack_detector_data(data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -169,7 +169,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="LPD")
+            return stack_detector_data(data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -248,7 +248,7 @@ class ImageAssemblerFactory(ABC):
         def load_geometry(self, filename, quad_positions):
             """Overload."""
             try:
-                self._geom = DSSC_Geometry.from_h5_file_and_quad_positions(
+                self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
                         filename, quad_positions)
             except Exception as e:
                 raise AssemblingError(e)
