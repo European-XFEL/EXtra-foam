@@ -146,7 +146,7 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
-        'karabo-data>=0.3.0',
+        'karabo-data>=0.5.0',
         'karabo-bridge>=0.3.0',
         'toolz',
         'silx>=0.9.0',
