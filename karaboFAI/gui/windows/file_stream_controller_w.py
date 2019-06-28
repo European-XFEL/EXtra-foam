@@ -184,7 +184,7 @@ class FileStreamControllerWindow(AbstractSatelliteWindow):
                 logger.error(repr(e))
                 return
 
-        slow_devices = list(self._slow_devices) if self._slow_devices else None
+        slow_devices = list(self._slow_devices)
         repeat_stream = self._repeat_stream
         # process can only be start once
         self._file_server = FileServer(folder, port,
