@@ -34,14 +34,28 @@ def gather_sources(path):
     Slow sources: Frozenset
           Set of slow sources available. Empty if none found.
     """
-    if osp.isdir(path) and path[-4:] == 'proc':
+    slow = frozenset()
+    if osp.isdir(path):
         try:
-            raw_data = RunDirectory(path.replace('proc', 'raw'))
-            return raw_data.control_sources
+            # This will work in case users are using data stored
+            # in /gpfs/exfel/exp/INSTRUMENT/cycle/proposal/proc/runumber
+            # or they have raw folder with same path instead of 'proc'
+            # in it in the end.
+            slow = RunDirectory(
+                        path.replace('/proc/', '/raw/')).control_sources
         except Exception as ex:
-            logger.warning(repr(ex))
-    else:
-        return frozenset()
+            # Will be raised if no folder with 'raw' exist or no files
+            # found in raw folder.
+            logger.info("Failed to find 'raw' folder! "
+                        "Looking for slow data in current folder")
+            # Fallback to corrected datapath. Will return empty
+            # frozenset if no control source found.
+            try:
+                slow = RunDirectory(path).control_sources
+            except Exception as ex:
+                logger.error(repr(ex))
+
+    return slow
 
 
 def generate_meta(sources, tid):
@@ -86,11 +100,14 @@ def serve_files(path, port, slow_devices=None, fast_devices=None,
         logger.error(repr(ex))
         return
 
-    if path[-4:] == 'proc' and slow_devices is not None:
+    if slow_devices:
+        # slow_devices is not None only when some slow data source was
+        # selected. That means raw_data atleast was same as corr_data
         try:
-            raw_data = RunDirectory(path.replace('proc', 'raw'))
+            raw_data = RunDirectory(path.replace('/proc/', '/raw/'))
         except Exception as ex:
             logger.warning(repr(ex))
+            raw_data = corr_data
 
     streamer = ZMQStreamer(port, **kwargs)
     streamer.start()
