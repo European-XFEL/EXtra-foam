@@ -229,6 +229,7 @@ class TestDSSCAssembler(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('DSSC')
+        config._data['REDIS_PORT'] = 6379
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
