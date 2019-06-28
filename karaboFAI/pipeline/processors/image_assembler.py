@@ -17,7 +17,7 @@ from h5py import File
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry import LPDGeometry
-from karabo_data.geometry2 import AGIPD_1MGeometry
+from karabo_data.geometry2 import AGIPD_1MGeometry, DSSC_1MGeometry
 
 from .base_processor import CompositeProcessor, _RedisParserMixin
 from ..exceptions import AssemblingError
@@ -116,6 +116,7 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             shape = modules_data.shape
+
             ndim = len(shape)
             try:
                 n_modules = config["NUMBER_OF_MODULES"]
@@ -129,6 +130,7 @@ class ImageAssemblerFactory(ABC):
                                      f"{shape[0]} instead!")
                 elif ndim == 4 and not shape[0]:
                     raise ValueError("Number of memory cells is zero!")
+
             except ValueError as e:
                 raise AssemblingError(e)
 
@@ -146,7 +148,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="AGIPD")
+            return stack_detector_data(data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -167,7 +169,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="LPD")
+            return stack_detector_data(data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -224,6 +226,33 @@ class ImageAssemblerFactory(ABC):
             """Overload."""
             raise NotImplementedError
 
+    class DsscImageAssembler(BaseAssembler):
+        @profiler("Prepare Module Data")
+        def _get_modules_bridge(self, data, src_name):
+            """Overload."""
+            # (memory cells, modules, y, x)
+            return np.moveaxis(
+                np.moveaxis(data[src_name]["image.data"], 3, 0), 3, 2)
+
+        @profiler("Prepare Module Data")
+        def _get_modules_file(self, data, src_name):
+            """Overload."""
+            # (memory cells, modules, y, x)
+            modules_data = stack_detector_data(data, "image.data")
+            # ndim = len(modules_data.shape)
+            # Raw files contain (memory cell, 1 , modules, y, x)
+            # if ndim == 5:
+            #     modules_data = np.squeeze(modules_data, axis=1)
+            return modules_data
+
+        def load_geometry(self, filename, quad_positions):
+            """Overload."""
+            try:
+                self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
+                        filename, quad_positions)
+            except Exception as e:
+                raise AssemblingError(e)
+
     @classmethod
     def create(cls, detector):
         if detector == 'AGIPD':
@@ -240,5 +269,8 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'BaslerCamera':
             return cls.BaslerCameraImageAssembler()
+
+        if detector == 'DSSC':
+            return cls.DsscImageAssembler()
 
         raise NotImplementedError(f"Unknown detector type {detector}!")
