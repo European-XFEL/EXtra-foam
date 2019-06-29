@@ -10,7 +10,7 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
-from karabo_data.geometry import LPDGeometry
+from karabo_data.geometry2 import LPD_1MGeometry
 
 from karaboFAI.logger import logger
 from karaboFAI.metadata import MetaProxy
@@ -351,7 +351,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         self.assertTrue(self.gui.updateMetaData())
 
-        self.assertIsInstance(image_worker._assembler._geom, LPDGeometry)
+        self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (

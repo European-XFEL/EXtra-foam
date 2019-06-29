@@ -273,11 +273,19 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
             "SOURCE_NAME_FILE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
             "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
-                                      'geometries/lpd_mar_18.h5'),
-            "QUAD_POSITIONS": [[-13.0, -299.0],
-                               [11.0, -8.0],
-                               [-254.0, 16.0],
-                               [-278.0, -275.0]],
+                                      'geometries/lpd_mar_18_axesfixed.h5'),
+            # For lpd_mar_18.h5 and LPDGeometry in karabo_data
+            # "QUAD_POSITIONS": [[-13.0, -299.0],
+            #                    [11.0, -8.0],
+            #                    [-254.0, 16.0],
+            #                    [-278.0, -275.0]],
+            # For lpd_mar18_axesfixed.h5 and LPD_1MGeometry in karabo_data
+            # The geometry uses XFEL standard coordinate directions.
+            "QUAD_POSITIONS": [(11.4, 299),
+                               (-11.5, 8),
+                               (254.5, -16),
+                               (278.5, 275)],
+
             "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
