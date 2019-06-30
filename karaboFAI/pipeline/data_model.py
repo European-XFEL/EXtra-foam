@@ -14,7 +14,7 @@ from threading import Lock
 
 import numpy as np
 
-from ..algorithms import nanmean_axis0_para, mask_image
+from ..algorithms import nanmean_image, mask_image
 from ..config import config
 
 
@@ -522,6 +522,8 @@ class ImageData:
         self._shape = images.shape[-2:]
 
         if data.ndim == 3:
+            self._mean = nanmean_image(images)
+
             self._n_images = images.shape[0]
             self._pulse_resolved = True
 
@@ -539,13 +541,12 @@ class ImageData:
                 for i in keep:
                     self._images[i] = data[i]
         else:
+            # Note: _image is _mean for train-resolved detectors
+            self._mean = images
             self._n_images = 1
             self._pulse_resolved = False
 
             self._images = []  # not used for train-resolved data
-
-        # Note: _mean is _images for train-resolved detectors
-        self._mean = nanmean_axis0_para(images)
 
         self._threshold_mask = threshold_mask
 

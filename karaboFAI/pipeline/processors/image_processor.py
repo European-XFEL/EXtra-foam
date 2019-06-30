@@ -14,7 +14,7 @@ import numpy as np
 from .base_processor import CompositeProcessor
 from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
-from ...algorithms import nanmean_axis0_para, mask_image
+from ...algorithms import nanmean_image, mask_image
 from ...metadata import Metadata as mt
 from ...command import CommandProxy
 from ...utils import profiler
@@ -255,7 +255,7 @@ class ImageProcessor(CompositeProcessor):
         if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             if assembled.ndim == 3:
                 # pulse resolved
-                on_image = nanmean_axis0_para(assembled[self._on_indices])
+                on_image = nanmean_image(assembled[self._on_indices])
             else:
                 on_image = assembled.copy()
 
@@ -267,7 +267,7 @@ class ImageProcessor(CompositeProcessor):
                     off_image = self._reference.copy()
             else:
                 # train-resolved data does not have the mode 'SAME_TRAIN'
-                off_image = nanmean_axis0_para(assembled[self._off_indices])
+                off_image = nanmean_image(assembled[self._off_indices])
 
         if mode in (PumpProbeMode.EVEN_TRAIN_ON, PumpProbeMode.ODD_TRAIN_ON):
             # on and off are from different trains
@@ -279,7 +279,7 @@ class ImageProcessor(CompositeProcessor):
 
             if tid % 2 == 1 ^ flag:
                 if assembled.ndim == 3:
-                    self._prev_unmasked_on = nanmean_axis0_para(
+                    self._prev_unmasked_on = nanmean_image(
                         assembled[self._on_indices])
                 else:
                     self._prev_unmasked_on = assembled.copy()
@@ -290,7 +290,7 @@ class ImageProcessor(CompositeProcessor):
                     self._prev_unmasked_on = None
                     # acknowledge off image only if on image has been received
                     if assembled.ndim == 3:
-                        off_image = nanmean_axis0_para(
+                        off_image = nanmean_image(
                             assembled[self._off_indices])
                     else:
                         off_image = assembled.copy()

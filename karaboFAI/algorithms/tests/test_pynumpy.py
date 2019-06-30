@@ -3,17 +3,21 @@ import unittest
 import numpy as np
 
 from karaboFAI.algorithms import (
-    first_tensor, mask_image, nanmean_axis0_para
+    first_tensor, mask_image, nanmean_image
 )
 
 
 class TestPynumpy(unittest.TestCase):
 
     def test_nanmeanparaimp(self):
-        # test 2D array
+        # test invalid shapes
         data = np.ones([2, 2])
-        ret = nanmean_axis0_para(data)
-        self.assertIs(ret, data)
+        with self.assertRaises(ValueError):
+            nanmean_image(data)
+
+        data = np.ones([2, 2, 2, 2])
+        with self.assertRaises(ValueError):
+            nanmean_image(data)
 
         # test 3D array
         data = np.ones([2, 4, 2])
@@ -22,11 +26,11 @@ class TestPynumpy(unittest.TestCase):
         data[1, 2, 0] = np.nan
         data[0, 3, 1] = np.inf
 
-        ret = nanmean_axis0_para(data, chunk_size=2, max_workers=2)
+        ret = nanmean_image(data, chunk_size=2, max_workers=2)
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
         np.testing.assert_array_almost_equal(expected, ret)
 
-        ret = nanmean_axis0_para(data, chunk_size=1, max_workers=1)
+        ret = nanmean_image(data, chunk_size=1, max_workers=1)
         expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
         np.testing.assert_array_almost_equal(expected, ret)
 
