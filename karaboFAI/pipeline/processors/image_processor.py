@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
+from .base_processor import CompositeProcessor
 from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
 from ...algorithms import nanmean_axis0_para, mask_image
@@ -112,89 +112,82 @@ class ImageProcessor(CompositeProcessor):
     A group of image processors. ProcessedData is constructed here.
 
     Attributes:
-        ma_window (int): moving average window size.
-        background (float): a uniform background value.
-        threshold_mask (tuple): threshold mask.
-        pulse_index_filter (list): a list of pulse indices.
-        vip_pulse_indices (list): indices of VIP pulses.
-        pp_mode (PumpProbeMode): pump-probe analysis mode.
-        on_indices (list): a list of laser-on pulse indices.
-        off_indices (list): a list of laser-off pulse indices.
-
-        _pulse_indices (list): selected pulse indices.
         _raw_data (_RawImageData): store the moving average of the
             raw images in a train.
-    """
-    ma_window = SharedProperty()
-    background = SharedProperty()
-    threshold_mask = SharedProperty()
+        _ma_window (int): moving average window size.
+        _background (float): a uniform background value.
+        _threshold_mask (tuple): threshold mask.
+        _image_mask
+        _reference
 
-    pulse_index_filter = SharedProperty()
-    vip_pulse_indices = SharedProperty()
+        _pulse_index_filter (list): a list of pulse indices.
+        _vip_pulse_indices (list): indices of VIP pulses.
 
-    pp_mode = SharedProperty()
-    on_indices = SharedProperty()
-    off_indices = SharedProperty()
+        _pp_mode (PumpProbeMode): pump-probe analysis mode.
+        _on_indices (list): a list of laser-on pulse indices.
+        _off_indices (list): a list of laser-off pulse indices.
+        _prev_unmasked_on:
 
-    def __init__(self):
-        super().__init__()
-
-        self.add(GeneralImageProcessor())
-        self.add(PumpProbeImageProcessor())
-
-    def update(self):
-        """Override."""
-        # image analysis
-        cfg = self._meta.get_all(mt.IMAGE_PROC)
-
-        self.ma_window = int(cfg['ma_window'])
-        self.background = float(cfg['background'])
-        self.threshold_mask = self.str2tuple(cfg['threshold_mask'],
-                                             handler=float)
-
-        # general analysis
-        gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
-
-        self.pulse_index_filter = self.str2list(
-            gp_cfg['selected_pulse_indices'], handler=int)
-
-        self.vip_pulse_indices = [int(gp_cfg['vip_pulse1_index']),
-                                  int(gp_cfg['vip_pulse2_index'])]
-
-        # pump-probe
-        pp_cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
-
-        self.pp_mode = PumpProbeMode(int(pp_cfg['mode']))
-        self.on_indices = self.str2list(pp_cfg['on_pulse_indices'],
-                                        handler=int)
-        self.off_indices = self.str2list(pp_cfg['off_pulse_indices'],
-                                         handler=int)
-
-
-class GeneralImageProcessor(LeafProcessor):
-    """GeneralImageProcessor class.
-
-    The GeneralImageProcessor manages the lifetime of raw image data.
-    Construct the processed data with index filter applied.
     """
 
     def __init__(self):
         super().__init__()
 
         self._raw_data = _RawImageData()
+        self._ma_window = 1
+        self._background = 0.0
+        self._threshold_mask = None
         self._reference = None
         self._image_mask = None
 
         self._cmd_proxy = CommandProxy()
 
+        self._pulse_index_filter = None
+        self._vip_pulse_indices = None
+
+        self._pp_mode = None
+        self._on_indices = None
+        self._off_indices = None
+        # the most recent on-pulse image
+        self._prev_unmasked_on = None
+
+    def update(self):
+        """Override."""
+        # image analysis
+        cfg = self._meta.get_all(mt.IMAGE_PROC)
+
+        self._ma_window = int(cfg['ma_window'])
+        self._background = float(cfg['background'])
+        self._threshold_mask = self.str2tuple(cfg['threshold_mask'],
+                                              handler=float)
+
+        # general analysis
+        gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
+
+        self._pulse_index_filter = self.str2list(
+            gp_cfg['selected_pulse_indices'], handler=int)
+
+        self._vip_pulse_indices = [int(gp_cfg['vip_pulse1_index']),
+                                   int(gp_cfg['vip_pulse2_index'])]
+
+        # pump-probe
+        pp_cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
+
+        self._pp_mode = PumpProbeMode(int(pp_cfg['mode']))
+        self._on_indices = self.str2list(
+            pp_cfg['on_pulse_indices'], handler=int)
+        self._off_indices = self.str2list(
+            pp_cfg['off_pulse_indices'], handler=int)
+
     @profiler("Image Processor")
     def process(self, data):
+        tid = data['tid']
         assembled = data['assembled']
-        if assembled.ndim == 3 and self.pulse_index_filter[0] != -1:
+        if assembled.ndim == 3 and self._pulse_index_filter[0] != -1:
             # apply the pulse index filter
-            assembled = assembled[self.pulse_index_filter]
+            assembled = assembled[self._pulse_index_filter]
 
-        self._raw_data.ma_window = self.ma_window
+        self._raw_data.ma_window = self._ma_window
         self._raw_data.images = assembled
         # make it the moving average
         # be careful, data['assembled'] and self._raw_data share memory
@@ -205,7 +198,7 @@ class GeneralImageProcessor(LeafProcessor):
         if assembled.ndim == 3 and \
                 not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
             # keep only the VIPs
-            keep = self.vip_pulse_indices
+            keep = self._vip_pulse_indices
 
         # update the reference image
         ref = self._cmd_proxy.get_ref_image()
@@ -230,111 +223,89 @@ class GeneralImageProcessor(LeafProcessor):
             raise ProcessingError("The shape of the image mask {} is "
                                   "different from the shape of the image {}!")
 
-        data['processed'] = ProcessedData(
+        # pump-probe images
+        on_image, off_image = self._compute_on_off_images(tid, assembled)
+
+        # apply mask
+        self._mask_on_off_images(on_image, off_image)
+
+        processed = ProcessedData(
             data['tid'], self._raw_data.images,
             reference=self._reference,
-            background=self.background,
+            background=self._background,
             image_mask=self._image_mask,
-            threshold_mask=self.threshold_mask,
+            threshold_mask=self._threshold_mask,
             ma_window=self._raw_data.ma_window,
             ma_count=self._raw_data.ma_count,
             keep=keep
         )
 
+        processed.pp.on_image_mean = on_image
+        processed.pp.off_image_mean = off_image
 
-class PumpProbeImageProcessor(LeafProcessor):
-    """Retrieve the on/off images.
+        data['processed'] = processed
+        del data['assembled']
 
-    It sets both on_image_mean and off_image_mean in PRE_DEFINED_OFF or
-    SAME_TRAIN modes as well as when an on-pulse is followed by an off
-    pulse in EVEN_TRAIN_ON or ODD_TRAIN_ON modes.
+    def _compute_on_off_images(self, tid, assembled):
+        on_image = None
+        off_image = None
 
-    Attributes:
-        _prev_on (None/numpy.ndarray): the most recent on-pulse image.
-    """
-
-    def __init__(self):
-        super().__init__()
-
-        self._prev_on = None
-
-    @profiler("Pump-probe Image Processor")
-    def process(self, data):
-        mode = self.pp_mode
-        if mode == PumpProbeMode.UNDEFINED:
-            return
-
-        assembled = data['assembled']
-        processed = data['processed']
-        image_mask = processed.image.image_mask
-        threshold_mask = processed.image.threshold_mask
-
+        mode = self._pp_mode
         # on and off are not from different trains
         if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             if assembled.ndim == 3:
                 # pulse resolved
-                on_image = nanmean_axis0_para(assembled[self.on_indices])
-                mask_image(on_image,
-                           threshold_mask=threshold_mask,
-                           image_mask=image_mask,
-                           inplace=True)
+                on_image = nanmean_axis0_para(assembled[self._on_indices])
             else:
-                on_image = processed.image.masked_mean
+                on_image = assembled.copy()
 
             if mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_image = processed.image.reference
-                if off_image is None:
+                if self._reference is None:
                     off_image = np.zeros_like(on_image)
                 else:
                     # do not operate on the original reference image
-                    off_image = off_image.copy()
-                    mask_image(off_image,
-                               threshold_mask=threshold_mask,
-                               image_mask=image_mask,
-                               inplace=True)
+                    off_image = self._reference.copy()
             else:
                 # train-resolved data does not have the mode 'SAME_TRAIN'
-                off_image = nanmean_axis0_para(assembled[self.off_indices])
-                mask_image(off_image,
-                           threshold_mask=threshold_mask,
-                           image_mask=image_mask,
-                           inplace=True)
+                off_image = nanmean_axis0_para(assembled[self._off_indices])
 
-            processed.pp.on_image_mean = on_image
-            processed.pp.off_image_mean = off_image
+        if mode in (PumpProbeMode.EVEN_TRAIN_ON, PumpProbeMode.ODD_TRAIN_ON):
+            # on and off are from different trains
 
-            return
+            if mode == PumpProbeMode.EVEN_TRAIN_ON:
+                flag = 1
+            else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
+                flag = 0
 
-        # on and off are from different trains
-
-        if mode == PumpProbeMode.EVEN_TRAIN_ON:
-            flag = 1
-        else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
-            flag = 0
-
-        if processed.tid % 2 == 1 ^ flag:
-            if processed.pulse_resolved:
-                self._prev_on = nanmean_axis0_para(assembled[self.on_indices])
-                mask_image(self._prev_on,
-                           threshold_mask=threshold_mask,
-                           image_mask=image_mask,
-                           inplace=True)
-            else:
-                self._prev_on = processed.image.masked_mean
-        else:
-            if self._prev_on is not None:
-                processed.pp.on_image_mean = self._prev_on
-                self._prev_on = None
-
-                # acknowledge off image only if on image has been received
-                if processed.pulse_resolved:
-                    off_image = nanmean_axis0_para(assembled[self.off_indices])
-                    mask_image(off_image,
-                               threshold_mask=threshold_mask,
-                               image_mask=image_mask,
-                               inplace=True)
-                    processed.pp.off_image_mean = off_image
+            if tid % 2 == 1 ^ flag:
+                if assembled.ndim == 3:
+                    self._prev_unmasked_on = nanmean_axis0_para(
+                        assembled[self._on_indices])
                 else:
-                    processed.pp.off_image_mean = processed.image.masked_mean
+                    self._prev_unmasked_on = assembled.copy()
 
-        del data['assembled']
+            else:
+                if self._prev_unmasked_on is not None:
+                    on_image = self._prev_unmasked_on
+                    self._prev_unmasked_on = None
+                    # acknowledge off image only if on image has been received
+                    if assembled.ndim == 3:
+                        off_image = nanmean_axis0_para(
+                            assembled[self._off_indices])
+                    else:
+                        off_image = assembled.copy()
+
+        return on_image, off_image
+
+    def _mask_on_off_images(self, on_image, off_image):
+        if on_image is not None:
+            mask_image(on_image,
+                       threshold_mask=self._threshold_mask,
+                       image_mask=self._image_mask,
+                       inplace=True)
+
+        if off_image is not None:
+            mask_image(off_image,
+                       threshold_mask=self._threshold_mask,
+                       image_mask=self._image_mask,
+                       inplace=True)

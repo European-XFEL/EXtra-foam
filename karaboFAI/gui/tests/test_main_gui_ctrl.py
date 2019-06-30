@@ -90,8 +90,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+        self.assertEqual(vip_pulse_index1, image_proc._vip_pulse_indices[0])
+        self.assertEqual(vip_pulse_index2, image_proc._vip_pulse_indices[1])
 
         # set new values
         vip_pulse_index1 = 10
@@ -105,8 +105,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+        self.assertEqual(vip_pulse_index1, image_proc._vip_pulse_indices[0])
+        self.assertEqual(vip_pulse_index2, image_proc._vip_pulse_indices[1])
 
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
@@ -122,11 +122,11 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertAlmostEqual(1e-10, ai_proc.wavelength)
         self.assertAlmostEqual(0.3, ai_proc.sample_dist)
         image_proc.update()
-        self.assertListEqual([-1], image_proc.pulse_index_filter)
+        self.assertListEqual([-1], image_proc._pulse_index_filter)
 
         widget._pulse_index_filter_le.setText("1:5:2")
         image_proc.update()
-        self.assertListEqual([1, 3], image_proc.pulse_index_filter)
+        self.assertListEqual([1, 3], image_proc._pulse_index_filter)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -220,11 +220,11 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
-        self.assertListEqual(list(range(0, 64, 2)), image_proc.on_indices)
-        self.assertIsInstance(image_proc.on_indices[0], int)
-        self.assertListEqual(list(range(1, 64, 2)), image_proc.off_indices)
-        self.assertIsInstance(image_proc.off_indices[0], int)
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
+        self.assertListEqual(list(range(0, 64, 2)), image_proc._on_indices)
+        self.assertIsInstance(image_proc._on_indices[0], int)
+        self.assertListEqual(list(range(1, 64, 2)), image_proc._off_indices)
+        self.assertIsInstance(image_proc._off_indices[0], int)
 
         # change assigning params
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
@@ -251,9 +251,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(AnalysisType(new_fom), pp_proc.analysis_type)
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc.pp_mode)
-        self.assertListEqual([0, 2, 4, 6, 8], image_proc.on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], image_proc.off_indices)
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc._pp_mode)
+        self.assertListEqual([0, 2, 4, 6, 8], image_proc._on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], image_proc._off_indices)
 
         # check invalid params
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
@@ -596,9 +596,9 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         # we only test train-resolved detector specific configuration
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
-        self.assertListEqual([0], image_proc.on_indices)
-        self.assertListEqual([0], image_proc.off_indices)
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
+        self.assertListEqual([0], image_proc._on_indices)
+        self.assertListEqual([0], image_proc._off_indices)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -607,9 +607,9 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
 
         image_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON),
-                         image_proc.pp_mode)
-        self.assertListEqual([0], image_proc.on_indices)
-        self.assertListEqual([0], image_proc.off_indices)
+                         image_proc._pp_mode)
+        self.assertListEqual([0], image_proc._on_indices)
+        self.assertListEqual([0], image_proc._off_indices)
 
         # PumpProbeMode.SAME_TRAIN is not available
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
