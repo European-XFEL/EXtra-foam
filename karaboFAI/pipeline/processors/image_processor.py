@@ -21,16 +21,15 @@ from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
 
-class _RawImageData:
+class RawImageData:
     """Stores moving average of raw images."""
-    def __init__(self, images=None):
-        self._images = None  # moving average (original data)
+    def __init__(self, images):
         self._ma_window = 1
+        self._new_ma_window = 1
         self._ma_count = 0
 
-        self._images = None
-        if images is not None:
-            self.images = images
+        self._images = None  # moving average (original data)
+        self.images = images
 
     @property
     def n_images(self):
@@ -59,14 +58,14 @@ class _RawImageData:
             raise ValueError(
                 f"The shape of images must be (y, x) or (n_pulses, y, x)!")
 
-        if self._images is not None and self._ma_window > 1:
-            if data.shape != self._images.shape:
-                # Note: this can happen, for example, when the quadrant
-                #       positions of the LPD detectors changes.
-                self._images = data
-                self._ma_count = 1
-                return
+        reset = False
+        if self._ma_window > self._new_ma_window:
+            reset = True
+        self._ma_window = self._new_ma_window
 
+        # Note: the image shape could change, for example, when the quadrant
+        #       positions of the LPD detectors changes.
+        if self._ma_window > 1 and data.shape == self._images.shape and not reset:
             if self._ma_count < self._ma_window:
                 self._ma_count += 1
                 self._images += (data - self._images) / self._ma_count
@@ -87,23 +86,11 @@ class _RawImageData:
         if not isinstance(v, int) or v <= 0:
             v = 1
 
-        if v < self._ma_window:
-            # if the new window size is smaller than the current one,
-            # we reset the original image sum and count
-            self._ma_window = v
-            self._ma_count = 0
-            self._images = None
-
-        self._ma_window = v
+        self._new_ma_window = v
 
     @property
     def ma_count(self):
         return self._ma_count
-
-    def clear(self):
-        self._images = None
-        self._ma_window = 1
-        self._ma_count = 0
 
 
 class ImageProcessor(CompositeProcessor):
@@ -112,7 +99,7 @@ class ImageProcessor(CompositeProcessor):
     A group of image processors. ProcessedData is constructed here.
 
     Attributes:
-        _raw_data (_RawImageData): store the moving average of the
+        _raw_data (RawImageData): store the moving average of the
             raw images in a train.
         _ma_window (int): moving average window size.
         _background (float): a uniform background value.
@@ -133,7 +120,7 @@ class ImageProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self._raw_data = _RawImageData()
+        self._raw_data = None
         self._ma_window = 1
         self._background = 0.0
         self._threshold_mask = None
@@ -187,8 +174,12 @@ class ImageProcessor(CompositeProcessor):
             # apply the pulse index filter
             assembled = assembled[self._pulse_index_filter]
 
+        if self._raw_data is None:
+            self._raw_data = RawImageData(assembled)
+        else:
+            self._raw_data.images = assembled
         self._raw_data.ma_window = self._ma_window
-        self._raw_data.images = assembled
+
         # make it the moving average
         # be careful, data['assembled'] and self._raw_data share memory
         data['assembled'] = self._raw_data.images
