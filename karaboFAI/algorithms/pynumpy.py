@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
 
-def nanmean_image(data, *, chunk_size=10, max_workers=4):
+def nanmean_images(data, *, chunk_size=10, max_workers=4):
     """Calculate nanmean of an array of images.
 
     :param numpy.ndarray data: an array of images. (index, y, x).

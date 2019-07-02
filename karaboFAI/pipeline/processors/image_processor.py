@@ -9,18 +9,20 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import time
+
 import numpy as np
 
 from .base_processor import CompositeProcessor
 from ..data_model import ProcessedData
 from ..exceptions import ProcessingError
-from ...algorithms import nanmean_image, mask_image
+from ...algorithms import mask_image
 from ...metadata import Metadata as mt
 from ...command import CommandProxy
 from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
-from karaboFAI.xtnumpy import xt_nanmean_image
+from karaboFAI.xtnumpy import xt_nanmean_images, xt_nanmean_two_images
 
 
 class RawImageData:
@@ -217,13 +219,23 @@ class ImageProcessor(CompositeProcessor):
                                   "different from the shape of the image {}!")
 
         # pump-probe images
-        on_image, off_image = self._compute_on_off_images(tid, assembled)
+        on_image, off_image, curr_indices, curr_means = \
+            self._compute_on_off_images(tid, assembled)
+
+        assembled_mean = None
+        # avoid calculating nanmean more than once
+        if len(curr_indices) == assembled.shape[0]:
+            if len(curr_means) == 1:
+                assembled_mean = curr_means[0].copy()
+            else:
+                assembled_mean = xt_nanmean_two_images(on_image, off_image)
 
         # apply mask
         self._mask_on_off_images(on_image, off_image)
 
         processed = ProcessedData(
             data['tid'], self._raw_data.images,
+            mean=assembled_mean,
             reference=self._reference,
             background=self._background,
             image_mask=self._image_mask,
@@ -240,6 +252,8 @@ class ImageProcessor(CompositeProcessor):
         del data['assembled']
 
     def _compute_on_off_images(self, tid, assembled):
+        curr_indices = []
+        curr_means = []
         on_image = None
         off_image = None
 
@@ -248,7 +262,10 @@ class ImageProcessor(CompositeProcessor):
         if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
             if assembled.ndim == 3:
                 # pulse resolved
-                on_image = nanmean_image(assembled[self._on_indices])
+                on_image = xt_nanmean_images(assembled[self._on_indices])
+
+                curr_indices.extend(self._on_indices)
+                curr_means.append(on_image)
             else:
                 on_image = assembled.copy()
 
@@ -260,7 +277,9 @@ class ImageProcessor(CompositeProcessor):
                     off_image = self._reference.copy()
             else:
                 # train-resolved data does not have the mode 'SAME_TRAIN'
-                off_image = nanmean_image(assembled[self._off_indices])
+                off_image = xt_nanmean_images(assembled[self._off_indices])
+                curr_indices.extend(self._off_indices)
+                curr_means.append(off_image)
 
         if mode in (PumpProbeMode.EVEN_TRAIN_ON, PumpProbeMode.ODD_TRAIN_ON):
             # on and off are from different trains
@@ -272,8 +291,10 @@ class ImageProcessor(CompositeProcessor):
 
             if tid % 2 == 1 ^ flag:
                 if assembled.ndim == 3:
-                    self._prev_unmasked_on = nanmean_image(
+                    self._prev_unmasked_on = xt_nanmean_images(
                         assembled[self._on_indices])
+                    curr_indices.extend(self._on_indices)
+                    curr_means.append(self._prev_unmasked_on)
                 else:
                     self._prev_unmasked_on = assembled.copy()
 
@@ -283,12 +304,13 @@ class ImageProcessor(CompositeProcessor):
                     self._prev_unmasked_on = None
                     # acknowledge off image only if on image has been received
                     if assembled.ndim == 3:
-                        off_image = nanmean_image(
-                            assembled[self._off_indices])
+                        off_image = xt_nanmean_images(assembled[self._off_indices])
+                        curr_indices.extend(self._off_indices)
+                        curr_means.append(off_image)
                     else:
                         off_image = assembled.copy()
 
-        return on_image, off_image
+        return on_image, off_image, curr_indices, curr_means
 
     def _mask_on_off_images(self, on_image, off_image):
         if on_image is not None:

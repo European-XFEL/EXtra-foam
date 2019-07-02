@@ -14,10 +14,10 @@ from threading import Lock
 
 import numpy as np
 
-from ..algorithms import nanmean_image, mask_image
+from ..algorithms import mask_image
 from ..config import config
 
-from karaboFAI.xtnumpy import xt_nanmean_image
+from karaboFAI.xtnumpy import xt_nanmean_images
 
 
 class PairData:
@@ -485,6 +485,7 @@ class ImageData:
         _DEFAULT_DTYPE = np.float32
 
     def __init__(self, data, *,
+                 mean=None,
                  reference=None,
                  background=0.0,
                  image_mask=None,
@@ -495,6 +496,9 @@ class ImageData:
         """Initialization.
 
         :param numpy.ndarray data: image data in a train.
+        :param numpy.ndarray mean: nanmean of image data in a train. If not
+            given, it will be calculated based on the image data. Only used
+            for pulse-resolved detectors.
         :param numpy.ndarray reference: reference image.
         :param float background: a uniform background value.
         :param numpy.ndarray image_mask: image mask.
@@ -525,7 +529,10 @@ class ImageData:
         self._shape = images.shape[-2:]
 
         if data.ndim == 3:
-            self._mean = nanmean_image(images)
+            if mean is None:
+                self._mean = xt_nanmean_images(images)
+            else:
+                self._mean = mean
 
             self._n_images = images.shape[0]
             self._pulse_resolved = True
