@@ -15,9 +15,7 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
-from ..gui_helpers import parse_ids
 from ...config import PumpProbeMode, AnalysisType
-from ...logger import logger
 
 
 class PumpProbeCtrlWidget(AbstractCtrlWidget):
@@ -52,8 +50,8 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
             self._mode_cb.addItems(all_keys)
-            on_pulse_indices = "0:64:2"
-            off_pulse_indices = "1:64:2"
+            on_pulse_indices = ":"
+            off_pulse_indices = ":"
         else:
             all_keys.remove("same train")
             self._mode_cb.addItems(all_keys)
@@ -72,12 +70,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
         self._reset_btn = QtGui.QPushButton("Reset")
-
-        self._non_reconfigurable_widgets = [
-            self._mode_cb,
-            self._on_pulse_le,
-            self._off_pulse_le,
-        ]
 
         self.initUI()
 
@@ -126,6 +118,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._mode_cb.currentTextChanged.connect(
             lambda x: mediator.onPpModeChange(self._available_modes[x]))
 
+        self._mode_cb.currentTextChanged.connect(
+            lambda x: self.onPpModeChange(self._available_modes[x]))
+
         self._on_pulse_le.value_changed_sgn.connect(
             mediator.onPpOnPulseIdsChange)
 
@@ -134,9 +129,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
-        if not self._checkOnOffIds():
-            return False
-
         self._ma_window_le.returnPressed.emit()
 
         self._abs_difference_cb.toggled.emit(
@@ -153,29 +145,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         return True
 
-    def _checkOnOffIds(self):
-        try:
-            mode = self._available_modes[self._mode_cb.currentText()]
-
-            # check pulse index only when laser on/off pulses are in the same
-            # train (the "normal" mode)
-            on_pulse_indices = parse_ids(self._on_pulse_le.text())
-            if mode == PumpProbeMode.PRE_DEFINED_OFF:
-                off_pulse_indices = []
-            else:
-                off_pulse_indices = parse_ids(self._off_pulse_le.text())
-
-            if mode == PumpProbeMode.SAME_TRAIN and self._pulse_resolved:
-                common = set(on_pulse_indices).intersection(off_pulse_indices)
-                if common:
-                    logger.error("Pulse indices {} are found in both on- and "
-                                 "off- pulses.".
-                                 format(','.join([str(v) for v in common])))
-                    return False
-
-        except ValueError:
-            logger.error("Invalid input! Enter on/off pulse indices separated "
-                         "by ',' and/or use the range operator ':'!")
-            return False
-
-        return True
+    def onPpModeChange(self, pp_mode):
+        if pp_mode == PumpProbeMode.PRE_DEFINED_OFF:
+            # off-pulse indices are ignored in PRE_DEFINED_OFF mode.
+            self._off_pulse_le.setEnabled(False)
+        else:
+            self._off_pulse_le.setEnabled(True)

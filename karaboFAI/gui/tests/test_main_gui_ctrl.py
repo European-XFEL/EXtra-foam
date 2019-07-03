@@ -221,9 +221,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         image_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
-        self.assertListEqual(list(range(0, 64, 2)), image_proc._on_indices)
+        self.assertListEqual([-1], image_proc._on_indices)
         self.assertIsInstance(image_proc._on_indices[0], int)
-        self.assertListEqual(list(range(1, 64, 2)), image_proc._off_indices)
+        self.assertListEqual([-1], image_proc._off_indices)
         self.assertIsInstance(image_proc._off_indices[0], int)
 
         # change assigning params
@@ -254,16 +254,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc._pp_mode)
         self.assertListEqual([0, 2, 4, 6, 8], image_proc._on_indices)
         self.assertListEqual([1, 3, 5, 7, 9], image_proc._off_indices)
-
-        # check invalid params
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
-        widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertFalse(self.gui.updateMetaData())
-
-        # change to valid params
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.ODD_TRAIN_ON])
-        widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertTrue(self.gui.updateMetaData())
 
         pp_reset.reset_mock()
         widget._reset_btn.clicked.emit()

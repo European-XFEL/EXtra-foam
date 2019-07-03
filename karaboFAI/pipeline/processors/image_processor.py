@@ -15,7 +15,7 @@ import numpy as np
 
 from .base_processor import CompositeProcessor
 from ..data_model import ProcessedData
-from ..exceptions import ProcessingError
+from ..exceptions import ProcessingError, PumpProbeIndexError
 from ...algorithms import mask_image
 from ...metadata import Metadata as mt
 from ...command import CommandProxy
@@ -136,9 +136,9 @@ class ImageProcessor(CompositeProcessor):
         self._pulse_index_filter = None
         self._vip_pulse_indices = None
 
-        self._pp_mode = None
-        self._on_indices = None
-        self._off_indices = None
+        self._pp_mode = PumpProbeMode.UNDEFINED
+        self._on_indices = []
+        self._off_indices = []
         # the most recent on-pulse image
         self._prev_unmasked_on = None
 
@@ -233,6 +233,9 @@ class ImageProcessor(CompositeProcessor):
         # apply mask
         self._mask_on_off_images(on_image, off_image)
 
+        # Note: Any Exceptions raise before the ProcessedData is constructed
+        #       will stop the pipeline, i.e. the effect is equivalent as
+        #       raising the StopPipelineError.
         processed = ProcessedData(
             data['tid'], self._raw_data.images,
             mean=assembled_mean,
@@ -258,57 +261,66 @@ class ImageProcessor(CompositeProcessor):
         off_image = None
 
         mode = self._pp_mode
-        # on and off are not from different trains
-        if mode in (PumpProbeMode.PRE_DEFINED_OFF, PumpProbeMode.SAME_TRAIN):
+        if mode != PumpProbeMode.UNDEFINED:
             if assembled.ndim == 3:
-                # pulse resolved
-                on_image = xt_nanmean_images(assembled[self._on_indices])
+                self._validate_on_off_indices(assembled.shape[0])
 
-                curr_indices.extend(self._on_indices)
-                curr_means.append(on_image)
-            else:
-                on_image = assembled.copy()
-
-            if mode == PumpProbeMode.PRE_DEFINED_OFF:
-                if self._reference is None:
-                    off_image = np.zeros_like(on_image)
-                else:
-                    # do not operate on the original reference image
-                    off_image = self._reference.copy()
-            else:
-                # train-resolved data does not have the mode 'SAME_TRAIN'
-                off_image = xt_nanmean_images(assembled[self._off_indices])
-                curr_indices.extend(self._off_indices)
-                curr_means.append(off_image)
-
-        if mode in (PumpProbeMode.EVEN_TRAIN_ON, PumpProbeMode.ODD_TRAIN_ON):
-            # on and off are from different trains
-
-            if mode == PumpProbeMode.EVEN_TRAIN_ON:
-                flag = 1
-            else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
-                flag = 0
-
-            if tid % 2 == 1 ^ flag:
+            # on and off are not from different trains
+            if mode in (PumpProbeMode.PRE_DEFINED_OFF,
+                        PumpProbeMode.SAME_TRAIN):
                 if assembled.ndim == 3:
-                    self._prev_unmasked_on = xt_nanmean_images(
-                        assembled[self._on_indices])
-                    curr_indices.extend(self._on_indices)
-                    curr_means.append(self._prev_unmasked_on)
-                else:
-                    self._prev_unmasked_on = assembled.copy()
+                    # pulse resolved
+                    on_image = xt_nanmean_images(assembled[self._on_indices])
 
-            else:
-                if self._prev_unmasked_on is not None:
-                    on_image = self._prev_unmasked_on
-                    self._prev_unmasked_on = None
-                    # acknowledge off image only if on image has been received
-                    if assembled.ndim == 3:
-                        off_image = xt_nanmean_images(assembled[self._off_indices])
-                        curr_indices.extend(self._off_indices)
-                        curr_means.append(off_image)
+                    curr_indices.extend(self._on_indices)
+                    curr_means.append(on_image)
+                else:
+                    on_image = assembled.copy()
+
+                if mode == PumpProbeMode.PRE_DEFINED_OFF:
+                    if self._reference is None:
+                        off_image = np.zeros_like(on_image)
                     else:
-                        off_image = assembled.copy()
+                        # do not operate on the original reference image
+                        off_image = self._reference.copy()
+                else:
+                    # train-resolved data does not have the mode 'SAME_TRAIN'
+                    off_image = xt_nanmean_images(
+                        assembled[self._off_indices])
+                    curr_indices.extend(self._off_indices)
+                    curr_means.append(off_image)
+
+            if mode in (PumpProbeMode.EVEN_TRAIN_ON,
+                        PumpProbeMode.ODD_TRAIN_ON):
+                # on and off are from different trains
+
+                if mode == PumpProbeMode.EVEN_TRAIN_ON:
+                    flag = 1
+                else:  # mode == PumpProbeMode.ODD_TRAIN_ON:
+                    flag = 0
+
+                if tid % 2 == 1 ^ flag:
+                    if assembled.ndim == 3:
+                        self._prev_unmasked_on = xt_nanmean_images(
+                            assembled[self._on_indices])
+                        curr_indices.extend(self._on_indices)
+                        curr_means.append(self._prev_unmasked_on)
+                    else:
+                        self._prev_unmasked_on = assembled.copy()
+
+                else:
+                    if self._prev_unmasked_on is not None:
+                        on_image = self._prev_unmasked_on
+                        self._prev_unmasked_on = None
+                        # acknowledge off image only if on image
+                        # has been received
+                        if assembled.ndim == 3:
+                            off_image = xt_nanmean_images(
+                                assembled[self._off_indices])
+                            curr_indices.extend(self._off_indices)
+                            curr_means.append(off_image)
+                        else:
+                            off_image = assembled.copy()
 
         return on_image, off_image, curr_indices, curr_means
 
@@ -324,3 +336,36 @@ class ImageProcessor(CompositeProcessor):
                        threshold_mask=self._threshold_mask,
                        image_mask=self._image_mask,
                        inplace=True)
+
+    def _validate_on_off_indices(self, n_pulses):
+        """Check pulse index when on/off pulses in the same train.
+
+        Note: We can not check it in the GUI side since we do not know
+              how many pulses are there in the train.
+        """
+        # convert [-1] to a list of indices
+        all_indices = list(range(n_pulses))
+        if self._on_indices[0] == -1:
+            self._on_indices = all_indices
+        if self._off_indices[0] == -1:
+            self._off_indices = all_indices
+
+        mode = self._pp_mode
+
+        # check index range
+        if mode == PumpProbeMode.PRE_DEFINED_OFF:
+            max_index = max(self._on_indices)
+        else:
+            max_index = max(max(self._on_indices), max(self._off_indices))
+
+        if max_index >= n_pulses:
+            raise PumpProbeIndexError(f"Index {max_index} is out of range for"
+                                      f" a train with {n_pulses} pulses!")
+
+        if mode == PumpProbeMode.SAME_TRAIN:
+            # check pulse index overlap in on- and off- indices
+            common = set(self._on_indices).intersection(self._off_indices)
+            if common:
+                raise PumpProbeIndexError(
+                    "Pulse indices {} are found in both on- and off- pulses.".
+                    format(','.join([str(v) for v in common])))

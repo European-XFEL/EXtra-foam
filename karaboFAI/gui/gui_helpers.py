@@ -67,6 +67,11 @@ def parse_ids(text):
     Combination of the above two styles:
 
     parse_ids("1:3, 5") == [1, 2, 5]
+
+    ":" means all the pulses in a train. The indices list will be generated
+    after data is received.
+
+    parse_ids(":") == [-1]
     """
     def parse_item(v):
         if not v:

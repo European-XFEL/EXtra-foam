@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -18,7 +18,9 @@ from karaboFAI.pipeline.processors.image_processor import (
     RawImageData, ImageProcessor
 )
 from karaboFAI.config import PumpProbeMode
-
+from karaboFAI.pipeline.exceptions import (
+    PumpProbeIndexError, ProcessingError
+)
 
 class TestRawImageData(unittest.TestCase):
 
@@ -272,8 +274,6 @@ class TestImageProcessorPr(unittest.TestCase):
 
         self._proc._pulse_index_filter = [-1]
         self._proc._vip_pulse_indices = [0, 2]
-        self._proc._on_indices = [0, 2]
-        self._proc._off_indices = [1, 3]
 
     def testGeneral(self):
         proc = self._proc
@@ -342,6 +342,33 @@ class TestImageProcessorPr(unittest.TestCase):
                 'assembled': imgs.copy()}
         return data
 
+    def testInvalidPulseIndices(self):
+        proc = self._proc
+        proc._on_indices = [0, 1, 5]
+        proc._off_indices = [1]
+
+        proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
+        with self.assertRaises(PumpProbeIndexError):
+            proc.process(self._gen_data(1001))
+
+        proc._off_indices = [1, 3]
+        proc._pp_mode = PumpProbeMode.EVEN_TRAIN_ON
+        with self.assertRaises(PumpProbeIndexError):
+            proc.process(self._gen_data(1001))
+
+        # raises when the same pulse index was found in both
+        # on- and off- indices
+        proc._on_indices = [0, 1]
+        proc._off_indices = [1, 3]
+        proc._pp_mode = PumpProbeMode.SAME_TRAIN
+        with self.assertRaises(PumpProbeIndexError):
+            proc.process(self._gen_data(1001))
+
+        # off-indices check is not trigger in PRE_DEFINED_OFF mode
+        proc._off_indices = [5]
+        proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc.process(self._gen_data(1001))
+
     def testUndefined(self):
         proc = self._proc
         proc._on_indices = [0, 2]
@@ -359,6 +386,8 @@ class TestImageProcessorPr(unittest.TestCase):
     def testPredefinedOff(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc._on_indices = [0, 2]
+        proc._off_indices = [1, 3]
 
         data = self._gen_data(1001)
         assembled = data['assembled']
@@ -373,6 +402,8 @@ class TestImageProcessorPr(unittest.TestCase):
     def testSameTrain(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.SAME_TRAIN
+        proc._on_indices = [0, 2]
+        proc._off_indices = [1, 3]
 
         data = self._gen_data(1001)
         assembled = data['assembled']
@@ -388,6 +419,8 @@ class TestImageProcessorPr(unittest.TestCase):
     def testEvenOn(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.EVEN_TRAIN_ON
+        proc._on_indices = [0, 2]
+        proc._off_indices = [1, 3]
 
         # test off will not be acknowledged without on
         data = self._gen_data(1001)  # off
@@ -420,6 +453,8 @@ class TestImageProcessorPr(unittest.TestCase):
     def testOddOn(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.ODD_TRAIN_ON
+        proc._on_indices = [0, 2]
+        proc._off_indices = [1, 3]
 
         # test off will not be acknowledged without on
         data = self._gen_data(1002)  # off
