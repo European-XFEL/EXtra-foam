@@ -106,16 +106,24 @@ the ``Data source`` panel.
 Data analysis with files
 ------------------------
 
-**karaboFAI** can be used to replay the experiment with files.
+**karaboFAI** can be used to replay the experiment with files. Click on the
+``Offline`` window on the tool bar that opens the following window.
 
+.. image:: images/file_stream_control.png
 
-The data is streamed from files after the ``Serve`` button is clicked. The user
-is free to use any available ``port``. ``Hostname`` should be `localhost` and
-the user needs to specify the full path of the directory which contains the
-(calibrated) files.
+The run folder is browsed through the ``Load Run Folder`` button. The corrected image
+data will be streamed from the run folder. If the run folder has path structure
+as on `Maxwell GPFS` (/gpfs/exfel/exp/instrument/cycle/proposal/proc/runnumber) then once
+the run folder is loaded, all the  slow/control sources available in the
+corresponding *raw* folder (or same data folder if no corresponding raw
+folder is found) are listed. Users can then choose slow data sources to stream
+along with the fast image data.
+
+The data is streamed from files after the ``Stream files`` button is clicked. The user
+is free to use any available ``port``. ``Hostname`` should be `localhost`.
 
 .. image:: images/data_source_from_file.png
-   :width: 300
+   :width: 500
 
 .. list-table:: Example files
    :header-rows: 1
