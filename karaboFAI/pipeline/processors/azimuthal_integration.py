@@ -209,6 +209,7 @@ class AiProcessor(LeafProcessor):
             momentum = mean_ret.radial
             intensity = mean_ret.intensity
             fom = slice_curve(intensity, momentum, *self.fom_integ_range)[0]
+            fom = np.sum(np.abs(fom))
 
             processed.ai.momentum = momentum
             processed.ai.intensity = self._normalize(
