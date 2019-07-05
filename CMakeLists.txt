@@ -19,8 +19,6 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-OPTION(FAI_WITH_TBB "enable parallelization using intel TBB" OFF)
-
 # pybind11
 add_subdirectory(thirdparty/pybind11)
 set(pybind11_INCLUDE_DIRS PYBIND11_INCLUDE_DIR)
@@ -28,6 +26,10 @@ set(pybind11_INCLUDE_DIRS PYBIND11_INCLUDE_DIR)
 # xtl
 add_subdirectory(thirdparty/xtl)
 set(xtl_DIR ${PROJECT_BINARY_DIR}/thirdparty/xtl)
+
+# xsimd
+add_subdirectory(thirdparty/xsimd)
+set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
 
 # xtensor
 add_subdirectory(thirdparty/xtensor)
