@@ -79,7 +79,7 @@ class BuildExt(build_ext):
         build_type = 'debug' if self.debug else 'release'
 
         cmake_options = [
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'karaboFAI/')}",
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'karaboFAI/cpp')}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
         ]

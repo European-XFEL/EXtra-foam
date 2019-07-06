@@ -20,7 +20,7 @@ from ...metadata import Metadata as mt
 from ...config import config, RoiFom, AnalysisType, CurveNormalizer
 from ...utils import profiler
 
-from karaboFAI.algo import intersection
+from karaboFAI.cpp import intersection
 
 
 class RoiProcessor(CompositeProcessor):

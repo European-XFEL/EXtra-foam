@@ -17,7 +17,7 @@ import numpy as np
 from ..algorithms import mask_image
 from ..config import config
 
-from karaboFAI.xtnumpy import xt_nanmean_images
+from karaboFAI.cpp import xt_nanmean_images
 
 
 class PairData:

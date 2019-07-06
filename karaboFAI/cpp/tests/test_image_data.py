@@ -6,7 +6,7 @@ import numpy as np
 from karaboFAI.pipeline.processors.image_processor import \
     RawImageData as RawImageDataPy
 
-from karaboFAI.image_data import RawImageData
+from karaboFAI.cpp import RawImageData
 
 
 class TestRawImageDataCpp(unittest.TestCase):

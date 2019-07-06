@@ -22,7 +22,7 @@ from ...command import CommandProxy
 from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
-from karaboFAI.xtnumpy import xt_nanmean_images, xt_nanmean_two_images
+from karaboFAI.cpp import xt_nanmean_images, xt_nanmean_two_images
 
 
 class RawImageData:

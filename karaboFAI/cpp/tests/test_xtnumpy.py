@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from karaboFAI.xtnumpy import xt_nanmean_images, xt_nanmean_two_images
+from karaboFAI.cpp import xt_nanmean_images, xt_nanmean_two_images
 
 from karaboFAI.algorithms import nanmean_images
 
