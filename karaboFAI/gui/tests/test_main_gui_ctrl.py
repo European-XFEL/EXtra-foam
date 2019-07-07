@@ -178,34 +178,35 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(-1000*pixel_size, proc.poni2)
         self.assertEqual(1000*pixel_size, proc.poni1)
 
-    @patch("karaboFAI.pipeline.data_model.RoiData.clear")
-    def testRoiCtrlWidget(self, roi_reset):
+    def testRoiCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
         proc = self.scheduler._roi_proc
         proc.update()
 
         # test default reconfigurable values
-        self.assertEqual(np.sum, proc.roi_fom_handler)
-        self.assertEqual(CurveNormalizer.AUC, proc.proj1d_normalizer)
-        self.assertEqual((0, math.inf), proc.proj1d_fom_integ_range)
-        self.assertEqual((0, math.inf), proc.proj1d_auc_range)
+        self.assertEqual(np.sum, proc._roi_fom_handler)
+        self.assertEqual(CurveNormalizer.AUC, proc._proj1d_normalizer)
+        self.assertEqual((0, math.inf), proc._proj1d_fom_integ_range)
+        self.assertEqual((0, math.inf), proc._proj1d_auc_range)
 
         # test setting new values
-        roi_reset.reset_mock()
+        proc._reset = False
         widget._roi_fom_cb.setCurrentText('mean')
-        roi_reset.assert_called_once()
+        proc.update()
+        self.assertTrue(proc._reset)
 
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
 
-        self.assertEqual(np.mean, proc.roi_fom_handler)
-        self.assertEqual((10, 20), proc.proj1d_fom_integ_range)
-        self.assertEqual((30, 40), proc.proj1d_auc_range)
+        self.assertEqual(np.mean, proc._roi_fom_handler)
+        self.assertEqual((10, 20), proc._proj1d_fom_integ_range)
+        self.assertEqual((30, 40), proc._proj1d_auc_range)
 
-        roi_reset.reset_mock()
+        proc._reset = False
         widget._roi_reset_btn.clicked.emit()
-        roi_reset.assert_called_once()
+        proc.update()
+        self.assertTrue(proc._reset)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget

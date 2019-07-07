@@ -160,10 +160,9 @@ class Mediator(DataManagerMixin, QObject):
 
     def onRoiFomChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, 'fom_type', int(value))
-        self.reset_roi()
 
     def onRoiReset(self):
-        self.reset_roi()
+        self._meta.set(mt.ROI_PROC, "reset", 1)
 
     def onProj1dNormalizerChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, "proj1d:normalizer", int(value))

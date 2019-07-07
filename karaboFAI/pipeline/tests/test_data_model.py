@@ -208,9 +208,6 @@ class TestCorrelationData(unittest.TestCase):
 
 
 class TestProcessedData(unittest.TestCase):
-    def setUp(self):
-        DataManagerMixin().reset_roi()
-
     def testGeneral(self):
         # ---------------------
         # pulse-resolved data

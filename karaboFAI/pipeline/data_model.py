@@ -374,7 +374,13 @@ class RoiData(AbstractData):
             setattr(self, f"roi{i}_proj_y", None)  # projection on y
             setattr(self, f"roi{i}_fom", None)  # FOM
 
+        self.reset = False
+
     def update_hist(self, tid):
+        if self.reset:
+            for i in range(1, self._n_rois + 1):
+                self.__class__.__dict__[f"roi{i}_hist"].clear()
+
         for i in range(1, self._n_rois+1):
             fom = getattr(self, f"roi{i}_fom")
             if fom is None:
@@ -827,10 +833,6 @@ class DataManagerMixin:
     @staticmethod
     def reset_correlation():
         CorrelationData.clear()
-
-    @staticmethod
-    def reset_roi():
-        RoiData.clear()
 
     @staticmethod
     def reset_xas():

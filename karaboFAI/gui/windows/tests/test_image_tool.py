@@ -112,14 +112,14 @@ class TestImageTool(unittest.TestCase):
         widget = self.window._roi_ctrl_widget
 
         proc.update()
-        self.assertListEqual([False]*4, proc.visibilities)
+        self.assertListEqual([False]*4, proc._visibilities)
 
         for i, ctrl in enumerate(widget._roi_ctrls):
             roi_region = [int(ctrl._px_le.text()),
                           int(ctrl._py_le.text()),
                           int(ctrl._width_le.text()),
                           int(ctrl._height_le.text())]
-            self.assertListEqual(roi_region, proc.regions[i])
+            self.assertListEqual(roi_region, proc._regions[i])
 
     def testRoiCtrlWidget(self):
         widget = self.window._roi_ctrl_widget
@@ -144,7 +144,7 @@ class TestImageTool(unittest.TestCase):
                          pos=QtCore.QPoint(2, roi1_ctrl.activate_cb.height()/2))
         self.assertTrue(roi1_ctrl.activate_cb.isChecked())
         proc.update()
-        self.assertTrue(proc.visibilities[0])
+        self.assertTrue(proc._visibilities[0])
 
         # test default values
         self.assertTupleEqual((float(roi1_ctrl._width_le.text()),
@@ -173,7 +173,7 @@ class TestImageTool(unittest.TestCase):
         self.assertTupleEqual((-1, -3), tuple(roi1.pos()))
 
         proc.update()
-        self.assertListEqual([-1, -3, 10, 30], proc.regions[0])
+        self.assertListEqual([-1, -3, 10, 30], proc._regions[0])
 
         # lock ROI ctrl
         QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,
