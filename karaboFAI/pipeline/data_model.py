@@ -480,7 +480,7 @@ class PumpProbeData(AbstractData):
         def moving_average_count(self):
             return self._ma_count
 
-        def reset(self):
+        def clear(self):
             with self._lock:
                 self._ma_window = 1
                 self._ma_count = 0
@@ -519,10 +519,17 @@ class PumpProbeData(AbstractData):
         # the sum of ROI.
         self.fom = None
 
-    def update_hist(self, tid):
-        fom = self.fom
-        if fom is not None:
-            self.fom_hist = (tid, fom)
+        self.reset = False
+
+    def update_hist(self, tid=None):
+        if self.reset:
+            self.__class__.__dict__['data'].clear()
+            self.__class__.__dict__['fom_hist'].clear()
+
+        if tid is not None:
+            fom = self.fom
+            if fom is not None:
+                self.fom_hist = (tid, fom)
 
     @property
     def ma_window(self):
@@ -535,11 +542,6 @@ class PumpProbeData(AbstractData):
     @property
     def ma_count(self):
         return self.__class__.__dict__['data'].moving_average_count
-
-    @classmethod
-    def clear(cls):
-        super().clear()
-        cls.__dict__['data'].reset()
 
 
 class ImageData:
@@ -829,10 +831,6 @@ class DataManagerMixin:
     @staticmethod
     def reset_roi():
         RoiData.clear()
-
-    @staticmethod
-    def reset_pp():
-        PumpProbeData.clear()
 
     @staticmethod
     def reset_xas():

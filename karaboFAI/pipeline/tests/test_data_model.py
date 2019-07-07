@@ -342,9 +342,6 @@ class TestImageData(unittest.TestCase):
 
 
 class TestPumpProbeData(unittest.TestCase):
-    def setUp(self):
-        DataManagerMixin().reset_pp()
-
     def testGeneral(self):
         data = PumpProbeData()
 
@@ -362,9 +359,10 @@ class TestPumpProbeData(unittest.TestCase):
         on_gt = np.copy(this_on)
         off_gt = np.copy(this_off)
 
-        # test clear
+        # test reset
         data.data = (x_gt, this_on, this_off)
-        PumpProbeData.clear()
+        data.reset = True
+        data.update_hist()
         self.assertEqual(1, data.ma_window)
         self.assertEqual(0, data.ma_count)
 

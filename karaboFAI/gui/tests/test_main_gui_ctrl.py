@@ -207,8 +207,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._roi_reset_btn.clicked.emit()
         roi_reset.assert_called_once()
 
-    @patch("karaboFAI.pipeline.data_model.PumpProbeData.clear")
-    def testPumpProbeCtrlWidget(self, pp_reset):
+    def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         image_proc = self.image_worker._image_proc
         pp_proc = self.scheduler._pp_proc
@@ -218,8 +217,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # check default reconfigurable params
         pp_proc.update()
-        self.assertEqual(1, pp_proc.ma_window)
-        self.assertTrue(pp_proc.abs_difference)
+        self.assertEqual(1, pp_proc._ma_window)
+        self.assertTrue(pp_proc._abs_difference)
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
         image_proc.update()
@@ -229,38 +228,45 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertListEqual([-1], image_proc._off_indices)
         self.assertIsInstance(image_proc._off_indices[0], int)
 
-        # change assigning params
+        # change analysis type
+        pp_proc._reset = False
+        widget._analysis_type_cb.setCurrentIndex(AnalysisType.ROI1_SUB_ROI2)
+        pp_proc.update()
+        self.assertEqual(AnalysisType(AnalysisType.ROI1_SUB_ROI2), pp_proc.analysis_type)
+        self.assertTrue(pp_proc._reset)
+
+        # change pump-probe mode
+        pp_proc._reset = False
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
+
+        # change moving average window
+        widget._ma_window_le.setText(str(10))
+        pp_proc.update()
+        self.assertEqual(10, pp_proc._ma_window)
+
+        # change abs_difference
+        pp_proc._reset = False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
-        widget._ma_window_le.setText(str(10))
-        new_fom = AnalysisType.ROI1_SUB_ROI2
+        pp_proc.update()
+        self.assertFalse(pp_proc._abs_difference)
+        self.assertTrue(pp_proc._reset)
 
-        pp_reset.reset_mock()
-        widget._analysis_type_cb.setCurrentIndex(new_fom)
-        pp_reset.assert_called_once()
-
-        pp_reset.reset_mock()
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        pp_reset.assert_called_once()
-
+        # change on/off pulse indices
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-
-        self.assertTrue(self.gui.updateMetaData())
-
-        pp_proc.update()
-        self.assertFalse(pp_proc.abs_difference)
-        self.assertEqual(10, pp_proc.ma_window)
-        self.assertEqual(AnalysisType(new_fom), pp_proc.analysis_type)
-
         image_proc.update()
         self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc._pp_mode)
         self.assertListEqual([0, 2, 4, 6, 8], image_proc._on_indices)
         self.assertListEqual([1, 3, 5, 7, 9], image_proc._off_indices)
 
-        pp_reset.reset_mock()
+        # test reset button
+        pp_proc._reset = False
         widget._reset_btn.clicked.emit()
-        pp_reset.assert_called_once()
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
 
     @patch("karaboFAI.pipeline.data_model.XasData.clear")
     def testXasCtrlWidget(self, reset_xas):

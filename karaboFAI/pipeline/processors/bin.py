@@ -69,7 +69,7 @@ class BinProcessor(CompositeProcessor):
     def __init__(self):
         super().__init__()
 
-        self.analysis_type = None
+        self.analysis_type = AnalysisType.UNDEFINED
 
         self._mode = None
 

@@ -130,11 +130,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'enable_pulsed_ai', str(value))
 
     def onPpModeChange(self, value: IntEnum):
-        value = int(value)
-        if self._meta.get(mt.PUMP_PROBE_PROC, 'mode') != value:
-            self.reset_pp()
-        self._meta.set(mt.PUMP_PROBE_PROC, 'mode', value)
-        # TODO: reset correlation if FOM in correlation is pump-probe
+        self._meta.set(mt.PUMP_PROBE_PROC, 'mode', int(value))
 
     def onPpOnPulseIdsChange(self, value: list):
         self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
@@ -144,8 +140,6 @@ class Mediator(DataManagerMixin, QObject):
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
-        self.reset_pp()
-        # TODO: reset correlation if FOM in correlation is pump-probe
 
     def onPpAbsDifferenceChange(self, value: bool):
         self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))
@@ -154,7 +148,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.PUMP_PROBE_PROC, "ma_window", value)
 
     def onPpReset(self):
-        self.reset_pp()
+        self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
 
     def onRoiRegionChange(self, value: tuple):
         rank, x, y, w, h = value
