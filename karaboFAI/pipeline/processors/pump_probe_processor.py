@@ -41,7 +41,8 @@ class PumpProbeProcessor(CompositeProcessor):
         """Override."""
         cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
 
-        if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
+        if self._update_analysis(AnalysisType(int(cfg['analysis_type'])),
+                                 register=False):
             self._reset = True
 
         mode = PumpProbeMode(int(cfg['mode']))

@@ -178,9 +178,9 @@ class RoiProcessor(CompositeProcessor):
                 fom = self._roi_fom_handler(norm_on_off_ma)
 
         else:
-            if processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_X:
+            if processed.pp.analysis_type == AnalysisType.ROI1_SUB_ROI2_PROJECTION_X:
                 axis = -2
-            elif processed.pp.analysis_type == AnalysisType.ROI_PROJECTION_Y:
+            elif processed.pp.analysis_type == AnalysisType.ROI1_SUB_ROI2_PROJECTION_Y:
                 axis = -1
             else:
                 return

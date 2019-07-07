@@ -280,7 +280,7 @@ class BinData(AbstractData):
 
         self.fom12 = None
 
-    def update_hist(self):
+    def update_hist(self, tid=None):
         n1 = self.n_bins1
         n2 = self.n_bins2
 
@@ -337,17 +337,26 @@ class BinData(AbstractData):
 class CorrelationData(AbstractData):
     """Correlation data model."""
 
-    n_params = len(config["CORRELATION_COLORS"])
+    _n_params = len(config["CORRELATION_COLORS"])
 
     def __init__(self):
         super().__init__()
         self.fom = None
-        for i in range(1, self.n_params+1):
+        for i in range(1, self._n_params+1):
             setattr(self, f"correlator{i}", None)
 
-    def update_hist(self, tid):
+        self.reset = False
+
+    def update_hist(self, tid=None):
+        if self.reset:
+            for i in range(1, self._n_params + 1):
+                try:
+                    self.__class__.__dict__[f"correlation{i}"].clear()
+                except KeyError:
+                    pass
+
         fom = self.fom
-        for i in range(1, self.n_params+1):
+        for i in range(1, self._n_params+1):
             corr = getattr(self, f"correlator{i}")
             if corr is not None:
                 setattr(self, f"correlation{i}", (corr, fom))
@@ -378,16 +387,17 @@ class RoiData(AbstractData):
 
         self.reset = False
 
-    def update_hist(self, tid):
+    def update_hist(self, tid=None):
         if self.reset:
             for i in range(1, self._n_rois + 1):
                 self.__class__.__dict__[f"roi{i}_hist"].clear()
 
-        for i in range(1, self._n_rois+1):
-            fom = getattr(self, f"roi{i}_fom")
-            if fom is None:
-                fom = 0
-            setattr(self, f"roi{i}_hist", (tid, fom))
+        if tid is not None:
+            for i in range(1, self._n_rois+1):
+                fom = getattr(self, f"roi{i}_fom")
+                if fom is None:
+                    fom = 0
+                setattr(self, f"roi{i}_hist", (tid, fom))
 
 
 class AzimuthalIntegrationData(AbstractData):
@@ -785,7 +795,7 @@ class ProcessedData:
         self.roi.update_hist(self._tid)
         self.pp.update_hist(self._tid)
         self.correlation.update_hist(self._tid)
-        self.bin.update_hist()
+        self.bin.update_hist(self._tid)
 
 
 class DataManagerMixin:
@@ -829,9 +839,5 @@ class DataManagerMixin:
 
     @staticmethod
     def remove_correlations():
-        for i in range(CorrelationData.n_params):
+        for i in range(CorrelationData._n_params):
             DataManagerMixin.remove_correlation(i+1)
-
-    @staticmethod
-    def reset_correlation():
-        CorrelationData.clear()

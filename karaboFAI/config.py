@@ -39,31 +39,19 @@ class PumpProbeMode(IntEnum):
 
 class AnalysisType(IntEnum):
     UNDEFINED = 0
-    PP_AZIMUTHAL_INTEG = 1
-    ROI_PROJECTION_X = 2
-    ROI_PROJECTION_Y = 3
-    ROI1_SUB_ROI2 = 4
-    ROI1_DIV_ROI2 = 5
-    TRAIN_AZIMUTHAL_INTEG = 6
-    PULSE_AZIMUTHAL_INTEG = 7
-    PUMP_PROBE = 101
+    PUMP_PROBE = 1
+    ROI1_ADD_ROI2 = 11
+    ROI1_SUB_ROI2 = 12
+    ROI1_DIV_ROI2 = 13
+    ROI1_SUB_ROI2_PROJECTION_X = 21
+    ROI1_SUB_ROI2_PROJECTION_Y = 22
+    TRAIN_AZIMUTHAL_INTEG = 31
+    PULSE_AZIMUTHAL_INTEG = 32
 
 
 class BinMode(IntEnum):
     ACCUMULATE = 0
     AVERAGE = 1
-
-
-class CorrelationFom(IntEnum):
-    UNDEFINED = 0
-    PUMP_PROBE = 1
-    ROI_SUB = 2  # ROI1 - ROI2
-    ROI1 = 3
-    ROI2 = 4
-    ROI_SUM = 5  # ROI1 + ROI2
-    # Calculate the FOM based on the azimuthal integration of the mean
-    # of the assembled image(s).
-    AZIMUTHAL_INTEG_MEAN = 6
 
 
 class VectorNormalizer(IntEnum):

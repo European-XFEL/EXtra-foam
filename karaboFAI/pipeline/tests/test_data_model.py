@@ -45,7 +45,6 @@ class TestCorrelationData(unittest.TestCase):
         cls._manager = DataManagerMixin()
 
     def setUp(self):
-        self._manager.reset_correlation()
         self._manager.remove_correlations()
 
     def testPairData(self):
@@ -79,7 +78,8 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual("property1", info["property"])
 
         # test clear history
-        self._manager.reset_correlation()
+        data.correlation.reset = True
+        data.correlation.update_hist(2)
         corr_hist, fom_hist, info = data.correlation.correlation1
         np.testing.assert_array_almost_equal([], corr_hist)
         np.testing.assert_array_almost_equal([], fom_hist)

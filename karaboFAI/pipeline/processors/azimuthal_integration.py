@@ -217,7 +217,7 @@ class AiProcessor(LeafProcessor):
             processed.ai.intensity_fom = fom
 
         # pump-probe azimuthal integration
-        if self._has_analysis(AnalysisType.PP_AZIMUTHAL_INTEG):
+        if processed.pp.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
             on_image = processed.pp.on_image_mean
             off_image = processed.pp.off_image_mean
 

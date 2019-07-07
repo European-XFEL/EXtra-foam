@@ -21,7 +21,7 @@ from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWin
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
-    CorrelationFom, DataSource, VectorNormalizer, PumpProbeMode
+    DataSource, VectorNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import \
@@ -231,9 +231,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # change analysis type
         pp_proc._reset = False
-        widget._analysis_type_cb.setCurrentIndex(AnalysisType.ROI1_SUB_ROI2)
+        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2')
         pp_proc.update()
-        self.assertEqual(AnalysisType(AnalysisType.ROI1_SUB_ROI2), pp_proc.analysis_type)
+        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, pp_proc.analysis_type)
         self.assertTrue(pp_proc._reset)
 
         # change pump-probe mode
@@ -365,15 +365,14 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # test default
-        self.assertEqual(CorrelationFom(0), proc.fom_type)
-        self.assertEqual([""] * 4, proc.device_ids)
-        self.assertEqual([""] * 4, proc.properties)
+        self.assertEqual(AnalysisType(0), proc.analysis_type)
+        self.assertEqual([""] * 4, proc._device_ids)
+        self.assertEqual([""] * 4, proc._properties)
 
         # set new FOM
-        new_fom = CorrelationFom.ROI1
-        widget._fom_type_cb.setCurrentIndex(new_fom)
+        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2')
         proc.update()
-        self.assertEqual(CorrelationFom(new_fom), proc.fom_type)
+        self.assertEqual(AnalysisType.ROI1_ADD_ROI2, proc.analysis_type)
 
         # test the correlation param table
         expected_correlations = []
@@ -407,9 +406,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
         for i in range(_N_PARAMS):
             device_id = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(device_id, proc.device_ids[i])
+            self.assertEqual(device_id, proc._device_ids[i])
             ppt = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(ppt, proc.device_ids[i])
+            self.assertEqual(ppt, proc._device_ids[i])
 
         # test data visualization
         # the upper two plots have error bars

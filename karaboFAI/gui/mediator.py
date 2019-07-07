@@ -173,9 +173,8 @@ class Mediator(DataManagerMixin, QObject):
     def onProj1dFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj1d:fom_integ_range", str(value))
 
-    def onCorrelationFomChange(self, value: IntEnum):
-        self._meta.set(mt.CORRELATION_PROC, "fom_type", int(value))
-        self.reset_correlation()
+    def onCorrelationAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
 
     def onCorrelationParamChange(self, value: tuple):
         # index, device ID, property name, resolution
@@ -187,7 +186,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)
 
     def onCorrelationReset(self):
-        self.reset_correlation()
+        self._meta.set(mt.CORRELATION_PROC, "reset", 1)
 
     def onXasMonoSourceNameChange(self, value: str):
         self._meta.set(mt.XAS_PROC, "mono_source_name", value)
