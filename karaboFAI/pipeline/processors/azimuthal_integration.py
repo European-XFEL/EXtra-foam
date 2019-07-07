@@ -17,9 +17,7 @@ from scipy import constants
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
-from .base_processor import (
-    LeafProcessor, CompositeProcessor, SharedProperty,
-)
+from .base_processor import CompositeProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import mask_image, normalize_auc, slice_curve
 from ...config import VectorNormalizer, AnalysisType, config
@@ -39,108 +37,98 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
     Perform azimuthal integration.
 
     Attributes:
-        enable_pulsed_ai (bool): True for performing azimuthal integration for
-            individual pulses. It only affect the performance with the
-            pulse-resolved detectors.
-        wavelength (float): photon wavelength in meter.
-        sample_dist (float): distance from the sample to the
+        _sample_dist (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
-        poni1 (float): poni1 in meter.
-        poni2 (float): poni2 in meter.
-        integ_method (string): the azimuthal integration
+        _poni1 (float): poni1 in meter.
+        _poni2 (float): poni2 in meter.
+        _wavelength (float): photon wavelength in meter.
+        _integ_method (string): the azimuthal integration
             method supported by pyFAI.
-        integ_range (tuple): the lower and upper range of
+        _integ_range (tuple): the lower and upper range of
             the integration radial unit. (float, float)
-        integ_points (int): number of points in the
+        _integ_points (int): number of points in the
             integration output pattern.
-        normalizer (int): normalizer type for calculating FOM from
+        _normalizer (int): normalizer type for calculating FOM from
             azimuthal integration result.
-        auc_range (tuple): x range for calculating AUC, which is used as
+        _auc_range (tuple): x range for calculating AUC, which is used as
             a normalizer of the azimuthal integration.
-        fom_integ_range (tuple): integration range for calculating FOM from
+        _fom_integ_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
+        _integrator (AzimuthalIntegrator): AzimuthalIntegrator instance.
     """
-
-    sample_dist = SharedProperty()
-    poni1 = SharedProperty()
-    poni2 = SharedProperty()
-    wavelength = SharedProperty()
-
-    integ_method = SharedProperty()
-    integ_range = SharedProperty()
-    integ_points = SharedProperty()
-
-    normalizer = SharedProperty()
-    auc_range = SharedProperty()
-    fom_integ_range = SharedProperty()
-
-    analysis_type = SharedProperty()
 
     def __init__(self):
         super().__init__()
 
-        self.add(AiProcessor())
+        self.analysis_type = AnalysisType.UNDEFINED
+
+        self._sample_dist = None
+        self._poni1 = None
+        self._poni2 = None
+        self._wavelength = None
+
+        self._integ_method = None
+        self._integ_range = None
+        self._integ_points = None
+
+        self._normalizer = None
+        self._auc_range = None
+        self._fom_integ_range = None
+
+        self._integrator = None
 
     def update(self):
         """Override."""
         gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
-        self.sample_dist = float(gp_cfg['sample_distance'])
-        self.wavelength = energy2wavelength(float(gp_cfg['photon_energy']))
+        self._sample_dist = float(gp_cfg['sample_distance'])
+        self._wavelength = energy2wavelength(float(gp_cfg['photon_energy']))
 
         cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
         pixel_size = config['PIXEL_SIZE']
-        self.poni1 = int(cfg['integ_center_y']) * pixel_size
-        self.poni2 = int(cfg['integ_center_x']) * pixel_size
+        self._poni1 = int(cfg['integ_center_y']) * pixel_size
+        self._poni2 = int(cfg['integ_center_x']) * pixel_size
 
-        self.integ_method = cfg['integ_method']
-        self.integ_range = self.str2tuple(cfg['integ_range'])
-        self.integ_points = int(cfg['integ_points'])
-        self.normalizer = VectorNormalizer(int(cfg['normalizer']))
-        self.auc_range = self.str2tuple(cfg['auc_range'])
-        self.fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
+        self._integ_method = cfg['integ_method']
+        self._integ_range = self.str2tuple(cfg['integ_range'])
+        self._integ_points = int(cfg['integ_points'])
+        self._normalizer = VectorNormalizer(int(cfg['normalizer']))
+        self._auc_range = self.str2tuple(cfg['auc_range'])
+        self._fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
 
         if cfg['enable_pulsed_ai'] == 'True':
+            # Performing azimuthal integration for individual pulses.
+            # It only affect the performance with the pulse-resolved
+            # detectors.
             self._update_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG)
         else:
             self._update_analysis(AnalysisType.UNDEFINED)
 
-
-class AiProcessor(LeafProcessor):
-    """AiProcessor class.
-
-    Calculate azimuthal integration in a train.
-    """
-    def __init__(self):
-        super().__init__()
-
-        self._integrator = None
-
     def _update_integrator(self):
         if self._integrator is None:
             self._integrator = AzimuthalIntegrator(
-                dist=self.sample_dist,
+                dist=self._sample_dist,
                 pixel1=config['PIXEL_SIZE'],
                 pixel2=config['PIXEL_SIZE'],
-                poni1=self.poni1,
-                poni2=self.poni2,
+                poni1=self._poni1,
+                poni2=self._poni2,
                 rot1=0,
                 rot2=0,
                 rot3=0,
-                wavelength=self.wavelength)
+                wavelength=self._wavelength)
         else:
-            if self._integrator.dist != self.sample_dist \
-                    or self._integrator.wavelength != self.wavelength \
-                    or self._integrator.poni1 != self.poni1 \
-                    or self._integrator.poni2 != self.poni2:
+            if self._integrator.dist != self._sample_dist \
+                    or self._integrator.wavelength != self._wavelength \
+                    or self._integrator.poni1 != self._poni1 \
+                    or self._integrator.poni2 != self._poni2:
                 # dist, poni1, poni2, rot1, rot2, rot3, wavelength
-                self._integrator.set_param((self.sample_dist,
-                                            self.poni1,
-                                            self.poni2,
+                self._integrator.set_param((self._sample_dist,
+                                            self._poni1,
+                                            self._poni2,
                                             0,
                                             0,
                                             0,
-                                            self.wavelength))
+                                            self._wavelength))
 
         return self._integrator
 
@@ -150,12 +138,12 @@ class AiProcessor(LeafProcessor):
 
         integrator = self._update_integrator()
         itgt1d = functools.partial(integrator.integrate1d,
-                                   method=self.integ_method,
-                                   radial_range=self.integ_range,
+                                   method=self._integ_method,
+                                   radial_range=self._integ_range,
                                    correctSolidAngle=True,
                                    polarization_factor=1,
                                    unit="q_A^-1")
-        integ_points = self.integ_points
+        integ_points = self._integ_points
 
         # pulse-resolved azimuthal integration
         if self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
@@ -191,7 +179,7 @@ class AiProcessor(LeafProcessor):
                 # calculate the figure of merit for each pulse
                 foms = []
                 for diff in diffs:
-                    fom = slice_curve(diff, momentum, *self.fom_integ_range)[0]
+                    fom = slice_curve(diff, momentum, *self._fom_integ_range)[0]
                     foms.append(np.sum(np.abs(fom)))
 
                 processed.ai.momentum = momentum
@@ -208,7 +196,7 @@ class AiProcessor(LeafProcessor):
 
             momentum = mean_ret.radial
             intensity = mean_ret.intensity
-            fom = slice_curve(intensity, momentum, *self.fom_integ_range)[0]
+            fom = slice_curve(intensity, momentum, *self._fom_integ_range)[0]
             fom = np.sum(np.abs(fom))
 
             processed.ai.momentum = momentum
@@ -238,7 +226,7 @@ class AiProcessor(LeafProcessor):
                 norm_on_off_ma = norm_on_ma - norm_off_ma
                 fom = slice_curve(norm_on_off_ma,
                                   momentum,
-                                  *self.fom_integ_range)[0]
+                                  *self._fom_integ_range)[0]
                 if processed.pp.abs_difference:
                     fom = np.sum(np.abs(fom))
                 else:
@@ -258,9 +246,9 @@ class AiProcessor(LeafProcessor):
         :param numpy.ndarray momentum: momentum (q value).
         :param numpy.ndarray intensity: intensity.
         """
-        auc_range = self.auc_range
+        auc_range = self._auc_range
 
-        if self.normalizer == VectorNormalizer.AUC:
+        if self._normalizer == VectorNormalizer.AUC:
             # normalized by area under curve (AUC)
             intensity = normalize_auc(intensity, momentum, *auc_range)
 
@@ -270,11 +258,11 @@ class AiProcessor(LeafProcessor):
             roi1_fom = processed.roi.roi1_fom
             roi2_fom = processed.roi.roi2_fom
 
-            if self.normalizer == VectorNormalizer.ROI1:
+            if self._normalizer == VectorNormalizer.ROI1:
                 if roi1_fom is None:
                     raise ProcessingError("ROI1 is not activated!")
                 denominator = roi1_fom
-            elif self.normalizer == VectorNormalizer.ROI2:
+            elif self._normalizer == VectorNormalizer.ROI2:
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
                 denominator = roi2_fom
@@ -284,12 +272,12 @@ class AiProcessor(LeafProcessor):
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
 
-                if self.normalizer == VectorNormalizer.ROI_SUM:
+                if self._normalizer == VectorNormalizer.ROI_SUM:
                     denominator = roi1_fom + roi2_fom
-                elif self.normalizer == VectorNormalizer.ROI_SUB:
+                elif self._normalizer == VectorNormalizer.ROI_SUB:
                     denominator = roi1_fom - roi2_fom
                 else:
-                    raise ProcessingError(f"Unknown normalizer: {repr(self.normalizer)}")
+                    raise ProcessingError(f"Unknown normalizer: {repr(self._normalizer)}")
 
             if denominator == 0:
                 raise ProcessingError("Normalizer (ROI) is zero!")

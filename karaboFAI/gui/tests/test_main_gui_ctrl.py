@@ -114,16 +114,16 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'],
-                               ai_proc.sample_dist)
+                               ai_proc._sample_dist)
         self.assertAlmostEqual(energy2wavelength(config['PHOTON_ENERGY']),
-                               ai_proc.wavelength)
+                               ai_proc._wavelength)
 
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
 
         ai_proc.update()
-        self.assertAlmostEqual(1e-10, ai_proc.wavelength)
-        self.assertAlmostEqual(0.3, ai_proc.sample_dist)
+        self.assertAlmostEqual(1e-10, ai_proc._wavelength)
+        self.assertAlmostEqual(0.3, ai_proc._sample_dist)
         image_proc.update()
         self.assertListEqual([-1], image_proc._pulse_index_filter)
 
@@ -140,19 +140,17 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
-        self.assertEqual(proc.integ_method, default_integ_method)
+        self.assertEqual(default_integ_method, proc._integ_method)
         default_normalizer = VectorNormalizer.AUC
-        self.assertEqual(proc.normalizer, default_normalizer)
-        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"],
-                         proc.integ_points)
+        self.assertEqual(default_normalizer, proc._normalizer)
+        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
         default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
-        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]),
-                              proc.integ_range)
-        self.assertTupleEqual(default_integ_range, proc.auc_range)
-        self.assertTupleEqual(default_integ_range, proc.fom_integ_range)
+        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]), proc._integ_range)
+        self.assertTupleEqual(default_integ_range, proc._auc_range)
+        self.assertTupleEqual(default_integ_range, proc._fom_integ_range)
         pixel_size = config["PIXEL_SIZE"]
-        self.assertEqual(config["CENTER_Y"] * pixel_size, proc.poni1)
-        self.assertEqual(config["CENTER_X"] * pixel_size, proc.poni2)
+        self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
+        self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
@@ -169,14 +167,14 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
         self.assertEqual(AnalysisType.PULSE_AZIMUTHAL_INTEG,
                          proc.analysis_type)
-        self.assertEqual(proc.integ_method, itgt_method)
-        self.assertEqual(proc.normalizer, ai_normalizer)
-        self.assertEqual(1024, proc.integ_points)
-        self.assertTupleEqual((0.1, 0.2), proc.integ_range)
-        self.assertTupleEqual((0.2, 0.3), proc.auc_range)
-        self.assertTupleEqual((0.3, 0.4), proc.fom_integ_range)
-        self.assertEqual(-1000*pixel_size, proc.poni2)
-        self.assertEqual(1000*pixel_size, proc.poni1)
+        self.assertEqual(itgt_method, proc._integ_method)
+        self.assertEqual(ai_normalizer, proc._normalizer)
+        self.assertEqual(1024, proc._integ_points)
+        self.assertTupleEqual((0.1, 0.2), proc._integ_range)
+        self.assertTupleEqual((0.2, 0.3), proc._auc_range)
+        self.assertTupleEqual((0.3, 0.4), proc._fom_integ_range)
+        self.assertEqual(-1000*pixel_size, proc._poni2)
+        self.assertEqual(1000*pixel_size, proc._poni1)
 
     def testRoiCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
