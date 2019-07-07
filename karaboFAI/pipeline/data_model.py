@@ -230,6 +230,8 @@ class XasData(AbstractData):
         self.xgm = np.array([])
         self.absorptions = [np.array([]), np.array([])]
 
+        self.reset =  False
+
 
 class BinData(AbstractData):
     """Binning data model."""
@@ -833,7 +835,3 @@ class DataManagerMixin:
     @staticmethod
     def reset_correlation():
         CorrelationData.clear()
-
-    @staticmethod
-    def reset_xas():
-        XasData.clear()

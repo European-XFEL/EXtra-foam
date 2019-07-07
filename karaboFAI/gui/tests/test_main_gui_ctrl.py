@@ -276,20 +276,19 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # check initial value is set
-        self.assertEqual("", proc.mono_source_name)
-        self.assertEqual(int(widget._n_bins_le.text()), proc.n_bins)
-        self.assertTupleEqual((0.7, 0.9), proc.bin_range)
+        self.assertEqual("", proc._mono_source_name)
+        self.assertEqual(int(widget._n_bins_le.text()), proc._n_bins)
+        self.assertTupleEqual((0.7, 0.9), proc._bin_range)
 
         # set another value
         widget._n_bins_le.setText("40")
         widget._bin_range_le.setText("0.9, 1.0")
         proc.update()
 
-        self.assertEqual(40, proc.n_bins)
-        self.assertTupleEqual((0.9, 1.0), proc.bin_range)
+        self.assertEqual(40, proc._n_bins)
+        self.assertTupleEqual((0.9, 1.0), proc._bin_range)
 
         widget._reset_btn.clicked.emit()
-        reset_xas.assert_called_once()
 
     @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
                                "SOURCE_NAME_FILE": ["A", "B"]})

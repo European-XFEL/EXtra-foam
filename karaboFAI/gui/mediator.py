@@ -199,7 +199,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.XAS_PROC, "bin_range", str(value))
 
     def onXasReset(self):
-        self.reset_xas()
+        self._meta.set(mt.XAS_PROC, "reset", 1)
 
     def onBinGroupChange(self, value: tuple):
         # index, device ID, property name, bin_range, number of bins,

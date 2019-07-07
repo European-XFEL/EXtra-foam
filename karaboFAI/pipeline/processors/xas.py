@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import CompositeProcessor, LeafProcessor, SharedProperty
+from .base_processor import CompositeProcessor, SharedProperty
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
 from ...metadata import Metadata as mt
@@ -21,18 +21,14 @@ from ...utils import profiler
 class XasProcessor(CompositeProcessor):
     """XasProcessor class.
 
-    Attributes:
-        mono_source_name (str): monochromator source name.
-        n_bins (int): number of bins.
-        bin_range (tuple): bin range.
-
     A processor which calculate absorption spectra based on different
     ROIs specified by the user.
-    """
 
-    mono_source_name = SharedProperty()
-    n_bins = SharedProperty()
-    bin_range = SharedProperty()
+    Attributes:
+        _mono_source_name (str): monochromator source name.
+        _n_bins (int): number of bins.
+        _bin_range (tuple): bin range.
+    """
 
     def __init__(self):
         super().__init__()
@@ -47,28 +43,51 @@ class XasProcessor(CompositeProcessor):
         self._absorptions = None
         self._bin_count = None
 
+        self._mono_source_name = None
+        self._n_bins = None
+        self._bin_range = None
+
         # we do not need to re-calculate the spectrum for every train, since
         # there is only one more data for detectors like FastCCD.
         self._counter = 0
         self._update_frequency = 10
 
-        self.reset()
+        self._reset = False
 
     def update(self):
         """Override."""
         cfg = self._meta.get_all(mt.XAS_PROC)
-        if cfg is None:
-            return
 
-        self.mono_source_name = cfg["mono_source_name"]
-        self.n_bins = int(cfg["n_bins"])
-        self.bin_range = self.str2tuple(cfg['bin_range'])
+        self._mono_source_name = cfg["mono_source_name"]
+        self._n_bins = int(cfg["n_bins"])
+        self._bin_range = self.str2tuple(cfg['bin_range'])
+
+        if 'reset' in cfg:
+            self._meta.delete(mt.XAS_PROC, 'reset')
+            # reset when commanded by the GUI
+            self._reset = True
+
+        if self._reset:
+            self._energies.clear()
+            self._xgm.clear()
+            self._I0.clear()
+            self._I1.clear()
+            self._I2.clear()
+
+            self._bin_center = np.array([])
+            self._bin_count = np.array([])
+            self._absorptions = [np.array([]), np.array([])]
+
+            self._counter = 0
 
     @profiler("XAS Processor")
     def process(self, data):
         """Override."""
 
         processed = data['processed']
+
+        processed.xas.reset = self._reset
+        self._reset = False
 
         # TODO: FIXME
 
@@ -111,16 +130,3 @@ class XasProcessor(CompositeProcessor):
         processed.xas.bin_center = bin_center
         processed.xas.absorptions = absorptions
         processed.xas.bin_count = bin_count
-
-    def reset(self):
-        self._energies.clear()
-        self._xgm.clear()
-        self._I0.clear()
-        self._I1.clear()
-        self._I2.clear()
-
-        self._bin_center = np.array([])
-        self._bin_count = np.array([])
-        self._absorptions = [np.array([]), np.array([])]
-
-        self._counter = 0
