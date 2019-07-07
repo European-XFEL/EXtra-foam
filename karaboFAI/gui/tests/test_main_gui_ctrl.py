@@ -20,8 +20,8 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
-    _Config, ConfigWrapper, config, CurveNormalizer, AnalysisType, BinMode,
-    CorrelationFom, DataSource, CurveNormalizer, PumpProbeMode
+    _Config, ConfigWrapper, config, AnalysisType, BinMode,
+    CorrelationFom, DataSource, VectorNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import \
@@ -141,7 +141,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(proc.integ_method, default_integ_method)
-        default_normalizer = CurveNormalizer.AUC
+        default_normalizer = VectorNormalizer.AUC
         self.assertEqual(proc.normalizer, default_normalizer)
         self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"],
                          proc.integ_points)
@@ -157,7 +157,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = CurveNormalizer.ROI2
+        ai_normalizer = VectorNormalizer.ROI2
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -185,7 +185,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # test default reconfigurable values
         self.assertEqual(np.sum, proc._roi_fom_handler)
-        self.assertEqual(CurveNormalizer.AUC, proc._proj1d_normalizer)
+        self.assertEqual(VectorNormalizer.AUC, proc._proj1d_normalizer)
         self.assertEqual((0, math.inf), proc._proj1d_fom_integ_range)
         self.assertEqual((0, math.inf), proc._proj1d_auc_range)
 

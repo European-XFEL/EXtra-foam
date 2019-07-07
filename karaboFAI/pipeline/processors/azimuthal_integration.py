@@ -22,7 +22,7 @@ from .base_processor import (
 )
 from ..exceptions import ProcessingError
 from ...algorithms import mask_image, normalize_auc, slice_curve
-from ...config import CurveNormalizer, AnalysisType, config
+from ...config import VectorNormalizer, AnalysisType, config
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
@@ -96,7 +96,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self.integ_method = cfg['integ_method']
         self.integ_range = self.str2tuple(cfg['integ_range'])
         self.integ_points = int(cfg['integ_points'])
-        self.normalizer = CurveNormalizer(int(cfg['normalizer']))
+        self.normalizer = VectorNormalizer(int(cfg['normalizer']))
         self.auc_range = self.str2tuple(cfg['auc_range'])
         self.fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
 
@@ -260,7 +260,7 @@ class AiProcessor(LeafProcessor):
         """
         auc_range = self.auc_range
 
-        if self.normalizer == CurveNormalizer.AUC:
+        if self.normalizer == VectorNormalizer.AUC:
             # normalized by area under curve (AUC)
             intensity = normalize_auc(intensity, momentum, *auc_range)
 
@@ -270,11 +270,11 @@ class AiProcessor(LeafProcessor):
             roi1_fom = processed.roi.roi1_fom
             roi2_fom = processed.roi.roi2_fom
 
-            if self.normalizer == CurveNormalizer.ROI1:
+            if self.normalizer == VectorNormalizer.ROI1:
                 if roi1_fom is None:
                     raise ProcessingError("ROI1 is not activated!")
                 denominator = roi1_fom
-            elif self.normalizer == CurveNormalizer.ROI2:
+            elif self.normalizer == VectorNormalizer.ROI2:
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
                 denominator = roi2_fom
@@ -284,9 +284,9 @@ class AiProcessor(LeafProcessor):
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
 
-                if self.normalizer == CurveNormalizer.ROI_SUM:
+                if self.normalizer == VectorNormalizer.ROI_SUM:
                     denominator = roi1_fom + roi2_fom
-                elif self.normalizer == CurveNormalizer.ROI_SUB:
+                elif self.normalizer == VectorNormalizer.ROI_SUB:
                     denominator = roi1_fom - roi2_fom
                 else:
                     raise ProcessingError(f"Unknown normalizer: {repr(self.normalizer)}")

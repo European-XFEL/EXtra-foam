@@ -66,7 +66,7 @@ class CorrelationFom(IntEnum):
     AZIMUTHAL_INTEG_MEAN = 6
 
 
-class CurveNormalizer(IntEnum):
+class VectorNormalizer(IntEnum):
     # Normalize the azimuthal integration curve by the area under the curve.
     AUC = 0
     # Normalize the azimuthal integration curve by the sum of ROI(s).
