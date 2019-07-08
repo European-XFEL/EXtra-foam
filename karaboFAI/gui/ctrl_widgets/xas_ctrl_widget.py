@@ -47,13 +47,13 @@ class XasCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Monochromator: "), 0, 0, AR)
-        layout.addWidget(self._mono_src_cb, 0, 1, 1, 3)
-        layout.addWidget(QtGui.QLabel("Bin range (keV): "), 1, 0, AR)
-        layout.addWidget(self._bin_range_le, 1, 1)
-        layout.addWidget(QtGui.QLabel("# of bins: "), 1, 2, AR)
-        layout.addWidget(self._n_bins_le, 1, 3)
-        layout.addWidget(self._reset_btn, 2, 3, AR)
+        layout.addWidget(self._reset_btn, 0, 3, AR)
+        layout.addWidget(QtGui.QLabel("Monochromator: "), 1, 0, AR)
+        layout.addWidget(self._mono_src_cb, 1, 1, 1, 3)
+        layout.addWidget(QtGui.QLabel("Bin range (keV): "), 2, 0, AR)
+        layout.addWidget(self._bin_range_le, 2, 1)
+        layout.addWidget(QtGui.QLabel("# of bins: "), 2, 2, AR)
+        layout.addWidget(self._n_bins_le, 2, 3)
 
         self.setLayout(layout)
 

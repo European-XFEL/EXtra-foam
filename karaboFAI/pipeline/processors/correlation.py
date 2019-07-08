@@ -47,6 +47,10 @@ class CorrelationProcessor(CompositeProcessor):
             self._device_ids[i] = cfg[f'device_id{i+1}']
             self._properties[i] = cfg[f'property{i+1}']
 
+        if 'reset' in cfg:
+            self._meta.delete(mt.CORRELATION_PROC, 'reset')
+            self._reset = True
+
     @profiler("Correlation Processor")
     def process(self, data):
         """Override."""

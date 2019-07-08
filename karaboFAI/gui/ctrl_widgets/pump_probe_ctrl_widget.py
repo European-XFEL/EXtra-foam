@@ -82,10 +82,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("On/off mode: "), 0, 0, AR)
-        layout.addWidget(self._mode_cb, 0, 1)
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 2, AR)
-        layout.addWidget(self._analysis_type_cb, 0, 3)
+        layout.addWidget(self._reset_btn, 0, 3, AR)
+        layout.addWidget(QtGui.QLabel("On/off mode: "), 1, 0, AR)
+        layout.addWidget(self._mode_cb, 1, 1)
+        layout.addWidget(QtGui.QLabel("Analysis type: "), 1, 2, AR)
+        layout.addWidget(self._analysis_type_cb, 1, 3)
         if self._pulse_resolved:
             layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
             layout.addWidget(self._on_pulse_le, 2, 1)
@@ -94,8 +95,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
         layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
-        layout.addWidget(self._abs_difference_cb, 4, 0, 1, 2)
-        layout.addWidget(self._reset_btn, 4, 3, 1, 1)
+        layout.addWidget(self._abs_difference_cb, 4, 2, 1, 2, AR)
 
         self.setLayout(layout)
 

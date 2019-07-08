@@ -202,7 +202,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual((30, 40), proc._proj1d_auc_range)
 
         proc._reset = False
-        widget._roi_reset_btn.clicked.emit()
+        widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
 
@@ -434,6 +434,12 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
             data.correlation.correlation2 = (i, -i)
         self.gui._data.set(data)
         window.update()
+
+        # test reset button
+        proc._reset = False
+        widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
 
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (

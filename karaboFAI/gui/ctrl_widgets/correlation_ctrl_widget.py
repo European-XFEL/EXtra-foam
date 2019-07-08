@@ -56,8 +56,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
         layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(self._reset_btn, 0, 3)
-        layout.addWidget(self._table, 1, 0, 1, 4)
+        layout.addWidget(self._reset_btn, 0, 5, AR)
+        layout.addWidget(self._table, 1, 0, 1, 6)
 
         self.setLayout(layout)
 
