@@ -21,9 +21,6 @@ from . import ROOT_PATH
 from .logger import logger
 
 
-MAX_NUMBER_OF_PULSES_PER_TRAIN = 2700
-
-
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge
@@ -89,6 +86,8 @@ class _Config(dict):
         "PROCESS_MONITOR_HEART_BEAT": 5000,
         # timeout when cleaning up remnant processes, in second
         "PROCESS_CLEANUP_TIMEOUT": 1,
+        # max number of pulses per pulse train
+        "MAX_N_PULSES_PER_TRAIN": 2700,
         # maximum length of a queue in data pipeline
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue

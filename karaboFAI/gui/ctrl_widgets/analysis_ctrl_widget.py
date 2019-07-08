@@ -19,7 +19,8 @@ from ...config import config
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
 
-    _pulse_index_validator = QtGui.QIntValidator(0, 2699)
+    _pulse_index_validator = QtGui.QIntValidator(
+        0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__("General setup", *args, **kwargs)
