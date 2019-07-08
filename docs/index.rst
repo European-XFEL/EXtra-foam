@@ -9,7 +9,7 @@ Contents:
    :maxdepth: 2
 
    introduction
-   deployment
+   installation
    start
    gui
    windows

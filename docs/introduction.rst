@@ -1,9 +1,14 @@
-Introduction
+INTRODUCTION
 ============
 
 **karaboFAI** is a tool that provides real-time and off-line data analysis
 (**azimuthal integration**, **ROI**, **correlation**, **binning**, etc.) and visualization for
-experiments using 2D detectors at European XFEL.
+experiments using **2D detectors** (*AGIPD*, *LPD*, *JungFrau*, *FastCCD*, *DSSC* and *BaslerCamera*)
+at European XFEL.
+
+
+Why use **karaboFAI**
+---------------------
 
 1. It allows users to perform EDA (exploratory data analysis) in real time by 'probing'
 the data with a combination of different analysis tools, for instance, monitoring individual
@@ -25,37 +30,26 @@ during experiments. It is worth noting that the 'replay' result could be differe
 result since the offline calibration algorithms are more complicated than the real-time ones.
 
 
-The current version works with AGIPD, LPD, JungFrau, FastCCD, DSSC and BaslerCamera.
+Performance
+-----------
 
-.. list-table:: Performance (ms/train)
-   :header-rows: 1
-
-   * - Detector
-     - With azimuthal integration
-     - Without azimuthal integration
-
-   * - AGIPD (60 pulses/train)
-     - ~ 2200
-     - ~ 700
-   * - LPD (60 pulses/train)
-     - ~ 2200
-     - ~ 700
-   * - Jungfrau
-     - < 200
-     - < 10
-   * - FastCCD
-     - ~ 500
-     - < 20
+For train-resolved detectors like JungFrau and FastCCD, **karaboFAI** can process and visualize the data
+at **10 Hz**. For large detectors like LPD and DSSC, the processing and visualization rate is about
+**1 ~ 2 Hz** with 64 pulses/train.
 
 
-.. image:: karaboFAI-GUI.png
+Galleries
+-----------
+
+.. image:: images/MainGUI.png
    :width: 800
 
 .. image:: images/ImageTool.png
    :width: 800
 
-.. image:: karaboFAI-LPD_azimuthal_integration.png
+.. image:: images/pump-probe_window.png
    :width: 800
 
-.. image:: karaboFAI-ROI.png
+.. image:: images/1D_binning_window.png
    :width: 800
+

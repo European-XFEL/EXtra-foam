@@ -1,15 +1,13 @@
-Data Analysis with karaboFAI
-============================
+GETTING STARTED
+===============
 
 
 Choose the correct version
 --------------------------
 
-**karaboFAI** can be started on both online and `Maxwell` clusters. Since we often
-receive feature requests within a few days before user experiments, in order to avoid
-conflict between different instruments, there are three versions of **karaboFAI**
-deployed. Please always consult your contact person if you are not sure which version
-to use.
+**karaboFAI** can be started on both online and `Maxwell` clusters. Currently, there
+are two versions of **karaboFAI** deployed. Please always consult your contact person
+if you are not sure which version to use.
 
 
 I. Stable version
@@ -25,12 +23,19 @@ To start the **stable** version on online or `Maxwell` clusters:
     module load exfel exfel_anaconda3
     karaboFAI DETECTOR_NAME
 
-Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
+.. note::
+    The installation is temporary removed since there is conflict in config files between
+    the latest deployed 0.5.0 and previous version. Please check the **Pre-release version**
+    instead.
 
 .. note::
-    It usually takes some time to start **karaboFAI** for the first time! This
+    It usually takes a few minutes to start **karaboFAI** for the first time! This
     is actually an issue related to the infrastructure and not because
     **karaboFAI** is slow.
+
+.. note::
+    If you are connecting to the online or `Maxwell` clusters via SSH, you will need
+    to enable X11 forwarding by including the -X option.
 
 .. note::
     In order to have a better experience with **karaboFAI** on the `Maxwell` cluster,
@@ -56,32 +61,16 @@ stable as the **stable** version.
     karaboFAI DETECTOR_NAME
 
 
-III. Temporary version
-++++++++++++++++++++++
-
-If there is any **critical** feature requested in a short notice but DA do not have
-enough time to follow the standard development procedure (code review, unittest, etc.),
-we will deploy this **temporary** solution. As a result, the stability and correctness
-of this version cannot be guaranteed.
-
-
-.. code-block:: bash
-
-    module load exfel karaboFAI
-    karaboFAI DETECTOR_NAME
-
-
 Data analysis in real time
 --------------------------
 
+For real-time data analysis, the (calibrated) data is streamed via a `ZMQ bridge`, which is
+a `Karabo` device (`PipeToZeroMQ`) running inside the control network. Normally, the user
+should not need to modify ``Hostname``, ``Port`` and ``Detector source name`` in the
+``Data source`` panel.
 
-For real-time data analysis, the (calibrated) data is streamed via a
-`ZMQ bridge`, which is a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
-Normally, the user should not modify ``Hostname``, ``Port`` and ``Source`` in
-the ``Data source`` panel.
-
-.. image:: images/data_source_real_time.png
-   :width: 300
+.. image:: images/data_source_from_bridge.png
+   :width: 500
 
 .. list-table:: Suggested online clusters
    :header-rows: 1
@@ -102,12 +91,18 @@ the ``Data source`` panel.
    * - SQS
      - sa1-br-kc-comp-3
      - exflonc15
+   * - MID
+     - ...
+     - ...
+   * - HED
+     - ...
+     - ...
 
 Data analysis with files
 ------------------------
 
-**karaboFAI** can be used to replay the experiment with files. Click on the
-``Offline`` window on the tool bar that opens the following window.
+**karaboFAI** can be used to replay experiments with files. Click on the
+*Offline* window on the tool bar that opens the following window.
 
 .. image:: images/file_stream_control.png
 
@@ -136,6 +131,8 @@ is free to use any available ``port``. ``Hostname`` should be `localhost`.
    * - LPD
      - /gpfs/exfel/exp/FXE/201701/p002026/proc/r0078
    * - JungFrau
-     - /gpfs/exfel/exp/FXE/201801/p002118/proc/r0143
+     - /gpfs/exfel/exp/FXE/201930/p900063/proc/r1051
    * - FastCCD
      - /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141
+   * - DSSC
+     - /gpfs/exfel/exp/SCS/
