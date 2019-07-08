@@ -11,7 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import CompositeProcessor, SharedProperty
+from .base_processor import CompositeProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import compute_spectrum
 from ...metadata import Metadata as mt
@@ -25,7 +25,7 @@ class XasProcessor(CompositeProcessor):
     ROIs specified by the user.
 
     Attributes:
-        _mono_source_name (str): monochromator source name.
+        _mono_src (str): monochromator source name.
         _n_bins (int): number of bins.
         _bin_range (tuple): bin range.
     """
@@ -43,7 +43,7 @@ class XasProcessor(CompositeProcessor):
         self._absorptions = None
         self._bin_count = None
 
-        self._mono_source_name = None
+        self._mono_src = None
         self._n_bins = None
         self._bin_range = None
 
@@ -58,7 +58,7 @@ class XasProcessor(CompositeProcessor):
         """Override."""
         cfg = self._meta.get_all(mt.XAS_PROC)
 
-        self._mono_source_name = cfg["mono_source_name"]
+        self._mono_src = cfg["mono_source_name"]
         self._n_bins = int(cfg["n_bins"])
         self._bin_range = self.str2tuple(cfg['bin_range'])
 

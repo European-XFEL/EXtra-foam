@@ -274,7 +274,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # check initial value is set
-        self.assertEqual("", proc._mono_source_name)
+        self.assertEqual("", proc._mono_src)
         self.assertEqual(int(widget._n_bins_le.text()), proc._n_bins)
         self.assertTupleEqual((0.7, 0.9), proc._bin_range)
 
@@ -322,7 +322,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertListEqual(["A", "B"], items)
 
         xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
         # change source_type from FILE to BRIDGE
 
@@ -338,7 +338,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertListEqual(["E", "F", "G"], items)
 
         xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
