@@ -96,6 +96,7 @@ def serve_files(path, port, slow_devices=None, fast_devices=None,
     raw_data = None
     try:
         corr_data = RunDirectory(path)
+        num_trains = len(corr_data.train_ids)
     except Exception as ex:
         logger.error(repr(ex))
         return
@@ -106,7 +107,6 @@ def serve_files(path, port, slow_devices=None, fast_devices=None,
         try:
             raw_data = RunDirectory(path.replace('/proc/', '/raw/'))
         except Exception as ex:
-            logger.warning(repr(ex))
             raw_data = corr_data
 
     streamer = ZMQStreamer(port, **kwargs)
@@ -115,7 +115,6 @@ def serve_files(path, port, slow_devices=None, fast_devices=None,
     counter = 0
 
     while True:
-        num_trains = 0
         for tid, train_data in corr_data.trains(devices=fast_devices,
                                                 require_all=require_all):
             # loop over corrected DataCollection
@@ -130,7 +129,6 @@ def serve_files(path, port, slow_devices=None, fast_devices=None,
                     # Value Error is raised by karabo data when raw data
                     # corresponding to slow devices is not found.
                     pass
-            num_trains += 1
             if train_data:
                 # Generate fake meta data with monotically increasing
                 # trainids only after the actual trains in corrected data
