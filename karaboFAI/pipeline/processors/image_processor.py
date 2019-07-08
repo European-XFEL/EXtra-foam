@@ -112,7 +112,7 @@ class ImageProcessor(CompositeProcessor):
         _reference
 
         _pulse_index_filter (list): a list of pulse indices.
-        _vip_pulse_indices (list): indices of VIP pulses.
+        _poi_indices (list): indices of VIP pulses.
 
         _pp_mode (PumpProbeMode): pump-probe analysis mode.
         _on_indices (list): a list of laser-on pulse indices.
@@ -134,7 +134,7 @@ class ImageProcessor(CompositeProcessor):
         self._cmd_proxy = CommandProxy()
 
         self._pulse_index_filter = None
-        self._vip_pulse_indices = None
+        self._poi_indices = None
 
         self._pp_mode = PumpProbeMode.UNDEFINED
         self._on_indices = []
@@ -158,8 +158,8 @@ class ImageProcessor(CompositeProcessor):
         self._pulse_index_filter = self.str2list(
             gp_cfg['selected_pulse_indices'], handler=int)
 
-        self._vip_pulse_indices = [int(gp_cfg['vip_pulse1_index']),
-                                   int(gp_cfg['vip_pulse2_index'])]
+        self._poi_indices = [int(gp_cfg['poi1_index']),
+                             int(gp_cfg['poi2_index'])]
 
         # pump-probe
         pp_cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
@@ -193,7 +193,7 @@ class ImageProcessor(CompositeProcessor):
         if assembled.ndim == 3 and \
                 not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
             # keep only the VIPs
-            keep = self._vip_pulse_indices
+            keep = self._poi_indices
 
         # update the reference image
         ref = self._cmd_proxy.get_ref_image()

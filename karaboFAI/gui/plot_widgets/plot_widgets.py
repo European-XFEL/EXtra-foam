@@ -63,7 +63,7 @@ class SinglePulseAiWidget(PlotWidget):
         if self.pulse_index <= max_id:
             self._pulse_plot.setData(momentum, intensities[self.pulse_index])
         else:
-            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+            logger.error("<POI index>: POI index ({}) > Maximum "
                          "pulse index ({})".format(self.pulse_index, max_id))
             return
 

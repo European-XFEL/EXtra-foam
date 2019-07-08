@@ -445,7 +445,7 @@ class SinglePulseImageView(ImageView):
             np.clip(images[self.pulse_index], *threshold_mask,
                     images[self.pulse_index])
         else:
-            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+            logger.error("<POI index>: POI index ({}) > Maximum "
                          "pulse index ({})".format(self.pulse_index, max_id))
             return
 

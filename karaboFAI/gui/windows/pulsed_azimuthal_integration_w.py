@@ -124,9 +124,9 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
         """Override."""
         if self._pulse_resolved:
             mediator = self._mediator
-            mediator.vip_pulse_index1_sgn.connect(self.onPulseID1Updated)
-            mediator.vip_pulse_index2_sgn.connect(self.onPulseID2Updated)
-            mediator.vip_pulse_indices_connected_sgn.emit()
+            mediator.poi_index1_sgn.connect(self.onPulseID1Updated)
+            mediator.poi_index2_sgn.connect(self.onPulseID2Updated)
+            mediator.poi_indices_connected_sgn.emit()
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, value):

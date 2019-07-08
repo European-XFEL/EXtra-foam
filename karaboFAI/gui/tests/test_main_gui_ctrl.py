@@ -85,31 +85,31 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
                   if isinstance(w, PulsedAzimuthalIntegrationWindow)][0]
 
         # default values
-        vip_pulse_index1 = int(widget._vip_pulse_index1_le.text())
-        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
-        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
-        vip_pulse_index2 = int(widget._vip_pulse_index2_le.text())
-        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
-        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
+        poi_index1 = int(widget._poi_index1_le.text())
+        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
+        poi_index2 = int(widget._poi_index2_le.text())
+        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc._vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc._vip_pulse_indices[1])
+        self.assertEqual(poi_index1, image_proc._poi_indices[0])
+        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
         # set new values
-        vip_pulse_index1 = 10
-        widget._vip_pulse_index1_le.setText(str(vip_pulse_index1))
-        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
-        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
+        poi_index1 = 10
+        widget._poi_index1_le.setText(str(poi_index1))
+        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
 
-        vip_pulse_index2 = 20
-        widget._vip_pulse_index2_le.setText(str(vip_pulse_index2))
-        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
-        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
+        poi_index2 = 20
+        widget._poi_index2_le.setText(str(poi_index2))
+        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc._vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc._vip_pulse_indices[1])
+        self.assertEqual(poi_index1, image_proc._poi_indices[0])
+        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()

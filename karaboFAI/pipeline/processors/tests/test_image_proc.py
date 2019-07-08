@@ -129,7 +129,7 @@ class TestImageProcessorTr(unittest.TestCase):
         proc._background = 0
         proc._threshold_mask = (-100, 100)
         proc._pulse_index_filter = [-1]
-        proc._vip_pulse_indices = [0, 0]
+        proc._poi_indices = [0, 0]
 
         imgs1 = np.random.randn(2, 2)
         imgs1_gt = imgs1.copy()
@@ -273,7 +273,7 @@ class TestImageProcessorPr(unittest.TestCase):
         self._proc._threshold_mask = (-100, 100)
 
         self._proc._pulse_index_filter = [-1]
-        self._proc._vip_pulse_indices = [0, 2]
+        self._proc._poi_indices = [0, 2]
 
     def testGeneral(self):
         proc = self._proc
