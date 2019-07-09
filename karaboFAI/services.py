@@ -133,6 +133,7 @@ def health_check():
             residual.append(proc)
 
     if residual:
+        # TODO: use utility function query_yes_no
         ret = input(
             "Warning: Found old karaboFAI instance(s) running in this "
             "machine!!!\n\n"

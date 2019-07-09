@@ -14,11 +14,13 @@ from enum import IntEnum
 import json
 import os.path as osp
 import collections
+import shutil
 
 import numpy as np
 
 from . import ROOT_PATH
 from .logger import logger
+from .utils import query_yes_no
 
 
 class DataSource(IntEnum):
@@ -110,7 +112,8 @@ class _Config(dict):
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
     }
 
-    # system configuration which users are allowed to modify
+    # system configurations which will appear in the config file so that
+    # users can modify them
     _system_reconfigurable_config = {
         # Source of data: FILES or BRIDGE
         "DEFAULT_SOURCE_TYPE": DataSource.BRIDGE,
@@ -212,8 +215,7 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": ["", ],
             # instrument source name in HDF5 files
             "SOURCE_NAME_FILE": ["", ],
-            # data folder if streamed from files
-            "DATA_FOLDER": "",
+            # path of the geometry file
             "GEOMETRY_FILE": "",
             # quadrant coordinates for assembling detector modules,
             # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
@@ -388,6 +390,7 @@ class _Config(dict):
         :param str detector: detector name.
         """
         self.__setitem__("DETECTOR", detector)
+        # config (self) does not have a detector hierarchy!
         self.update(self._detector_readonly_config[detector])
         self.from_file(detector)
 
@@ -395,6 +398,7 @@ class _Config(dict):
         """Update the config dictionary from the config file."""
         with open(self._filename, 'r') as fp:
             try:
+                # FIXME: what if the file is wrong formatted
                 config_from_file = json.load(fp)
             except json.decoder.JSONDecodeError as e:
                 logger.error(f"Invalid config file: {self._filename}")
@@ -408,15 +412,33 @@ class _Config(dict):
                 invalid_keys.append(key)
 
         # check detector configuration
+        # FIXME: what if the detector config does not exist
         for key in config_from_file[detector]:
             if key not in self._detector_reconfigurable_config['DEFAULT']:
                 invalid_keys.append(f"{detector}.{key}")
 
         if invalid_keys:
-            msg = f"The following invalid keys were found in " \
-                f"{self._filename}:\n{', '.join(invalid_keys)}"
-            logger.error(msg)
-            raise ValueError(msg)
+            msg = f"\nThe following invalid keys were found in " \
+                f"{self._filename}:\n\n{', '.join(invalid_keys)}.\n\n" \
+                f"This could be caused by a version update.\n" \
+                f"Create a new config file?"
+
+            if not query_yes_no(msg):
+                raise ValueError(
+                    f"Invalid config keys: {', '.join(invalid_keys)}")
+
+            backup_file = self._filename + ".bak"
+            if not osp.exists(backup_file):
+                shutil.move(self._filename, backup_file)
+            else:
+                # up to two backup files
+                shutil.move(backup_file, backup_file + '.bak')
+                shutil.move(self._filename, backup_file)
+
+            # generate a new config file
+            self.ensure_file()
+            with open(self._filename, 'r') as fp:
+                config_from_file = json.load(fp)
 
         # update system configuration
         for key in self._system_reconfigurable_config:
@@ -441,8 +463,8 @@ class ConfigWrapper(collections.Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def load(self, detector, **kwargs):
-        self._data.load(detector, **kwargs)
+    def load(self, detector):
+        self._data.load(detector)
 
     @property
     def detectors(self):
