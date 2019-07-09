@@ -1,17 +1,36 @@
 karaboFAI
 =========
 
-karaboFAI is a tool that provides on-line (real-time, as fast as the
-calibration pipeline) and off-line data analysis and visualization
-for experiments at European XFEL that require azimuthal integration
-of diffraction data acquired with 2D detectors.
+karaboFAI is an application  that provides on-line (real-time, as fast as the
+calibration pipeline) and off-line data analysis and visualization for experiments 
+at European XFEL that using 2D detectors, e.g. LPD, JungFrau, etc.
 
 [Documentation](https://in.xfel.eu/readthedocs/docs/karabofai/en/documentation/)
 
 ## Build and install
 
+You are encouraged to use [Anaconda](https://www.anaconda.com/) to run and build **karaboFAI**.
+
+### Dependencies
+
+- cmake >= 3.8
+- gcc >= 5.4 (support c++14)
+
+In your [Anaconda](https://www.anaconda.com/) environment, run the following commands:
+
+```sh
+$ conda install -c anaconda cmake
+$ conda install -c omgarcia gcc-6
+```
+
+### Install karaboFAI
+
 ```sh
 $ git clone --recursive https://git.xfel.eu/gitlab/dataAnalysis/karaboFAI.git
+
+# If you have cloned the repository without one or more of its submodules, run
+$ git submodule update --init
+
 $ cd karaboFAI
 
 # optional
