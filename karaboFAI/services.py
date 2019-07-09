@@ -28,7 +28,7 @@ from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
 from .processes import ProcessInfo, register_fai_process
-from .utils import check_system_resource
+from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
@@ -133,17 +133,15 @@ def health_check():
             residual.append(proc)
 
     if residual:
-        # TODO: use utility function query_yes_no
-        ret = input(
+        if query_yes_no(
             "Warning: Found old karaboFAI instance(s) running in this "
             "machine!!!\n\n"
             "Running more than two karaboFAI instances with the same \n"
             "detector can result in undefined behavior. You can try to \n"
             "kill the other instances if it is owned by you. \n"
             "Note: you are not able to kill other users' instances! \n\n"
-            "Send SIGKILL? (y/n)")
-
-        if ret.lower() == 'y':
+            "Send SIGKILL?"
+        ):
             for p in residual:
                 p.kill()
 

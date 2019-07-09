@@ -131,12 +131,12 @@ def query_yes_no(question):
 
     :return bool: True for yes and False for no.
     """
+    ans = input(f"{question} (y/n)").lower()
     while True:
-        ans = input(f"{question} (y/n)").lower()
-
         if ans not in ['y', 'yes', 'n', 'no']:
-            print('please enter yes (y) or no (n)')
+            ans = input('please enter yes (y) or no (n): ')
             continue
+
         if ans == 'y' or ans == 'yes':
             return True
         if ans == 'n' or ans == 'no':
