@@ -64,6 +64,7 @@ _DATA_CATEGORIES = OrderedDict({
             "FXE_SMS_USR/MOTOR/UM05",
             "FXE_SMS_USR/MOTOR/UM13",
             "FXE_AUXT_LIC/DOOCS/PPLASER",
+            "FXE_AUXT_LIC/DOOCS/PPODL",
         ],
         properties=["actualPosition"],
     ),
