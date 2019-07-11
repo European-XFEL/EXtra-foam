@@ -141,7 +141,7 @@ setup(
         'console_scripts': [
             'karaboFAI=karaboFAI.services:application',
             'karaboFAI-kill=karaboFAI.services:kill_application',
-            'karaboFAI-stream=karaboFAI.services:karaboFAI_stream'
+            'karaboFAI-stream=karaboFAI.services:stream_file'
         ],
     },
     ext_modules=ext_modules,

@@ -294,7 +294,7 @@ def kill_application():
                   f"please try again or clean it manually")
 
 
-def karaboFAI_stream():
+def stream_file():
     ap = argparse.ArgumentParser(prog="karaboFAI-stream")
     ap.add_argument("detector", help="detector name (case insensitive)",
                     choices=[det.upper() for det in config.detectors],
@@ -306,8 +306,7 @@ def karaboFAI_stream():
     detector = _parse_detector_name(args.detector)
 
     app = mkQApp()
-    file_streamer = FileStreamControllerWindow(detector=detector,
-                                               port=args.port)
+    streamer = FileStreamControllerWindow(detector=detector, port=args.port)
     app.exec_()
 
 
