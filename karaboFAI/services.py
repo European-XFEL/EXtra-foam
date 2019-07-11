@@ -212,6 +212,19 @@ class FAI:
         return self._gui
 
 
+def _parse_detector_name(detector):
+    if detector == 'JUNGFRAU':
+        return 'JungFrau'
+
+    if detector == 'FASTCCD':
+        return 'FastCCD'
+
+    if detector == 'BASLERCAMERA':
+        return 'BaslerCamera'
+
+    return detector.upper()
+
+
 def application():
     parser = argparse.ArgumentParser(prog="karaboFAI")
     parser.add_argument('-V', '--version', action='version',
@@ -231,15 +244,7 @@ def application():
     else:
         logger.setLevel("INFO")
 
-    detector = args.detector
-    if detector == 'JUNGFRAU':
-        detector = 'JungFrau'
-    elif detector == 'FASTCCD':
-        detector = 'FastCCD'
-    elif detector == 'BASLERCAMERA':
-        detector = 'BaslerCamera'
-    else:
-        detector = detector.upper()
+    detector = _parse_detector_name(args.detector)
 
     if not faulthandler.is_enabled():
         faulthandler.enable(all_threads=False)
@@ -298,15 +303,7 @@ def karaboFAI_stream():
 
     args = ap.parse_args()
 
-    detector = args.detector
-    if detector == 'JUNGFRAU':
-        detector = 'JungFrau'
-    elif detector == 'FASTCCD':
-        detector = 'FastCCD'
-    elif detector == 'BASLERCAMERA':
-        detector = 'BaslerCamera'
-    else:
-        detector = detector.upper()
+    detector = _parse_detector_name(args.detector)
 
     app = mkQApp()
     file_streamer = FileStreamControllerWindow(detector=detector,
