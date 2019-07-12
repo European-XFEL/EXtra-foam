@@ -1,5 +1,7 @@
 import unittest
+from unittest import mock
 import os
+import os.path as osp
 import tempfile
 import json
 
@@ -11,7 +13,7 @@ class TestLaserOnOffWindow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dir = tempfile.mkdtemp()
-        _Config._filename = os.path.join(cls.dir, "config.json")
+        _Config._filename = osp.join(cls.dir, "config.json")
 
         cls.expected_keys = set(_Config._system_readonly_config.keys()).union(
             set(_Config._system_reconfigurable_config.keys())).union(
@@ -97,9 +99,41 @@ class TestLaserOnOffWindow(unittest.TestCase):
             json.dump(cfg, fp, indent=4)
 
         detector = "LPD"
-        with self.assertRaisesRegex(ValueError, 'UNKNOWN1, UNKNOWN2'):
-            with self.assertLogs(logger, "ERROR"):
+        # test raise if the answer is 'no'
+        with mock.patch('builtins.input', return_value='n'):
+            with self.assertRaisesRegex(ValueError, 'UNKNOWN1, UNKNOWN2'):
                 self._cfg.load(detector)
+
+        # test generating backup file if the answer is 'yes'
+        with mock.patch('builtins.input', return_value='y'):
+            self._cfg.load(detector)
+
+        self.assertTrue(osp.exists(_Config._filename + '.bak'))
+        # check the content of the backup file
+        with open(_Config._filename + '.bak', 'r') as fp:
+            self.assertEqual(cfg, json.load(fp))
+        # nothing should happen since there is a valid config file
+        self._cfg.load(detector)
+
+        # mess up the new config file again
+        with open(_Config._filename, 'w') as fp:
+            cfg['UNKNOWN3'] = 1
+            json.dump(cfg, fp, indent=4)
+
+        with mock.patch('builtins.input', return_value='y'):
+            self._cfg.load(detector)
+
+        self.assertTrue(osp.exists(_Config._filename + '.bak'))
+        # check the content of the backup file
+        with open(_Config._filename + '.bak', 'r') as fp:
+            self.assertEqual(cfg, json.load(fp))
+
+        # test that the second level backup file was generated
+        self.assertTrue(osp.exists(_Config._filename + '.bak.bak'))
+        # check the content of the second level backup file
+        with open(_Config._filename + '.bak.bak', 'r') as fp:
+            del cfg['UNKNOWN3']
+            self.assertEqual(cfg, json.load(fp))
 
     def testInvalidDetectorKeys(self):
         # invalid keys in detector config
@@ -113,7 +147,6 @@ class TestLaserOnOffWindow(unittest.TestCase):
             cfg[detector]['TIMEOUT'] = 2
             json.dump(cfg, fp, indent=4)
 
-        with self.assertRaisesRegex(
-                ValueError, f'{detector}.UNKNOWN, {detector}.TIMEOUT'):
-            with self.assertLogs(logger, "ERROR"):
+        with mock.patch('builtins.input', return_value='n'):
+            with self.assertRaisesRegex(ValueError, 'LPD.UNKNOWN, LPD.TIMEOUT'):
                 self._cfg.load(detector)

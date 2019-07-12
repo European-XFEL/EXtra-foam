@@ -1,6 +1,6 @@
 import unittest
 
-from karaboFAI.algorithms import intersection
+from karaboFAI.cpp import intersection
 
 
 class TestGeometry(unittest.TestCase):

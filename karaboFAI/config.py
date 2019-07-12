@@ -14,12 +14,13 @@ from enum import IntEnum
 import json
 import os.path as osp
 import collections
+import shutil
+
+import numpy as np
 
 from . import ROOT_PATH
 from .logger import logger
-
-
-MAX_NUMBER_OF_PULSES_PER_TRAIN = 2700
+from .utils import query_yes_no
 
 
 class DataSource(IntEnum):
@@ -37,13 +38,14 @@ class PumpProbeMode(IntEnum):
 
 class AnalysisType(IntEnum):
     UNDEFINED = 0
-    PP_AZIMUTHAL_INTEG = 1
-    ROI_PROJECTION_X = 2
-    ROI_PROJECTION_Y = 3
-    ROI1_SUB_ROI2 = 4
-    ROI1_DIV_ROI2 = 5
-    TRAIN_AZIMUTHAL_INTEG = 6
-    PULSE_AZIMUTHAL_INTEG = 7
+    PUMP_PROBE = 1
+    ROI1_ADD_ROI2 = 11
+    ROI1_SUB_ROI2 = 12
+    ROI1_DIV_ROI2 = 13
+    ROI1_SUB_ROI2_PROJECTION_X = 21
+    ROI1_SUB_ROI2_PROJECTION_Y = 22
+    TRAIN_AZIMUTHAL_INTEG = 31
+    PULSE_AZIMUTHAL_INTEG = 32
 
 
 class BinMode(IntEnum):
@@ -51,19 +53,7 @@ class BinMode(IntEnum):
     AVERAGE = 1
 
 
-class CorrelationFom(IntEnum):
-    UNDEFINED = 0
-    PUMP_PROBE = 1
-    ROI_SUB = 2  # ROI1 - ROI2
-    ROI1 = 3
-    ROI2 = 4
-    ROI_SUM = 5  # ROI1 + ROI2
-    # Calculate the FOM based on the azimuthal integration of the mean
-    # of the assembled image(s).
-    AZIMUTHAL_INTEG_MEAN = 6
-
-
-class CurveNormalizer(IntEnum):
+class VectorNormalizer(IntEnum):
     # Normalize the azimuthal integration curve by the area under the curve.
     AUC = 0
     # Normalize the azimuthal integration curve by the sum of ROI(s).
@@ -78,6 +68,14 @@ class RoiFom(IntEnum):
     MEAN = 1  # monitor mean of ROI
 
 
+# a simple class saves the trouble when the attribute needs to be read/write
+# from/at Redis.
+class MaskState:
+    UNMASK = 0
+    MASK = 1
+    CLEAR_MASK = -1
+
+
 class _Config(dict):
     """Config implementation."""
 
@@ -90,6 +88,8 @@ class _Config(dict):
         "PROCESS_MONITOR_HEART_BEAT": 5000,
         # timeout when cleaning up remnant processes, in second
         "PROCESS_CLEANUP_TIMEOUT": 1,
+        # max number of pulses per pulse train
+        "MAX_N_PULSES_PER_TRAIN": 2700,
         # maximum length of a queue in data pipeline
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue
@@ -98,6 +98,8 @@ class _Config(dict):
         "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4
         "CORRELATION_COLORS": ['b', 'o', 'g', 'r'],
+        # color of the bounding box used in masking and unmasking
+        "MASK_BOUNDING_BOX_COLOR": 'b',
         # full path of the Redis server executable
         "REDIS_EXECUTABLE": osp.join(osp.abspath(
             osp.dirname(__file__)), "thirdparty/bin/redis-server"),
@@ -110,7 +112,8 @@ class _Config(dict):
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
     }
 
-    # system configuration which users are allowed to modify
+    # system configurations which will appear in the config file so that
+    # users can modify them
     _system_reconfigurable_config = {
         # Source of data: FILES or BRIDGE
         "DEFAULT_SOURCE_TYPE": DataSource.BRIDGE,
@@ -130,6 +133,11 @@ class _Config(dict):
     _detector_readonly_config = {
         # set all default value to None
         "DEFAULT": {
+            # image data dtype
+            # Note: the cpp code must have the corresponding overload!!!
+            #       np.float32 -> float
+            #       np.float64 -> double
+            "IMAGE_DTYPE": np.float32,
             # whether the data is pulse resolved
             "PULSE_RESOLVED": None,
             # whether geometry is required to assemble the detector
@@ -207,8 +215,7 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": ["", ],
             # instrument source name in HDF5 files
             "SOURCE_NAME_FILE": ["", ],
-            # data folder if streamed from files
-            "DATA_FOLDER": "",
+            # path of the geometry file
             "GEOMETRY_FILE": "",
             # quadrant coordinates for assembling detector modules,
             # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
@@ -259,11 +266,19 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
             "SOURCE_NAME_FILE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
             "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
-                                      'geometries/lpd_mar_18.h5'),
-            "QUAD_POSITIONS": [[-13.0, -299.0],
-                               [11.0, -8.0],
-                               [-254.0, 16.0],
-                               [-278.0, -275.0]],
+                                      'geometries/lpd_mar_18_axesfixed.h5'),
+            # For lpd_mar_18.h5 and LPDGeometry in karabo_data
+            # "QUAD_POSITIONS": [[-13.0, -299.0],
+            #                    [11.0, -8.0],
+            #                    [-254.0, 16.0],
+            #                    [-278.0, -275.0]],
+            # For lpd_mar18_axesfixed.h5 and LPD_1MGeometry in karabo_data
+            # The geometry uses XFEL standard coordinate directions.
+            "QUAD_POSITIONS": [(11.4, 299),
+                               (-11.5, 8),
+                               (254.5, -16),
+                               (278.5, 275)],
+
             "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
@@ -375,6 +390,7 @@ class _Config(dict):
         :param str detector: detector name.
         """
         self.__setitem__("DETECTOR", detector)
+        # config (self) does not have a detector hierarchy!
         self.update(self._detector_readonly_config[detector])
         self.from_file(detector)
 
@@ -382,6 +398,7 @@ class _Config(dict):
         """Update the config dictionary from the config file."""
         with open(self._filename, 'r') as fp:
             try:
+                # FIXME: what if the file is wrong formatted
                 config_from_file = json.load(fp)
             except json.decoder.JSONDecodeError as e:
                 logger.error(f"Invalid config file: {self._filename}")
@@ -395,15 +412,33 @@ class _Config(dict):
                 invalid_keys.append(key)
 
         # check detector configuration
+        # FIXME: what if the detector config does not exist
         for key in config_from_file[detector]:
             if key not in self._detector_reconfigurable_config['DEFAULT']:
                 invalid_keys.append(f"{detector}.{key}")
 
         if invalid_keys:
-            msg = f"The following invalid keys were found in " \
-                f"{self._filename}:\n{', '.join(invalid_keys)}"
-            logger.error(msg)
-            raise ValueError(msg)
+            msg = f"\nThe following invalid keys were found in " \
+                f"{self._filename}:\n\n{', '.join(invalid_keys)}.\n\n" \
+                f"This could be caused by a version update.\n" \
+                f"Create a new config file?"
+
+            if not query_yes_no(msg):
+                raise ValueError(
+                    f"Invalid config keys: {', '.join(invalid_keys)}")
+
+            backup_file = self._filename + ".bak"
+            if not osp.exists(backup_file):
+                shutil.move(self._filename, backup_file)
+            else:
+                # up to two backup files
+                shutil.move(backup_file, backup_file + '.bak')
+                shutil.move(self._filename, backup_file)
+
+            # generate a new config file
+            self.ensure_file()
+            with open(self._filename, 'r') as fp:
+                config_from_file = json.load(fp)
 
         # update system configuration
         for key in self._system_reconfigurable_config:
@@ -428,8 +463,8 @@ class ConfigWrapper(collections.Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def load(self, detector, **kwargs):
-        self._data.load(detector, **kwargs)
+    def load(self, detector):
+        self._data.load(detector)
 
     @property
     def detectors(self):

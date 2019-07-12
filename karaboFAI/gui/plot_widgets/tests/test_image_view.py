@@ -6,8 +6,7 @@ import numpy as np
 
 from karaboFAI.gui import mkQApp, pyqtgraph
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
-from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem
-from karaboFAI.gui.plot_widgets.roi import RectROI
+from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
 from karaboFAI.gui.plot_widgets.image_view import ImageView, ImageAnalysis
 from karaboFAI.logger import logger
 
@@ -21,14 +20,10 @@ class TestImageView(unittest.TestCase):
         widget = ImageView()
         plot_items = widget._plot_widget.plotItem.items
         self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
-        self.assertIsInstance(plot_items[1], MaskItem)
-        for i in range(2, 6):
+        for i in range(1, 5):
             self.assertIsInstance(plot_items[i], RectROI)
 
-        widget = ImageView(has_mask=False)
-        self.assertIsInstance(widget._plot_widget.plotItem.items[1], RectROI)
-
-        widget = ImageView(has_mask=False, has_roi=False)
+        widget = ImageView(has_roi=False)
         self.assertEqual(1, len(widget._plot_widget.plotItem.items))
 
 
@@ -43,6 +38,7 @@ class TestImageAnalysis(unittest.TestCase):
 
     def testSaveLoadImageMask(self):
         widget = ImageAnalysis()
+        widget._mask_item.loadMask = MagicMock()
 
         fp = tempfile.TemporaryFile()
         # if image_data is None, it does not raise but only logger.error()
@@ -64,14 +60,12 @@ class TestImageAnalysis(unittest.TestCase):
         self.assertEqual(cm.output[0].split(':')[-1],
                          'Cannot load mask from abc')
 
-        widget._publish_image_mask = MagicMock()
-
         widget._saveImageMaskImp(fp)
 
         fp.seek(0)
         widget._loadImageMaskImp(fp)
-        widget._publish_image_mask.assert_called_once()
-        widget._publish_image_mask.reset_mock()
+        widget._mask_item.loadMask.assert_called_once()
+        widget._mask_item.loadMask.reset_mock()
 
         # save and load another mask
         mask[0, 0] = 1
@@ -83,7 +77,8 @@ class TestImageAnalysis(unittest.TestCase):
         widget._saveImageMaskImp(fp)
         fp.seek(0)
         widget._loadImageMaskImp(fp)
-        widget._publish_image_mask.assert_called_once()
+        widget._mask_item.loadMask.assert_called_once()
+        widget._mask_item.loadMask.reset_mock()
 
         # load a mask with different shape
         new_mask = np.array((3, 3), dtype=bool)

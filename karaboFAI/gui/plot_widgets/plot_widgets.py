@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections.abc import Iterable
+
 import numpy as np
 
 from .base_plot_widget import PlotWidget
@@ -61,12 +63,12 @@ class SinglePulseAiWidget(PlotWidget):
         if self.pulse_index <= max_id:
             self._pulse_plot.setData(momentum, intensities[self.pulse_index])
         else:
-            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+            logger.error("<POI index>: POI index ({}) > Maximum "
                          "pulse index ({})".format(self.pulse_index, max_id))
             return
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.intensity_mean)
+            self._mean_plot.setData(momentum, data.ai.intensity)
 
 
 class TrainAiWidget(PlotWidget):
@@ -98,24 +100,24 @@ class TrainAiWidget(PlotWidget):
                 self.clear()
 
                 colors = SequentialColors().s1(n_pulses)
-                for key, value in intensities.items():
-                    self.plotCurve(momentum, value, pen=make_pen(colors[key]))
+                for i, intensity in enumerate(intensities):
+                    self.plotCurve(momentum, intensity, pen=make_pen(colors[i]))
             else:
                 for item, intensity in zip(self.plotItem.items, intensities):
                     item.setData(momentum, intensity)
 
         else:
-            intensity_mean = data.ai.intensity_mean
-            if intensity_mean is None:
+            intensity = data.ai.intensity
+            if intensity is None:
                 return
 
             if self._n_pulses == 0:
                 # initialize
-                self.plotCurve(momentum, intensity_mean,
+                self.plotCurve(momentum, intensity,
                                pen=make_pen(SequentialColors().r[0]))
                 self._n_pulses = 1
             else:
-                self.plotItem.items[0].setData(momentum, intensity_mean)
+                self.plotItem.items[0].setData(momentum, intensity)
 
 
 class PulsedFOMWidget(PlotWidget):
@@ -136,7 +138,7 @@ class PulsedFOMWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.ai.pulse_fom
+        foms = data.ai.intensities_foms
         if foms is None:
             return
 
@@ -379,71 +381,40 @@ class XasSpectrumBinCountWidget(PlotWidget):
         self._plot.setData(bin_center, bin_count)
 
 
-class BinWidget(PlotWidget):
-    """BinWidget class.
+class Bin1dHist(PlotWidget):
+    """Bin1dHist class.
 
-    Widget for displaying the pump and probe signal or their difference.
+    Widget for visualizing histogram of count for 1D-binning.
     """
-    def __init__(self, *, parent=None):
-        """Initialization."""
+    def __init__(self, idx, *, count=False, parent=None):
+        """Initialization.
+
+        :param int idx: index of the binning parameter (must be 1 or 2).
+        :param bool count: True for count plot and False for FOM plot.
+        """
         super().__init__(parent=parent)
 
-        self._n_bins = 0
+        self._idx = idx
+        self._count = count
 
-        self.setLabel('left', "y (arb. u.)")
-        self.setLabel('bottom', "x (arb. u.)")
-        self.addLegend(offset=(-40, 20))
-
-    def update(self, data):
-        """Override."""
-        bin_center = data.bin.center_x
-        data_x = data.bin.data_x
-        x = data.bin.x
-
-        if data_x is None:
-            return
-
-        n_bins = len(bin_center)
-        if self._n_bins != n_bins:
-            self.clear()
-
-            self._n_bins = n_bins
-
-            colors = SequentialColors().s1(n_bins)
-
-            bin_width = bin_center[1] - bin_center[0]
-            for i, v in enumerate(data_x):
-                start = bin_center[i] - bin_width/2.
-                end = bin_center[i] + bin_width/2.
-                self.plotCurve(x, v,
-                               name=f"{start:>8.2e}, {end:>8.2e}",
-                               pen=make_pen(colors[i]))
+        self.setLabel('bottom', f"Label{idx}")
+        if count:
+            self.setLabel('left', "Count")
+            self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
         else:
-            for item, v in zip(self.plotItem.items, data_x):
-                item.setData(x, v)
-
-
-class BinCountWidget(PlotWidget):
-    """BinCountWidget class.
-
-    Widget for displaying the number of data points in each bins.
-    """
-
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('bottom', "x")
-        self.setLabel('left', "Count")
-
-        self._plot = self.plotBar()
+            self.setLabel('left', "FOM")
+            self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('p'))
 
     def update(self, data):
         """Override."""
-        center = data.bin.center_x
-        count = data.bin.count_x
+        if self._count:
+            value = getattr(data.bin, f"count{self._idx}_hist")
+        else:
+            value = getattr(data.bin, f"fom{self._idx}_hist")
 
-        if count is None:
-            return
+        reset = getattr(data.bin, f"reset{self._idx}")
+        # do not update if FOM is None
+        if value is not None and (reset or getattr(data.bin, f"fom{self._idx}") is not None):
+            self._plot.setData(getattr(data.bin, f"center{self._idx}"), value)
 
-        self._plot.setData(center, count)
+            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))

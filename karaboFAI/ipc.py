@@ -110,7 +110,11 @@ class RedisSubscriber:
         if self._sub is None:
             self._sub = redis_connection(
                 decode_responses=self._decode_responses).pubsub()
-            self._sub.subscribe(self._channel)
+            try:
+                self._sub.subscribe(self._channel)
+            except redis.ConnectionError:
+                self._sub = None
+
         return self._sub
 
 
@@ -125,7 +129,11 @@ class RedisPSubscriber:
         if self._sub is None:
             self._sub = redis_connection(
                 decode_responses=self._decode_responses).pubsub()
-            self._sub.psubscribe(self._pattern)
+            try:
+                self._sub.psubscribe(self._pattern)
+            except redis.ConnectionError:
+                self._sub = None
+
         return self._sub
 
 

@@ -19,7 +19,8 @@ from ...config import config
 class AnalysisCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the general analysis parameters."""
 
-    _pulse_index_validator = QtGui.QIntValidator(0, 2699)
+    _pulse_index_validator = QtGui.QIntValidator(
+        0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__("General setup", *args, **kwargs)
@@ -28,19 +29,19 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         # PULSE_RESOLVED = True case. It makes sense since these attributes
         # also appear in the defined methods.
         if self._pulse_resolved:
-            vip_pulse_index1 = 0
-            vip_pulse_index2 = 1
+            poi_index1 = 0
+            poi_index2 = 1
         else:
-            vip_pulse_index1 = 0
-            vip_pulse_index2 = 0
+            poi_index1 = 0
+            poi_index2 = 0
 
         self._pulse_index_filter_le = SmartRangeLineEdit(":")
 
-        self._vip_pulse_index1_le = SmartLineEdit(str(vip_pulse_index1))
-        self._vip_pulse_index1_le.setValidator(self._pulse_index_validator)
+        self._poi_index1_le = SmartLineEdit(str(poi_index1))
+        self._poi_index1_le.setValidator(self._pulse_index_validator)
 
-        self._vip_pulse_index2_le = SmartLineEdit(str(vip_pulse_index2))
-        self._vip_pulse_index2_le.setValidator(self._pulse_index_validator)
+        self._poi_index2_le = SmartLineEdit(str(poi_index2))
+        self._poi_index2_le.setValidator(self._pulse_index_validator)
 
         self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
         self._photon_energy_le.setValidator(
@@ -63,10 +64,10 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
             layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
 
-            layout.addWidget(QtGui.QLabel("VIP pulse index 1: "), 1, 0, AR)
-            layout.addWidget(self._vip_pulse_index1_le, 1, 1)
-            layout.addWidget(QtGui.QLabel("VIP pulse index 2: "), 1, 2, AR)
-            layout.addWidget(self._vip_pulse_index2_le, 1, 3)
+            layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
+            layout.addWidget(self._poi_index1_le, 1, 1)
+            layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
+            layout.addWidget(self._poi_index2_le, 1, 3)
 
         layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 2, 0, AR)
         layout.addWidget(self._photon_energy_le, 2, 1)
@@ -78,15 +79,15 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._vip_pulse_index1_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(1,
-                int(self._vip_pulse_index1_le.text())))
+        self._poi_index1_le.returnPressed.connect(
+            lambda: mediator.onVipPulseIndexChange(
+                1, int(self._poi_index1_le.text())))
 
-        self._vip_pulse_index2_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(2,
-                int(self._vip_pulse_index2_le.text())))
+        self._poi_index2_le.returnPressed.connect(
+            lambda: mediator.onVipPulseIndexChange(
+                2, int(self._poi_index2_le.text())))
 
-        mediator.vip_pulse_indices_connected_sgn.connect(
+        mediator.poi_indices_connected_sgn.connect(
             self.updateVipPulseIDs)
 
         self._photon_energy_le.returnPressed.connect(
@@ -102,8 +103,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
-        self._vip_pulse_index1_le.returnPressed.emit()
-        self._vip_pulse_index2_le.returnPressed.emit()
+        self._poi_index1_le.returnPressed.emit()
+        self._poi_index2_le.returnPressed.emit()
 
         self._photon_energy_le.returnPressed.emit()
 
@@ -115,5 +116,5 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
     def updateVipPulseIDs(self):
         """Called when OverviewWindow is opened."""
-        self._vip_pulse_index1_le.returnPressed.emit()
-        self._vip_pulse_index2_le.returnPressed.emit()
+        self._poi_index1_le.returnPressed.emit()
+        self._poi_index2_le.returnPressed.emit()

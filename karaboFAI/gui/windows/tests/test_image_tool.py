@@ -9,6 +9,7 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
+from karaboFAI.algorithms import mask_image
 from karaboFAI.config import config, _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow
@@ -44,23 +45,13 @@ class TestSimpleImageData(unittest.TestCase):
             img_data.threshold_mask = [1, 2, 3]
 
         img_data.threshold_mask = (3, 6)
-        np.testing.assert_array_equal(np.clip(gt_data, 3, 6), img_data.masked)
+        np.testing.assert_array_equal(mask_image(gt_data, threshold_mask=(3, 6)),
+                                      img_data.masked)
         img_data.background = 3
-        np.testing.assert_array_equal(np.clip(gt_data-3, 3, 6), img_data.masked)
-
-        self.assertEqual(1.0e-3, img_data.pixel_size)
-
-    def testImageWithNan(self):
-        gt_data = np.array([[1, 0], [np.nan, np.nan]])
-        img_data = _SimpleImageData(ImageData(gt_data))
-
-        img_data.background = -1
-        np.testing.assert_array_equal(np.array([[2, 1], [np.nan, np.nan]]),
+        np.testing.assert_array_equal(mask_image(gt_data-3, threshold_mask=(3, 6)),
                                       img_data.masked)
 
-        img_data.threshold_mask = (1.1, 1.6)
-        np.testing.assert_array_almost_equal(
-            np.array([[1.6, 1.1], [np.nan, np.nan]]), img_data.masked)
+        self.assertEqual(1.0e-3, img_data.pixel_size)
 
     @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
     def testInstantiateFromArray(self):
@@ -121,14 +112,14 @@ class TestImageTool(unittest.TestCase):
         widget = self.window._roi_ctrl_widget
 
         proc.update()
-        self.assertListEqual([False]*4, proc.visibilities)
+        self.assertListEqual([False]*4, proc._visibilities)
 
         for i, ctrl in enumerate(widget._roi_ctrls):
             roi_region = [int(ctrl._px_le.text()),
                           int(ctrl._py_le.text()),
                           int(ctrl._width_le.text()),
                           int(ctrl._height_le.text())]
-            self.assertListEqual(roi_region, proc.regions[i])
+            self.assertListEqual(roi_region, proc._regions[i])
 
     def testRoiCtrlWidget(self):
         widget = self.window._roi_ctrl_widget
@@ -153,7 +144,7 @@ class TestImageTool(unittest.TestCase):
                          pos=QtCore.QPoint(2, roi1_ctrl.activate_cb.height()/2))
         self.assertTrue(roi1_ctrl.activate_cb.isChecked())
         proc.update()
-        self.assertTrue(proc.visibilities[0])
+        self.assertTrue(proc._visibilities[0])
 
         # test default values
         self.assertTupleEqual((float(roi1_ctrl._width_le.text()),
@@ -182,7 +173,7 @@ class TestImageTool(unittest.TestCase):
         self.assertTupleEqual((-1, -3), tuple(roi1.pos()))
 
         proc.update()
-        self.assertListEqual([-1, -3, 10, 30], proc.regions[0])
+        self.assertListEqual([-1, -3, 10, 30], proc._regions[0])
 
         # lock ROI ctrl
         QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,

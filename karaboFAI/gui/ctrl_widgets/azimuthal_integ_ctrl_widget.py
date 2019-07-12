@@ -15,18 +15,18 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ...config import CurveNormalizer, config
+from ...config import VectorNormalizer, config
 
 
 class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
-        "AUC": CurveNormalizer.AUC,
-        "ROI1 - ROI2": CurveNormalizer.ROI_SUB,
-        "ROI1": CurveNormalizer.ROI1,
-        "ROI2": CurveNormalizer.ROI2,
-        "ROI1 + ROI2": CurveNormalizer.ROI_SUM,
+        "AUC": VectorNormalizer.AUC,
+        "ROI1 - ROI2": VectorNormalizer.ROI_SUB,
+        "ROI1": VectorNormalizer.ROI1,
+        "ROI2": VectorNormalizer.ROI2,
+        "ROI1 + ROI2": VectorNormalizer.ROI_SUM,
     })
 
     def __init__(self, *args, **kwargs):

@@ -122,3 +122,22 @@ class _MetaSingleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+def query_yes_no(question):
+    """Ask a yes/no question and return the answer.
+
+    :param str question: the question string.
+
+    :return bool: True for yes and False for no.
+    """
+    ans = input(f"{question} (y/n)").lower()
+    while True:
+        if ans not in ['y', 'yes', 'n', 'no']:
+            ans = input('please enter yes (y) or no (n): ')
+            continue
+
+        if ans == 'y' or ans == 'yes':
+            return True
+        if ans == 'n' or ans == 'no':
+            return False

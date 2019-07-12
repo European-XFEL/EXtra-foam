@@ -11,7 +11,7 @@ All rights reserved.
 """
 
 
-class _ProcessingError(Exception):
+class ProcessingError(Exception):
     """Base Exception for non-fatal errors in pipeline.
 
     The error must not be fatal and the rest of the data processing pipeline
@@ -20,17 +20,7 @@ class _ProcessingError(Exception):
     pass
 
 
-class AggregatingError(_ProcessingError):
-    """Raised when data aggregating fails."""
-    pass
-
-
-class ProcessingError(_ProcessingError):
-    """Raised when data processor fails."""
-    pass
-
-
-class _StopPipelineError(Exception):
+class StopPipelineError(Exception):
     """Base Exception for fatal errors in pipeline.
 
     The error is fatal so once it is raised, the pipeline should be stopped
@@ -39,6 +29,11 @@ class _StopPipelineError(Exception):
     pass
 
 
-class AssemblingError(_StopPipelineError):
+class AssemblingError(StopPipelineError):
     """Raised when image assembling fails."""
+    pass
+
+
+class PumpProbeIndexError(StopPipelineError):
+    """Raised when the pulse indices are invalid."""
     pass

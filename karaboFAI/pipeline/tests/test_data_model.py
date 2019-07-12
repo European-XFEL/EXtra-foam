@@ -45,7 +45,6 @@ class TestCorrelationData(unittest.TestCase):
         cls._manager = DataManagerMixin()
 
     def setUp(self):
-        self._manager.reset_correlation()
         self._manager.remove_correlations()
 
     def testPairData(self):
@@ -79,7 +78,8 @@ class TestCorrelationData(unittest.TestCase):
         self.assertEqual("property1", info["property"])
 
         # test clear history
-        self._manager.reset_correlation()
+        data.correlation.reset = True
+        data.correlation.update_hist(2)
         corr_hist, fom_hist, info = data.correlation.correlation1
         np.testing.assert_array_almost_equal([], corr_hist)
         np.testing.assert_array_almost_equal([], fom_hist)
@@ -208,9 +208,6 @@ class TestCorrelationData(unittest.TestCase):
 
 
 class TestProcessedData(unittest.TestCase):
-    def setUp(self):
-        DataManagerMixin().reset_roi()
-
     def testGeneral(self):
         # ---------------------
         # pulse-resolved data
@@ -266,7 +263,7 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(4, image_data.n_images)
         self.assertTupleEqual((2, 2), image_data.shape)
         self.assertTrue(image_data.pulse_resolved)
-        self.assertListEqual([None] * 4, image_data.images)
+        np.testing.assert_array_equal(np.ones((4, 2, 2)), image_data.images)
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked_mean)
         self.assertEqual(0.0, image_data.background)
@@ -278,14 +275,17 @@ class TestImageData(unittest.TestCase):
         # train-resolved data
         # ---------------------
 
-        image_data = ImageData(np.ones((3, 3)))
+        image_data = ImageData(np.array([[1, 0], [np.nan, 1]]))
 
         self.assertEqual(1, image_data.n_images)
-        self.assertTupleEqual((3, 3), image_data.shape)
+        self.assertTupleEqual((2, 2), image_data.shape)
         self.assertFalse(image_data.pulse_resolved)
-        np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
+        np.testing.assert_array_equal(np.array([[1, 0], [np.nan, 1]]),
+                                      image_data.mean)
         self.assertIs(image_data.mean, image_data.images)
-        np.testing.assert_array_equal(np.ones((3, 3)), image_data.masked_mean)
+        # nan should be converted to 0 after masking
+        np.testing.assert_array_equal(np.array([[1, 0], [0, 1]]),
+                                      image_data.masked_mean)
         self.assertIsNot(image_data.masked_mean, image_data.mean)
 
     @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
@@ -298,38 +298,47 @@ class TestImageData(unittest.TestCase):
         # ---------------------
         # pulse-resolved data
         # ---------------------
-
-        image_data = ImageData(np.ones((2, 2, 2)),
-                               threshold_mask=(0, 0.5),
+        imgs = np.ones((3, 2, 2))
+        imgs[:, 0, :] = 2
+        image_data = ImageData(imgs,
+                               threshold_mask=(0, 1),
                                ma_window=4,
                                ma_count=2,
-                               background=-100)
+                               background=-100,
+                               keep=[0, 1])
         self.assertEqual(2e-3, image_data.pixel_size)
-        self.assertEqual(2, image_data.n_images)
-        np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
-        np.testing.assert_array_equal(0.5*np.ones((2, 2)),
+        self.assertEqual(3, image_data.n_images)
+        # image_data.images become a list when 'keep' is given.
+        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+                                      image_data.images[0])
+        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+                                      image_data.images[1])
+        self.assertIsNone(image_data.images[2])
+        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+                                      image_data.mean)
+        np.testing.assert_array_equal(np.array([[0., 0.], [1., 1.]]),
                                       image_data.masked_mean)
         self.assertEqual(-100, image_data.background)
-        self.assertEqual((0, 0.5), image_data.threshold_mask)
+        self.assertEqual((0, 1), image_data.threshold_mask)
         self.assertEqual(4, image_data.ma_window)
         self.assertEqual(2, image_data.ma_count)
 
         # ---------------------
         # train-resolved data
         # ---------------------
-
-        image_data = ImageData(np.ones((3, 3)), threshold_mask=(0, 0.5))
+        img = np.ones((2, 2))
+        img[0, 0] = 2
+        image_data = ImageData(img, threshold_mask=(0, 1))
 
         self.assertEqual(1, image_data.n_images)
-        self.assertTupleEqual((3, 3), image_data.shape)
-        np.testing.assert_array_equal(np.ones((3, 3)), image_data.mean)
-        np.testing.assert_array_equal(0.5*np.ones((3, 3)), image_data.masked_mean)
+        self.assertTupleEqual((2, 2), image_data.shape)
+        np.testing.assert_array_equal(np.array([[2., 1.], [1., 1.]]),
+                                      image_data.mean)
+        np.testing.assert_array_equal(np.array([[0., 1.], [1., 1.]]),
+                                      image_data.masked_mean)
 
 
 class TestPumpProbeData(unittest.TestCase):
-    def setUp(self):
-        DataManagerMixin().reset_pp()
-
     def testGeneral(self):
         data = PumpProbeData()
 
@@ -347,9 +356,10 @@ class TestPumpProbeData(unittest.TestCase):
         on_gt = np.copy(this_on)
         off_gt = np.copy(this_off)
 
-        # test clear
+        # test reset
         data.data = (x_gt, this_on, this_off)
-        PumpProbeData.clear()
+        data.reset = True
+        data.update_hist()
         self.assertEqual(1, data.ma_window)
         self.assertEqual(0, data.ma_count)
 

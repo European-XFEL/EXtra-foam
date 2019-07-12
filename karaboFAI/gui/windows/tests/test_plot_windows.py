@@ -8,7 +8,7 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
-    Bin1DWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
+    Bin1dWindow, Bin2dWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
     PumpProbeWindow, RoiWindow, XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
@@ -17,7 +17,7 @@ from karaboFAI.gui.plot_widgets import (
     PulsedFOMWidget, SinglePulseAiWidget, SinglePulseImageView,
     RoiImageView, RoiValueMonitor,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
-    BinCountWidget, BinWidget,
+    Bin1dHist, Bin1dHeatmap, Bin2dHeatmap
 )
 
 app = mkQApp()
@@ -85,16 +85,26 @@ class TestOverviewWindow(unittest.TestCase):
         self.assertEqual(4, counter[RoiImageView])
         self.assertEqual(1, counter[RoiValueMonitor])
 
-    def testBin1DWindow(self):
-        win = Bin1DWindow(pulse_resolved=True, parent=self.gui)
+    def testBin1dWindow(self):
+        win = Bin1dWindow(pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(6, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(2, counter[Bin1dHeatmap])
+        self.assertEqual(4, counter[Bin1dHist])
+
+    def testBin2dWindow(self):
+        win = Bin2dWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[BinWidget])
-        self.assertEqual(1, counter[BinCountWidget])
+        self.assertEqual(2, counter[Bin2dHeatmap])
 
 
 class TestPulsedAiWindow(unittest.TestCase):

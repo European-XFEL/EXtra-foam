@@ -27,12 +27,12 @@ class Mediator(DataManagerMixin, QObject):
     Mediator() is instantiated.
     """
 
-    vip_pulse_index1_sgn = pyqtSignal(int)
-    vip_pulse_index2_sgn = pyqtSignal(int)
+    poi_index1_sgn = pyqtSignal(int)
+    poi_index2_sgn = pyqtSignal(int)
     # When pulsed azimuthal integration window is opened, it first connect
     # the above two signals to its two slots. Then it informs the
-    # AnalysisCtrlWidget to update the VIP pulse indices.
-    vip_pulse_indices_connected_sgn = pyqtSignal()
+    # AnalysisCtrlWidget to update the POI indices.
+    poi_indices_connected_sgn = pyqtSignal()
 
     reset_image_level_sgn = pyqtSignal()
 
@@ -79,9 +79,6 @@ class Mediator(DataManagerMixin, QObject):
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
 
-    def onImageMaskRegionChange(self, value: tuple):
-        self._db.publish("command:image_mask", str(value))
-
     def onGeomFilenameChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 
@@ -92,12 +89,12 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.GENERAL_PROC, 'selected_pulse_indices', str(value))
 
     def onVipPulseIndexChange(self, vip_id: int, value: int):
-        self._meta.set(mt.GENERAL_PROC, f"vip_pulse{vip_id}_index", str(value))
+        self._meta.set(mt.GENERAL_PROC, f"poi{vip_id}_index", str(value))
 
         if vip_id == 1:
-            self.vip_pulse_index1_sgn.emit(value)
+            self.poi_index1_sgn.emit(value)
         else:  # vip_id == 2:
-            self.vip_pulse_index2_sgn.emit(value)
+            self.poi_index2_sgn.emit(value)
 
     def onSampleDistanceChange(self, value: float):
         self._meta.set(mt.GENERAL_PROC, 'sample_distance', value)
@@ -133,11 +130,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'enable_pulsed_ai', str(value))
 
     def onPpModeChange(self, value: IntEnum):
-        value = int(value)
-        if self._meta.get(mt.PUMP_PROBE_PROC, 'mode') != value:
-            self.reset_pp()
-        self._meta.set(mt.PUMP_PROBE_PROC, 'mode', value)
-        # TODO: reset correlation if FOM in correlation is pump-probe
+        self._meta.set(mt.PUMP_PROBE_PROC, 'mode', int(value))
 
     def onPpOnPulseIdsChange(self, value: list):
         self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
@@ -147,8 +140,6 @@ class Mediator(DataManagerMixin, QObject):
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
-        self.reset_pp()
-        # TODO: reset correlation if FOM in correlation is pump-probe
 
     def onPpAbsDifferenceChange(self, value: bool):
         self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))
@@ -157,7 +148,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.PUMP_PROBE_PROC, "ma_window", value)
 
     def onPpReset(self):
-        self.reset_pp()
+        self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
 
     def onRoiRegionChange(self, value: tuple):
         rank, x, y, w, h = value
@@ -169,10 +160,9 @@ class Mediator(DataManagerMixin, QObject):
 
     def onRoiFomChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, 'fom_type', int(value))
-        self.reset_roi()
 
     def onRoiReset(self):
-        self.reset_roi()
+        self._meta.set(mt.ROI_PROC, "reset", 1)
 
     def onProj1dNormalizerChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, "proj1d:normalizer", int(value))
@@ -183,9 +173,8 @@ class Mediator(DataManagerMixin, QObject):
     def onProj1dFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj1d:fom_integ_range", str(value))
 
-    def onCorrelationFomChange(self, value: IntEnum):
-        self._meta.set(mt.CORRELATION_PROC, "fom_type", int(value))
-        self.reset_correlation()
+    def onCorrelationAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
 
     def onCorrelationParamChange(self, value: tuple):
         # index, device ID, property name, resolution
@@ -197,7 +186,7 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)
 
     def onCorrelationReset(self):
-        self.reset_correlation()
+        self._meta.set(mt.CORRELATION_PROC, "reset", 1)
 
     def onXasMonoSourceNameChange(self, value: str):
         self._meta.set(mt.XAS_PROC, "mono_source_name", value)
@@ -209,27 +198,23 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.XAS_PROC, "bin_range", str(value))
 
     def onXasReset(self):
-        self.reset_xas()
+        self._meta.set(mt.XAS_PROC, "reset", 1)
 
     def onBinGroupChange(self, value: tuple):
         # index, device ID, property name, bin_range, number of bins,
         # where the index starts from 1
         index, device_id, ppt, bin_range, n_bins = value
-        if index == 1:
-            suffix = '_x'
-        else:
-            suffix = '_y'
 
-        self._meta.set(mt.BIN_PROC, f'device_id{suffix}', device_id)
-        self._meta.set(mt.BIN_PROC, f'property{suffix}', ppt)
-        self._meta.set(mt.BIN_PROC, f'bin_range{suffix}', str(bin_range))
-        self._meta.set(mt.BIN_PROC, f'n_bins{suffix}', n_bins)
-
-    def onBinReset(self):
-        self._meta.set(mt.BIN_PROC, "reset", 1)
+        self._meta.set(mt.BIN_PROC, f'device_id{index}', device_id)
+        self._meta.set(mt.BIN_PROC, f'property{index}', ppt)
+        self._meta.set(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
+        self._meta.set(mt.BIN_PROC, f'n_bins{index}', n_bins)
 
     def onBinAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.BIN_PROC, "analysis_type", int(value))
 
     def onBinModeChange(self, value: IntEnum):
         self._meta.set(mt.BIN_PROC, "mode", int(value))
+
+    def onBinReset(self):
+        self._meta.set(mt.BIN_PROC, "reset", 1)

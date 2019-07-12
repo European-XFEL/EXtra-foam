@@ -16,7 +16,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
 from .smart_widgets import SmartLineEdit
-from ...config import CorrelationFom
+from ...config import AnalysisType
 
 _N_PARAMS = 4  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = "0.0"
@@ -25,22 +25,20 @@ _DEFAULT_RESOLUTION = "0.0"
 class CorrelationCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the correlation analysis parameters."""
 
-    _available_foms = OrderedDict({
-        "": CorrelationFom.UNDEFINED,
-        "pump-probe": CorrelationFom.PUMP_PROBE,
-        "ROI1 - ROI2": CorrelationFom.ROI_SUB,
-        "ROI1": CorrelationFom.ROI1,
-        "ROI2": CorrelationFom.ROI2,
-        "ROI1 + ROI2": CorrelationFom.ROI_SUM,
-        "azimuthal integ": CorrelationFom.AZIMUTHAL_INTEG_MEAN,
+    _analysis_types = OrderedDict({
+        "": AnalysisType.UNDEFINED,
+        "pump-probe": AnalysisType.PUMP_PROBE,
+        "ROI1 + ROI2": AnalysisType.ROI1_ADD_ROI2,
+        "ROI1 - ROI2": AnalysisType.ROI1_SUB_ROI2,
+        "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
     })
 
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation setup", *args, **kwargs)
 
-        self._fom_type_cb = QtGui.QComboBox()
-        for v in self._available_foms:
-            self._fom_type_cb.addItem(v)
+        self._analysis_type_cb = QtGui.QComboBox()
+        for v in self._analysis_types:
+            self._analysis_type_cb.addItem(v)
 
         self._reset_btn = QtGui.QPushButton("Reset")
 
@@ -56,10 +54,10 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("FOM type: "), 0, 0, AR)
-        layout.addWidget(self._fom_type_cb, 0, 1)
-        layout.addWidget(self._reset_btn, 0, 3)
-        layout.addWidget(self._table, 1, 0, 1, 4)
+        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
+        layout.addWidget(self._analysis_type_cb, 0, 1)
+        layout.addWidget(self._reset_btn, 0, 5, AR)
+        layout.addWidget(self._table, 1, 0, 1, 6)
 
         self.setLayout(layout)
 
@@ -68,11 +66,11 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._fom_type_cb.currentTextChanged.connect(
-            lambda x: mediator.onCorrelationFomChange(
-                self._available_foms[x]))
-        self._fom_type_cb.currentTextChanged.emit(
-            self._fom_type_cb.currentText())
+        self._analysis_type_cb.currentTextChanged.connect(
+            lambda x: mediator.onCorrelationAnalysisTypeChange(
+                self._analysis_types[x]))
+        self._analysis_type_cb.currentTextChanged.emit(
+            self._analysis_type_cb.currentText())
 
         self._reset_btn.clicked.connect(mediator.onCorrelationReset)
 
@@ -183,8 +181,8 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             (i_row+1, device_id, ppt, res))
 
     def updateMetaData(self):
-        self._fom_type_cb.currentTextChanged.emit(
-            self._fom_type_cb.currentText())
+        self._analysis_type_cb.currentTextChanged.emit(
+            self._analysis_type_cb.currentText())
 
         for i_row in range(_N_PARAMS):
             category = self._table.cellWidget(i_row, 0).currentText()

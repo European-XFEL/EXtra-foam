@@ -13,40 +13,32 @@ import unittest
 import numpy as np
 
 from karaboFAI.pipeline.data_model import ProcessedData, RoiData
-from karaboFAI.pipeline.processors.roi import (
-    RoiProcessor, RoiProcessorFom
-)
+from karaboFAI.pipeline.processors.roi import RoiProcessor
 
 
 class TestRoiProcessor(unittest.TestCase):
-    def setUp(self):
-        RoiData.clear()
-
-        proc = RoiProcessor()
-        self._proc = RoiProcessorFom()
-        self._proc.regions = proc.regions
-        self._proc.visibilities = proc.visibilities
-
     def testFom(self):
+        proc = RoiProcessor()
+
         default_roi = (0, 0, -1, -1)
         data = {'tid': 1001,
                 'processed': ProcessedData(1001, np.ones((100, 100))),
                 'raw': dict()}
         processed = data['processed']
 
-        self._proc.roi_fom_handler = np.sum
+        proc._roi_fom_handler = np.sum
 
         # test default values
-        self.assertEqual([default_roi] * 4, self._proc.regions)
-        self.assertListEqual([False] * 4, self._proc.visibilities)
+        self.assertEqual([default_roi] * 4, proc._regions)
+        self.assertListEqual([False] * 4, proc._visibilities)
 
         # set ROI1 and ROI4
-        self._proc.visibilities[0] = True
-        self._proc.regions[0] = [0, 0, 2, 3]
-        self._proc.visibilities[3] = True
-        self._proc.regions[3] = [1, 1, 4, 3]
+        proc._visibilities[0] = True
+        proc._regions[0] = [0, 0, 2, 3]
+        proc._visibilities[3] = True
+        proc._regions[3] = [1, 1, 4, 3]
 
-        self._proc.process(data)
+        proc.process(data)
 
         # ROI regions
         self.assertEqual(processed.roi.roi1, [0, 0, 2, 3])

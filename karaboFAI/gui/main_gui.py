@@ -29,12 +29,9 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    Bin1DWindow, CorrelationWindow, ImageToolWindow, OverviewWindow,
-    PulsedAzimuthalIntegrationWindow, PumpProbeWindow, RoiWindow,
-    XasWindow, FileStreamControllerWindow
-)
-from .windows import (
-    ProcessMonitor,
+    Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
+    OverviewWindow, ProcessMonitor, PulsedAzimuthalIntegrationWindow,
+    PumpProbeWindow, RoiWindow, XasWindow, FileStreamControllerWindow
 )
 from .. import __version__
 from ..config import config
@@ -170,6 +167,14 @@ class MainGUI(QtGui.QMainWindow):
         open_corr_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
+        open_bin1d_window_at = self._addAction("Bin 1D", "binning1d.png")
+        open_bin1d_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, Bin1dWindow))
+
+        open_bin2d_window_at = self._addAction("Bin 2D", "binning2d.png")
+        open_bin2d_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, Bin2dWindow))
+
         open_xas_window_at = self._addAction("XAS", "xas.png")
         open_xas_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, XasWindow))
@@ -178,10 +183,6 @@ class MainGUI(QtGui.QMainWindow):
             "Pulsed A.I", "pulsed_ai.png")
         open_pulsed_ai_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulsedAzimuthalIntegrationWindow))
-
-        open_bin_window_at = self._addAction("Bin", "binning.png")
-        open_bin_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, Bin1DWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
@@ -307,7 +308,7 @@ class MainGUI(QtGui.QMainWindow):
 
         try:
             processed_data = self._input.get_nowait()
-            processed_data.update_hist()
+            processed_data.update()
             self._data.set(processed_data)
         except Empty:
             return

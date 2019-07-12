@@ -28,7 +28,7 @@ from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
 from .processes import ProcessInfo, register_fai_process
-from .utils import check_system_resource
+from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
@@ -133,16 +133,15 @@ def health_check():
             residual.append(proc)
 
     if residual:
-        ret = input(
+        if query_yes_no(
             "Warning: Found old karaboFAI instance(s) running in this "
             "machine!!!\n\n"
             "Running more than two karaboFAI instances with the same \n"
             "detector can result in undefined behavior. You can try to \n"
             "kill the other instances if it is owned by you. \n"
             "Note: you are not able to kill other users' instances! \n\n"
-            "Send SIGKILL? (y/n)")
-
-        if ret.lower() == 'y':
+            "Send SIGKILL?"
+        ):
             for p in residual:
                 p.kill()
 
@@ -213,6 +212,19 @@ class FAI:
         return self._gui
 
 
+def _parse_detector_name(detector):
+    if detector == 'JUNGFRAU':
+        return 'JungFrau'
+
+    if detector == 'FASTCCD':
+        return 'FastCCD'
+
+    if detector == 'BASLERCAMERA':
+        return 'BaslerCamera'
+
+    return detector.upper()
+
+
 def application():
     parser = argparse.ArgumentParser(prog="karaboFAI")
     parser.add_argument('-V', '--version', action='version',
@@ -232,15 +244,7 @@ def application():
     else:
         logger.setLevel("INFO")
 
-    detector = args.detector
-    if detector == 'JUNGFRAU':
-        detector = 'JungFrau'
-    elif detector == 'FASTCCD':
-        detector = 'FastCCD'
-    elif detector == 'BASLERCAMERA':
-        detector = 'BaslerCamera'
-    else:
-        detector = detector.upper()
+    detector = _parse_detector_name(args.detector)
 
     if not faulthandler.is_enabled():
         faulthandler.enable(all_threads=False)
@@ -290,7 +294,7 @@ def kill_application():
                   f"please try again or clean it manually")
 
 
-def karaboFAI_stream():
+def stream_file():
     ap = argparse.ArgumentParser(prog="karaboFAI-stream")
     ap.add_argument("detector", help="detector name (case insensitive)",
                     choices=[det.upper() for det in config.detectors],
@@ -299,19 +303,10 @@ def karaboFAI_stream():
 
     args = ap.parse_args()
 
-    detector = args.detector
-    if detector == 'JUNGFRAU':
-        detector = 'JungFrau'
-    elif detector == 'FASTCCD':
-        detector = 'FastCCD'
-    elif detector == 'BASLERCAMERA':
-        detector = 'BaslerCamera'
-    else:
-        detector = detector.upper()
+    detector = _parse_detector_name(args.detector)
 
     app = mkQApp()
-    file_streamer = FileStreamControllerWindow(detector=detector,
-                                               port=args.port)
+    streamer = FileStreamControllerWindow(detector=detector, port=args.port)
     app.exec_()
 
 

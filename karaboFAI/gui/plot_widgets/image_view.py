@@ -15,23 +15,28 @@ from .. import pyqtgraph as pg
 from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 
 from .base_plot_widget import PlotWidget
-from .plot_items import ImageItem, MaskItem
-from .roi import RectROI
+from .plot_items import ImageItem, MaskItem, RectROI
 from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
+from ...command import CommandProxy
 from ...algorithms import quick_min_max
 from ...config import config
-from ...ipc import redis_connection
 from ...logger import logger
 
 
 class ImageView(QtGui.QWidget):
     """ImageView class.
 
-    A widget used for displaying a single image. Four ROIs and one MaskItem
-    are included in this widget by default.
+    A widget used for displaying 2D image data.
+
+    * Four ROIs and one MaskItem are included in this widget by default.
 
     Note: it is different from the ImageView in pyqtgraph!
+
+    Attributes:
+        _image_item (pyqtgraph.ImageItem): This object will be used to
+            display the image.
+
     """
     ROI_X0 = 50
     ROI_Y0 = 50
@@ -39,7 +44,6 @@ class ImageView(QtGui.QWidget):
 
     def __init__(self, *,
                  level_mode='mono',
-                 has_mask=True,
                  has_roi=True,
                  hide_axis=True,
                  color_map=None,
@@ -50,8 +54,6 @@ class ImageView(QtGui.QWidget):
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
-        :param bool has_mask: True for adding a MaskItem on top of the
-            ImageItem.
         :param bool has_roi: True for adding 4 ROIs on top of the other
             PlotItems.
         :param bool hide_axis: True for hiding left and bottom axes.
@@ -73,20 +75,12 @@ class ImageView(QtGui.QWidget):
             self._plot_widget.hideAxis()
 
         self._image_item = pg.ImageItem()
-        if has_mask:
-            self._mask_item = MaskItem(self._image_item)
-        else:
-            self._mask_item = None
-
         self._plot_widget.addItem(self._image_item)
-
-        if self._mask_item is not None:
-            self._plot_widget.addItem(self._mask_item)
 
         for roi in self._rois:
             self._plot_widget.addItem(roi)
 
-        self.invertY(True)
+        self.invertY(True)  # y-axis points from top to bottom
         self.setAspectLocked(True)
 
         self._hist_widget = HistogramLUTWidget()
@@ -155,7 +149,8 @@ class ImageView(QtGui.QWidget):
     def rois(self):
         return self._rois
 
-    def setImage(self, img, *, auto_range=False, auto_levels=False):
+    def setImage(self, img, *, auto_range=False, auto_levels=False,
+                 scale=None, pos=None):
         """Set the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
@@ -163,11 +158,18 @@ class ImageView(QtGui.QWidget):
             the image. defaut = False
         :param bool auto_levels: whether to update the white/black levels
             to fit the image. default = False
+        :param tuple/list pos: the origin of the displayed image in (x, y).
+        :param tuple/list scale: the origin of the displayed image image in
+            (x_scale, y_scale).
         """
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        if self._mask_item is not None:
-            self._mask_item.onSetImage()
+
+        self._image_item.resetTransform()
+        if scale is not None:
+            self._image_item.scale(*scale)
+        if pos is not None:
+            self._image_item.setPos(*pos)
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -202,6 +204,9 @@ class ImageView(QtGui.QWidget):
     def setAspectLocked(self, *args, **kwargs):
         self._plot_widget.setAspectLocked(*args, **kwargs)
 
+    def setLabel(self, *args, **kwargs):
+        self._plot_widget.setLabel(*args, **kwargs)
+
     def invertY(self, *args, **kwargs):
         self._plot_widget.plotItem.invertY(*args, **kwargs)
 
@@ -233,8 +238,6 @@ class ImageAnalysis(ImageView):
         self._image_item = ImageItem()
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(
-            self._mediator.onImageMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -250,6 +253,13 @@ class ImageAnalysis(ImageView):
 
         self._image_data = None
 
+        self._cmd_proxy = CommandProxy()
+
+    def setImage(self, *args, **kwargs):
+        """Overload."""
+        super().setImage(*args, **kwargs)
+        self._mask_item.onSetImage()
+
     def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
 
@@ -261,15 +271,13 @@ class ImageAnalysis(ImageView):
 
         self.setImage(image_data.masked)
 
-    def setImageRef(self):
+    def setReferenceImage(self):
         """Set the displayed image as reference image."""
-        if self._image_data is not None:
-            self._image_data.set_reference()
+        self._cmd_proxy.set_ref_image(self._image)
 
-    def removeImageRef(self):
+    def removeReferenceImage(self):
         """Remove reference image."""
-        if self._image_data is not None:
-            self._image_data.remove_reference()
+        self._cmd_proxy.remove_ref_image()
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
@@ -295,8 +303,8 @@ class ImageAnalysis(ImageView):
         self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(bool)
-    def onDrawToggled(self, masking_state, checked):
-        self._mask_item.masking_state = masking_state
+    def onDrawToggled(self, state, checked):
+        self._mask_item.state = state
         self._image_item.drawing = checked
 
     @QtCore.pyqtSlot()
@@ -335,24 +343,16 @@ class ImageAnalysis(ImageView):
         try:
             image_mask = np.load(file_path)
             if image_mask.shape != self._image.shape:
-                msg = "The shape of image mask is different from the image!"
-                logger.error(msg)
+                logger.error(f"The shape of image mask {image_mask.shape} is "
+                             f"different from the image {self._image.shape}!")
                 return
 
             logger.info(f"Image mask loaded from {file_path}!")
 
             self._mask_item.loadMask(image_mask)
-            self._publish_image_mask(image_mask)
 
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {file_path}")
-
-    def _publish_image_mask(self, image_mask):
-        r = redis_connection()
-        buf = np.packbits(image_mask).tobytes()
-        h, w = image_mask.shape
-        r.publish("command:image_mask", str((2, 0, 0, w, h, w, h)))
-        r.publish("command:image_mask", buf)
 
 
 class AssembledImageView(ImageView):
@@ -396,8 +396,6 @@ class PumpProbeImageView(ImageView):
         self._on = on
         self._roi = roi
         self._diff = diff
-        if self._roi:
-            self._plot_widget.removeItem(self._mask_item)
 
     def update(self, data):
         """Override."""
@@ -447,7 +445,7 @@ class SinglePulseImageView(ImageView):
             np.clip(images[self.pulse_index], *threshold_mask,
                     images[self.pulse_index])
         else:
-            logger.error("<VIP pulse index>: VIP pulse index ({}) > Maximum "
+            logger.error("<POI index>: POI index ({}) > Maximum "
                          "pulse index ({})".format(self.pulse_index, max_id))
             return
 
@@ -467,7 +465,7 @@ class RoiImageView(ImageView):
     """
     def __init__(self, rank, **kwargs):
         """Initialization."""
-        super().__init__(has_mask=False, has_roi=False, **kwargs)
+        super().__init__(has_roi=False, **kwargs)
 
         self._rank = rank
 
@@ -484,20 +482,99 @@ class RoiImageView(ImageView):
         self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
 
 
-class BinImageView(ImageView):
-    """BinImageView class.
+class Bin1dHeatmap(ImageView):
+    """Bin1dHeatmap class.
 
-    Widget for displaying the image in selected bins.
+    Widget for visualizing the heatmap of 1D binning.
     """
-    def __init__(self, index=0, *, parent=None):
+    def __init__(self, idx, *, parent=None):
         """Initialization.
 
-        :param int index: index of bins
+        :param int idx: index of the binning parameter (must be 1 or 2).
         """
-        super().__init__(has_mask=False, has_roi=False, parent=parent)
+        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        self.invertY(False)
+        self.setAspectLocked(False)
 
-        self._index = index
+        self._idx = idx
+
+        self.setLabel('bottom', f'Label{idx}')
+        self.setLabel('left', f'Vec{idx}')
 
     def update(self, data):
         """Override."""
-        pass
+        heatmap = getattr(data.bin, f"vec{self._idx}_hist")
+        vec = getattr(data.bin, f"vec{self._idx}")
+
+        reset = getattr(data.bin, f"reset{self._idx}")
+        # do not update if vec is None
+        if heatmap is not None and (reset or vec is not None):
+            h, w = heatmap.shape
+            w_range = getattr(data.bin, f"edge{self._idx}")
+            h_range = data.bin.vec_x
+
+            self.setImage(heatmap,
+                          auto_levels=True,
+                          auto_range=True,
+                          pos=[w_range[0], h_range[0]],
+                          scale=[(w_range[-1] - w_range[0])/w,
+                                 (h_range[-1] - h_range[0])/h])
+
+            self.setLabel('left', data.bin.vec_label)
+            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))
+        elif heatmap is None and reset:
+            w_range = getattr(data.bin, f"edge{self._idx}")
+            n_bins = getattr(data.bin, f"n_bins{self._idx}")
+            # A temporary all-zero array is used to reset the vector heatmap
+            # if no vector result is available.
+            self.setImage(np.zeros((1, n_bins), dtype=np.float32),
+                          auto_levels=True,
+                          auto_range=True,
+                          pos=[w_range[0], 0],
+                          scale=[(w_range[-1] - w_range[0])/n_bins, 1.0])
+
+            self.setLabel('left', f"vec{self._idx}")
+            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))
+
+
+class Bin2dHeatmap(ImageView):
+    """Bin2dHeatmap class.
+
+    Widget for visualizing the heatmap of 2D binning.
+    """
+    def __init__(self, *, count=False, parent=None):
+        """Initialization.
+
+        :param bool count: True for count plot and False for value plot.
+        """
+        self._count = count
+        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        self.invertY(False)
+        self.setAspectLocked(False)
+
+        self.setLabel('bottom', 'Label1')
+        self.setLabel('left', 'Label2')
+
+    def update(self, data):
+        """Override."""
+        if self._count:
+            heatmap = data.bin.count12_hist
+        else:
+            heatmap = data.bin.fom12_hist
+
+        # do not update if FOM is None
+        reset = data.bin.reset1 or data.bin.reset2
+        if heatmap is not None and (reset or data.bin.fom12 is not None):
+            h, w = heatmap.shape
+            w_range = data.bin.edge1
+            h_range = data.bin.edge2
+
+            self.setImage(heatmap,
+                          auto_levels=True,
+                          auto_range=True,
+                          pos=[w_range[0], h_range[0]],
+                          scale=[(w_range[-1] - w_range[0])/w,
+                                 (h_range[-1] - h_range[0])/h])
+
+            self.setLabel('bottom', data.bin.label1)
+            self.setLabel('left', data.bin.label2)

@@ -214,25 +214,36 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 return False
         return True
 
-    def _update_analysis(self, analysis_type):
+    def _update_analysis(self, analysis_type, *, register=True):
+        """Update analysis type.
+
+        :param AnalysisType analysis_type: analysis type.
+        :param bool register: True for (un)register the analysis type.
+
+        :return: True if the analysis type has changed and False for not.
+        """
         if not isinstance(analysis_type, AnalysisType):
             raise ProcessingError(
                 f"Unknown analysis type: {str(analysis_type)}")
 
         if analysis_type != self.analysis_type:
-            if self.analysis_type is not None:
+            if register:
                 # unregister the old
-                self._meta.increase_by(
-                    mt.ANALYSIS_TYPE, self.analysis_type, -1)
+                if self.analysis_type is not None:
+                    self._meta.increase_by(
+                        mt.ANALYSIS_TYPE, self.analysis_type, -1)
 
-            # register new type
-            if analysis_type != AnalysisType.UNDEFINED:
-                if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
-                    # set analysis type if it does not exist
-                    self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
-                self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
+                # register the new one
+                if analysis_type != AnalysisType.UNDEFINED:
+                    if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
+                        # set analysis type if it does not exist
+                        self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
+                    self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
 
             self.analysis_type = analysis_type
+            return True
+
+        return False
 
     @abstractmethod
     def run_once(self, processed):

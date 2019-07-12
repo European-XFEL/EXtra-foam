@@ -10,12 +10,12 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import multiprocessing as mp
-from queue import Empty, Full, Queue
+from queue import Empty, Full
 import sys
 import traceback
 import time
 
-from .exceptions import _StopPipelineError, _ProcessingError, ProcessingError
+from .exceptions import StopPipelineError, ProcessingError, ProcessingError
 from ..metadata import MetaProxy
 from ..metadata import Metadata as mt
 from ..config import config, DataSource
@@ -102,7 +102,7 @@ class ProcessWorker(mp.Process):
 
                     try:
                         self._run_tasks(data)
-                    except _StopPipelineError:
+                    except StopPipelineError:
                         self._prev_processed_time = time.time()
                         break
 
@@ -142,13 +142,13 @@ class ProcessWorker(mp.Process):
             # TODO: improve
             try:
                 task.run_once(data)
-            except _StopPipelineError as e:
+            except StopPipelineError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 self.log.debug(repr(traceback.format_tb(exc_traceback))
                                + repr(e))
                 self.log.error(repr(e))
                 raise
-            except _ProcessingError as e:
+            except ProcessingError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 self.log.debug(repr(traceback.format_tb(exc_traceback))
                                + repr(e))

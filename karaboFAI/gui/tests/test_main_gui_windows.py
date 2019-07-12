@@ -7,8 +7,8 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
-    CorrelationWindow, ImageToolWindow, OverviewWindow, PumpProbeWindow,
-    XasWindow
+    Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
+    OverviewWindow, PumpProbeWindow, XasWindow
 )
 
 app = mkQApp()
@@ -38,7 +38,9 @@ class TestMainGui(unittest.TestCase):
         overview_action = actions[3]
         pp_action = actions[4]
         correlation_action = actions[5]
-        xas_action = actions[6]
+        bin1d_action = actions[6]
+        bin2d_action = actions[7]
+        xas_action = actions[8]
 
         # ImageToolWindow is opened together with the MainGUI
         imagetool_window = list(self.gui._windows.keys())[-1]
@@ -47,22 +49,30 @@ class TestMainGui(unittest.TestCase):
         overview_window = self._check_open_window(overview_action)
         self.assertIsInstance(overview_window, OverviewWindow)
 
+        pp_window = self._check_open_window(pp_action)
+        self.assertIsInstance(pp_window, PumpProbeWindow)
+
         correlation_window = self._check_open_window(correlation_action)
         self.assertIsInstance(correlation_window, CorrelationWindow)
 
-        pp_window = self._check_open_window(pp_action)
-        self.assertIsInstance(pp_window, PumpProbeWindow)
+        bin1d_window = self._check_open_window(bin1d_action)
+        self.assertIsInstance(bin1d_window, Bin1dWindow)
+
+        bin2d_window = self._check_open_window(bin2d_action)
+        self.assertIsInstance(bin2d_window, Bin2dWindow)
 
         # open one window twice
         xas_window = self._check_open_window(xas_action)
         self.assertIsInstance(xas_window, XasWindow)
         self._check_open_window(xas_action, registered=False)
 
-        self._check_close_window(overview_window)
-        self._check_close_window(correlation_window)
-        self._check_close_window(pp_window)
-        self._check_close_window(xas_window)
         self._check_close_window(imagetool_window)
+        self._check_close_window(overview_window)
+        self._check_close_window(pp_window)
+        self._check_close_window(correlation_window)
+        self._check_close_window(bin1d_window)
+        self._check_close_window(bin2d_window)
+        self._check_close_window(xas_window)
 
         # if a plot window is closed, it can be re-openned and a new instance
         # will be created

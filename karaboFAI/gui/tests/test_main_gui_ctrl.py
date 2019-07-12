@@ -10,20 +10,22 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
-from karabo_data.geometry import LPDGeometry
+from karabo_data.geometry2 import LPD_1MGeometry
 
 from karaboFAI.logger import logger
 from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import ImageToolWindow
+from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
-    _Config, ConfigWrapper, config, CurveNormalizer, AnalysisType, BinMode,
-    CorrelationFom, DataSource, CurveNormalizer, PumpProbeMode
+    _Config, ConfigWrapper, config, AnalysisType, BinMode,
+    DataSource, VectorNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
+from karaboFAI.pipeline.processors.azimuthal_integration import \
+    energy2wavelength
 
 app = mkQApp()
 
@@ -53,8 +55,10 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._stop_action = cls._actions[1]
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
-        cls._xas_action = cls._actions[6]
-        cls._pulsed_ai_action = cls._actions[7]
+        cls._bin1d_action = cls._actions[6]
+        cls._bin2d_action = cls._actions[7]
+        cls._xas_action = cls._actions[8]
+        cls._pulsed_ai_action = cls._actions[9]
 
     @classmethod
     def tearDownClass(cls):
@@ -77,54 +81,55 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # test setting VIP pulse indices
         # --------------------------
         self._pulsed_ai_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
+        window = [w for w in self.gui._windows
+                  if isinstance(w, PulsedAzimuthalIntegrationWindow)][0]
 
         # default values
-        vip_pulse_index1 = int(widget._vip_pulse_index1_le.text())
-        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
-        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
-        vip_pulse_index2 = int(widget._vip_pulse_index2_le.text())
-        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
-        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
+        poi_index1 = int(widget._poi_index1_le.text())
+        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
+        poi_index2 = int(widget._poi_index2_le.text())
+        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+        self.assertEqual(poi_index1, image_proc._poi_indices[0])
+        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
         # set new values
-        vip_pulse_index1 = 10
-        widget._vip_pulse_index1_le.setText(str(vip_pulse_index1))
-        self.assertEqual(vip_pulse_index1, window._vip1_ai.pulse_index)
-        self.assertEqual(vip_pulse_index1, window._vip1_img.pulse_index)
+        poi_index1 = 10
+        widget._poi_index1_le.setText(str(poi_index1))
+        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
+        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
 
-        vip_pulse_index2 = 20
-        widget._vip_pulse_index2_le.setText(str(vip_pulse_index2))
-        self.assertEqual(vip_pulse_index2, window._vip2_ai.pulse_index)
-        self.assertEqual(vip_pulse_index2, window._vip2_img.pulse_index)
+        poi_index2 = 20
+        widget._poi_index2_le.setText(str(poi_index2))
+        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
+        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
-        self.assertEqual(vip_pulse_index1, image_proc.vip_pulse_indices[0])
-        self.assertEqual(vip_pulse_index2, image_proc.vip_pulse_indices[1])
+        self.assertEqual(poi_index1, image_proc._poi_indices[0])
+        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'],
-                               ai_proc.sample_distance)
-        self.assertAlmostEqual(config['PHOTON_ENERGY'],
-                               ai_proc.photon_energy)
+                               ai_proc._sample_dist)
+        self.assertAlmostEqual(energy2wavelength(config['PHOTON_ENERGY']),
+                               ai_proc._wavelength)
 
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
 
         ai_proc.update()
-        self.assertAlmostEqual(12.4, ai_proc.photon_energy)
-        self.assertAlmostEqual(0.3, ai_proc.sample_distance)
+        self.assertAlmostEqual(1e-10, ai_proc._wavelength)
+        self.assertAlmostEqual(0.3, ai_proc._sample_dist)
         image_proc.update()
-        self.assertListEqual([-1], image_proc.pulse_index_filter)
+        self.assertListEqual([-1], image_proc._pulse_index_filter)
 
         widget._pulse_index_filter_le.setText("1:5:2")
         image_proc.update()
-        self.assertListEqual([1, 3], image_proc.pulse_index_filter)
+        self.assertListEqual([1, 3], image_proc._pulse_index_filter)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -135,23 +140,22 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
-        self.assertEqual(proc.integ_method, default_integ_method)
-        default_normalizer = CurveNormalizer.AUC
-        self.assertEqual(proc.normalizer, default_normalizer)
-        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"],
-                         proc.integ_points)
+        self.assertEqual(default_integ_method, proc._integ_method)
+        default_normalizer = VectorNormalizer.AUC
+        self.assertEqual(default_normalizer, proc._normalizer)
+        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
         default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
-        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]),
-                              proc.integ_range)
-        self.assertTupleEqual(default_integ_range, proc.auc_range)
-        self.assertTupleEqual(default_integ_range, proc.fom_integ_range)
-        self.assertEqual(config["CENTER_X"], proc.integ_center_x)
-        self.assertEqual(config["CENTER_Y"], proc.integ_center_y)
+        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]), proc._integ_range)
+        self.assertTupleEqual(default_integ_range, proc._auc_range)
+        self.assertTupleEqual(default_integ_range, proc._fom_integ_range)
+        pixel_size = config["PIXEL_SIZE"]
+        self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
+        self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = CurveNormalizer.ROI2
+        ai_normalizer = VectorNormalizer.ROI2
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -163,46 +167,46 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
         self.assertEqual(AnalysisType.PULSE_AZIMUTHAL_INTEG,
                          proc.analysis_type)
-        self.assertEqual(proc.integ_method, itgt_method)
-        self.assertEqual(proc.normalizer, ai_normalizer)
-        self.assertEqual(1024, proc.integ_points)
-        self.assertTupleEqual((0.1, 0.2), proc.integ_range)
-        self.assertTupleEqual((0.2, 0.3), proc.auc_range)
-        self.assertTupleEqual((0.3, 0.4), proc.fom_integ_range)
-        self.assertEqual(-1000, proc.integ_center_x)
-        self.assertEqual(1000, proc.integ_center_y)
+        self.assertEqual(itgt_method, proc._integ_method)
+        self.assertEqual(ai_normalizer, proc._normalizer)
+        self.assertEqual(1024, proc._integ_points)
+        self.assertTupleEqual((0.1, 0.2), proc._integ_range)
+        self.assertTupleEqual((0.2, 0.3), proc._auc_range)
+        self.assertTupleEqual((0.3, 0.4), proc._fom_integ_range)
+        self.assertEqual(-1000*pixel_size, proc._poni2)
+        self.assertEqual(1000*pixel_size, proc._poni1)
 
-    @patch("karaboFAI.pipeline.data_model.RoiData.clear")
-    def testRoiCtrlWidget(self, roi_reset):
+    def testRoiCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
         proc = self.scheduler._roi_proc
         proc.update()
 
         # test default reconfigurable values
-        self.assertEqual(np.sum, proc.roi_fom_handler)
-        self.assertEqual(CurveNormalizer.AUC, proc.proj1d_normalizer)
-        self.assertEqual((0, math.inf), proc.proj1d_fom_integ_range)
-        self.assertEqual((0, math.inf), proc.proj1d_auc_range)
+        self.assertEqual(np.sum, proc._roi_fom_handler)
+        self.assertEqual(VectorNormalizer.AUC, proc._proj1d_normalizer)
+        self.assertEqual((0, math.inf), proc._proj1d_fom_integ_range)
+        self.assertEqual((0, math.inf), proc._proj1d_auc_range)
 
         # test setting new values
-        roi_reset.reset_mock()
+        proc._reset = False
         widget._roi_fom_cb.setCurrentText('mean')
-        roi_reset.assert_called_once()
+        proc.update()
+        self.assertTrue(proc._reset)
 
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
 
-        self.assertEqual(np.mean, proc.roi_fom_handler)
-        self.assertEqual((10, 20), proc.proj1d_fom_integ_range)
-        self.assertEqual((30, 40), proc.proj1d_auc_range)
+        self.assertEqual(np.mean, proc._roi_fom_handler)
+        self.assertEqual((10, 20), proc._proj1d_fom_integ_range)
+        self.assertEqual((30, 40), proc._proj1d_auc_range)
 
-        roi_reset.reset_mock()
-        widget._roi_reset_btn.clicked.emit()
-        roi_reset.assert_called_once()
+        proc._reset = False
+        widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
 
-    @patch("karaboFAI.pipeline.data_model.PumpProbeData.clear")
-    def testPumpProbeCtrlWidget(self, pp_reset):
+    def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         image_proc = self.image_worker._image_proc
         pp_proc = self.scheduler._pp_proc
@@ -212,59 +216,56 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # check default reconfigurable params
         pp_proc.update()
-        self.assertEqual(1, pp_proc.ma_window)
-        self.assertTrue(pp_proc.abs_difference)
+        self.assertEqual(1, pp_proc._ma_window)
+        self.assertTrue(pp_proc._abs_difference)
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
-        self.assertListEqual(list(range(0, 64, 2)), image_proc.on_indices)
-        self.assertIsInstance(image_proc.on_indices[0], int)
-        self.assertListEqual(list(range(1, 64, 2)), image_proc.off_indices)
-        self.assertIsInstance(image_proc.off_indices[0], int)
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
+        self.assertListEqual([-1], image_proc._on_indices)
+        self.assertIsInstance(image_proc._on_indices[0], int)
+        self.assertListEqual([-1], image_proc._off_indices)
+        self.assertIsInstance(image_proc._off_indices[0], int)
 
-        # change assigning params
+        # change analysis type
+        pp_proc._reset = False
+        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2')
+        pp_proc.update()
+        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, pp_proc.analysis_type)
+        self.assertTrue(pp_proc._reset)
+
+        # change pump-probe mode
+        pp_proc._reset = False
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
+
+        # change moving average window
+        widget._ma_window_le.setText(str(10))
+        pp_proc.update()
+        self.assertEqual(10, pp_proc._ma_window)
+
+        # change abs_difference
+        pp_proc._reset = False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
-        widget._ma_window_le.setText(str(10))
-        new_fom = AnalysisType.ROI1_SUB_ROI2
+        pp_proc.update()
+        self.assertFalse(pp_proc._abs_difference)
+        self.assertTrue(pp_proc._reset)
 
-        pp_reset.reset_mock()
-        widget._analysis_type_cb.setCurrentIndex(new_fom)
-        pp_reset.assert_called_once()
-
-        pp_reset.reset_mock()
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        pp_reset.assert_called_once()
-
+        # change on/off pulse indices
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-
-        self.assertTrue(self.gui.updateMetaData())
-
-        pp_proc.update()
-        self.assertFalse(pp_proc.abs_difference)
-        self.assertEqual(10, pp_proc.ma_window)
-        self.assertEqual(AnalysisType(new_fom), pp_proc.analysis_type)
-
         image_proc.update()
-        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc.pp_mode)
-        self.assertListEqual([0, 2, 4, 6, 8], image_proc.on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], image_proc.off_indices)
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc._pp_mode)
+        self.assertListEqual([0, 2, 4, 6, 8], image_proc._on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], image_proc._off_indices)
 
-        # check invalid params
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
-        widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertFalse(self.gui.updateMetaData())
-
-        # change to valid params
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.ODD_TRAIN_ON])
-        widget._off_pulse_le.setText('1, 3, 4, 7, 9')
-        self.assertTrue(self.gui.updateMetaData())
-
-        pp_reset.reset_mock()
+        # test reset button
+        pp_proc._reset = False
         widget._reset_btn.clicked.emit()
-        pp_reset.assert_called_once()
+        pp_proc.update()
+        self.assertTrue(pp_proc._reset)
 
     @patch("karaboFAI.pipeline.data_model.XasData.clear")
     def testXasCtrlWidget(self, reset_xas):
@@ -273,20 +274,19 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # check initial value is set
-        self.assertEqual("", proc.mono_source_name)
-        self.assertEqual(int(widget._n_bins_le.text()), proc.n_bins)
-        self.assertTupleEqual((0.7, 0.9), proc.bin_range)
+        self.assertEqual("", proc._mono_src)
+        self.assertEqual(int(widget._n_bins_le.text()), proc._n_bins)
+        self.assertTupleEqual((0.7, 0.9), proc._bin_range)
 
         # set another value
         widget._n_bins_le.setText("40")
         widget._bin_range_le.setText("0.9, 1.0")
         proc.update()
 
-        self.assertEqual(40, proc.n_bins)
-        self.assertTupleEqual((0.9, 1.0), proc.bin_range)
+        self.assertEqual(40, proc._n_bins)
+        self.assertTupleEqual((0.9, 1.0), proc._bin_range)
 
         widget._reset_btn.clicked.emit()
-        reset_xas.assert_called_once()
 
     @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
                                "SOURCE_NAME_FILE": ["A", "B"]})
@@ -322,7 +322,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertListEqual(["A", "B"], items)
 
         xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
         # change source_type from FILE to BRIDGE
 
@@ -338,7 +338,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertListEqual(["E", "F", "G"], items)
 
         xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm.xgm_src)
+        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
@@ -348,7 +348,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         self.assertTrue(self.gui.updateMetaData())
 
-        self.assertIsInstance(image_worker._assembler._geom, LPDGeometry)
+        self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -363,15 +363,14 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # test default
-        self.assertEqual(CorrelationFom(0), proc.fom_type)
-        self.assertEqual([""] * 4, proc.device_ids)
-        self.assertEqual([""] * 4, proc.properties)
+        self.assertEqual(AnalysisType(0), proc.analysis_type)
+        self.assertEqual([""] * 4, proc._device_ids)
+        self.assertEqual([""] * 4, proc._properties)
 
         # set new FOM
-        new_fom = CorrelationFom.ROI1
-        widget._fom_type_cb.setCurrentIndex(new_fom)
+        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2')
         proc.update()
-        self.assertEqual(CorrelationFom(new_fom), proc.fom_type)
+        self.assertEqual(AnalysisType.ROI1_ADD_ROI2, proc.analysis_type)
 
         # test the correlation param table
         expected_correlations = []
@@ -405,9 +404,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
         for i in range(_N_PARAMS):
             device_id = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(device_id, proc.device_ids[i])
+            self.assertEqual(device_id, proc._device_ids[i])
             ppt = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(ppt, proc.device_ids[i])
+            self.assertEqual(ppt, proc._device_ids[i])
 
         # test data visualization
         # the upper two plots have error bars
@@ -436,9 +435,15 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.gui._data.set(data)
         window.update()
 
+        # test reset button
+        proc._reset = False
+        widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
+
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (
-            _N_PARAMS, _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
         )
 
         widget = self.gui.bin_ctrl_widget
@@ -446,46 +451,99 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc = scheduler._bin_proc
         proc.update()
 
-        default_bin_range = tuple(float(v) for v in
-                                  _DEFAULT_BIN_RANGE.split(','))
+        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
 
         # test default
-        self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual(BinMode(0), proc.mode)
-        self.assertEqual("", proc.device_id_x)
-        self.assertEqual("", proc.property_x)
-        self.assertTupleEqual(default_bin_range, proc.bin_range_x)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_x)
-        self.assertEqual("", proc.device_id_y)
-        self.assertEqual("", proc.property_y)
-        self.assertEqual(default_bin_range, proc.bin_range_y)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc.n_bins_y)
+        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
+        self.assertEqual(BinMode.AVERAGE, proc._mode)
+        self.assertEqual("", proc._device_id1)
+        self.assertEqual("", proc._property1)
+        self.assertTupleEqual(default_bin_range, proc._range1)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
+        self.assertEqual("", proc._device_id2)
+        self.assertEqual("", proc._property2)
+        self.assertEqual(default_bin_range, proc._range2)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
 
-        for i in range(_N_PARAMS):
-            widget._table.cellWidget(i, 0).setCurrentIndex(1)
-            self.assertEqual("", widget._table.cellWidget(i, 1).currentText())
-            widget._table.cellWidget(i, 1).setCurrentIndex(1)
-
+        # test analysis type change
+        proc._reset1 = False
+        proc._reset2 = False
         widget._analysis_type_cb.setCurrentIndex(1)
         proc.update()
-        self.assertEqual(AnalysisType(AnalysisType.TRAIN_AZIMUTHAL_INTEG),
+        self.assertEqual(AnalysisType(AnalysisType.PUMP_PROBE),
                          proc.analysis_type)
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
-        # Now we should have device_ids and properties for both x and y
-        widget._table.cellWidget(0, 3).setText("0, 10")
-        widget._table.cellWidget(0, 4).setText("20")
-        widget._table.cellWidget(1, 3).setText("-1, 20")
-        widget._table.cellWidget(1, 4).setText("30")
+        # test device id and property change
+        proc._reset1 = False
+        proc._reset2 = False
+        # bin parameter 1
+        widget._table.cellWidget(0, 0).setCurrentIndex(1)
+        widget._table.cellWidget(0, 1).setCurrentIndex(1)
         proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertFalse(proc._reset2)
+        # bin parameter 2
+        widget._table.cellWidget(1, 0).setCurrentIndex(1)
+        widget._table.cellWidget(1, 1).setCurrentIndex(1)
+        proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
-        self.assertEqual(20, proc.n_bins_x)
-        self.assertTupleEqual((0, 10), proc.bin_range_x)
-        self.assertEqual(30, proc.n_bins_y)
-        self.assertTupleEqual((-1, 20), proc.bin_range_y)
+        # test bin range and number of bins change
+        proc._reset1 = False
+        proc._reset2 = False
+        proc._fom1_hist = None
+        proc._count1_hist = None
+        proc._vec1_hist = np.array([])
+        proc._fom2_hist = None
+        proc._count2_hist = None
+        proc._vec2_hist = np.array([])
+        proc._fom12_hist = None
+        proc._count12_hist = None
+        # bin parameter 1
+        widget._table.cellWidget(0, 3).setText("0, 10")  # range
+        widget._table.cellWidget(0, 4).setText("5")  # n_bins
+        proc.update()
+        self.assertEqual(5, proc._n_bins1)
+        self.assertTupleEqual((0, 10), proc._range1)
+        np.testing.assert_array_equal(np.array([0, 2, 4, 6, 8, 10]), proc._edge1)
+        np.testing.assert_array_equal(np.array([1, 3, 5, 7, 9]), proc._center1)
+        self.assertTrue(proc._reset1)
+        self.assertFalse(proc._reset2)
+        np.testing.assert_array_equal(np.zeros(5), proc._fom1_hist)
+        self.assertEqual(np.float32, proc._fom1_hist.dtype)
+        np.testing.assert_array_equal(np.zeros(5), proc._count1_hist)
+        self.assertEqual(np.uint32, proc._count1_hist.dtype)
+        self.assertIsNone(proc._vec1_hist)
+        # bin parameter 2
+        widget._table.cellWidget(1, 3).setText("-4, 4")  # range
+        widget._table.cellWidget(1, 4).setText("2")  # n_bins
+        proc.update()
+        self.assertEqual(2, proc._n_bins2)
+        self.assertTupleEqual((-4, 4), proc._range2)
+        np.testing.assert_array_equal(np.array([-4, 0, 4]), proc._edge2)
+        np.testing.assert_array_equal(np.array([-2, 2]), proc._center2)
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
+        np.testing.assert_array_equal(np.zeros(2), proc._fom2_hist)
+        self.assertEqual(np.float32, proc._fom2_hist.dtype)
+        np.testing.assert_array_equal(np.zeros(2), proc._count2_hist)
+        self.assertEqual(np.uint32, proc._count2_hist.dtype)
+        self.assertIsNone(proc._vec2_hist)
+        np.testing.assert_array_equal(np.zeros((2, 5)), proc._fom12_hist)
+        self.assertEqual(np.float32, proc._fom12_hist.dtype)
+        np.testing.assert_array_equal(np.zeros((2, 5)), proc._count12_hist)
+        self.assertEqual(np.uint32, proc._count12_hist.dtype)
 
-        # test reset
+        # test reset button
+        proc._reset1 = False
+        proc._reset2 = False
         widget._reset_btn.clicked.emit()
-        self.assertEqual('1', self.meta.get(mt.BIN_PROC, 'reset'))
+        proc.update()
+        self.assertTrue(proc._reset1)
+        self.assertTrue(proc._reset2)
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
@@ -593,9 +651,9 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         # we only test train-resolved detector specific configuration
 
         image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc.pp_mode)
-        self.assertListEqual([0], image_proc.on_indices)
-        self.assertListEqual([0], image_proc.off_indices)
+        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
+        self.assertListEqual([0], image_proc._on_indices)
+        self.assertListEqual([0], image_proc._off_indices)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -604,9 +662,9 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
 
         image_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON),
-                         image_proc.pp_mode)
-        self.assertListEqual([0], image_proc.on_indices)
-        self.assertListEqual([0], image_proc.off_indices)
+                         image_proc._pp_mode)
+        self.assertListEqual([0], image_proc._on_indices)
+        self.assertListEqual([0], image_proc._off_indices)
 
         # PumpProbeMode.SAME_TRAIN is not available
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])

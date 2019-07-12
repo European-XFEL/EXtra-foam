@@ -19,7 +19,7 @@ class TestRedisConnection(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        wait_until_redis_shutdown
+        wait_until_redis_shutdown()
 
     def testCreateConnection(self):
         # TODO: clean the clients from other tests

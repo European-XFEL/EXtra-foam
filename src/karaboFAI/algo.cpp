@@ -1,3 +1,15 @@
+/**
+ * Offline and online data analysis and visualization tool for azimuthal
+ * integration of different data acquired with various detectors at
+ * European XFEL.
+ *
+ * various algorithms.
+ *
+ * Author: Jun Zhu <jun.zhu@xfel.eu>
+ * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+ * All rights reserved.
+ */
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -30,12 +42,8 @@ intersection(const std::array<int, 4>& rect1, const std::array<int, 4>& rect2) {
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(geometry, m) {
-  m.def("intersection", &intersection);
+PYBIND11_MODULE(algo, m) {
+  m.doc() = "General algorithms in cpp";
 
-#ifdef VERSION_INFO
-  m.attr("__version__") = VERSION_INFO;
-#else
-  m.attr("__version__") = "dev";
-#endif
+  m.def("intersection", &intersection);
 }
