@@ -53,9 +53,8 @@ class BinMode(IntEnum):
     AVERAGE = 1
 
 
-class VectorNormalizer(IntEnum):
-    # Normalize the azimuthal integration curve by the area under the curve.
-    AUC = 0
+class VFomNormalizer(IntEnum):
+    AUC = 0  # area under curve
     # Normalize the azimuthal integration curve by the sum of ROI(s).
     ROI_SUB = 1  # ROI1 - ROI2
     ROI1 = 2

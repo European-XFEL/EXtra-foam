@@ -16,7 +16,7 @@ from .base_processor import CompositeProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import normalize_auc, slice_curve
 from ...metadata import Metadata as mt
-from ...config import config, RoiFom, AnalysisType, VectorNormalizer
+from ...config import config, RoiFom, AnalysisType, VFomNormalizer
 from ...utils import profiler
 
 from karaboFAI.cpp import intersection
@@ -33,7 +33,7 @@ class RoiProcessor(CompositeProcessor):
             corresponding ROI is visible.
         _roi_fom_handler (callable): hanlder used to calculate the FOM of a
             given ROI.
-        _proj1d_normalizer (VectorNormalizer): normalizer type for calculating
+        _proj1d_normalizer (VFomNormalizer): normalizer type for calculating
             FOM from 1D projection result.
         _proj1d_auc_range (tuple): x range for calculating AUC, which is
             used as a normalizer of 1D projection.
@@ -72,7 +72,7 @@ class RoiProcessor(CompositeProcessor):
             self._visibilities[i-1] = cfg[f'visibility{i}'] == 'True'
             self._regions[i-1] = self.str2list(cfg[f'region{i}'], handler=int)
 
-        self._proj1d_normalizer = VectorNormalizer(
+        self._proj1d_normalizer = VFomNormalizer(
             int(cfg['proj1d:normalizer']))
         self._proj1d_auc_range = self.str2tuple(cfg['proj1d:auc_range'])
         self._proj1d_fom_integ_range = self.str2tuple(

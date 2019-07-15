@@ -20,7 +20,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import CompositeProcessor
 from ..exceptions import ProcessingError
 from ...algorithms import mask_image, normalize_auc, slice_curve
-from ...config import VectorNormalizer, AnalysisType, config
+from ...config import VFomNormalizer, AnalysisType, config
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
@@ -92,7 +92,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self._integ_method = cfg['integ_method']
         self._integ_range = self.str2tuple(cfg['integ_range'])
         self._integ_points = int(cfg['integ_points'])
-        self._normalizer = VectorNormalizer(int(cfg['normalizer']))
+        self._normalizer = VFomNormalizer(int(cfg['normalizer']))
         self._auc_range = self.str2tuple(cfg['auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
 
@@ -247,7 +247,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         """
         auc_range = self._auc_range
 
-        if self._normalizer == VectorNormalizer.AUC:
+        if self._normalizer == VFomNormalizer.AUC:
             # normalized by area under curve (AUC)
             intensity = normalize_auc(intensity, momentum, *auc_range)
 
@@ -257,11 +257,11 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             roi1_fom = processed.roi.roi1_fom
             roi2_fom = processed.roi.roi2_fom
 
-            if self._normalizer == VectorNormalizer.ROI1:
+            if self._normalizer == VFomNormalizer.ROI1:
                 if roi1_fom is None:
                     raise ProcessingError("ROI1 is not activated!")
                 denominator = roi1_fom
-            elif self._normalizer == VectorNormalizer.ROI2:
+            elif self._normalizer == VFomNormalizer.ROI2:
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
                 denominator = roi2_fom
@@ -271,9 +271,9 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
                 if roi2_fom is None:
                     raise ProcessingError("ROI2 is not activated!")
 
-                if self._normalizer == VectorNormalizer.ROI_SUM:
+                if self._normalizer == VFomNormalizer.ROI_SUM:
                     denominator = roi1_fom + roi2_fom
-                elif self._normalizer == VectorNormalizer.ROI_SUB:
+                elif self._normalizer == VFomNormalizer.ROI_SUB:
                     denominator = roi1_fom - roi2_fom
                 else:
                     raise ProcessingError(f"Unknown normalizer: {repr(self._normalizer)}")

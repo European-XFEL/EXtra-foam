@@ -15,7 +15,7 @@ from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import VectorNormalizer, RoiFom
+from ...config import VFomNormalizer, RoiFom
 
 
 class RoiCtrlWidget(AbstractCtrlWidget):
@@ -27,7 +27,7 @@ class RoiCtrlWidget(AbstractCtrlWidget):
     })
 
     _available_normalizers = OrderedDict({
-        "AUC": VectorNormalizer.AUC,
+        "AUC": VFomNormalizer.AUC,
     })
 
     def __init__(self, *args, **kwargs):
