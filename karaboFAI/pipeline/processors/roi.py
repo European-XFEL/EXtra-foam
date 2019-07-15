@@ -59,10 +59,13 @@ class RoiProcessor(CompositeProcessor):
         """Override."""
         cfg = self._meta.get_all(mt.ROI_PROC)
 
-        if RoiFom(int(cfg['fom_type'])) == RoiFom.SUM:
+        fom_type = RoiFom(int(cfg['fom_type']))
+        if fom_type == RoiFom.SUM:
             fom_handler = np.sum
-        else:  # fom_type == RoiFom.MEAN:
+        elif fom_type == RoiFom.MEAN:
             fom_handler = np.mean
+        else:  # fom_type == RoiFom.MEDIAN
+            fom_handler = np.median
 
         if fom_handler != self._roi_fom_handler:
             self._reset = True
