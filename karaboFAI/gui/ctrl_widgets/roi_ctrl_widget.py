@@ -57,15 +57,15 @@ class RoiCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
+        layout.addWidget(QtGui.QLabel("ROI FOM: "), 0, 0, AR)
+        layout.addWidget(self._roi_fom_cb, 0, 1)
         layout.addWidget(self._reset_btn, 0, 3, AR)
         layout.addWidget(QtGui.QLabel("Normalizer (proj X/Y): "), 1, 0, AR)
         layout.addWidget(self._normalizers_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("ROI FOM: "), 1, 2, AR)
-        layout.addWidget(self._roi_fom_cb, 1, 3)
         layout.addWidget(QtGui.QLabel("AUC range (proj X/Y): "), 2, 0, AR)
         layout.addWidget(self._auc_range_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("FOM range (proj X/Y): "), 3, 0, AR)
-        layout.addWidget(self._fom_integ_range_le, 3, 1)
+        layout.addWidget(QtGui.QLabel("FOM range (proj X/Y): "), 2, 2, AR)
+        layout.addWidget(self._fom_integ_range_le, 2, 3)
 
         self.setLayout(layout)
 

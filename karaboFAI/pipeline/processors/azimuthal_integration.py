@@ -80,7 +80,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
     def update(self):
         """Override."""
-        gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
+        gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
         self._sample_dist = float(gp_cfg['sample_distance'])
         self._wavelength = energy2wavelength(float(gp_cfg['photon_energy']))
 

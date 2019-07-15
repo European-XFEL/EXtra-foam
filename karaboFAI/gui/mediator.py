@@ -86,10 +86,10 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
     def onPulseIndexSelectorChange(self, value: list):
-        self._meta.set(mt.GENERAL_PROC, 'selected_pulse_indices', str(value))
+        self._meta.set(mt.GLOBAL_PROC, 'selected_pulse_indices', str(value))
 
     def onVipPulseIndexChange(self, vip_id: int, value: int):
-        self._meta.set(mt.GENERAL_PROC, f"poi{vip_id}_index", str(value))
+        self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
 
         if vip_id == 1:
             self.poi_index1_sgn.emit(value)
@@ -97,10 +97,13 @@ class Mediator(DataManagerMixin, QObject):
             self.poi_index2_sgn.emit(value)
 
     def onSampleDistanceChange(self, value: float):
-        self._meta.set(mt.GENERAL_PROC, 'sample_distance', value)
+        self._meta.set(mt.GLOBAL_PROC, 'sample_distance', value)
 
     def onPhotonEnergyChange(self, value: float):
-        self._meta.set(mt.GENERAL_PROC, 'photon_energy', value)
+        self._meta.set(mt.GLOBAL_PROC, 'photon_energy', value)
+
+    def onMaWindowChange(self, value: int):
+        self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
 
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
@@ -143,9 +146,6 @@ class Mediator(DataManagerMixin, QObject):
 
     def onPpAbsDifferenceChange(self, value: bool):
         self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))
-
-    def onPpMaWindowChange(self, value: int):
-        self._meta.set(mt.PUMP_PROBE_PROC, "ma_window", value)
 
     def onPpReset(self):
         self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)

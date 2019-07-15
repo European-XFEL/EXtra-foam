@@ -131,6 +131,15 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         image_proc.update()
         self.assertListEqual([1, 3], image_proc._pulse_index_filter)
 
+        # test moving average window
+        pp_proc = self.scheduler._pp_proc
+        pp_proc.update()
+        self.assertEqual(1, pp_proc._ma_window)
+
+        widget._ma_window_le.setText(str(10))
+        pp_proc.update()
+        self.assertEqual(10, pp_proc._ma_window)
+
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
         scheduler = self.scheduler
@@ -216,7 +225,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # check default reconfigurable params
         pp_proc.update()
-        self.assertEqual(1, pp_proc._ma_window)
         self.assertTrue(pp_proc._abs_difference)
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
@@ -239,11 +247,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
-
-        # change moving average window
-        widget._ma_window_le.setText(str(10))
-        pp_proc.update()
-        self.assertEqual(10, pp_proc._ma_window)
 
         # change abs_difference
         pp_proc._reset = False

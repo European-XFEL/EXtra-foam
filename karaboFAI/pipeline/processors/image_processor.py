@@ -153,7 +153,7 @@ class ImageProcessor(CompositeProcessor):
                                               handler=float)
 
         # general analysis
-        gp_cfg = self._meta.get_all(mt.GENERAL_PROC)
+        gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
 
         self._pulse_index_filter = self.str2list(
             gp_cfg['selected_pulse_indices'], handler=int)

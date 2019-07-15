@@ -20,7 +20,7 @@ class Metadata:
 
     ANALYSIS_TYPE = "metadata:analysis_type"
 
-    GENERAL_PROC = "metadata:proc:general"
+    GLOBAL_PROC = "metadata:proc:global"
     GEOMETRY_PROC = "metadata:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "metadata:proc:azimuthal_integration"
     PUMP_PROBE_PROC = "metadata:proc:pump_probe"
@@ -43,10 +43,11 @@ class Metadata:
     }
 
     _proc_meta = {
-        GENERAL_PROC: [
+        GLOBAL_PROC: [
             "sample_distance",
             "photon_energy",
             "selected_pulse_indices",
+            "ma_window",
         ],
         IMAGE_PROC: [
             "threshold_mask",
@@ -89,7 +90,6 @@ class Metadata:
             "off_pulse_indices",
             "abs_difference",
             "analysis_type",
-            "ma_window",
         ],
         CORRELATION_PROC: [
             "fom_type",

@@ -39,6 +39,9 @@ class PumpProbeProcessor(CompositeProcessor):
 
     def update(self):
         """Override."""
+        g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        self._ma_window = int(g_cfg['ma_window'])
+
         cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type'])),
@@ -49,8 +52,6 @@ class PumpProbeProcessor(CompositeProcessor):
         if mode != self._mode:
             self._reset = True
             self._mode = mode
-
-        self._ma_window = int(cfg['ma_window'])
 
         abs_difference = cfg['abs_difference'] == 'True'
         if abs_difference != self._abs_difference:
