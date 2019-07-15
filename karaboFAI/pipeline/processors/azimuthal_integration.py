@@ -195,13 +195,12 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
             mean_ret = itgt1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial
-            intensity = mean_ret.intensity
+            intensity = self._normalize(processed, momentum, mean_ret.intensity)
             fom = slice_curve(intensity, momentum, *self._fom_integ_range)[0]
             fom = np.sum(np.abs(fom))
 
             processed.ai.momentum = momentum
-            processed.ai.intensity = self._normalize(
-                processed, momentum, intensity)
+            processed.ai.intensity = intensity
             processed.ai.intensity_fom = fom
 
         # pump-probe azimuthal integration
