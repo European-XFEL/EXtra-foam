@@ -59,17 +59,16 @@ class RoiProcessor(CompositeProcessor):
         """Override."""
         cfg = self._meta.get_all(mt.ROI_PROC)
 
+        # Do not reset since it might be useful to compare the result
+        # from different handler and normalizer.
+
         fom_type = RoiFom(int(cfg['fom_type']))
         if fom_type == RoiFom.SUM:
-            fom_handler = np.sum
+            self._roi_fom_handler = np.sum
         elif fom_type == RoiFom.MEAN:
-            fom_handler = np.mean
+            self._roi_fom_handler = np.mean
         else:  # fom_type == RoiFom.MEDIAN
-            fom_handler = np.median
-
-        if fom_handler != self._roi_fom_handler:
-            self._reset = True
-            self._roi_fom_handler = fom_handler
+            self._roi_fom_handler = np.median
 
         for i, _ in enumerate(self._regions, 1):
             self._visibilities[i-1] = cfg[f'visibility{i}'] == 'True'

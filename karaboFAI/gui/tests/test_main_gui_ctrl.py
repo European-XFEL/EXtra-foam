@@ -197,16 +197,12 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual((0, math.inf), proc._proj_auc_range)
 
         # test setting new values
-        proc._reset = False
-        widget._roi_fom_cb.setCurrentText('mean')
-        proc.update()
-        self.assertTrue(proc._reset)
-
+        widget._roi_fom_cb.setCurrentText('median')
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
 
-        self.assertEqual(np.mean, proc._roi_fom_handler)
+        self.assertEqual(np.median, proc._roi_fom_handler)
         self.assertEqual((10, 20), proc._proj_fom_integ_range)
         self.assertEqual((30, 40), proc._proj_auc_range)
 
