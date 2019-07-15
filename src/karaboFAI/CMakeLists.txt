@@ -14,14 +14,14 @@ target_link_libraries(xtnumpy PRIVATE xtensor-python)
 
 # image data
 
-pybind11_add_Module(image_data image_data.cpp)
+pybind11_add_Module(data_model data_model.cpp)
 
-target_include_directories(image_data
+target_include_directories(data_model
     PRIVATE
         ${xtensor-python_INCLUDE_DIRS})
 
-target_link_libraries(image_data PRIVATE xtensor-python)
+target_link_libraries(data_model PRIVATE xtensor-python)
 
-target_compile_options(image_data
+target_compile_options(data_model
     PRIVATE
         -fPIC)

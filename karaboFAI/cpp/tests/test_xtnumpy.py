@@ -3,8 +3,9 @@ import time
 
 import numpy as np
 
-from karaboFAI.cpp import xt_nanmean_images, xt_nanmean_two_images
-
+from karaboFAI.cpp import (
+    xt_nanmean_images, xt_nanmean_two_images, xt_moving_average
+)
 from karaboFAI.algorithms import nanmean_images
 
 
@@ -79,3 +80,12 @@ class TestXtnumpy(unittest.TestCase):
         # test performance
         self.nanmean_two_images_compare_cpp_py(np.float32)
         self.nanmean_two_images_compare_cpp_py(np.float64)
+
+    def testMovingAverage(self):
+        arr = np.ones(100, dtype=np.float32)
+        ma = arr.copy()
+        data = 3 * arr
+
+        ma = xt_moving_average(ma, data, 2)
+
+        np.testing.assert_array_equal(2 * arr, ma)

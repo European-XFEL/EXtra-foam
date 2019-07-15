@@ -22,24 +22,22 @@ from ...command import CommandProxy
 from ...utils import profiler
 from ...config import AnalysisType, PumpProbeMode
 
-from karaboFAI.cpp import xt_nanmean_images, xt_nanmean_two_images
+from karaboFAI.cpp import (
+    xt_nanmean_images, xt_nanmean_two_images, xt_moving_average
+)
 
 
 class RawImageData:
     """Stores moving average of raw images."""
     def __init__(self, images):
-        self._ma_window = 1
-        self._new_ma_window = 1
-        self._ma_count = 0
+        self._window = 1
+        self._count = 0
 
-        self._images = None  # moving average (original data)
+        self._images = None  # moving average
         self.images = images
 
     @property
     def n_images(self):
-        if self._images is None:
-            return 0
-
         if self._images.ndim == 3:
             return self._images.shape[0]
         return 1
@@ -62,39 +60,35 @@ class RawImageData:
             raise ValueError(
                 f"The shape of images must be (y, x) or (n_pulses, y, x)!")
 
-        reset = False
-        if self._ma_window > self._new_ma_window:
-            reset = True
-        self._ma_window = self._new_ma_window
-
         # Note: the image shape could change, for example, when the quadrant
         #       positions of the LPD detectors changes.
-        if self._ma_window > 1 and data.shape == self._images.shape and not reset:
-            if self._ma_count < self._ma_window:
-                self._ma_count += 1
-                self._images += (data - self._images) / self._ma_count
-            else:  # self._ma_count == self._ma_window
+        if self._window > 1 and self._count <= self._window \
+                and data.shape == self._images.shape:
+            if self._count < self._window:
+                self._count += 1
+                self._images = xt_moving_average(self._images, data, self._count)
+            else:  # self._count == self._window
                 # here is an approximation
-                self._images += (data - self._images) / self._ma_window
+                self._images = xt_moving_average(self._images, data, self._count)
 
-        else:  # self._images is None or self._ma_window == 1
+        else:  # self._images is None or self._window == 1
             self._images = data
-            self._ma_count = 1
+            self._count = 1
 
     @property
-    def ma_window(self):
-        return self._ma_window
+    def window(self):
+        return self._window
 
-    @ma_window.setter
-    def ma_window(self, v):
+    @window.setter
+    def window(self, v):
         if not isinstance(v, int) or v <= 0:
-            v = 1
+            raise ValueError("Input must be integer")
 
-        self._new_ma_window = v
+        self._window = v
 
     @property
-    def ma_count(self):
-        return self._ma_count
+    def count(self):
+        return self._count
 
 
 class ImageProcessor(CompositeProcessor):
@@ -243,8 +237,8 @@ class ImageProcessor(CompositeProcessor):
             background=self._background,
             image_mask=self._image_mask,
             threshold_mask=self._threshold_mask,
-            ma_window=self._raw_data.ma_window,
-            ma_count=self._raw_data.ma_count,
+            ma_window=self._raw_data.window,
+            ma_count=self._raw_data.count,
             keep=keep
         )
 

@@ -22,6 +22,7 @@ from karaboFAI.pipeline.exceptions import (
     PumpProbeIndexError, ProcessingError
 )
 
+
 class TestRawImageData(unittest.TestCase):
 
     def testInvalidInput(self):
@@ -38,74 +39,59 @@ class TestRawImageData(unittest.TestCase):
             RawImageData(np.arange(16).reshape((2, 2, 2, 2)))
 
     def testTrainResolved(self):
-        data = RawImageData(np.ones((3, 3), dtype=np.float32))
+        arr = np.ones((3, 3), dtype=np.float32)
+
+        data = RawImageData(arr.copy())
         self.assertEqual(1, data.n_images)
 
-        data.ma_window = 5
-        # ma_window will not change until the next data arrive
-        self.assertEqual(1, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        data.images = 3 * np.ones((3, 3), dtype=np.float32)
-        self.assertEqual(5, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        np.testing.assert_array_equal(2*np.ones((3, 3), dtype=np.float32),
-                                      data.images)
+        data.window = 5
+        self.assertEqual(5, data.window)
+        self.assertEqual(1, data.count)
+        data.images = 3 * arr
+        self.assertEqual(5, data.window)
+        self.assertEqual(2, data.count)
+        np.testing.assert_array_equal(2 * arr, data.images)
 
         # set a ma window which is smaller than the current window
-        data.ma_window = 3
-        self.assertEqual(5, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        new_data = 2*np.ones((3, 3), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(3, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
+        data.window = 3
+        self.assertEqual(3, data.window)
+        self.assertEqual(1, data.count)
+        np.testing.assert_array_equal(3 * arr, data.images)
 
         # set an image with a different shape
-        new_data = 2*np.ones((3, 1), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(3, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
+        new_arr = 2*np.ones((3, 1), dtype=np.float32)
+        data.images = new_arr
+        self.assertEqual(3, data.window)
+        self.assertEqual(1, data.count)
+        np.testing.assert_array_equal(new_arr, data.images)
 
     def testPulseResolved(self):
-        data = RawImageData(np.ones((3, 4, 4), dtype=np.float32))
+        arr = np.ones((3, 4, 4), dtype=np.float32)
+
+        data = RawImageData(arr.copy())
 
         self.assertEqual(3, data.n_images)
 
-        data.ma_window = 10
-        # ma_window will not change until the next data arrive
-        self.assertEqual(1, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        new_data = 5*np.ones((3, 4, 4), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(10, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        np.testing.assert_array_equal(3*np.ones((3, 4, 4), dtype=np.float32),
-                                      data.images)
+        data.window = 10
+        self.assertEqual(10, data.window)
+        self.assertEqual(1, data.count)
+        data.images = 5 * arr
+        self.assertEqual(10, data.window)
+        self.assertEqual(2, data.count)
+        np.testing.assert_array_equal(3 * arr, data.images)
 
         # set a ma window which is smaller than the current window
-        data.ma_window = 2
-        self.assertEqual(10, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        new_data = 0.1*np.ones((3, 4, 4), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
+        data.window = 2
+        self.assertEqual(2, data.window)
+        self.assertEqual(1, data.count)
+        np.testing.assert_array_equal(5 * arr, data.images)
 
         # set a data with a different number of images
-        new_data = 5*np.ones((5, 4, 4))
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-        new_data = 1*np.ones((5, 3, 4))
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
+        new_arr = 5*np.ones((5, 4, 4))
+        data.images = new_arr
+        self.assertEqual(2, data.window)
+        self.assertEqual(1, data.count)
+        np.testing.assert_array_equal(new_arr, data.images)
 
 
 class TestImageProcessorTr(unittest.TestCase):
