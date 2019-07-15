@@ -33,11 +33,11 @@ class RoiProcessor(CompositeProcessor):
             corresponding ROI is visible.
         _roi_fom_handler (callable): hanlder used to calculate the FOM of a
             given ROI.
-        _proj1d_normalizer (VFomNormalizer): normalizer type for calculating
+        _proj_normalizer (VFomNormalizer): normalizer type for calculating
             FOM from 1D projection result.
-        _proj1d_auc_range (tuple): x range for calculating AUC, which is
+        _proj_auc_range (tuple): x range for calculating AUC, which is
             used as a normalizer of 1D projection.
-        _proj1d_fom_integ_range (tuple): integration range for calculating
+        _proj_fom_integ_range (tuple): integration range for calculating
             FOM from the normalized 1D projection.
     """
     def __init__(self):
@@ -49,9 +49,9 @@ class RoiProcessor(CompositeProcessor):
         self._visibilities = [False] * n_rois
         self._roi_fom_handler = None
 
-        self._proj1d_normalizer = None
-        self._proj1d_auc_range = None
-        self._proj1d_fom_integ_range = None
+        self._proj_normalizer = None
+        self._proj_auc_range = None
+        self._proj_fom_integ_range = None
 
         self._reset = False
 
@@ -72,11 +72,11 @@ class RoiProcessor(CompositeProcessor):
             self._visibilities[i-1] = cfg[f'visibility{i}'] == 'True'
             self._regions[i-1] = self.str2list(cfg[f'region{i}'], handler=int)
 
-        self._proj1d_normalizer = VFomNormalizer(
-            int(cfg['proj1d:normalizer']))
-        self._proj1d_auc_range = self.str2tuple(cfg['proj1d:auc_range'])
-        self._proj1d_fom_integ_range = self.str2tuple(
-            cfg['proj1d:fom_integ_range'])
+        self._proj_normalizer = VFomNormalizer(
+            int(cfg['proj:normalizer']))
+        self._proj_auc_range = self.str2tuple(cfg['proj:auc_range'])
+        self._proj_fom_integ_range = self.str2tuple(
+            cfg['proj:fom_integ_range'])
 
         if 'reset' in cfg:
             self._meta.delete(mt.ROI_PROC, 'reset')
@@ -196,16 +196,16 @@ class RoiProcessor(CompositeProcessor):
 
             try:
                 norm_on_ma = normalize_auc(
-                    on_ma, x_data, *self._proj1d_auc_range)
+                    on_ma, x_data, *self._proj_auc_range)
                 norm_off_ma = normalize_auc(
-                    off_ma, x_data, *self._proj1d_auc_range)
+                    off_ma, x_data, *self._proj_auc_range)
             except ValueError as e:
                 raise ProcessingError(str(e))
 
             norm_on_off_ma = norm_on_ma - norm_off_ma
 
             sliced = slice_curve(norm_on_off_ma, x_data,
-                                 *self._proj1d_fom_integ_range)[0]
+                                 *self._proj_fom_integ_range)[0]
             if processed.pp.abs_difference:
                 fom = np.sum(np.abs(sliced))
             else:

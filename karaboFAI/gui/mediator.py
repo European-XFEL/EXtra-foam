@@ -165,13 +165,13 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.ROI_PROC, "reset", 1)
 
     def onProj1dNormalizerChange(self, value: IntEnum):
-        self._meta.set(mt.ROI_PROC, "proj1d:normalizer", int(value))
+        self._meta.set(mt.ROI_PROC, "proj:normalizer", int(value))
 
     def onProj1dAucRangeChange(self, value: tuple):
-        self._meta.set(mt.ROI_PROC, "proj1d:auc_range", str(value))
+        self._meta.set(mt.ROI_PROC, "proj:auc_range", str(value))
 
     def onProj1dFomIntegRangeChange(self, value: tuple):
-        self._meta.set(mt.ROI_PROC, "proj1d:fom_integ_range", str(value))
+        self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
 
     def onCorrelationAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))

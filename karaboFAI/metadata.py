@@ -69,9 +69,9 @@ class Metadata:
             "visibility3",
             "visibility4",
             "fom_type",
-            "proj1d:normalizer",
-            "proj1d:auc_range",
-            "proj1d:fom_integ_range",
+            "proj:normalizer",
+            "proj:auc_range",
+            "proj:fom_integ_range",
         ],
         AZIMUTHAL_INTEG_PROC: [
             "integ_center_x",

@@ -192,9 +192,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # test default reconfigurable values
         self.assertEqual(np.sum, proc._roi_fom_handler)
-        self.assertEqual(VFomNormalizer.AUC, proc._proj1d_normalizer)
-        self.assertEqual((0, math.inf), proc._proj1d_fom_integ_range)
-        self.assertEqual((0, math.inf), proc._proj1d_auc_range)
+        self.assertEqual(VFomNormalizer.AUC, proc._proj_normalizer)
+        self.assertEqual((0, math.inf), proc._proj_fom_integ_range)
+        self.assertEqual((0, math.inf), proc._proj_auc_range)
 
         # test setting new values
         proc._reset = False
@@ -207,8 +207,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         self.assertEqual(np.mean, proc._roi_fom_handler)
-        self.assertEqual((10, 20), proc._proj1d_fom_integ_range)
-        self.assertEqual((30, 40), proc._proj1d_auc_range)
+        self.assertEqual((10, 20), proc._proj_fom_integ_range)
+        self.assertEqual((30, 40), proc._proj_auc_range)
 
         proc._reset = False
         widget._reset_btn.clicked.emit()
