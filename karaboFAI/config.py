@@ -63,9 +63,8 @@ class VFomNormalizer(IntEnum):
 
 
 class RoiFom(IntEnum):
-    SUM = 0
-    MEAN = 1
-    MEDIAN = 2
+    SUM = 0  # monitor sum of ROI
+    MEAN = 1  # monitor mean of ROI
 
 
 # a simple class saves the trouble when the attribute needs to be read/write

@@ -24,7 +24,6 @@ class RoiCtrlWidget(AbstractCtrlWidget):
     _available_roi_foms = OrderedDict({
         "sum": RoiFom.SUM,
         "mean": RoiFom.MEAN,
-        "median": RoiFom.MEDIAN,
     })
 
     _available_normalizers = OrderedDict({
