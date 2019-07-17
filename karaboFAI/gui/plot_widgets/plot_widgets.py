@@ -145,31 +145,6 @@ class PulsedFOMWidget(PlotWidget):
         self._plot.setData(range(len(foms)), foms)
 
 
-class RoiValueMonitor(PlotWidget):
-    """RoiValueMonitor class.
-
-    Widget for displaying the evolution of the value (integration, median,
-    mean) of ROIs.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "Intensity (arb. u.)")
-        self.addLegend(offset=(-40, 20))
-
-        self._plots = []
-        for i, c in enumerate(config["ROI_COLORS"], 1):
-            self._plots.append(self.plotCurve(name=f"ROI {i}", pen=make_pen(c)))
-
-    def update(self, data):
-        """Override."""
-        for i, plot in enumerate(self._plots, 1):
-            tids, roi_hist, _ = getattr(data.roi, f"roi{i}_hist")
-            plot.setData(tids, roi_hist)
-
-
 class CorrelationWidget(PlotWidget):
     """CorrelationWidget class.
 
