@@ -52,12 +52,12 @@ class TestOverviewWindow(unittest.TestCase):
     def testPumpProbeWIndow(self):
         win = PumpProbeWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(8, len(win._plot_widgets))
+        self.assertEqual(5, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(5, counter[PumpProbeImageView])
+        self.assertEqual(2, counter[PumpProbeImageView])
         self.assertEqual(2, counter[PumpProbeOnOffWidget])
         self.assertEqual(1, counter[PumpProbeFomWidget])
 

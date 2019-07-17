@@ -380,45 +380,28 @@ class PumpProbeImageView(ImageView):
 
     Widget for displaying the on or off image in the pump-probe analysis.
     """
-    def __init__(self, on=True, *, roi=False, diff=False, parent=None):
+    def __init__(self, on=True, *, parent=None):
         """Initialization.
 
         :param bool on: True for display the on image while False for
             displaying the off image.
-        :param bool roi: True for displaying the ROI while False for
-            displaying the whole image.
-        :param bool diff: True for displaying on - off ROI instead of
-            off ROI. Ignored if roi == False. This option is not enabled
-            for the whole image because of the concern of performance.
         """
         super().__init__(parent=parent)
 
         self._on = on
-        self._roi = roi
-        self._diff = diff
 
     def update(self, data):
         """Override."""
         if self._on:
-            if self._roi:
-                img = data.pp.on_roi
-            else:
-                img = data.pp.on_image_mean
+            img = data.pp.on_image_mean
         else:
-            if self._roi:
-                if self._diff and data.pp.off_roi is not None:
-                    img = data.pp.on_roi - data.pp.off_roi
-                else:
-                    img = data.pp.off_roi
-            else:
-                img = data.pp.off_image_mean
+            img = data.pp.off_image_mean
 
         if img is None:
             return
 
         self.setImage(img, auto_levels=(not self._is_initialized))
-        if not self._roi:
-            self.updateROI(data)
+        self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True
