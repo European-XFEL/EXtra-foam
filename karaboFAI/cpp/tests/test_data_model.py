@@ -93,19 +93,23 @@ class TestRawImageDataCpp(unittest.TestCase):
         dt_get_cpp = time.perf_counter() - t0
 
         # compare with Python
+        class Dummy:
+            data = RawImageDataPy()
+
         imgs_py = np.ones((60, 1024, 1024), dtype=dtype)
 
         t0 = time.perf_counter()
-        data_py = RawImageDataPy(imgs_py)
+        dummy =  Dummy()
+        dummy.data = imgs_py
         dt_ctor_py = time.perf_counter() - t0
 
-        data_py.window = 10
+        Dummy.data.window = 10
         t0 = time.perf_counter()
-        data_py.images = imgs_py
+        dummy.data = imgs_py
         dt_ma_py = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        imgs_py_ = data_py.images
+        imgs_py_ = dummy.data
         dt_get_py = time.perf_counter() - t0
 
         print(f"Performance {dtype} in constructor: "

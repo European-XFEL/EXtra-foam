@@ -5,7 +5,8 @@ import numpy as np
 
 from karaboFAI.pipeline.data_model import (
     AbstractData, AccumulatedPairData, DataManagerMixin,
-    ImageData, ProcessedData, PumpProbeData, RoiData, PairData
+    ImageData, ProcessedData, PumpProbeData, RawImageData, RoiData,
+    PairData
 )
 from karaboFAI.config import config
 
@@ -37,6 +38,67 @@ class TestPairData(unittest.TestCase):
         tids, values, _ = dm.values
         np.testing.assert_array_equal([], tids)
         np.testing.assert_array_equal([], values)
+
+
+class TestRawImageData(unittest.TestCase):
+    # This also tests MovingAverageArray
+    data = RawImageData()
+
+    def testTrainResolved(self):
+        arr = np.ones((3, 3), dtype=np.float32)
+        self.data = arr.copy()
+
+        self.assertEqual(1, self.__class__.data.n_images)
+
+        self.__class__.data.window = 5
+        self.assertEqual(5, self.__class__.data.window)
+        self.assertEqual(1, self.__class__.data.count)
+        self.data = 3 * arr
+        self.assertEqual(5, self.__class__.data.window)
+        self.assertEqual(2, self.__class__.data.count)
+        np.testing.assert_array_equal(2 * arr, self.data)
+
+        # set a ma window which is smaller than the current window
+        self.__class__.data.window = 3
+        self.assertEqual(3, self.__class__.data.window)
+        self.assertEqual(2, self.__class__.data.count)
+        np.testing.assert_array_equal(2 * arr, self.data)
+
+        # set an image with a different shape
+        new_arr = 2*np.ones((3, 1), dtype=np.float32)
+        self.data = new_arr
+        self.assertEqual(3, self.__class__.data.window)
+        self.assertEqual(1, self.__class__.data.count)
+        np.testing.assert_array_equal(new_arr, self.data)
+
+    def testPulseResolved(self):
+        arr = np.ones((3, 4, 4), dtype=np.float32)
+
+        self.assertEqual(0, self.__class__.data.n_images)
+
+        self.data = arr.copy()
+        self.assertEqual(3, self.__class__.data.n_images)
+
+        self.__class__.data.window = 10
+        self.assertEqual(10, self.__class__.data.window)
+        self.assertEqual(1, self.__class__.data.count)
+        self.data = 5 * arr
+        self.assertEqual(10, self.__class__.data.window)
+        self.assertEqual(2, self.__class__.data.count)
+        np.testing.assert_array_equal(3 * arr, self.data)
+
+        # set a ma window which is smaller than the current window
+        self.__class__.data.window = 2
+        self.assertEqual(2, self.__class__.data.window)
+        self.assertEqual(2, self.__class__.data.count)
+        np.testing.assert_array_equal(3 * arr, self.data)
+
+        # set a data with a different number of images
+        new_arr = 5*np.ones((5, 4, 4))
+        self.data = new_arr
+        self.assertEqual(2, self.__class__.data.window)
+        self.assertEqual(1, self.__class__.data.count)
+        np.testing.assert_array_equal(new_arr, self.data)
 
 
 class TestCorrelationData(unittest.TestCase):

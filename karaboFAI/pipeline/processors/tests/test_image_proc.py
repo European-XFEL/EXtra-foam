@@ -14,84 +14,11 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from karaboFAI.pipeline.processors.image_processor import (
-    RawImageData, ImageProcessor
-)
+from karaboFAI.pipeline.processors.image_processor import ImageProcessor
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
     PumpProbeIndexError, ProcessingError
 )
-
-
-class TestRawImageData(unittest.TestCase):
-
-    def testInvalidInput(self):
-        with self.assertRaises(TypeError):
-            RawImageData()
-
-        with self.assertRaises(TypeError):
-            RawImageData([1, 2, 3])
-
-        with self.assertRaises(ValueError):
-            RawImageData(np.arange(2))
-
-        with self.assertRaises(ValueError):
-            RawImageData(np.arange(16).reshape((2, 2, 2, 2)))
-
-    def testTrainResolved(self):
-        arr = np.ones((3, 3), dtype=np.float32)
-
-        data = RawImageData(arr.copy())
-        self.assertEqual(1, data.n_images)
-
-        data.window = 5
-        self.assertEqual(5, data.window)
-        self.assertEqual(1, data.count)
-        data.images = 3 * arr
-        self.assertEqual(5, data.window)
-        self.assertEqual(2, data.count)
-        np.testing.assert_array_equal(2 * arr, data.images)
-
-        # set a ma window which is smaller than the current window
-        data.window = 3
-        self.assertEqual(3, data.window)
-        self.assertEqual(1, data.count)
-        np.testing.assert_array_equal(3 * arr, data.images)
-
-        # set an image with a different shape
-        new_arr = 2*np.ones((3, 1), dtype=np.float32)
-        data.images = new_arr
-        self.assertEqual(3, data.window)
-        self.assertEqual(1, data.count)
-        np.testing.assert_array_equal(new_arr, data.images)
-
-    def testPulseResolved(self):
-        arr = np.ones((3, 4, 4), dtype=np.float32)
-
-        data = RawImageData(arr.copy())
-
-        self.assertEqual(3, data.n_images)
-
-        data.window = 10
-        self.assertEqual(10, data.window)
-        self.assertEqual(1, data.count)
-        data.images = 5 * arr
-        self.assertEqual(10, data.window)
-        self.assertEqual(2, data.count)
-        np.testing.assert_array_equal(3 * arr, data.images)
-
-        # set a ma window which is smaller than the current window
-        data.window = 2
-        self.assertEqual(2, data.window)
-        self.assertEqual(1, data.count)
-        np.testing.assert_array_equal(5 * arr, data.images)
-
-        # set a data with a different number of images
-        new_arr = 5*np.ones((5, 4, 4))
-        data.images = new_arr
-        self.assertEqual(2, data.window)
-        self.assertEqual(1, data.count)
-        np.testing.assert_array_equal(new_arr, data.images)
 
 
 class TestImageProcessorTr(unittest.TestCase):
@@ -127,10 +54,8 @@ class TestImageProcessorTr(unittest.TestCase):
         proc.process(data)
         processed = data['processed']
 
-        np.testing.assert_array_almost_equal(imgs1_gt,
-                                             processed.image.images)
-        np.testing.assert_array_almost_equal(imgs1_gt,
-                                             proc._raw_data.images)
+        np.testing.assert_array_almost_equal(imgs1_gt, processed.image.images)
+        np.testing.assert_array_almost_equal(imgs1_gt, proc._raw_data)
 
         imgs2 = np.random.randn(2, 2)
         imgs2_gt = imgs2.copy()
@@ -143,10 +68,8 @@ class TestImageProcessorTr(unittest.TestCase):
         processed = data['processed']
 
         ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt,
-                                             processed.image.images)
-        np.testing.assert_array_almost_equal(ma_gt,
-                                             proc._raw_data.images)
+        np.testing.assert_array_almost_equal(ma_gt, processed.image.images)
+        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
 
         # test the internal data of _raw_data shares memory with the first data
         self.assertIs(imgs1, proc._raw_data.images)
@@ -273,7 +196,7 @@ class TestImageProcessorPr(unittest.TestCase):
 
         proc.process(data)
 
-        np.testing.assert_array_equal(imgs1_gt, proc._raw_data.images)
+        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
 
         imgs2 = np.random.randn(4, 2, 2)
         imgs2_gt = imgs2.copy()

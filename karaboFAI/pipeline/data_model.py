@@ -18,7 +18,7 @@ from ..algorithms import mask_image
 
 from ..config import config
 
-from karaboFAI.cpp import xt_nanmean_images
+from karaboFAI.cpp import xt_nanmean_images, xt_moving_average
 
 
 class PairData:
@@ -211,6 +211,82 @@ class AbstractData:
             if isinstance(attr, PairData):
                 # descriptor protocol will not be triggered here
                 attr.clear()
+
+
+class MovingAverageArray:
+    """Stores moving average of raw images."""
+    def __init__(self):
+        self._data = None  # moving average
+
+        self._window = 1
+        self._count = 0
+
+    def __get__(self, instance, instance_type):
+        if instance is None:
+            return self
+
+        return self._data
+
+    def __set__(self, instance, data):
+        self._validate_input(data)
+
+        if self._data is not None and self._window > 1 and \
+                self._count <= self._window and data.shape == self._data.shape:
+            if self._count < self._window:
+                self._count += 1
+                self._data = xt_moving_average(self._data, data, self._count)
+            else:  # self._count == self._window
+                # here is an approximation
+                self._data = xt_moving_average(self._data, data, self._count)
+
+        else:
+            self._data = data
+            self._count = 1
+
+    def _validate_input(self, data):
+        if not isinstance(data, np.ndarray):
+            raise TypeError(r"Input must be an numpy.ndarray!")
+
+    @property
+    def window(self):
+        return self._window
+
+    @window.setter
+    def window(self, v):
+        if not isinstance(v, int) or v <= 0:
+            raise ValueError("Input must be integer")
+
+        self._window = v
+
+    @property
+    def count(self):
+        return self._count
+
+
+class RawImageData(MovingAverageArray):
+    """Stores moving average of raw images."""
+    def __init__(self):
+        super().__init__()
+
+    def _validate_input(self, images):
+        super()._validate_input(images)
+
+        if images.ndim <= 1 or images.ndim > 3:
+            raise ValueError(
+                f"The shape of images must be (y, x) or (n_pulses, y, x)!")
+
+    @property
+    def n_images(self):
+        if self._data is None:
+            return 0
+
+        if self._data.ndim == 3:
+            return self._data.shape[0]
+        return 1
+
+    @property
+    def pulse_resolved(self):
+        return self._data.ndim == 3
 
 
 class XgmData(AbstractData):
