@@ -68,7 +68,7 @@ class Metadata:
             "visibility2",
             "visibility3",
             "visibility4",
-            "fom_type",
+            "proj:direction",
             "proj:normalizer",
             "proj:auc_range",
             "proj:fom_integ_range",

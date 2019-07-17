@@ -53,8 +53,8 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
-        intensities = data.ai.intensities
+        momentum = data.pulse.ai.x
+        intensities = data.pulse.ai.vfom
 
         if intensities is None:
             return
@@ -68,7 +68,7 @@ class SinglePulseAiWidget(PlotWidget):
             return
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.intensity)
+            self._mean_plot.setData(momentum, data.ai.vfom)
 
 
 class TrainAiWidget(PlotWidget):
@@ -88,10 +88,10 @@ class TrainAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
+        momentum = data.ai.x
 
         if data.pulse_resolved:
-            intensities = data.ai.intensities
+            intensities = data.pulse.ai.vfom
             if intensities is None:
                 return
 
@@ -107,7 +107,7 @@ class TrainAiWidget(PlotWidget):
                     item.setData(momentum, intensity)
 
         else:
-            intensity = data.ai.intensity
+            intensity = data.ai.vfom
             if intensity is None:
                 return
 
@@ -138,7 +138,7 @@ class PulsedFOMWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.ai.intensities_foms
+        foms = data.pulse.ai.fom
         if foms is None:
             return
 
@@ -159,7 +159,7 @@ class CorrelationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._idx = idx # start from 1
+        self._idx = idx  # start from 1
 
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
@@ -173,11 +173,8 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        try:
-            correlator_hist, fom_hist, info = getattr(
-                data.correlation, f'correlation{self._idx}')
-        except AttributeError:
-            return
+        correlator_hist, fom_hist, info = getattr(
+            data.corr, f'correlation{self._idx}').hist
 
         device_id = info['device_id']
         ppt = info['property']
@@ -241,9 +238,9 @@ class PumpProbeOnOffWidget(PlotWidget):
     def update(self, data):
         """Override."""
         x = data.pp.x
-        on = data.pp.norm_on_ma
-        off = data.pp.norm_off_ma
-        on_off = data.pp.norm_on_off_ma
+        on = data.pp.vfom_on
+        off = data.pp.vfom_off
+        vfom = data.pp.vfom
 
         if on is None or off is None:
             return
@@ -254,7 +251,7 @@ class PumpProbeOnOffWidget(PlotWidget):
             return
 
         if self._is_diff:
-            self._on_off_pulse.setData(x, on_off)
+            self._on_off_pulse.setData(x, vfom)
         else:
             self._on_pulse.setData(x, on)
             self._off_pulse.setData(x, off)

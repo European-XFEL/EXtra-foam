@@ -132,10 +132,9 @@ class ImageView(QtGui.QWidget):
         visualization of ROIs and calculation of ROI data are synchronized.
         """
         for i, roi in enumerate(self._rois, 1):
-            roi_area = getattr(data.roi, f"roi{i}")
-            if roi_area is not None:
+            x, y, w, h = getattr(data.roi, f"rect{i}")
+            if w > 0 and h > 0:
                 roi.show()
-                x, y, w, h = roi_area
                 roi.setSize((w, h), update=False)
                 roi.setPos((x, y), update=False)
             else:
@@ -393,9 +392,9 @@ class PumpProbeImageView(ImageView):
     def update(self, data):
         """Override."""
         if self._on:
-            img = data.pp.on_image_mean
+            img = data.pp.image_on
         else:
-            img = data.pp.off_image_mean
+            img = data.pp.image_off
 
         if img is None:
             return

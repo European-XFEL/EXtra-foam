@@ -3,6 +3,8 @@ from collections import Counter
 import os
 import tempfile
 
+import numpy as np
+
 from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
@@ -17,8 +19,10 @@ from karaboFAI.gui.plot_widgets import (
     PulsedFOMWidget, SinglePulseAiWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
-    Bin1dHist, Bin1dHeatmap, Bin2dHeatmap
+    Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
+    CorrelationWidget,
 )
+from karaboFAI.pipeline.data_model import ProcessedData
 
 app = mkQApp()
 
@@ -104,6 +108,52 @@ class TestOverviewWindow(unittest.TestCase):
             counter[key.__class__] += 1
 
         self.assertEqual(2, counter[Bin2dHeatmap])
+
+    def testCorrelationWindow(self):
+
+        self.gui._tool_bar.actions()[5].trigger()
+        win = list(self.gui._windows.keys())[-1]
+
+        self.assertEqual(4, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(4, counter[CorrelationWidget])
+
+        # -----------------------
+        # test data visualization
+        # -----------------------
+
+        # the upper two plots have error bars
+        data = ProcessedData(1, np.arange(480).reshape((120, 2, 2)))
+        for i in range(1000):
+            data.corr.correlation1.hist = (int(i/5), 100*i)
+            data.corr.correlation2.hist = (int(i/5), -100*i)
+            data.corr.correlation3.hist = (i, i+1)
+            data.corr.correlation4.hist = (i, -i)
+        self.gui._data.set(data)
+        win.update()
+        app.processEvents()
+
+        # change the resolutions
+        data.corr.correlation1.reset = True
+        data.corr.correlation2.reset = True
+        data.corr.correlation3.resolution = 15
+        data.corr.correlation4.resolution = 20
+        data.corr.update_hist()
+
+        # the data is cleared after the resolutions were changed
+        # now the lower two plots have error bars but the upper ones do not
+        for i in range(1000):
+            data.corr.correlation1.hist = (i, i+1)
+            data.corr.correlation2.hist = (i, -i)
+            data.corr.correlation3.hist = (int(i/5), 100*i)
+            data.corr.correlation4.hist = (int(i/5), -100*i)
+
+        self.gui._data.set(data)
+        win.update()
+        app.processEvents()
 
 
 class TestPulsedAiWindow(unittest.TestCase):

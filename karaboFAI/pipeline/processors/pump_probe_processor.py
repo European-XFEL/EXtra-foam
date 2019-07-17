@@ -23,7 +23,6 @@ class PumpProbeProcessor(CompositeProcessor):
         analysis_type (AnalysisType): pump-probe analysis type.
         _abs_difference (bool): True for calculating absolute different
             between on/off pulses.
-        _ma_window (int): moving average window size.
     """
     def __init__(self):
         super().__init__()
@@ -33,15 +32,11 @@ class PumpProbeProcessor(CompositeProcessor):
         self._mode = PumpProbeMode.UNDEFINED
 
         self._abs_difference = False
-        self._ma_window = 1
 
         self._reset = False
 
     def update(self):
         """Override."""
-        g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
-        self._ma_window = int(g_cfg['ma_window'])
-
         cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type'])),
@@ -71,6 +66,4 @@ class PumpProbeProcessor(CompositeProcessor):
 
         processed.pp.analysis_type = self.analysis_type
 
-        # setting processing parameters should come before setting data
-        processed.pp.ma_window = self._ma_window
         processed.pp.abs_difference = self._abs_difference

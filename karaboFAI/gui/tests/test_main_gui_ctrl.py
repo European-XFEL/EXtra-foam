@@ -24,8 +24,8 @@ from karaboFAI.config import (
     DataSource, VFomNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
-from karaboFAI.pipeline.processors.azimuthal_integration import \
-    energy2wavelength
+from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
+from karaboFAI.pipeline.processors.roi import _RectROI
 
 app = mkQApp()
 
@@ -131,15 +131,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         image_proc.update()
         self.assertListEqual([1, 3], image_proc._pulse_index_filter)
 
-        # test moving average window
-        pp_proc = self.scheduler._pp_proc
-        pp_proc.update()
-        self.assertEqual(1, pp_proc._ma_window)
-
-        widget._ma_window_le.setText(str(10))
-        pp_proc.update()
-        self.assertEqual(10, pp_proc._ma_window)
-
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
         scheduler = self.scheduler
@@ -164,7 +155,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = VFomNormalizer.ROI2
+        ai_normalizer = VFomNormalizer.ROI3_SUB_ROI4
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -191,25 +182,21 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # test default reconfigurable values
-        self.assertEqual(np.sum, proc._roi_fom_handler)
-        self.assertEqual(VFomNormalizer.AUC, proc._proj_normalizer)
-        self.assertEqual((0, math.inf), proc._proj_fom_integ_range)
-        self.assertEqual((0, math.inf), proc._proj_auc_range)
+        self.assertEqual('x', proc._direction)
+        self.assertEqual(VFomNormalizer.AUC, proc._normalizer)
+        self.assertEqual((0, math.inf), proc._fom_integ_range)
+        self.assertEqual((0, math.inf), proc._auc_range)
 
         # test setting new values
-        widget._roi_fom_cb.setCurrentText('median')
+        widget._direct_cb.setCurrentText('y')
+        widget._normalizers_cb.setCurrentText('ROI3 - ROI4')
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
-
-        self.assertEqual(np.median, proc._roi_fom_handler)
-        self.assertEqual((10, 20), proc._proj_fom_integ_range)
-        self.assertEqual((30, 40), proc._proj_auc_range)
-
-        proc._reset = False
-        widget._reset_btn.clicked.emit()
-        proc.update()
-        self.assertTrue(proc._reset)
+        self.assertEqual('y', proc._direction)
+        self.assertEqual(VFomNormalizer.ROI3_SUB_ROI4, proc._normalizer)
+        self.assertEqual((10, 20), proc._fom_integ_range)
+        self.assertEqual((30, 40), proc._auc_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -233,9 +220,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # change analysis type
         pp_proc._reset = False
-        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2')
+        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2 (proj)')
         pp_proc.update()
-        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, pp_proc.analysis_type)
+        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, pp_proc.analysis_type)
         self.assertTrue(pp_proc._reset)
 
         # change pump-probe mode
@@ -266,8 +253,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
 
-    @patch("karaboFAI.pipeline.data_model.XasData.clear")
-    def testXasCtrlWidget(self, reset_xas):
+    def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
         proc = self.scheduler._xas_proc
         proc.update()
@@ -367,38 +353,21 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual([""] * 4, proc._properties)
 
         # set new FOM
-        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2')
+        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2 (proj)')
         proc.update()
-        self.assertEqual(AnalysisType.ROI1_ADD_ROI2, proc.analysis_type)
+        self.assertEqual(AnalysisType.PROJ_ROI1_ADD_ROI2, proc.analysis_type)
 
         # test the correlation param table
-        expected_correlations = []
         for i in range(_N_PARAMS):
             # change category
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
 
-            for item in expected_correlations:
-                self.assertTrue(
-                    hasattr(ProcessedData(1, np.zeros((2, 2))).correlation,
-                            item))
-
             # change device id
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
-            correlation = f'correlation{i+1}'
-            expected_correlations.append(correlation)
 
             resolution = (i+1)*5 if i < 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
-
-            if resolution > 0:
-                _, _, info = getattr(
-                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
-                self.assertEqual(resolution, info['resolution'])
-            else:
-                _, _, info = getattr(
-                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
-                self.assertNotIn('resolution', info)
 
         proc.update()
         for i in range(_N_PARAMS):
@@ -406,33 +375,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
             self.assertEqual(device_id, proc._device_ids[i])
             ppt = widget._table.cellWidget(i, 1).currentText()
             self.assertEqual(ppt, proc._device_ids[i])
-
-        # test data visualization
-        # the upper two plots have error bars
-        data = ProcessedData(1, np.arange(480).reshape(120, 2, 2))
-        for i in range(1000):
-            data.correlation.correlation1 = (int(i/5), 100*i)
-            data.correlation.correlation2 = (int(i/5), -100*i)
-            data.correlation.correlation3 = (i, i+1)
-            data.correlation.correlation4 = (i, -i)
-        self.gui._data.set(data)
-        window.update()
-
-        # change the resolutions
-        for i in range(_N_PARAMS):
-            resolution = (i+1)*5 if i >= 2 else 0.0
-            resolution_le = widget._table.cellWidget(i, 3)
-            resolution_le.setText(str(resolution))
-
-        # the data is cleared after the resolutions were changed
-        # now the lower two plots have error bars but the upper ones do not
-        for i in range(1000):
-            data.correlation.correlation3 = (int(i/5), 100*i)
-            data.correlation.correlation4 = (int(i/5), -100*i)
-            data.correlation.correlation1 = (i, i+1)
-            data.correlation.correlation2 = (i, -i)
-        self.gui._data.set(data)
-        window.update()
 
         # test reset button
         proc._reset = False

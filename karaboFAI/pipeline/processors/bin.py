@@ -204,18 +204,60 @@ class BinProcessor(CompositeProcessor):
 
         # Try to get FOM first.
 
-        if self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
-            vec_x = processed.ai.momentum
-            vec = processed.ai.intensity
-            vec_label = processed.ai.momentum_label
-            fom = processed.ai.intensity_fom
-        elif self.analysis_type == AnalysisType.PUMP_PROBE:
-            vec_x = processed.pp.x
-            vec = processed.pp.norm_on_off_ma
-            fom = processed.pp.fom
-            vec_label = 'Pump-probe'  # FIXME
+        if self.analysis_type == AnalysisType.PUMP_PROBE:
+            ret = processed.pp
+            # Don't raise an Exception here if fom is None since it does not
+            # work well if on- and off- pulses are in different trains.
+        elif self.analysis_type == AnalysisType.ROI1:
+            ret = processed.roi.roi1
+            if ret.fom is None:
+                raise ProcessingError("ROI1 sum result is not available")
+        elif self.analysis_type == AnalysisType.ROI2:
+            ret = processed.roi.roi2
+            if ret.fom is None:
+                raise ProcessingError("ROI2 sum result is not available")
+        elif self.analysis_type == AnalysisType.ROI1_SUB_ROI2:
+            ret = processed.roi.roi1_sub_roi2
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI1 - ROI2 sum result is not available")
+        elif self.analysis_type == AnalysisType.ROI1_ADD_ROI2:
+            ret = processed.roi.roi1_add_roi2
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI1 + ROI2 sum result is not available")
+        elif self.analysis_type == AnalysisType.PROJ_ROI1:
+            ret = processed.roi.proj1
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI1 projection result is not available")
+        elif self.analysis_type == AnalysisType.PROJ_ROI2:
+            ret = processed.roi.proj2
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI2 projection result is not available")
+        elif self.analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
+            ret = processed.roi.proj1_sub_proj2
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI1 - ROI2 projection result is not available")
+        elif self.analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
+            ret = processed.roi.proj1_add_proj2
+            if ret.fom is None:
+                raise ProcessingError(
+                    "ROI1 + ROI2 projection result is not available")
+        elif self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
+            ret = processed.ai
+            if ret.fom is None:
+                raise ProcessingError(
+                    "Azimuthal integration result is not available")
         else:
             return
+
+        vec_x = ret.x
+        vec = ret.vfom
+        fom = ret.fom
+        vec_label = ret.x_label
 
         if fom is None:
             # If it is not available, we stop getting slow data.
@@ -228,10 +270,10 @@ class BinProcessor(CompositeProcessor):
         error_messages = []
         if self._device_id1 and self._property1:
             try:
-                slow1 = _get_slow_data(processed.tid,
-                                       data['raw'],
-                                       self._device_id1,
-                                       self._property1)
+                slow1, _ = _get_slow_data(processed.tid,
+                                          data['raw'],
+                                          self._device_id1,
+                                          self._property1)
 
                 iloc1 = np.searchsorted(self._edge1, slow1) - 1
             except ProcessingError as e:
@@ -239,10 +281,10 @@ class BinProcessor(CompositeProcessor):
 
         if self._device_id2 and self._property2:
             try:
-                slow2 = _get_slow_data(processed.tid,
-                                       data['raw'],
-                                       self._device_id2,
-                                       self._property2)
+                slow2, _ = _get_slow_data(processed.tid,
+                                          data['raw'],
+                                          self._device_id2,
+                                          self._property2)
 
                 iloc2 = np.searchsorted(self._edge2, slow2) - 1
             except ProcessingError as e:

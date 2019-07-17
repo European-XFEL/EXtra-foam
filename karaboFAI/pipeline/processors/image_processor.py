@@ -175,8 +175,8 @@ class ImageProcessor(CompositeProcessor):
             keep=keep
         )
 
-        processed.pp.on_image_mean = on_image
-        processed.pp.off_image_mean = off_image
+        processed.pp.image_on = on_image
+        processed.pp.image_off = off_image
 
         data['processed'] = processed
         del data['assembled']

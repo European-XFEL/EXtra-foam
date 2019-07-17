@@ -23,10 +23,10 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
 
     _available_normalizers = OrderedDict({
         "AUC": VFomNormalizer.AUC,
-        "ROI1 - ROI2": VFomNormalizer.ROI_SUB,
-        "ROI1": VFomNormalizer.ROI1,
-        "ROI2": VFomNormalizer.ROI2,
-        "ROI1 + ROI2": VFomNormalizer.ROI_SUM,
+        "ROI3": VFomNormalizer.ROI3,
+        "ROI4": VFomNormalizer.ROI4,
+        "ROI3 - ROI4": VFomNormalizer.ROI3_SUB_ROI4,
+        "ROI3 + ROI4": VFomNormalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):

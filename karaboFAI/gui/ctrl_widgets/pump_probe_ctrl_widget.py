@@ -31,10 +31,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "ROI1 - ROI2": AnalysisType.ROI1_SUB_ROI2,
-        "ROI1 / ROI2": AnalysisType.ROI1_DIV_ROI2,
-        "proj X (ROI1 - ROI2)": AnalysisType.ROI1_SUB_ROI2_PROJECTION_X,
-        "proj Y (ROI2 - ROI2)": AnalysisType.ROI1_SUB_ROI2_PROJECTION_Y,
+        "ROI1 (proj)": AnalysisType.PROJ_ROI1,
+        "ROI2 (proj)": AnalysisType.PROJ_ROI2,
+        "ROI1 - ROI2 (proj)": AnalysisType.PROJ_ROI1_SUB_ROI2,
+        "ROI1 + ROI2 (proj)": AnalysisType.PROJ_ROI1_ADD_ROI2,
         "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
     })
 
@@ -86,6 +86,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
         layout.addWidget(self._abs_difference_cb, 1, 2, 1, 2, AR)
+
         if self._pulse_resolved:
             layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
             layout.addWidget(self._on_pulse_le, 2, 1)

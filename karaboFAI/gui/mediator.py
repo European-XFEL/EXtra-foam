@@ -16,11 +16,10 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
-from ..pipeline.data_model import DataManagerMixin
 from ..ipc import RedisConnection
 
 
-class Mediator(DataManagerMixin, QObject):
+class Mediator(QObject):
     """Mediator for GUI signal-slot connection.
 
     The behavior of the code should not be affected by when the
@@ -158,19 +157,16 @@ class Mediator(DataManagerMixin, QObject):
         rank, is_visible = value
         self._meta.set(mt.ROI_PROC, f'visibility{rank}', str(is_visible))
 
-    def onRoiFomChange(self, value: IntEnum):
-        self._meta.set(mt.ROI_PROC, 'fom_type', int(value))
+    def onRoiProjDirectChange(self, value: str):
+        self._meta.set(mt.ROI_PROC, 'proj:direction', value)
 
-    def onRoiReset(self):
-        self._meta.set(mt.ROI_PROC, "reset", 1)
-
-    def onProj1dNormalizerChange(self, value: IntEnum):
+    def onRoiProjNormalizerChange(self, value: IntEnum):
         self._meta.set(mt.ROI_PROC, "proj:normalizer", int(value))
 
-    def onProj1dAucRangeChange(self, value: tuple):
+    def onRoiProjAucRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj:auc_range", str(value))
 
-    def onProj1dFomIntegRangeChange(self, value: tuple):
+    def onRoiProjFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
 
     def onCorrelationAnalysisTypeChange(self, value: IntEnum):
@@ -180,7 +176,6 @@ class Mediator(DataManagerMixin, QObject):
         # index, device ID, property name, resolution
         # index starts from 1
         index, device_id, ppt, resolution = value
-        self.add_correlation(index, device_id, ppt, resolution)
         self._meta.set(mt.CORRELATION_PROC, f'device_id{index}', device_id)
         self._meta.set(mt.CORRELATION_PROC, f'property{index}', ppt)
         self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)

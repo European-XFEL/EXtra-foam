@@ -15,7 +15,8 @@ import copy
 from ..exceptions import ProcessingError
 from ...metadata import MetaProxy
 from ...metadata import Metadata as mt
-from ...config import AnalysisType
+from ...algorithms import normalize_auc
+from ...config import AnalysisType, VFomNormalizer
 
 
 def _get_slow_data(tid, raw, device_id, ppt):
@@ -25,25 +26,189 @@ def _get_slow_data(tid, raw, device_id, ppt):
     :param dict raw: raw data.
     :param str device_id: device ID.
     :param str ppt: property name.
+
+    :returns (value, error str)
     """
+    if not device_id or not ppt:
+        # not activated is not an error
+        return None, ""
+
     if device_id == "Any":
-        return tid
+        return tid, ""
     else:
         try:
             device_data = raw[device_id]
         except KeyError:
-            raise ProcessingError(
-                f"Device '{device_id}' is not in the data!")
+            return None, f"Device '{device_id}' is not in the data!"
 
         try:
             if ppt not in device_data:
                 # from file
                 ppt += '.value'
-            return device_data[ppt]
+            return device_data[ppt], ""
 
         except KeyError:
-            raise ProcessingError(
-                f"'{device_id}'' does not have property '{ppt}'")
+            return None, f"'{device_id}'' does not have property '{ppt}'"
+
+
+def _normalize_vfom(processed, y, normalizer, *, x=None, auc_range=None):
+    """Normalize VFOM.
+
+    :param ProcessedData processed: processed data.
+    :param numpy.ndarray y: y values.
+    :param VFomNormalizer normalizer: normalizer type.
+    :param numpy.ndarray x: x values used with AUC normalizer..
+    :param tuple auc_range: normalization range with AUC normalizer.
+    """
+    if normalizer == VFomNormalizer.AUC:
+        # normalized by area under curve (AUC)
+        normalized = normalize_auc(y, x, *auc_range)
+    else:
+        # normalized by ROI
+        if normalizer == VFomNormalizer.ROI3:
+            denominator = processed.roi.norm3
+        elif normalizer == VFomNormalizer.ROI4:
+            denominator = processed.roi.norm4
+        elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+            denominator = processed.roi.norm3_sub_norm4
+        elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+            denominator = processed.roi.norm3_add_norm4
+        else:
+            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+
+        if denominator is None:
+            raise ProcessingError("ROI normalizer is not available!")
+
+        if denominator == 0:
+            raise ProcessingError("ROI normalizer is zero!")
+
+        normalized = y / denominator
+
+    return normalized
+
+
+def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
+                       x=None, auc_range=None):
+    """Normalize the azimuthal integration result.
+
+    :param ProcessedData processed: processed data.
+    :param numpy.ndarray y_on: pump y values.
+    :param numpy.ndarray y_off: probe y values.
+    :param VFomNormalizer normalizer: normalizer type.
+    :param numpy.ndarray x: x values used with AUC normalizer..
+    :param tuple auc_range: normalization range with AUC normalizer.
+    """
+    if normalizer == VFomNormalizer.AUC:
+        # normalized by area under curve (AUC)
+        normalized_on = normalize_auc(y_on, x, *auc_range)
+        normalized_off = normalize_auc(y_off, x, *auc_range)
+    else:
+        # normalized by ROI
+        on = processed.roi.on
+        off = processed.roi.off
+
+        if normalizer == VFomNormalizer.ROI3:
+            denominator_on = on.norm3
+            denominator_off = off.norm3
+        elif normalizer == VFomNormalizer.ROI4:
+            denominator_on = on.norm4
+            denominator_off = off.norm4
+        elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+            denominator_on = on.norm3_sub_norm4
+            denominator_off = off.norm3_sub_norm4
+        elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+            denominator_on = on.norm3_add_norm4
+            denominator_off = off.norm3_add_norm4
+        else:
+            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+
+        if denominator_on is None:
+            raise ProcessingError("ROI normalizer (on) is not available!")
+
+        if denominator_off is None:
+            raise ProcessingError("ROI normalizer (off) is not available!")
+
+        if denominator_on == 0:
+            raise ProcessingError("ROI normalizer (on) is zero!")
+
+        if denominator_off == 0:
+            raise ProcessingError("ROI normalizer (off) is zero!")
+
+        normalized_on = y_on / denominator_on
+        normalized_off = y_off / denominator_off
+
+    return normalized_on, normalized_off
+
+
+class MovingAverageData:
+    """Moving average data descriptor."""
+    def __init__(self, n=1):
+        """Initialization.
+
+        :param int n: number of moving average data.
+        """
+        self._data = [None] * n
+
+        self._ma_window = 1
+        self._ma_count = 0
+
+    def __get__(self, instance, instance_type):
+        return self._data
+
+    def __set__(self, instance, data):
+        if not isinstance(data, (tuple, list)):
+            data = [data]
+
+        if self._data[0] is not None \
+                and hasattr(self._data[0], 'shape') \
+                and self._data[0].shape != data[0].shape:
+            # reset moving average if data shape changes
+            self._ma_count = 0
+            self._data = [None] * len(self._data)
+
+        if self._ma_window > 1 and self._ma_count > 0:
+            if self._ma_count < self._ma_window:
+                self._ma_count += 1
+                denominator = self._ma_count
+            else:   # self._ma_count == self._ma_window
+                # here is an approximation
+                denominator = self._ma_window
+
+            for i in range(len(self._data)):
+                self._data[i] += (data[i] - self._data[i]) / denominator
+
+        else:  # self._ma_window == 1
+            for i in range(len(self._data)):
+                self._data[i] = data[i]
+            if self._ma_window > 1:
+                self._ma_count = 1  # 0 -> 1
+
+    @property
+    def moving_average_window(self):
+        return self._ma_window
+
+    @moving_average_window.setter
+    def moving_average_window(self, v):
+        if not isinstance(v, int) or v <= 0:
+            v = 1
+
+        if v < self._ma_window:
+            # if the new window size is smaller than the current one,
+            # we reset everything
+            self._ma_window = v
+            self._ma_count = 0
+            self._data = [None] * len(self._data)
+
+        self._ma_window = v
+
+    @property
+    def moving_average_count(self):
+        return self._ma_count
+
+    def clear(self):
+        self._ma_window = 1
+        self._ma_count = 0
+        self._data = [None] * len(self._data)
 
 
 class State(ABC):
