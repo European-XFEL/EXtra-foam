@@ -213,11 +213,9 @@ class TestImageProcessorPr(unittest.TestCase):
         self.assertEqual(2, processed.image.ma_count)
         # test only VIP pulses are kept
         ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt[0],
-                                             processed.image.images[0])
+        np.testing.assert_array_almost_equal(ma_gt[0], processed.image.images[0])
         self.assertIsNone(processed.image.images[1])
-        np.testing.assert_array_almost_equal(ma_gt[2],
-                                             processed.image.images[2])
+        np.testing.assert_array_almost_equal(ma_gt[2], processed.image.images[2])
         self.assertIsNone(processed.image.images[3])
 
         np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
@@ -226,24 +224,6 @@ class TestImageProcessorPr(unittest.TestCase):
         # FIXME: This not true with the c++ code. But will be fixed when
         #        xtensor-python has a new release.
         # self.assertIs(imgs1, proc._raw_data)
-
-        # test keep all pulse images
-        proc._has_analysis = MagicMock(return_value=True)
-
-        imgs3 = np.random.randn(4, 2, 2)
-        imgs3_gt = imgs3.copy()
-        data = {
-            'tid': 3,
-            'assembled': imgs3,
-        }
-
-        proc.process(data)
-        processed = data['processed']
-
-        ma_gt = (imgs1_gt + imgs2_gt + imgs3_gt) / 3.0
-        for i in range(4):
-            np.testing.assert_array_almost_equal(ma_gt[i],
-                                                 processed.image.images[i])
 
     def _gen_data(self, tid):
         imgs = np.random.randn(4, 2, 2)

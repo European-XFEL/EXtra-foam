@@ -118,14 +118,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self._auc_range = self.str2tuple(cfg['auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
 
-        if cfg['enable_pulsed_ai'] == 'True':
-            # Performing azimuthal integration for individual pulses.
-            # It only affect the performance with the pulse-resolved
-            # detectors.
-            self._update_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG)
-        else:
-            self._update_analysis(AnalysisType.UNDEFINED)
-
     def _update_integrator(self):
         if self._integrator is None:
             self._integrator = AzimuthalIntegrator(
@@ -171,7 +163,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         # pulse-resolved azimuthal integration
         # ------------------------------------
 
-        if self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
+        if False:
 
             image_mask = processed.image.image_mask
             threshold_mask = processed.image.threshold_mask
@@ -220,8 +212,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         # train-resolved azimuthal integration
         # ------------------------------------
 
-        if self._has_any_analysis([AnalysisType.TRAIN_AZIMUTHAL_INTEG,
-                                   AnalysisType.PULSE_AZIMUTHAL_INTEG]):
+        if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
             mean_ret = itgt1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial
@@ -242,7 +233,7 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         # pump-probe azimuthal integration
         # ------------------------------------
 
-        if processed.pp.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
+        if processed.pp.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             on_image = processed.pp.image_on
             off_image = processed.pp.image_off
 

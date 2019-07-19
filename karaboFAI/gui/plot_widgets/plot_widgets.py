@@ -53,6 +53,8 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
+        return
+
         momentum = data.pulse.ai.x
         intensities = data.pulse.ai.vfom
 
@@ -91,6 +93,8 @@ class TrainAiWidget(PlotWidget):
         momentum = data.ai.x
 
         if data.pulse_resolved:
+            return
+
             intensities = data.pulse.ai.vfom
             if intensities is None:
                 return
@@ -138,6 +142,8 @@ class PulsedFOMWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
+        return
+
         foms = data.pulse.ai.fom
         if foms is None:
             return

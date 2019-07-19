@@ -82,7 +82,6 @@ class Metadata:
             "normalizer",
             "auc_range",
             "fom_integ_range",
-            "enable_pulsed_ai",
         ],
         PUMP_PROBE_PROC: [
             "mode",

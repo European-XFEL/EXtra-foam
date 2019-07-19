@@ -464,7 +464,7 @@ class ImageData:
                  threshold_mask=(-np.inf, np.inf),
                  ma_window=1,
                  ma_count=1,
-                 keep=None):
+                 poi_indices=None):
         """Initialization.
 
         :param numpy.ndarray data: image data in a train.
@@ -477,8 +477,6 @@ class ImageData:
         :param tuple threshold_mask: threshold mask.
         :param int ma_window: moving average window size.
         :param int ma_count: current moving average count.
-        :param None/list keep: pulse image indices to keep. None for
-            keeping nothing.
 
         Note: data, reference and image_mask must not be modified in-place.
         """
@@ -508,27 +506,17 @@ class ImageData:
 
             self._n_images = images.shape[0]
             self._pulse_resolved = True
-
-            # No matter 'keep' is None or a list, the interface for accessing a
-            # single image is the same.
-            if keep is None:
-                # _images is an numpy.ndarray
-                self._images = data
-            else:
-                if not isinstance(keep, (tuple, list)):
-                    raise TypeError("'keep' must be a tuple or list!")
-                # _images is a list of numpy.ndarray
-                self._images = [None] * self._n_images
-
-                for i in keep:
-                    self._images[i] = data[i]
+            # (temporary solution for now) avoid sending all images around
+            self._images = [None] * self._n_images
+            if poi_indices is not None:
+                for i in poi_indices:
+                    self._images[i] = images[i]
         else:
             # Note: _image is _mean for train-resolved detectors
             self._mean = images
             self._n_images = 1
             self._pulse_resolved = False
-
-            self._images = []  # not used for train-resolved data
+            self._images = images
 
         self._threshold_mask = threshold_mask
 
@@ -553,9 +541,7 @@ class ImageData:
 
     @property
     def images(self):
-        if self.pulse_resolved:
-            return self._images
-        return self._mean
+        return self._images
 
     @property
     def reference(self):

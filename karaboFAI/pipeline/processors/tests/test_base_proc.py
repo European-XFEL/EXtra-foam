@@ -196,24 +196,24 @@ class TestBaseProcessor(unittest.TestCase):
         self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
 
         # set new analysis type for comp1
-        self._comp1._update_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG)
-        self._check_has_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG)
+        self._comp1._update_analysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._check_has_analysis(AnalysisType.AZIMUTHAL_INTEG)
         self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, self._comp2.analysis_type)
-        self.assertEqual(AnalysisType.TRAIN_AZIMUTHAL_INTEG, self._comp1.analysis_type)
+        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG, self._comp1.analysis_type)
 
         # unset analysis type for comp1
         self._comp1._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
         self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, self._comp2.analysis_type)
         self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
-        self._check_has_no_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG)
+        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
 
         # unset analysis type for comp2
         self._comp2._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp1.analysis_type)
         self.assertEqual(AnalysisType.UNDEFINED, self._comp2.analysis_type)
         self._check_has_no_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
-        self._check_has_no_analysis(AnalysisType.TRAIN_AZIMUTHAL_INTEG)
+        self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
 
         # set same analysis type for comp1 and comp2
         self._comp1._update_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)

@@ -135,7 +135,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         self.assertEqual(18, processed.corr.correlation1.y)
 
         # AZIMUTHAL_INTEG
-        proc.analysis_type = AnalysisType.TRAIN_AZIMUTHAL_INTEG
+        proc.analysis_type = AnalysisType.AZIMUTHAL_INTEG
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
         # test unchanged

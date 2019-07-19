@@ -35,7 +35,7 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         "ROI2 (proj)": AnalysisType.PROJ_ROI2,
         "ROI1 - ROI2 (proj)": AnalysisType.PROJ_ROI1_SUB_ROI2,
         "ROI1 + ROI2 (proj)": AnalysisType.PROJ_ROI1_ADD_ROI2,
-        "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
+        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 
     def __init__(self, *args, **kwargs):

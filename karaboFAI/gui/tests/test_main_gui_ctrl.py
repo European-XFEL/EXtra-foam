@@ -152,7 +152,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
         self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
-        widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
         ai_normalizer = VFomNormalizer.ROI3_SUB_ROI4
@@ -165,8 +164,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._cy_le.setText("1000")
 
         proc.update()
-        self.assertEqual(AnalysisType.PULSE_AZIMUTHAL_INTEG,
-                         proc.analysis_type)
         self.assertEqual(itgt_method, proc._integ_method)
         self.assertEqual(ai_normalizer, proc._normalizer)
         self.assertEqual(1024, proc._integ_points)

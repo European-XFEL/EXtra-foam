@@ -246,7 +246,7 @@ class BinProcessor(CompositeProcessor):
             if ret.fom is None:
                 raise ProcessingError(
                     "ROI1 + ROI2 projection result is not available")
-        elif self.analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
+        elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             ret = processed.ai
             if ret.fom is None:
                 raise ProcessingError(

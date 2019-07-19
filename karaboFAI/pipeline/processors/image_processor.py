@@ -115,13 +115,6 @@ class ImageProcessor(CompositeProcessor):
         # be careful, data['assembled'] and self._raw_data share memory
         data['assembled'] = self._raw_data
 
-        keep = None  # keep all
-        # 'keep' is only required by pulsed-resolved data
-        if assembled.ndim == 3 and \
-                not self._has_analysis(AnalysisType.PULSE_AZIMUTHAL_INTEG):
-            # keep only the VIPs
-            keep = self._poi_indices
-
         # update the reference image
         ref = self._cmd_proxy.get_ref_image()
         if ref is not None:
@@ -172,7 +165,7 @@ class ImageProcessor(CompositeProcessor):
             threshold_mask=self._threshold_mask,
             ma_window=ImageProcessor._raw_data.window,
             ma_count=ImageProcessor._raw_data.count,
-            keep=keep
+            poi_indices=self._poi_indices
         )
 
         processed.pp.image_on = on_image

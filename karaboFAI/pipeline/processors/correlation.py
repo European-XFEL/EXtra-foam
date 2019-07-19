@@ -105,7 +105,7 @@ class CorrelationProcessor(CompositeProcessor):
             if fom is None:
                 raise ProcessingError(
                     "ROI1 + ROI2 projection result is not available")
-        elif analysis_type == AnalysisType.TRAIN_AZIMUTHAL_INTEG:
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             fom = processed.ai.fom
             if fom is None:
                 raise ProcessingError(

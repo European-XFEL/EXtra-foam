@@ -47,8 +47,7 @@ class AnalysisType(IntEnum):
     PROJ_ROI2 = 22
     PROJ_ROI1_SUB_ROI2 = 23
     PROJ_ROI1_ADD_ROI2 = 24
-    TRAIN_AZIMUTHAL_INTEG = 41
-    PULSE_AZIMUTHAL_INTEG = 42
+    AZIMUTHAL_INTEG = 41
 
 
 class BinMode(IntEnum):

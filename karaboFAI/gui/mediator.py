@@ -128,9 +128,6 @@ class Mediator(QObject):
     def onAiFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'fom_integ_range', str(value))
 
-    def onAiPulsedIntegStateChange(self, value: bool):
-        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'enable_pulsed_ai', str(value))
-
     def onPpModeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'mode', int(value))
 

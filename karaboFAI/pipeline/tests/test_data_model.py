@@ -279,7 +279,7 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(4, image_data.n_images)
         self.assertTupleEqual((2, 2), image_data.shape)
         self.assertTrue(image_data.pulse_resolved)
-        np.testing.assert_array_equal(np.ones((4, 2, 2)), image_data.images)
+        self.assertTrue(any(img is None for img in image_data.images))
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked_mean)
         self.assertEqual(0.0, image_data.background)
@@ -307,10 +307,6 @@ class TestImageData(unittest.TestCase):
     @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
     def testInitWithSpecifiedParameters(self):
 
-        # test raise
-        with self.assertRaises(TypeError):
-            ImageData(np.ones((2, 2, 2)), keep=1)
-
         # ---------------------
         # pulse-resolved data
         # ---------------------
@@ -321,15 +317,16 @@ class TestImageData(unittest.TestCase):
                                ma_window=4,
                                ma_count=2,
                                background=-100,
-                               keep=[0, 1])
+                               poi_indices=(0, 1))
         self.assertEqual(2e-3, image_data.pixel_size)
         self.assertEqual(3, image_data.n_images)
-        # image_data.images become a list when 'keep' is given.
+
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
                                       image_data.images[0])
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
                                       image_data.images[1])
         self.assertIsNone(image_data.images[2])
+
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
                                       image_data.mean)
         np.testing.assert_array_equal(np.array([[0., 0.], [1., 1.]]),
