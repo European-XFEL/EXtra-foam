@@ -77,7 +77,7 @@ class _SimpleImageData:
         self._image -= v - self._bkg  # in-place operation
         self._bkg = v
 
-        # invalid cache
+        # invalidate cache
         try:
             del self.__dict__['masked']
         except KeyError:
