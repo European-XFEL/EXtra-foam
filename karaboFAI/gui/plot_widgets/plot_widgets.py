@@ -53,8 +53,6 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        return
-
         momentum = data.pulse.ai.x
         intensities = data.pulse.ai.vfom
 
@@ -93,8 +91,6 @@ class TrainAiWidget(PlotWidget):
         momentum = data.ai.x
 
         if data.pulse_resolved:
-            return
-
             intensities = data.pulse.ai.vfom
             if intensities is None:
                 return
@@ -124,8 +120,8 @@ class TrainAiWidget(PlotWidget):
                 self.plotItem.items[0].setData(momentum, intensity)
 
 
-class PulsedFOMWidget(PlotWidget):
-    """PulsedFOMWidget class.
+class PulsesFomInTrainWidget(PlotWidget):
+    """PulsesFomInTrainWidget class.
 
     A widget which allows users to monitor the azimuthal integration FOM
     of each pulse with respect to the first pulse in a train.
@@ -136,14 +132,12 @@ class PulsedFOMWidget(PlotWidget):
 
         self._plot = self.plotBar()
 
-        self.setLabel('left', "Integrated difference (arb.)")
+        self.setLabel('left', "FOM")
         self.setLabel('bottom', "Pulse index")
-        self.setTitle('FOM with respect to the first pulse')
+        self.setTitle('Analysis type')
 
     def update(self, data):
         """Override."""
-        return
-
         foms = data.pulse.ai.fom
         if foms is None:
             return

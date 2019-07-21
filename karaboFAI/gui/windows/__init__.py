@@ -7,6 +7,7 @@ from .pump_probe_w import PumpProbeWindow
 from .roi_w import RoiWindow
 from .xas_w import XasWindow
 from .bin_w import Bin1dWindow, Bin2dWindow
+from .pulses_in_train_w import PulsesInTrainWindow
 
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "ImageToolWindow",
     "OverviewWindow",
     "PulsedAzimuthalIntegrationWindow",
+    "PulsesInTrainWindow",
     "PumpProbeWindow",
     "RoiWindow",
     'XasWindow',

@@ -52,10 +52,13 @@ class _SimpleImageData:
 
         self._pixel_size = image_data.pixel_size
 
-        # copy an image is expensive but we should make sure that other
-        # GUI code cannot modify the image data.
+        # This is only used for reset the image in the ImageTool, which
+        # does not occur very often. Therefore, the copy is used to avoid
+        # data sharing.
         # Note: image_data.mean does not contain any NaN
-        self._image = image_data.mean
+        self._image = image_data.mean.copy()
+
+        # Note:: we do not copy 'masked_mean' since it also includes image_mask
 
         # image mask is plotted on top of the image in ImageTool
 
@@ -92,12 +95,6 @@ class _SimpleImageData:
         if mask == self._threshold_mask:
             return
 
-        if not isinstance(mask, (tuple, list)):
-            raise TypeError("Threshold mask must be a tuple or a list!")
-
-        if len(mask) != 2:
-            raise ValueError("Length of threshold mask must be 2!")
-
         self._threshold_mask = mask
 
         # invalid cache
@@ -111,22 +108,8 @@ class _SimpleImageData:
 
     @classmethod
     def from_array(cls, arr):
-        """Instantiate from an array.
-
-        This is the second constructor.
-        """
-        instance = cls.__new__(cls)
-
-        image_data = ImageData(arr)
-
-        instance._pixel_size = image_data.pixel_size
-        instance._image = ImageData.mean
-        # set the cached property
-        instance.__dict__['masked'] = image_data.masked_mean
-        instance._bkg = image_data.background
-        instance._threshold_mask = image_data.threshold_mask
-
-        return instance
+        """Instantiate from an array."""
+        return cls(ImageData.from_array(arr))
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -364,6 +347,9 @@ class _ImageActionWidget(QtGui.QWidget):
         self.moving_avg_le = SmartLineEdit(str(1))
         self.moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
         self.moving_avg_le.setMinimumWidth(60)
+
+        if config['PULSE_RESOLVED']:
+            self.moving_avg_le.setEnabled(False)
 
         self.threshold_mask_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["MASK_RANGE"]]))

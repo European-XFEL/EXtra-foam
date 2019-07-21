@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from karaboFAI.pipeline.data_model import ProcessedData
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.pipeline.processors import CorrelationProcessor
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
@@ -25,10 +25,11 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc = CorrelationProcessor()
         proc._reset = True
 
+        processed = ProcessedData(1001)
+        processed.image = ImageData.from_array(np.random.randn(2, 2))
         data = {'tid': 1001,
-                'processed': ProcessedData(1001, np.random.randn(2, 2)),
+                'processed': processed,
                 'raw': dict()}
-        processed = data['processed']
 
         proc.process(data)
 
@@ -40,11 +41,11 @@ class TestCorrelationProcessor(unittest.TestCase):
     def testFomExtraction(self):
         proc = CorrelationProcessor()
 
+        processed = ProcessedData(1001)
+        processed.image = ImageData.from_array(np.random.randn(2, 2))
         data = {'tid': 1001,
-                'processed': ProcessedData(1001, np.random.randn(2, 2)),
+                'processed': processed,
                 'raw': dict()}
-
-        processed = data['processed']
 
         # PUMP_PROBE_FOM
         proc.analysis_type = AnalysisType.PUMP_PROBE
@@ -151,8 +152,10 @@ class TestCorrelationProcessor(unittest.TestCase):
     def testCorrelatorExtraction(self):
         proc = CorrelationProcessor()
 
+        processed = ProcessedData(1001)
+        processed.image = ImageData.from_array(np.random.randn(2, 2))
         data = {'tid': 1001,
-                'processed': ProcessedData(1001, np.random.randn(2, 2)),
+                'processed': processed,
                 'raw': {
                     'A': {'e': 1},
                     'B': {'f': 2},
@@ -160,7 +163,6 @@ class TestCorrelationProcessor(unittest.TestCase):
                     'D': {'h': 4}
                 }
         }
-        processed = data['processed']
 
         proc._device_ids = ['A', 'B', 'C', 'D']
         proc._properties = ['e', 'f', 'g', 'h']

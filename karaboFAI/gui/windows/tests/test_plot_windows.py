@@ -11,12 +11,12 @@ from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
     Bin1dWindow, Bin2dWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
-    PumpProbeWindow, RoiWindow, XasWindow
+    PulsesInTrainWindow, PumpProbeWindow, RoiWindow, XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsedFOMWidget, SinglePulseAiWidget, SinglePulseImageView,
+    PulsesFomInTrainWidget, SinglePulseAiWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
@@ -111,7 +111,7 @@ class TestOverviewWindow(unittest.TestCase):
 
     def testCorrelationWindow(self):
 
-        self.gui._tool_bar.actions()[5].trigger()
+        self.gui._tool_bar.actions()[6].trigger()
         win = list(self.gui._windows.keys())[-1]
 
         self.assertEqual(4, len(win._plot_widgets))
@@ -126,7 +126,8 @@ class TestOverviewWindow(unittest.TestCase):
         # -----------------------
 
         # the upper two plots have error bars
-        data = ProcessedData(1, np.arange(480).reshape((120, 2, 2)))
+        data = ProcessedData(1)
+        data.image.images = np.arange(480).reshape((120, 2, 2))
         for i in range(1000):
             data.corr.correlation1.hist = (int(i/5), 100*i)
             data.corr.correlation2.hist = (int(i/5), -100*i)
@@ -155,6 +156,16 @@ class TestOverviewWindow(unittest.TestCase):
         win.update()
         app.processEvents()
 
+    def testPulsesInTrainWindow(self):
+        win = PulsesInTrainWindow(pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(2, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(2, counter[PulsesFomInTrainWidget])
+
 
 class TestPulsedAiWindow(unittest.TestCase):
     def testPulseResolved(self):
@@ -163,13 +174,12 @@ class TestPulsedAiWindow(unittest.TestCase):
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
 
-        self.assertEqual(6, len(self._win._plot_widgets))
+        self.assertEqual(5, len(self._win._plot_widgets))
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[TrainAiWidget])
-        self.assertEqual(1, counter[PulsedFOMWidget])
         self.assertEqual(2, counter[SinglePulseAiWidget])
         self.assertEqual(2, counter[SinglePulseImageView])
 

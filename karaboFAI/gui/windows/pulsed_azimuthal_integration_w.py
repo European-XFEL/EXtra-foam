@@ -14,8 +14,7 @@ from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
 from ..plot_widgets import (
-    TrainAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
-    SinglePulseImageView
+    TrainAiWidget, SinglePulseAiWidget, SinglePulseImageView
 )
 from ...config import config
 
@@ -38,8 +37,6 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
 
         if self._pulse_resolved:
             self._ai = TrainAiWidget(parent=self)
-
-            self._sample_degradation = PulsedFOMWidget(parent=self)
 
             self._vip1_ai_dock = None
             self._vip1_img_dock = None
@@ -89,14 +86,9 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
 
             # right column
 
-            sample_degradation_dock = Dock(
-                "Pulse-resolved FOM", size=(self._RW, self._RH1))
-            self._docker_area.addDock(sample_degradation_dock, 'right')
-            sample_degradation_dock.addWidget(self._sample_degradation)
-
             ai_dock = Dock("Normalized azimuthal Integration",
                            size=(self._RW, self._RH2))
-            self._docker_area.addDock(ai_dock, 'top', sample_degradation_dock)
+            self._docker_area.addDock(ai_dock, 'right')
             ai_dock.addWidget(self._ai)
 
             self._vip1_ai_dock = Dock("VIP pulse 0000 - AI",

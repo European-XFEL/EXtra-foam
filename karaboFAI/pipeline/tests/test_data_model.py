@@ -216,7 +216,7 @@ class TestPumpProbeData(unittest.TestCase):
         np.testing.assert_array_equal([1, 2], foms)
 
         data.reset = True
-        data.fom =3
+        data.fom = 3
         data.update_hist(33)
         tids, foms, _ = data.fom_hist
         np.testing.assert_array_equal([33], tids)
@@ -229,80 +229,40 @@ class TestProcessedData(unittest.TestCase):
         # pulse-resolved data
         # ---------------------
 
-        data = ProcessedData(1234, np.zeros((1, 2, 2)))
+        data = ProcessedData(1234)
 
         self.assertEqual(1234, data.tid)
+        self.assertEqual(0, data.n_pulses)
+
+        data.image = ImageData.from_array(np.zeros((1, 2, 2)))
         self.assertEqual(1, data.n_pulses)
-        self.assertTrue(data.pulse_resolved)
 
-        data = ProcessedData(1235, np.zeros((3, 2, 2)))
-
+        data = ProcessedData(1235)
+        data.image = ImageData.from_array(np.zeros((3, 2, 2)))
         self.assertEqual(3, data.n_pulses)
-        self.assertTrue(data.pulse_resolved)
 
         # ---------------------
         # train-resolved data
         # ---------------------
 
-        data = ProcessedData(1236, np.zeros((2, 2)))
+        data = ProcessedData(1236)
+        data.image = ImageData.from_array(np.zeros((2, 2)))
 
         self.assertEqual(1236, data.tid)
         self.assertEqual(1, data.n_pulses)
-        self.assertFalse(data.pulse_resolved)
 
 
 class TestImageData(unittest.TestCase):
 
-    def testInvalidInput(self):
+    def testFromArray(self):
         with self.assertRaises(TypeError):
-            ImageData()
+            ImageData.from_array()
 
         with self.assertRaises(ValueError):
-            ImageData(np.arange(2))
+            ImageData.from_array(np.arange(2))
 
         with self.assertRaises(ValueError):
-            ImageData(np.arange(16).reshape((2, 2, 2, 2)))
-
-    @patch.dict(config._data, {'PIXEL_SIZE': 1e-3})
-    def testInitWithDefaultParameters(self):
-
-        # ---------------------
-        # pulse-resolved data
-        # ---------------------
-
-        # test automatically convert dtype to np.float32
-        self.assertEqual(ImageData(np.arange(4).reshape((2, 2))).mean.dtype,
-                         np.float32)
-
-        image_data = ImageData(np.ones((4, 2, 2)))
-        self.assertEqual(1e-3, image_data.pixel_size)
-        self.assertEqual(4, image_data.n_images)
-        self.assertTupleEqual((2, 2), image_data.shape)
-        self.assertTrue(image_data.pulse_resolved)
-        self.assertTrue(any(img is None for img in image_data.images))
-        np.testing.assert_array_equal(np.ones((2, 2)), image_data.mean)
-        np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked_mean)
-        self.assertEqual(0.0, image_data.background)
-        self.assertEqual((-np.inf, np.inf), image_data.threshold_mask)
-        self.assertEqual(1, image_data.ma_window)
-        self.assertEqual(1, image_data.ma_count)
-
-        # ---------------------
-        # train-resolved data
-        # ---------------------
-
-        image_data = ImageData(np.array([[1, 0], [np.nan, 1]]))
-
-        self.assertEqual(1, image_data.n_images)
-        self.assertTupleEqual((2, 2), image_data.shape)
-        self.assertFalse(image_data.pulse_resolved)
-        np.testing.assert_array_equal(np.array([[1, 0], [np.nan, 1]]),
-                                      image_data.mean)
-        self.assertIs(image_data.mean, image_data.images)
-        # nan should be converted to 0 after masking
-        np.testing.assert_array_equal(np.array([[1, 0], [0, 1]]),
-                                      image_data.masked_mean)
-        self.assertIsNot(image_data.masked_mean, image_data.mean)
+            ImageData.from_array(np.arange(16).reshape((2, 2, 2, 2)))
 
     @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
     def testInitWithSpecifiedParameters(self):
@@ -312,12 +272,11 @@ class TestImageData(unittest.TestCase):
         # ---------------------
         imgs = np.ones((3, 2, 2))
         imgs[:, 0, :] = 2
-        image_data = ImageData(imgs,
-                               threshold_mask=(0, 1),
-                               ma_window=4,
-                               ma_count=2,
-                               background=-100,
-                               poi_indices=(0, 1))
+        image_data = ImageData.from_array(imgs,
+                                          threshold_mask=(0, 1),
+                                          background=-100,
+                                          poi_indices=[0, 1])
+
         self.assertEqual(2e-3, image_data.pixel_size)
         self.assertEqual(3, image_data.n_images)
 
@@ -333,18 +292,15 @@ class TestImageData(unittest.TestCase):
                                       image_data.masked_mean)
         self.assertEqual(-100, image_data.background)
         self.assertEqual((0, 1), image_data.threshold_mask)
-        self.assertEqual(4, image_data.ma_window)
-        self.assertEqual(2, image_data.ma_count)
 
         # ---------------------
         # train-resolved data
         # ---------------------
         img = np.ones((2, 2))
         img[0, 0] = 2
-        image_data = ImageData(img, threshold_mask=(0, 1))
+        image_data = ImageData.from_array(img, threshold_mask=(0, 1))
 
         self.assertEqual(1, image_data.n_images)
-        self.assertTupleEqual((2, 2), image_data.shape)
         np.testing.assert_array_equal(np.array([[2., 1.], [1., 1.]]),
                                       image_data.mean)
         np.testing.assert_array_equal(np.array([[0., 1.], [1., 1.]]),

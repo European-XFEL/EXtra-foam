@@ -295,25 +295,6 @@ class DataItem:
         self.y_label = y_label
 
 
-class DataItemPulse:
-    """Pulse-resolved data item.
-
-    Attributes:
-        x (numpy.array): x coordinate of VFOM.
-        vfom (list of numpy.array): list of vector figure-of-merits.
-        fom (list of float): list of figure-of-merit.
-        x_label (str): x label used in plots.
-        y_label (str): y label used in plots.
-    """
-    def __init__(self, x_label="", y_label=""):
-        self.x = None
-        self.vfom = []
-        self.fom = []
-
-        self.x_label = x_label
-        self.y_label = y_label
-
-
 class XgmData:
     def __init__(self):
         self.intensity = DataItem()
@@ -433,119 +414,41 @@ class ImageData:
     Once constructed, the internal data are not allowed to be modified.
 
     Attributes:
-        _images (list): a list of pulse images in the train. A value of
+        pixel_size (float): pixel size of the detector.
+        images (list): a list of pulse images in the train. A value of
             None only indicates that the corresponding pulse image is
             not needed (in the main process).
-        pixel_size (float): pixel size of the detector.
-        n_images (int): number of images in the train.
-        background (float): a uniform background value.
-        ma_window (int): moving average window size.
         ma_count (int): current moving average count.
+        n_images (int): number of images in the train.
+        poi_indices (list): indices of pulses of interest.
+        background (float): a uniform background value.
+        image_mask (numpy.ndarray): image mask with dtype=np.bool.
         threshold_mask (tuple): (lower, upper) boundaries of the
             threshold mask.
+        reference (numpy.ndarray): reference image.
         mean (numpy.ndarray): average image over the train.
         masked_mean (numpy.ndarray): average image over the train with
             threshold mask applied.
-        ref (numpy.ndarray): reference image.
-        masked_ref (numpy.ndarray): reference image with threshold mask
-            applied.
     """
 
-    if 'IMAGE_DTYPE' in config:
-        _DEFAULT_DTYPE = config['IMAGE_DTYPE']
-    else:
-        _DEFAULT_DTYPE = np.float32
-
-    def __init__(self, data, *,
-                 mean=None,
-                 reference=None,
-                 background=0.0,
-                 image_mask=None,
-                 threshold_mask=(-np.inf, np.inf),
-                 ma_window=1,
-                 ma_count=1,
-                 poi_indices=None):
-        """Initialization.
-
-        :param numpy.ndarray data: image data in a train.
-        :param numpy.ndarray mean: nanmean of image data in a train. If not
-            given, it will be calculated based on the image data. Only used
-            for pulse-resolved detectors.
-        :param numpy.ndarray reference: reference image.
-        :param float background: a uniform background value.
-        :param numpy.ndarray image_mask: image mask.
-        :param tuple threshold_mask: threshold mask.
-        :param int ma_window: moving average window size.
-        :param int ma_count: current moving average count.
-
-        Note: data, reference and image_mask must not be modified in-place.
-        """
-        if not isinstance(data, np.ndarray):
-            raise TypeError(r"Image data must be numpy.ndarray!")
-
-        if data.ndim <= 1 or data.ndim > 3:
-            raise ValueError(f"The shape of image data must be (y, x) or "
-                             f"(n_pulses, y, x)!")
-
+    def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
 
-        if data.dtype != self._DEFAULT_DTYPE:
-            # FIXME: dtype of the incoming data could be integer, but integer
-            #        array does not have nanmean.
-            images = data.astype(self._DEFAULT_DTYPE)
-        else:
-            images = data
+        self.images = None
+        self.ma_count = 0
 
-        self._shape = images.shape[-2:]
+        self.poi_indices = [0, 0]
 
-        if data.ndim == 3:
-            if mean is None:
-                self._mean = xt_nanmean_images(images)
-            else:
-                self._mean = mean
+        self.background = None
+        self.image_mask = None
+        self.threshold_mask = None
 
-            self._n_images = images.shape[0]
-            self._pulse_resolved = True
-            # (temporary solution for now) avoid sending all images around
-            self._images = [None] * self._n_images
-            if poi_indices is not None:
-                for i in poi_indices:
-                    self._images[i] = images[i]
-        else:
-            # Note: _image is _mean for train-resolved detectors
-            self._mean = images
-            self._n_images = 1
-            self._pulse_resolved = False
-            self._images = images
+        self.index_mask = None
 
-        self._threshold_mask = threshold_mask
+        self.reference = None
 
-        # if image_mask is given, we assume that the shape of the image
-        # mask is the same as the image. This is guaranteed in
-        # ImageProcessor.
-        self._image_mask = image_mask
-
-        # self._masked_mean does not share memory with self._mean
-        self._masked_mean = self._mean.copy()
-        mask_image(self._masked_mean,
-                   threshold_mask=threshold_mask,
-                   image_mask=image_mask,
-                   inplace=True)
-
-        self._ref = reference
-
-        self._bkg = background
-
-        self._ma_window = ma_window
-        self._ma_count = ma_count
-
-    @property
-    def images(self):
-        return self._images
-
-    @property
-    def reference(self):
-        return self._ref
+        self.mean = None
+        self.masked_mean = None
 
     @property
     def pixel_size(self):
@@ -553,43 +456,62 @@ class ImageData:
 
     @property
     def n_images(self):
-        return self._n_images
+        if self.images is None:
+            return 0
 
-    @property
-    def pulse_resolved(self):
-        return self._pulse_resolved
+        if isinstance(self.images, list):
+            return len(self.images)
+        return 1
 
-    @property
-    def shape(self):
-        return self._shape
+    @classmethod
+    def from_array(cls, arr, *,
+                   ma_count=1.0,
+                   background=0.0,
+                   image_mask=None,
+                   threshold_mask=None,
+                   poi_indices=None):
+        """Construct a self-consistant ImageData."""
+        if arr is not None:
+            if not isinstance(arr, np.ndarray):
+                raise TypeError(r"Image data must be numpy.ndarray!")
 
-    @property
-    def background(self):
-        return self._bkg
+            if arr.ndim <= 1 or arr.ndim > 3:
+                raise ValueError(f"The shape of image data must be (y, x) or "
+                                 f"(n_pulses, y, x)!")
 
-    @property
-    def ma_window(self):
-        return self._ma_window
+            image_dtype = config['IMAGE_DTYPE']
+            if arr.dtype != image_dtype:
+                # FIXME: dtype of the incoming data could be integer, but integer
+                #        array does not have nanmean.
+                arr = arr.astype(image_dtype)
 
-    @property
-    def ma_count(self):
-        return self._ma_count
+        instance = cls()
+        instance.images = arr
+        instance.ma_count = ma_count
 
-    @property
-    def threshold_mask(self):
-        return self._threshold_mask
+        if arr.ndim == 3:
+            arr_mean = xt_nanmean_images(arr)
+            image_list = [None] * len(arr)
+            if poi_indices is None:
+                poi_indices = [0, 0]
+            for i in poi_indices:
+                image_list[i] = arr[i]
+            instance.images = image_list
+        else:
+            arr_mean = arr
 
-    @property
-    def image_mask(self):
-        return self._image_mask
+        instance.poi_indices = poi_indices
 
-    @property
-    def mean(self):
-        return self._mean
+        instance.mean = arr_mean
+        instance.masked_mean = mask_image(arr_mean,
+                                          threshold_mask=threshold_mask,
+                                          image_mask=image_mask,
+                                          inplace=False)
+        instance.image_mask = image_mask
+        instance.threshold_mask = threshold_mask
+        instance.background = background
 
-    @property
-    def masked_mean(self):
-        return self._masked_mean
+        return instance
 
 
 class BinData:
@@ -769,12 +691,9 @@ class CorrelationData:
 class ProcessedData:
     """A class which stores the processed data.
 
-    ProcessedData also provide interface for manipulating the other node
-    dataset, e.g. RoiData, CorrelationData, PumpProbeData.
-
     Attributes:
-        _tid (int): train ID.
-        _image (ImageData): image data.
+        tid (int): train ID.
+        image (ImageData): image data.
         xgm (XgmData): XGM train-resolved data.
         ai (AzimuthalIntegrationData): azimuthal integration train-resolved data.
         pp (PumpProbeData): pump-probe train-resolved data.
@@ -784,11 +703,16 @@ class ProcessedData:
         correlation (CorrelationData): correlation related data.
         bin (BinData): binning data.
     """
-    def __init__(self, tid, images, **kwargs):
+    class PulseData:
+        """Container for pulse-resolved data."""
+        def __init__(self):
+            self.ai = AzimuthalIntegrationData()
+
+    def __init__(self, tid):
         """Initialization."""
         self._tid = tid  # train ID
 
-        self._image = ImageData(images, **kwargs)
+        self.image = ImageData()
 
         self.roi = RoiData()
         self.xgm = XgmData()
@@ -799,21 +723,15 @@ class ProcessedData:
         self.corr = CorrelationData()
         self.bin = BinData()
 
+        self.pulse = self.PulseData()
+
     @property
     def tid(self):
         return self._tid
 
     @property
-    def image(self):
-        return self._image
-
-    @property
-    def pulse_resolved(self):
-        return self.image.pulse_resolved
-
-    @property
     def n_pulses(self):
-        return self._image.n_images
+        return self.image.n_images
 
     def update(self):
         self.pp.update_hist(self._tid)

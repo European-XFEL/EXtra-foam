@@ -13,7 +13,6 @@ from abc import ABC, abstractmethod
 
 import json
 import numpy as np
-from h5py import File
 
 from karabo_data import stack_detector_data
 from karabo_data.geometry2 import (
@@ -134,8 +133,16 @@ class ImageAssemblerFactory(ABC):
             except ValueError as e:
                 raise AssemblingError(e)
 
-            # assembled is a temporary item which will be need in ImageProcessor
-            data['assembled'] = self._modules_to_assembled(modules_data)
+            assembled = self._modules_to_assembled(modules_data)
+
+            image_dtype = config['IMAGE_DTYPE']
+            if assembled.dtype != image_dtype:
+                # FIXME: dtype of the incoming data could be integer, but integer
+                #        array does not have nanmean.
+                assembled = assembled.astype(image_dtype)
+            # TODO: in the future, the data should be store at a shared
+            #       memory space.
+            data['assembled'] = assembled
 
     class AgipdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src_name):

@@ -34,10 +34,10 @@ def energy2wavelength(energy):
     return HC_E / energy
 
 
-class AzimuthalIntegrationProcessor(CompositeProcessor):
-    """AzimuthalIntegrationProcessor class.
+class _AzimuthalIntegrationProcessorBase(CompositeProcessor):
+    """_AzimuthalIntegrationProcessorBase class.
 
-    Perform azimuthal integration.
+    Base class for azimuthal integration processor.
 
     Attributes:
         _sample_dist (float): distance from the sample to the
@@ -62,10 +62,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         _ma_window (int): moving average window size.
     """
 
-    _intensity_ma = MovingAverageArray()
-    _intensity_on_ma = MovingAverageArray()
-    _intensity_off_ma = MovingAverageArray()
-
     def __init__(self):
         super().__init__()
 
@@ -85,17 +81,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
         self._fom_integ_range = None
 
         self._integrator = None
-
-        self._ma_window = 1
-        self._ma_reset = False
-
-    def _update_moving_average(self, v):
-        if self._ma_window != v:
-            self.__class__._intensity_ma.window = v
-            self.__class__._intensity_on_ma.window = v
-            self.__class__._intensity_off_ma.window = v
-
-        self._ma_window = v
 
     def update(self):
         """Override."""
@@ -146,7 +131,31 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
 
         return self._integrator
 
-    @profiler("Azimuthal Integration Processor")
+
+class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
+    """AzimuthalIntegrationProcessorTrain class.
+
+    Train-resolved azimuthal integration processor.
+    """
+    _intensity_ma = MovingAverageArray()
+    _intensity_on_ma = MovingAverageArray()
+    _intensity_off_ma = MovingAverageArray()
+
+    def __init__(self):
+        super().__init__()
+
+        self._ma_window = 1
+        self._ma_reset = False
+
+    def _update_moving_average(self, v):
+        if self._ma_window != v:
+            self.__class__._intensity_ma.window = v
+            self.__class__._intensity_on_ma.window = v
+            self.__class__._intensity_off_ma.window = v
+
+        self._ma_window = v
+
+    @profiler("Azimuthal Integration Processor (Train)")
     def process(self, data):
         processed = data['processed']
 
@@ -158,59 +167,6 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
                                    polarization_factor=1,
                                    unit="q_A^-1")
         integ_points = self._integ_points
-
-        # ------------------------------------
-        # pulse-resolved azimuthal integration
-        # ------------------------------------
-
-        if False:
-
-            image_mask = processed.image.image_mask
-            threshold_mask = processed.image.threshold_mask
-
-            pulse_images = processed.image.images
-            # pulse_images could also be a list in the process of analysis
-            # type switching
-            if isinstance(pulse_images, np.ndarray):
-
-                def _integrate1d_imp(i):
-                    masked = mask_image(pulse_images[i],
-                                        threshold_mask=threshold_mask,
-                                        image_mask=image_mask)
-                    return itgt1d(masked, integ_points)
-
-                intensities = []  # pulsed A.I.
-                with ThreadPoolExecutor(max_workers=4) as executor:
-                    for i, ret in zip(range(len(pulse_images)),
-                                      executor.map(_integrate1d_imp,
-                                                   range(len(pulse_images)))):
-                        if i == 0:
-                            momentum = ret.radial
-                        intensities.append(_normalize_vfom(
-                            processed, ret.intensity, self._normalizer,
-                            x=momentum, auc_range=self._auc_range))
-
-                # calculate the difference between each pulse and the
-                # first one
-                diffs = [p - intensities[0] for p in intensities]
-
-                # calculate the figure of merit for each pulse
-                foms = []
-                for diff in diffs:
-                    fom = slice_curve(
-                        diff, momentum, *self._fom_integ_range)[0]
-                    foms.append(np.sum(np.abs(fom)))
-
-                processed.pulse.ai.x = momentum
-                processed.pulse.ai.vfom = intensities
-                processed.pulse.ai.fom = foms
-                # It is not correct to calculate the mean of intensities since
-                # the result is equivalent to setting all nan to zero instead
-                # of nanmean.
-
-        # ------------------------------------
-        # train-resolved azimuthal integration
-        # ------------------------------------
 
         if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
             mean_ret = itgt1d(processed.image.masked_mean, integ_points)
@@ -266,3 +222,66 @@ class AzimuthalIntegrationProcessor(CompositeProcessor):
                 processed.pp.vfom = vfom
                 processed.pp.x = momentum
                 processed.pp.fom = fom
+
+
+class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
+    """AzimuthalIntegrationProcessorPulse class.
+
+    Pulse-resolved azimuthal integration processor.
+    """
+    def _update_moving_average(self, v):
+        pass
+
+    @profiler("Azimuthal Integration Processor (Pulse)")
+    def process(self, data):
+        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
+            return
+
+        processed = data['processed']
+        assembled = data['assembled']
+
+        integrator = self._update_integrator()
+        itgt1d = functools.partial(integrator.integrate1d,
+                                   method=self._integ_method,
+                                   radial_range=self._integ_range,
+                                   correctSolidAngle=True,
+                                   polarization_factor=1,
+                                   unit="q_A^-1")
+        integ_points = self._integ_points
+
+        threshold_mask = processed.image.threshold_mask
+
+        def _integrate1d_imp(i):
+            masked = mask_image(assembled[i], threshold_mask=threshold_mask)
+            return itgt1d(masked, integ_points)
+
+        intensities = []  # pulsed A.I.
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            for i, ret in zip(range(len(assembled)),
+                              executor.map(_integrate1d_imp,
+                                           range(len(assembled)))):
+                if i == 0:
+                    momentum = ret.radial
+                intensities.append(ret.intensity)
+
+        # intensities = _normalize_vfom(
+        #     processed, np.array(intensities), self._normalizer,
+        #     x=momentum, auc_range=self._auc_range)
+
+        # calculate the difference between each pulse and the
+        # first one
+        diffs = [p - intensities[0] for p in intensities]
+
+        # calculate the figure of merit for each pulse
+        foms = []
+        for diff in diffs:
+            fom = slice_curve(
+                diff, momentum, *self._fom_integ_range)[0]
+            foms.append(np.sum(np.abs(fom)))
+
+        processed.pulse.ai.x = momentum
+        processed.pulse.ai.vfom = intensities
+        processed.pulse.ai.fom = foms
+        # Note: It is not correct to calculate the mean of intensities
+        #       since the result is equivalent to setting all nan to zero
+        #       instead of nanmean.

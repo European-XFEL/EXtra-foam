@@ -54,11 +54,12 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._start_action = cls._actions[0]
         cls._stop_action = cls._actions[1]
         cls._pp_action = cls._actions[4]
-        cls._correlation_action = cls._actions[5]
-        cls._bin1d_action = cls._actions[6]
-        cls._bin2d_action = cls._actions[7]
-        cls._xas_action = cls._actions[8]
-        cls._pulsed_ai_action = cls._actions[9]
+        cls._pulses_in_train_action = cls._actions[5]
+        cls._correlation_action = cls._actions[6]
+        cls._bin1d_action = cls._actions[7]
+        cls._bin2d_action = cls._actions[8]
+        cls._xas_action = cls._actions[9]
+        cls._pulsed_ai_action = cls._actions[10]
 
     @classmethod
     def tearDownClass(cls):
@@ -74,7 +75,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
 
-        image_proc = image_worker._image_proc
+        image_proc = image_worker._image_proc_pulse
         ai_proc = scheduler._ai_proc
 
         # --------------------------
@@ -197,7 +198,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc
+        image_proc = self.image_worker._image_proc_train
         pp_proc = self.scheduler._pp_proc
 
         all_modes = {value: key for key, value in
@@ -581,7 +582,7 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         self.gui.updateMetaData()
 
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc
+        image_proc = self.image_worker._image_proc_train
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}

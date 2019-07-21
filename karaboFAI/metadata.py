@@ -19,6 +19,7 @@ class Metadata:
     DATA_SOURCE = "metadata:source"
 
     ANALYSIS_TYPE = "metadata:analysis_type"
+    ANALYSIS_TYPE_PULSE = "metadata:analysis_type_pulse"
 
     GLOBAL_PROC = "metadata:proc:global"
     GEOMETRY_PROC = "metadata:proc:geometry"
@@ -29,6 +30,7 @@ class Metadata:
     XAS_PROC = "metadata:proc:xas"
     BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
+    PULSE_FOM_PROC = "metadata:proc:pulse_fom"
 
     _meta = {
         ANALYSIS_TYPE: [
@@ -84,15 +86,14 @@ class Metadata:
             "fom_integ_range",
         ],
         PUMP_PROBE_PROC: [
+            "analysis_type",
             "mode",
             "on_pulse_indices",
             "off_pulse_indices",
             "abs_difference",
-            "analysis_type",
         ],
         CORRELATION_PROC: [
-            "fom_type",
-            "fom_integ_range",
+            "analysis_type",
             "device_id1",
             "device_id2",
             "device_id3",
@@ -111,6 +112,7 @@ class Metadata:
             "bin_range",
         ],
         BIN_PROC: [
+            "analysis_type",
             "device_id_x",
             "device_id_y",
             "property_x",
@@ -119,8 +121,10 @@ class Metadata:
             "n_bins_y",
             "bin_range_x",
             "bin_range_y",
-            "analysis_type",
             "mode",
+        ],
+        PULSE_FOM_PROC: [
+            "analysis_type"
         ]
     }
 

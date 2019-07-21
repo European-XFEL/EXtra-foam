@@ -166,6 +166,9 @@ class Mediator(QObject):
     def onRoiProjFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
 
+    def onPulseFomAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.PULSE_FOM_PROC, "analysis_type", int(value))
+
     def onCorrelationAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
 

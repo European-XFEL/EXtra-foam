@@ -271,7 +271,10 @@ class ImageAnalysis(ImageView):
         self.setImage(image_data.masked)
 
     def setReferenceImage(self):
-        """Set the displayed image as reference image."""
+        """Set the displayed image as reference image.
+
+        Note: image mask is not included in self._image.
+        """
         self._cmd_proxy.set_ref_image(self._image)
 
     def removeReferenceImage(self):

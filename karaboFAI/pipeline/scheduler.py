@@ -12,8 +12,8 @@ All rights reserved.
 from .worker import ProcessWorker
 from .pipe import MpInQueue, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessor, BinProcessor, CorrelationProcessor,
-    PumpProbeProcessor, XgmProcessor, RoiProcessor, XasProcessor
+    AzimuthalIntegrationProcessorTrain, BinProcessor, CorrelationProcessor,
+    PumpProbeProcessor, RoiProcessor, XasProcessor, XgmProcessor,
 )
 
 
@@ -33,10 +33,15 @@ class Scheduler(ProcessWorker):
         self._bin_proc = BinProcessor()
 
         self._roi_proc = RoiProcessor()
-        self._ai_proc = AzimuthalIntegrationProcessor()
+        self._ai_proc = AzimuthalIntegrationProcessorTrain()
         self._xas_proc = XasProcessor()
 
         self._tasks = [
-            self._xgm_proc, self._pp_proc, self._roi_proc, self._ai_proc,
-            self._correlation_proc, self._bin_proc, self._xas_proc
+            self._xgm_proc,
+            self._pp_proc,
+            self._roi_proc,
+            self._ai_proc,
+            self._correlation_proc,
+            self._bin_proc,
+            self._xas_proc
         ]

@@ -136,7 +136,7 @@ class ProcessWorker(mp.Process):
 
         :param dict data: a dictionary which is passed around processors.
         """
-        tid = data['tid']
+        tid = data['processed'].tid
 
         for task in self._tasks:
             # TODO: improve

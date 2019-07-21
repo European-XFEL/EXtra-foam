@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import MagicMock
 import numpy as np
 
-from karaboFAI.pipeline.data_model import ProcessedData
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.processors.roi import _RectROI, RoiProcessor
 from karaboFAI.config import AnalysisType, VFomNormalizer
@@ -60,8 +60,9 @@ class TestRoiProcessor(unittest.TestCase):
         self._proc._fom_integ_range = (0, 1000)
 
     def _get_data(self):
-        processed = ProcessedData(1001, np.ones((20, 20), dtype=np.float32))
-        return {'tid': 1001, 'processed': processed, 'raw': dict()}, processed
+        processed = ProcessedData(1001)
+        processed.image = ImageData.from_array(np.ones((20, 20)))
+        return {'processed': processed, 'raw': dict()}, processed
 
     def testRoiFom(self):
         proc = self._proc

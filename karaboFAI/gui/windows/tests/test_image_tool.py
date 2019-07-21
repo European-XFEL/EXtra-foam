@@ -31,18 +31,12 @@ class TestSimpleImageData(unittest.TestCase):
             _SimpleImageData([1, 2, 3])
 
         gt_data = np.arange(9).reshape(3, 3)
-        img_data = _SimpleImageData(ImageData(gt_data))
+        img_data = _SimpleImageData.from_array(gt_data)
 
         img_data.background = 1
         np.testing.assert_array_equal(gt_data - 1, img_data.masked)
         img_data.background = 0
         np.testing.assert_array_equal(gt_data, img_data.masked)
-
-        with self.assertRaises(TypeError):
-            img_data.threshold_mask = 1
-
-        with self.assertRaises(ValueError):
-            img_data.threshold_mask = [1, 2, 3]
 
         img_data.threshold_mask = (3, 6)
         np.testing.assert_array_equal(mask_image(gt_data, threshold_mask=(3, 6)),
@@ -62,7 +56,7 @@ class TestSimpleImageData(unittest.TestCase):
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked)
         self.assertEqual(1e-3, image_data.pixel_size)
         self.assertEqual(0, image_data.background)
-        self.assertEqual((-np.inf, np.inf), image_data.threshold_mask)
+        self.assertEqual(None, image_data.threshold_mask)
 
 
 class TestImageTool(unittest.TestCase):
@@ -194,14 +188,10 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
-    @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
-    def testImageAction1(self, on_ma_mediator):
+    def testImageAction1(self):
         widget = self.window._image_action
-
-        widget.moving_avg_le.clear()
-        QTest.keyClicks(widget.moving_avg_le, "10")
-        QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
-        on_ma_mediator.assert_called_once_with(10)
+        # moving average is disabled for pulse-resolved data
+        self.assertFalse(widget.moving_avg_le.isEnabled())
 
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
            "onThresholdMaskChange")
@@ -233,3 +223,51 @@ class TestImageTool(unittest.TestCase):
         spy = QSignalSpy(self.window._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
+
+
+class TestImageToolTs(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # do not use the config file in the current computer
+        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
+        ConfigWrapper()  # ensure file
+        config.load('JungFrau')
+        # the global Redis client already has a port of 6379
+        config._data['REDIS_PORT'] = 6379
+
+        # ImageToolWindow._reset() is not called in other tests
+        ImageToolWindow._reset()
+
+        fai = FAI()
+        fai.init()
+
+        cls._fai = fai
+        cls.gui = fai._gui
+        cls.scheduler = fai.scheduler
+
+        actions = cls.gui._tool_bar.actions()
+        cls._action = actions[2]
+
+        # close the ImageToolWindow opened together with the MainGUI
+        window = list(cls.gui._windows.keys())[-1]
+        window.close()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._fai.terminate()
+
+        wait_until_redis_shutdown()
+
+    def setUp(self):
+        ImageToolWindow._reset()
+        self._action.trigger()
+        self.window = list(self.gui._windows.keys())[-1]
+
+    @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
+    def testImageAction1(self, on_ma_mediator):
+        widget = self.window._image_action
+
+        widget.moving_avg_le.clear()
+        QTest.keyClicks(widget.moving_avg_le, "10")
+        QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
+        on_ma_mediator.assert_called_once_with(10)

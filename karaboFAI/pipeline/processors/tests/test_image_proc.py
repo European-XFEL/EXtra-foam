@@ -14,62 +14,81 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from karaboFAI.pipeline.processors.image_processor import ImageProcessor
+from karaboFAI.pipeline.processors.image_processor import (
+    ImageProcessorTrain, ImageProcessorPulse
+)
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
     PumpProbeIndexError, ProcessingError
 )
 
 
-class TestImageProcessorTr(unittest.TestCase):
-    """Test train-resolved ImageProcessor."""
+class TestImageProcessorPulse(unittest.TestCase):
+    """Test pulse-resolved ImageProcessor."""
     def setUp(self):
-        self._proc = ImageProcessor()
-        self._proc.on_indices = [0]
-        self._proc.off_indices = [0]
-        self._proc.threshold_mask = (-np.inf, np.inf)
+        self._proc = ImageProcessorPulse()
+        del self._proc._raw_data
 
-    def _gen_data(self, tid):
-        imgs = np.random.randn(2, 2)
-        data = {'tid': tid,
-                'assembled': imgs}
-        return data
+        ImageProcessorPulse._raw_data.window = 3
+        self._proc._background = -10
+        self._proc._threshold_mask = (-100, 100)
+        self._proc._pulse_index_filter = [-1]
+        self._proc._poi_indices = [0, 2]
 
     def testGeneral(self):
         proc = self._proc
 
-        proc._ma_window = 2
-        proc._background = 0
-        proc._threshold_mask = (-100, 100)
-        proc._pulse_index_filter = [-1]
-        proc._poi_indices = [0, 0]
-
-        imgs1 = np.random.randn(2, 2)
+        imgs1 = np.random.randn(4, 2, 2)
         imgs1_gt = imgs1.copy()
         data = {
-            'tid': 1,
+            'processed': ProcessedData(1),
             'assembled': imgs1,
         }
 
         proc.process(data)
-        processed = data['processed']
 
-        np.testing.assert_array_almost_equal(imgs1_gt, processed.image.images)
-        np.testing.assert_array_almost_equal(imgs1_gt, proc._raw_data)
+        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
 
-        imgs2 = np.random.randn(2, 2)
+        imgs2 = np.random.randn(4, 2, 2)
         imgs2_gt = imgs2.copy()
         data = {
-            'tid': 2,
+            'processed': ProcessedData(1),
             'assembled': imgs2,
         }
 
         proc.process(data)
-        processed = data['processed']
 
+        processed = data['processed']
+        self.assertEqual(proc._background, processed.image.background)
+        self.assertTupleEqual(proc._threshold_mask,
+                              processed.image.threshold_mask)
+        self.assertEqual(2, processed.image.ma_count)
         ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt, processed.image.images)
         np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
+
+        # test the internal data of _raw_data shares memory with the first data
+        # FIXME: This not true with the c++ code. But will be fixed when
+        #        xtensor-python has a new release.
+        # self.assertIs(imgs1, proc._raw_data)
+
+
+class TestImageProcessorTrainTr(unittest.TestCase):
+    """Test train-resolved ImageProcessor."""
+    def setUp(self):
+        self._proc = ImageProcessorTrain()
+        self._proc._on_indices = [0]
+        self._proc._off_indices = [0]
+
+    def _gen_data(self, tid):
+        data = {'processed': ProcessedData(tid),
+                'assembled': np.random.randn(2, 2)}
+        image_data = ImageData()
+        image_data._background = 0
+        image_data._threshold_mask = (-100, 100)
+        image_data._pulse_index_filter = [-1]
+        image_data._poi_indices = [0, 0]
+        return data
 
     def testPpUndefined(self):
         proc = self._proc
@@ -170,65 +189,24 @@ class TestImageProcessorTr(unittest.TestCase):
             data['processed'].pp.image_off, assembled)
 
 
-class TestImageProcessorPr(unittest.TestCase):
-    """Test pulse-resolved ImageProcessor."""
+class TestImageProcessorTrainPr(unittest.TestCase):
+    """Test train-resolved ImageProcessor.
+
+    For pulse-resolved data.
+    """
     def setUp(self):
-        self._proc = ImageProcessor()
-        del self._proc._raw_data
-        self._proc._ma_window = 3
-        self._proc._background = -10
-        self._proc._threshold_mask = (-100, 100)
-
-        self._proc._pulse_index_filter = [-1]
-        self._proc._poi_indices = [0, 2]
-
-    def testGeneral(self):
-        proc = self._proc
-
-        imgs1 = np.random.randn(4, 2, 2)
-        imgs1_gt = imgs1.copy()
-        data = {
-            'tid': 1,
-            'assembled': imgs1,
-        }
-
-        proc.process(data)
-
-        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
-
-        imgs2 = np.random.randn(4, 2, 2)
-        imgs2_gt = imgs2.copy()
-        data = {
-            'tid': 2,
-            'assembled': imgs2,
-        }
-
-        proc.process(data)
-
-        processed = data['processed']
-        self.assertEqual(proc._background, processed.image.background)
-        self.assertEqual(proc._ma_window, processed.image.ma_window)
-        self.assertTupleEqual(proc._threshold_mask,
-                              processed.image.threshold_mask)
-        self.assertEqual(2, processed.image.ma_count)
-        # test only VIP pulses are kept
-        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt[0], processed.image.images[0])
-        self.assertIsNone(processed.image.images[1])
-        np.testing.assert_array_almost_equal(ma_gt[2], processed.image.images[2])
-        self.assertIsNone(processed.image.images[3])
-
-        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
-
-        # test the internal data of _raw_data shares memory with the first data
-        # FIXME: This not true with the c++ code. But will be fixed when
-        #        xtensor-python has a new release.
-        # self.assertIs(imgs1, proc._raw_data)
+        self._proc = ImageProcessorTrain()
+        self._proc._on_indices = [0]
+        self._proc._off_indices = [0]
 
     def _gen_data(self, tid):
-        imgs = np.random.randn(4, 2, 2)
-        data = {'tid': tid,
-                'assembled': imgs.copy()}
+        data = {'processed': ProcessedData(tid),
+                'assembled': np.random.randn(4, 2, 2)}
+        image_data = ImageData()
+        image_data._background = 0
+        image_data._threshold_mask = (-100, 100)
+        image_data._pulse_index_filter = [-1]
+        image_data._poi_indices = [0, 0]
         return data
 
     def testInvalidPulseIndices(self):
@@ -238,6 +216,7 @@ class TestImageProcessorPr(unittest.TestCase):
 
         proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
         with self.assertRaises(PumpProbeIndexError):
+            # the maximum index is 4
             proc.process(self._gen_data(1001))
 
         proc._off_indices = [1, 3]
