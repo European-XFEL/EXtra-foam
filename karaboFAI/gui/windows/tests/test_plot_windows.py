@@ -15,7 +15,7 @@ from karaboFAI.gui.windows import (
     XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
-    AssembledImageView, TrainAiWidget,
+    AssembledImageView, TrainAiWidget, FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
     PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
@@ -165,7 +165,8 @@ class TestPlotWindows(unittest.TestCase):
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(2, counter[PulsesInTrainFomWidget])
+        self.assertEqual(1, counter[PulsesInTrainFomWidget])
+        self.assertEqual(1, counter[FomHistogramWidget])
 
     def testPulseOfInterestWindow(self):
         win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
