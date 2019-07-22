@@ -176,7 +176,7 @@ class MainGUI(QtGui.QMainWindow):
         open_bin1d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin1dWindow))
 
-        open_bin2d_window_at = self._addAction("Bin 2D", "binning2d.png")
+        open_bin2d_window_at = self._addAction("Bin 2D", "heatmap.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin2dWindow))
 
