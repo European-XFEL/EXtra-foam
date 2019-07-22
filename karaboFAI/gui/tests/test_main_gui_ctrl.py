@@ -80,7 +80,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         ai_proc = scheduler._ai_proc
 
         # --------------------------
-        # test setting VIP pulse indices
+        # test setting POI pulse indices
         # --------------------------
         self._poi_action.trigger()
         window = [w for w in self.gui._windows
