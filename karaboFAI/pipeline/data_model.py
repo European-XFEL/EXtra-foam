@@ -742,6 +742,10 @@ class ProcessedData:
     def n_pulses(self):
         return self.image.n_images
 
+    @property
+    def pulse_resolved(self):
+        return config['PULSE_RESOLVED']
+
     def update(self):
         self.pp.update_hist(self._tid)
 
