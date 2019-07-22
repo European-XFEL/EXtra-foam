@@ -13,9 +13,7 @@ from ..pyqtgraph import QtCore
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..plot_widgets import (
-    TrainAiWidget, SinglePulseAiWidget, SinglePulseImageView
-)
+from ..plot_widgets import TrainAiWidget, SinglePulseImageView
 from ...config import config
 
 
@@ -38,14 +36,10 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
         if self._pulse_resolved:
             self._ai = TrainAiWidget(parent=self)
 
-            self._vip1_ai_dock = None
             self._vip1_img_dock = None
-            self._vip1_ai = SinglePulseAiWidget(parent=self)
             self._vip1_img = SinglePulseImageView(parent=self)
 
-            self._vip2_ai_dock = None
             self._vip2_img_dock = None
-            self._vip2_ai = SinglePulseAiWidget(parent=self)
             self._vip2_img = SinglePulseImageView(parent=self)
 
             self.initUI()
@@ -91,21 +85,6 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
             self._docker_area.addDock(ai_dock, 'right')
             ai_dock.addWidget(self._ai)
 
-            self._vip1_ai_dock = Dock("VIP pulse 0000 - AI",
-                                      size=(self._RW, self._RH1),
-                                      autoOrientation=False)
-            self._vip1_ai_dock.setOrientation('vertical')
-            self._docker_area.addDock(self._vip1_ai_dock, 'top', ai_dock)
-            self._vip1_ai_dock.addWidget(self._vip1_ai)
-
-            self._vip2_ai_dock = Dock("VIP pulse 0000 - AI",
-                                      size=(self._RW, self._RH1),
-                                      autoOrientation=False)
-            self._vip2_ai_dock.setOrientation('vertical')
-            self._docker_area.addDock(
-                self._vip2_ai_dock, 'right', self._vip1_ai_dock)
-            self._vip2_ai_dock.addWidget(self._vip2_ai)
-
         else:
             ai_dock = Dock("Normalized azimuthal Integration",
                            size=(self._TOTAL_W, self._TOTAL_H))
@@ -122,14 +101,10 @@ class PulsedAzimuthalIntegrationWindow(DockerWindow):
 
     @QtCore.pyqtSlot(int)
     def onPulseID1Updated(self, value):
-        self._vip1_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
         self._vip1_img_dock.setTitle("VIP pulse {:04d}".format(value))
-        self._vip1_ai.pulse_index = value
         self._vip1_img.pulse_index = value
 
     @QtCore.pyqtSlot(int)
     def onPulseID2Updated(self, value):
-        self._vip2_ai_dock.setTitle("VIP pulse {:04d} - AI".format(value))
         self._vip2_img_dock.setTitle("VIP pulse {:04d}".format(value))
-        self._vip2_ai.pulse_index = value
         self._vip2_img.pulse_index = value

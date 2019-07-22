@@ -9,66 +9,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections.abc import Iterable
-
 import numpy as np
 
 from .base_plot_widget import PlotWidget
 
 from ..misc_widgets import make_brush, make_pen, SequentialColors
-from ...logger import logger
 from ...config import AnalysisType, config
-
-
-class SinglePulseAiWidget(PlotWidget):
-    """SinglePulseAiWidget class.
-
-    A widget which allows user to visualize the the azimuthal integration
-    result of a single pulse. The azimuthal integration result is also
-    compared with the average azimuthal integration of all the pulses.
-    """
-    def __init__(self, *, pulse_index=0, plot_mean=True, parent=None):
-        """Initialization.
-
-        :param int pulse_index: ID of the pulse to be plotted.
-        :param bool plot_mean: whether to plot the mean AI of all pulses
-            if the data is pulse resolved.
-        """
-        super().__init__(parent=parent)
-
-        self.pulse_index = pulse_index
-
-        self.setLabel('left', "Scattering signal (arb. u.)")
-        self.setLabel('bottom', "Momentum transfer (1/A)")
-
-        if plot_mean:
-            self.addLegend(offset=(-40, 20))
-
-        if plot_mean:
-            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("g"))
-        else:
-            self._mean_plot = None
-
-        self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("p"))
-
-    def update(self, data):
-        """Override."""
-        momentum = data.pulse.ai.x
-        intensities = data.pulse.ai.vfom
-
-        if intensities is None:
-            return
-
-        max_id = data.n_pulses - 1
-        if self.pulse_index <= max_id:
-            self._pulse_plot.setData(momentum, intensities[self.pulse_index])
-        else:
-            logger.error("<POI index>: POI index ({}) > Maximum "
-                         "pulse index ({})".format(self.pulse_index, max_id))
-            return
-
-        if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.vfom)
 
 
 class TrainAiWidget(PlotWidget):

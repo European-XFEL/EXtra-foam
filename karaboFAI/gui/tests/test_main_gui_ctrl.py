@@ -87,10 +87,8 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # default values
         poi_index1 = int(widget._poi_index1_le.text())
-        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
         self.assertEqual(poi_index1, window._vip1_img.pulse_index)
         poi_index2 = int(widget._poi_index2_le.text())
-        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
         self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()
@@ -100,12 +98,10 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # set new values
         poi_index1 = 10
         widget._poi_index1_le.setText(str(poi_index1))
-        self.assertEqual(poi_index1, window._vip1_ai.pulse_index)
         self.assertEqual(poi_index1, window._vip1_img.pulse_index)
 
         poi_index2 = 20
         widget._poi_index2_le.setText(str(poi_index2))
-        self.assertEqual(poi_index2, window._vip2_ai.pulse_index)
         self.assertEqual(poi_index2, window._vip2_img.pulse_index)
 
         image_proc.update()

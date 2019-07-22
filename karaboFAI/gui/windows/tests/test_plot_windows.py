@@ -16,7 +16,7 @@ from karaboFAI.gui.windows import (
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsesInTrainFomWidget, SinglePulseAiWidget, SinglePulseImageView,
+    PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
@@ -174,13 +174,12 @@ class TestPulsedAiWindow(unittest.TestCase):
         self._win = PulsedAzimuthalIntegrationWindow(
             pulse_resolved=True, parent=gui)
 
-        self.assertEqual(5, len(self._win._plot_widgets))
+        self.assertEqual(3, len(self._win._plot_widgets))
         counter = Counter()
         for key in self._win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[TrainAiWidget])
-        self.assertEqual(2, counter[SinglePulseAiWidget])
         self.assertEqual(2, counter[SinglePulseImageView])
 
         gui.close()
