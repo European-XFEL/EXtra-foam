@@ -16,6 +16,7 @@ import time
 
 from karabo_bridge import Client
 
+from .data_model import ProcessedData
 from ..config import config
 from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
@@ -194,7 +195,7 @@ class KaraboBridge(PipeIn):
         tid = next(iter(meta.values()))["timestamp.tid"]
 
         return {
-            "tid": tid,
+            "processed": ProcessedData(tid),
             "raw": raw
         }
 
@@ -254,8 +255,7 @@ class MpOutQueue(PipeOut):
             if self._gui:
                 data_out = data['processed']
             else:
-                data_out = {key: data[key]
-                            for key in ['tid', 'processed', 'raw']}
+                data_out = {key: data[key] for key in ['processed', 'raw']}
 
             while not close_ev.is_set():
                 # push the stored data into client

@@ -10,7 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .ipc import RedisConnection, RedisSubscriber
-from .pipeline.serialization import deserialize_image, serialize_image
+from .serialization import deserialize_image, serialize_image
 
 
 class CommandProxy:

@@ -19,8 +19,9 @@ class Metadata:
     DATA_SOURCE = "metadata:source"
 
     ANALYSIS_TYPE = "metadata:analysis_type"
+    ANALYSIS_TYPE_PULSE = "metadata:analysis_type_pulse"
 
-    GENERAL_PROC = "metadata:proc:general"
+    GLOBAL_PROC = "metadata:proc:global"
     GEOMETRY_PROC = "metadata:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "metadata:proc:azimuthal_integration"
     PUMP_PROBE_PROC = "metadata:proc:pump_probe"
@@ -29,6 +30,7 @@ class Metadata:
     XAS_PROC = "metadata:proc:xas"
     BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
+    STATISTICS_PROC = "metadata:proc:pulse_fom"
 
     _meta = {
         ANALYSIS_TYPE: [
@@ -43,10 +45,11 @@ class Metadata:
     }
 
     _proc_meta = {
-        GENERAL_PROC: [
+        GLOBAL_PROC: [
             "sample_distance",
             "photon_energy",
             "selected_pulse_indices",
+            "ma_window",
         ],
         IMAGE_PROC: [
             "threshold_mask",
@@ -67,10 +70,10 @@ class Metadata:
             "visibility2",
             "visibility3",
             "visibility4",
-            "fom_type",
-            "proj1d:normalizer",
-            "proj1d:auc_range",
-            "proj1d:fom_integ_range",
+            "proj:direction",
+            "proj:normalizer",
+            "proj:auc_range",
+            "proj:fom_integ_range",
         ],
         AZIMUTHAL_INTEG_PROC: [
             "integ_center_x",
@@ -81,19 +84,16 @@ class Metadata:
             "normalizer",
             "auc_range",
             "fom_integ_range",
-            "enable_pulsed_ai",
         ],
         PUMP_PROBE_PROC: [
+            "analysis_type",
             "mode",
             "on_pulse_indices",
             "off_pulse_indices",
             "abs_difference",
-            "analysis_type",
-            "ma_window",
         ],
         CORRELATION_PROC: [
-            "fom_type",
-            "fom_integ_range",
+            "analysis_type",
             "device_id1",
             "device_id2",
             "device_id3",
@@ -112,6 +112,7 @@ class Metadata:
             "bin_range",
         ],
         BIN_PROC: [
+            "analysis_type",
             "device_id_x",
             "device_id_y",
             "property_x",
@@ -120,8 +121,10 @@ class Metadata:
             "n_bins_y",
             "bin_range_x",
             "bin_range_y",
-            "analysis_type",
             "mode",
+        ],
+        STATISTICS_PROC: [
+            "analysis_type"
         ]
     }
 

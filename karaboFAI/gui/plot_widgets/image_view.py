@@ -132,10 +132,9 @@ class ImageView(QtGui.QWidget):
         visualization of ROIs and calculation of ROI data are synchronized.
         """
         for i, roi in enumerate(self._rois, 1):
-            roi_area = getattr(data.roi, f"roi{i}")
-            if roi_area is not None:
+            x, y, w, h = getattr(data.roi, f"rect{i}")
+            if w > 0 and h > 0:
                 roi.show()
-                x, y, w, h = roi_area
                 roi.setSize((w, h), update=False)
                 roi.setPos((x, y), update=False)
             else:
@@ -272,7 +271,10 @@ class ImageAnalysis(ImageView):
         self.setImage(image_data.masked)
 
     def setReferenceImage(self):
-        """Set the displayed image as reference image."""
+        """Set the displayed image as reference image.
+
+        Note: image mask is not included in self._image.
+        """
         self._cmd_proxy.set_ref_image(self._image)
 
     def removeReferenceImage(self):
@@ -380,45 +382,28 @@ class PumpProbeImageView(ImageView):
 
     Widget for displaying the on or off image in the pump-probe analysis.
     """
-    def __init__(self, on=True, *, roi=False, diff=False, parent=None):
+    def __init__(self, on=True, *, parent=None):
         """Initialization.
 
         :param bool on: True for display the on image while False for
             displaying the off image.
-        :param bool roi: True for displaying the ROI while False for
-            displaying the whole image.
-        :param bool diff: True for displaying on - off ROI instead of
-            off ROI. Ignored if roi == False. This option is not enabled
-            for the whole image because of the concern of performance.
         """
         super().__init__(parent=parent)
 
         self._on = on
-        self._roi = roi
-        self._diff = diff
 
     def update(self, data):
         """Override."""
         if self._on:
-            if self._roi:
-                img = data.pp.on_roi
-            else:
-                img = data.pp.on_image_mean
+            img = data.pp.image_on
         else:
-            if self._roi:
-                if self._diff and data.pp.off_roi is not None:
-                    img = data.pp.on_roi - data.pp.off_roi
-                else:
-                    img = data.pp.off_roi
-            else:
-                img = data.pp.off_image_mean
+            img = data.pp.image_off
 
         if img is None:
             return
 
         self.setImage(img, auto_levels=(not self._is_initialized))
-        if not self._roi:
-            self.updateROI(data)
+        self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True

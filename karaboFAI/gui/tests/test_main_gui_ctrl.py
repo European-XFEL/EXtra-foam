@@ -21,11 +21,11 @@ from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWin
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
-    DataSource, VectorNormalizer, PumpProbeMode
+    DataSource, VFomNormalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
-from karaboFAI.pipeline.processors.azimuthal_integration import \
-    energy2wavelength
+from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
+from karaboFAI.pipeline.processors.roi import _RectROI
 
 app = mkQApp()
 
@@ -54,11 +54,12 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._start_action = cls._actions[0]
         cls._stop_action = cls._actions[1]
         cls._pp_action = cls._actions[4]
-        cls._correlation_action = cls._actions[5]
-        cls._bin1d_action = cls._actions[6]
-        cls._bin2d_action = cls._actions[7]
-        cls._xas_action = cls._actions[8]
-        cls._pulsed_ai_action = cls._actions[9]
+        cls._statistics_action = cls._actions[5]
+        cls._correlation_action = cls._actions[6]
+        cls._bin1d_action = cls._actions[7]
+        cls._bin2d_action = cls._actions[8]
+        cls._xas_action = cls._actions[9]
+        cls._pulsed_ai_action = cls._actions[10]
 
     @classmethod
     def tearDownClass(cls):
@@ -74,7 +75,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
 
-        image_proc = image_worker._image_proc
+        image_proc = image_worker._image_proc_pulse
         ai_proc = scheduler._ai_proc
 
         # --------------------------
@@ -141,7 +142,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(default_integ_method, proc._integ_method)
-        default_normalizer = VectorNormalizer.AUC
+        default_normalizer = VFomNormalizer.AUC
         self.assertEqual(default_normalizer, proc._normalizer)
         self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
         default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
@@ -152,10 +153,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
         self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
-        widget._pulsed_integ_cb.setChecked(True)
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = VectorNormalizer.ROI2
+        ai_normalizer = VFomNormalizer.ROI3_SUB_ROI4
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -165,8 +165,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._cy_le.setText("1000")
 
         proc.update()
-        self.assertEqual(AnalysisType.PULSE_AZIMUTHAL_INTEG,
-                         proc.analysis_type)
         self.assertEqual(itgt_method, proc._integ_method)
         self.assertEqual(ai_normalizer, proc._normalizer)
         self.assertEqual(1024, proc._integ_points)
@@ -182,33 +180,25 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         proc.update()
 
         # test default reconfigurable values
-        self.assertEqual(np.sum, proc._roi_fom_handler)
-        self.assertEqual(VectorNormalizer.AUC, proc._proj1d_normalizer)
-        self.assertEqual((0, math.inf), proc._proj1d_fom_integ_range)
-        self.assertEqual((0, math.inf), proc._proj1d_auc_range)
+        self.assertEqual('x', proc._direction)
+        self.assertEqual(VFomNormalizer.AUC, proc._normalizer)
+        self.assertEqual((0, math.inf), proc._fom_integ_range)
+        self.assertEqual((0, math.inf), proc._auc_range)
 
         # test setting new values
-        proc._reset = False
-        widget._roi_fom_cb.setCurrentText('mean')
-        proc.update()
-        self.assertTrue(proc._reset)
-
+        widget._direct_cb.setCurrentText('y')
+        widget._normalizers_cb.setCurrentText('ROI3 - ROI4')
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
-
-        self.assertEqual(np.mean, proc._roi_fom_handler)
-        self.assertEqual((10, 20), proc._proj1d_fom_integ_range)
-        self.assertEqual((30, 40), proc._proj1d_auc_range)
-
-        proc._reset = False
-        widget._reset_btn.clicked.emit()
-        proc.update()
-        self.assertTrue(proc._reset)
+        self.assertEqual('y', proc._direction)
+        self.assertEqual(VFomNormalizer.ROI3_SUB_ROI4, proc._normalizer)
+        self.assertEqual((10, 20), proc._fom_integ_range)
+        self.assertEqual((30, 40), proc._auc_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc
+        image_proc = self.image_worker._image_proc_train
         pp_proc = self.scheduler._pp_proc
 
         all_modes = {value: key for key, value in
@@ -216,7 +206,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # check default reconfigurable params
         pp_proc.update()
-        self.assertEqual(1, pp_proc._ma_window)
         self.assertTrue(pp_proc._abs_difference)
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
@@ -229,9 +218,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
         # change analysis type
         pp_proc._reset = False
-        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2')
+        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2 (proj)')
         pp_proc.update()
-        self.assertEqual(AnalysisType.ROI1_SUB_ROI2, pp_proc.analysis_type)
+        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, pp_proc.analysis_type)
         self.assertTrue(pp_proc._reset)
 
         # change pump-probe mode
@@ -239,11 +228,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
-
-        # change moving average window
-        widget._ma_window_le.setText(str(10))
-        pp_proc.update()
-        self.assertEqual(10, pp_proc._ma_window)
 
         # change abs_difference
         pp_proc._reset = False
@@ -267,8 +251,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
 
-    @patch("karaboFAI.pipeline.data_model.XasData.clear")
-    def testXasCtrlWidget(self, reset_xas):
+    def testXasCtrlWidget(self):
         widget = self.gui.xas_ctrl_widget
         proc = self.scheduler._xas_proc
         proc.update()
@@ -368,38 +351,21 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         self.assertEqual([""] * 4, proc._properties)
 
         # set new FOM
-        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2')
+        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2 (proj)')
         proc.update()
-        self.assertEqual(AnalysisType.ROI1_ADD_ROI2, proc.analysis_type)
+        self.assertEqual(AnalysisType.PROJ_ROI1_ADD_ROI2, proc.analysis_type)
 
         # test the correlation param table
-        expected_correlations = []
         for i in range(_N_PARAMS):
             # change category
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
 
-            for item in expected_correlations:
-                self.assertTrue(
-                    hasattr(ProcessedData(1, np.zeros((2, 2))).correlation,
-                            item))
-
             # change device id
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
-            correlation = f'correlation{i+1}'
-            expected_correlations.append(correlation)
 
             resolution = (i+1)*5 if i < 2 else 0.0
             resolution_le = widget._table.cellWidget(i, 3)
             resolution_le.setText(str(resolution))
-
-            if resolution > 0:
-                _, _, info = getattr(
-                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
-                self.assertEqual(resolution, info['resolution'])
-            else:
-                _, _, info = getattr(
-                    ProcessedData(1, np.zeros((2, 2))).correlation, correlation)
-                self.assertNotIn('resolution', info)
 
         proc.update()
         for i in range(_N_PARAMS):
@@ -407,33 +373,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
             self.assertEqual(device_id, proc._device_ids[i])
             ppt = widget._table.cellWidget(i, 1).currentText()
             self.assertEqual(ppt, proc._device_ids[i])
-
-        # test data visualization
-        # the upper two plots have error bars
-        data = ProcessedData(1, np.arange(480).reshape(120, 2, 2))
-        for i in range(1000):
-            data.correlation.correlation1 = (int(i/5), 100*i)
-            data.correlation.correlation2 = (int(i/5), -100*i)
-            data.correlation.correlation3 = (i, i+1)
-            data.correlation.correlation4 = (i, -i)
-        self.gui._data.set(data)
-        window.update()
-
-        # change the resolutions
-        for i in range(_N_PARAMS):
-            resolution = (i+1)*5 if i >= 2 else 0.0
-            resolution_le = widget._table.cellWidget(i, 3)
-            resolution_le.setText(str(resolution))
-
-        # the data is cleared after the resolutions were changed
-        # now the lower two plots have error bars but the upper ones do not
-        for i in range(1000):
-            data.correlation.correlation3 = (int(i/5), 100*i)
-            data.correlation.correlation4 = (int(i/5), -100*i)
-            data.correlation.correlation1 = (i, i+1)
-            data.correlation.correlation2 = (i, -i)
-        self.gui._data.set(data)
-        window.update()
 
         # test reset button
         proc._reset = False
@@ -643,7 +582,7 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         self.gui.updateMetaData()
 
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc
+        image_proc = self.image_worker._image_proc_train
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}

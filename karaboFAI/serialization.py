@@ -12,7 +12,7 @@ All rights reserved.
 import struct
 import numpy as np
 
-from ..config import config
+from karaboFAI.config import config
 
 
 if 'IMAGE_DTYPE' in config:

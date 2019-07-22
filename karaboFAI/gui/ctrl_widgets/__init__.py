@@ -7,6 +7,7 @@ from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .xas_ctrl_widget import XasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
+from .statistics_ctrl_widget import StatisticsCtrlWidget
 
 
 # add control widgets
@@ -16,6 +17,7 @@ __all__ = [
     "BinCtrlWidget",
     "CorrelationCtrlWidget",
     "DataCtrlWidget",
+    "StatisticsCtrlWidget",
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",

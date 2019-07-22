@@ -11,7 +11,11 @@ All rights reserved.
 """
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
-from .processors import ImageAssemblerFactory, ImageProcessor
+from .processors import (
+    AzimuthalIntegrationProcessorPulse, StatisticsProcessor,
+    ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain,
+    RoiProcessorPulse
+)
 from ..config import config
 
 
@@ -25,6 +29,17 @@ class ImageWorker(ProcessWorker):
         self._output = MpOutQueue(f"{self._name}:output")
 
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
-        self._image_proc = ImageProcessor()
+        self._image_proc_pulse = ImageProcessorPulse()
+        self._statistics = StatisticsProcessor()
+        self._roi_proc = RoiProcessorPulse()
+        self._ai_proc = AzimuthalIntegrationProcessorPulse()
+        self._image_proc_train = ImageProcessorTrain()
 
-        self._tasks = [self._assembler, self._image_proc]
+        self._tasks = [
+            self._assembler,
+            self._image_proc_pulse,
+            self._statistics,
+            self._roi_proc,
+            self._ai_proc,
+            self._image_proc_train
+        ]

@@ -31,11 +31,11 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "ROI1 - ROI2": AnalysisType.ROI1_SUB_ROI2,
-        "ROI1 / ROI2": AnalysisType.ROI1_DIV_ROI2,
-        "proj X (ROI1 - ROI2)": AnalysisType.ROI1_SUB_ROI2_PROJECTION_X,
-        "proj Y (ROI2 - ROI2)": AnalysisType.ROI1_SUB_ROI2_PROJECTION_Y,
-        "azimuthal integ": AnalysisType.TRAIN_AZIMUTHAL_INTEG,
+        "ROI1 (proj)": AnalysisType.PROJ_ROI1,
+        "ROI2 (proj)": AnalysisType.PROJ_ROI2,
+        "ROI1 - ROI2 (proj)": AnalysisType.PROJ_ROI1_SUB_ROI2,
+        "ROI1 + ROI2 (proj)": AnalysisType.PROJ_ROI1_ADD_ROI2,
+        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 
     def __init__(self, *args, **kwargs):
@@ -67,8 +67,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         self._on_pulse_le = SmartRangeLineEdit(on_pulse_indices)
         self._off_pulse_le = SmartRangeLineEdit(off_pulse_indices)
 
-        self._ma_window_le = SmartLineEdit("1")
-        self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
         self._reset_btn = QtGui.QPushButton("Reset")
 
         self.initUI()
@@ -82,20 +80,18 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
+        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
+        layout.addWidget(self._analysis_type_cb, 0, 1)
         layout.addWidget(self._reset_btn, 0, 3, AR)
-        layout.addWidget(QtGui.QLabel("On/off mode: "), 1, 0, AR)
+        layout.addWidget(QtGui.QLabel("Mode: "), 1, 0, AR)
         layout.addWidget(self._mode_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 1, 2, AR)
-        layout.addWidget(self._analysis_type_cb, 1, 3)
+        layout.addWidget(self._abs_difference_cb, 1, 2, 1, 2, AR)
+
         if self._pulse_resolved:
             layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
             layout.addWidget(self._on_pulse_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("Off-pulse indices: "), 2, 2, AR)
-            layout.addWidget(self._off_pulse_le, 2, 3)
-
-        layout.addWidget(QtGui.QLabel("Moving average window: "), 3, 1, 1, 2, AR)
-        layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
-        layout.addWidget(self._abs_difference_cb, 4, 2, 1, 2, AR)
+            layout.addWidget(QtGui.QLabel("Off-pulse indices: "), 3, 0, AR)
+            layout.addWidget(self._off_pulse_le, 3, 1)
 
         self.setLayout(layout)
 
@@ -103,10 +99,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._reset_btn.clicked.connect(mediator.onPpReset)
-
-        self._ma_window_le.returnPressed.connect(
-            lambda: mediator.onPpMaWindowChange(
-                int(self._ma_window_le.text())))
 
         self._abs_difference_cb.toggled.connect(
             mediator.onPpAbsDifferenceChange)
@@ -129,8 +121,6 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
-        self._ma_window_le.returnPressed.emit()
-
         self._abs_difference_cb.toggled.emit(
             self._abs_difference_cb.isChecked())
 

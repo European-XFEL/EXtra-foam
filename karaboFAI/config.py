@@ -39,13 +39,24 @@ class PumpProbeMode(IntEnum):
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
-    ROI1_ADD_ROI2 = 11
-    ROI1_SUB_ROI2 = 12
-    ROI1_DIV_ROI2 = 13
-    ROI1_SUB_ROI2_PROJECTION_X = 21
-    ROI1_SUB_ROI2_PROJECTION_Y = 22
-    TRAIN_AZIMUTHAL_INTEG = 31
-    PULSE_AZIMUTHAL_INTEG = 32
+    ROI1 = 11
+    ROI2 = 12
+    ROI1_SUB_ROI2 = 13
+    ROI1_ADD_ROI2 = 14
+    PROJ_ROI1 = 21
+    PROJ_ROI2 = 22
+    PROJ_ROI1_SUB_ROI2 = 23
+    PROJ_ROI1_ADD_ROI2 = 24
+    AZIMUTHAL_INTEG = 41
+    ROI1_PULSE = 2711
+    ROI2_PULSE = 2712
+    ROI1_SUB_ROI2_PULSE = 2713
+    ROI1_ADD_ROI2_PULSE = 2714
+    PROJ_ROI1_PULSE = 2721
+    PROJ_ROI2_PULSE = 2722
+    PROJ_ROI1_SUB_ROI2_PULSE = 2723
+    PROJ_ROI1_ADD_ROI2_PULSE = 2724
+    AZIMUTHAL_INTEG_PULSE = 2741
 
 
 class BinMode(IntEnum):
@@ -53,19 +64,12 @@ class BinMode(IntEnum):
     AVERAGE = 1
 
 
-class VectorNormalizer(IntEnum):
-    # Normalize the azimuthal integration curve by the area under the curve.
-    AUC = 0
-    # Normalize the azimuthal integration curve by the sum of ROI(s).
-    ROI_SUB = 1  # ROI1 - ROI2
-    ROI1 = 2
-    ROI2 = 3
-    ROI_SUM = 4  # ROI1 + ROI2
-
-
-class RoiFom(IntEnum):
-    SUM = 0  # monitor sum of ROI
-    MEAN = 1  # monitor mean of ROI
+class VFomNormalizer(IntEnum):
+    AUC = 0  # area under curve
+    ROI3 = 1
+    ROI4 = 2
+    ROI3_SUB_ROI4 = 3
+    ROI3_ADD_ROI4 = 4
 
 
 # a simple class saves the trouble when the attribute needs to be read/write

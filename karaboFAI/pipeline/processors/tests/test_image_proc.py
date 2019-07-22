@@ -15,155 +15,80 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 
 from karaboFAI.pipeline.processors.image_processor import (
-    RawImageData, ImageProcessor
+    ImageProcessorTrain, ImageProcessorPulse
 )
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
     PumpProbeIndexError, ProcessingError
 )
 
-class TestRawImageData(unittest.TestCase):
 
-    def testInvalidInput(self):
-        with self.assertRaises(TypeError):
-            RawImageData()
-
-        with self.assertRaises(TypeError):
-            RawImageData([1, 2, 3])
-
-        with self.assertRaises(ValueError):
-            RawImageData(np.arange(2))
-
-        with self.assertRaises(ValueError):
-            RawImageData(np.arange(16).reshape((2, 2, 2, 2)))
-
-    def testTrainResolved(self):
-        data = RawImageData(np.ones((3, 3), dtype=np.float32))
-        self.assertEqual(1, data.n_images)
-
-        data.ma_window = 5
-        # ma_window will not change until the next data arrive
-        self.assertEqual(1, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        data.images = 3 * np.ones((3, 3), dtype=np.float32)
-        self.assertEqual(5, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        np.testing.assert_array_equal(2*np.ones((3, 3), dtype=np.float32),
-                                      data.images)
-
-        # set a ma window which is smaller than the current window
-        data.ma_window = 3
-        self.assertEqual(5, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        new_data = 2*np.ones((3, 3), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(3, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-        # set an image with a different shape
-        new_data = 2*np.ones((3, 1), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(3, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-    def testPulseResolved(self):
-        data = RawImageData(np.ones((3, 4, 4), dtype=np.float32))
-
-        self.assertEqual(3, data.n_images)
-
-        data.ma_window = 10
-        # ma_window will not change until the next data arrive
-        self.assertEqual(1, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        new_data = 5*np.ones((3, 4, 4), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(10, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        np.testing.assert_array_equal(3*np.ones((3, 4, 4), dtype=np.float32),
-                                      data.images)
-
-        # set a ma window which is smaller than the current window
-        data.ma_window = 2
-        self.assertEqual(10, data.ma_window)
-        self.assertEqual(2, data.ma_count)
-        new_data = 0.1*np.ones((3, 4, 4), dtype=np.float32)
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-        # set a data with a different number of images
-        new_data = 5*np.ones((5, 4, 4))
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-        new_data = 1*np.ones((5, 3, 4))
-        data.images = new_data
-        self.assertEqual(2, data.ma_window)
-        self.assertEqual(1, data.ma_count)
-        np.testing.assert_array_equal(new_data, data.images)
-
-
-class TestImageProcessorTr(unittest.TestCase):
-    """Test train-resolved ImageProcessor."""
+class TestImageProcessorPulse(unittest.TestCase):
+    """Test pulse-resolved ImageProcessor."""
     def setUp(self):
-        self._proc = ImageProcessor()
-        self._proc.on_indices = [0]
-        self._proc.off_indices = [0]
-        self._proc.threshold_mask = (-np.inf, np.inf)
+        self._proc = ImageProcessorPulse()
+        del self._proc._raw_data
 
-    def _gen_data(self, tid):
-        imgs = np.random.randn(2, 2)
-        data = {'tid': tid,
-                'assembled': imgs}
-        return data
+        ImageProcessorPulse._raw_data.window = 3
+        self._proc._background = -10
+        self._proc._threshold_mask = (-100, 100)
+        self._proc._pulse_index_filter = [-1]
+        self._proc._poi_indices = [0, 2]
 
     def testGeneral(self):
         proc = self._proc
 
-        proc._ma_window = 2
-        proc._background = 0
-        proc._threshold_mask = (-100, 100)
-        proc._pulse_index_filter = [-1]
-        proc._poi_indices = [0, 0]
-
-        imgs1 = np.random.randn(2, 2)
+        imgs1 = np.random.randn(4, 2, 2)
         imgs1_gt = imgs1.copy()
         data = {
-            'tid': 1,
+            'processed': ProcessedData(1),
             'assembled': imgs1,
         }
 
         proc.process(data)
-        processed = data['processed']
 
-        np.testing.assert_array_almost_equal(imgs1_gt,
-                                             processed.image.images)
-        np.testing.assert_array_almost_equal(imgs1_gt,
-                                             proc._raw_data.images)
+        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
 
-        imgs2 = np.random.randn(2, 2)
+        imgs2 = np.random.randn(4, 2, 2)
         imgs2_gt = imgs2.copy()
         data = {
-            'tid': 2,
+            'processed': ProcessedData(1),
             'assembled': imgs2,
         }
 
         proc.process(data)
-        processed = data['processed']
 
+        processed = data['processed']
+        self.assertEqual(proc._background, processed.image.background)
+        self.assertTupleEqual(proc._threshold_mask,
+                              processed.image.threshold_mask)
+        self.assertEqual(2, processed.image.ma_count)
         ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt,
-                                             processed.image.images)
-        np.testing.assert_array_almost_equal(ma_gt,
-                                             proc._raw_data.images)
+        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
 
         # test the internal data of _raw_data shares memory with the first data
-        self.assertIs(imgs1, proc._raw_data.images)
+        # FIXME: This not true with the c++ code. But will be fixed when
+        #        xtensor-python has a new release.
+        # self.assertIs(imgs1, proc._raw_data)
+
+
+class TestImageProcessorTrainTr(unittest.TestCase):
+    """Test train-resolved ImageProcessor."""
+    def setUp(self):
+        self._proc = ImageProcessorTrain()
+        self._proc._on_indices = [0]
+        self._proc._off_indices = [0]
+
+    def _gen_data(self, tid):
+        data = {'processed': ProcessedData(tid),
+                'assembled': np.random.randn(2, 2)}
+        image_data = ImageData()
+        image_data._background = 0
+        image_data._threshold_mask = (-100, 100)
+        image_data._pulse_index_filter = [-1]
+        image_data._poi_indices = [0, 0]
+        return data
 
     def testPpUndefined(self):
         proc = self._proc
@@ -172,8 +97,8 @@ class TestImageProcessorTr(unittest.TestCase):
         data = self._gen_data(1001)
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
     def testPpPredefinedOff(self):
         proc = self._proc
@@ -184,9 +109,9 @@ class TestImageProcessorTr(unittest.TestCase):
 
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean, assembled)
+            data['processed'].pp.image_on, assembled)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean, np.zeros((2, 2)))
+            data['processed'].pp.image_off, np.zeros((2, 2)))
 
     def testPpOddOn(self):
         proc = self._proc
@@ -195,22 +120,22 @@ class TestImageProcessorTr(unittest.TestCase):
         # test off will not be acknowledged without on
         data = self._gen_data(1002)  # off
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
         data = self._gen_data(1003)  # on
         assembled = data['assembled']
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
         np.testing.assert_array_almost_equal(assembled, proc._prev_unmasked_on)
 
         data = self._gen_data(1005)  # on
         assembled = data['assembled']
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
         np.testing.assert_array_almost_equal(assembled, proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
@@ -220,9 +145,9 @@ class TestImageProcessorTr(unittest.TestCase):
 
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean, prev_unmasked_on)
+            data['processed'].pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean, assembled)
+            data['processed'].pp.image_off, assembled)
 
     def testPpEvenOn(self):
         proc = self._proc
@@ -232,15 +157,15 @@ class TestImageProcessorTr(unittest.TestCase):
         data = self._gen_data(1001)  # off
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
         data = self._gen_data(1002)  # on
         assembled = data['assembled']
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
         np.testing.assert_array_almost_equal(assembled, proc._prev_unmasked_on)
 
         # test when two 'on' are received successively
@@ -248,8 +173,8 @@ class TestImageProcessorTr(unittest.TestCase):
         assembled = data['assembled']
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
         np.testing.assert_array_almost_equal(assembled, proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
@@ -259,87 +184,29 @@ class TestImageProcessorTr(unittest.TestCase):
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean, prev_unmasked_on)
+            data['processed'].pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean, assembled)
+            data['processed'].pp.image_off, assembled)
 
 
-class TestImageProcessorPr(unittest.TestCase):
-    """Test pulse-resolved ImageProcessor."""
+class TestImageProcessorTrainPr(unittest.TestCase):
+    """Test train-resolved ImageProcessor.
+
+    For pulse-resolved data.
+    """
     def setUp(self):
-        self._proc = ImageProcessor()
-        self._proc._ma_window = 3
-        self._proc._background = -10
-        self._proc._threshold_mask = (-100, 100)
-
-        self._proc._pulse_index_filter = [-1]
-        self._proc._poi_indices = [0, 2]
-
-    def testGeneral(self):
-        proc = self._proc
-
-        imgs1 = np.random.randn(4, 2, 2)
-        imgs1_gt = imgs1.copy()
-        data = {
-            'tid': 1,
-            'assembled': imgs1,
-        }
-
-        proc.process(data)
-
-        np.testing.assert_array_equal(imgs1_gt, proc._raw_data.images)
-
-        imgs2 = np.random.randn(4, 2, 2)
-        imgs2_gt = imgs2.copy()
-        data = {
-            'tid': 2,
-            'assembled': imgs2,
-        }
-
-        proc.process(data)
-
-        processed = data['processed']
-        self.assertEqual(proc._background, processed.image.background)
-        self.assertEqual(proc._ma_window, processed.image.ma_window)
-        self.assertTupleEqual(proc._threshold_mask,
-                              processed.image.threshold_mask)
-        self.assertEqual(2, processed.image.ma_count)
-        # test only VIP pulses are kept
-        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt[0],
-                                             processed.image.images[0])
-        self.assertIsNone(processed.image.images[1])
-        np.testing.assert_array_almost_equal(ma_gt[2],
-                                             processed.image.images[2])
-        self.assertIsNone(processed.image.images[3])
-
-        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data.images)
-
-        # test the internal data of _raw_data shares memory with the first data
-        self.assertIs(imgs1, proc._raw_data.images)
-
-        # test keep all pulse images
-        proc._has_analysis = MagicMock(return_value=True)
-
-        imgs3 = np.random.randn(4, 2, 2)
-        imgs3_gt = imgs3.copy()
-        data = {
-            'tid': 3,
-            'assembled': imgs3,
-        }
-
-        proc.process(data)
-        processed = data['processed']
-
-        ma_gt = (imgs1_gt + imgs2_gt + imgs3_gt) / 3.0
-        for i in range(4):
-            np.testing.assert_array_almost_equal(ma_gt[i],
-                                                 processed.image.images[i])
+        self._proc = ImageProcessorTrain()
+        self._proc._on_indices = [0]
+        self._proc._off_indices = [0]
 
     def _gen_data(self, tid):
-        imgs = np.random.randn(4, 2, 2)
-        data = {'tid': tid,
-                'assembled': imgs.copy()}
+        data = {'processed': ProcessedData(tid),
+                'assembled': np.random.randn(4, 2, 2)}
+        image_data = ImageData()
+        image_data._background = 0
+        image_data._threshold_mask = (-100, 100)
+        image_data._pulse_index_filter = [-1]
+        image_data._poi_indices = [0, 0]
         return data
 
     def testInvalidPulseIndices(self):
@@ -349,6 +216,7 @@ class TestImageProcessorPr(unittest.TestCase):
 
         proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
         with self.assertRaises(PumpProbeIndexError):
+            # the maximum index is 4
             proc.process(self._gen_data(1001))
 
         proc._off_indices = [1, 3]
@@ -380,8 +248,8 @@ class TestImageProcessorPr(unittest.TestCase):
         data = self._gen_data(1001)
         proc.process(data)
 
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
     def testPredefinedOff(self):
         proc = self._proc
@@ -394,10 +262,10 @@ class TestImageProcessorPr(unittest.TestCase):
 
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean,
+            data['processed'].pp.image_on,
             np.mean(assembled[::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean, np.zeros((2, 2)))
+            data['processed'].pp.image_off, np.zeros((2, 2)))
 
     def testSameTrain(self):
         proc = self._proc
@@ -410,10 +278,10 @@ class TestImageProcessorPr(unittest.TestCase):
 
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean,
+            data['processed'].pp.image_on,
             np.mean(assembled[::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean,
+            data['processed'].pp.image_off,
             np.mean(assembled[1::2, :, :], axis=0))
 
     def testEvenOn(self):
@@ -426,15 +294,15 @@ class TestImageProcessorPr(unittest.TestCase):
         data = self._gen_data(1001)  # off
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
         data = self._gen_data(1002)  # on
         assembled = data['assembled']
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
         np.testing.assert_array_almost_equal(
             np.mean(assembled[::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
@@ -445,9 +313,9 @@ class TestImageProcessorPr(unittest.TestCase):
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean, prev_unmasked_on)
+            data['processed'].pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean,
+            data['processed'].pp.image_off,
             np.mean(assembled[1::2, :, :], axis=0))
 
     def testOddOn(self):
@@ -460,15 +328,15 @@ class TestImageProcessorPr(unittest.TestCase):
         data = self._gen_data(1002)  # off
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
 
         data = self._gen_data(1003)  # on
         assembled = data['assembled']
 
         proc.process(data)
-        self.assertIsNone(data['processed'].pp.on_image_mean)
-        self.assertIsNone(data['processed'].pp.off_image_mean)
+        self.assertIsNone(data['processed'].pp.image_on)
+        self.assertIsNone(data['processed'].pp.image_off)
         np.testing.assert_array_almost_equal(
             np.mean(assembled[::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
@@ -478,7 +346,7 @@ class TestImageProcessorPr(unittest.TestCase):
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.on_image_mean, prev_unmasked_on)
+            data['processed'].pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            data['processed'].pp.off_image_mean,
+            data['processed'].pp.image_off,
             np.mean(assembled[1::2, :, :], axis=0))

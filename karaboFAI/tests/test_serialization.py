@@ -12,7 +12,7 @@ All rights reserved.
 import unittest
 
 import numpy as np
-from karaboFAI.pipeline.serialization import (
+from karaboFAI.serialization import (
     serialize_image, deserialize_image, serialize_images, deserialize_images
 )
 

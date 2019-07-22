@@ -23,7 +23,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
 
     def __init__(self, *args, **kwargs):
-        super().__init__("General setup", *args, **kwargs)
+        super().__init__("Global setup", *args, **kwargs)
 
         # We keep the definitions of attributes which are not used in the
         # PULSE_RESOLVED = True case. It makes sense since these attributes
@@ -50,6 +50,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._sample_dist_le = SmartLineEdit(str(config["SAMPLE_DISTANCE"]))
         self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0.001, 100, 6))
 
+        self._ma_window_le = SmartLineEdit("1")
+        self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
+
         self.initUI()
         self.initConnections()
 
@@ -73,6 +76,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._photon_energy_le, 2, 1)
         layout.addWidget(QtGui.QLabel("Sample distance (m): "), 2, 2, AR)
         layout.addWidget(self._sample_dist_le, 2, 3)
+
+        layout.addWidget(QtGui.QLabel("M.A. window: "), 3, 1, 1, 2, AR)
+        layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
 
         self.setLayout(layout)
 
@@ -101,6 +107,10 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._pulse_index_filter_le.value_changed_sgn.connect(
             mediator.onPulseIndexSelectorChange)
 
+        self._ma_window_le.returnPressed.connect(
+            lambda: mediator.onMaWindowChange(
+                int(self._ma_window_le.text())))
+
     def updateMetaData(self):
         """Override"""
         self._poi_index1_le.returnPressed.emit()
@@ -111,6 +121,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._sample_dist_le.returnPressed.emit()
 
         self._pulse_index_filter_le.returnPressed.emit()
+
+        self._ma_window_le.returnPressed.emit()
 
         return True
 

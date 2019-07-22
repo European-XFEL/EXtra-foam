@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Bin1dWindow
+Bin1dWindow and Bin2dWindow.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -59,15 +59,15 @@ class Bin1dWindow(DockerWindow):
         # Left
         # -----------
 
-        heatmap1_dock = Dock("FOM1 (heatmap)", size=(self._W, self._H1))
+        heatmap1_dock = Dock("VFOM heatmap 1", size=(self._W, self._H1))
         self._docker_area.addDock(heatmap1_dock, 'top')
         heatmap1_dock.addWidget(self._value1_hm)
 
-        fom1_dock = Dock("FOM1", size=(self._W, self._H2))
+        fom1_dock = Dock("FOM histogram 1", size=(self._W, self._H2))
         self._docker_area.addDock(fom1_dock, 'bottom', heatmap1_dock)
         fom1_dock.addWidget(self._fom1)
 
-        count1_dock = Dock("Count1", size=(self._W, self._H3))
+        count1_dock = Dock("Count 1", size=(self._W, self._H3))
         self._docker_area.addDock(count1_dock, 'bottom', fom1_dock)
         count1_dock.addWidget(self._count1)
 
@@ -75,15 +75,15 @@ class Bin1dWindow(DockerWindow):
         # Right
         # -----------
 
-        heatmap2_dock = Dock("FOM2 (heatmap)", size=(self._W, self._H1))
+        heatmap2_dock = Dock("VFOM heatmap 2", size=(self._W, self._H1))
         self._docker_area.addDock(heatmap2_dock, 'right')
         heatmap2_dock.addWidget(self._value2_hm)
 
-        fom2_dock = Dock("FOM2", size=(self._W, self._H2))
+        fom2_dock = Dock("FOM histogram 2", size=(self._W, self._H2))
         self._docker_area.addDock(fom2_dock, 'bottom', heatmap2_dock)
         fom2_dock.addWidget(self._fom2)
 
-        count2_dock = Dock("Count2", size=(self._W, self._H3))
+        count2_dock = Dock("Count 2", size=(self._W, self._H3))
         self._docker_area.addDock(count2_dock, 'bottom', fom2_dock)
         count2_dock.addWidget(self._count2)
 

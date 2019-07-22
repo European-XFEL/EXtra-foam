@@ -6,8 +6,7 @@ from .plot_widgets import (
     Bin1dHist,
     CorrelationWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget,
-    RoiValueMonitor,
-    TrainAiWidget, PulsedFOMWidget, SinglePulseAiWidget,
+    TrainAiWidget, PulsesInTrainFomWidget, SinglePulseAiWidget,
     XasSpectrumWidget, XasSpectrumDiffWidget, XasSpectrumBinCountWidget
 )
 
@@ -30,8 +29,7 @@ __all__.extend([
     "PumpProbeOnOffWidget",
     "PumpProbeFomWidget",
     "TrainAiWidget",
-    "RoiValueMonitor",
-    "PulsedFOMWidget",
+    "PulsesInTrainFomWidget",
     "SinglePulseAiWidget",
     "XasSpectrumWidget",
     "XasSpectrumDiffWidget",

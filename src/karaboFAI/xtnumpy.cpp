@@ -12,12 +12,14 @@
 
 #include <pybind11/pybind11.h>
 
+#include "xtensor/xview.hpp"
 #include "xtensor/xarray.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xreducer.hpp"
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pyvectorize.hpp"
 #include "xtensor-python/pyarray.hpp"
+#include "xtensor-python/pytensor.hpp"
 
 
 template<typename T>
@@ -40,6 +42,12 @@ inline T nanmeanScalar(T x, T y) {
 }
 
 
+template<typename T>
+inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma, xt::pyarray<T>& data, size_t count) {
+  return ma + (data - ma) / T(count);
+}
+
+
 namespace py = pybind11;
 
 
@@ -54,4 +62,6 @@ PYBIND11_MODULE(xtnumpy, m) {
   m.def("xt_nanmean_images", &nanmeanImages<float>);
   m.def("xt_nanmean_two_images", xt::pyvectorize(nanmeanScalar<double>));
   m.def("xt_nanmean_two_images", xt::pyvectorize(nanmeanScalar<float>));
+  m.def("xt_moving_average", &movingAverage<double>);
+  m.def("xt_moving_average", &movingAverage<float>);
 }

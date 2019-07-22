@@ -24,14 +24,15 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, DataCtrlWidget, GeometryCtrlWidget,
-    PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
+    CorrelationCtrlWidget, DataCtrlWidget, StatisticsCtrlWidget,
+    GeometryCtrlWidget, PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
     OverviewWindow, ProcessMonitor, PulsedAzimuthalIntegrationWindow,
-    PumpProbeWindow, RoiWindow, XasWindow, FileStreamControllerWindow
+    StatisticsWindow, PumpProbeWindow, RoiWindow, XasWindow,
+    FileStreamControllerWindow
 )
 from .. import __version__
 from ..config import config
@@ -163,6 +164,10 @@ class MainGUI(QtGui.QMainWindow):
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
+        open_statistics_window_at = self._addAction("Statistics", "statistics.png")
+        open_statistics_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, StatisticsWindow))
+
         open_corr_window_at = self._addAction("Correlations", "scatter.png")
         open_corr_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, CorrelationWindow))
@@ -267,6 +272,10 @@ class MainGUI(QtGui.QMainWindow):
         self.bin_ctrl_widget = BinCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
+        self.statistics_ctrl_widget = StatisticsCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved
+        )
+
         self.initUI()
         self.updateMetaData()
 
@@ -286,15 +295,16 @@ class MainGUI(QtGui.QMainWindow):
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
+        misc_layout.addWidget(self.statistics_ctrl_widget)
         misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)
         if config['REQUIRE_GEOMETRY']:
             misc_layout.addWidget(self.geometry_ctrl_widget)
-        misc_layout.addWidget(self._logger.widget)
 
-        layout = QtGui.QHBoxLayout()
-        layout.addLayout(analysis_layout, 1)
-        layout.addLayout(misc_layout, 3)
+        layout = QtGui.QGridLayout()
+        layout.addLayout(analysis_layout, 0, 0, 3, 1)
+        layout.addLayout(misc_layout, 0, 1, 3, 3)
+        layout.addWidget(self._logger.widget, 4, 0, 1, 4)
         self._cw.setLayout(layout)
 
     def connectInputToOutput(self, output):

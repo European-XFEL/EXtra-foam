@@ -15,18 +15,18 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ...config import VectorNormalizer, config
+from ...config import VFomNormalizer, config
 
 
 class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
-        "AUC": VectorNormalizer.AUC,
-        "ROI1 - ROI2": VectorNormalizer.ROI_SUB,
-        "ROI1": VectorNormalizer.ROI1,
-        "ROI2": VectorNormalizer.ROI2,
-        "ROI1 + ROI2": VectorNormalizer.ROI_SUM,
+        "AUC": VFomNormalizer.AUC,
+        "ROI3": VFomNormalizer.ROI3,
+        "ROI4": VFomNormalizer.ROI4,
+        "ROI3 - ROI4": VFomNormalizer.ROI3_SUB_ROI4,
+        "ROI3 + ROI4": VFomNormalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):
@@ -56,13 +56,6 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._fom_integ_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
 
-        # default state is unchecked
-        self._pulsed_integ_cb = QtGui.QCheckBox("Pulsed azimuthal integ")
-
-        self._non_reconfigurable_widgets = [
-            self._pulsed_integ_cb,
-        ]
-
         self.initUI()
         self.initConnections()
 
@@ -89,8 +82,6 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._auc_range_le, 3, 1)
         layout.addWidget(QtGui.QLabel("FOM range (1/A): "), 3, 2, AR)
         layout.addWidget(self._fom_integ_range_le, 3, 3)
-        if config["PULSE_RESOLVED"]:
-            layout.addWidget(self._pulsed_integ_cb, 4, 0, 1, 4, AR)
 
         self.setLayout(layout)
 
@@ -111,10 +102,6 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._normalizers_cb.currentTextChanged.connect(
             lambda x: mediator.onCurveNormalizerChange(
                 self._available_normalizers[x]))
-
-        if self._pulsed_integ_cb is not None:
-            self._pulsed_integ_cb.toggled.connect(
-                mediator.onAiPulsedIntegStateChange)
 
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
@@ -147,8 +134,5 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._auc_range_le.returnPressed.emit()
 
         self._fom_integ_range_le.returnPressed.emit()
-
-        self._pulsed_integ_cb.toggled.emit(
-            self._pulsed_integ_cb.isChecked())
 
         return True

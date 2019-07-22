@@ -97,15 +97,15 @@ class XasProcessor(CompositeProcessor):
         energy = processed.mono.energy
         if not energy:
             return
-        _, roi1_hist, _ = processed.roi.roi1_hist
-        _, roi2_hist, _ = processed.roi.roi2_hist
-        _, roi3_hist, _ = processed.roi.roi3_hist
+        _, fom1_hist, _ = processed.roi.fom1_hist
+        _, fom2_hist, _ = processed.roi.fom2_hist
+        _, fom3_hist, _ = processed.roi.fom3_hist
 
         self._energies.append(energy)
         self._xgm.append(intensity)
-        self._I0.append(roi1_hist[-1])
-        self._I1.append(roi2_hist[-1])
-        self._I2.append(roi3_hist[-1])
+        self._I0.append(fom1_hist[-1])
+        self._I1.append(fom2_hist[-1])
+        self._I2.append(fom3_hist[-1])
 
         if self._counter == self._update_frequency:
             try:

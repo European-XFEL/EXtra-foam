@@ -17,7 +17,7 @@ from .base_plot_widget import PlotWidget
 
 from ..misc_widgets import make_brush, make_pen, SequentialColors
 from ...logger import logger
-from ...config import config
+from ...config import AnalysisType, config
 
 
 class SinglePulseAiWidget(PlotWidget):
@@ -53,8 +53,8 @@ class SinglePulseAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
-        intensities = data.ai.intensities
+        momentum = data.pulse.ai.x
+        intensities = data.pulse.ai.vfom
 
         if intensities is None:
             return
@@ -68,7 +68,7 @@ class SinglePulseAiWidget(PlotWidget):
             return
 
         if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.intensity)
+            self._mean_plot.setData(momentum, data.ai.vfom)
 
 
 class TrainAiWidget(PlotWidget):
@@ -88,10 +88,10 @@ class TrainAiWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
+        momentum = data.ai.x
 
         if data.pulse_resolved:
-            intensities = data.ai.intensities
+            intensities = data.pulse.ai.vfom
             if intensities is None:
                 return
 
@@ -107,7 +107,7 @@ class TrainAiWidget(PlotWidget):
                     item.setData(momentum, intensity)
 
         else:
-            intensity = data.ai.intensity
+            intensity = data.ai.vfom
             if intensity is None:
                 return
 
@@ -120,11 +120,10 @@ class TrainAiWidget(PlotWidget):
                 self.plotItem.items[0].setData(momentum, intensity)
 
 
-class PulsedFOMWidget(PlotWidget):
-    """PulsedFOMWidget class.
+class PulsesInTrainFomWidget(PlotWidget):
+    """PulsesInTrainFomWidget class.
 
-    A widget which allows users to monitor the azimuthal integration FOM
-    of each pulse with respect to the first pulse in a train.
+    A widget which allows users to monitor the FOM of each pulse in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -132,42 +131,23 @@ class PulsedFOMWidget(PlotWidget):
 
         self._plot = self.plotBar()
 
-        self.setLabel('left', "Integrated difference (arb.)")
+        self.setLabel('left', "FOM")
         self.setLabel('bottom', "Pulse index")
-        self.setTitle('FOM with respect to the first pulse')
+        self.setTitle('Analysis type')
 
     def update(self, data):
         """Override."""
-        foms = data.ai.intensities_foms
-        if foms is None:
+        fom_list = None
+        analysis_type = data.st.analysis_type
+        if analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
+            fom_list = data.pulse.ai.fom
+        elif analysis_type == AnalysisType.ROI1_PULSE:
+            fom_list = data.pulse.roi.roi1.fom
+
+        if fom_list is None:
             return
 
-        self._plot.setData(range(len(foms)), foms)
-
-
-class RoiValueMonitor(PlotWidget):
-    """RoiValueMonitor class.
-
-    Widget for displaying the evolution of the value (integration, median,
-    mean) of ROIs.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "Intensity (arb. u.)")
-        self.addLegend(offset=(-40, 20))
-
-        self._plots = []
-        for i, c in enumerate(config["ROI_COLORS"], 1):
-            self._plots.append(self.plotCurve(name=f"ROI {i}", pen=make_pen(c)))
-
-    def update(self, data):
-        """Override."""
-        for i, plot in enumerate(self._plots, 1):
-            tids, roi_hist, _ = getattr(data.roi, f"roi{i}_hist")
-            plot.setData(tids, roi_hist)
+        self._plot.setData(range(len(fom_list)), fom_list)
 
 
 class CorrelationWidget(PlotWidget):
@@ -184,7 +164,7 @@ class CorrelationWidget(PlotWidget):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._idx = idx # start from 1
+        self._idx = idx  # start from 1
 
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
@@ -198,11 +178,8 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        try:
-            correlator_hist, fom_hist, info = getattr(
-                data.correlation, f'correlation{self._idx}')
-        except AttributeError:
-            return
+        correlator_hist, fom_hist, info = getattr(
+            data.corr, f'correlation{self._idx}').hist
 
         device_id = info['device_id']
         ppt = info['property']
@@ -266,9 +243,9 @@ class PumpProbeOnOffWidget(PlotWidget):
     def update(self, data):
         """Override."""
         x = data.pp.x
-        on = data.pp.norm_on_ma
-        off = data.pp.norm_off_ma
-        on_off = data.pp.norm_on_off_ma
+        on = data.pp.vfom_on
+        off = data.pp.vfom_off
+        vfom = data.pp.vfom
 
         if on is None or off is None:
             return
@@ -279,7 +256,7 @@ class PumpProbeOnOffWidget(PlotWidget):
             return
 
         if self._is_diff:
-            self._on_off_pulse.setData(x, on_off)
+            self._on_off_pulse.setData(x, vfom)
         else:
             self._on_pulse.setData(x, on)
             self._off_pulse.setData(x, off)

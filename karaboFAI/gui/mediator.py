@@ -16,11 +16,10 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 
 from ..metadata import Metadata as mt
 from ..metadata import MetaProxy
-from ..pipeline.data_model import DataManagerMixin
 from ..ipc import RedisConnection
 
 
-class Mediator(DataManagerMixin, QObject):
+class Mediator(QObject):
     """Mediator for GUI signal-slot connection.
 
     The behavior of the code should not be affected by when the
@@ -86,10 +85,10 @@ class Mediator(DataManagerMixin, QObject):
         self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
     def onPulseIndexSelectorChange(self, value: list):
-        self._meta.set(mt.GENERAL_PROC, 'selected_pulse_indices', str(value))
+        self._meta.set(mt.GLOBAL_PROC, 'selected_pulse_indices', str(value))
 
     def onVipPulseIndexChange(self, vip_id: int, value: int):
-        self._meta.set(mt.GENERAL_PROC, f"poi{vip_id}_index", str(value))
+        self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
 
         if vip_id == 1:
             self.poi_index1_sgn.emit(value)
@@ -97,10 +96,13 @@ class Mediator(DataManagerMixin, QObject):
             self.poi_index2_sgn.emit(value)
 
     def onSampleDistanceChange(self, value: float):
-        self._meta.set(mt.GENERAL_PROC, 'sample_distance', value)
+        self._meta.set(mt.GLOBAL_PROC, 'sample_distance', value)
 
     def onPhotonEnergyChange(self, value: float):
-        self._meta.set(mt.GENERAL_PROC, 'photon_energy', value)
+        self._meta.set(mt.GLOBAL_PROC, 'photon_energy', value)
+
+    def onMaWindowChange(self, value: int):
+        self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
 
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
@@ -126,9 +128,6 @@ class Mediator(DataManagerMixin, QObject):
     def onAiFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'fom_integ_range', str(value))
 
-    def onAiPulsedIntegStateChange(self, value: bool):
-        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'enable_pulsed_ai', str(value))
-
     def onPpModeChange(self, value: IntEnum):
         self._meta.set(mt.PUMP_PROBE_PROC, 'mode', int(value))
 
@@ -144,9 +143,6 @@ class Mediator(DataManagerMixin, QObject):
     def onPpAbsDifferenceChange(self, value: bool):
         self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))
 
-    def onPpMaWindowChange(self, value: int):
-        self._meta.set(mt.PUMP_PROBE_PROC, "ma_window", value)
-
     def onPpReset(self):
         self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
 
@@ -158,20 +154,20 @@ class Mediator(DataManagerMixin, QObject):
         rank, is_visible = value
         self._meta.set(mt.ROI_PROC, f'visibility{rank}', str(is_visible))
 
-    def onRoiFomChange(self, value: IntEnum):
-        self._meta.set(mt.ROI_PROC, 'fom_type', int(value))
+    def onRoiProjDirectChange(self, value: str):
+        self._meta.set(mt.ROI_PROC, 'proj:direction', value)
 
-    def onRoiReset(self):
-        self._meta.set(mt.ROI_PROC, "reset", 1)
+    def onRoiProjNormalizerChange(self, value: IntEnum):
+        self._meta.set(mt.ROI_PROC, "proj:normalizer", int(value))
 
-    def onProj1dNormalizerChange(self, value: IntEnum):
-        self._meta.set(mt.ROI_PROC, "proj1d:normalizer", int(value))
+    def onRoiProjAucRangeChange(self, value: tuple):
+        self._meta.set(mt.ROI_PROC, "proj:auc_range", str(value))
 
-    def onProj1dAucRangeChange(self, value: tuple):
-        self._meta.set(mt.ROI_PROC, "proj1d:auc_range", str(value))
+    def onRoiProjFomIntegRangeChange(self, value: tuple):
+        self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
 
-    def onProj1dFomIntegRangeChange(self, value: tuple):
-        self._meta.set(mt.ROI_PROC, "proj1d:fom_integ_range", str(value))
+    def onStatisticsAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.STATISTICS_PROC, "analysis_type", int(value))
 
     def onCorrelationAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
@@ -180,7 +176,6 @@ class Mediator(DataManagerMixin, QObject):
         # index, device ID, property name, resolution
         # index starts from 1
         index, device_id, ppt, resolution = value
-        self.add_correlation(index, device_id, ppt, resolution)
         self._meta.set(mt.CORRELATION_PROC, f'device_id{index}', device_id)
         self._meta.set(mt.CORRELATION_PROC, f'property{index}', ppt)
         self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)

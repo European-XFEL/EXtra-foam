@@ -15,29 +15,26 @@ from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import VectorNormalizer, RoiFom
+from ...config import VFomNormalizer
 
 
 class RoiCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for ROI analysis."""
 
-    _available_roi_foms = OrderedDict({
-        "sum": RoiFom.SUM,
-        "mean": RoiFom.MEAN,
-    })
-
     _available_normalizers = OrderedDict({
-        "AUC": VectorNormalizer.AUC,
+        "AUC": VFomNormalizer.AUC,
+        "ROI3": VFomNormalizer.ROI3,
+        "ROI4": VFomNormalizer.ROI4,
+        "ROI3 - ROI4": VFomNormalizer.ROI3_SUB_ROI4,
+        "ROI3 + ROI4": VFomNormalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("ROI analysis setup", *args, **kwargs)
+        super().__init__("ROI 1D projection analysis setup", *args, **kwargs)
 
-        self._roi_fom_cb = QtGui.QComboBox()
-        for v in self._available_roi_foms:
-            self._roi_fom_cb.addItem(v)
-
-        self._reset_btn = QtGui.QPushButton("Reset")
+        self._direct_cb = QtGui.QComboBox()
+        for v in ['x', 'y']:
+            self._direct_cb.addItem(v)
 
         self._normalizers_cb = QtGui.QComboBox()
         for v in self._available_normalizers:
@@ -57,39 +54,36 @@ class RoiCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self._reset_btn, 0, 3, AR)
-        layout.addWidget(QtGui.QLabel("Normalizer (proj X/Y): "), 1, 0, AR)
-        layout.addWidget(self._normalizers_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("ROI FOM: "), 1, 2, AR)
-        layout.addWidget(self._roi_fom_cb, 1, 3)
-        layout.addWidget(QtGui.QLabel("AUC range (proj X/Y): "), 2, 0, AR)
+        layout.addWidget(QtGui.QLabel("Direction: "), 1, 0, AR)
+        layout.addWidget(self._direct_cb, 1, 1)
+        layout.addWidget(QtGui.QLabel("Normalizer: "), 1, 2, AR)
+        layout.addWidget(self._normalizers_cb, 1, 3)
+        layout.addWidget(QtGui.QLabel("AUC range: "), 2, 0, AR)
         layout.addWidget(self._auc_range_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("FOM range (proj X/Y): "), 3, 0, AR)
-        layout.addWidget(self._fom_integ_range_le, 3, 1)
+        layout.addWidget(QtGui.QLabel("FOM range: "), 2, 2, AR)
+        layout.addWidget(self._fom_integ_range_le, 2, 3)
 
         self.setLayout(layout)
 
     def initConnections(self):
         mediator = self._mediator
 
-        self._roi_fom_cb.currentTextChanged.connect(
-            lambda x: mediator.onRoiFomChange(self._available_roi_foms[x]))
-
-        self._reset_btn.clicked.connect(mediator.onRoiReset)
+        self._direct_cb.currentTextChanged.connect(
+            mediator.onRoiProjDirectChange)
 
         self._normalizers_cb.currentTextChanged.connect(
-            lambda x: mediator.onProj1dNormalizerChange(
+            lambda x: mediator.onRoiProjNormalizerChange(
                 self._available_normalizers[x]))
 
         self._auc_range_le.value_changed_sgn.connect(
-            mediator.onProj1dAucRangeChange)
+            mediator.onRoiProjAucRangeChange)
 
         self._fom_integ_range_le.value_changed_sgn.connect(
-            mediator.onProj1dFomIntegRangeChange)
+            mediator.onRoiProjFomIntegRangeChange)
 
     def updateMetaData(self):
-        self._roi_fom_cb.currentTextChanged.emit(
-            self._roi_fom_cb.currentText())
+        self._direct_cb.currentTextChanged.emit(
+            self._direct_cb.currentText())
 
         self._normalizers_cb.currentTextChanged.emit(
             self._normalizers_cb.currentText())
