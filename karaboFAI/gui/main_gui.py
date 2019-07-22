@@ -189,7 +189,7 @@ class MainGUI(QtGui.QMainWindow):
             functools.partial(self.onOpenPlotWindow, XasWindow))
 
         open_pulsed_ai_window_at = self._addAction(
-            "Azimuthal Integration", "pulsed_ai.png")
+            "Azimuthal Integration", "azimuthal_integration.png")
         open_pulsed_ai_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, AzimuthalIntegrationWindow))
 
