@@ -17,7 +17,7 @@ from .base_plot_widget import PlotWidget
 
 from ..misc_widgets import make_brush, make_pen, SequentialColors
 from ...logger import logger
-from ...config import config
+from ...config import AnalysisType, config
 
 
 class SinglePulseAiWidget(PlotWidget):
@@ -120,11 +120,10 @@ class TrainAiWidget(PlotWidget):
                 self.plotItem.items[0].setData(momentum, intensity)
 
 
-class PulsesFomInTrainWidget(PlotWidget):
-    """PulsesFomInTrainWidget class.
+class PulsesInTrainFomWidget(PlotWidget):
+    """PulsesInTrainFomWidget class.
 
-    A widget which allows users to monitor the azimuthal integration FOM
-    of each pulse with respect to the first pulse in a train.
+    A widget which allows users to monitor the FOM of each pulse in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
@@ -138,11 +137,17 @@ class PulsesFomInTrainWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        foms = data.pulse.ai.fom
-        if foms is None:
+        fom_list = None
+        analysis_type = data.pit.analysis_type
+        if analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
+            fom_list = data.pulse.ai.fom
+        elif analysis_type == AnalysisType.ROI1_PULSE:
+            fom_list = data.pulse.roi.roi1.fom
+
+        if fom_list is None:
             return
 
-        self._plot.setData(range(len(foms)), foms)
+        self._plot.setData(range(len(fom_list)), fom_list)
 
 
 class CorrelationWidget(PlotWidget):

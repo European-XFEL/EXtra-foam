@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..plot_widgets import PulsesFomInTrainWidget
+from ..plot_widgets import PulsesInTrainFomWidget
 from ...config import config
 
 
@@ -32,8 +32,8 @@ class PulsesInTrainWindow(DockerWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._plot1 = PulsesFomInTrainWidget(parent=self)
-        self._plot2 = PulsesFomInTrainWidget(parent=self)
+        self._plot1 = PulsesInTrainFomWidget(parent=self)
+        self._plot2 = PulsesInTrainFomWidget(parent=self)
 
         self.initUI()
 
@@ -48,10 +48,10 @@ class PulsesInTrainWindow(DockerWindow):
 
     def initPlotUI(self):
         """Override."""
-        dock1 = Dock("Analysis tyep 1", size=(self._W, self._H))
+        dock1 = Dock("Analysis type 1", size=(self._W, self._H))
         self._docker_area.addDock(dock1, 'right')
         dock1.addWidget(self._plot1)
 
-        dock2 = Dock("Analysis tyep 2", size=(self._W, self._H))
+        dock2 = Dock("Analysis type 2", size=(self._W, self._H))
         self._docker_area.addDock(dock2, 'top', dock1)
         dock2.addWidget(self._plot2)

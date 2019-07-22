@@ -16,7 +16,7 @@ from karaboFAI.gui.windows import (
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsesFomInTrainWidget, SinglePulseAiWidget, SinglePulseImageView,
+    PulsesInTrainFomWidget, SinglePulseAiWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
@@ -164,7 +164,7 @@ class TestOverviewWindow(unittest.TestCase):
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(2, counter[PulsesFomInTrainWidget])
+        self.assertEqual(2, counter[PulsesInTrainFomWidget])
 
 
 class TestPulsedAiWindow(unittest.TestCase):

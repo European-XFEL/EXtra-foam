@@ -13,7 +13,8 @@ from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
     AzimuthalIntegrationProcessorPulse, PulsesInTrainProcessor,
-    ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain
+    ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain,
+    RoiProcessorPulse
 )
 from ..config import config
 
@@ -30,13 +31,15 @@ class ImageWorker(ProcessWorker):
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc_pulse = ImageProcessorPulse()
         self._pulses_in_train = PulsesInTrainProcessor()
-        self._image_proc_train = ImageProcessorTrain()
+        self._roi_proc = RoiProcessorPulse()
         self._ai_proc = AzimuthalIntegrationProcessorPulse()
+        self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
             self._assembler,
             self._image_proc_pulse,
             self._pulses_in_train,
+            self._roi_proc,
             self._ai_proc,
             self._image_proc_train
         ]

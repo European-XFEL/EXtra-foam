@@ -15,7 +15,7 @@ from threading import Lock
 import numpy as np
 
 from ..algorithms import mask_image
-from ..config import config
+from ..config import AnalysisType, config
 
 from karaboFAI.cpp import xt_nanmean_images, xt_moving_average
 
@@ -688,6 +688,12 @@ class CorrelationData:
         self.correlation4.update_hist()
 
 
+class PulsesInTrainData:
+    """Pulses-in-train data model."""
+    def __init__(self):
+        self.analysis_type = AnalysisType.UNDEFINED
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
@@ -700,13 +706,15 @@ class ProcessedData:
         roi (RoiData): ROI train-resolved data.
         xas (XasData): XAS train-resolved data.
 
-        correlation (CorrelationData): correlation related data.
+        pit (PulsesInTrainData): pulses-in-train data.
+        correlation (CorrelationData): correlation data.
         bin (BinData): binning data.
     """
     class PulseData:
         """Container for pulse-resolved data."""
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
+            self.roi = RoiData()
 
     def __init__(self, tid):
         """Initialization."""
@@ -720,6 +728,7 @@ class ProcessedData:
         self.pp = PumpProbeData()
         self.xas = XasData()
 
+        self.pit = PulsesInTrainData()
         self.corr = CorrelationData()
         self.bin = BinData()
 

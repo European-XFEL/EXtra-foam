@@ -16,7 +16,7 @@ from .base_processor import (
 )
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
-from ...algorithms import slice_curve
+from ...algorithms import slice_curve, mask_image
 from ...metadata import Metadata as mt
 from ...config import AnalysisType, VFomNormalizer
 from ...utils import profiler
@@ -40,12 +40,23 @@ class _RectROI:
     def get_image(self, img, copy=False):
         """Get the ROI from a given image.
 
-        :return: numpy.array if there is intersection between the ROI
+        :return: numpy.ndarray if there is intersection between the ROI
             and the image and None if not.
         """
         x, y, w, h = self.intersect(img)
         if w > 0 and h > 0:
             return np.array(img[y:y + h, x:x + w], copy=copy)
+
+    def get_images(self, imgs, copy=False):
+        """Get the ROI from an array of images.
+
+        :return: numpy.ndarray if there is intersection between the ROI
+            and the image and None if not.
+        """
+        x, y, w, h = self.intersect(imgs[0])
+
+        if w > 0 and h > 0:
+            return np.array(imgs[:, y:y + h, x:x + w], copy=copy)
 
     def get_images_pp(self, img_on, img_off, copy=False):
         """Convenient function to get on/off images together.
@@ -100,10 +111,11 @@ def project_y(img):
     return np.sum(img, axis=-1)
 
 
-class RoiProcessor(CompositeProcessor):
-    """RoiProcessor class.
+class _RoiProcessBase(CompositeProcessor):
+    """_RoiProcessBase class.
 
-    Process FOM and 1D projection of region of interest.
+    Base class for ROI Processors, which process FOM and 1D projection
+    of region of interest.
 
     Attributes:
         _normalizer (VFomNormalizer): normalizer type for calculating
@@ -113,22 +125,6 @@ class RoiProcessor(CompositeProcessor):
             FOM from the normalized 1D projection.
         _ma_window (int): moving average window size.
     """
-
-    _img1 = MovingAverageArray()
-    _img2 = MovingAverageArray()
-    _img3 = MovingAverageArray()
-    _img4 = MovingAverageArray()
-
-    _img1_on = MovingAverageArray()
-    _img2_on = MovingAverageArray()
-    _img3_on = MovingAverageArray()
-    _img4_on = MovingAverageArray()
-
-    _img1_off = MovingAverageArray()
-    _img2_off = MovingAverageArray()
-    _img3_off = MovingAverageArray()
-    _img4_off = MovingAverageArray()
-
     def __init__(self):
         super().__init__()
 
@@ -152,25 +148,6 @@ class RoiProcessor(CompositeProcessor):
 
         self._ma_window = 1
 
-    def _update_moving_average(self, v):
-        if self._ma_window != v:
-            self.__class__._img1.window = v
-            self.__class__._img2.window = v
-            self.__class__._img3.window = v
-            self.__class__._img4.window = v
-
-            self.__class__._img1_on.window = v
-            self.__class__._img2_on.window = v
-            self.__class__._img3_on.window = v
-            self.__class__._img4_on.window = v
-
-            self.__class__._img1_off.window = v
-            self.__class__._img2_off.window = v
-            self.__class__._img3_off.window = v
-            self.__class__._img4_off.window = v
-
-        self._ma_window = v
-
     def update(self):
         """Override."""
         g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
@@ -192,7 +169,48 @@ class RoiProcessor(CompositeProcessor):
         self._auc_range = self.str2tuple(cfg['proj:auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['proj:fom_integ_range'])
 
-    @profiler("ROI Processor")
+
+class RoiProcessorTrain(_RoiProcessBase):
+    """RoiProcessorTrain class.
+
+    Train-resolved RoiProcessor.
+    """
+
+    _img1 = MovingAverageArray()
+    _img2 = MovingAverageArray()
+    _img3 = MovingAverageArray()
+    _img4 = MovingAverageArray()
+
+    _img1_on = MovingAverageArray()
+    _img2_on = MovingAverageArray()
+    _img3_on = MovingAverageArray()
+    _img4_on = MovingAverageArray()
+
+    _img1_off = MovingAverageArray()
+    _img2_off = MovingAverageArray()
+    _img3_off = MovingAverageArray()
+    _img4_off = MovingAverageArray()
+
+    def _update_moving_average(self, v):
+        if self._ma_window != v:
+            self.__class__._img1.window = v
+            self.__class__._img2.window = v
+            self.__class__._img3.window = v
+            self.__class__._img4.window = v
+
+            self.__class__._img1_on.window = v
+            self.__class__._img2_on.window = v
+            self.__class__._img3_on.window = v
+            self.__class__._img4_on.window = v
+
+            self.__class__._img1_off.window = v
+            self.__class__._img2_off.window = v
+            self.__class__._img3_off.window = v
+            self.__class__._img4_off.window = v
+
+        self._ma_window = v
+
+    @profiler("ROI Processor (train)")
     def process(self, data):
         processed = data['processed']
 
@@ -451,3 +469,44 @@ class RoiProcessor(CompositeProcessor):
         pp.vfom_off = vfom_off
         pp.vfom = vfom
         pp.fom = fom
+
+
+class RoiProcessorPulse(_RoiProcessBase):
+    """RoiProcessorTrain class.
+
+    Train-resolved RoiProcessor.
+    """
+    def _update_moving_average(self, v):
+        pass
+
+    @profiler("ROI Processor (pulse)")
+    def process(self, data):
+        processed = data['processed']
+        assembled = data['assembled']
+        self._process_rois(processed, assembled)
+
+    def _process_rois(self, processed, assembled):
+        """Process averaged image in a train."""
+        if not self._has_analysis(AnalysisType.ROI1_PULSE):
+            return
+
+        threshold_mask = processed.image.threshold_mask
+        image_mask = processed.image.image_mask
+
+        # for speed
+        roi = processed.pulse.roi
+
+        roi.rect1 = self._roi1.intersect(assembled[0])
+
+        # get the current ROI images
+        img1 = self._roi1.get_images(assembled)
+
+        # set up the flags
+        self._has_img1 = img1 is not None
+
+        if self._has_img1:
+            foms = []
+            for i in range(len(img1)):
+                foms.append(np.sum(mask_image(
+                    img1[i], image_mask=image_mask, threshold_mask=threshold_mask)))
+            roi.roi1.fom = foms

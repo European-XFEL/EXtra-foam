@@ -23,6 +23,7 @@ class PulsesInTrainCtrlWidget(AbstractCtrlWidget):
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG_PULSE,
+        "ROI1 (sum)": AnalysisType.ROI1_PULSE,
     })
 
     def __init__(self, *args, **kwargs):

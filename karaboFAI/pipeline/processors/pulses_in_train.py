@@ -12,6 +12,7 @@ All rights reserved.
 from .base_processor import CompositeProcessor
 from ...metadata import Metadata as mt
 from ...config import AnalysisType
+from ...utils import profiler
 
 
 class PulsesInTrainProcessor(CompositeProcessor):
@@ -32,5 +33,10 @@ class PulsesInTrainProcessor(CompositeProcessor):
     def update(self):
         """Override."""
         cfg = self._meta.get_all(mt.PULSE_FOM_PROC)
-
         self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
+
+    @profiler("Pulses-in-train processor")
+    def process(self, data):
+        processed = data['processed']
+
+        processed.pit.analysis_type = self.analysis_type
