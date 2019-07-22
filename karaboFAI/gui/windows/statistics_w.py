@@ -3,9 +3,9 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PulsesInTrainWindow
+StatisticsWindow
 
-Author: Jun Zhu <jun.zhu@xfel.eu>
+Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
@@ -16,12 +16,12 @@ from ..plot_widgets import PulsesInTrainFomWidget
 from ...config import config
 
 
-class PulsesInTrainWindow(DockerWindow):
-    """PulsesInTrainWindow class.
+class StatisticsWindow(DockerWindow):
+    """StatisticsWindow class.
 
-    Plot pulse-resolved FOM in a train.
+    Visualize statistics.
     """
-    title = "pulses-in-train"
+    title = "statistics"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 

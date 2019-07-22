@@ -13,4 +13,4 @@ from .pump_probe_processor import PumpProbeProcessor
 from .roi import RoiProcessorTrain, RoiProcessorPulse
 from .xas import XasProcessor
 from .xgm import XgmProcessor
-from .pulses_in_train import PulsesInTrainProcessor
+from .statistics import StatisticsProcessor

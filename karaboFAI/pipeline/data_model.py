@@ -688,8 +688,8 @@ class CorrelationData:
         self.correlation4.update_hist()
 
 
-class PulsesInTrainData:
-    """Pulses-in-train data model."""
+class StatisticsData:
+    """Statistics data model."""
     def __init__(self):
         self.analysis_type = AnalysisType.UNDEFINED
 
@@ -706,7 +706,7 @@ class ProcessedData:
         roi (RoiData): ROI train-resolved data.
         xas (XasData): XAS train-resolved data.
 
-        pit (PulsesInTrainData): pulses-in-train data.
+        st (StatisticsData): statistics data.
         correlation (CorrelationData): correlation data.
         bin (BinData): binning data.
     """
@@ -728,7 +728,7 @@ class ProcessedData:
         self.pp = PumpProbeData()
         self.xas = XasData()
 
-        self.pit = PulsesInTrainData()
+        self.st = StatisticsData()
         self.corr = CorrelationData()
         self.bin = BinData()
 

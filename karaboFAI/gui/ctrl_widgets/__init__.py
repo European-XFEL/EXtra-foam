@@ -7,7 +7,7 @@ from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .xas_ctrl_widget import XasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
-from .pulses_in_train_ctrl_widget import PulsesInTrainCtrlWidget
+from .statistics_ctrl_widget import StatisticsCtrlWidget
 
 
 # add control widgets
@@ -17,7 +17,7 @@ __all__ = [
     "BinCtrlWidget",
     "CorrelationCtrlWidget",
     "DataCtrlWidget",
-    "PulsesInTrainCtrlWidget",
+    "StatisticsCtrlWidget",
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",

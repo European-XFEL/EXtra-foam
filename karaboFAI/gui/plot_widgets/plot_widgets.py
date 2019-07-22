@@ -138,7 +138,7 @@ class PulsesInTrainFomWidget(PlotWidget):
     def update(self, data):
         """Override."""
         fom_list = None
-        analysis_type = data.pit.analysis_type
+        analysis_type = data.st.analysis_type
         if analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
             fom_list = data.pulse.ai.fom
         elif analysis_type == AnalysisType.ROI1_PULSE:

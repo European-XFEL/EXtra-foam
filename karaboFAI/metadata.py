@@ -30,7 +30,7 @@ class Metadata:
     XAS_PROC = "metadata:proc:xas"
     BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
-    PULSE_FOM_PROC = "metadata:proc:pulse_fom"
+    STATISTICS_PROC = "metadata:proc:pulse_fom"
 
     _meta = {
         ANALYSIS_TYPE: [
@@ -123,7 +123,7 @@ class Metadata:
             "bin_range_y",
             "mode",
         ],
-        PULSE_FOM_PROC: [
+        STATISTICS_PROC: [
             "analysis_type"
         ]
     }

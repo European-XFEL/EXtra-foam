@@ -8,7 +8,7 @@ from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
-    OverviewWindow, PulsesInTrainWindow, PumpProbeWindow, XasWindow
+    OverviewWindow, StatisticsWindow, PumpProbeWindow, XasWindow
 )
 
 app = mkQApp()
@@ -37,7 +37,7 @@ class TestMainGui(unittest.TestCase):
         imagetool_action = actions[2]
         overview_action = actions[3]
         pp_action = actions[4]
-        pulses_in_train_action = actions[5]
+        statistics_action = actions[5]
         correlation_action = actions[6]
         bin1d_action = actions[7]
         bin2d_action = actions[8]
@@ -53,8 +53,8 @@ class TestMainGui(unittest.TestCase):
         pp_window = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window, PumpProbeWindow)
 
-        pulses_in_train_window = self._check_open_window(pulses_in_train_action)
-        self.assertIsInstance(pulses_in_train_window, PulsesInTrainWindow)
+        statistics_window = self._check_open_window(statistics_action)
+        self.assertIsInstance(statistics_window, StatisticsWindow)
 
         correlation_window = self._check_open_window(correlation_action)
         self.assertIsInstance(correlation_window, CorrelationWindow)
@@ -73,7 +73,7 @@ class TestMainGui(unittest.TestCase):
         self._check_close_window(imagetool_window)
         self._check_close_window(overview_window)
         self._check_close_window(pp_window)
-        self._check_close_window(pulses_in_train_window)
+        self._check_close_window(statistics_window)
         self._check_close_window(correlation_window)
         self._check_close_window(bin1d_window)
         self._check_close_window(bin2d_window)

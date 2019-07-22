@@ -3,9 +3,9 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PulsesInTrainCtrlWidget.
+StatisticsCtrlWidget.
 
-Author: Jun Zhu <jun.zhu@xfel.eu>
+Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
@@ -17,8 +17,8 @@ from .base_ctrl_widgets import AbstractCtrlWidget
 from ...config import AnalysisType
 
 
-class PulsesInTrainCtrlWidget(AbstractCtrlWidget):
-    """Analysis parameters setup for monitoring pulsed (V)FOM."""
+class StatisticsCtrlWidget(AbstractCtrlWidget):
+    """Analysis parameters setup for monitoring statistics of V(FOM)."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -53,7 +53,7 @@ class PulsesInTrainCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
-            lambda x: mediator.onPulseFomAnalysisTypeChange(
+            lambda x: mediator.onStatisticsAnalysisTypeChange(
                 self._analysis_types[x]))
 
     def updateMetaData(self):

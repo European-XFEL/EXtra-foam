@@ -54,7 +54,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._start_action = cls._actions[0]
         cls._stop_action = cls._actions[1]
         cls._pp_action = cls._actions[4]
-        cls._pulses_in_train_action = cls._actions[5]
+        cls._statistics_action = cls._actions[5]
         cls._correlation_action = cls._actions[6]
         cls._bin1d_action = cls._actions[7]
         cls._bin2d_action = cls._actions[8]

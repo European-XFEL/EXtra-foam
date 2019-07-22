@@ -24,14 +24,14 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, DataCtrlWidget, PulsesInTrainCtrlWidget,
+    CorrelationCtrlWidget, DataCtrlWidget, StatisticsCtrlWidget,
     GeometryCtrlWidget, PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
     OverviewWindow, ProcessMonitor, PulsedAzimuthalIntegrationWindow,
-    PulsesInTrainWindow, PumpProbeWindow, RoiWindow, XasWindow,
+    StatisticsWindow, PumpProbeWindow, RoiWindow, XasWindow,
     FileStreamControllerWindow
 )
 from .. import __version__
@@ -164,9 +164,9 @@ class MainGUI(QtGui.QMainWindow):
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
-        open_pit_window_at = self._addAction("Pulses-in-train", "pulses_in_train.png")
-        open_pit_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, PulsesInTrainWindow))
+        open_statistics_window_at = self._addAction("Statistics", "statistics.png")
+        open_statistics_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, StatisticsWindow))
 
         open_corr_window_at = self._addAction("Correlations", "scatter.png")
         open_corr_window_at.triggered.connect(
@@ -272,7 +272,7 @@ class MainGUI(QtGui.QMainWindow):
         self.bin_ctrl_widget = BinCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
-        self.pulses_in_train_ctrl_widget = PulsesInTrainCtrlWidget(
+        self.statistics_ctrl_widget = StatisticsCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved
         )
 
@@ -295,7 +295,7 @@ class MainGUI(QtGui.QMainWindow):
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
-        misc_layout.addWidget(self.pulses_in_train_ctrl_widget)
+        misc_layout.addWidget(self.statistics_ctrl_widget)
         misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)
         if config['REQUIRE_GEOMETRY']:

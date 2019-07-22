@@ -11,7 +11,7 @@ from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
     Bin1dWindow, Bin2dWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
-    PulsesInTrainWindow, PumpProbeWindow, RoiWindow, XasWindow
+    StatisticsWindow, PumpProbeWindow, RoiWindow, XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget,
@@ -157,7 +157,7 @@ class TestOverviewWindow(unittest.TestCase):
         app.processEvents()
 
     def testPulsesInTrainWindow(self):
-        win = PulsesInTrainWindow(pulse_resolved=True, parent=self.gui)
+        win = StatisticsWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
