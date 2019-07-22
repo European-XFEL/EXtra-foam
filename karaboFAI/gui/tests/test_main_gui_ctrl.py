@@ -17,7 +17,7 @@ from karaboFAI.metadata import MetaProxy
 from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import ImageToolWindow, PulsedAzimuthalIntegrationWindow
+from karaboFAI.gui.windows import ImageToolWindow, PulseOfInterestWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
@@ -58,8 +58,9 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._correlation_action = cls._actions[6]
         cls._bin1d_action = cls._actions[7]
         cls._bin2d_action = cls._actions[8]
-        cls._xas_action = cls._actions[9]
-        cls._pulsed_ai_action = cls._actions[10]
+        cls._poi_action = cls._actions[9]
+        cls._xas_action = cls._actions[10]
+        cls._pulsed_ai_action = cls._actions[11]
 
     @classmethod
     def tearDownClass(cls):
@@ -81,15 +82,15 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # --------------------------
         # test setting VIP pulse indices
         # --------------------------
-        self._pulsed_ai_action.trigger()
+        self._poi_action.trigger()
         window = [w for w in self.gui._windows
-                  if isinstance(w, PulsedAzimuthalIntegrationWindow)][0]
+                  if isinstance(w, PulseOfInterestWindow)][0]
 
         # default values
         poi_index1 = int(widget._poi_index1_le.text())
-        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
+        self.assertEqual(poi_index1, window._poi1_img.pulse_index)
         poi_index2 = int(widget._poi_index2_le.text())
-        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
+        self.assertEqual(poi_index2, window._poi2_img.pulse_index)
 
         image_proc.update()
         self.assertEqual(poi_index1, image_proc._poi_indices[0])
@@ -98,11 +99,11 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # set new values
         poi_index1 = 10
         widget._poi_index1_le.setText(str(poi_index1))
-        self.assertEqual(poi_index1, window._vip1_img.pulse_index)
+        self.assertEqual(poi_index1, window._poi1_img.pulse_index)
 
         poi_index2 = 20
         widget._poi_index2_le.setText(str(poi_index2))
-        self.assertEqual(poi_index2, window._vip2_img.pulse_index)
+        self.assertEqual(poi_index2, window._poi2_img.pulse_index)
 
         image_proc.update()
         self.assertEqual(poi_index1, image_proc._poi_indices[0])

@@ -30,9 +30,9 @@ from .ctrl_widgets import (
 from .misc_widgets import GuiLogger
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
-    OverviewWindow, ProcessMonitor, PulsedAzimuthalIntegrationWindow,
-    StatisticsWindow, PumpProbeWindow, RoiWindow, XasWindow,
-    FileStreamControllerWindow
+    OverviewWindow, ProcessMonitor, AzimuthalIntegrationWindow,
+    StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow, RoiWindow,
+    XasWindow, FileStreamControllerWindow
 )
 from .. import __version__
 from ..config import config
@@ -180,14 +180,18 @@ class MainGUI(QtGui.QMainWindow):
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin2dWindow))
 
+        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
+        open_poi_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
+
         open_xas_window_at = self._addAction("XAS", "xas.png")
         open_xas_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, XasWindow))
 
         open_pulsed_ai_window_at = self._addAction(
-            "Pulsed A.I", "pulsed_ai.png")
+            "Azimuthal Integration", "pulsed_ai.png")
         open_pulsed_ai_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, PulsedAzimuthalIntegrationWindow))
+            functools.partial(self.onOpenPlotWindow, AzimuthalIntegrationWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
