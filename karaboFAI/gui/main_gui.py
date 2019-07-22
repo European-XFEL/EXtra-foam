@@ -188,9 +188,9 @@ class MainGUI(QtGui.QMainWindow):
         open_xas_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, XasWindow))
 
-        open_pulsed_ai_window_at = self._addAction(
+        open_ai_window_at = self._addAction(
             "Azimuthal Integration", "azimuthal_integration.png")
-        open_pulsed_ai_window_at.triggered.connect(
+        open_ai_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, AzimuthalIntegrationWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")

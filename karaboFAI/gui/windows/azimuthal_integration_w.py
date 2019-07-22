@@ -18,26 +18,21 @@ from ...config import config
 
 class AzimuthalIntegrationWindow(DockerWindow):
     """AzimuthalIntegrationWindow class."""
-    title = "azimuthal integration"
+    title = "Azimuthal Integration"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
-
-    _LW = 0.5 * _TOTAL_W
-    _LH = 0.5 * _TOTAL_H
-    _RW = 0.5 * _TOTAL_W
-    _RH1 = 0.3 * _TOTAL_H
-    _RH2 = 0.4 * _TOTAL_H
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
         self._ai = TrainAiWidget(parent=self)
-        self.resize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
+        self.initUI()
+
+        self.resize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
-        self.initConnections()
         self.update()
 
     def initUI(self):
@@ -46,7 +41,6 @@ class AzimuthalIntegrationWindow(DockerWindow):
 
     def initPlotUI(self):
         """Override."""
-
         ai_dock = Dock("Normalized azimuthal Integration",
                        size=(self._TOTAL_W, self._TOTAL_H))
         self._docker_area.addDock(ai_dock)

@@ -20,50 +20,27 @@ from ...config import AnalysisType, config
 class TrainAiWidget(PlotWidget):
     """TrainAiWidget class.
 
-    Widget for displaying azimuthal integration result for all
+    Widget for displaying azimuthal integration result for the average of all
     the pulse(s) in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._n_pulses = 0
-
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
+
+        self._plot = self.plotCurve(pen=make_pen("p"))
 
     def update(self, data):
         """Override."""
         momentum = data.ai.x
+        intensity = data.ai.vfom
 
-        if data.pulse_resolved:
-            intensities = data.pulse.ai.vfom
-            if intensities is None:
-                return
+        if intensity is None:
+            return
 
-            n_pulses = len(intensities)
-            if self._n_pulses != n_pulses:
-                self.clear()
-
-                colors = SequentialColors().s1(n_pulses)
-                for i, intensity in enumerate(intensities):
-                    self.plotCurve(momentum, intensity, pen=make_pen(colors[i]))
-            else:
-                for item, intensity in zip(self.plotItem.items, intensities):
-                    item.setData(momentum, intensity)
-
-        else:
-            intensity = data.ai.vfom
-            if intensity is None:
-                return
-
-            if self._n_pulses == 0:
-                # initialize
-                self.plotCurve(momentum, intensity,
-                               pen=make_pen(SequentialColors().r[0]))
-                self._n_pulses = 1
-            else:
-                self.plotItem.items[0].setData(momentum, intensity)
+        self._plot.setData(momentum, intensity)
 
 
 class PulsesInTrainFomWidget(PlotWidget):
