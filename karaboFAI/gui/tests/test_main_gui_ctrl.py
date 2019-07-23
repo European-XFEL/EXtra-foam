@@ -60,7 +60,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         cls._bin2d_action = cls._actions[8]
         cls._poi_action = cls._actions[9]
         cls._xas_action = cls._actions[10]
-        cls._pulsed_ai_action = cls._actions[11]
+        cls._ai_action = cls._actions[11]
 
     @classmethod
     def tearDownClass(cls):
@@ -564,7 +564,7 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         cls._pp_action = cls._actions[4]
         cls._correlation_action = cls._actions[5]
         cls._xas_action = cls._actions[6]
-        cls._pulsed_ai_action = cls._actions[7]
+        cls._ai_action = cls._actions[7]
 
     @classmethod
     def tearDownClass(cls):
