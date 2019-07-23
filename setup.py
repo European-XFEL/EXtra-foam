@@ -166,11 +166,11 @@ setup(
         'PyQt5>=5.12.0',
         'karabo-data>=0.5.0',
         'karabo-bridge>=0.3.0',
-        'toolz',
+        'toolz>=0.9.0',
         'silx>=0.9.0',
-        'redis',
+        'redis>=3.2.1',
         'pyarrow>=0.13.0',
-        'psutil',
+        'psutil>=5.6.2',
     ],
     extras_require={
         'docs': [
