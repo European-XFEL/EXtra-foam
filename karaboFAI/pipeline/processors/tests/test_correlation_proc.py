@@ -49,7 +49,9 @@ class TestCorrelationProcessor(unittest.TestCase):
 
         # PUMP_PROBE_FOM
         proc.analysis_type = AnalysisType.PUMP_PROBE
-        proc.process(data)  # not raise if PUMP_PROBE
+        proc.process(data)
+        with self.assertRaises(ProcessingError):
+            proc.process(data)
         self.assertIsNone(processed.corr.correlation1.y)
         processed.pp.fom = 10
         proc.process(data)
@@ -59,8 +61,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.ROI1
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(10, processed.corr.correlation1.y)
+        self.assertIsNone(processed.corr.correlation1.y)
         processed.roi.roi1.fom = 11
         proc.process(data)
         self.assertEqual(11, processed.corr.correlation1.y)
@@ -69,8 +70,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(11, processed.corr.correlation2.y)
+        self.assertIsNone(processed.corr.correlation2.y)
         processed.roi.roi2.fom = 12
         proc.process(data)
         self.assertEqual(12, processed.corr.correlation2.y)
@@ -79,8 +79,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.ROI1_SUB_ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(12, processed.corr.correlation2.y)
+        self.assertIsNone(processed.corr.correlation2.y)
         processed.roi.roi1_sub_roi2.fom = 13
         proc.process(data)
         self.assertEqual(13, processed.corr.correlation2.y)
@@ -89,8 +88,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.ROI1_ADD_ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(13, processed.corr.correlation3.y)
+        self.assertIsNone(processed.corr.correlation3.y)
         processed.roi.roi1_add_roi2.fom = 14
         proc.process(data)
         self.assertEqual(14, processed.corr.correlation3.y)
@@ -99,8 +97,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.PROJ_ROI1
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(14, processed.corr.correlation3.y)
+        self.assertIsNone(processed.corr.correlation3.y)
         processed.roi.proj1.fom = 15
         proc.process(data)
         self.assertEqual(15, processed.corr.correlation3.y)
@@ -109,8 +106,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.PROJ_ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(15, processed.corr.correlation4.y)
+        self.assertIsNone(processed.corr.correlation4.y)
         processed.roi.proj2.fom = 16
         proc.process(data)
         self.assertEqual(16, processed.corr.correlation4.y)
@@ -119,8 +115,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.PROJ_ROI1_ADD_ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(16, processed.corr.correlation1.y)
+        self.assertIsNone(processed.corr.correlation1.y)
         processed.roi.proj1_add_proj2.fom = 17
         proc.process(data)
         self.assertEqual(17, processed.corr.correlation1.y)
@@ -129,8 +124,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.PROJ_ROI1_SUB_ROI2
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged but we test the other two correlations
-        self.assertEqual(17, processed.corr.correlation1.y)
+        self.assertIsNone(processed.corr.correlation1.y)
         processed.roi.proj1_sub_proj2.fom = 18
         proc.process(data)
         self.assertEqual(18, processed.corr.correlation1.y)
@@ -139,8 +133,7 @@ class TestCorrelationProcessor(unittest.TestCase):
         proc.analysis_type = AnalysisType.AZIMUTHAL_INTEG
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        # test unchanged
-        self.assertEqual(18, processed.corr.correlation2.y)
+        self.assertIsNone(processed.corr.correlation2.y)
         processed.ai.fom = 19
         proc.process(data)
         self.assertEqual(19, processed.corr.correlation2.y)

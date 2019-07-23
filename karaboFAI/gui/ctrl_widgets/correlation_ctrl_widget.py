@@ -46,7 +46,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         for v in self._analysis_types:
             self._analysis_type_cb.addItem(v)
 
-        self._reset_btn = QtGui.QPushButton("Clear history")
+        self._reset_btn = QtGui.QPushButton("Reset")
 
         self._table = QtGui.QTableWidget()
 
