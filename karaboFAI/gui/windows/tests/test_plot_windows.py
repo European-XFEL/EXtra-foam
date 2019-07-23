@@ -10,13 +10,14 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
-    Bin1dWindow, Bin2dWindow, OverviewWindow, PulsedAzimuthalIntegrationWindow,
-    StatisticsWindow, PumpProbeWindow, RoiWindow, XasWindow
+    Bin1dWindow, Bin2dWindow, OverviewWindow, AzimuthalIntegrationWindow,
+    StatisticsWindow, PumpProbeWindow, RoiWindow, PulseOfInterestWindow,
+    XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsesInTrainFomWidget, SinglePulseAiWidget, SinglePulseImageView,
+    PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
@@ -29,7 +30,7 @@ app = mkQApp()
 logger.setLevel('CRITICAL')
 
 
-class TestOverviewWindow(unittest.TestCase):
+class TestPlotWindows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # do not use the config file in the current computer
@@ -156,7 +157,7 @@ class TestOverviewWindow(unittest.TestCase):
         win.update()
         app.processEvents()
 
-    def testPulsesInTrainWindow(self):
+    def testStatisticsWindow(self):
         win = StatisticsWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
@@ -166,30 +167,21 @@ class TestOverviewWindow(unittest.TestCase):
 
         self.assertEqual(2, counter[PulsesInTrainFomWidget])
 
+    def testPulseOfInterestWindow(self):
+        win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
 
-class TestPulsedAiWindow(unittest.TestCase):
-    def testPulseResolved(self):
-        gui = MainGUI()
-
-        self._win = PulsedAzimuthalIntegrationWindow(
-            pulse_resolved=True, parent=gui)
-
-        self.assertEqual(5, len(self._win._plot_widgets))
+        self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
-        for key in self._win._plot_widgets:
+        for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[TrainAiWidget])
-        self.assertEqual(2, counter[SinglePulseAiWidget])
         self.assertEqual(2, counter[SinglePulseImageView])
 
-        gui.close()
-
-    def testTrainResolved(self):
+    def testAzimuthalIntegrationWindow(self):
         gui = MainGUI()
 
-        self._win = PulsedAzimuthalIntegrationWindow(
-            pulse_resolved=False, parent=gui)
+        self._win = AzimuthalIntegrationWindow(
+            pulse_resolved=True, parent=gui)
 
         self.assertEqual(1, len(self._win._plot_widgets))
         counter = Counter()
