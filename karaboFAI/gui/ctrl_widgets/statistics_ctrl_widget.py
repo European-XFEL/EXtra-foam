@@ -27,7 +27,7 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Pulses-in-train setup", *args, **kwargs)
+        super().__init__("Statistics setup", *args, **kwargs)
 
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))

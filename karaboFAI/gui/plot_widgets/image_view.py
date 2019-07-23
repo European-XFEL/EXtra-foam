@@ -458,12 +458,11 @@ class RoiImageView(ImageView):
         """Override."""
         image = data.image.masked_mean
 
-        roi = getattr(data.roi, f"roi{self._rank}")
+        roi = getattr(data.roi, f"rect{self._rank}")
 
-        if roi is None:
-            return
         x, y, w, h = roi
-
+        if w < 0 or h < 0:
+            return
         self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
 
 
