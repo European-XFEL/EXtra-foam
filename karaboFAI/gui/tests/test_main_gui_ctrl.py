@@ -430,14 +430,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # test bin range and number of bins change
         proc._reset1 = False
         proc._reset2 = False
-        proc._fom1_hist = None
-        proc._count1_hist = None
-        proc._vec1_hist = np.array([])
-        proc._fom2_hist = None
-        proc._count2_hist = None
-        proc._vec2_hist = np.array([])
-        proc._fom12_hist = None
-        proc._count12_hist = None
         # bin parameter 1
         widget._table.cellWidget(0, 3).setText("0, 10")  # range
         widget._table.cellWidget(0, 4).setText("5")  # n_bins
@@ -448,11 +440,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         np.testing.assert_array_equal(np.array([1, 3, 5, 7, 9]), proc._center1)
         self.assertTrue(proc._reset1)
         self.assertFalse(proc._reset2)
-        np.testing.assert_array_equal(np.zeros(5), proc._fom1_hist)
-        self.assertEqual(np.float32, proc._fom1_hist.dtype)
-        np.testing.assert_array_equal(np.zeros(5), proc._count1_hist)
-        self.assertEqual(np.uint32, proc._count1_hist.dtype)
-        self.assertIsNone(proc._vec1_hist)
         # bin parameter 2
         widget._table.cellWidget(1, 3).setText("-4, 4")  # range
         widget._table.cellWidget(1, 4).setText("2")  # n_bins
@@ -463,15 +450,6 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         np.testing.assert_array_equal(np.array([-2, 2]), proc._center2)
         self.assertTrue(proc._reset1)
         self.assertTrue(proc._reset2)
-        np.testing.assert_array_equal(np.zeros(2), proc._fom2_hist)
-        self.assertEqual(np.float32, proc._fom2_hist.dtype)
-        np.testing.assert_array_equal(np.zeros(2), proc._count2_hist)
-        self.assertEqual(np.uint32, proc._count2_hist.dtype)
-        self.assertIsNone(proc._vec2_hist)
-        np.testing.assert_array_equal(np.zeros((2, 5)), proc._fom12_hist)
-        self.assertEqual(np.float32, proc._fom12_hist.dtype)
-        np.testing.assert_array_equal(np.zeros((2, 5)), proc._count12_hist)
-        self.assertEqual(np.uint32, proc._count12_hist.dtype)
 
         # test reset button
         proc._reset1 = False

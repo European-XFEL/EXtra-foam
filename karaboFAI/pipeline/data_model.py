@@ -283,16 +283,19 @@ class DataItem:
         x (numpy.array): x coordinate of VFOM.
         vfom (numpy.array): Vector figure-of-merit.
         fom (float): Figure-of-merit.
-        x_label (str): x label used in plots.
-        y_label (str): y label used in plots.
+        x_label (str): label for x of VFOM.
+        vfom_label (str): label for VFOM.
+        has_vfom (bool): whether VFOM exists.
     """
-    def __init__(self, x_label="", y_label=""):
+    def __init__(self, *, x_label="", vfom_label="", has_vfom=True):
         self.x = None
         self.vfom = None
         self.fom = None
 
         self.x_label = x_label
-        self.y_label = y_label
+        self.vfom_label = vfom_label
+
+        self.has_vfom = has_vfom
 
 
 class XgmData:
@@ -352,27 +355,27 @@ class RoiData(_RoiAuxData):
         self.on = _RoiAuxData()
         self.off = _RoiAuxData()
 
-        self.roi1 = DataItem()
-        self.roi2 = DataItem()
-        self.roi1_sub_roi2 = DataItem()
-        self.roi1_add_roi2 = DataItem()
+        self.roi1 = DataItem(has_vfom=False)
+        self.roi2 = DataItem(has_vfom=False)
+        self.roi1_sub_roi2 = DataItem(has_vfom=False)
+        self.roi1_add_roi2 = DataItem(has_vfom=False)
 
         # 1. pump-probe 'proj' will directly go to ProcessedData.pp;
         # 2. we may need two projection types at the same time;
-        self.proj1 = DataItem(x_label='pixel', y_label='ROI1 projection')
-        self.proj2 = DataItem(x_label='pixel', y_label='ROI2 projection')
+        self.proj1 = DataItem(x_label='pixel', vfom_label='ROI1 projection')
+        self.proj2 = DataItem(x_label='pixel', vfom_label='ROI2 projection')
         self.proj1_sub_proj2 = DataItem(
-            x_label='pixel', y_label='ROI1 - ROI2 projection')
+            x_label='pixel', vfom_label='ROI1 - ROI2 projection')
         self.proj1_add_proj2 = DataItem(
-            x_label='pixel', y_label='ROI1 + ROI2 projection')
+            x_label='pixel', vfom_label='ROI1 + ROI2 projection')
 
 
 class AzimuthalIntegrationData(DataItem):
     """Train-resolved azimuthal integration data."""
     def __init__(self,
                  x_label="Momentum transfer (1/A)",
-                 y_label="Scattering signal (arb.u.)"):
-        super().__init__(x_label=x_label, y_label=y_label)
+                 vfom_label="Scattering signal (arb.u.)"):
+        super().__init__(x_label=x_label, vfom_label=vfom_label)
 
 
 class PumpProbeData(DataItem):
@@ -517,102 +520,61 @@ class ImageData:
 class BinData:
     """Binning data model."""
 
-    # 1D binning
-    vec1_hist = None
-    fom1_hist = None
-    count1_hist = None
-    vec2_hist = None
-    fom2_hist = None
-    count2_hist = None
+    class Bin1dDataItem:
+        def __init__(self):
+            # bin center
+            self.center = None
+            # bin label
+            self.label = None
 
-    # 2D binning
-    fom12_hist = None
-    count12_hist = None
+            # FOM histogram
+            self.fom_hist = None
+            # FOM count histogram
+            self.count_hist = None
+            # VFOM heatmap
+            self.vfom_heat = None
+
+            # whether the analysis type has VFOM
+            self.has_vfom = True
+            # x coordinate of VFOM
+            self.x = None
+            # label for x
+            self.x_label = ""
+            # label for VFOM
+            self.vfom_label = ""
+
+            self.reset = False
+            self.updated = False
+
+    class Bin2dDataItem:
+        def __init__(self):
+            # bin center x
+            self.center_x = None
+            # bin center y
+            self.center_y = None
+            # bin label x
+            self.x_label = ""
+            # bin label y
+            self.y_label = ""
+
+            # FOM 2D heatmap
+            self.fom_heat = None
+            # FOM 2D count
+            self.count_heat = None
+
+            self.reset = False
+            self.updated = False
 
     def __init__(self):
         super().__init__()
 
         self.mode = None
 
-        self.reset1 = False
-        self.reset2 = False
+        self.bin1 = self.Bin1dDataItem()
+        self.bin2 = self.Bin1dDataItem()
 
-        # shared between 1D binning and 2D binning:
-        # 1. For 1D binning, they both are y coordinates;
-        # 2. For 2D binning, center1 is the x coordinate and center2 is the
-        #    y coordinate.
-        self.n_bins1 = 0
-        self.n_bins2 = 0
-        self.center1 = None
-        self.center2 = None
-
-        self.label1 = None
-        self.label2 = None
-
-        self.iloc1 = -1
-        self.fom1 = None
-        self.vec1 = None
-        self.iloc2 = -1
-        self.fom2 = None
-        self.vec2 = None
-
-        self.vec_x = None
-        self.vec_label = None
-
-        self.fom12 = None
-
-    def update_hist(self):
-        n1 = self.n_bins1
-        n2 = self.n_bins2
-
-        # reset and initialization
-        if self.reset1:
-            self.__class__.fom1_hist = np.zeros(n1, dtype=np.float32)
-            self.__class__.count1_hist = np.zeros(n1, dtype=np.uint32)
-            # Real initialization could take place later then valid vec
-            # is received.
-            self.__class__.vec1_hist = None
-
-        if self.reset2:
-            self.__class__.fom2_hist = np.zeros(n2, dtype=np.float32)
-            self.__class__.count2_hist = np.zeros(n2, dtype=np.uint32)
-            # Real initialization could take place later then valid vec
-            # is received.
-            self.__class__.vec2_hist = None
-
-        if (self.reset1 or self.reset2) and n1 > 0 and n2 > 0:
-            self.__class__.fom12_hist = np.zeros((n2, n1), dtype=np.float32)
-            self.__class__.count12_hist = np.zeros((n2, n1), dtype=np.float32)
-
-        # update history
-
-        if 0 <= self.iloc1 < n1:
-            self.__class__.count1_hist[self.iloc1] += 1
-            self.__class__.fom1_hist[self.iloc1] = self.fom1
-
-            if self.vec1 is not None:
-                if self.vec1_hist is None or len(self.vec_x) != self.vec1_hist.shape[0]:
-                    # initialization
-                    self.__class__.vec1_hist = np.zeros(
-                        (len(self.vec_x), n1), dtype=np.float32)
-
-                self.__class__.vec1_hist[:, self.iloc1] = self.vec1
-
-        if 0 <= self.iloc2 < n2:
-            self.__class__.count2_hist[self.iloc2] += 1
-            self.__class__.fom2_hist[self.iloc2] = self.fom2
-
-            if self.vec2 is not None:
-                if self.vec2_hist is None or len(self.vec_x) != self.vec2_hist.shape[0]:
-                    # initialization
-                    self.__class__.vec2_hist = np.zeros(
-                        (len(self.vec_x), n2), dtype=np.float32)
-
-                self.__class__.vec2_hist[:, self.iloc2] = self.vec2
-
-        if 0 <= self.iloc1 < n1 and 0 <= self.iloc2 < n2:
-            self.__class__.count12_hist[self.iloc2, self.iloc1] += 1
-            self.__class__.fom12_hist[self.iloc2, self.iloc1] = self.fom12
+        # bin1 -> x, bin2 -> y
+        self.bin12 = self.Bin2dDataItem()
 
 
 class CorrelationData:
@@ -752,4 +714,3 @@ class ProcessedData:
         self.pp.update_hist(self._tid)
 
         self.corr.update_hist()
-        self.bin.update_hist()

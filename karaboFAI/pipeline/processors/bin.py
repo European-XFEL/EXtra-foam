@@ -48,21 +48,21 @@ class BinProcessor(CompositeProcessor):
         _center2 (numpy.array): bin centers for parameter 2.
         _reset1 (bool): True for resetting history data for param1.
         _reset2 (bool): True for resetting history data for param2.
-        _vec1_hist (numpy.array): vector heatmap for 1D binning with param1.
-            shape = (vector length, _n_bins1)
+        vfom1_heat (numpy.array): VFOM heatmap for 1D binning with param1.
+            shape = (VFOM length, _n_bins1)
         _fom1_hist (numpy.array): 1D FOM array for 1D binning with param1.
             shape = (_n_bins1,)
         _count1_hist (numpy.array): 1D count array for 1D binning with param1.
             shape = (_n_bins1,)
-        _vec2_hist (numpy.array): vector heatmap for 1D binning with param2.
-            shape = (vector length, _n_bins2)
+        _vfom2_heat (numpy.array): VFOM heatmap for 1D binning with param2.
+            shape = (VFOM length, _n_bins2)
         _fom2_hist (numpy.array): 1D FOM array for 1D binning with param2.
             shape = (_n_bins2,)
         _count2_hist (numpy.array): 1D count array for 1D binning with param2.
             shape = (_n_bins2,)
-        _fom12_hist (numpy.array): FOM heatmap for 2D binning.
+        _fom12_heat (numpy.array): FOM heatmap for 2D binning.
             shape = (_n_bins2, _n_bins1)
-        _count12_hist (numpy.array): count heatmap for 2D binning.
+        _count12_heat (numpy.array): count heatmap for 2D binning.
             shape = (_n_bins2, _n_bins1)
     """
 
@@ -91,16 +91,19 @@ class BinProcessor(CompositeProcessor):
         self._reset2 = False
 
         # 1D binning
-        self._vec1_hist = None
+        self._vfom1_heat = None
         self._fom1_hist = None
         self._count1_hist = None
-        self._vec2_hist = None
+        self._vfom2_heat = None
         self._fom2_hist = None
         self._count2_hist = None
 
         # 2D binning
-        self._fom12_hist = None
-        self._count12_hist = None
+        self._fom12_heat = None
+        self._count12_heat = None
+
+        # used to check whether pump-probe FOM is available
+        self._pp_fail_flag = 0
 
     def update(self):
         """Override."""
@@ -158,204 +161,241 @@ class BinProcessor(CompositeProcessor):
             self._reset1 = True
             self._reset2 = True
 
-        # reset history data
+    @profiler("Binning Processor")
+    def process(self, data):
+        processed = data['processed']
+        tid = processed.tid
+        raw = data['raw']
+
+        # for speed
+        bin1 = processed.bin.bin1
+        bin2 = processed.bin.bin2
+        bin12 = processed.bin.bin12
+
+        # try to get the FOM
+        # raise ProcessingError if FOM is not available
+        fom, has_vfom, x, vfom, x_label, vfom_label = \
+            self._get_analysis_ret(processed)
+
+        if fom is None:
+            # needed for pump-probe
+            return
+
+        if has_vfom:
+            # reset all when VFOM length changes
+            if self._vfom1_heat is not None and len(x) != self._vfom1_heat.shape[0]:
+                self._reset1 = True
+                self._reset2 = True
+            elif self._vfom2_heat is not None and len(x) != self._vfom2_heat.shape[0]:
+                self._reset1 = True
+                self._reset2 = True
+
+        # reset data
 
         if self._reset1:
             self._fom1_hist = np.zeros(self._n_bins1, dtype=np.float32)
             self._count1_hist = np.zeros(self._n_bins1, dtype=np.uint32)
-            # Real initialization could take place later then valid vec
-            # is received.
-            self._vec1_hist = None
+            if has_vfom:
+                self._vfom1_heat = np.zeros(
+                    (len(x), self._n_bins1), dtype=np.float32)
+            else:
+                self._vfom1_heat = None
+
+            bin1.updated = True
 
         if self._reset2:
             self._fom2_hist = np.zeros(self._n_bins2, dtype=np.float32)
             self._count2_hist = np.zeros(self._n_bins2, dtype=np.uint32)
-            # Real initialization could take place later then valid vec
-            # is received.
-            self._vec2_hist = None
+            if has_vfom:
+                self._vfom2_heat = np.zeros(
+                    (len(x), self._n_bins2), dtype=np.float32)
+            else:
+                self._vfom2_heat = None
+
+            bin2.updated = True
 
         if self._reset1 or self._reset2:
-            self._fom12_hist = np.zeros((self._n_bins2, self._n_bins1),
-                                        dtype=np.float32)
-            self._count12_hist = np.zeros((self._n_bins2, self._n_bins1),
-                                          dtype=np.uint32)
+            self._fom12_heat = np.zeros(
+                (self._n_bins2, self._n_bins1), dtype=np.float32)
+            self._count12_heat = np.zeros(
+                (self._n_bins2, self._n_bins1), dtype=np.float32)
 
-    @profiler("Binning Processor")
-    def process(self, data):
-        processed = data['processed']
+            bin12.updated = True
 
-        # Guarantee initialization and reset arrays in the main process.
-
-        processed.mode = self._mode
-
-        processed.bin.n_bins1 = self._n_bins1
-        processed.bin.center1 = self._center1
-        processed.bin.edge1 = self._edge1
-        processed.bin.label1 = self._device_id1 + ":" + self._property1
-        processed.bin.reset1 = self._reset1
         self._reset1 = False
-
-        processed.bin.n_bins2 = self._n_bins2
-        processed.bin.center2 = self._center2
-        processed.bin.edge2 = self._edge2
-        processed.bin.label2 = self._device_id2 + ":" + self._property2
-        processed.bin.reset2 = self._reset2
         self._reset2 = False
-
-        # Try to get FOM first.
-
-        if self.analysis_type == AnalysisType.PUMP_PROBE:
-            ret = processed.pp
-            # Don't raise an Exception here if fom is None since it does not
-            # work well if on- and off- pulses are in different trains.
-        elif self.analysis_type == AnalysisType.ROI1:
-            ret = processed.roi.roi1
-            if ret.fom is None:
-                raise ProcessingError("ROI1 sum result is not available")
-        elif self.analysis_type == AnalysisType.ROI2:
-            ret = processed.roi.roi2
-            if ret.fom is None:
-                raise ProcessingError("ROI2 sum result is not available")
-        elif self.analysis_type == AnalysisType.ROI1_SUB_ROI2:
-            ret = processed.roi.roi1_sub_roi2
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI1 - ROI2 sum result is not available")
-        elif self.analysis_type == AnalysisType.ROI1_ADD_ROI2:
-            ret = processed.roi.roi1_add_roi2
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI1 + ROI2 sum result is not available")
-        elif self.analysis_type == AnalysisType.PROJ_ROI1:
-            ret = processed.roi.proj1
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI1 projection result is not available")
-        elif self.analysis_type == AnalysisType.PROJ_ROI2:
-            ret = processed.roi.proj2
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI2 projection result is not available")
-        elif self.analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
-            ret = processed.roi.proj1_sub_proj2
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI1 - ROI2 projection result is not available")
-        elif self.analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
-            ret = processed.roi.proj1_add_proj2
-            if ret.fom is None:
-                raise ProcessingError(
-                    "ROI1 + ROI2 projection result is not available")
-        elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            ret = processed.ai
-            if ret.fom is None:
-                raise ProcessingError(
-                    "Azimuthal integration result is not available")
-        else:
-            return
-
-        vec_x = ret.x
-        vec = ret.vfom
-        fom = ret.fom
-        vec_label = ret.x_label
-
-        if fom is None:
-            # If it is not available, we stop getting slow data.
-            return
 
         # try to get slow data.
 
-        iloc1 = -1
-        iloc2 = -1
-        error_messages = []
-        if self._device_id1 and self._property1:
-            try:
-                slow1, _ = _get_slow_data(processed.tid,
-                                          data['raw'],
-                                          self._device_id1,
-                                          self._property1)
+        err_msgs = []
 
-                iloc1 = np.searchsorted(self._edge1, slow1) - 1
-            except ProcessingError as e:
-                error_messages.append(repr(e))
+        iloc1, err = self._get_iloc(
+            tid, raw, self._device_id1, self._property1, self._edge1)
+        if err:
+            err_msgs.append(err)
 
-        if self._device_id2 and self._property2:
-            try:
-                slow2, _ = _get_slow_data(processed.tid,
-                                          data['raw'],
-                                          self._device_id2,
-                                          self._property2)
+        iloc2, err = self._get_iloc(
+            tid, raw, self._device_id2, self._property2, self._edge2)
+        if err:
+            err_msgs.append(err)
 
-                iloc2 = np.searchsorted(self._edge2, slow2) - 1
-            except ProcessingError as e:
-                error_messages.append(repr(e))
-
-        # 1d binning
+        # 1D binning
 
         if 0 <= iloc1 < self._n_bins1:
-            self._count1_hist[iloc1] += 1
-            if self._mode == BinMode.ACCUMULATE:
-                self._fom1_hist[iloc1] += fom
-            else:  # self._mode == BinMode.AVERAGE
-                self._fom1_hist[iloc1] += \
-                    (fom - self._fom1_hist[iloc1]) / self._count1_hist[iloc1]
+            self._update_fom_hist_1d(
+                iloc1, fom, self._fom1_hist, self._count1_hist)
 
-            processed.bin.iloc1 = iloc1
-            processed.bin.fom1 = self._fom1_hist[iloc1]
+            self._update_vfom_heat_1d(
+                iloc1, vfom, self._vfom1_heat, self._count1_hist)
 
-            if vec is not None:
-                if self._vec1_hist is None or len(vec_x) != self._vec1_hist.shape[0]:
-                    # initialization
-                    self._vec1_hist = np.zeros(
-                        (len(vec_x), self._n_bins1), dtype=np.float32)
-
-                if self._mode == BinMode.ACCUMULATE:
-                    self._vec1_hist[:, iloc1] += vec
-                else:  # self._mode == BinMode.AVERAGE
-                    self._vec1_hist[:, iloc1] += \
-                        (vec - self._vec1_hist[:, iloc1]) / self._count1_hist[iloc1]
-
-                processed.bin.vec1 = self._vec1_hist[:, iloc1]
+            bin1.updated = True
 
         if 0 <= iloc2 < self._n_bins2:
-            self._count2_hist[iloc2] += 1
+            self._update_fom_hist_1d(
+                iloc2, fom, self._fom2_hist, self._count2_hist)
 
-            if self._mode == BinMode.ACCUMULATE:
-                self._fom2_hist[iloc2] += fom
-            else:  # self._mode == BinMode.AVERAGE
-                self._fom2_hist[iloc2] += \
-                    (fom - self._fom2_hist[iloc2]) / self._count2_hist[iloc2]
+            self._update_vfom_heat_1d(
+                iloc2, vfom, self._vfom2_heat, self._count2_hist)
 
-            processed.bin.iloc2 = iloc2
-            processed.bin.fom2 = self._fom2_hist[iloc2]
-
-            if vec is not None:
-                if self._vec2_hist is None or len(vec_x) != self._vec2_hist.shape[0]:
-                    # initialization
-                    self._vec2_hist = np.zeros(
-                        (len(vec_x), self._n_bins2), dtype=np.float32)
-
-                if self._mode == BinMode.ACCUMULATE:
-                    self._vec2_hist[:, iloc2] += vec
-                else:  # self._mode == BinMode.AVERAGE
-                    self._vec2_hist[:, iloc2] += \
-                        (vec - self._vec2_hist[:, iloc2]) / self._count2_hist[iloc2]
-
-                processed.bin.vec2 = self._vec2_hist[:, iloc2]
+            bin2.updated = True
 
         # 2D binning
+
         if 0 <= iloc1 < self._n_bins1 and 0 <= iloc2 < self._n_bins2:
-            self._count12_hist[iloc2, iloc1] += 1
-            if self._mode == BinMode.ACCUMULATE:
-                self._fom12_hist[iloc2, iloc1] += fom
-            else:  # self._mode == BinMode.AVERAGE
-                self._fom12_hist[iloc2, iloc1] += \
-                    (fom - self._fom12_hist[iloc2, iloc1]) / self._count12_hist[iloc2, iloc1]
+            self._update_fom_heat_2d(
+                iloc1, iloc2, fom, self._fom12_heat, self._count12_heat)
 
-            processed.bin.fom12 = self._fom12_hist[iloc2, iloc1]
+            bin12.updated = True
 
-        processed.bin.vec_x = vec_x
-        processed.bin.vec_label = vec_label
+        bin1.center = self._center1
+        bin1.label = f"{self._device_id1} | {self._property1}"
+        bin1.has_vfom = has_vfom
+        bin1.vfom_heat = self._vfom1_heat
+        bin1.vfom_label = vfom_label
+        bin1.vfom_x = x
+        bin1.vfom_x_label = x_label
+        bin1.fom_hist = self._fom1_hist
+        bin1.count_hist = self._count1_hist
 
-        for msg in error_messages:
-            raise ProcessingError(msg)
+        bin2.center = self._center2
+        bin2.label = f"{self._device_id2} | {self._property2}"
+        bin2.has_vfom = has_vfom
+        bin2.vfom_heat = self._vfom2_heat
+        bin2.vfom_label = vfom_label
+        bin2.vfom_x = x
+        bin2.vfom_x_label = x_label
+        bin2.fom_hist = self._fom2_hist
+        bin2.count_hist = self._count2_hist
+
+        bin12.center_x = self._center1
+        bin12.center_y = self._center2
+        bin12.x_label = bin1.label
+        bin12.y_label = bin2.label
+        bin12.fom_heat = self._fom12_heat
+        bin12.count_heat = self._count12_heat
+
+        if err_msgs:
+            raise ProcessingError(f"[Binning] {err_msgs[0]}")
+
+    def _get_analysis_ret(self, processed):
+        err = ''
+
+        analysis_type = self.analysis_type
+        if analysis_type == AnalysisType.PUMP_PROBE:
+            ret = processed.pp
+            if ret.fom is None:
+                self._pp_fail_flag += 1
+                # if on/off pulses are in different trains, pump-probe FOM is
+                # only calculated every other train.
+                if self._pp_fail_flag == 2:
+                    self._pp_fail_flag = 0
+                    err = "Pump-probe result is not available"
+            else:
+                self._pp_fail_flag = 0
+        elif analysis_type == AnalysisType.ROI1:
+            ret = processed.roi.roi1
+            if ret.fom is None:
+                err = "ROI1 sum result is not available"
+        elif analysis_type == AnalysisType.ROI2:
+            ret = processed.roi.roi2
+            if ret.fom is None:
+                err = "ROI2 sum result is not available"
+        elif analysis_type == AnalysisType.ROI1_SUB_ROI2:
+            ret = processed.roi.roi1_sub_roi2
+            if ret.fom is None:
+                err = "ROI1 - ROI2 sum result is not available"
+        elif analysis_type == AnalysisType.ROI1_ADD_ROI2:
+            ret = processed.roi.roi1_add_roi2
+            if ret.fom is None:
+                err = "ROI1 + ROI2 sum result is not available"
+        elif analysis_type == AnalysisType.PROJ_ROI1:
+            ret = processed.roi.proj1
+            if ret.fom is None:
+                err = "ROI1 projection result is not available"
+        elif analysis_type == AnalysisType.PROJ_ROI2:
+            ret = processed.roi.proj2
+            if ret.fom is None:
+                err = "ROI2 projection result is not available"
+        elif analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
+            ret = processed.roi.proj1_sub_proj2
+            if ret.fom is None:
+                err = "ROI1 - ROI2 projection result is not available"
+        elif analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
+            ret = processed.roi.proj1_add_proj2
+            if ret.fom is None:
+                err = "ROI1 + ROI2 projection result is not available"
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            ret = processed.ai
+            if ret.fom is None:
+                err = "Azimuthal integration result is not available"
+        else:  # self.analysis_type == AnalysisType.UNDEFINED
+            ret = None
+
+        if err:
+            raise ProcessingError(f"[Binning] {err}")
+
+        if ret is None:
+            return None, None, None, None, None, None
+
+        return ret.fom, ret.has_vfom, ret.x, ret.vfom, ret.x_label, ret.vfom_label
+
+    def _get_iloc(self, tid, raw, device_id, property, bin_edge):
+        slow, err = _get_slow_data(tid, raw, device_id, property)
+
+        if slow is None:
+            iloc = -1
+        else:
+            iloc = np.searchsorted(bin_edge, slow) - 1
+
+        return iloc, err
+
+    def _update_fom_hist_1d(self, iloc, fom, fom_hist, count_hist):
+        if fom is None:
+            return
+
+        count_hist[iloc] += 1
+        if self._mode == BinMode.ACCUMULATE:
+            fom_hist[iloc] += fom
+        else:  # self._mode == BinMode.AVERAGE
+            fom_hist[iloc] += (fom - fom_hist[iloc]) / count_hist[iloc]
+
+    def _update_vfom_heat_1d(self, iloc, vfom, vfom_heat, count_hist):
+        if vfom is None:
+            return
+
+        if self._mode == BinMode.ACCUMULATE:
+            vfom_heat[:, iloc] += vfom
+        else:  # self._mode == BinMode.AVERAGE
+            vfom_heat[:, iloc] += \
+                (vfom - vfom_heat[:, iloc]) / count_hist[iloc]
+
+    def _update_fom_heat_2d(self, iloc1, iloc2, fom, fom_heat, count_heat):
+        if fom is None:
+            return
+
+        count_heat[iloc2, iloc1] += 1
+        if self._mode == BinMode.ACCUMULATE:
+            fom_heat[iloc2, iloc1] += fom
+        else:  # self._mode == BinMode.AVERAGE
+            fom_heat[iloc2, iloc1] += \
+                fom - fom_heat[iloc2, iloc1] / count_heat[iloc2, iloc1]
