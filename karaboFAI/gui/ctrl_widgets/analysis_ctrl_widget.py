@@ -53,6 +53,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
 
+        self._ma_reset_btn = QtGui.QPushButton("Reset M.A.")
+
         self.initUI()
         self.initConnections()
 
@@ -77,8 +79,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Sample distance (m): "), 2, 2, AR)
         layout.addWidget(self._sample_dist_le, 2, 3)
 
-        layout.addWidget(QtGui.QLabel("M.A. window: "), 3, 1, 1, 2, AR)
-        layout.addWidget(self._ma_window_le, 3, 3, 1, 1)
+        layout.addWidget(QtGui.QLabel("M.A. window: "), 3, 0, AR)
+        layout.addWidget(self._ma_window_le, 3, 1)
+        layout.addWidget(self._ma_reset_btn, 3, 3, AR)
 
         self.setLayout(layout)
 
@@ -110,6 +113,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le.returnPressed.connect(
             lambda: mediator.onMaWindowChange(
                 int(self._ma_window_le.text())))
+
+        self._ma_reset_btn.clicked.connect(mediator.onMaReset)
 
     def updateMetaData(self):
         """Override"""

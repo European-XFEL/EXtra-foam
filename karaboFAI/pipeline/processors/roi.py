@@ -151,7 +151,7 @@ class _RoiProcessBase(CompositeProcessor):
     def update(self):
         """Override."""
         g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
-        self._update_moving_average(int(g_cfg['ma_window']))
+        self._update_moving_average(g_cfg)
 
         cfg = self._meta.get_all(mt.ROI_PROC)
 
@@ -191,7 +191,27 @@ class RoiProcessorTrain(_RoiProcessBase):
     _img3_off = MovingAverageArray()
     _img4_off = MovingAverageArray()
 
-    def _update_moving_average(self, v):
+    def _update_moving_average(self, cfg):
+        if 'reset_roi' in cfg:
+            # reset moving average
+            del self._img1
+            del self._img2
+            del self._img3
+            del self._img4
+
+            del self._img1_on
+            del self._img2_on
+            del self._img3_on
+            del self._img4_on
+
+            del self._img1_off
+            del self._img2_off
+            del self._img3_off
+            del self._img4_off
+
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_roi')
+
+        v = int(cfg['ma_window'])
         if self._ma_window != v:
             self.__class__._img1.window = v
             self.__class__._img2.window = v

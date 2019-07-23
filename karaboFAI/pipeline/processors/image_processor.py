@@ -37,7 +37,7 @@ class ImageProcessorPulse(CompositeProcessor):
         _threshold_mask (tuple): threshold mask.
         _reference (numpy.ndarray): reference image.
         _pulse_index_filter (list): a list of pulse indices.
-        _poi_indices (list): indices of VIP pulses.
+        _poi_indices (list): indices of POI pulses.
         _image_mask (numpy.ndarray): image mask array (dtype=np.bool).
     """
     _raw_data = RawImageData()

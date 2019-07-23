@@ -82,14 +82,14 @@ class _AzimuthalIntegrationProcessorBase(CompositeProcessor):
 
         self._integrator = None
 
+        self._reset_ma = False
+
     def update(self):
         """Override."""
         g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
         self._sample_dist = float(g_cfg['sample_distance'])
         self._wavelength = energy2wavelength(float(g_cfg['photon_energy']))
-        self._update_moving_average(int(g_cfg['ma_window']))
-        if 'reset' in g_cfg:
-            self._ma_reset = True
+        self._update_moving_average(g_cfg)
 
         cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
         pixel_size = config['PIXEL_SIZE']
@@ -145,9 +145,16 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
         super().__init__()
 
         self._ma_window = 1
-        self._ma_reset = False
 
-    def _update_moving_average(self, v):
+    def _update_moving_average(self, cfg):
+        if 'reset_ai' in cfg:
+            # reset moving average
+            del self._intensity_ma
+            del self._intensity_on_ma
+            del self._intensity_off_ma
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_ai')
+
+        v = int(cfg['ma_window'])
         if self._ma_window != v:
             self.__class__._intensity_ma.window = v
             self.__class__._intensity_on_ma.window = v

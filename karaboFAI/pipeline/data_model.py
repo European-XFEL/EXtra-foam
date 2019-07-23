@@ -661,6 +661,8 @@ class CorrelationData:
                         property=self.property,
                         resolution=0.0)
 
+            # if self.y is not None:
+            # self.x must not be None
             self.hist = (self.x, self.y)
 
     class Correlation1(CorrelationDataItem):

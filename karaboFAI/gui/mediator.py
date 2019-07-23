@@ -104,6 +104,11 @@ class Mediator(QObject):
     def onMaWindowChange(self, value: int):
         self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
 
+    def onMaReset(self):
+        # TODO: merge into one set
+        self._meta.set(mt.GLOBAL_PROC, "reset_ai", 1)
+        self._meta.set(mt.GLOBAL_PROC, "reset_roi", 1)
+
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
 
@@ -145,6 +150,8 @@ class Mediator(QObject):
 
     def onPpReset(self):
         self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
+        # reset moving average at the same time
+        self.onMaReset()
 
     def onRoiRegionChange(self, value: tuple):
         rank, x, y, w, h = value

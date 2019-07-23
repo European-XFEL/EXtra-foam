@@ -53,15 +53,13 @@ class PulseOfInterestWindow(DockerWindow):
         """Override."""
         # upper row
 
-        self._poi1_img_dock = Dock("VIP pulse 0000",
-                                   size=(self._MW, self._MH))
+        self._poi1_img_dock = Dock("POI pulse 0000", size=(self._MW, self._MH))
         self._docker_area.addDock(self._poi1_img_dock)
         self._poi1_img_dock.addWidget(self._poi1_img)
 
         # lower row
 
-        self._poi2_img_dock = Dock("VIP pulse 0000",
-                                   size=(self._MW, self._MH))
+        self._poi2_img_dock = Dock("POI pulse 0000", size=(self._MW, self._MH))
         self._docker_area.addDock(
             self._poi2_img_dock, 'bottom', self._poi1_img_dock)
         self._poi2_img_dock.addWidget(self._poi2_img)
