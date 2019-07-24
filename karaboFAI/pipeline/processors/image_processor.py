@@ -202,13 +202,25 @@ class ImageProcessorTrain(CompositeProcessor):
             processed.pp.image_off = off_image
 
         # (temporary solution for now) avoid sending all images around
+        err_msgs = []
         if assembled.ndim == 3:
-            processed.image.images = [None] * len(assembled)
+            n_images = len(assembled)
+            processed.image.images = [None] * n_images
             for i in processed.image.poi_indices:
-                try:
-                    processed.image.images[i] = assembled[i]
-                except IndexError as e:
-                    raise ProcessingError(str(e))
+                if i < n_images:
+                    # TODO: check whether inplace is legal here
+                    processed.image.images[i] = mask_image(
+                        assembled[i],
+                        threshold_mask=threshold_mask,
+                        image_mask=image_mask,
+                        inplace=True
+                    )
+                else:
+                    err_msgs.append(
+                        f"POI index {i} is out of bound (0 - {n_images-1}")
+
+        for msg in err_msgs:
+            raise ProcessingError('[Image processor] ' + msg)
 
     def _compute_on_off_images(self, tid, assembled, *, reference=None):
         curr_indices = []
