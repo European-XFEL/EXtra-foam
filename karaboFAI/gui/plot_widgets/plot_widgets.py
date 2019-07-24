@@ -89,6 +89,7 @@ class CorrelationWidget(PlotWidget):
 
         self._idx = idx  # start from 1
 
+        self.setTitle('')
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
 
@@ -297,7 +298,8 @@ class Bin1dHist(PlotWidget):
         self._idx = idx
         self._count = count
 
-        self.setLabel('bottom', f"Label{idx}")
+        self.setTitle('')
+        self.setLabel('bottom', "Bin center")
         if count:
             self.setLabel('left', "Count")
             self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))

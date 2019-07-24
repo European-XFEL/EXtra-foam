@@ -492,9 +492,12 @@ class Bin1dHeatmap(ImageView):
 
         self._idx = idx
 
-        self.setLabel('bottom', f'Label{idx}')
-        self.setLabel('left', f'VFOM{idx}')
-        self.setTitle("")
+        self.setDefautLabels()
+
+    def setDefautLabels(self):
+        self.setLabel('bottom', 'Bin center')
+        self.setLabel('left', "VFOM")
+        self.setTitle('')
 
     def update(self, data):
         """Override."""
@@ -503,6 +506,7 @@ class Bin1dHeatmap(ImageView):
         if not bin.has_vfom and self._image is not None:
             # clear the heatmap if VFOM does not exists for the analysis type
             self.clear()
+            self.setDefautLabels()
             return
 
         if not bin.updated:
@@ -541,8 +545,8 @@ class Bin2dHeatmap(ImageView):
         self.invertY(False)
         self.setAspectLocked(False)
 
-        self.setLabel('bottom', 'Label1')
-        self.setLabel('left', 'Label2')
+        self.setLabel('bottom', '')
+        self.setLabel('left', '')
         if count:
             self.setTitle("Count")
         else:
