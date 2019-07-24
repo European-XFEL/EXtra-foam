@@ -161,6 +161,9 @@ class ImageView(QtGui.QWidget):
         :param tuple/list scale: the origin of the displayed image image in
             (x_scale, y_scale).
         """
+        if not isinstance(img, np.ndarray):
+            raise TypeError("Image data must be a numpy array!")
+
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
 
@@ -176,6 +179,10 @@ class ImageView(QtGui.QWidget):
 
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
+
+    def clear(self):
+        self._image = None
+        self._image_item.clear()
 
     def _updateImage(self):
         """Re-display the current image with auto_levels."""
@@ -495,7 +502,7 @@ class Bin1dHeatmap(ImageView):
 
         if not bin.has_vfom and self._image is not None:
             # clear the heatmap if VFOM does not exists for the analysis type
-            self.setImage(None)
+            self.clear()
             return
 
         if not bin.updated:
