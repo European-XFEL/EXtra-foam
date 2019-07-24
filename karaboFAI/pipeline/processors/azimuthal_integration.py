@@ -197,8 +197,10 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
         # ------------------------------------
 
         if processed.pp.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            on_image = processed.pp.image_on
-            off_image = processed.pp.image_off
+            pp = processed.pp
+
+            on_image = pp.image_on
+            off_image = pp.image_off
 
             if on_image is not None and off_image is not None:
                 with ThreadPoolExecutor(max_workers=2) as executor:
@@ -219,16 +221,18 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                 vfom = vfom_on - vfom_off
                 sliced = slice_curve(vfom, momentum, *self._fom_integ_range)[0]
 
-                if processed.pp.abs_difference:
+                if pp.abs_difference:
                     fom = np.sum(np.abs(sliced))
                 else:
                     fom = np.sum(sliced)
 
-                processed.pp.vfom_on = vfom_on
-                processed.pp.vfom_off = vfom_off
-                processed.pp.vfom = vfom
-                processed.pp.x = momentum
-                processed.pp.fom = fom
+                pp.vfom_on = vfom_on
+                pp.vfom_off = vfom_off
+                pp.vfom = vfom
+                pp.x = momentum
+                pp.fom = fom
+                pp.x_label = processed.ai.x_label
+                pp.vfom_label = f"[pump-probe] {processed.ai.vfom_label}"
 
 
 class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):

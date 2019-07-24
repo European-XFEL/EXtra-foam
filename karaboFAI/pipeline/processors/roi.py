@@ -448,15 +448,19 @@ class RoiProcessorTrain(_RoiProcessBase):
         if analysis_type == AnalysisType.PROJ_ROI1 and self._has_img1:
             img_on = self._img1_on
             img_off = self._img1_off
+            proj = processed.roi.proj1
         elif analysis_type == AnalysisType.PROJ_ROI2 and self._has_img2:
             img_on = self._img2_on
             img_off = self._img2_off
+            proj = processed.roi.proj2
         elif analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2 and self._has_img12:
             img_on = self._img1_on - self._img2_on
             img_off = self._img1_off - self._img2_off
+            proj = processed.roi.proj1_sub_proj2
         elif analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2 and self._has_img12:
             img_on = self._img1_on + self._img2_on
             img_off = self._img1_off + self._img2_off
+            proj = processed.roi.proj1_add_proj2
 
         if img_on is None:
             return
@@ -489,6 +493,8 @@ class RoiProcessorTrain(_RoiProcessBase):
         pp.vfom_off = vfom_off
         pp.vfom = vfom
         pp.fom = fom
+        pp.x_label = proj.x_label
+        pp.vfom_label = f"[pump-probe] {proj.vfom_label}"
 
 
 class RoiProcessorPulse(_RoiProcessBase):
