@@ -187,12 +187,6 @@ class ImageProcessorTrain(CompositeProcessor):
         processed.image.mean = images_mean
         processed.image.masked_mean = masked_mean
 
-        # (temporary solution for now) avoid sending all images around
-        if assembled.ndim == 3:
-            processed.image.images = [None] * len(assembled)
-            for i in processed.image.poi_indices:
-                processed.image.images[i] = assembled[i]
-
         if on_image is not None:
             mask_image(on_image,
                        threshold_mask=threshold_mask,
@@ -206,6 +200,15 @@ class ImageProcessorTrain(CompositeProcessor):
 
             processed.pp.image_on = on_image
             processed.pp.image_off = off_image
+
+        # (temporary solution for now) avoid sending all images around
+        if assembled.ndim == 3:
+            processed.image.images = [None] * len(assembled)
+            for i in processed.image.poi_indices:
+                try:
+                    processed.image.images[i] = assembled[i]
+                except IndexError as e:
+                    raise ProcessingError(str(e))
 
     def _compute_on_off_images(self, tid, assembled, *, reference=None):
         curr_indices = []

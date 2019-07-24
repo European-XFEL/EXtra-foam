@@ -183,6 +183,8 @@ class MainGUI(QtGui.QMainWindow):
         open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
+        if not self._pulse_resolved:
+            open_poi_window_at.setEnabled(False)
 
         open_xas_window_at = self._addAction("XAS", "xas.png")
         open_xas_window_at.triggered.connect(

@@ -25,15 +25,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Global setup", *args, **kwargs)
 
-        # We keep the definitions of attributes which are not used in the
-        # PULSE_RESOLVED = True case. It makes sense since these attributes
-        # also appear in the defined methods.
-        if self._pulse_resolved:
-            poi_index1 = 0
-            poi_index2 = 1
-        else:
-            poi_index1 = 0
-            poi_index2 = 0
+        poi_index1 = 0
+        poi_index2 = 0
 
         self._pulse_index_filter_le = SmartRangeLineEdit(":")
 
@@ -89,11 +82,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._poi_index1_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(
+            lambda: mediator.onPoiPulseIndexChange(
                 1, int(self._poi_index1_le.text())))
 
         self._poi_index2_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(
+            lambda: mediator.onPoiPulseIndexChange(
                 2, int(self._poi_index2_le.text())))
 
         mediator.poi_indices_connected_sgn.connect(
