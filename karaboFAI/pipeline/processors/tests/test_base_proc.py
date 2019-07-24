@@ -166,15 +166,12 @@ class TestBaseProcessor(unittest.TestCase):
         ConfigWrapper()   # ensure file
         config.load('LPD')
 
-        fai = FAI()
-        fai.init()
-
-        cls._fai = fai
-        cls.scheduler = fai.scheduler
+        cls.fai = FAI().init()
+        cls.scheduler = cls.fai.scheduler
 
     @classmethod
     def tearDownClass(cls):
-        cls._fai.terminate()
+        cls.fai.terminate()
 
         wait_until_redis_shutdown()
 

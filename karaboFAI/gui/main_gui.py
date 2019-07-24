@@ -254,8 +254,10 @@ class MainGUI(QtGui.QMainWindow):
 
         self.azimuthal_integ_ctrl_widget = AzimuthalIntegCtrlWidget(
             parent=self)
-        if config['REQUIRE_GEOMETRY']:
-            self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+
+        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
+        if not config['REQUIRE_GEOMETRY']:
+            self.geometry_ctrl_widget.setEnabled(False)
 
         self.analysis_ctrl_widget = AnalysisCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
@@ -304,8 +306,7 @@ class MainGUI(QtGui.QMainWindow):
         misc_layout.addWidget(self.statistics_ctrl_widget)
         misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)
-        if config['REQUIRE_GEOMETRY']:
-            misc_layout.addWidget(self.geometry_ctrl_widget)
+        misc_layout.addWidget(self.geometry_ctrl_widget)
 
         layout = QtGui.QGridLayout()
         layout.addLayout(analysis_layout, 0, 0, 3, 1)

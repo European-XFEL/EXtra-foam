@@ -36,6 +36,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._poi_index2_le = SmartLineEdit(str(poi_index2))
         self._poi_index2_le.setValidator(self._pulse_index_validator)
 
+        if not self._pulse_resolved:
+            self._pulse_index_filter_le.setEnabled(False)
+            self._poi_index1_le.setEnabled(False)
+            self._poi_index2_le.setEnabled(False)
+
         self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
         self._photon_energy_le.setValidator(
             QtGui.QDoubleValidator(0.001, 100, 6))
@@ -58,14 +63,13 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
-            layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
+        layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
+        layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
 
-            layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
-            layout.addWidget(self._poi_index1_le, 1, 1)
-            layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
-            layout.addWidget(self._poi_index2_le, 1, 3)
+        layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
+        layout.addWidget(self._poi_index1_le, 1, 1)
+        layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
+        layout.addWidget(self._poi_index2_le, 1, 3)
 
         layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 2, 0, AR)
         layout.addWidget(self._photon_energy_le, 2, 1)

@@ -7,8 +7,8 @@ from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import (
-    Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
-    OverviewWindow, StatisticsWindow, PulseOfInterestWindow,
+    AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
+    ImageToolWindow, OverviewWindow, StatisticsWindow, PulseOfInterestWindow,
     PumpProbeWindow, XasWindow
 )
 
@@ -44,6 +44,7 @@ class TestMainGui(unittest.TestCase):
         bin2d_action = actions[8]
         poi_action = actions[9]
         xas_action = actions[10]
+        ai_action = actions[11]
 
         # ImageToolWindow is opened together with the MainGUI
         imagetool_window = list(self.gui._windows.keys())[-1]
@@ -75,6 +76,10 @@ class TestMainGui(unittest.TestCase):
         self.assertIsInstance(xas_window, XasWindow)
         self._check_open_window(xas_action, registered=False)
 
+        ai_window = self._check_open_window(ai_action)
+        self.assertIsInstance(ai_window, AzimuthalIntegrationWindow)
+        self._check_open_window(ai_action, registered=False)
+
         self._check_close_window(imagetool_window)
         self._check_close_window(overview_window)
         self._check_close_window(pp_window)
@@ -84,8 +89,9 @@ class TestMainGui(unittest.TestCase):
         self._check_close_window(bin2d_window)
         self._check_close_window(poi_window)
         self._check_close_window(xas_window)
+        self._check_close_window(ai_window)
 
-        # if a plot window is closed, it can be re-openned and a new instance
+    # if a plot window is closed, it can be re-openned and a new instance
         # will be created
         pp_window_new = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window_new, PumpProbeWindow)

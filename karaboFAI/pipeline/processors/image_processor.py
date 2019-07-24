@@ -230,6 +230,9 @@ class ImageProcessorTrain(CompositeProcessor):
 
         mode = self._pp_mode
         if mode != PumpProbeMode.UNDEFINED:
+
+            self._parse_on_off_indices(assembled.shape)
+
             if assembled.ndim == 3:
                 self._validate_on_off_indices(assembled.shape[0])
 
@@ -292,19 +295,26 @@ class ImageProcessorTrain(CompositeProcessor):
 
         return on_image, off_image, curr_indices, curr_means
 
+    def _parse_on_off_indices(self, shape):
+        if len(shape) == 3:
+            # pulse-resolved
+            all_indices = list(range(shape[0]))
+        else:
+            # train-resolved (indeed not used)
+            all_indices = [0]
+
+        # convert [-1] to a list of indices
+        if self._on_indices[0] == -1:
+            self._on_indices = all_indices
+        if self._off_indices[0] == -1:
+            self._off_indices = all_indices
+
     def _validate_on_off_indices(self, n_pulses):
         """Check pulse index when on/off pulses in the same train.
 
         Note: We can not check it in the GUI side since we do not know
               how many pulses are there in the train.
         """
-        # convert [-1] to a list of indices
-        all_indices = list(range(n_pulses))
-        if self._on_indices[0] == -1:
-            self._on_indices = all_indices
-        if self._off_indices[0] == -1:
-            self._off_indices = all_indices
-
         mode = self._pp_mode
 
         # check index range
