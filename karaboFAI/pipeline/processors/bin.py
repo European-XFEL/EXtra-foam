@@ -360,6 +360,7 @@ class BinProcessor(CompositeProcessor):
         return ret.fom, ret.has_vfom, ret.x, ret.vfom, ret.x_label, ret.vfom_label
 
     def _get_iloc(self, tid, raw, device_id, property, bin_edge):
+        """Get the index of the bins."""
         slow, err = _get_slow_data(tid, raw, device_id, property)
 
         if slow is None:
@@ -370,6 +371,7 @@ class BinProcessor(CompositeProcessor):
         return iloc, err
 
     def _update_fom_hist_1d(self, iloc, fom, fom_hist, count_hist):
+        """Update the FOM count and histogram for 1D binning."""
         if fom is None:
             return
 
@@ -380,6 +382,7 @@ class BinProcessor(CompositeProcessor):
             fom_hist[iloc] += (fom - fom_hist[iloc]) / count_hist[iloc]
 
     def _update_vfom_heat_1d(self, iloc, vfom, vfom_heat, count_hist):
+        """Update the VFOM heatmap for 1D binning."""
         if vfom is None:
             return
 
@@ -390,6 +393,7 @@ class BinProcessor(CompositeProcessor):
                 (vfom - vfom_heat[:, iloc]) / count_hist[iloc]
 
     def _update_fom_heat_2d(self, iloc1, iloc2, fom, fom_heat, count_heat):
+        """Update the FOM heatmap and count for 2D binning."""
         if fom is None:
             return
 
