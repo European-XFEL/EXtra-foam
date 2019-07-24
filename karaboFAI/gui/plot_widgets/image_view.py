@@ -162,12 +162,6 @@ class ImageView(QtGui.QWidget):
             (x_scale, y_scale).
         """
         self._image_item.setImage(img, autoLevels=False)
-
-        # a patch for ImageItem in pyqtgraph: when img is None, it does not
-        # clear the internal image data.
-        if img is None:
-            self._image_item.image = None
-
         self._image = img
 
         self._image_item.resetTransform()
