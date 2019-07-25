@@ -25,15 +25,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Global setup", *args, **kwargs)
 
-        # We keep the definitions of attributes which are not used in the
-        # PULSE_RESOLVED = True case. It makes sense since these attributes
-        # also appear in the defined methods.
-        if self._pulse_resolved:
-            poi_index1 = 0
-            poi_index2 = 1
-        else:
-            poi_index1 = 0
-            poi_index2 = 0
+        poi_index1 = 0
+        poi_index2 = 0
 
         self._pulse_index_filter_le = SmartRangeLineEdit(":")
 
@@ -42,6 +35,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._poi_index2_le = SmartLineEdit(str(poi_index2))
         self._poi_index2_le.setValidator(self._pulse_index_validator)
+
+        if not self._pulse_resolved:
+            self._pulse_index_filter_le.setEnabled(False)
+            self._poi_index1_le.setEnabled(False)
+            self._poi_index2_le.setEnabled(False)
 
         self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
         self._photon_energy_le.setValidator(
@@ -65,14 +63,13 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
-            layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
+        layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
+        layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
 
-            layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
-            layout.addWidget(self._poi_index1_le, 1, 1)
-            layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
-            layout.addWidget(self._poi_index2_le, 1, 3)
+        layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
+        layout.addWidget(self._poi_index1_le, 1, 1)
+        layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
+        layout.addWidget(self._poi_index2_le, 1, 3)
 
         layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 2, 0, AR)
         layout.addWidget(self._photon_energy_le, 2, 1)
@@ -89,11 +86,11 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         mediator = self._mediator
 
         self._poi_index1_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(
+            lambda: mediator.onPoiPulseIndexChange(
                 1, int(self._poi_index1_le.text())))
 
         self._poi_index2_le.returnPressed.connect(
-            lambda: mediator.onVipPulseIndexChange(
+            lambda: mediator.onPoiPulseIndexChange(
                 2, int(self._poi_index2_le.text())))
 
         mediator.poi_indices_connected_sgn.connect(

@@ -87,7 +87,7 @@ class Mediator(QObject):
     def onPulseIndexSelectorChange(self, value: list):
         self._meta.set(mt.GLOBAL_PROC, 'selected_pulse_indices', str(value))
 
-    def onVipPulseIndexChange(self, vip_id: int, value: int):
+    def onPoiPulseIndexChange(self, vip_id: int, value: int):
         self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
 
         if vip_id == 1:

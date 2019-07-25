@@ -70,12 +70,9 @@ class TestImageTool(unittest.TestCase):
         # ImageToolWindow._reset() is not called in other tests
         ImageToolWindow._reset()
 
-        fai = FAI()
-        fai.init()
-
-        cls._fai = fai
-        cls.gui = fai._gui
-        cls.scheduler = fai.scheduler
+        cls.fai = FAI().init()
+        cls.gui = cls.fai._gui
+        cls.scheduler = cls.fai.scheduler
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[2]
@@ -86,7 +83,7 @@ class TestImageTool(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls._fai.terminate()
+        cls.fai.terminate()
 
         wait_until_redis_shutdown()
 
@@ -238,12 +235,9 @@ class TestImageToolTs(unittest.TestCase):
         # ImageToolWindow._reset() is not called in other tests
         ImageToolWindow._reset()
 
-        fai = FAI()
-        fai.init()
-
-        cls._fai = fai
-        cls.gui = fai._gui
-        cls.scheduler = fai.scheduler
+        cls.fai = FAI().init()
+        cls.gui = cls.fai._gui
+        cls.scheduler = cls.fai.scheduler
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[2]
@@ -254,7 +248,7 @@ class TestImageToolTs(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls._fai.terminate()
+        cls.fai.terminate()
 
         wait_until_redis_shutdown()
 

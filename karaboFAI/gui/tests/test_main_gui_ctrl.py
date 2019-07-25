@@ -32,7 +32,7 @@ app = mkQApp()
 logger.setLevel("CRITICAL")
 
 
-class TestMainGuiCtrlPulseResolved(unittest.TestCase):
+class TestLpdMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # do not use the config file in the current computer
@@ -40,15 +40,13 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         ConfigWrapper()   # ensure file
         config.load('LPD')
 
-        fai = FAI()
-        fai.init()
-        cls._fai = fai
+        cls.fai = FAI().init()
 
         cls.meta = MetaProxy()
 
-        cls.gui = fai._gui
-        cls.scheduler = fai.scheduler
-        cls.image_worker = fai.image_worker
+        cls.gui = cls.fai._gui
+        cls.scheduler = cls.fai.scheduler
+        cls.image_worker = cls.fai.image_worker
 
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
@@ -64,7 +62,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls._fai.terminate()
+        cls.fai.terminate()
 
         wait_until_redis_shutdown()
 
@@ -225,6 +223,14 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
+
+        # off_pulse_le will be disabled when the mode is PRE_DEFINED_OFF
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
+        self.assertTrue(widget._on_pulse_le.isEnabled())
+        self.assertFalse(widget._off_pulse_le.isEnabled())
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
+        self.assertTrue(widget._on_pulse_le.isEnabled())
+        self.assertTrue(widget._off_pulse_le.isEnabled())
 
         # change abs_difference
         pp_proc._reset = False
@@ -513,7 +519,7 @@ class TestMainGuiCtrlPulseResolved(unittest.TestCase):
         # self.bridge.pause.assert_called_once()
 
 
-class TestMainGuiCtrlTrainResolved(unittest.TestCase):
+class TestJungFrauMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         ImageToolWindow._reset()
@@ -525,39 +531,45 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         # the global Redis client already has a port of 6379
         config._data['REDIS_PORT'] = 6379
 
-        fai = FAI()
-        fai.init()
+        cls.fai = FAI().init()
 
-        cls._fai = fai
         cls.meta = MetaProxy()
 
-        cls.gui = fai._gui
-
-        cls.scheduler = fai.scheduler
-        cls.image_worker = fai.image_worker
-
-        cls._actions = cls.gui._tool_bar.actions()
-        cls._start_action = cls._actions[0]
-        cls._stop_action = cls._actions[1]
-        cls._pp_action = cls._actions[4]
-        cls._correlation_action = cls._actions[5]
-        cls._xas_action = cls._actions[6]
-        cls._ai_action = cls._actions[7]
+        cls.gui = cls.fai._gui
+        cls.image_worker = cls.fai.image_worker
 
     @classmethod
     def tearDownClass(cls):
-        cls._fai.terminate()
+        cls.fai.terminate()
 
         wait_until_redis_shutdown()
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
 
-    def testPumpProbeCtrlWidget(self):
-        self.gui.updateMetaData()
+    def testAnalysisCtrlWidget(self):
+        widget = self.gui.analysis_ctrl_widget
 
+        self.assertFalse(widget._pulse_index_filter_le.isEnabled())
+        self.assertFalse(widget._poi_index1_le.isEnabled())
+        self.assertFalse(widget._poi_index2_le.isEnabled())
+
+        image_proc = self.image_worker._image_proc_pulse
+
+        # Although the widgets are disabled, they still send values to
+        # the processor - test default values
+        self.assertEqual(0, int(widget._poi_index1_le.text()))
+        self.assertEqual(0, int(widget._poi_index2_le.text()))
+        image_proc.update()
+        self.assertEqual(0, image_proc._poi_indices[0])
+        self.assertEqual(0, image_proc._poi_indices[1])
+
+    def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         image_proc = self.image_worker._image_proc_train
+
+        self.assertFalse(widget._on_pulse_le.isEnabled())
+        self.assertFalse(widget._off_pulse_le.isEnabled())
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}
@@ -566,8 +578,8 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
 
         image_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
-        self.assertListEqual([0], image_proc._on_indices)
-        self.assertListEqual([0], image_proc._off_indices)
+        self.assertListEqual([-1], image_proc._on_indices)
+        self.assertListEqual([-1], image_proc._off_indices)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -577,13 +589,19 @@ class TestMainGuiCtrlTrainResolved(unittest.TestCase):
         image_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON),
                          image_proc._pp_mode)
-        self.assertListEqual([0], image_proc._on_indices)
-        self.assertListEqual([0], image_proc._off_indices)
+        self.assertListEqual([-1], image_proc._on_indices)
+        self.assertListEqual([-1], image_proc._off_indices)
+
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
+        self.assertEqual(2, len(spy))
+        # test on_pulse_le is still disabled, which will become enabled if the
+        # detector is pulse-resolved
+        self.assertFalse(widget._on_pulse_le.isEnabled())
 
         # PumpProbeMode.SAME_TRAIN is not available
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
-        self.assertEqual(1, len(spy))
+        self.assertEqual(2, len(spy))
 
     def testGeometryCtrlWidget(self):
-        with self.assertRaises(AttributeError):
-            self.gui.geometry_ctrl_widget
+        widget = self.gui.geometry_ctrl_widget
+        self.assertFalse(widget.isEnabled())

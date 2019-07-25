@@ -92,6 +92,9 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
+        if not config['REQUIRE_GEOMETRY']:
+            return True
+
         geom_file = self._geom_file_le.text()
         if not osp.isfile(geom_file):
             logger.error(f"<Geometry file>: {geom_file} is not a valid file")

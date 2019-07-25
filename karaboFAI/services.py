@@ -195,6 +195,8 @@ class FAI:
         self._gui.start_sgn.connect(self.start)
         self._gui.stop_sgn.connect(self.pause)
 
+        return self
+
     def start(self):
         self.scheduler.resume()
         self.image_worker.resume()
@@ -254,8 +256,7 @@ def application():
     # update global configuration
     config.load(detector)
 
-    fai = FAI()
-    fai.init()
+    fai = FAI().init()
 
     app.exec_()
 

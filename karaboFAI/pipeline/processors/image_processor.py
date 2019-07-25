@@ -187,12 +187,6 @@ class ImageProcessorTrain(CompositeProcessor):
         processed.image.mean = images_mean
         processed.image.masked_mean = masked_mean
 
-        # (temporary solution for now) avoid sending all images around
-        if assembled.ndim == 3:
-            processed.image.images = [None] * len(assembled)
-            for i in processed.image.poi_indices:
-                processed.image.images[i] = assembled[i]
-
         if on_image is not None:
             mask_image(on_image,
                        threshold_mask=threshold_mask,
@@ -207,6 +201,27 @@ class ImageProcessorTrain(CompositeProcessor):
             processed.pp.image_on = on_image
             processed.pp.image_off = off_image
 
+        # (temporary solution for now) avoid sending all images around
+        err_msgs = []
+        if assembled.ndim == 3:
+            n_images = len(assembled)
+            processed.image.images = [None] * n_images
+            for i in processed.image.poi_indices:
+                if i < n_images:
+                    # TODO: check whether inplace is legal here
+                    processed.image.images[i] = mask_image(
+                        assembled[i],
+                        threshold_mask=threshold_mask,
+                        image_mask=image_mask,
+                        inplace=True
+                    )
+                else:
+                    err_msgs.append(
+                        f"POI index {i} is out of bound (0 - {n_images-1}")
+
+        for msg in err_msgs:
+            raise ProcessingError('[Image processor] ' + msg)
+
     def _compute_on_off_images(self, tid, assembled, *, reference=None):
         curr_indices = []
         curr_means = []
@@ -215,6 +230,9 @@ class ImageProcessorTrain(CompositeProcessor):
 
         mode = self._pp_mode
         if mode != PumpProbeMode.UNDEFINED:
+
+            self._parse_on_off_indices(assembled.shape)
+
             if assembled.ndim == 3:
                 self._validate_on_off_indices(assembled.shape[0])
 
@@ -277,19 +295,26 @@ class ImageProcessorTrain(CompositeProcessor):
 
         return on_image, off_image, curr_indices, curr_means
 
+    def _parse_on_off_indices(self, shape):
+        if len(shape) == 3:
+            # pulse-resolved
+            all_indices = list(range(shape[0]))
+        else:
+            # train-resolved (indeed not used)
+            all_indices = [0]
+
+        # convert [-1] to a list of indices
+        if self._on_indices[0] == -1:
+            self._on_indices = all_indices
+        if self._off_indices[0] == -1:
+            self._off_indices = all_indices
+
     def _validate_on_off_indices(self, n_pulses):
         """Check pulse index when on/off pulses in the same train.
 
         Note: We can not check it in the GUI side since we do not know
               how many pulses are there in the train.
         """
-        # convert [-1] to a list of indices
-        all_indices = list(range(n_pulses))
-        if self._on_indices[0] == -1:
-            self._on_indices = all_indices
-        if self._off_indices[0] == -1:
-            self._off_indices = all_indices
-
         mode = self._pp_mode
 
         # check index range

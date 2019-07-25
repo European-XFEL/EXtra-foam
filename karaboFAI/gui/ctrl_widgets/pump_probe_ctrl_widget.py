@@ -43,29 +43,23 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
 
         self._mode_cb = QtGui.QComboBox()
 
-        # We keep the definitions of attributes which are not used in the
-        # PULSE_RESOLVED = True case. It makes sense since these attributes
-        # also appear in the defined methods.
+        self._on_pulse_le = SmartRangeLineEdit(":")
+        self._off_pulse_le = SmartRangeLineEdit(":")
 
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
             self._mode_cb.addItems(all_keys)
-            on_pulse_indices = ":"
-            off_pulse_indices = ":"
         else:
             all_keys.remove("same train")
             self._mode_cb.addItems(all_keys)
-            on_pulse_indices = "0"
-            off_pulse_indices = "0"
+            self._on_pulse_le.setEnabled(False)
+            self._off_pulse_le.setEnabled(False)
 
         self._analysis_type_cb = QtGui.QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
         self._abs_difference_cb = QtGui.QCheckBox("FOM from absolute on-off")
         self._abs_difference_cb.setChecked(True)
-
-        self._on_pulse_le = SmartRangeLineEdit(on_pulse_indices)
-        self._off_pulse_le = SmartRangeLineEdit(off_pulse_indices)
 
         self._reset_btn = QtGui.QPushButton("Reset")
 
@@ -87,11 +81,10 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._mode_cb, 1, 1)
         layout.addWidget(self._abs_difference_cb, 1, 2, 1, 2, AR)
 
-        if self._pulse_resolved:
-            layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
-            layout.addWidget(self._on_pulse_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("Off-pulse indices: "), 3, 0, AR)
-            layout.addWidget(self._off_pulse_le, 3, 1)
+        layout.addWidget(QtGui.QLabel("On-pulse indices: "), 2, 0, AR)
+        layout.addWidget(self._on_pulse_le, 2, 1)
+        layout.addWidget(QtGui.QLabel("Off-pulse indices: "), 3, 0, AR)
+        layout.addWidget(self._off_pulse_le, 3, 1)
 
         self.setLayout(layout)
 
@@ -136,6 +129,9 @@ class PumpProbeCtrlWidget(AbstractCtrlWidget):
         return True
 
     def onPpModeChange(self, pp_mode):
+        if not self._pulse_resolved:
+            return
+
         if pp_mode == PumpProbeMode.PRE_DEFINED_OFF:
             # off-pulse indices are ignored in PRE_DEFINED_OFF mode.
             self._off_pulse_le.setEnabled(False)

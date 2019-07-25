@@ -109,8 +109,7 @@ class ImageView(QtGui.QWidget):
         self.layout().setSpacing(0)
 
     def reset(self):
-        # TODO: check
-        self._image_item.clear()
+        self.clear()
 
     def update(self, data):
         """karaboFAI interface."""
@@ -433,19 +432,13 @@ class SinglePulseImageView(ImageView):
     def update(self, data):
         """Override."""
         images = data.image.images
-        threshold_mask = data.image.threshold_mask
 
-        max_id = data.n_pulses - 1
-        if self.pulse_index <= max_id:
-            np.clip(images[self.pulse_index], *threshold_mask,
-                    images[self.pulse_index])
-        else:
-            logger.error("<POI index>: POI index ({}) > Maximum "
-                         "pulse index ({})".format(self.pulse_index, max_id))
+        try:
+            self.setImage(images[self.pulse_index],
+                          auto_levels=(not self._is_initialized))
+        except IndexError:
+            self.clear()
             return
-
-        self.setImage(images[self.pulse_index],
-                      auto_levels=(not self._is_initialized))
 
         self.updateROI(data)
 

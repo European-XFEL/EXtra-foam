@@ -29,6 +29,12 @@ class TestImageView(unittest.TestCase):
         widget = ImageView(has_roi=False)
         self.assertEqual(1, len(widget._plot_widget.plotItem.items))
 
+        with self.assertRaises(TypeError):
+            widget.setImage([[1, 2, 3], [4, 5, 6]])
+
+        with self.assertRaises(TypeError):
+            widget.setImage(None)
+
     def testRoiImageView(self):
         widget = RoiImageView(1)
         widget.setImage = MagicMock()
