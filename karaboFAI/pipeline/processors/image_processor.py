@@ -90,7 +90,9 @@ class ImageProcessorPulse(CompositeProcessor):
         image_shape = assembled.shape[-2:]
 
         # update image mask
-        self._image_mask = self._cmd_proxy.update_mask(self._image_mask)
+        self._image_mask = self._cmd_proxy.update_mask(
+            self._image_mask, image_shape)
+
         if self._image_mask is not None:
             if self._image_mask.shape != image_shape:
                 # This could only happen when the mask is loaded from the files
