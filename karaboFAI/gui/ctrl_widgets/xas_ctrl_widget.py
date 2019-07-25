@@ -12,19 +12,29 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from ..mediator import Mediator
+from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 
 
 class XasCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
+
+    _monochromators = [
+        "",
+        "SA3_XTD10_MONO/MDL/PHOTON_ENERGY",
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__("XAS analysis setup", *args, **kwargs)
 
         self._reset_btn = QtGui.QPushButton("Reset")
 
-        self._nbins_le = QtGui.QLineEdit("60")
-        self._nbins_le.setValidator(QtGui.QIntValidator(0, 999))
+        self._mono_src_cb = QtGui.QComboBox()
+        for src in self._monochromators:
+            self._mono_src_cb.addItem(src)
+
+        self._n_bins_le = SmartLineEdit("60")
+        self._n_bins_le.setValidator(QtGui.QIntValidator(1, 999))
+        self._bin_range_le = SmartBoundaryLineEdit("0.7, 0.9")
 
         self.initUI()
 
@@ -37,22 +47,37 @@ class XasCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(self._reset_btn, 0, 1)
-        layout.addWidget(QtGui.QLabel("# of energy bins: "), 1, 0, 1, 1, AR)
-        layout.addWidget(self._nbins_le, 1, 1, 1, 1)
+        layout.addWidget(self._reset_btn, 0, 3, AR)
+        layout.addWidget(QtGui.QLabel("Monochromator: "), 1, 0, AR)
+        layout.addWidget(self._mono_src_cb, 1, 1, 1, 3)
+        layout.addWidget(QtGui.QLabel("Bin range (keV): "), 2, 0, AR)
+        layout.addWidget(self._bin_range_le, 2, 1)
+        layout.addWidget(QtGui.QLabel("# of bins: "), 2, 2, AR)
+        layout.addWidget(self._n_bins_le, 2, 3)
 
         self.setLayout(layout)
 
     def initConnections(self):
-        mediator = Mediator()
+        mediator = self._mediator
 
-        self._reset_btn.clicked.connect(mediator.reset_xas_sgn)
+        self._reset_btn.clicked.connect(mediator.onXasReset)
 
-        self._nbins_le.editingFinished.connect(
-            lambda: mediator.energy_bins_change_sgn.emit(
-                int(self._nbins_le.text())))
-        self._nbins_le.editingFinished.emit()
+        self._mono_src_cb.currentTextChanged.connect(
+            mediator.onXasMonoSourceNameChange)
 
-    def updateSharedParameters(self):
-        """Override"""
+        self._n_bins_le.returnPressed.connect(
+            lambda: mediator.onXasEnergyBinsChange(
+                int(self._n_bins_le.text())))
+
+        self._bin_range_le.value_changed_sgn.connect(
+            mediator.onXasBinRangeChange)
+
+    def updateMetaData(self):
+        self._mono_src_cb.currentTextChanged.emit(
+            self._mono_src_cb.currentText())
+
+        self._n_bins_le.returnPressed.emit()
+
+        self._bin_range_le.returnPressed.emit()
+
         return True

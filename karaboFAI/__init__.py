@@ -34,5 +34,12 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+import os
 
-__version__ = "0.4.4"
+
+__version__ = "0.5.0"
+
+# root path for storing config and log files
+ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")
+if not os.path.isdir(ROOT_PATH):
+    os.makedirs(ROOT_PATH)

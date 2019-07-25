@@ -1,4 +1,5 @@
 import unittest
+import math
 
 import numpy as np
 
@@ -8,15 +9,30 @@ from karaboFAI.algorithms import down_sample, slice_curve, up_sample
 class TestSampling(unittest.TestCase):
     def test_slicecurve(self):
         y = np.array([6, 5, 4, 3, 2, 1])
-        x = np.array([0, 1, 2, 3, 4, 5])
+        x = np.array([-5.0, -3.0, 2.0, 3.0, 4.0, 5.0])
 
+        # default x_min and x_max are both None
         new_y, new_x = slice_curve(y, x)
         self.assertTrue(np.array_equal(new_y, y))
         self.assertTrue(np.array_equal(new_x, x))
 
+        # normal slice
         new_y, new_x = slice_curve(y, x, 1, 3)
-        self.assertTrue(np.array_equal(new_y, np.array([5, 4, 3])))
-        self.assertTrue(np.array_equal(new_x, np.array([1, 2, 3])))
+        np.testing.assert_array_equal(np.array([4, 3]), new_y)
+        np.testing.assert_array_equal(np.array([2.0, 3.0]), new_x)
+
+        # x_min >= x_max. It returns empty array instead of raising Exception
+        new_y, new_x = slice_curve(y, x, 3, 1)
+        np.testing.assert_array_equal(np.array([], dtype=y.dtype), new_y)
+        np.testing.assert_array_equal(np.array([], dtype=x.dtype), new_x)
+
+        # x_min and x_max are -inf/inf
+        new_y, new_x = slice_curve(y, x, -math.inf, math.inf)
+        np.testing.assert_array_equal(y, new_y)
+        np.testing.assert_array_equal(x, new_x)
+        new_y, new_x = slice_curve(y, x, -np.inf, np.inf)
+        np.testing.assert_array_equal(y, new_y)
+        np.testing.assert_array_equal(x, new_x)
 
     def test_downsample(self):
         x1 = np.array([1, 2])

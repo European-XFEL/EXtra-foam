@@ -30,8 +30,8 @@ class _BarPlotItem(pg.GraphicsObject):
         self._width = None
         self.width = width
 
-        self._pen = make_pen('e') if pen is None else pen
-        self._brush = make_brush('e') if brush is None else brush
+        self._pen = make_pen('g') if pen is None else pen
+        self._brush = make_brush('b') if brush is None else brush
 
         self.setData(x, y)
 
@@ -101,7 +101,13 @@ class _BarPlotItem(pg.GraphicsObject):
 class _ErrorBarItem(pg.GraphicsObject):
     """ErrorBarItem."""
 
-    def __init__(self, x=None, y=None, y_min=None, y_max=None, beam=None, pen=None):
+    def __init__(self,
+                 x=None,
+                 y=None,
+                 y_min=None,
+                 y_max=None,
+                 beam=None,
+                 pen=None):
         """Initialization.
 
         Note: y is not used for now.
@@ -116,7 +122,7 @@ class _ErrorBarItem(pg.GraphicsObject):
         self._y_max = None
 
         self._beam = 0.0 if beam is None else beam
-        self._pen = make_pen('e') if pen is None else pen
+        self._pen = make_pen('b') if pen is None else pen
 
         self.setData(x, y, y_min=y_min, y_max=y_max)
 
@@ -261,8 +267,19 @@ class PlotWidget(GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotErrorBar(self, x=None, y=None, y_min=None, y_max=None, beam=None):
-        item = _ErrorBarItem(x=x, y=y, y_min=y_min, y_max=y_max, beam=beam)
+    def plotErrorBar(self,
+                     x=None,
+                     y=None,
+                     y_min=None,
+                     y_max=None,
+                     beam=None,
+                     **kwargs):
+        item = _ErrorBarItem(x=x,
+                             y=y,
+                             y_min=y_min,
+                             y_max=y_max,
+                             beam=beam,
+                             **kwargs)
         self.plotItem.addItem(item)
         return item
 

@@ -1,108 +1,152 @@
 import unittest
+from unittest import mock
 import os
+import os.path as osp
+import tempfile
+import json
 
-from karaboFAI.config import Config, UpperCaseConfigParser
+from karaboFAI.config import ConfigWrapper, _Config
+from karaboFAI.logger import logger
 
 
 class TestLaserOnOffWindow(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.dir = tempfile.mkdtemp()
+        _Config._filename = osp.join(cls.dir, "config.json")
+
+        cls.expected_keys = set(_Config._system_readonly_config.keys()).union(
+            set(_Config._system_reconfigurable_config.keys())).union(
+            set(_Config._detector_readonly_config['DEFAULT'].keys())).union(
+            set(_Config._detector_reconfigurable_config['DEFAULT'].keys()))
+
     def setUp(self):
-        Config._filename = "mock_settings.ini"
-        self._expected_keys = set(Config._default_sys_config.keys()).union(
-                              set(Config._detector_reconfigurable_keys)).union(
-                              set(Config._detector_readonly_config_keys)
-        )
-
-    def testNewFileGeneration(self):
-        Config()  # generate the file
-
-        cfg = UpperCaseConfigParser()
-        cfg.read(Config._filename)
-
-        # "DEFAULT" section should be empty
-        self.assertTrue(not cfg["DEFAULT"])
-        for detector in Config._default_detector_configs:
-            # only reconfigurable keys are allowed to be defined in the file
-            self.assertEqual(set(cfg[detector].keys()),
-                             set(Config._detector_reconfigurable_keys))
-            # values are all ''
-            self.assertEqual(set(cfg[detector].values()), {''})
-
-    def testLoad(self):
-        detector = "AGIPD"
-
-        config = Config()
-        config.load(detector)
-
-        # test keys
-        self.assertEqual(self._expected_keys, set(config.keys()))
-
-        # test values
-        self.assertEqual(config["DETECTOR"], detector)
-        self.assertEqual(config["SOURCE_NAME"],
-                         Config._default_detector_configs[detector]["SOURCE_NAME"])
-        self.assertEqual(config["SOURCE_TYPE"],
-                         Config._default_detector_configs[detector]["SOURCE_TYPE"])
-
-        # *************************************************************
-        # now we change the content of the file
-        with open(Config._filename) as fp:
-            lines = fp.readlines()
-            lines[3] = 'DATA_FOLDER = changed\n'
-            lines[4] = 'SOURCE_TYPE = also changed\n'
-
-        with open(Config._filename, 'w') as fp:
-            for line in lines:
-                fp.write(line)
-
-        config.load(detector)
-
-        # test keys
-        self.assertEqual(self._expected_keys, set(config.keys()))
-
-        # test values which should be overwritten by new values in the file
-        self.assertEqual(config["DETECTOR"], detector)
-        self.assertEqual(config["DATA_FOLDER"], "changed")
-        self.assertEqual(config["SOURCE_TYPE"], "also changed")
-
-        # *************************************************************
-        # now we add an unknown key to the file
-        with open(Config._filename) as fp:
-            lines = fp.readlines()
-            lines.insert(1, 'SOURCE_PLACE = \n')
-
-        with open(Config._filename, 'w') as fp:
-            for line in lines:
-                fp.write(line)
-
-        config.load(detector)  # unknown keys will not raise
-
-        # *************************************************************
-        # now we add a read-only key to the file
-        with open(Config._filename) as fp:
-            lines = fp.readlines()
-            lines[1] = Config._detector_readonly_config_keys[-1] + ' = \n'
-
-        with open(Config._filename, 'w') as fp:
-            for line in lines:
-                fp.write(line)
-
-        # read-only config is not allowed to be in the file
-        with self.assertRaises(KeyError):
-            config.load(detector)
-
-        # *************************************************************
-        # now we add a system config key to the file
-        with open(Config._filename) as fp:
-            lines = fp.readlines()
-            lines[1] = list(Config._default_sys_config.keys())[-1] + ' = \n'
-
-        with open(Config._filename, 'w') as fp:
-            for line in lines:
-                fp.write(line)
-
-        # system config is not allowed to be in the file
-        with self.assertRaises(KeyError):
-            config.load(detector)
+        self._cfg = ConfigWrapper()
 
     def tearDown(self):
-        os.remove(Config._filename)
+        os.remove(_Config._filename)
+
+    def testGeneral(self):
+        # test readonly
+        with self.assertRaises(TypeError):
+            self._cfg['DETECTOR'] = "ABC"
+
+    def testNewFileGeneration(self):
+        with open(_Config._filename, 'r') as fp:
+            cfg = json.load(fp)
+
+        # check system configuration
+        self.assertEqual(set(cfg.keys()),
+                         set(_Config._system_reconfigurable_config.keys())
+                         .union(set(_Config.detectors)))
+
+        for key, value in _Config._system_reconfigurable_config.items():
+            if key not in _Config.detectors:
+                self.assertEqual(value, cfg[key])
+
+        # check configuration for each detector
+        for det in _Config.detectors:
+            self.assertEqual(
+                set(cfg[det].keys()),
+                set(_Config._detector_reconfigurable_config['DEFAULT'].keys()))
+
+    def testLoadLPD(self):
+        cfg = self._cfg
+
+        detector = "LPD"
+        cfg.load(detector)
+
+        # test keys
+        self.assertEqual(self.expected_keys, set(cfg.keys()))
+
+        # test values
+        self.assertEqual(cfg["DETECTOR"], detector)
+        self.assertEqual(cfg["PULSE_RESOLVED"], True)
+        self.assertEqual(cfg["SOURCE_NAME_BRIDGE"],
+                         _Config._detector_reconfigurable_config[
+                             detector]["SOURCE_NAME_BRIDGE"])
+        self.assertEqual(cfg["SOURCE_NAME_FILE"],
+                         _Config._detector_reconfigurable_config[
+                             detector]["SOURCE_NAME_FILE"])
+
+    def testLoadJungFrau(self):
+        cfg = self._cfg
+
+        detector = "JungFrau"
+        cfg.load(detector)
+
+        # test keys
+        self.assertEqual(self.expected_keys, set(cfg.keys()))
+
+        # test values
+        self.assertEqual(cfg["DETECTOR"], detector)
+        self.assertEqual(cfg["PULSE_RESOLVED"], False)
+        self.assertEqual(cfg["SERVER_ADDR"],
+                         _Config._detector_reconfigurable_config[
+                             detector]["SERVER_ADDR"])
+        self.assertEqual(cfg["SERVER_PORT"],
+                         _Config._detector_reconfigurable_config[
+                             detector]["SERVER_PORT"])
+
+    def testInvalidSysKeys(self):
+        # invalid keys in system config
+        with open(_Config._filename, 'r') as fp:
+            cfg = json.load(fp)
+
+        with open(_Config._filename, 'w') as fp:
+            cfg['UNKNOWN1'] = 1
+            cfg['UNKNOWN2'] = 2
+            json.dump(cfg, fp, indent=4)
+
+        detector = "LPD"
+        # test raise if the answer is 'no'
+        with mock.patch('builtins.input', return_value='n'):
+            with self.assertRaisesRegex(ValueError, 'UNKNOWN1, UNKNOWN2'):
+                self._cfg.load(detector)
+
+        # test generating backup file if the answer is 'yes'
+        with mock.patch('builtins.input', return_value='y'):
+            self._cfg.load(detector)
+
+        self.assertTrue(osp.exists(_Config._filename + '.bak'))
+        # check the content of the backup file
+        with open(_Config._filename + '.bak', 'r') as fp:
+            self.assertEqual(cfg, json.load(fp))
+        # nothing should happen since there is a valid config file
+        self._cfg.load(detector)
+
+        # mess up the new config file again
+        with open(_Config._filename, 'w') as fp:
+            cfg['UNKNOWN3'] = 1
+            json.dump(cfg, fp, indent=4)
+
+        with mock.patch('builtins.input', return_value='y'):
+            self._cfg.load(detector)
+
+        self.assertTrue(osp.exists(_Config._filename + '.bak'))
+        # check the content of the backup file
+        with open(_Config._filename + '.bak', 'r') as fp:
+            self.assertEqual(cfg, json.load(fp))
+
+        # test that the second level backup file was generated
+        self.assertTrue(osp.exists(_Config._filename + '.bak.bak'))
+        # check the content of the second level backup file
+        with open(_Config._filename + '.bak.bak', 'r') as fp:
+            del cfg['UNKNOWN3']
+            self.assertEqual(cfg, json.load(fp))
+
+    def testInvalidDetectorKeys(self):
+        # invalid keys in detector config
+        with open(_Config._filename, 'r') as fp:
+            cfg = json.load(fp)
+
+        detector = "LPD"
+
+        with open(_Config._filename, 'w') as fp:
+            cfg[detector]['UNKNOWN'] = 1
+            cfg[detector]['TIMEOUT'] = 2
+            json.dump(cfg, fp, indent=4)
+
+        with mock.patch('builtins.input', return_value='n'):
+            with self.assertRaisesRegex(ValueError, 'LPD.UNKNOWN, LPD.TIMEOUT'):
+                self._cfg.load(detector)

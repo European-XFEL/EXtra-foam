@@ -9,7 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import Qt, QtCore, QtGui
+import os.path as osp
+
+from ..pyqtgraph import Qt, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_table_widget
@@ -19,8 +21,6 @@ from ...logger import logger
 
 class GeometryCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the geometry parameters."""
-    # (geometry file, quadrant positions)
-    geometry_sgn = QtCore.pyqtSignal(str, list)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Geometry setup", *args, **kwargs)
@@ -30,7 +30,7 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         self._geom_file_open_btn = QtGui.QPushButton("Load geometry file")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
-        self._disabled_widgets_during_daq = [
+        self._non_reconfigurable_widgets = [
             self._quad_positions_tb,
             self._geom_file_le,
             self._geom_file_open_btn
@@ -90,14 +90,24 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         if filename:
             self._geom_file_le.setText(filename)
 
-    def updateSharedParameters(self):
+    def updateMetaData(self):
         """Override"""
+        if not config['REQUIRE_GEOMETRY']:
+            return True
+
+        geom_file = self._geom_file_le.text()
+        if not osp.isfile(geom_file):
+            logger.error(f"<Geometry file>: {geom_file} is not a valid file")
+            return False
+
+        self._mediator.onGeomFilenameChange(geom_file)
+
         try:
-            geom_file = self._geom_file_le.text()
             quad_positions = parse_table_widget(self._quad_positions_tb)
-            self.geometry_sgn.emit(geom_file, quad_positions)
         except ValueError as e:
             logger.error("<Quadrant positions>: " + repr(e))
             return False
+
+        self._mediator.onGeomQuadPositionsChange(quad_positions)
 
         return True

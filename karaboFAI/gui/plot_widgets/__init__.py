@@ -1,18 +1,23 @@
 from .image_view import (
-    AssembledImageView, ImageAnalysis, PumpProbeImageView,
-    RoiImageView, SinglePulseImageView
+    AssembledImageView, Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
+    PumpProbeImageView, RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
-    CorrelationWidget, PumpProbeOnOffWidget,
-    PumpProbeFomWidget, MultiPulseAiWidget, RoiValueMonitor,
-    PulsedFOMWidget, SinglePulseAiWidget, XasSpectrumWidget,
-    XasSpectrumDiffWidget, XasSpectrumBinCountWidget
+    Bin1dHist,
+    CorrelationWidget,
+    FomHistogramWidget,
+    PumpProbeOnOffWidget, PumpProbeFomWidget,
+    TrainAiWidget, PulsesInTrainFomWidget,
+    XasSpectrumWidget, XasSpectrumDiffWidget,
+    XasSpectrumBinCountWidget
 )
-from .roi import CropROI, RectROI
+
 
 # add image view widgets
 __all__ = ([
     "AssembledImageView",
+    "Bin1dHeatmap",
+    "Bin2dHeatmap",
     "ImageAnalysis",
     "PumpProbeImageView",
     "RoiImageView",
@@ -21,20 +26,14 @@ __all__ = ([
 
 # add plot widgets
 __all__.extend([
+    "Bin1dHist",
     "CorrelationWidget",
+    "FomHistogramWidget",
     "PumpProbeOnOffWidget",
     "PumpProbeFomWidget",
-    "MultiPulseAiWidget",
-    "RoiValueMonitor",
-    "PulsedFOMWidget",
-    "SinglePulseAiWidget",
+    "TrainAiWidget",
+    "PulsesInTrainFomWidget",
     "XasSpectrumWidget",
     "XasSpectrumDiffWidget",
     "XasSpectrumBinCountWidget",
-])
-
-# add ROI widgets
-__all__.extend([
-    "CropROI",
-    "RectROI"
 ])

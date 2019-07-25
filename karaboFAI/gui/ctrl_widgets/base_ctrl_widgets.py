@@ -9,7 +9,74 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import QtCore, QtGui
+from collections import OrderedDict
+
+from ..pyqtgraph import QtGui
+
+from ..mediator import Mediator
+
+
+class CorrelationParam:
+    def __init__(self, device_ids=None, properties=None):
+        if device_ids is None:
+            self.device_ids = []
+        else:
+            self.device_ids = device_ids
+
+        if properties is None:
+            self.properties = []
+        else:
+            self.properties = properties
+
+
+# Leave the default device ID empty since the available devices
+# in different instruments are different.
+#
+_DATA_CATEGORIES = OrderedDict({
+    "": CorrelationParam(),
+    # "XGM": CorrelationParam(
+    #     device_ids=[
+    #         "",
+    #         "SA1_XTD2_XGM/DOOCS/MAIN",
+    #         "SPB_XTD9_XGM/DOOCS/MAIN",
+    #         "SA3_XTD10_XGM/XGM/DOOCS",
+    #         "SCS_BLU_XGM/XGM/DOOCS"
+    #     ],
+    #     properties=["data.intensityTD"],
+    # ),
+    # "Digitizer": CorrelationParam(
+    #     device_ids=[
+    #         "",
+    #         "SCS_UTC1_ADQ/ADC/1"
+    #     ],
+    #     properties=["MCP1", "MCP2", "MCP3", "MCP4"],
+    # ),
+    "Train ID": CorrelationParam(
+        device_ids=["", "Any"],
+        properties=["timestamp.tid"]
+    ),
+    "Motor": CorrelationParam(
+        device_ids=[
+            "",
+            "FXE_SMS_USR/MOTOR/UM01",
+            "FXE_SMS_USR/MOTOR/UM02",
+            "FXE_SMS_USR/MOTOR/UM04",
+            "FXE_SMS_USR/MOTOR/UM05",
+            "FXE_SMS_USR/MOTOR/UM13",
+            "FXE_AUXT_LIC/DOOCS/PPLASER",
+            "FXE_AUXT_LIC/DOOCS/PPODL",
+        ],
+        properties=["actualPosition"],
+    ),
+    "MonoChromator": CorrelationParam(
+        device_ids=[
+            "",
+            "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
+        ],
+        properties=["actualEnergy"],
+    ),
+    "User defined": CorrelationParam()
+})
 
 
 class AbstractCtrlWidget(QtGui.QGroupBox):
@@ -35,10 +102,11 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         if parent is not None:
             parent.registerCtrlWidget(self)
 
-        parent.bridge_started_sgn.connect(self.onBridgeStarted)
-        parent.bridge_stopped_sgn.connect(self.onBridgeStopped)
+        self._mediator = Mediator()
 
-        self._disabled_widgets_during_daq = []
+        # widgets whose values are not allowed to change after the "run"
+        # button is clicked
+        self._non_reconfigurable_widgets = []
 
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
@@ -47,20 +115,18 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         """Initialization of UI."""
         raise NotImplementedError
 
-    @QtCore.pyqtSlot()
-    def onBridgeStarted(self):
-        for widget in self._disabled_widgets_during_daq:
+    def onStart(self):
+        for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
 
-    @QtCore.pyqtSlot()
-    def onBridgeStopped(self):
-        for widget in self._disabled_widgets_during_daq:
+    def onStop(self):
+        for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
 
-    def updateSharedParameters(self):
-        """Update shared parameters for control widget.
+    def updateMetaData(self):
+        """Update metadata belong to this control widget.
 
         :return: None if any of the parameters is invalid. Otherwise, a
             string of to be logged information.
         """
-        raise NotImplementedError
+        return True

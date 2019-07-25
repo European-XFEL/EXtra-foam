@@ -1,17 +1,15 @@
 import unittest
-from unittest.mock import MagicMock
 
-from karaboFAI.services import FaiServer
+from karaboFAI.gui import mkQApp
 from karaboFAI.gui.plot_widgets.plot_widgets import (
-    PlotWidget, PumpProbeOnOffWidget
+    PlotWidget
 )
 
 
-class TestPlotWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.app = FaiServer().app
+app = mkQApp()
 
+
+class TestPlotWidget(unittest.TestCase):
     def setUp(self):
         self._widget = PlotWidget()
 
@@ -29,11 +27,10 @@ class TestPlotWidget(unittest.TestCase):
     def testBarPlot(self):
         # set any valid number
         plot = self._widget.plotBar([1, 2], [3, 4])
-        self.app.processEvents()
+        app.processEvents()
 
         # test set empty data
         plot.setData([], [])
-        self.app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):
@@ -42,15 +39,14 @@ class TestPlotWidget(unittest.TestCase):
     def testErrorBarPlot(self):
         # set any valid number
         plot = self._widget.plotErrorBar([1, 2], [3, 4])
-        self.app.processEvents()
+        app.processEvents()
 
         # set x, y, y_min and y_max together
         plot.setData([1, 2], [1, 2], y_min=[0, 0], y_max=[2, 2])
-        self.app.processEvents()
+        app.processEvents()
 
         # test set empty data
         plot.setData([], [])
-        self.app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):

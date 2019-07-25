@@ -10,80 +10,203 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os.path as osp
-from collections import OrderedDict
 import functools
 
 from ..pyqtgraph import QtCore, QtGui
 
-from .base_window import AbstractWindow, SingletonWindow
+from .base_window import AbstractWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis
-from ...config import config, RoiFom, ImageMaskChange
+from ..ctrl_widgets.smart_widgets import (
+    SmartLineEdit, SmartBoundaryLineEdit
+)
+from ...pipeline.data_model import ImageData
+from ...utils import cached_property
+from ...config import config, MaskState
+from ...algorithms import mask_image
+
+
+class _SimpleImageData:
+    """SimpleImageData which is used by ImageToolWindow.
+
+    In ImageToolWindow, some properties of the image can be changed, for
+    instance, background, threshold mask, etc.
+
+    Attributes:
+        pixel_size (float): pixel size of the detector.
+        threshold_mask (tuple): (lower, upper) boundaries of the
+            threshold mask.
+        background (float): a uniform background value.
+        masked (numpy.ndarray): image with threshold mask.
+    """
+
+    def __init__(self, image_data):
+        """Initialization.
+
+        Construct a _SimpleImageData instance from an ImageData instance.
+
+        :param ImageData image_data: an ImageData instance.
+        """
+        if not isinstance(image_data, ImageData):
+            raise TypeError("Input must be an ImageData instance.")
+
+        self._pixel_size = image_data.pixel_size
+
+        # This is only used for reset the image in the ImageTool, which
+        # does not occur very often. Therefore, the copy is used to avoid
+        # data sharing.
+        # Note: image_data.mean does not contain any NaN
+        self._image = image_data.mean.copy()
+
+        # Note:: we do not copy 'masked_mean' since it also includes image_mask
+
+        # image mask is plotted on top of the image in ImageTool
+
+        self._bkg = image_data.background
+        self._threshold_mask = image_data.threshold_mask
+
+    @property
+    def pixel_size(self):
+        return self._pixel_size
+
+    @property
+    def background(self):
+        return self._bkg
+
+    @background.setter
+    def background(self, v):
+        if v == self._bkg:
+            return
+        self._image -= v - self._bkg  # in-place operation
+        self._bkg = v
+
+        # invalidate cache
+        try:
+            del self.__dict__['masked']
+        except KeyError:
+            pass
+
+    @property
+    def threshold_mask(self):
+        return self._threshold_mask
+
+    @threshold_mask.setter
+    def threshold_mask(self, mask):
+        if mask == self._threshold_mask:
+            return
+
+        self._threshold_mask = mask
+
+        # invalid cache
+        del self.__dict__['masked']
+
+    @cached_property
+    def masked(self):
+        return mask_image(self._image,
+                          threshold_mask=self._threshold_mask,
+                          inplace=False)
+
+    @classmethod
+    def from_array(cls, arr):
+        """Instantiate from an array."""
+        return cls(ImageData.from_array(arr))
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
 
-    Implemented four QLineEdits (w, h, x, y) and their connection to the
+    Implemented four QLineEdits (x, y, w, h) and their connection to the
     corresponding ROI.
     """
-    # rank, activated, w, h, px, py
-    roi_region_change_sgn = QtCore.Signal(int, bool, int, int, int, int)
+    # (rank, x, y, w, h) where rank starts from 1
+    roi_region_change_sgn = QtCore.Signal(object)
+    # (rank, visible)
+    roi_visibility_change_sgn = QtCore.Signal(object)
 
     _pos_validator = QtGui.QIntValidator(-10000, 10000)
-    _size_validator = QtGui.QIntValidator(0, 10000)
+    _size_validator = QtGui.QIntValidator(1, 10000)
 
     def __init__(self, roi, *, parent=None):
         super().__init__(parent=parent)
         self._roi = roi
 
-        self._width_le = QtGui.QLineEdit()
+        self._width_le = SmartLineEdit()
         self._width_le.setValidator(self._size_validator)
-        self._height_le = QtGui.QLineEdit()
+        self._height_le = SmartLineEdit()
         self._height_le.setValidator(self._size_validator)
-        self._px_le = QtGui.QLineEdit()
+        self._px_le = SmartLineEdit()
         self._px_le.setValidator(self._pos_validator)
-        self._py_le = QtGui.QLineEdit()
+        self._py_le = SmartLineEdit()
         self._py_le.setValidator(self._pos_validator)
-        self._width_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._height_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._px_le.editingFinished.connect(self.onRoiRegionEdited)
-        self._py_le.editingFinished.connect(self.onRoiRegionEdited)
+        self._width_le.returnPressed.connect(self.onRoiSizeEdited)
+        self._height_le.returnPressed.connect(self.onRoiSizeEdited)
+        self._px_le.returnPressed.connect(self.onRoiPositionEdited)
+        self._py_le.returnPressed.connect(self.onRoiPositionEdited)
 
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
 
         roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
-        roi.sigRegionChangeFinished.emit(roi)  # fill the QLineEdit(s)
 
     @QtCore.pyqtSlot()
-    def onRoiRegionEdited(self):
-        w = int(self._width_le.text())
-        h = int(self._height_le.text())
-        px = int(self._px_le.text())
-        py = int(self._py_le.text())
+    def onRoiPositionEdited(self):
+        x, y = [int(v) for v in self._roi.pos()]
+        w, h = [int(v) for v in self._roi.size()]
+
+        if self.sender() == self._px_le:
+            x = int(self._px_le.text())
+        elif self.sender() == self._py_le:
+            y = int(self._py_le.text())
+
+        # If 'update' == False, the state change will be remembered
+        # but not processed and no signals will be emitted.
+        self._roi.setPos((x, y), update=False)
+        # trigger sigRegionChanged which moves the handler(s)
+        # finish=False -> sigRegionChangeFinished will not emit, which
+        # otherwise triggers infinite recursion
+        self._roi.stateChanged(finish=False)
+
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
+
+    @QtCore.pyqtSlot()
+    def onRoiSizeEdited(self):
+        x, y = [int(v) for v in self._roi.pos()]
+        w, h = [int(v) for v in self._roi.size()]
+        if self.sender() == self._width_le:
+            w = int(self._width_le.text())
+        elif self.sender() == self._height_le:
+            h = int(self._height_le.text())
 
         # If 'update' == False, the state change will be remembered
         # but not processed and no signals will be emitted.
         self._roi.setSize((w, h), update=False)
-        self._roi.setPos((px, py), update=False)
+        # trigger sigRegionChanged which moves the handler(s)
+        # finish=False -> sigRegionChangeFinished will not emit, which
+        # otherwise triggers infinite recursion
         self._roi.stateChanged(finish=False)
-        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
+
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
 
     @QtCore.pyqtSlot(object)
     def onRoiRegionChangeFinished(self, roi):
         """Connect to the signal from an ROI object."""
-        w, h = [int(v) for v in self._roi.size()]
-        px, py = [int(v) for v in self._roi.pos()]
-        self.updateParameters(w, h, px, py)
+        x, y = [int(v) for v in roi.pos()]
+        w, h = [int(v) for v in roi.size()]
+        self.updateParameters(x, y, w, h)
         # inform widgets outside this window
-        self.roi_region_change_sgn.emit(self._roi.rank, True, w, h, px, py)
+        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
 
-    def updateParameters(self, w, h, px, py):
+    def notifyRoiParams(self):
+        # fill the QLineEdit(s)
+        self._roi.sigRegionChangeFinished.emit(self._roi)
+
+    def updateParameters(self, x, y, w, h):
+        self.roi_region_change_sgn.disconnect()
+        self._px_le.setText(str(x))
+        self._py_le.setText(str(y))
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self._px_le.setText(str(px))
-        self._py_le.setText(str(py))
+        self.roi_region_change_sgn.connect(Mediator().onRoiRegionChange)
 
     def setEditable(self, editable):
         for w in self._line_edits:
@@ -108,12 +231,14 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
         self.disableAllEdit()
 
         self.activate_cb.stateChanged.connect(self.onToggleRoiActivation)
+        self.activate_cb.stateChanged.emit(self.activate_cb.checkState())
         self.lock_cb.stateChanged.connect(self.onLock)
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
+        rank = self._roi.rank
         layout.addWidget(QtGui.QLabel(
-            f"ROI{self._roi.rank} ({self._roi.color[0]}): "))
+            f"ROI{rank} ({config['ROI_COLORS'][rank-1]}): "))
         layout.addWidget(self.activate_cb)
         layout.addWidget(self.lock_cb)
         layout.addWidget(QtGui.QLabel("w: "))
@@ -131,16 +256,15 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
 
     @QtCore.pyqtSlot(int)
     def onToggleRoiActivation(self, state):
-        if state == QtCore.Qt.Checked:
+        activated = state == QtCore.Qt.Checked
+        if activated:
             self._roi.show()
             self.enableAllEdit()
-            self.roi_region_change_sgn.emit(
-                self._roi.rank, True, *self._roi.size(), *self._roi.pos())
         else:
             self._roi.hide()
             self.disableAllEdit()
-            self.roi_region_change_sgn.emit(
-                self._roi.rank, False, *self._roi.size(), *self._roi.pos())
+
+        self.roi_visibility_change_sgn.emit((self._roi.rank, activated))
 
     @QtCore.pyqtSlot(int)
     def onLock(self, state):
@@ -156,75 +280,84 @@ class _SingleRoiCtrlWidget(_RoiCtrlWidgetBase):
         self.setEditable(True)
 
 
-class _RoisCtrlWidget(QtGui.QGroupBox):
+class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
     """Widget for controlling of a group of ROIs."""
-
-    _available_roi_foms = OrderedDict({
-        "sum": RoiFom.SUM,
-        "mean": RoiFom.MEAN,
-    })
-
-    roi_fom_sgn = QtCore.pyqtSignal(object)
 
     def __init__(self, rois, *, parent=None):
         super().__init__(parent)
-
-        mediator = Mediator()
-
-        self._clear_roi_hist_btn = QtGui.QPushButton("Clear history")
-        self._clear_roi_hist_btn.clicked.connect(mediator.roi_hist_clear_sgn)
-
-        self._roi_displayed_range_le = QtGui.QLineEdit(str(600))
-        validator = QtGui.QIntValidator()
-        validator.setBottom(1)
-        self._roi_displayed_range_le.setValidator(validator)
-        self._roi_displayed_range_le.editingFinished.connect(
-            mediator.onRoiDisplayedRangeChange)
-
-        self._roi_fom_cb = QtGui.QComboBox()
-        for v in self._available_roi_foms:
-            self._roi_fom_cb.addItem(v)
-        self._roi_fom_cb.currentTextChanged.connect(
-            lambda x: self.roi_fom_sgn.emit(
-                self._available_roi_foms[x]))
-        self.roi_fom_sgn.connect(mediator.roi_fom_change_sgn)
-        self._roi_fom_cb.currentTextChanged.emit(
-            self._roi_fom_cb.currentText())
 
         self._roi_ctrls = []
         for roi in rois:
             widget = _SingleRoiCtrlWidget(roi)
             self._roi_ctrls.append(widget)
-            widget.roi_region_change_sgn.connect(mediator.roi_region_change_sgn)
+
+        self.initUI()
+        self.initConnections()
+        self.updateMetaData()
+
+    def initUI(self):
+        layout = QtGui.QGridLayout()
+        for i, roi_ctrl in enumerate(self._roi_ctrls):
+            layout.addWidget(roi_ctrl, i, 0, 1, 5)
+        self.setLayout(layout)
+
+    def initConnections(self):
+        mediator = Mediator()
+
+        for widget in self._roi_ctrls:
+            widget.roi_region_change_sgn.connect(mediator.onRoiRegionChange)
+            widget.roi_visibility_change_sgn.connect(
+                mediator.onRoiVisibilityChange)
+
+    def updateMetaData(self):
+        for i, widget in enumerate(self._roi_ctrls, 1):
+            widget.notifyRoiParams()
+            widget.roi_visibility_change_sgn.emit(
+                (i, widget.activate_cb.checkState() == QtCore.Qt.Checked))
+
+
+class _ImageCtrlWidget(QtGui.QGroupBox):
+    def __init__(self, *, parent=None):
+        super().__init__(parent)
+
+        self.update_image_btn = QtGui.QPushButton("Update image")
+        self.auto_level_btn = QtGui.QPushButton("Auto level")
+        self.set_ref_btn = QtGui.QPushButton("Set reference")
+        self.remove_ref_btn = QtGui.QPushButton("Remove reference")
 
         self.initUI()
 
     def initUI(self):
+        """Override."""
         layout = QtGui.QGridLayout()
-        layout.addWidget(QtGui.QLabel("ROI value: "), 0, 0)
-        layout.addWidget(self._roi_fom_cb, 0, 1)
-        layout.addWidget(QtGui.QLabel("Displayed range: "), 0, 2)
-        layout.addWidget(self._roi_displayed_range_le, 0, 3)
-        layout.addWidget(self._clear_roi_hist_btn, 0, 4)
-        for i, roi_ctrl in enumerate(self._roi_ctrls, 1):
-            layout.addWidget(roi_ctrl, i, 0, 1, 5)
+
+        layout.addWidget(self.update_image_btn, 0, 0, 1, 2)
+        layout.addWidget(self.auto_level_btn, 0, 2, 1, 2)
+        layout.addWidget(self.set_ref_btn, 1, 0, 1, 2)
+        layout.addWidget(self.remove_ref_btn, 1, 2, 1, 2)
         self.setLayout(layout)
 
 
-class _ImageCtrlWidget(QtGui.QWidget):
-    """Widget inside the action bar for masking image."""
-
-    moving_avg_window_sgn = QtCore.pyqtSignal(int)
+class _ImageActionWidget(QtGui.QWidget):
+    """Image ctrl widget in the action bar."""
 
     def __init__(self, parent=None):
-        """Initialization"""
         super().__init__(parent=parent)
 
-        self._moving_avg_le = QtGui.QLineEdit(str(1))
-        self._moving_avg_le.setValidator(QtGui.QIntValidator(1, 1000000))
-        self._moving_avg_le.setMinimumWidth(60)
-        self._moving_avg_le.returnPressed.connect(lambda:
-            self.moving_avg_window_sgn.emit(int(self._moving_avg_le.text())))
+        self.moving_avg_le = SmartLineEdit(str(1))
+        self.moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
+        self.moving_avg_le.setMinimumWidth(60)
+
+        if config['PULSE_RESOLVED']:
+            self.moving_avg_le.setEnabled(False)
+
+        self.threshold_mask_le = SmartBoundaryLineEdit(
+            ', '.join([str(v) for v in config["MASK_RANGE"]]))
+        # avoid collapse on online and maxwell clusters
+        self.threshold_mask_le.setMinimumWidth(160)
+
+        self.bkg_le = SmartLineEdit(str(0.0))
+        self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
         self.initUI()
 
@@ -233,111 +366,21 @@ class _ImageCtrlWidget(QtGui.QWidget):
     def initUI(self):
         layout = QtGui.QHBoxLayout()
         layout.addWidget(QtGui.QLabel("Moving average: "))
-        layout.addWidget(self._moving_avg_le)
+        layout.addWidget(self.moving_avg_le)
+        layout.addWidget(QtGui.QLabel("Threshold mask: "))
+        layout.addWidget(self.threshold_mask_le)
+        layout.addWidget(QtGui.QLabel("Subtract background: "))
+        layout.addWidget(self.bkg_le)
 
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
 
 
-class _MaskCtrlWidget(QtGui.QWidget):
-    """Widget inside the action bar for masking image."""
-
-    threshold_mask_sgn = QtCore.pyqtSignal(int, int)
-
-    def __init__(self, parent=None):
-        """Initialization"""
-        super().__init__(parent=parent)
-
-        self._min_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][0])))
-        self._min_pixel_le.setValidator(QtGui.QIntValidator())
-        # avoid collapse on online and maxwell clusters
-        self._min_pixel_le.setMinimumWidth(80)
-        self._min_pixel_le.returnPressed.connect(
-            self.onThresholdMaskChanged)
-        self._max_pixel_le = QtGui.QLineEdit(str(int(config["MASK_RANGE"][1])))
-        self._max_pixel_le.setValidator(QtGui.QIntValidator())
-        self._max_pixel_le.setMinimumWidth(80)
-        self._max_pixel_le.returnPressed.connect(
-            self.onThresholdMaskChanged)
-
-        self.initUI()
-
-        self.setFixedSize(self.minimumSizeHint())
-
-    def initUI(self):
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(QtGui.QLabel("Min. mask: "))
-        layout.addWidget(self._min_pixel_le)
-        layout.addWidget(QtGui.QLabel("Max. mask: "))
-        layout.addWidget(self._max_pixel_le)
-
-        self.setLayout(layout)
-        self.layout().setContentsMargins(2, 1, 2, 1)
-
-    def onThresholdMaskChanged(self):
-        self.threshold_mask_sgn.emit(int(self._min_pixel_le.text()),
-                                     int(self._max_pixel_le.text()))
-
-
-class _ImageProcWidget(QtGui.QGroupBox):
-
-    class RoiWidget(_RoiCtrlWidgetBase):
-        def __init__(self, roi, *, parent=None):
-            super().__init__(roi, parent=parent)
-
-            self.initUI()
-
-        def initUI(self):
-            """Override."""
-            layout = QtGui.QGridLayout()
-            layout.addWidget(QtGui.QLabel("w: "), 2, 0)
-            layout.addWidget(self._width_le, 2, 1)
-            layout.addWidget(QtGui.QLabel("h: "), 2, 2)
-            layout.addWidget(self._height_le, 2, 3)
-            layout.addWidget(QtGui.QLabel("x: "), 3, 0)
-            layout.addWidget(self._px_le, 3, 1)
-            layout.addWidget(QtGui.QLabel("y: "), 3, 2)
-            layout.addWidget(self._py_le, 3, 3)
-            self.setLayout(layout)
-
-    def __init__(self, *, parent=None):
-        super().__init__(parent)
-
-        mediator = Mediator()
-
-        self.bkg_le = QtGui.QLineEdit(str(0.0))
-        self.bkg_le.setValidator(QtGui.QDoubleValidator())
-
-        self.update_image_btn = QtGui.QPushButton("Update image")
-
-        self._auto_level_btn = QtGui.QPushButton("Auto level")
-        self._auto_level_btn.clicked.connect(mediator.onAutoLevel)
-
-        self.set_ref_btn = QtGui.QPushButton("Set reference")
-        self.remove_ref_btn = QtGui.QPushButton("Remove reference")
-
-        self.initUI()
-
-    def initUI(self):
-        """Override."""
-        AR = QtCore.Qt.AlignRight
-
-        layout = QtGui.QGridLayout()
-        layout.addWidget(QtGui.QLabel("Subtract bkg: "), 0, 0, 1, 2, AR)
-        layout.addWidget(self.bkg_le, 0, 2, 1, 2)
-        layout.addWidget(self.update_image_btn, 2, 0, 1, 2)
-        layout.addWidget(self._auto_level_btn, 2, 2, 1, 2)
-        layout.addWidget(self.set_ref_btn, 3, 0, 1, 2)
-        layout.addWidget(self.remove_ref_btn, 3, 2, 1, 2)
-        self.setLayout(layout)
-
-
-@SingletonWindow
 class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
 
     This is the second Main GUI which focuses on manipulating the image
-    , e.g. selecting ROI, masking, cropping, normalization, for different
+    , e.g. selecting ROI, masking, normalization, for different
     data analysis scenarios.
     """
 
@@ -345,40 +388,49 @@ class ImageToolWindow(AbstractWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
+    __instance = None
+
+    @classmethod
+    def _reset(cls):
+        cls.__instance = None
+
+    def __new__(cls, *args, **kwargs):
+        """Create a singleton."""
+        if cls.__instance is None:
+            instance = super().__new__(cls, *args, **kwargs)
+            instance._is_initialized = False
+            cls.__instance = instance
+            return instance
+
+        instance = cls.__instance
+        parent = instance.parent()
+        if parent is not None:
+            parent.registerWindow(instance)
+
+        instance.show()
+        instance.activateWindow()
+        return instance
+
     def __init__(self, *args, **kwargs):
+        if self._is_initialized:
+            return
         super().__init__(*args, **kwargs)
 
         self._image_view = ImageAnalysis(hide_axis=False, parent=self)
 
-        self._roi_ctrl_widget = _RoisCtrlWidget(
-            self._image_view.rois, parent=self)
-        self._image_proc_widget = _ImageProcWidget(parent=self)
-
-        self._image_proc_widget.bkg_le.editingFinished.connect(
-            self._image_view.onBkgChange)
-        self._image_proc_widget.update_image_btn.clicked.connect(
-            self.updateImage)
-        self._image_proc_widget.set_ref_btn.clicked.connect(
-            self._image_view.setImageRef)
-        self._image_proc_widget.remove_ref_btn.clicked.connect(
-            self._image_view.removeImageRef)
-
-        #
-        # image tool bar
-        #
+        # image ctrl widget in the toolbar
 
         self._tool_bar_image = self.addToolBar("image")
 
-        self._image_ctrl = _ImageCtrlWidget()
-        self._image_ctrl.moving_avg_window_sgn.connect(
-            self._image_view.onMovingAverageWindowChange)
-        self._image_ctrl_at = QtGui.QWidgetAction(self._tool_bar_image)
-        self._image_ctrl_at.setDefaultWidget(self._image_ctrl)
-        self._tool_bar_image.addAction(self._image_ctrl_at)
+        self._image_action = _ImageActionWidget()
+        self._image_action_at = QtGui.QWidgetAction(self._tool_bar_image)
+        self._image_action_at.setDefaultWidget(self._image_action)
+        self._tool_bar_image.addAction(self._image_action_at)
 
-        #
+        # start another line of tool bar
+        self.addToolBarBreak()
+
         # mask tool bar
-        #
 
         self._tool_bar_mask = self.addToolBar("mask")
 
@@ -387,7 +439,7 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         mask_at.toggled.connect(self._exclude_actions)
         mask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.MASK))
+            self._image_view.onDrawToggled, MaskState.MASK))
 
         unmask_at = self._addAction(
             self._tool_bar_mask, "Unmask", "un_mask.png")
@@ -395,11 +447,11 @@ class ImageToolWindow(AbstractWindow):
         # Note: the sequence of the following two 'connect'
         unmask_at.toggled.connect(self._exclude_actions)
         unmask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, ImageMaskChange.UNMASK))
+            self._image_view.onDrawToggled, MaskState.UNMASK))
 
         clear_mask_at = self._addAction(
             self._tool_bar_mask, "Trash mask", "trash_mask.png")
-        clear_mask_at.triggered.connect(self._image_view.onClearMask)
+        clear_mask_at.triggered.connect(self._image_view.onClearImageMask)
 
         save_img_mask_at = self._addAction(
             self._tool_bar_mask, "Save image mask", "save_mask.png")
@@ -409,54 +461,69 @@ class ImageToolWindow(AbstractWindow):
             self._tool_bar_mask, "Load image mask", "load_mask.png")
         load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
 
-        self._mask_ctrl = _MaskCtrlWidget()
-        self._mask_ctrl.threshold_mask_sgn.connect(
-            self._image_view.onThresholdMaskChange)
+        self._exclusive_actions = {mask_at, unmask_at}
 
-        mask_widget = QtGui.QWidgetAction(self._tool_bar_mask)
-        mask_widget.setDefaultWidget(self._mask_ctrl)
-        self._tool_bar_mask.addAction(mask_widget)
+        # ROI and Image ctrl widget
 
-        self.addToolBarBreak()
-
-        #
-        # crop tool bar
-        #
-
-        self._tool_bar_crop = self.addToolBar("crop")
-
-        crop_at = self._addAction(
-            self._tool_bar_crop, "Crop", "crop_selection.png")
-        crop_at.setCheckable(True)
-        crop_at.toggled.connect(self._exclude_actions)
-        crop_at.toggled.connect(self._image_view.onCropToggle)
-
-        crop_to_selection_at = self._addAction(
-            self._tool_bar_crop, "Crop to selection", "crop.png")
-        crop_to_selection_at.triggered.connect(
-            self._image_view.onCropConfirmed)
-        crop_to_selection_at.triggered.connect(functools.partial(
-            crop_at.setChecked, False))
-
-        restore_image_at = self._addAction(
-            self._tool_bar_crop, "Restore image", "restore.png")
-        restore_image_at.triggered.connect(self._image_view.onRestoreImage)
-
-        self._exclusive_actions = {mask_at, unmask_at, crop_at}
+        self._roi_ctrl_widget = _RoiCtrlWidgetGroup(
+            self._image_view.rois, parent=self)
+        self._image_ctrl_widget = _ImageCtrlWidget(parent=self)
 
         self.initUI()
+        self.initConnections()
+        self.updateMetaData()
+
         self.resize(800, 800)
         self.update()
+
+        self._is_initialized = True
 
     def initUI(self):
         """Override."""
         layout = QtGui.QGridLayout()
         layout.addWidget(self._image_view, 0, 0, 1, 3)
         layout.addWidget(self._roi_ctrl_widget, 1, 0, 1, 2)
-        layout.addWidget(self._image_proc_widget, 1, 2, 1, 1)
+        layout.addWidget(self._image_ctrl_widget, 1, 2, 1, 1)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
+
+    def initConnections(self):
+        mediator = self._mediator
+
+        # signal-slot connections of child widgets should also be set here
+
+        self._image_ctrl_widget.update_image_btn.clicked.connect(
+            self.updateImage)
+
+        self._image_ctrl_widget.set_ref_btn.clicked.connect(
+            self._image_view.setReferenceImage)
+
+        self._image_ctrl_widget.remove_ref_btn.clicked.connect(
+            self._image_view.removeReferenceImage)
+
+        self._image_ctrl_widget.auto_level_btn.clicked.connect(
+            mediator.reset_image_level_sgn)
+
+        self._image_action.moving_avg_le.value_changed_sgn.connect(
+            lambda x: mediator.onImageMaWindowChange(int(x)))
+
+        self._image_action.threshold_mask_le.value_changed_sgn.connect(
+            lambda x: self._image_view.onThresholdMaskChange(x))
+        self._image_action.threshold_mask_le.value_changed_sgn.connect(
+            lambda x: mediator.onImageThresholdMaskChange(x))
+
+        self._image_action.bkg_le.value_changed_sgn.connect(
+            lambda x: self._image_view.onBkgChange(float(x)))
+        self._image_action.bkg_le.value_changed_sgn.connect(
+            lambda x: mediator.onImageBackgroundChange(float(x)))
+
+    def updateMetaData(self):
+        """Override."""
+        self._image_action.moving_avg_le.returnPressed.emit()
+        self._image_action.threshold_mask_le.returnPressed.emit()
+        self._image_action.bkg_le.returnPressed.emit()
+        return True
 
     def update(self):
         """Update widgets.
@@ -477,10 +544,11 @@ class ImageToolWindow(AbstractWindow):
         It is only used for updating the image manually.
         """
         data = self._data.get()
-        if data.image is None:
+
+        if data is None:
             return
 
-        self._image_view.setImageData(data.image, **kwargs)
+        self._image_view.setImageData(_SimpleImageData(data.image), **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):

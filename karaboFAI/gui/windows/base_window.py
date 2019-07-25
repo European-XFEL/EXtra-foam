@@ -11,34 +11,11 @@ All rights reserved.
 """
 from weakref import WeakKeyDictionary
 
-from ..pyqtgraph import QtGui
+from PyQt5 import QtGui
+
 from ..pyqtgraph.dockarea import DockArea
 
-
-class SingletonWindow:
-    """SingletonWindow decorator.
-
-    A singleton window is only allowed to have one instance.
-    """
-    _instances = dict()
-
-    def __init__(self, instance_type):
-        self._instance_type = instance_type
-
-    def __call__(self, *args, **kwargs):
-        if self._instance_type not in self._instances:
-            instance = self._instance_type(*args, **kwargs)
-            self._instances[self._instance_type] = instance
-        else:
-            instance = self._instances[self._instance_type]
-            parent = instance.parent()
-            if parent is not None:
-                parent.registerWindow(instance)
-            instance.update()
-
-        instance.show()
-        instance.activateWindow()
-        return instance
+from ..mediator import Mediator
 
 
 class AbstractWindow(QtGui.QMainWindow):
@@ -60,6 +37,8 @@ class AbstractWindow(QtGui.QMainWindow):
         super().__init__(parent=parent)
         if parent is not None:
             parent.registerWindow(self)
+
+        self._mediator = Mediator()
 
         self._data = data
         self._pulse_resolved = pulse_resolved
@@ -100,6 +79,14 @@ class AbstractWindow(QtGui.QMainWindow):
         Initialization of the plot UI should take place in this method.
         """
         pass
+
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        pass
+
+    def updateMetaData(self):
+        """Update metadata affected by this window."""
+        return True
 
     def reset(self):
         """Reset data in widgets.
@@ -149,7 +136,7 @@ class DockerWindow(AbstractWindow):
             return
 
         data = self._data.get()
-        if data.image is None:
+        if data is None:
             return
 
         for widget in self._plot_widgets:
@@ -168,3 +155,51 @@ class DockerWindow(AbstractWindow):
 
     def unregisterPlotWidget(self, instance):
         del self._plot_widgets[instance]
+
+
+class AbstractSatelliteWindow(QtGui.QMainWindow):
+    """Base class for Satellite windows.
+
+    A satellite window does not need to access the data.
+    """
+    title = ""
+
+    def __init__(self, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+        if parent is not None:
+            parent.registerWindow(self)
+
+        self._mediator = Mediator()
+
+        try:
+            if self.title:
+                title = parent.title + " - " + self.title
+            else:
+                title = parent.title
+
+            self.setWindowTitle(title)
+        except AttributeError:
+            # for unit test where parent is None
+            self.setWindowTitle(self.title)
+
+    def initUI(self):
+        """Initialization of UI.
+
+        This method should call 'initCtrlUI' and 'initPlotUI'.
+        """
+        pass
+
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        pass
+
+    def addToolBar(self):
+        """Toolbar is not allowed."""
+        raise NotImplementedError
+
+    def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterWindow(self)
+        super().closeEvent(QCloseEvent)

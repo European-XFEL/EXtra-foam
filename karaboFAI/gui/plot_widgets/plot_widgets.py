@@ -13,163 +13,58 @@ import numpy as np
 
 from .base_plot_widget import PlotWidget
 
-from ..pyqtgraph import QtCore
-
-from ..misc_widgets import make_brush, make_pen
-from ...logger import logger
-from ...config import config
+from ..misc_widgets import make_brush, make_pen, SequentialColors
+from ...config import AnalysisType, config
 
 
-class SinglePulseAiWidget(PlotWidget):
-    """SinglePulseAiWidget class.
+class TrainAiWidget(PlotWidget):
+    """TrainAiWidget class.
 
-    A widget which allows user to visualize the the azimuthal integration
-    result of a single pulse. The azimuthal integration result is also
-    compared with the average azimuthal integration of all the pulses.
-    """
-    def __init__(self, *, pulse_id=0, plot_mean=True, parent=None):
-        """Initialization.
-
-        :param int pulse_id: ID of the pulse to be plotted.
-        :param bool plot_mean: whether to plot the mean AI of all pulses
-            if the data is pulse resolved.
-        """
-        super().__init__(parent=parent)
-
-        self.pulse_id = pulse_id
-
-        self.setLabel('left', "Scattering signal (arb. u.)")
-        self.setLabel('bottom', "Momentum transfer (1/A)")
-
-        if plot_mean:
-            self.addLegend(offset=(-40, 20))
-
-        self._pulse_plot = self.plotCurve(name="pulse_plot", pen=make_pen("y"))
-
-        if plot_mean:
-            self._mean_plot = self.plotCurve(name="mean", pen=make_pen("b"))
-        else:
-            self._mean_plot = None
-
-    def update(self, data):
-        """Override."""
-        momentum = data.ai.momentum
-        intensities = data.ai.intensities
-
-        if intensities is None:
-            return
-
-        if intensities.ndim == 2:
-            # pulse resolved data
-            max_id = data.n_pulses - 1
-            if self.pulse_id <= max_id:
-                self._pulse_plot.setData(momentum,
-                                         intensities[self.pulse_id])
-            else:
-                logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
-                             "pulse ID ({})".format(self.pulse_id, max_id))
-                return
-        else:
-            self._pulse_plot.setData(momentum, intensities)
-
-        if self._mean_plot is not None:
-            self._mean_plot.setData(momentum, data.ai.intensity_mean)
-
-
-class MultiPulseAiWidget(PlotWidget):
-    """MultiPulseAiWidget class.
-
-    Widget for displaying azimuthal integration result for all
-    the pulses in a train.
+    Widget for displaying azimuthal integration result for the average of all
+    the pulse(s) in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._n_pulses = 0
-
         self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "Scattering signal (arb. u.)")
 
+        self._plot = self.plotCurve(pen=make_pen("p"))
+
     def update(self, data):
         """Override."""
-        momentum = data.ai.momentum
-        intensities = data.ai.intensities
+        momentum = data.ai.x
+        intensity = data.ai.vfom
 
-        if intensities is None:
+        if intensity is None:
             return
 
-        n_pulses = len(intensities)
-        if n_pulses != self._n_pulses:
-            self._n_pulses = n_pulses
-            # re-plot if number of pulses change
-            self.clear()
-            for i, intensity in enumerate(intensities):
-                self.plotCurve(momentum, intensity,
-                               pen=make_pen(i, hues=9, values=5))
-        else:
-            for item, intensity in zip(self.plotItem.items, intensities):
-                item.setData(momentum, intensity)
+        self._plot.setData(momentum, intensity)
 
 
-class PulsedFOMWidget(PlotWidget):
-    """PulsedFOMWidget class.
+class PulsesInTrainFomWidget(PlotWidget):
+    """PulsesInTrainFomWidget class.
 
-    A widget which allows users to monitor the azimuthal integration FOM
-    of each pulse with respect to the first pulse in a train.
+    A widget which allows users to monitor the FOM of each pulse in a train.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._plot = self.plotBar(width=0.6, brush=make_brush('b'))
+        self._plot = self.plotBar()
 
-        self.setLabel('left', "Integrated difference (arb.)")
-        self.setLabel('bottom', "Pulse ID")
-        self.setTitle('FOM with respect to the first pulse')
+        self.setLabel('left', "FOM")
+        self.setLabel('bottom', "Pulse index")
+        self.setTitle('Pulse resolved FOM in a train')
 
     def update(self, data):
         """Override."""
-        foms = data.ai.pulse_fom
-        if foms is None:
+        fom_hist = data.st.fom_hist
+        if fom_hist is None:
+            self.reset()
             return
-
-        self._plot.setData(range(len(foms)), foms)
-
-
-class RoiValueMonitor(PlotWidget):
-    """RoiValueMonitor class.
-
-    Widget for displaying the evolution of the value (integration, median,
-    mean) of ROIs.
-    """
-    def __init__(self, *, window=600, parent=None):
-        """Initialization.
-
-        :param int window: window size, i.e. maximum number of trains to
-            display. Default = 600.
-        """
-        super().__init__(parent=parent)
-
-        self._window = window
-
-        self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "Intensity (arb. u.)")
-        self.addLegend(offset=(-40, 20))
-
-        self._plots = []
-        for i, c in enumerate(config["ROI_COLORS"], 1):
-            self._plots.append(self.plotCurve(name=f"ROI {i}", pen=make_pen(c)))
-
-    def update(self, data):
-        """Override."""
-        for i, plot in enumerate(self._plots, 1):
-            tids, roi_hist, _ = getattr(data.roi, f"roi{i}_hist")
-            plot.setData(tids[-self._window:], roi_hist[-self._window:])
-
-    @QtCore.pyqtSlot(int)
-    def onDisplayRangeChange(self, v):
-        self._window = v
+        self._plot.setData(range(len(fom_hist)), fom_hist)
 
 
 class CorrelationWidget(PlotWidget):
@@ -177,31 +72,23 @@ class CorrelationWidget(PlotWidget):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = ['c', 'b', 'o', 'y']
-    _brushes = {
-        0: make_brush(_colors[0], 120),
-        1: make_brush(_colors[1], 120),
-        2: make_brush(_colors[2], 120),
-        3: make_brush(_colors[3], 120)
-    }
-    _opaque_brushes = {
-        0: make_brush(_colors[0]),
-        1: make_brush(_colors[1]),
-        2: make_brush(_colors[2]),
-        3: make_brush(_colors[3])
-    }
+    _colors = config["CORRELATION_COLORS"]
+    _pens = [make_pen(color) for color in _colors]
+    _brushes = [make_brush(color, 120) for color in _colors]
+    _opaque_brushes = [make_brush(color) for color in _colors]
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self._idx = idx
+        self._idx = idx  # start from 1
 
+        self.setTitle('')
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
 
-        self._bar = self.plotErrorBar()
-        self._plot = self.plotScatter(brush=self._brushes[self._idx])
+        self._bar = self.plotErrorBar(pen=self._pens[self._idx-1])
+        self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
         self._device_id = None
         self._ppt = None
@@ -209,11 +96,8 @@ class CorrelationWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        try:
-            correlator, foms, info = getattr(data.correlation,
-                                             f'param{self._idx}')
-        except AttributeError:
-            return
+        correlator_hist, fom_hist, info = getattr(
+            data.corr, f'correlation{self._idx}').hist
 
         device_id = info['device_id']
         ppt = info['property']
@@ -222,16 +106,16 @@ class CorrelationWidget(PlotWidget):
             self._device_id = device_id
             self._ppt = ppt
 
-        if isinstance(foms, np.ndarray):
+        if isinstance(fom_hist, np.ndarray):
             # PairData
             if self._resolution != 0.0:
                 self._resolution = 0.0
                 self._bar.setData([], [], beam=0.0)
-                self._plot.setBrush(self._brushes[self._idx])
+                self._plot.setBrush(self._brushes[self._idx-1])
 
-            self._plot.setData(correlator, foms)
+            self._plot.setData(correlator_hist, fom_hist)
             # make auto-range of the viewbox work correctly
-            self._bar.setData(correlator, foms)
+            self._bar.setData(correlator_hist, fom_hist)
         else:
             # AccumulatedPairData
             resolution = info['resolution']
@@ -239,11 +123,13 @@ class CorrelationWidget(PlotWidget):
             if self._resolution != resolution:
                 self._resolution = resolution
                 self._bar.setData([], [], beam=resolution)
-                self._plot.setBrush(self._opaque_brushes[self._idx])
+                self._plot.setBrush(self._opaque_brushes[self._idx-1])
 
-            self._bar.setData(x=correlator,
-                              y=foms.avg, y_min=foms.min, y_max=foms.max)
-            self._plot.setData(correlator, foms.avg)
+            self._bar.setData(x=correlator_hist,
+                              y=fom_hist.avg,
+                              y_min=fom_hist.min,
+                              y_max=fom_hist.max)
+            self._plot.setData(correlator_hist, fom_hist.avg)
 
 
 class PumpProbeOnOffWidget(PlotWidget):
@@ -267,17 +153,17 @@ class PumpProbeOnOffWidget(PlotWidget):
 
         self._is_diff = diff
         if diff:
-            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("y"))
+            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("p"))
         else:
-            self._on_pulse = self.plotCurve(name="On", pen=make_pen("p"))
-            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("g"))
+            self._on_pulse = self.plotCurve(name="On", pen=make_pen("r"))
+            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("b"))
 
     def update(self, data):
         """Override."""
-        x, _, _ = data.pp.data
-        on = data.pp.norm_on_ma
-        off = data.pp.norm_off_ma
-        on_off = data.pp.norm_on_off_ma
+        x = data.pp.x
+        on = data.pp.vfom_on
+        off = data.pp.vfom_off
+        vfom = data.pp.vfom
 
         if on is None or off is None:
             return
@@ -288,7 +174,7 @@ class PumpProbeOnOffWidget(PlotWidget):
             return
 
         if self._is_diff:
-            self._on_off_pulse.setData(x, on_off)
+            self._on_off_pulse.setData(x, vfom)
         else:
             self._on_pulse.setData(x, on)
             self._off_pulse.setData(x, off)
@@ -305,14 +191,14 @@ class PumpProbeFomWidget(PlotWidget):
         super().__init__(parent=parent)
 
         self.setLabel('bottom', "Train ID")
-        self.setLabel('left', "ROI (arb. u.)")
+        self.setLabel('left', "FOM (arb. u.)")
 
-        self._plot = self.plotScatter(brush=make_brush('o'))
+        self._plot = self.plotScatter(brush=make_brush('g'))
 
     def update(self, data):
         """Override."""
-        tids, foms, _ = data.pp.fom
-        self._plot.setData(tids, foms)
+        tids, fom_hist, _ = data.pp.fom_hist
+        self._plot.setData(tids, fom_hist)
 
 
 class XasSpectrumWidget(PlotWidget):
@@ -329,9 +215,9 @@ class XasSpectrumWidget(PlotWidget):
         self.setLabel('left', "Absorption")
 
         self._spectrum1 = self.plotScatter(
-            name="ROI2/ROI1", brush=make_brush('p'), size=12)
+            name="ROI2/ROI1", brush=make_brush('r'), size=12)
         self._spectrum2 = self.plotScatter(
-            name="ROI3/ROI1", brush=make_brush('g'), size=12)
+            name="ROI3/ROI1", brush=make_brush('b'), size=12)
 
         self.addLegend(offset=(-40, 20))
 
@@ -380,7 +266,7 @@ class XasSpectrumBinCountWidget(PlotWidget):
         self.setLabel('bottom', "Energy (eV)")
         self.setLabel('left', "Count")
 
-        self._plot = self.plotBar(width=0.8)
+        self._plot = self.plotBar()
 
     def update(self, data):
         """Override."""
@@ -388,3 +274,66 @@ class XasSpectrumBinCountWidget(PlotWidget):
         bin_count = data.xas.bin_count
 
         self._plot.setData(bin_center, bin_count)
+
+
+class Bin1dHist(PlotWidget):
+    """Bin1dHist class.
+
+    Widget for visualizing histogram of count for 1D-binning.
+    """
+    def __init__(self, idx, *, count=False, parent=None):
+        """Initialization.
+
+        :param int idx: index of the binning parameter (must be 1 or 2).
+        :param bool count: True for count plot and False for FOM plot.
+        """
+        super().__init__(parent=parent)
+
+        self._idx = idx
+        self._count = count
+
+        self.setTitle('')
+        self.setLabel('bottom', "Bin center")
+        if count:
+            self.setLabel('left', "Count")
+            self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
+        else:
+            self.setLabel('left', "FOM")
+            self._plot = self.plotScatter(brush=make_brush('p'))
+
+    def update(self, data):
+        """Override."""
+        bin = getattr(data.bin, f"bin{self._idx}")
+        if not bin.updated:
+            return
+
+        if self._count:
+            hist = bin.count_hist
+        else:
+            hist = bin.fom_hist
+
+        if hist is not None:
+            self.setLabel('bottom', bin.label)
+            self._plot.setData(bin.center, hist)
+
+
+class FomHistogramWidget(PlotWidget):
+    """StatisticsWidget class
+
+    Plot statistics of accumulated FOMs from different analysis
+    """
+    def __init__(self, *, parent=None):
+        super().__init__(parent=parent)
+
+        self.setTitle("FOM Histogram")
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'FOM')
+        self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
+
+    def update(self, data):
+        center = data.st.fom_bin_center
+        counts = data.st.fom_counts
+        if center is None:
+            self.reset()
+            return
+        self._plot.setData(center, counts)

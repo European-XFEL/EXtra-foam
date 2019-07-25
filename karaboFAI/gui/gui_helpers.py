@@ -27,16 +27,17 @@ def parse_boundary(text):
         if "," not in text:
             raise ValueError(msg)
 
+        # float('Inf') = inf
         ret = [float(x) for x in text.split(",")]
 
         if len(ret) != 2:
             raise ValueError(msg)
 
-        if ret[0] > ret[1]:
-            raise ValueError("lower boundary > upper boundary")
+        if ret[0] >= ret[1]:
+            raise ValueError("lower boundary >= upper boundary")
 
     except Exception as e:
-        raise ValueError("Invalid input! " + repr(e))
+        raise ValueError(str(e))
 
     return ret[0], ret[1]
 
@@ -66,10 +67,18 @@ def parse_ids(text):
     Combination of the above two styles:
 
     parse_ids("1:3, 5") == [1, 2, 5]
+
+    ":" means all the pulses in a train. The indices list will be generated
+    after data is received.
+
+    parse_ids(":") == [-1]
     """
     def parse_item(v):
         if not v:
             return []
+
+        if v.strip() == ':':
+            return [-1]
 
         if ':' in v:
             try:
@@ -79,7 +88,7 @@ def parse_ids(text):
 
                 start = int(x[0].strip())
                 if start < 0:
-                    raise ValueError("Pulse ID cannot be negative!")
+                    raise ValueError("Pulse index cannot be negative!")
                 end = int(x[1].strip())
 
                 if len(x) == 3:
@@ -99,7 +108,7 @@ def parse_ids(text):
             try:
                 v = int(v)
                 if v < 0:
-                    raise ValueError("Pulse ID cannot be negative!")
+                    raise ValueError("Pulse index cannot be negative!")
             except Exception as e:
                 raise ValueError("Invalid input: " + repr(e))
 

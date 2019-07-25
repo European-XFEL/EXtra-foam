@@ -15,35 +15,47 @@ from .. import pyqtgraph as pg
 from ..pyqtgraph import HistogramLUTWidget, QtCore, QtGui
 
 from .base_plot_widget import PlotWidget
-from .plot_items import ImageItem, MaskItem
-from .roi import CropROI, RectROI
-from ..misc_widgets import colorMapFactory
+from .plot_items import ImageItem, MaskItem, RectROI
+from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
-from ...algorithms import intersection, quick_min_max
-from ...config import config, ImageMaskChange
+from ...command import CommandProxy
+from ...algorithms import quick_min_max
+from ...config import config
 from ...logger import logger
 
 
 class ImageView(QtGui.QWidget):
     """ImageView class.
 
-    A widget used for displaying a single image. Two ROI widgets are
-    embedded in this widget.
+    A widget used for displaying 2D image data.
+
+    * Four ROIs and one MaskItem are included in this widget by default.
 
     Note: it is different from the ImageView in pyqtgraph!
+
+    Attributes:
+        _image_item (pyqtgraph.ImageItem): This object will be used to
+            display the image.
+
     """
     ROI_X0 = 50
     ROI_Y0 = 50
     ROI_SIZE0 = (100, 100)
 
-    def __init__(self, *, level_mode='mono',
-                 hide_axis=True, color_map=None, parent=None):
+    def __init__(self, *,
+                 level_mode='mono',
+                 has_roi=True,
+                 hide_axis=True,
+                 color_map=None,
+                 parent=None):
         """Initialization.
 
         :param str level_mode: 'mono' or 'rgba'. If 'mono', then only
             a single set of black/white level lines is drawn, and the
             levels apply to all channels in the image. If 'rgba', then
             one set of levels is drawn for each channel.
+        :param bool has_roi: True for adding 4 ROIs on top of the other
+            PlotItems.
         :param bool hide_axis: True for hiding left and bottom axes.
         """
         super().__init__(parent=parent)
@@ -52,21 +64,23 @@ class ImageView(QtGui.QWidget):
         except AttributeError:
             pass
 
+        self._mediator = Mediator()
+
         self._rois = []
-        self._initializeROIs()
+        if has_roi:
+            self._initializeROIs()
 
         self._plot_widget = PlotWidget()
         if hide_axis:
             self._plot_widget.hideAxis()
 
-        self._image_item = pg.ImageItem(border='w')
-        self._mask_item = MaskItem(self._image_item)
-
+        self._image_item = pg.ImageItem()
         self._plot_widget.addItem(self._image_item)
-        self._plot_widget.addItem(self._mask_item)
+
         for roi in self._rois:
             self._plot_widget.addItem(roi)
-        self.invertY(True)
+
+        self.invertY(True)  # y-axis points from top to bottom
         self.setAspectLocked(True)
 
         self._hist_widget = HistogramLUTWidget()
@@ -74,7 +88,7 @@ class ImageView(QtGui.QWidget):
         self._hist_widget.setImageItem(self._image_item)
 
         if color_map is None:
-            self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
+            self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
         else:
             self.setColorMap(colorMapFactory["thermal"])
 
@@ -84,7 +98,7 @@ class ImageView(QtGui.QWidget):
 
         self.initUI()
 
-        Mediator().reset_image_level_sgn.connect(self._updateImage)
+        self._mediator.reset_image_level_sgn.connect(self._updateImage)
 
     def initUI(self):
         layout = QtGui.QHBoxLayout()
@@ -95,8 +109,7 @@ class ImageView(QtGui.QWidget):
         self.layout().setSpacing(0)
 
     def reset(self):
-        # TODO: check
-        self._image_item.clear()
+        self.clear()
 
     def update(self, data):
         """karaboFAI interface."""
@@ -104,9 +117,10 @@ class ImageView(QtGui.QWidget):
 
     def _initializeROIs(self):
         for i, color in enumerate(config["ROI_COLORS"], 1):
-            roi = RectROI(i, color,
-                          (self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
-                          self.ROI_SIZE0)
+            roi = RectROI(i,
+                          pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
+                          size=self.ROI_SIZE0,
+                          pen=make_pen(color, width=2, style=QtCore.Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)
 
@@ -117,12 +131,11 @@ class ImageView(QtGui.QWidget):
         visualization of ROIs and calculation of ROI data are synchronized.
         """
         for i, roi in enumerate(self._rois, 1):
-            roi_area = getattr(data.roi, f"roi{i}")
-            if roi_area is not None:
+            x, y, w, h = getattr(data.roi, f"rect{i}")
+            if w > 0 and h > 0:
                 roi.show()
-                w, h, px, py = roi_area
                 roi.setSize((w, h), update=False)
-                roi.setPos((px, py), update=False)
+                roi.setPos((x, y), update=False)
             else:
                 roi.hide()
 
@@ -134,7 +147,8 @@ class ImageView(QtGui.QWidget):
     def rois(self):
         return self._rois
 
-    def setImage(self, img, *, auto_range=False, auto_levels=False):
+    def setImage(self, img, *, auto_range=False, auto_levels=False,
+                 scale=None, pos=None):
         """Set the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
@@ -142,10 +156,21 @@ class ImageView(QtGui.QWidget):
             the image. defaut = False
         :param bool auto_levels: whether to update the white/black levels
             to fit the image. default = False
+        :param tuple/list pos: the origin of the displayed image in (x, y).
+        :param tuple/list scale: the origin of the displayed image image in
+            (x_scale, y_scale).
         """
+        if not isinstance(img, np.ndarray):
+            raise TypeError("Image data must be a numpy array!")
+
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
-        self._mask_item.updateImage()
+
+        self._image_item.resetTransform()
+        if scale is not None:
+            self._image_item.scale(*scale)
+        if pos is not None:
+            self._image_item.setPos(*pos)
 
         if auto_levels:
             self._image_levels = quick_min_max(self._image)
@@ -153,6 +178,10 @@ class ImageView(QtGui.QWidget):
 
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
+
+    def clear(self):
+        self._image = None
+        self._image_item.clear()
 
     def _updateImage(self):
         """Re-display the current image with auto_levels."""
@@ -180,6 +209,12 @@ class ImageView(QtGui.QWidget):
     def setAspectLocked(self, *args, **kwargs):
         self._plot_widget.setAspectLocked(*args, **kwargs)
 
+    def setLabel(self, *args, **kwargs):
+        self._plot_widget.setLabel(*args, **kwargs)
+
+    def setTitle(self, *args, **kwargs):
+        self._plot_widget.setTitle(*args, **kwargs)
+
     def invertY(self, *args, **kwargs):
         self._plot_widget.plotItem.invertY(*args, **kwargs)
 
@@ -198,7 +233,7 @@ class ImageAnalysis(ImageView):
     """ImageAnalysis widget.
 
     Advance image analysis widget built on top of ImageView widget.
-    It provides tools like masking, cropping, etc.
+    It provides tools like masking, etc.
     """
 
     def __init__(self, *args, **kwargs):
@@ -208,10 +243,9 @@ class ImageAnalysis(ImageView):
         self._plot_widget.setTitle('')  # reserve space for displaying
 
         # set the customized ImageItem
-        self._image_item = ImageItem(border='w')
+        self._image_item = ImageItem()
         self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
-        self._mask_item.mask_region_change_sgn.connect(self.onMaskRegionChange)
 
         # re-add items to keep the order
         self._plot_widget.clear()
@@ -225,126 +259,68 @@ class ImageAnalysis(ImageView):
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
-        # add cropping widget
-        self.crop = CropROI((0, 0), (100, 100))
-        self.crop.hide()
-        self._plot_widget.addItem(self.crop)
-
         self._image_data = None
-        self._moving_average_window = 1
+
+        self._cmd_proxy = CommandProxy()
+
+    def setImage(self, *args, **kwargs):
+        """Overload."""
+        super().setImage(*args, **kwargs)
+        self._mask_item.onSetImage()
 
     def setImageData(self, image_data, **kwargs):
         """Set the ImageData.
 
-        :param ImageData image_data: ImageData instance
+        :param _SimpleImageData image_data: _SimpleImageData instance.
         """
         self._image_data = image_data
-        if image_data is not None:
-            self.setImage(image_data.masked_mean, **kwargs)
+        if image_data is None:
+            return
 
-    def setImageRef(self):
-        """Set the displayed image as reference image."""
-        if self._image_data is not None:
-            self._image_data.set_reference()
+        self.setImage(image_data.masked)
 
-    def removeImageRef(self):
+    def setReferenceImage(self):
+        """Set the displayed image as reference image.
+
+        Note: image mask is not included in self._image.
+        """
+        self._cmd_proxy.set_ref_image(self._image)
+
+    def removeReferenceImage(self):
         """Remove reference image."""
-        if self._image_data is not None:
-            self._image_data.remove_reference()
+        self._cmd_proxy.remove_ref_image()
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
-        x, y = self._image_data.pos(x, y)
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
-    @QtCore.pyqtSlot(bool)
-    def onCropToggle(self, checked):
-        if checked:
-            if self._image is not None:
-                self.crop.setPos(0, 0)
-                self.crop.setSize(self._image.shape[::-1])
-            self.crop.show()
-        else:
-            self.crop.hide()
-
-    @QtCore.pyqtSlot()
-    def onCropConfirmed(self):
-        if not self.crop.isVisible():
-            return
-
-        if self._image is None:
-            return
-
-        x, y = self.crop.pos()
-        w, h = self.crop.size()
-        h0, w0 = self._image.shape
-
-        w, h, x, y = [int(v) for v in intersection(w, h, x, y, w0, h0, 0, 0)]
-        if w > 0 and h > 0:
-            self.setImage(self._image[y:y+h, x:x+w], auto_range=True)
-            # convert x, y to position at the original image
-            x, y = self._image_data.pos(x, y)
-            self._image_data.set_crop_area(True, x, y, w, h)
-            self._image_data.update()
-            self._mask_item.updateMask(self._image_data.image_mask)
-
-        self.crop.hide()
-
-    @QtCore.pyqtSlot()
-    def onRestoreImage(self):
+    @QtCore.pyqtSlot(float)
+    def onBkgChange(self, bkg):
         if self._image_data is None:
             return
 
-        self._image_data.set_crop_area(False, 0, 0, 0, 0)
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean, auto_range=True)
-        self._mask_item.updateMask(self._image_data.image_mask)
+        self._image_data.background = bkg
+        self.setImage(self._image_data.masked)
 
-    @QtCore.pyqtSlot(int)
-    def onMovingAverageWindowChange(self, v):
+    @QtCore.pyqtSlot(object)
+    def onThresholdMaskChange(self, mask_range):
         if self._image_data is None:
             return
 
-        self._image_data.set_ma_window(v)
-        # this change does not affect the displayed image in ImageToolWindow
-
-    @QtCore.pyqtSlot()
-    def onBkgChange(self):
-        if self._image_data is None:
-            return
-
-        self._image_data.set_background(float(self.sender().text()))
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean)
-
-    @QtCore.pyqtSlot(int, int)
-    def onThresholdMaskChange(self, lb, ub):
-        if self._image_data is None:
-            return
-
-        self._image_data.set_threshold_mask(lb, ub)
-        self._image_data.update()
-        self.setImage(self._image_data.masked_mean)
-
-    @QtCore.pyqtSlot(object, int, int, int, int)
-    def onMaskRegionChange(self, flag, x, y, w, h):
-        if self._image_data is None:
-            return
-
-        x, y = self._image_data.pos(x, y)
-        self._image_data.set_image_mask(flag, x, y, w, h)
+        self._image_data.threshold_mask = mask_range
+        self.setImage(self._image_data.masked)
 
     @QtCore.pyqtSlot(bool)
-    def onDrawToggled(self, draw_type, checked):
-        self._mask_item.draw_type = draw_type
+    def onDrawToggled(self, state, checked):
+        self._mask_item.state = state
         self._image_item.drawing = checked
 
     @QtCore.pyqtSlot()
-    def onClearMask(self):
-        self._mask_item.clear()
+    def onClearImageMask(self):
+        self._mask_item.clearMask()
 
     def saveImageMask(self):
         file_path = QtGui.QFileDialog.getSaveFileName()[0]
@@ -371,22 +347,20 @@ class ImageAnalysis(ImageView):
         self._loadImageMaskImp(file_path)
 
     def _loadImageMaskImp(self, file_path):
-        if self._image_data is None:
+        if self._image is None:
             logger.error("Cannot load image mask without image!")
             return
 
         try:
             image_mask = np.load(file_path)
-            if image_mask.shape != self._image_data.shape:
-                msg = "The shape of image mask is different from the image!"
-                logger.error(msg)
+            if image_mask.shape != self._image.shape:
+                logger.error(f"The shape of image mask {image_mask.shape} is "
+                             f"different from the image {self._image.shape}!")
                 return
 
             logger.info(f"Image mask loaded from {file_path}!")
 
-            self._image_data.set_image_mask(
-                ImageMaskChange.REPLACE, image_mask, 0, 0, 0)
-            self._mask_item.updateMask(image_mask)
+            self._mask_item.loadMask(image_mask)
 
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {file_path}")
@@ -401,8 +375,6 @@ class AssembledImageView(ImageView):
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
-
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
@@ -419,49 +391,28 @@ class PumpProbeImageView(ImageView):
 
     Widget for displaying the on or off image in the pump-probe analysis.
     """
-    def __init__(self, on=True, *, roi=False, diff=False, parent=None):
+    def __init__(self, on=True, *, parent=None):
         """Initialization.
 
         :param bool on: True for display the on image while False for
             displaying the off image.
-        :param bool roi: True for displaying the ROI while False for
-            displaying the whole image.
-        :param bool diff: True for displaying on - off ROI instead of
-            off ROI. Ignored if roi == False. This option is not enabled
-            for the whole image because of the concern of performance.
         """
         super().__init__(parent=parent)
 
         self._on = on
-        self._roi = roi
-        self._diff = diff
-        if self._roi:
-            self._plot_widget.removeItem(self._mask_item)
-
-        self.setColorMap(colorMapFactory[config["COLOR_MAP"]])
 
     def update(self, data):
         """Override."""
         if self._on:
-            if self._roi:
-                img = data.pp.on_roi
-            else:
-                img = data.pp.on_image_mean
+            img = data.pp.image_on
         else:
-            if self._roi:
-                if self._diff and data.pp.off_roi is not None:
-                    img = data.pp.on_roi - data.pp.off_roi
-                else:
-                    img = data.pp.off_roi
-            else:
-                img = data.pp.off_image_mean
+            img = data.pp.image_off
 
         if img is None:
             return
 
         self.setImage(img, auto_levels=(not self._is_initialized))
-        if not self._roi:
-            self.updateROI(data)
+        self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True
@@ -472,28 +423,22 @@ class SinglePulseImageView(ImageView):
 
     Widget for displaying the assembled image of a single pulse.
     """
-    def __init__(self, *, pulse_id=0, parent=None):
+    def __init__(self, *, pulse_index=0, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_id = pulse_id
+        self.pulse_index = pulse_index
 
     def update(self, data):
         """Override."""
         images = data.image.images
-        threshold_mask = data.image.threshold_mask
 
-        max_id = data.n_pulses - 1
-        if self.pulse_id <= max_id:
-            np.clip(images[self.pulse_id], *threshold_mask,
-                    images[self.pulse_id])
-        else:
-            logger.error("<VIP pulse ID>: VIP pulse ID ({}) > Maximum "
-                         "pulse ID ({})".format(self.pulse_id, max_id))
+        try:
+            self.setImage(images[self.pulse_index],
+                          auto_levels=(not self._is_initialized))
+        except IndexError:
+            self.clear()
             return
-
-        self.setImage(images[self.pulse_id],
-                      auto_levels=(not self._is_initialized))
 
         self.updateROI(data)
 
@@ -508,9 +453,7 @@ class RoiImageView(ImageView):
     """
     def __init__(self, rank, **kwargs):
         """Initialization."""
-        super().__init__(**kwargs)
-
-        self._plot_widget.removeItem(self._mask_item)
+        super().__init__(has_roi=False, **kwargs)
 
         self._rank = rank
 
@@ -518,11 +461,113 @@ class RoiImageView(ImageView):
         """Override."""
         image = data.image.masked_mean
 
-        roi = getattr(data.roi, f"roi{self._rank}")
+        roi = getattr(data.roi, f"rect{self._rank}")
 
-        if roi is None:
+        x, y, w, h = roi
+        if w < 0 or h < 0:
             return
-        w, h, px, py = roi
+        self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
 
-        self.setImage(image[py:py+h, px:px+w],
-                      auto_range=True, auto_levels=True)
+
+class Bin1dHeatmap(ImageView):
+    """Bin1dHeatmap class.
+
+    Widget for visualizing the heatmap of 1D binning.
+    """
+    def __init__(self, idx, *, parent=None):
+        """Initialization.
+
+        :param int idx: index of the binning parameter (must be 1 or 2).
+        """
+        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        self.invertY(False)
+        self.setAspectLocked(False)
+
+        self._idx = idx
+
+        self.setDefautLabels()
+
+    def setDefautLabels(self):
+        self.setLabel('bottom', 'Bin center')
+        self.setLabel('left', "VFOM")
+        self.setTitle('')
+
+    def update(self, data):
+        """Override."""
+        bin = getattr(data.bin, f"bin{self._idx}")
+
+        if not bin.has_vfom and self._image is not None:
+            # clear the heatmap if VFOM does not exists for the analysis type
+            self.clear()
+            self.setDefautLabels()
+            return
+
+        if not bin.updated:
+            return
+
+        heatmap = bin.vfom_heat
+        if heatmap is not None:
+            h, w = heatmap.shape
+            w_range = bin.center
+            h_range = bin.vfom_x
+
+            self.setLabel('left', bin.vfom_x_label)
+            self.setLabel('bottom', bin.label)
+            self.setTitle(bin.vfom_label)
+
+            self.setImage(heatmap,
+                          auto_levels=True,
+                          auto_range=True,
+                          pos=[w_range[0], h_range[0]],
+                          scale=[(w_range[-1] - w_range[0])/w,
+                                 (h_range[-1] - h_range[0])/h])
+
+
+class Bin2dHeatmap(ImageView):
+    """Bin2dHeatmap class.
+
+    Widget for visualizing the heatmap of 2D binning.
+    """
+    def __init__(self, *, count=False, parent=None):
+        """Initialization.
+
+        :param bool count: True for count plot and False for value plot.
+        """
+        self._count = count
+        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        self.invertY(False)
+        self.setAspectLocked(False)
+
+        self.setLabel('bottom', '')
+        self.setLabel('left', '')
+        if count:
+            self.setTitle("Count")
+        else:
+            self.setTitle("FOM")
+
+    def update(self, data):
+        """Override."""
+        bin = data.bin.bin12
+        if not bin.updated:
+            return
+
+        if self._count:
+            heatmap = bin.count_heat
+        else:
+            heatmap = bin.fom_heat
+
+        # do not update if FOM is None
+        if heatmap is not None:
+            h, w = heatmap.shape
+            w_range = bin.center_x
+            h_range = bin.center_y
+
+            self.setLabel('bottom', bin.x_label)
+            self.setLabel('left', bin.y_label)
+
+            self.setImage(heatmap,
+                          auto_levels=True,
+                          auto_range=True,
+                          pos=[w_range[0], h_range[0]],
+                          scale=[(w_range[-1] - w_range[0])/w,
+                                 (h_range[-1] - h_range[0])/h])

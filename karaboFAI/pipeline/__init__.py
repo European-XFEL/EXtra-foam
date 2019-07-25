@@ -1,10 +1,15 @@
-from .bridge import Bridge
+from .image_worker import ImageWorker
 from .scheduler import Scheduler
-from .data_model import Data4Visualization
-
 
 __all__ = [
-    "Bridge",
+    "ImageWorker",
     "Scheduler",
-    "Data4Visualization"
+]
+
+
+from .pipe import MpInQueue, MpOutQueue
+
+__all__ += [
+    "MpInQueue",
+    "MpOutQueue"
 ]

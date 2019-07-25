@@ -9,110 +9,140 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import numpy as np
-
-from .base_processor import LeafProcessor, CompositeProcessor, SharedProperty
-from ..data_model import ProcessedData
+from .base_processor import CompositeProcessor, _get_slow_data
 from ..exceptions import ProcessingError
-from ...algorithms import slice_curve
-from ...config import FomName
-from ...helpers import profiler
+from ...config import AnalysisType
+from ...metadata import Metadata as mt
+from ...utils import profiler
 
 
 class CorrelationProcessor(CompositeProcessor):
     """Add correlation information into processed data.
 
     Attributes:
-        fom_name (FomName): name of the figure-of-merit
-        fom_itgt_range (tuple): integration range for calculating FOM from
-            the normalized azimuthal integration.
+        analysis_type (AnalysisType): analysis type.
+        _device_ids (list): device ids for slow data correlators.
+        _properties (list): properties for slow data correlators
     """
-    fom_itgt_range = SharedProperty()
-    fom_name = SharedProperty()
 
     def __init__(self):
         super().__init__()
-        self.add(CorrelationFomProcessor())
 
+        self.analysis_type = AnalysisType.UNDEFINED
 
-class CorrelationFomProcessor(LeafProcessor):
-    @profiler("Correlation processor")
-    def process(self, processed, raw=None):
+        n_params = 4
+        self._device_ids = [""] * n_params
+        self._properties = [""] * n_params
+        self._resolutions = [0.0] * n_params
+
+        # used to check whether pump-probe FOM is available
+        self._pp_fail_flag = 0
+
+        self._reset = False
+
+    def update(self):
         """Override."""
-        if self.fom_name is None or self.fom_name == FomName.UNDEFINED:
+        cfg = self._meta.get_all(mt.CORRELATION_PROC)
+
+        if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
+            self._reset = True
+
+        for i in range(len(self._device_ids)):
+            self._device_ids[i] = cfg[f'device_id{i+1}']
+            self._properties[i] = cfg[f'property{i+1}']
+            self._resolutions[i] = float(cfg[f'resolution{i+1}'])
+
+        if 'reset' in cfg:
+            self._meta.delete(mt.CORRELATION_PROC, 'reset')
+            self._reset = True
+
+    @profiler("Correlation Processor")
+    def process(self, data):
+        """Override."""
+        processed = data['processed']
+
+        processed.corr.correlation1.reset = self._reset
+        processed.corr.correlation2.reset = self._reset
+        processed.corr.correlation3.reset = self._reset
+        processed.corr.correlation4.reset = self._reset
+        self._reset = False
+
+        err_msgs = []
+
+        analysis_type = self.analysis_type
+        if analysis_type == AnalysisType.PUMP_PROBE:
+            fom = processed.pp.fom
+            if fom is None:
+                self._pp_fail_flag += 1
+                # if on/off pulses are in different trains, pump-probe FOM is
+                # only calculated every other train.
+                if self._pp_fail_flag == 2:
+                    err_msgs.append("Pump-probe result is not available")
+                    self._pp_fail_flag = 0
+            else:
+                self._pp_fail_flag = 0
+        elif analysis_type == AnalysisType.ROI1:
+            fom = processed.roi.roi1.fom
+            if fom is None:
+                err_msgs.append("ROI1 FOM result is not available")
+        elif analysis_type == AnalysisType.ROI2:
+            fom = processed.roi.roi2.fom
+            if fom is None:
+                err_msgs.append("ROI2 FOM result is not available")
+        elif analysis_type == AnalysisType.ROI1_SUB_ROI2:
+            fom = processed.roi.roi1_sub_roi2.fom
+            if fom is None:
+                err_msgs.append("ROI1 - ROI2 FOM result is not available")
+        elif analysis_type == AnalysisType.ROI1_ADD_ROI2:
+            fom = processed.roi.roi1_add_roi2.fom
+            if fom is None:
+                err_msgs.append("ROI1 + ROI2 FOM result is not available")
+        elif analysis_type == AnalysisType.PROJ_ROI1:
+            fom = processed.roi.proj1.fom
+            if fom is None:
+                err_msgs.append("ROI1 projection result is not available")
+        elif analysis_type == AnalysisType.PROJ_ROI2:
+            fom = processed.roi.proj2.fom
+            if fom is None:
+                err_msgs.append("ROI2 projection result is not available")
+        elif analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
+            fom = processed.roi.proj1_sub_proj2.fom
+            if fom is None:
+                err_msgs.append(
+                    "ROI1 - ROI2 projection result is not available")
+        elif analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
+            fom = processed.roi.proj1_add_proj2.fom
+            if fom is None:
+                err_msgs.append(
+                    "ROI1 + ROI2 projection result is not available")
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            fom = processed.ai.fom
+            if fom is None:
+                err_msgs.append(
+                    "Azimuthal integration result is not available")
+        else:  # self.analysis_type == AnalysisType.UNDEFINED
             return
 
-        if self.fom_name == FomName.PUMP_PROBE_FOM:
-            _, foms, _ = processed.pp.fom
-            if foms.size == 0:
-                raise ProcessingError(
-                    "Pump-probe result is not available for correlation plots!")
-            fom = foms[-1]
+        # Note: do not return or raise even if FOM is None. Otherwise, the
+        #       CorrelationDataItem will be reset.
 
-        elif self.fom_name == FomName.ROI1:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1]
+        # update correlations
 
-        elif self.fom_name == FomName.ROI2:
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi2_hist.size == 0:
-                return
-            fom = roi2_hist[-1]
+        correlations = [
+            processed.corr.correlation1,
+            processed.corr.correlation2,
+            processed.corr.correlation3,
+            processed.corr.correlation4
+        ]
 
-        elif self.fom_name == FomName.ROI_SUM:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1] + roi2_hist[-1]
+        for corr, dev_id, ppt, res in zip(correlations,
+                                          self._device_ids,
+                                          self._properties,
+                                          self._resolutions):
+            v, err = _get_slow_data(processed.tid, data['raw'], dev_id, ppt)
+            if err:
+                err_msgs.append(err)
+            corr.update_params(v, fom, dev_id, ppt, res)
 
-        elif self.fom_name == FomName.ROI_SUB:
-            _, roi1_hist, _ = processed.roi.roi1_hist
-            _, roi2_hist, _ = processed.roi.roi2_hist
-            if roi1_hist.size == 0:
-                return
-            fom = roi1_hist[-1] - roi2_hist[-1]
-
-        elif self.fom_name == FomName.AI_MEAN:
-            momentum = processed.ai.momentum
-            if momentum is None:
-                raise ProcessingError(
-                    "Azimuthal integration result is not available!")
-            intensity = processed.ai.intensity_mean
-
-            # calculate figure-of-merit
-            fom = slice_curve(intensity, momentum, *self.fom_itgt_range)[0]
-            fom = np.sum(np.abs(fom))
-
-        else:
-            name = str(self.fom_name).split(".")[-1]
-            raise ProcessingError(f"Unknown FOM name: {name}!")
-
-        for param in ProcessedData.get_correlators():
-            _, _, info = getattr(processed.correlation, param)
-            if info['device_id'] == "Any":
-                # orig_data cannot be empty here
-                setattr(processed.correlation, param, (processed.tid, fom))
-            else:
-                try:
-                    device_data = raw[info['device_id']]
-                except KeyError:
-                    raise ProcessingError(
-                        f"Device '{info['device_id']}' is not in the data!")
-
-                try:
-                    if info['property'] in device_data:
-                        ppt = info['property']
-                    else:
-                        # From the file
-                        ppt = info['property'] + '.value'
-
-                    setattr(processed.correlation, param,
-                            (device_data[ppt], fom))
-
-                except KeyError:
-                    raise ProcessingError(
-                        f"'{info['device_id']}'' does not have property "
-                        f"'{info['property']}'")
+        for msg in err_msgs:
+            raise ProcessingError('[Correlation] ' + msg)

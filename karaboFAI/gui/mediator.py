@@ -9,41 +9,38 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .pyqtgraph import QtCore
+from enum import IntEnum
+import json
+
+from PyQt5.QtCore import pyqtSignal,  QObject
+
+from ..metadata import Metadata as mt
+from ..metadata import MetaProxy
+from ..ipc import RedisConnection
 
 
-class Mediator(QtCore.QObject):
-    """Mediator for GUI signal-slot connection."""
+class Mediator(QObject):
+    """Mediator for GUI signal-slot connection.
 
-    tcp_host_change_sgn = QtCore.pyqtSignal(str)
-    tcp_port_change_sgn = QtCore.pyqtSignal(int)
+    The behavior of the code should not be affected by when the
+    Mediator() is instantiated.
+    """
 
-    vip_pulse_id1_sgn = QtCore.pyqtSignal(int)
-    vip_pulse_id2_sgn = QtCore.pyqtSignal(int)
-    update_vip_pulse_ids_sgn = QtCore.pyqtSignal()
+    poi_index1_sgn = pyqtSignal(int)
+    poi_index2_sgn = pyqtSignal(int)
+    # When pulsed azimuthal integration window is opened, it first connect
+    # the above two signals to its two slots. Then it informs the
+    # AnalysisCtrlWidget to update the POI indices.
+    poi_indices_connected_sgn = pyqtSignal()
 
-    roi_displayed_range_sgn = QtCore.pyqtSignal(int)
-
-    # index, device ID, property name, resolution
-    correlation_param_change_sgn = QtCore.pyqtSignal(int, str, str, float)
-
-    reset_image_level_sgn = QtCore.pyqtSignal()
-
-    source_type_change_sgn = QtCore.pyqtSignal(int)
-    detector_source_change_sgn = QtCore.pyqtSignal(str)
-    xgm_source_change_sgn = QtCore.pyqtSignal(str)
-    mono_source_change_sgn = QtCore.pyqtSignal(str)
-
-    pp_ma_window_change_sgn = QtCore.pyqtSignal(int)
-
-    reset_xas_sgn = QtCore.pyqtSignal()
-    energy_bins_change_sgn = QtCore.pyqtSignal(int)
-
-    roi_region_change_sgn = QtCore.pyqtSignal(int, bool, int, int, int, int)
-    roi_fom_change_sgn = QtCore.pyqtSignal(object)
-    roi_hist_clear_sgn = QtCore.pyqtSignal()
+    reset_image_level_sgn = pyqtSignal()
 
     __instance = None
+
+    # TODO: make a command interface
+    _db = RedisConnection()
+
+    _meta = MetaProxy()
 
     def __new__(cls, *args, **kwargs):
         """Create a singleton."""
@@ -60,40 +57,175 @@ class Mediator(QtCore.QObject):
 
         self._is_initialized = True
 
-    def connect_scheduler(self, scheduler):
-        self.source_type_change_sgn.connect(scheduler.onSourceTypeChange)
-        self.detector_source_change_sgn.connect(scheduler.onDetectorSourceChange)
-        self.xgm_source_change_sgn.connect(scheduler.onXgmSourceChange)
-        self.mono_source_change_sgn.connect(scheduler.onMonoSourceChange)
+    def onBridgeEndpointChange(self, value: str):
+        self._meta.set(mt.DATA_SOURCE, "endpoint", value)
 
-        self.pp_ma_window_change_sgn.connect(scheduler.onPumpProbeMAWindowChange)
+    def onDetectorSourceNameChange(self, value: str):
+        self._meta.set(mt.DATA_SOURCE, "detector_source_name", value)
 
-        self.reset_xas_sgn.connect(scheduler.onXasReset)
-        self.energy_bins_change_sgn.connect(scheduler.onXasEnergyBinsChange)
+    def onXgmSourceNameChange(self, value: str):
+        self._meta.set(mt.DATA_SOURCE, "xgm_source_name", value)
 
-        self.roi_region_change_sgn.connect(scheduler.onRoiRegionChange)
-        self.roi_fom_change_sgn.connect(scheduler.onRoiFomChange)
-        self.roi_hist_clear_sgn.connect(scheduler.onRoiHistClear)
+    def onSourceTypeChange(self, value: IntEnum):
+        self._meta.set(mt.DATA_SOURCE, "source_type", int(value))
 
-    def connect_bridge(self, bridge):
-        self.tcp_host_change_sgn.connect(bridge.onTcpHostChange)
-        self.tcp_port_change_sgn.connect(bridge.onTcpPortChange)
+    def onImageThresholdMaskChange(self, value: tuple):
+        self._meta.set(mt.IMAGE_PROC, "threshold_mask", str(value))
 
-    @QtCore.pyqtSlot(int)
-    def onPulseID1Updated(self, v):
-        self.vip_pulse_id1_sgn.emit(v)
+    def onImageMaWindowChange(self, value: int):
+        self._meta.set(mt.IMAGE_PROC, "ma_window", value)
 
-    @QtCore.pyqtSlot(int)
-    def onPulseID2Updated(self, v):
-        self.vip_pulse_id2_sgn.emit(v)
+    def onImageBackgroundChange(self, value: float):
+        self._meta.set(mt.IMAGE_PROC, "background", value)
 
-    @QtCore.pyqtSlot()
-    def onRoiDisplayedRangeChange(self):
-        v = int(self.sender().text())
-        self.roi_displayed_range_sgn.emit(v)
+    def onGeomFilenameChange(self, value: str):
+        self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 
-    def updateVipPulseIds(self):
-        self.update_vip_pulse_ids_sgn.emit()
+    def onGeomQuadPositionsChange(self, value: str):
+        self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
-    def onAutoLevel(self):
-        self.reset_image_level_sgn.emit()
+    def onPulseIndexSelectorChange(self, value: list):
+        self._meta.set(mt.GLOBAL_PROC, 'selected_pulse_indices', str(value))
+
+    def onPoiPulseIndexChange(self, vip_id: int, value: int):
+        self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
+
+        if vip_id == 1:
+            self.poi_index1_sgn.emit(value)
+        else:  # vip_id == 2:
+            self.poi_index2_sgn.emit(value)
+
+    def onSampleDistanceChange(self, value: float):
+        self._meta.set(mt.GLOBAL_PROC, 'sample_distance', value)
+
+    def onPhotonEnergyChange(self, value: float):
+        self._meta.set(mt.GLOBAL_PROC, 'photon_energy', value)
+
+    def onMaWindowChange(self, value: int):
+        self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
+
+    def onMaReset(self):
+        # TODO: merge into one set
+        self._meta.set(mt.GLOBAL_PROC, "reset_ai", 1)
+        self._meta.set(mt.GLOBAL_PROC, "reset_roi", 1)
+
+    def onAiIntegCenterXChange(self, value: int):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
+
+    def onAiIntegCenterYChange(self, value: int):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_y', value)
+
+    def onAiIntegMethodChange(self, value: str):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_method', value)
+
+    def onAiIntegPointsChange(self, value: int):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_points', value)
+
+    def onAiIntegRangeChange(self, value: tuple):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_range', str(value))
+
+    def onCurveNormalizerChange(self, value: IntEnum):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'normalizer', int(value))
+
+    def onAiAucChangeChange(self, value: tuple):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'auc_range', str(value))
+
+    def onAiFomIntegRangeChange(self, value: tuple):
+        self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'fom_integ_range', str(value))
+
+    def onPpModeChange(self, value: IntEnum):
+        self._meta.set(mt.PUMP_PROBE_PROC, 'mode', int(value))
+
+    def onPpOnPulseIdsChange(self, value: list):
+        self._meta.set(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
+
+    def onPpOffPulseIdsChange(self, value: list):
+        self._meta.set(mt.PUMP_PROBE_PROC, 'off_pulse_indices', str(value))
+
+    def onPpAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
+
+    def onPpAbsDifferenceChange(self, value: bool):
+        self._meta.set(mt.PUMP_PROBE_PROC, "abs_difference", str(value))
+
+    def onPpReset(self):
+        self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
+        # reset moving average at the same time
+        self.onMaReset()
+
+    def onRoiRegionChange(self, value: tuple):
+        rank, x, y, w, h = value
+        self._meta.set(mt.ROI_PROC, f'region{rank}', str((x, y, w, h)))
+
+    def onRoiVisibilityChange(self, value: tuple):
+        rank, is_visible = value
+        self._meta.set(mt.ROI_PROC, f'visibility{rank}', str(is_visible))
+
+    def onRoiProjDirectChange(self, value: str):
+        self._meta.set(mt.ROI_PROC, 'proj:direction', value)
+
+    def onRoiProjNormalizerChange(self, value: IntEnum):
+        self._meta.set(mt.ROI_PROC, "proj:normalizer", int(value))
+
+    def onRoiProjAucRangeChange(self, value: tuple):
+        self._meta.set(mt.ROI_PROC, "proj:auc_range", str(value))
+
+    def onRoiProjFomIntegRangeChange(self, value: tuple):
+        self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
+
+    def onCorrelationAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
+
+    def onCorrelationParamChange(self, value: tuple):
+        # index, device ID, property name, resolution
+        # index starts from 1
+        index, device_id, ppt, resolution = value
+        self._meta.set(mt.CORRELATION_PROC, f'device_id{index}', device_id)
+        self._meta.set(mt.CORRELATION_PROC, f'property{index}', ppt)
+        self._meta.set(mt.CORRELATION_PROC, f'resolution{index}', resolution)
+
+    def onCorrelationReset(self):
+        self._meta.set(mt.CORRELATION_PROC, "reset", 1)
+
+    def onXasMonoSourceNameChange(self, value: str):
+        self._meta.set(mt.XAS_PROC, "mono_source_name", value)
+
+    def onXasEnergyBinsChange(self, value: int):
+        self._meta.set(mt.XAS_PROC, "n_bins", value)
+
+    def onXasBinRangeChange(self, value: tuple):
+        self._meta.set(mt.XAS_PROC, "bin_range", str(value))
+
+    def onXasReset(self):
+        self._meta.set(mt.XAS_PROC, "reset", 1)
+
+    def onBinGroupChange(self, value: tuple):
+        # index, device ID, property name, bin_range, number of bins,
+        # where the index starts from 1
+        index, device_id, ppt, bin_range, n_bins = value
+
+        self._meta.set(mt.BIN_PROC, f'device_id{index}', device_id)
+        self._meta.set(mt.BIN_PROC, f'property{index}', ppt)
+        self._meta.set(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
+        self._meta.set(mt.BIN_PROC, f'n_bins{index}', n_bins)
+
+    def onBinAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.BIN_PROC, "analysis_type", int(value))
+
+    def onBinModeChange(self, value: IntEnum):
+        self._meta.set(mt.BIN_PROC, "mode", int(value))
+
+    def onBinReset(self):
+        self._meta.set(mt.BIN_PROC, "reset", 1)
+
+    def onStAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.STATISTICS_PROC, "analysis_type", int(value))
+
+    def onStNumBinsChange(self, value: int):
+        self._meta.set(mt.STATISTICS_PROC, "n_bins", int(value))
+
+    def onStPulseOrTrainResolutionChange(self, value: bool):
+        self._meta.set(mt.STATISTICS_PROC, "pulse_resolved", str(value))
+
+    def onStReset(self):
+        self._meta.set(mt.STATISTICS_PROC, "reset", 1)
