@@ -28,6 +28,7 @@ class TestImageProcessorPulse(unittest.TestCase):
     """Test pulse-resolved ImageProcessor."""
     def setUp(self):
         self._proc = ImageProcessorPulse()
+
         del self._proc._raw_data
 
         ImageProcessorPulse._raw_data.window = 3

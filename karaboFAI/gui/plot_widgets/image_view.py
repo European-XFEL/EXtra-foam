@@ -18,7 +18,7 @@ from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem, RectROI
 from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
-from ...command import CommandProxy
+from ...ipc import CommandProxy
 from ...algorithms import quick_min_max
 from ...config import config
 from ...logger import logger

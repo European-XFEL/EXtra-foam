@@ -18,7 +18,7 @@ from ..data_model import RawImageData
 from ..exceptions import ProcessingError, PumpProbeIndexError
 from ...algorithms import mask_image
 from ...metadata import Metadata as mt
-from ...command import CommandProxy
+from ...ipc import CommandProxy
 from ...utils import profiler
 from ...config import PumpProbeMode
 
@@ -89,7 +89,19 @@ class ImageProcessorPulse(CompositeProcessor):
 
         image_shape = assembled.shape[-2:]
 
-        # update image mask
+        self._update_image_mask(image_shape)
+
+        self._update_reference(image_shape)
+
+        image_data.ma_count = self.__class__._raw_data.count
+        image_data.background = self._background
+        image_data.image_mask = self._image_mask
+        image_data.threshold_mask = self._threshold_mask
+        image_data.index_mask = self._pulse_index_filter
+        image_data.reference = self._reference
+        image_data.poi_indices = self._poi_indices
+
+    def _update_image_mask(self, image_shape):
         self._image_mask = self._cmd_proxy.update_mask(
             self._image_mask, image_shape)
 
@@ -102,7 +114,7 @@ class ImageProcessorPulse(CompositeProcessor):
                     f"The shape of the image mask {self._image_mask.shape} is "
                     f"different from the shape of the image {image_shape}!")
 
-        # update the reference image
+    def _update_reference(self, image_shape):
         ref = self._cmd_proxy.get_ref_image()
         if ref is not None:
             if isinstance(ref, np.ndarray):
@@ -114,14 +126,6 @@ class ImageProcessorPulse(CompositeProcessor):
                         f"{image_shape}")
             else:
                 self._reference = None
-
-        image_data.ma_count = self.__class__._raw_data.count
-        image_data.background = self._background
-        image_data.image_mask = self._image_mask
-        image_data.threshold_mask = self._threshold_mask
-        image_data.index_mask = self._pulse_index_filter
-        image_data.reference = self._reference
-        image_data.poi_indices = self._poi_indices
 
 
 class ImageProcessorTrain(CompositeProcessor):

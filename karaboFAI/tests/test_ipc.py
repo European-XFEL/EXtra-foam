@@ -1,10 +1,13 @@
 import unittest
 import time
 
+from redis.client import PubSub, Redis
+
 from karaboFAI.logger import logger
 from karaboFAI.services import start_redis_server
 from karaboFAI.ipc import (
-    redis_connection, RedisConnection, RedisSubscriber, RedisPSubscriber
+    redis_connection, RedisConnection, RedisSubscriber, RedisPSubscriber,
+    _global_connections, reset_redis_connections, MetaRedisConnection
 )
 from karaboFAI.pipeline.worker import ProcessWorker
 from karaboFAI.processes import wait_until_redis_shutdown
@@ -75,6 +78,9 @@ class TestRedisConnection(unittest.TestCase):
         class SubHost:
             sub = RedisSubscriber('abc')
 
+        class PSubHost:
+            sub = RedisPSubscriber('abc')
+
         n_clients = len(redis_connection().client_list())
         sub_host = SubHost()
         self.assertEqual(n_clients, len(redis_connection().client_list()))
@@ -83,12 +89,61 @@ class TestRedisConnection(unittest.TestCase):
         n_clients += 1
         self.assertEqual(n_clients, len(redis_connection().client_list()))
 
-        class PSubHost:
-            sub = RedisPSubscriber('abc')
-
         psub_host = PSubHost()
         self.assertEqual(n_clients, len(redis_connection().client_list()))
         # add a connection when first called
         psub_host.sub.get_message()
         n_clients += 1
         self.assertEqual(n_clients, len(redis_connection().client_list()))
+
+    def testTrackingConnections(self):
+        self.assertTrue(bool(_global_connections))
+        # clear the current registrations
+        _global_connections.clear()
+        self.assertFalse(bool(_global_connections))
+
+        class Host:
+            db = RedisConnection()
+
+        c1 = RedisConnection()
+        self.assertListEqual(['RedisConnection'], list(_global_connections.keys()))
+        self.assertIsInstance(_global_connections['RedisConnection'][0](), RedisConnection)
+
+        class SubHost:
+            sub = RedisSubscriber('abc')
+
+        self.assertListEqual(['RedisConnection', 'RedisSubscriber'],
+                             list(_global_connections.keys()))
+        self.assertIsInstance(_global_connections['RedisConnection'][0](), RedisConnection)
+        self.assertIsInstance(_global_connections['RedisSubscriber'][0](), RedisSubscriber)
+
+        class PSubHost1:
+            sub = RedisPSubscriber('abc')
+
+        class PSubHost2:
+            sub = RedisPSubscriber('abc')
+
+        self.assertListEqual(['RedisConnection', 'RedisSubscriber', 'RedisPSubscriber'],
+                             list(_global_connections.keys()))
+        self.assertIsInstance(_global_connections['RedisConnection'][0](), RedisConnection)
+        self.assertIsInstance(_global_connections['RedisSubscriber'][0](), RedisSubscriber)
+        self.assertIsInstance(_global_connections['RedisPSubscriber'][0](), RedisPSubscriber)
+        self.assertIsInstance(_global_connections['RedisPSubscriber'][1](), RedisPSubscriber)
+        self.assertIsNot(_global_connections['RedisPSubscriber'][0](),
+                         _global_connections['RedisPSubscriber'][1]())
+
+        # test reset_redis_connections
+
+        Host().db
+        self.assertIsInstance(_global_connections['RedisConnection'][0]()._db, Redis)
+        SubHost().sub
+        self.assertIsInstance(_global_connections['RedisSubscriber'][0]()._sub, PubSub)
+        PSubHost1().sub
+        self.assertIsInstance(_global_connections['RedisPSubscriber'][0]()._sub, PubSub)
+        PSubHost2().sub
+        self.assertIsInstance(_global_connections['RedisPSubscriber'][1]()._sub, PubSub)
+        reset_redis_connections()
+        self.assertIsNone(_global_connections['RedisConnection'][0]()._db)
+        self.assertIsNone(_global_connections['RedisSubscriber'][0]()._sub)
+        self.assertIsNone(_global_connections['RedisPSubscriber'][0]()._sub)
+        self.assertIsNone(_global_connections['RedisPSubscriber'][0]()._sub)

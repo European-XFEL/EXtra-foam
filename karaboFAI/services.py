@@ -23,13 +23,13 @@ import redis
 
 from . import __version__
 from .config import config
-from .ipc import redis_connection
+from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
 from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource, query_yes_no
-from .gui.windows import FileStreamControllerWindow
+from .gui.windows import FileStreamControllerWindow, ImageToolWindow
 
 _N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
 
@@ -70,6 +70,8 @@ def start_redis_server():
         FileNotFoundError: raised if the Redis executable does not exist.
         ConnectionError: raised if failed to start Redis server.
     """
+    reset_redis_connections()
+
     executable = config["REDIS_EXECUTABLE"]
     if not os.path.isfile(executable):
         raise FileNotFoundError
@@ -172,6 +174,8 @@ class FAI:
             # process which runs the scheduler
             self.scheduler = Scheduler()
             self.scheduler.connectInputToOutput(self.image_worker.output)
+
+            ImageToolWindow.reset()
 
             self._gui = MainGUI(start_thread_logger=True)
         except Exception as e:

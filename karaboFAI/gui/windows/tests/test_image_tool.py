@@ -2,12 +2,12 @@ import unittest
 from unittest.mock import patch, MagicMock
 import os
 import tempfile
+import time
 
 import numpy as np
 
-from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QPoint
 
 from karaboFAI.algorithms import mask_image
 from karaboFAI.config import config, _Config, ConfigWrapper
@@ -15,7 +15,8 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
 from karaboFAI.logger import logger
-from karaboFAI.pipeline.data_model import ImageData
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
+from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.services import FAI
 
@@ -67,18 +68,17 @@ class TestImageTool(unittest.TestCase):
         ConfigWrapper()  # ensure file
         config.load('LPD')
 
-        # ImageToolWindow.reset() is not called in other tests
-        ImageToolWindow.reset()
-
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
         cls.scheduler = cls.fai.scheduler
+        cls.image_worker = cls.fai.image_worker
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[2]
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]
+        assert isinstance(window, ImageToolWindow)
         window.close()
 
     @classmethod
@@ -90,9 +90,9 @@ class TestImageTool(unittest.TestCase):
     def setUp(self):
         ImageToolWindow.reset()
         self._action.trigger()
-        self.window = list(self.gui._windows.keys())[-1]
+        self.image_tool = list(self.gui._windows.keys())[-1]
 
-        self.view = self.window._image_view
+        self.view = self.image_tool._image_view
         self.view.setImageData(None)
         self.view._image = None
 
@@ -100,7 +100,7 @@ class TestImageTool(unittest.TestCase):
         # This must be the first test method in order to check that the
         # default values are set correctly
         proc = self.scheduler._roi_proc
-        widget = self.window._roi_ctrl_widget
+        widget = self.image_tool._roi_ctrl_widget
 
         proc.update()
 
@@ -112,7 +112,7 @@ class TestImageTool(unittest.TestCase):
             self.assertListEqual(roi_region, getattr(proc, f"_roi{i}").rect)
 
     def testRoiCtrlWidget(self):
-        widget = self.window._roi_ctrl_widget
+        widget = self.image_tool._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
         proc = self.scheduler._roi_proc
         self.assertEqual(4, len(roi_ctrls))
@@ -131,7 +131,7 @@ class TestImageTool(unittest.TestCase):
 
         # activate ROI1 ctrl
         QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, roi1_ctrl.activate_cb.height()/2))
+                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
         self.assertTrue(roi1_ctrl.activate_cb.isChecked())
         proc.update()
         self.assertTrue(proc._roi1._activated)
@@ -167,7 +167,7 @@ class TestImageTool(unittest.TestCase):
 
         # lock ROI ctrl
         QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, roi1_ctrl.lock_cb.height()/2))
+                         pos=QPoint(2, roi1_ctrl.lock_cb.height()/2))
         self.assertTrue(roi1_ctrl.activate_cb.isChecked())
         self.assertTrue(roi1_ctrl.lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
@@ -177,7 +177,7 @@ class TestImageTool(unittest.TestCase):
 
         # deactivate ROI ctrl
         QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, roi1_ctrl.activate_cb.height()/2))
+                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
         self.assertFalse(roi1_ctrl.activate_cb.isChecked())
         self.assertTrue(roi1_ctrl.lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
@@ -185,16 +185,16 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
-    def testImageAction1(self):
-        widget = self.window._image_action
+    def testMovingAverageQLineEdit(self):
+        widget = self.image_tool._image_action
         # moving average is disabled for pulse-resolved data
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
            "onThresholdMaskChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageThresholdMaskChange")
-    def testImageAction2(self, on_mask_mediator, on_mask):
-        widget = self.window._image_action
+    def testThresholdMask(self, on_mask_mediator, on_mask):
+        widget = self.image_tool._image_action
 
         widget.threshold_mask_le.clear()
         QTest.keyClicks(widget.threshold_mask_le, "1, 10")
@@ -205,8 +205,8 @@ class TestImageTool(unittest.TestCase):
     @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
            "onBkgChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageBackgroundChange")
-    def testImageAction3(self, on_bkg_mediator, on_bkg):
-        widget = self.window._image_action
+    def testBackground(self, on_bkg_mediator, on_bkg):
+        widget = self.image_tool._image_action
 
         widget.bkg_le.clear()
         QTest.keyClicks(widget.bkg_le, "1.1")
@@ -214,12 +214,46 @@ class TestImageTool(unittest.TestCase):
         on_bkg.assert_called_once_with(1.1)
         on_bkg_mediator.assert_called_once_with(1.1)
 
-    def testImageCtrl(self):
-        widget = self.window._image_ctrl_widget
+    def testAutoLevel(self):
+        widget = self.image_tool._image_ctrl_widget
 
-        spy = QSignalSpy(self.window._mediator.reset_image_level_sgn)
+        spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
+
+    def testSetAndRemoveReference(self):
+        widget = self.image_tool._image_ctrl_widget
+        proc = self.image_worker._image_proc_pulse
+
+        data = self._get_data()
+
+        widget.set_ref_btn.clicked.emit()
+        proc.process(data)
+        self.assertIsNone(proc._reference)
+
+        self.view._image = 2 * np.ones((10, 10), np.float32)
+        widget.set_ref_btn.clicked.emit()
+        # FIXME: the test could fail randomly
+        time.sleep(0.2)
+        proc.process(data)
+        np.testing.assert_array_equal(self.view._image, proc._reference)
+
+        widget.remove_ref_btn.clicked.emit()
+        proc.process(data)
+        self.assertIsNone(proc._reference)
+
+        with self.assertRaises(ProcessingError):
+            self.view._image = np.ones((2, 2), np.float32)
+            widget.set_ref_btn.clicked.emit()
+            time.sleep(0.2)
+            proc.process(data)
+
+    def testDrawMask(self):
+        pass
+
+    def _get_data(self):
+        return {'assembled': np.ones((4, 10, 10), np.float32),
+                'processed': ProcessedData(1001)}
 
 
 class TestImageToolTs(unittest.TestCase):
@@ -229,11 +263,6 @@ class TestImageToolTs(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
         config.load('JungFrau')
-        # the global Redis client already has a port of 6379
-        config._data['REDIS_PORT'] = 6379
-
-        # ImageToolWindow.reset() is not called in other tests
-        ImageToolWindow.reset()
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
@@ -244,6 +273,7 @@ class TestImageToolTs(unittest.TestCase):
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]
+        assert isinstance(window, ImageToolWindow)
         window.close()
 
     @classmethod
@@ -255,11 +285,11 @@ class TestImageToolTs(unittest.TestCase):
     def setUp(self):
         ImageToolWindow.reset()
         self._action.trigger()
-        self.window = list(self.gui._windows.keys())[-1]
+        self.image_tool = list(self.gui._windows.keys())[-1]
 
     @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
     def testImageAction1(self, on_ma_mediator):
-        widget = self.window._image_action
+        widget = self.image_tool._image_action
 
         widget.moving_avg_le.clear()
         QTest.keyClicks(widget.moving_avg_le, "10")

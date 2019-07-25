@@ -13,8 +13,6 @@ from PyQt5.QtCore import Qt
 from karabo_data.geometry2 import LPD_1MGeometry
 
 from karaboFAI.logger import logger
-from karaboFAI.metadata import MetaProxy
-from karaboFAI.metadata import Metadata as mt
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import ImageToolWindow, PulseOfInterestWindow
@@ -25,7 +23,6 @@ from karaboFAI.config import (
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
-from karaboFAI.pipeline.processors.roi import _RectROI
 
 app = mkQApp()
 
@@ -41,8 +38,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         config.load('LPD')
 
         cls.fai = FAI().init()
-
-        cls.meta = MetaProxy()
 
         cls.gui = cls.fai._gui
         cls.scheduler = cls.fai.scheduler
@@ -567,18 +562,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ImageToolWindow.reset()
-
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('JungFrau')
-        # the global Redis client already has a port of 6379
-        config._data['REDIS_PORT'] = 6379
 
         cls.fai = FAI().init()
-
-        cls.meta = MetaProxy()
 
         cls.gui = cls.fai._gui
         cls.image_worker = cls.fai.image_worker

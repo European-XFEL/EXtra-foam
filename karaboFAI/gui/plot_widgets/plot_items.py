@@ -20,7 +20,7 @@ from ..pyqtgraph import GraphicsObject
 
 from ..misc_widgets import make_pen
 from ...config import config, MaskState
-from ...command import CommandProxy
+from ...ipc import CommandProxy
 
 
 class ImageItem(pg.ImageItem):

@@ -134,6 +134,9 @@ class Metadata:
 class MetaProxy:
     _db = RedisConnection()
 
+    def reset(self):
+        self._db = None
+
     def set(self, name, key, value):
         """Set a Hash.
 

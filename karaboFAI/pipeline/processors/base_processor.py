@@ -339,9 +339,9 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         self._state = StateOn()
 
-        self._meta = MetaProxy()
-
         self._params = dict()
+
+        self._meta = MetaProxy()
 
         self.on_handler = None
         self.processing_handler = None

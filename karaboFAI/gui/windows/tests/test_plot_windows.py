@@ -54,7 +54,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(1, counter[BulletinWidget])
         self.assertEqual(1, counter[AssembledImageView])
 
-    def testPumpProbeWIndow(self):
+    def testPumpProbeWindow(self):
         win = PumpProbeWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(5, len(win._plot_widgets))
