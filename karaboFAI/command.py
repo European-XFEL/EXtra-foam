@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .ipc import RedisConnection, RedisSubscriber
 from .serialization import deserialize_image, serialize_image
 
@@ -79,8 +81,11 @@ class CommandProxy:
         """Notify to completely clear all the image mask."""
         self.__db.publish("command:image_mask", 'clear')
 
-    def update_mask(self, mask):
+    def update_mask(self, mask, shape):
         """Parse all masking operations.
+
+        :param numpy.ndarray mask: image mask. dtype = np.bool.
+        :param tuple/list shape: shape of the image.
 
         :return: a list of masking operations.
         """
@@ -98,6 +103,9 @@ class CommandProxy:
             if action == b'set':
                 mask = deserialize_image(sub.get_message()['data'], is_mask=True)
             elif action in [b'add', b'remove']:
+                if mask is None:
+                    mask = np.zeros(shape, dtype=np.bool)
+
                 data = sub.get_message()['data'].decode("utf-8")
                 x, y, w, h = [int(v) for v in data[1:-1].split(',')]
                 if action == b'add':
