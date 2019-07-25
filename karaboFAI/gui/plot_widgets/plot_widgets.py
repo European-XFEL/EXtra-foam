@@ -60,11 +60,11 @@ class PulsesInTrainFomWidget(PlotWidget):
 
     def update(self, data):
         """Override."""
-        fom_list = data.st.fom_list
-        if fom_list is None:
+        fom_hist = data.st.fom_hist
+        if fom_hist is None:
             self.reset()
             return
-        self._plot.setData(range(len(fom_list)), fom_list)
+        self._plot.setData(range(len(fom_hist)), fom_hist)
 
 
 class CorrelationWidget(PlotWidget):
@@ -333,4 +333,7 @@ class FomHistogramWidget(PlotWidget):
     def update(self, data):
         center = data.st.fom_bin_center
         counts = data.st.fom_counts
+        if center is None:
+            self.reset()
+            return
         self._plot.setData(center, counts)

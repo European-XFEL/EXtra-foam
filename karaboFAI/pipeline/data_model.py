@@ -661,15 +661,15 @@ class StatisticsData:
     """Statistics data model.
 
     Attributes:
-        fom_list (np.array): 1D array for pulse resolved FOMs in a train
+        fom_hist (np.array): 1D array for pulse resolved FOMs in a train
         fom_bin_center (np.array): 1D array for bins centers
         fom_counts (np.array): 1D array for counts in each bin.
     """
 
     def __init__(self):
-        self.fom_list = None
-        self.fom_bin_center = np.array([])
-        self.fom_counts = np.array([])
+        self.fom_hist = None
+        self.fom_bin_center = None
+        self.fom_counts = None
 
 
 class ProcessedData:

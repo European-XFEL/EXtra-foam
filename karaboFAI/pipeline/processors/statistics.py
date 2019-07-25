@@ -101,7 +101,7 @@ class StatisticsProcessor(CompositeProcessor):
                         "Azimuthal int. result is not available")
 
         if foms is not None:
-            processed.st.fom_list = foms if self._pulse_resolved else None
+            processed.st.fom_hist = foms if self._pulse_resolved else None
             if isinstance(foms, list):
                 self._fom.extend(foms)
             else:
