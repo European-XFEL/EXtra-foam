@@ -15,7 +15,9 @@ import numpy as np
 
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.pipeline.exceptions import ProcessingError
-from karaboFAI.pipeline.processors.roi import _RectROI, RoiProcessorTrain
+from karaboFAI.pipeline.processors.roi import (
+    _RectROI, RoiProcessorTrain, RoiProcessorPulse
+)
 from karaboFAI.config import AnalysisType, VFomNormalizer
 
 
@@ -51,7 +53,7 @@ class TestRectROI(unittest.TestCase):
         self.assertIsNone(roi.get_image(img))
 
 
-class TestRoiProcessor(unittest.TestCase):
+class TestRoiProcessorTrain(unittest.TestCase):
 
     def setUp(self):
         self._proc = RoiProcessorTrain()
@@ -254,3 +256,8 @@ class TestRoiProcessor(unittest.TestCase):
         processed.pp.image_off = 2.0 * np.ones((20, 20), dtype=np.float32)
         proc.process(data)
         self.assertEqual(0, processed.pp.fom)
+
+
+class TestRoiProcessorPulse(unittest.TestCase):
+    def setUp(self):
+        self._proc = RoiProcessorPulse()

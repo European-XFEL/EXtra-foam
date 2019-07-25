@@ -161,6 +161,9 @@ class ImageView(QtGui.QWidget):
         :param tuple/list scale: the origin of the displayed image image in
             (x_scale, y_scale).
         """
+        if not isinstance(img, np.ndarray):
+            raise TypeError("Image data must be a numpy array!")
+
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
 
@@ -176,6 +179,10 @@ class ImageView(QtGui.QWidget):
 
         if auto_range:
             self._plot_widget.plotItem.vb.autoRange()
+
+    def clear(self):
+        self._image = None
+        self._image_item.clear()
 
     def _updateImage(self):
         """Re-display the current image with auto_levels."""
@@ -205,6 +212,9 @@ class ImageView(QtGui.QWidget):
 
     def setLabel(self, *args, **kwargs):
         self._plot_widget.setLabel(*args, **kwargs)
+
+    def setTitle(self, *args, **kwargs):
+        self._plot_widget.setTitle(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
         self._plot_widget.plotItem.invertY(*args, **kwargs)
@@ -482,20 +492,35 @@ class Bin1dHeatmap(ImageView):
 
         self._idx = idx
 
-        self.setLabel('bottom', f'Label{idx}')
-        self.setLabel('left', f'Vec{idx}')
+        self.setDefautLabels()
+
+    def setDefautLabels(self):
+        self.setLabel('bottom', 'Bin center')
+        self.setLabel('left', "VFOM")
+        self.setTitle('')
 
     def update(self, data):
         """Override."""
-        heatmap = getattr(data.bin, f"vec{self._idx}_hist")
-        vec = getattr(data.bin, f"vec{self._idx}")
+        bin = getattr(data.bin, f"bin{self._idx}")
 
-        reset = getattr(data.bin, f"reset{self._idx}")
-        # do not update if vec is None
-        if heatmap is not None and (reset or vec is not None):
+        if not bin.has_vfom and self._image is not None:
+            # clear the heatmap if VFOM does not exists for the analysis type
+            self.clear()
+            self.setDefautLabels()
+            return
+
+        if not bin.updated:
+            return
+
+        heatmap = bin.vfom_heat
+        if heatmap is not None:
             h, w = heatmap.shape
-            w_range = getattr(data.bin, f"edge{self._idx}")
-            h_range = data.bin.vec_x
+            w_range = bin.center
+            h_range = bin.vfom_x
+
+            self.setLabel('left', bin.vfom_x_label)
+            self.setLabel('bottom', bin.label)
+            self.setTitle(bin.vfom_label)
 
             self.setImage(heatmap,
                           auto_levels=True,
@@ -503,22 +528,6 @@ class Bin1dHeatmap(ImageView):
                           pos=[w_range[0], h_range[0]],
                           scale=[(w_range[-1] - w_range[0])/w,
                                  (h_range[-1] - h_range[0])/h])
-
-            self.setLabel('left', data.bin.vec_label)
-            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))
-        elif heatmap is None and reset:
-            w_range = getattr(data.bin, f"edge{self._idx}")
-            n_bins = getattr(data.bin, f"n_bins{self._idx}")
-            # A temporary all-zero array is used to reset the vector heatmap
-            # if no vector result is available.
-            self.setImage(np.zeros((1, n_bins), dtype=np.float32),
-                          auto_levels=True,
-                          auto_range=True,
-                          pos=[w_range[0], 0],
-                          scale=[(w_range[-1] - w_range[0])/n_bins, 1.0])
-
-            self.setLabel('left', f"vec{self._idx}")
-            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))
 
 
 class Bin2dHeatmap(ImageView):
@@ -536,22 +545,32 @@ class Bin2dHeatmap(ImageView):
         self.invertY(False)
         self.setAspectLocked(False)
 
-        self.setLabel('bottom', 'Label1')
-        self.setLabel('left', 'Label2')
+        self.setLabel('bottom', '')
+        self.setLabel('left', '')
+        if count:
+            self.setTitle("Count")
+        else:
+            self.setTitle("FOM")
 
     def update(self, data):
         """Override."""
+        bin = data.bin.bin12
+        if not bin.updated:
+            return
+
         if self._count:
-            heatmap = data.bin.count12_hist
+            heatmap = bin.count_heat
         else:
-            heatmap = data.bin.fom12_hist
+            heatmap = bin.fom_heat
 
         # do not update if FOM is None
-        reset = data.bin.reset1 or data.bin.reset2
-        if heatmap is not None and (reset or data.bin.fom12 is not None):
+        if heatmap is not None:
             h, w = heatmap.shape
-            w_range = data.bin.edge1
-            h_range = data.bin.edge2
+            w_range = bin.center_x
+            h_range = bin.center_y
+
+            self.setLabel('bottom', bin.x_label)
+            self.setLabel('left', bin.y_label)
 
             self.setImage(heatmap,
                           auto_levels=True,
@@ -559,6 +578,3 @@ class Bin2dHeatmap(ImageView):
                           pos=[w_range[0], h_range[0]],
                           scale=[(w_range[-1] - w_range[0])/w,
                                  (h_range[-1] - h_range[0])/h])
-
-            self.setLabel('bottom', data.bin.label1)
-            self.setLabel('left', data.bin.label2)

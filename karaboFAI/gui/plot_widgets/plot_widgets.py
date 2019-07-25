@@ -89,6 +89,7 @@ class CorrelationWidget(PlotWidget):
 
         self._idx = idx  # start from 1
 
+        self.setTitle('')
         self.setLabel('left', "FOM (arb. u.)")
         self.setLabel('bottom', "Correlator (arb. u.)")
 
@@ -297,24 +298,26 @@ class Bin1dHist(PlotWidget):
         self._idx = idx
         self._count = count
 
-        self.setLabel('bottom', f"Label{idx}")
+        self.setTitle('')
+        self.setLabel('bottom', "Bin center")
         if count:
             self.setLabel('left', "Count")
             self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
         else:
             self.setLabel('left', "FOM")
-            self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('p'))
+            self._plot = self.plotScatter(brush=make_brush('p'))
 
     def update(self, data):
         """Override."""
+        bin = getattr(data.bin, f"bin{self._idx}")
+        if not bin.updated:
+            return
+
         if self._count:
-            value = getattr(data.bin, f"count{self._idx}_hist")
+            hist = bin.count_hist
         else:
-            value = getattr(data.bin, f"fom{self._idx}_hist")
+            hist = bin.fom_hist
 
-        reset = getattr(data.bin, f"reset{self._idx}")
-        # do not update if FOM is None
-        if value is not None and (reset or getattr(data.bin, f"fom{self._idx}") is not None):
-            self._plot.setData(getattr(data.bin, f"center{self._idx}"), value)
-
-            self.setLabel('bottom', getattr(data.bin, f"label{self._idx}"))
+        if hist is not None:
+            self.setLabel('bottom', bin.label)
+            self._plot.setData(bin.center, hist)
