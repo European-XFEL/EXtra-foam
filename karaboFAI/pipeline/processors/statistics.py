@@ -33,7 +33,9 @@ class StatisticsProcessor(CompositeProcessor):
         _num_bins (int): number of bins
         _pulse_resolved (bool): True for pulse resolved analysis
     """
-    _MAX_FOM_SIZE = 1000000
+    _MAX_FOM_SIZE = 250000
+    # 128 pulses/s * 60 seconds * 30 minutes = 153600
+    # So 250000 is sufficient.
     def __init__(self):
         super().__init__()
 
