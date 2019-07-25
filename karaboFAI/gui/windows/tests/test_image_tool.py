@@ -67,8 +67,8 @@ class TestImageTool(unittest.TestCase):
         ConfigWrapper()  # ensure file
         config.load('LPD')
 
-        # ImageToolWindow._reset() is not called in other tests
-        ImageToolWindow._reset()
+        # ImageToolWindow.reset() is not called in other tests
+        ImageToolWindow.reset()
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
@@ -88,7 +88,7 @@ class TestImageTool(unittest.TestCase):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        ImageToolWindow._reset()
+        ImageToolWindow.reset()
         self._action.trigger()
         self.window = list(self.gui._windows.keys())[-1]
 
@@ -232,8 +232,8 @@ class TestImageToolTs(unittest.TestCase):
         # the global Redis client already has a port of 6379
         config._data['REDIS_PORT'] = 6379
 
-        # ImageToolWindow._reset() is not called in other tests
-        ImageToolWindow._reset()
+        # ImageToolWindow.reset() is not called in other tests
+        ImageToolWindow.reset()
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
@@ -253,7 +253,7 @@ class TestImageToolTs(unittest.TestCase):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        ImageToolWindow._reset()
+        ImageToolWindow.reset()
         self._action.trigger()
         self.window = list(self.gui._windows.keys())[-1]
 

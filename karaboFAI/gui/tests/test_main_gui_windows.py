@@ -26,7 +26,7 @@ class TestMainGui(unittest.TestCase):
 
         config.load('LPD')
 
-        ImageToolWindow._reset()
+        ImageToolWindow.reset()
         cls.gui = MainGUI()
 
     @classmethod

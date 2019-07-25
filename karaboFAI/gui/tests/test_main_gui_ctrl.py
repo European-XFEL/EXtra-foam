@@ -567,7 +567,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        ImageToolWindow._reset()
+        ImageToolWindow.reset()
 
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")

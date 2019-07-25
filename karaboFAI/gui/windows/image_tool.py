@@ -391,7 +391,7 @@ class ImageToolWindow(AbstractWindow):
     __instance = None
 
     @classmethod
-    def _reset(cls):
+    def reset(cls):
         cls.__instance = None
 
     def __new__(cls, *args, **kwargs):
