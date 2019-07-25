@@ -14,3 +14,7 @@
 [submodule "thirdparty/xsimd"]
 	path = thirdparty/xsimd
 	url = https://github.com/QuantStack/xsimd.git
+[submodule "thirdparty/tbb"]
+	path = thirdparty/tbb
+	url = https://github.com/intel/tbb.git
+	ignore = dirty

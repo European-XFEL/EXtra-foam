@@ -34,7 +34,7 @@ $ git submodule update --init
 $ cd karaboFAI
 
 # optional
-$ export FAI_WITH_TBB=1  # libtbb-dev is required
+$ export FAI_WITH_TBB=0  # turn off TBB
 $ export FAI_WITH_XSIMD=1
 
 # Note: This step is also required if one wants to change the above 

@@ -19,6 +19,25 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+if(FAI_WITH_TBB)
+    # TODO: try to find TBB in the system first?
+    set(tbb_root_dir ${PROJECT_SOURCE_DIR}/thirdparty/tbb)
+
+    include(${tbb_root_dir}/cmake/TBBBuild.cmake)
+    tbb_build(TBB_ROOT ${PROJECT_SOURCE_DIR}/thirdparty/tbb
+        CONFIG_DIR TBB_DIR
+        MAKE_ARGS tbb_build_dir=${CMAKE_CURRENT_BINARY_DIR}/thirdparty/tbb
+                  tbb_build_prefix=tbb_cmake_build)
+
+    find_package(TBB REQUIRED tbb tbbmalloc)
+    get_target_property(TBB_INCLUDE_DIRS TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(TBB_LIBRARIES TBB::tbb IMPORTED_LOCATION_RELEASE)
+
+    message(STATUS "FOUND TBB: ${TBB_VERSION}, ${TBB_LIBRARIES}")
+
+    set(XTENSOR_USE_TBB ON CACHE BOOL "Build XTENSOR with TBB")
+endif()
+
 # pybind11
 add_subdirectory(thirdparty/pybind11)
 set(pybind11_INCLUDE_DIRS PYBIND11_INCLUDE_DIR)

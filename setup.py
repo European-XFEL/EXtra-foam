@@ -49,7 +49,7 @@ class BuildExt(build_ext):
     def initialize_options(self):
         super().initialize_options()
 
-        self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '0'))
+        self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '1'))
         self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '0'))
 
     def run(self):
@@ -60,20 +60,19 @@ class BuildExt(build_ext):
                                "following extensions: " + ", ".join(
                 e.name for e in self.extensions))
 
-        if platform.system() == "Windows":
-            cmake_version = LooseVersion(
-                re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-            if cmake_version < '3.1.0':
-                raise RuntimeError("CMake >= 3.1.0 is required on Windows")
-
-        for ext in self.extensions:
-            self.build_cmake(ext)
+        cmake_version = LooseVersion(
+            re.search(r'version\s*([\d.]+)', out.decode()).group(1))
+        if cmake_version < '3.8.0':
+            raise RuntimeError("CMake >= 3.8.0 is required!")
 
         # build third-party libraries, for example, Redis
         command = ["./build.sh", "-p", sys.executable]
         subprocess.check_call(command)
         for filename in self._thirdparty_files:
             self._move_file(filename)
+
+        for ext in self.extensions:
+            self.build_cmake(ext)
 
     def build_cmake(self, ext):
         ext_dir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
@@ -86,24 +85,19 @@ class BuildExt(build_ext):
         ]
 
         if self.with_tbb:
-            cmake_options.append('-DXTENSOR_USE_TBB=ON')
+            cmake_options.append('-DFAI_WITH_TBB=ON')
 
         if self.with_xsimd:
             cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
 
         build_options = ['--', '-j4']
 
-        env = os.environ.copy()
-        env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(
-            env.get('CXXFLAGS', ''), self.distribution.get_version())
-
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        subprocess.check_call(['cmake', ext.source_dir] + cmake_options,
-                              cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_options,
-                              cwd=self.build_temp)
+        os.chdir(self.build_temp)
+        self.spawn(['cmake', ext.source_dir] + cmake_options)
+        self.spawn(['cmake', '--build', '.'] + build_options)
 
         print()  # add an empty line to improve output readability
 
