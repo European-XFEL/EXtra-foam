@@ -5,9 +5,11 @@ from .image_view import (
 from .plot_widgets import (
     Bin1dHist,
     CorrelationWidget,
+    FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget,
     TrainAiWidget, PulsesInTrainFomWidget,
-    XasSpectrumWidget, XasSpectrumDiffWidget, XasSpectrumBinCountWidget
+    XasSpectrumWidget, XasSpectrumDiffWidget,
+    XasSpectrumBinCountWidget
 )
 
 
@@ -26,6 +28,7 @@ __all__ = ([
 __all__.extend([
     "Bin1dHist",
     "CorrelationWidget",
+    "FomHistogramWidget",
     "PumpProbeOnOffWidget",
     "PumpProbeFomWidget",
     "TrainAiWidget",

@@ -56,21 +56,15 @@ class PulsesInTrainFomWidget(PlotWidget):
 
         self.setLabel('left', "FOM")
         self.setLabel('bottom', "Pulse index")
-        self.setTitle('Analysis type')
+        self.setTitle('Pulse resolved FOM in a train')
 
     def update(self, data):
         """Override."""
-        fom_list = None
-        analysis_type = data.st.analysis_type
-        if analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
-            fom_list = data.pulse.ai.fom
-        elif analysis_type == AnalysisType.ROI1_PULSE:
-            fom_list = data.pulse.roi.roi1.fom
-
-        if fom_list is None:
+        fom_hist = data.st.fom_hist
+        if fom_hist is None:
+            self.reset()
             return
-
-        self._plot.setData(range(len(fom_list)), fom_list)
+        self._plot.setData(range(len(fom_hist)), fom_hist)
 
 
 class CorrelationWidget(PlotWidget):
@@ -321,3 +315,25 @@ class Bin1dHist(PlotWidget):
         if hist is not None:
             self.setLabel('bottom', bin.label)
             self._plot.setData(bin.center, hist)
+
+
+class FomHistogramWidget(PlotWidget):
+    """StatisticsWidget class
+
+    Plot statistics of accumulated FOMs from different analysis
+    """
+    def __init__(self, *, parent=None):
+        super().__init__(parent=parent)
+
+        self.setTitle("FOM Histogram")
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'FOM')
+        self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
+
+    def update(self, data):
+        center = data.st.fom_bin_center
+        counts = data.st.fom_counts
+        if center is None:
+            self.reset()
+            return
+        self._plot.setData(center, counts)

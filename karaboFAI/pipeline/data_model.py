@@ -86,6 +86,7 @@ class AccumulatedPairData(PairData):
     """
     class DataStat:
         """Statistic of data."""
+
         def __init__(self):
             self.count = None
             self.avg = None
@@ -205,6 +206,7 @@ class AccumulatedPairData(PairData):
 
 class MovingAverageArray:
     """Stores moving average of raw images."""
+
     def __init__(self):
         self._data = None  # moving average
 
@@ -256,6 +258,7 @@ class MovingAverageArray:
 
 class RawImageData(MovingAverageArray):
     """Stores moving average of raw images."""
+
     def __init__(self):
         super().__init__()
 
@@ -321,6 +324,7 @@ class _RoiAuxData:
 
     Store ROI related auxiliary data, e.g. normalization.
     """
+
     def __init__(self):
         self.norm3 = None
         self.norm4 = None
@@ -372,6 +376,7 @@ class RoiData(_RoiAuxData):
 
 class AzimuthalIntegrationData(DataItem):
     """Train-resolved azimuthal integration data."""
+
     def __init__(self,
                  x_label="Momentum transfer (1/A)",
                  vfom_label="Scattering signal (arb.u.)"):
@@ -653,9 +658,18 @@ class CorrelationData:
 
 
 class StatisticsData:
-    """Statistics data model."""
+    """Statistics data model.
+
+    Attributes:
+        fom_hist (np.array): 1D array for pulse resolved FOMs in a train
+        fom_bin_center (np.array): 1D array for bins centers
+        fom_counts (np.array): 1D array for counts in each bin.
+    """
+
     def __init__(self):
-        self.analysis_type = AnalysisType.UNDEFINED
+        self.fom_hist = None
+        self.fom_bin_center = None
+        self.fom_counts = None
 
 
 class ProcessedData:
@@ -676,6 +690,7 @@ class ProcessedData:
     """
     class PulseData:
         """Container for pulse-resolved data."""
+
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()

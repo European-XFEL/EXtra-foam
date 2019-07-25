@@ -173,9 +173,6 @@ class Mediator(QObject):
     def onRoiProjFomIntegRangeChange(self, value: tuple):
         self._meta.set(mt.ROI_PROC, "proj:fom_integ_range", str(value))
 
-    def onStatisticsAnalysisTypeChange(self, value: IntEnum):
-        self._meta.set(mt.STATISTICS_PROC, "analysis_type", int(value))
-
     def onCorrelationAnalysisTypeChange(self, value: IntEnum):
         self._meta.set(mt.CORRELATION_PROC, "analysis_type", int(value))
 
@@ -220,3 +217,15 @@ class Mediator(QObject):
 
     def onBinReset(self):
         self._meta.set(mt.BIN_PROC, "reset", 1)
+
+    def onStAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.STATISTICS_PROC, "analysis_type", int(value))
+
+    def onStNumBinsChange(self, value: int):
+        self._meta.set(mt.STATISTICS_PROC, "n_bins", int(value))
+
+    def onStPulseOrTrainResolutionChange(self, value: bool):
+        self._meta.set(mt.STATISTICS_PROC, "pulse_resolved", str(value))
+
+    def onStReset(self):
+        self._meta.set(mt.STATISTICS_PROC, "reset", 1)

@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph.dockarea import Dock
 
 from .base_window import DockerWindow
-from ..plot_widgets import PulsesInTrainFomWidget
+from ..plot_widgets import PulsesInTrainFomWidget, FomHistogramWidget
 from ...config import config
 
 
@@ -32,8 +32,8 @@ class StatisticsWindow(DockerWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._plot1 = PulsesInTrainFomWidget(parent=self)
-        self._plot2 = PulsesInTrainFomWidget(parent=self)
+        self._pulse_fom = PulsesInTrainFomWidget(parent=self)
+        self._fom_historgram = FomHistogramWidget(parent=self)
 
         self.initUI()
 
@@ -48,10 +48,12 @@ class StatisticsWindow(DockerWindow):
 
     def initPlotUI(self):
         """Override."""
-        dock1 = Dock("Analysis type 1", size=(self._W, self._H))
-        self._docker_area.addDock(dock1, 'right')
-        dock1.addWidget(self._plot1)
+        dock1 = Dock("Pulse resolved FOM", size=(self._W, self._H),
+                     hideTitle=True)
+        self._docker_area.addDock(dock1)
+        dock1.addWidget(self._pulse_fom)
 
-        dock2 = Dock("Analysis type 2", size=(self._W, self._H))
-        self._docker_area.addDock(dock2, 'top', dock1)
-        dock2.addWidget(self._plot2)
+        dock2 = Dock("FOM Histogram", size=(self._W, self._H),
+                     hideTitle=True)
+        self._docker_area.addDock(dock2, 'bottom')
+        dock2.addWidget(self._fom_historgram)

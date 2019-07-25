@@ -14,6 +14,7 @@ from collections import OrderedDict
 from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType
 
 
@@ -22,16 +23,22 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG_PULSE,
-        "ROI1 (sum)": AnalysisType.ROI1_PULSE,
+        "ROI1 (sum)": AnalysisType.ROI1,
+        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 
     def __init__(self, *args, **kwargs):
         super().__init__("Statistics setup", *args, **kwargs)
 
         self._analysis_type_cb = QtGui.QComboBox()
-        self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
+        self._analysis_type_cb.addItems(self._analysis_types.keys())
 
+        self._pulse_resolved_cb = QtGui.QCheckBox("Pulse resolved")
+
+        self._num_bins_le = SmartLineEdit("10")
+        self._num_bins_le.setValidator(QtGui.QIntValidator(1, 10000))
+
+        self._reset_btn = QtGui.QPushButton("Reset")
         self.initUI()
 
         self.setFixedHeight(self.minimumSizeHint().height())
@@ -45,19 +52,37 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
 
         layout.addWidget(QtGui.QLabel("Analysis type: "), 1, AR)
         layout.addWidget(self._analysis_type_cb, 1)
-        layout.addStretch(4)
+        layout.addWidget(QtGui.QLabel("# of bins: "), 4, AR)
+        layout.addWidget(self._num_bins_le, 2)
+        if self._pulse_resolved:
+            layout.addWidget(self._pulse_resolved_cb, 5, AR)
+            self._pulse_resolved_cb.setChecked(True)
 
+        layout.addWidget(self._reset_btn, AR)
         self.setLayout(layout)
 
     def initConnections(self):
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
-            lambda x: mediator.onStatisticsAnalysisTypeChange(
+            lambda x: mediator.onStAnalysisTypeChange(
                 self._analysis_types[x]))
+        self._num_bins_le.returnPressed.connect(
+            lambda: mediator.onStNumBinsChange(
+                self._num_bins_le.text()))
+        self._pulse_resolved_cb.toggled.connect(
+            mediator.onStPulseOrTrainResolutionChange)
+
+        self._reset_btn.clicked.connect(mediator.onStReset)
+
 
     def updateMetaData(self):
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
+        self._num_bins_le.returnPressed.emit()
+        self._pulse_resolved_cb.toggled.emit(
+            self._pulse_resolved_cb.isChecked())
 
         return True
+
+

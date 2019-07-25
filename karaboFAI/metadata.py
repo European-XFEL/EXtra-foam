@@ -124,7 +124,9 @@ class Metadata:
             "mode",
         ],
         STATISTICS_PROC: [
-            "analysis_type"
+            "analysis_type",
+            "n_bins",
+            "pulse_resolved",
         ]
     }
 
