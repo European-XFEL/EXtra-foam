@@ -44,6 +44,7 @@ class ImageAssemblerFactory(ABC):
             self._geom_file = None
             self._quad_position = None
             self._geom = None
+            self._out_array = None
 
         def update(self):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
@@ -95,7 +96,13 @@ class ImageAssemblerFactory(ABC):
             """Convert modules data to assembled image data."""
             if self._geom is not None:
                 # karabo_data interface
-                assembled, centre = self._geom.position_all_modules(modules)
+                if self._out_array is None:
+                    extra_shape = (modules.shape[0], )
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        extra_shape=extra_shape)
+
+                assembled, centre = self._geom.position_all_modules(modules,
+                    out=self._out_array)
                 return assembled
 
             # For train-resolved detector, assembled is a reference
