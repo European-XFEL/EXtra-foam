@@ -26,3 +26,4 @@ fi
 
 mkdir -p ${ROOT_DIR}/karaboFAI/thirdparty/bin
 cp ${REDIS_BUILD_DIR}/src/redis-server ${ROOT_DIR}/karaboFAI/thirdparty/bin/redis-server
+cp ${REDIS_BUILD_DIR}/src/redis-cli ${ROOT_DIR}/karaboFAI/thirdparty/bin/redis-cli

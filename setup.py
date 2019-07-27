@@ -36,6 +36,7 @@ class BuildExt(build_ext):
 
     _thirdparty_files = [
         "karaboFAI/thirdparty/bin/redis-server",
+        "karaboFAI/thirdparty/bin/redis-cli"
     ]
 
     description = "Build the C++ extensions for karaboFAI"
@@ -141,7 +142,8 @@ setup(
         'console_scripts': [
             'karaboFAI=karaboFAI.services:application',
             'karaboFAI-kill=karaboFAI.services:kill_application',
-            'karaboFAI-stream=karaboFAI.services:stream_file'
+            'karaboFAI-stream=karaboFAI.services:stream_file',
+            'karaboFAI-redis-cli=karaboFAI.services:start_redis_client',
         ],
     },
     ext_modules=ext_modules,

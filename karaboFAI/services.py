@@ -61,6 +61,22 @@ def try_to_connect_redis_server(host, port, *, n_attempts=5):
                           f"{host}:{port}.")
 
 
+def start_redis_client():
+    """Start a Redis client."""
+    exec_ = config["REDIS_EXECUTABLE"].replace("redis-server", "redis-cli")
+
+    if not os.path.isfile(exec_):
+        raise FileNotFoundError
+
+    command = [exec_]
+    command.extend(sys.argv[1:])
+
+    logger.setLevel("INFO")
+
+    proc = psutil.Popen(command)
+    proc.wait()
+
+
 def start_redis_server():
     """Start a Redis server.
 
