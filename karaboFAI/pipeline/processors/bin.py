@@ -12,7 +12,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import (
-    CompositeProcessor, _get_slow_data
+    _BaseProcessor, _get_slow_data
 )
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
@@ -26,7 +26,7 @@ def compute_bin_edge(n_bins, bin_range):
     return edge, center
 
 
-class BinProcessor(CompositeProcessor):
+class BinProcessor(_BaseProcessor):
     """BinProcessor class.
 
     Bin data based on 1 and/or 2 scalar data.

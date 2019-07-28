@@ -1,5 +1,5 @@
 from .base_processor import (
-    _BaseProcessor, SharedProperty, StopCompositionProcessing
+    _BaseProcessor, SharedProperty
 )
 from .azimuthal_integration import (
     AzimuthalIntegrationProcessorTrain,

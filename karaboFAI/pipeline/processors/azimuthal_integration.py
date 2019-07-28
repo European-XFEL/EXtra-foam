@@ -18,7 +18,7 @@ from scipy import constants
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .base_processor import (
-    CompositeProcessor, _normalize_vfom, _normalize_vfom_pp
+    _BaseProcessor, _normalize_vfom, _normalize_vfom_pp
 )
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
@@ -34,7 +34,7 @@ def energy2wavelength(energy):
     return HC_E / energy
 
 
-class _AzimuthalIntegrationProcessorBase(CompositeProcessor):
+class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
     """_AzimuthalIntegrationProcessorBase class.
 
     Base class for azimuthal integration processor.

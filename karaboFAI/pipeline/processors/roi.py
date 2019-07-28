@@ -12,7 +12,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import (
-    CompositeProcessor, _normalize_vfom, _normalize_vfom_pp
+    _BaseProcessor, _normalize_vfom, _normalize_vfom_pp
 )
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
@@ -111,7 +111,7 @@ def project_y(img):
     return np.sum(img, axis=-1)
 
 
-class _RoiProcessBase(CompositeProcessor):
+class _RoiProcessBase(_BaseProcessor):
     """_RoiProcessBase class.
 
     Base class for ROI Processors, which process FOM and 1D projection

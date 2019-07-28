@@ -13,7 +13,7 @@ import time
 
 import numpy as np
 
-from .base_processor import CompositeProcessor
+from .base_processor import _BaseProcessor
 from ..data_model import RawImageData
 from ..exceptions import ProcessingError, PumpProbeIndexError
 from ...algorithms import mask_image
@@ -27,7 +27,7 @@ from karaboFAI.cpp import (
 )
 
 
-class ImageProcessorPulse(CompositeProcessor):
+class ImageProcessorPulse(_BaseProcessor):
     """ImageProcessorPulse class.
 
     Attributes:
@@ -128,7 +128,7 @@ class ImageProcessorPulse(CompositeProcessor):
                 self._reference = None
 
 
-class ImageProcessorTrain(CompositeProcessor):
+class ImageProcessorTrain(_BaseProcessor):
     """ImageProcessorTrain class.
 
     Attributes:

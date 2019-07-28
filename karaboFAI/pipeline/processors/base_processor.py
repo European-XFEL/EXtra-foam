@@ -312,14 +312,6 @@ class _RedisParserMixin:
         return [handler(v) for v in text[1:-1].split(delimiter)]
 
 
-class StopCompositionProcessing(Exception):
-    """StopCompositionProcessing
-
-    Exception raised to stop the process train of a Composite processor.
-    """
-    pass
-
-
 class MetaProcessor(type):
     def __new__(mcs, name, bases, class_dict):
         for key, value in class_dict.items():
@@ -339,21 +331,10 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         self._state = StateOn()
 
-        self._params = dict()
-
         self._meta = MetaProxy()
 
         self.on_handler = None
         self.processing_handler = None
-
-    def __getattribute__(self, item):
-        try:
-            return super().__getattribute__(item)
-        except AttributeError:
-            if item in self._params:
-                return self._params[item]
-            else:
-                raise
 
     def _has_analysis(self, analysis_type):
         count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
@@ -416,73 +397,16 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         :param ProcessedData processed: processed data.
         """
-        pass
-
-    def process(self, processed):
-        """Process data."""
-        pass
-
-    @abstractmethod
-    def reset_all(self):
-        pass
-
-    def reset(self):
-        pass
-
-
-class LeafProcessor(_BaseProcessor):
-
-    def run_once(self, processed):
-        # self._state = self._state.next()
-        # self._state.update(self)
+        self.update()
         self.process(processed)
-        # self._state = self._state.next()
-
-    def reset_all(self):
-        self.reset()
-
-
-class CompositeProcessor(_BaseProcessor):
-    def __init__(self):
-        super().__init__()
-
-        self._children = []
-
-    def add(self, child):
-        if not isinstance(child, LeafProcessor):
-            raise TypeError("Child processors must be LeafProcessor!")
-
-        self._children.append(child)
-        child._parent = self
-
-    def remove(self, child):
-        self._children.remove(child)
-
-    def pop(self):
-        """Remove and return the last child."""
-        return self._children.pop(-1)
 
     def update(self):
         """Update metadata."""
+        raise NotImplementedError
+
+    def process(self, processed):
+        """Process data."""
+        raise NotImplementedError
+
+    def reset(self):
         pass
-
-    def run_once(self, processed):
-        try:
-            self.update()
-
-            # froze all the shared properties
-            params = copy.deepcopy(self._params)
-
-            self.process(processed)
-
-            for child in self._children:
-                child._params.update(params)
-                child.run_once(processed)
-
-        except StopCompositionProcessing:
-            pass
-
-    def reset_all(self):
-        self.reset()
-        for child in self._children:
-            child.reset_all()

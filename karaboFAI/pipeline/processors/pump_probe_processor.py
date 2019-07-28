@@ -9,12 +9,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import CompositeProcessor
+from .base_processor import _BaseProcessor
 from ...config import AnalysisType, PumpProbeMode
 from ...metadata import Metadata as mt
 
 
-class PumpProbeProcessor(CompositeProcessor):
+class PumpProbeProcessor(_BaseProcessor):
     """PumpProbeImageExtractor.
 
     Extract the pump and probe images in a train.

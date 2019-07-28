@@ -12,14 +12,14 @@ All rights reserved.
 from collections import deque
 import numpy as np
 
-from .base_processor import CompositeProcessor
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
 from ...config import AnalysisType
 from ...utils import profiler
 
 
-class StatisticsProcessor(CompositeProcessor):
+class StatisticsProcessor(_BaseProcessor):
     """StatisticsProcessor class.
 
     - Register the pulse resolved analysis in order to monitor the FOM of

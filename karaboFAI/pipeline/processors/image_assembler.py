@@ -18,7 +18,7 @@ from karabo_data import stack_detector_data
 from karabo_data.geometry2 import (
     AGIPD_1MGeometry, DSSC_1MGeometry, LPD_1MGeometry
 )
-from .base_processor import CompositeProcessor, _RedisParserMixin
+from .base_processor import _BaseProcessor, _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, DataSource
 from ...metadata import Metadata as mt
@@ -26,7 +26,7 @@ from ...utils import profiler
 
 
 class ImageAssemblerFactory(ABC):
-    class BaseAssembler(CompositeProcessor, _RedisParserMixin):
+    class BaseAssembler(_BaseProcessor, _RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:

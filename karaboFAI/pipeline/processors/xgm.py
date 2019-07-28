@@ -9,13 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import CompositeProcessor
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
 
-class XgmProcessor(CompositeProcessor):
+class XgmProcessor(_BaseProcessor):
     """Process XGM data."""
 
     def __init__(self):

@@ -9,14 +9,14 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import CompositeProcessor, _get_slow_data
+from .base_processor import _BaseProcessor, _get_slow_data
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...metadata import Metadata as mt
 from ...utils import profiler
 
 
-class CorrelationProcessor(CompositeProcessor):
+class CorrelationProcessor(_BaseProcessor):
     """Add correlation information into processed data.
 
     Attributes:
