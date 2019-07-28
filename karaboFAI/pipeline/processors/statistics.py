@@ -80,6 +80,11 @@ class StatisticsProcessor(_BaseProcessor):
                 if foms is None:
                     raise ProcessingError(
                         "Pulse resolved ROI1 sum result is not available")
+            if self.analysis_type == AnalysisType.ROI2_PULSE:
+                foms = processed.pulse.roi.roi2.fom
+                if foms is None:
+                    raise ProcessingError(
+                        "Pulse resolved ROI2 sum result is not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
                 foms = processed.pulse.ai.fom
                 if foms is None:
@@ -90,6 +95,10 @@ class StatisticsProcessor(_BaseProcessor):
                 foms = processed.roi.roi1.fom
                 if foms is None:
                     raise ProcessingError("ROI1 sum result is not available")
+            if self.analysis_type == AnalysisType.ROI2:
+                foms = processed.roi.roi2.fom
+                if foms is None:
+                    raise ProcessingError("ROI2 sum result is not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
                 foms = processed.ai.fom
                 if foms is None:
@@ -107,4 +116,3 @@ class StatisticsProcessor(_BaseProcessor):
         bins_center = (bins_edges[1:]+bins_edges[:-1])/2.0
         processed.st.fom_bin_center = bins_center
         processed.st.fom_counts = hist
-

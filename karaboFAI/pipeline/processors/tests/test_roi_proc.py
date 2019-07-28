@@ -261,3 +261,39 @@ class TestRoiProcessorTrain(unittest.TestCase):
 class TestRoiProcessorPulse(unittest.TestCase):
     def setUp(self):
         self._proc = RoiProcessorPulse()
+
+    def _get_data(self):
+        processed = ProcessedData(1001)
+        assembled = np.array(np.ones((4, 20, 20)), dtype=np.float32)
+        return {'processed': processed, 'assembled': assembled}, processed
+
+    def testRoiFom(self):
+        proc = self._proc
+        # set ROI1 and ROI2
+        proc._roi1.activated = True
+        proc._roi1.rect = [0, 0, 2, 3]
+        proc._roi2.activated = True
+        proc._roi2.rect = [0, 0, 1, 3]
+
+        data, processed = self._get_data()
+
+        # only ROI1_PULSE is registered
+
+        proc._has_analysis = MagicMock(
+            side_effect=lambda x: True if x == AnalysisType.ROI1_PULSE else False)
+        proc.process(data)
+
+        roi = processed.pulse.roi
+        self.assertListEqual([6.0] * 4, roi.roi1.fom)
+        self.assertIsNone(roi.roi2.fom)
+
+        # only ROI2_PULSE is registered
+
+        roi.roi1.fom = None  # clear previous result
+        proc._has_analysis = MagicMock(
+            side_effect=lambda x: True if x == AnalysisType.ROI2_PULSE else False)
+        proc.process(data)
+
+        roi = processed.pulse.roi
+        self.assertIsNone(roi.roi1.fom)
+        self.assertListEqual([3.0] * 4, roi.roi2.fom)

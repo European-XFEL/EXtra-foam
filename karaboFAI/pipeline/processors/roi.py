@@ -169,6 +169,9 @@ class _RoiProcessBase(_BaseProcessor):
         self._auc_range = self.str2tuple(cfg['proj:auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['proj:fom_integ_range'])
 
+    def _update_moving_average(self, v):
+        pass
+
 
 class RoiProcessorTrain(_RoiProcessBase):
     """RoiProcessorTrain class.
@@ -500,19 +503,17 @@ class RoiProcessorTrain(_RoiProcessBase):
 class RoiProcessorPulse(_RoiProcessBase):
     """RoiProcessorTrain class.
 
-    Train-resolved RoiProcessor.
+    Pulse-resolved RoiProcessor.
     """
-    def _update_moving_average(self, v):
-        pass
-
     @profiler("ROI Processor (pulse)")
     def process(self, data):
         processed = data['processed']
         assembled = data['assembled']
-        self._process_rois(processed, assembled)
+        self._process_roi1(processed, assembled)
+        self._process_roi2(processed, assembled)
 
-    def _process_rois(self, processed, assembled):
-        """Process averaged image in a train."""
+    def _process_roi1(self, processed, assembled):
+        """Process pulse-resolved ROI1 FOM a train."""
         if not self._has_analysis(AnalysisType.ROI1_PULSE):
             return
 
@@ -533,6 +534,34 @@ class RoiProcessorPulse(_RoiProcessBase):
         if self._has_img1:
             foms = []
             for i in range(len(img1)):
-                foms.append(np.sum(mask_image(
-                    img1[i], image_mask=image_mask, threshold_mask=threshold_mask)))
+                foms.append(np.sum(mask_image(img1[i],
+                                              image_mask=image_mask,
+                                              threshold_mask=threshold_mask)))
             roi.roi1.fom = foms
+
+    def _process_roi2(self, processed, assembled):
+        """Process pulse-resolved ROI2 FOM a train."""
+        if not self._has_analysis(AnalysisType.ROI2_PULSE):
+            return
+
+        threshold_mask = processed.image.threshold_mask
+        image_mask = processed.image.image_mask
+
+        # for speed
+        roi = processed.pulse.roi
+
+        roi.rect2 = self._roi2.intersect(assembled[0])
+
+        # get the current ROI images
+        img2 = self._roi2.get_images(assembled)
+
+        # set up the flags
+        self._has_img2 = img2 is not None
+
+        if self._has_img2:
+            foms = []
+            for i in range(len(img2)):
+                foms.append(np.sum(mask_image(img2[i],
+                                              image_mask=image_mask,
+                                              threshold_mask=threshold_mask)))
+            roi.roi2.fom = foms

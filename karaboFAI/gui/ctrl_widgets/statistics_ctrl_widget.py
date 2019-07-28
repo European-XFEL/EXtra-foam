@@ -24,6 +24,7 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
         "ROI1 (sum)": AnalysisType.ROI1,
+        "ROI2 (sum)": AnalysisType.ROI2,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 
