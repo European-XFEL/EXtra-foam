@@ -20,7 +20,7 @@ from ..pyqtgraph import GraphicsObject
 
 from ..misc_widgets import make_pen
 from ...config import config, MaskState
-from ...ipc import CommandProxy
+from ...ipc import ImageMaskPub
 
 
 class ImageItem(pg.ImageItem):
@@ -103,7 +103,7 @@ class MaskItem(GraphicsObject):
         self._pen = make_pen(config['MASK_BOUNDING_BOX_COLOR'])
 
         self.state = MaskState.UNMASK
-        self._cmd_proxy = CommandProxy()
+        self._mask_pub = ImageMaskPub()
 
         self._p1 = None
         self._p2 = None
@@ -137,9 +137,9 @@ class MaskItem(GraphicsObject):
         h = int(rect.height())
 
         if self.state == MaskState.MASK:
-            self._cmd_proxy.add_mask((x, y, w, h))
+            self._mask_pub.add((x, y, w, h))
         elif self.state == MaskState.UNMASK:
-            self._cmd_proxy.remove_mask((x, y, w, h))
+            self._mask_pub.erase((x, y, w, h))
 
         self._p1 = None
         self._p2 = None
@@ -158,7 +158,7 @@ class MaskItem(GraphicsObject):
         if self._mask is None:
             return
 
-        self._cmd_proxy.clear_mask()
+        self._mask_pub.remove()
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
@@ -197,7 +197,7 @@ class MaskItem(GraphicsObject):
 
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
-        self._cmd_proxy.set_mask(mask)
+        self._mask_pub.set(mask)
 
         h, w = mask.shape
         self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)

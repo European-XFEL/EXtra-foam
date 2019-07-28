@@ -18,7 +18,7 @@ from ..data_model import RawImageData
 from ..exceptions import ProcessingError, PumpProbeIndexError
 from ...algorithms import mask_image
 from ...metadata import Metadata as mt
-from ...ipc import CommandProxy
+from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import PumpProbeMode
 
@@ -55,7 +55,8 @@ class ImageProcessorPulse(_BaseProcessor):
 
         self._image_mask = None
 
-        self._cmd_proxy = CommandProxy()
+        self._ref_sub = ReferenceSub()
+        self._mask_sub = ImageMaskSub()
 
     def update(self):
         # image
@@ -102,7 +103,7 @@ class ImageProcessorPulse(_BaseProcessor):
         image_data.poi_indices = self._poi_indices
 
     def _update_image_mask(self, image_shape):
-        self._image_mask = self._cmd_proxy.update_mask(
+        self._image_mask = self._mask_sub.update(
             self._image_mask, image_shape)
 
         if self._image_mask is not None:
@@ -115,7 +116,7 @@ class ImageProcessorPulse(_BaseProcessor):
                     f"different from the shape of the image {image_shape}!")
 
     def _update_reference(self, image_shape):
-        ref = self._cmd_proxy.get_ref_image()
+        ref = self._ref_sub.get()
         if ref is not None:
             if isinstance(ref, np.ndarray):
                 self._reference = ref

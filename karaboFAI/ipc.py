@@ -195,14 +195,10 @@ class ProcessWorkerLogger(metaclass=_MetaSingleton):
         self._db.publish("log:error", msg)
 
 
-class CommandProxy:
+class ReferencePub:
     _db = RedisConnection()
-    _ref_sub = RedisSubscriber("command:reference_image",
-                               decode_responses=False)
-    _mask_sub = RedisSubscriber("command:image_mask",
-                                decode_responses=False)
 
-    def set_ref_image(self, image):
+    def set(self, image):
         """Publish the reference image in Redis."""
         if image is None:
             return
@@ -210,17 +206,21 @@ class CommandProxy:
         self._db.publish("command:reference_image", 'next')
         self._db.publish("command:reference_image", serialize_image(image))
 
-    def remove_ref_image(self):
+    def remove(self):
         """Notify to remove the current reference image."""
         self._db.publish("command:reference_image", 'remove')
 
-    def get_ref_image(self):
+
+class ReferenceSub:
+    _sub = RedisSubscriber("command:reference_image", decode_responses=False)
+
+    def get(self):
         """Try to get the reference image.
 
         :return: None for no update; numpy.ndarray for receiving a new
             reference image; -1 for removing the current reference image.
         """
-        sub = self._ref_sub
+        sub = self._sub
         if sub is None:
             return
 
@@ -241,25 +241,35 @@ class CommandProxy:
 
         return ref
 
-    def add_mask(self, mask_region):
+
+class ImageMaskPub:
+    _db = RedisConnection()
+
+    def add(self, mask_region):
+        """Add a region to the current mask."""
         self._db.publish("command:image_mask", 'add')
         self._db.publish("command:image_mask", str(mask_region))
 
-    def remove_mask(self, mask_region):
-        self._db.publish("command:image_mask", 'remove')
+    def erase(self, mask_region):
+        """Erase a region from the current mask."""
+        self._db.publish("command:image_mask", 'erase')
         self._db.publish("command:image_mask", str(mask_region))
 
-    def set_mask(self, mask):
-        """Publish the image mask in Redis."""
+    def set(self, mask):
+        """Set the whole mask."""
         self._db.publish("command:image_mask", 'set')
         self._db.publish("command:image_mask",
-                          serialize_image(mask, is_mask=True))
+                         serialize_image(mask, is_mask=True))
 
-    def clear_mask(self):
-        """Notify to completely clear all the image mask."""
-        self._db.publish("command:image_mask", 'clear')
+    def remove(self):
+        """Completely remove all the mask."""
+        self._db.publish("command:image_mask", 'remove')
 
-    def update_mask(self, mask, shape):
+
+class ImageMaskSub:
+    _sub = RedisSubscriber("command:image_mask", decode_responses=False)
+
+    def update(self, mask, shape):
         """Parse all masking operations.
 
         :param numpy.ndarray mask: image mask. dtype = np.bool.
@@ -267,10 +277,9 @@ class CommandProxy:
 
         :return: a list of masking operations.
         """
-        sub = self._mask_sub
+        sub = self._sub
         if sub is None:
             return
-
         # process all messages related to mask
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
@@ -280,7 +289,7 @@ class CommandProxy:
             action = msg['data']
             if action == b'set':
                 mask = deserialize_image(sub.get_message()['data'], is_mask=True)
-            elif action in [b'add', b'remove']:
+            elif action in [b'add', b'erase']:
                 if mask is None:
                     mask = np.zeros(shape, dtype=np.bool)
 
@@ -290,7 +299,7 @@ class CommandProxy:
                     mask[y:y+h, x:x+w] = True
                 else:
                     mask[y:y+h, x:x+w] = False
-            else:  # data == 'clear'
+            else:  # data == 'remove'
                 mask = None
 
         return mask

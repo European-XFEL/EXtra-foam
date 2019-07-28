@@ -18,7 +18,7 @@ from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem, RectROI
 from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
-from ...ipc import CommandProxy
+from ...ipc import ReferencePub
 from ...algorithms import quick_min_max
 from ...config import config
 from ...logger import logger
@@ -261,7 +261,7 @@ class ImageAnalysis(ImageView):
 
         self._image_data = None
 
-        self._cmd_proxy = CommandProxy()
+        self._ref_pub = ReferencePub()
 
     def setImage(self, *args, **kwargs):
         """Overload."""
@@ -284,11 +284,11 @@ class ImageAnalysis(ImageView):
 
         Note: image mask is not included in self._image.
         """
-        self._cmd_proxy.set_ref_image(self._image)
+        self._ref_pub.set(self._image)
 
     def removeReferenceImage(self):
         """Remove reference image."""
-        self._cmd_proxy.remove_ref_image()
+        self._ref_pub.remove()
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
