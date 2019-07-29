@@ -24,8 +24,11 @@ from karaboFAI.pipeline.exceptions import (
 )
 
 
-class TestImageProcessorPulse(unittest.TestCase):
-    """Test pulse-resolved ImageProcessor."""
+class TestImageProcessorPulseTr(unittest.TestCase):
+    """Test pulse-resolved ImageProcessor.
+
+    For train-resolved data.
+    """
     def setUp(self):
         self._proc = ImageProcessorPulse()
 
@@ -34,10 +37,94 @@ class TestImageProcessorPulse(unittest.TestCase):
         ImageProcessorPulse._raw_data.window = 3
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
-        self._proc._pulse_index_filter = [-1]
-        self._proc._poi_indices = [0, 2]
 
-    def testGeneral(self):
+    def testMovingAverage(self):
+        proc = self._proc
+
+        imgs1 = np.random.randn(2, 2)
+        imgs1_gt = imgs1.copy()
+        data = {
+            'processed': ProcessedData(1),
+            'assembled': imgs1,
+        }
+
+        proc.process(data)
+
+        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
+
+        imgs2 = np.random.randn(2, 2)
+        imgs2_gt = imgs2.copy()
+        data = {
+            'processed': ProcessedData(1),
+            'assembled': imgs2,
+        }
+
+        proc.process(data)
+
+        processed = data['processed']
+        self.assertEqual(proc._background, processed.image.background)
+        self.assertTupleEqual(proc._threshold_mask,
+                              processed.image.threshold_mask)
+        # The moving average test is redundant for now since pulse-resolved
+        # detector is not allow to set moving average on images on ImageToolWindow.
+        self.assertEqual(2, processed.image.ma_count)
+        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
+        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
+
+        # test the internal data of _raw_data shares memory with the first data
+        # FIXME: This not true with the c++ code. But will be fixed when
+        #        xtensor-python has a new release.
+        # self.assertIs(imgs1, proc._raw_data)
+
+    def testImageShapeChangeOnTheFly(self):
+        proc = self._proc
+        proc._image_mask = np.ones((2, 2), dtype=np.bool)
+
+        proc.process({
+            'processed': ProcessedData(1),
+            'assembled': np.random.randn(2, 2)
+        })
+
+        # image shape changes
+        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+            proc.process({
+                'processed': ProcessedData(2),
+                'assembled': np.random.randn(4, 2)
+            })
+        # image mask remains the same, one needs to clear it by hand
+        np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
+        proc._image_mask = None
+
+        # assign a reference image
+        proc._reference = np.ones((4, 2), dtype=np.float32)
+        # image shape changes
+        with self.assertRaisesRegex(ProcessingError, 'reference'):
+            proc.process({
+                'processed': ProcessedData(3),
+                'assembled': np.random.randn(2, 2)
+            })
+        # image mask remains the same, one needs to clear it by hand
+        np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
+        proc._reference = None
+
+
+class TestImageProcessorPulsePr(unittest.TestCase):
+    """Test pulse-resolved ImageProcessor.
+
+    For pulse-resolved data.
+    """
+    def setUp(self):
+        self._proc = ImageProcessorPulse()
+
+        del self._proc._raw_data
+
+        ImageProcessorPulse._raw_data.window = 3
+        self._proc._background = -10
+        self._proc._threshold_mask = (-100, 100)
+
+    def testMovingAverage(self):
+        # The moving average test is redundant for now since pulse-resolved
+        # detector is not allow to set moving average on images on ImageToolWindow.
         proc = self._proc
 
         imgs1 = np.random.randn(4, 2, 2)
@@ -54,7 +141,7 @@ class TestImageProcessorPulse(unittest.TestCase):
         imgs2 = np.random.randn(4, 2, 2)
         imgs2_gt = imgs2.copy()
         data = {
-            'processed': ProcessedData(1),
+            'processed': ProcessedData(2),
             'assembled': imgs2,
         }
 
@@ -74,12 +161,48 @@ class TestImageProcessorPulse(unittest.TestCase):
         # self.assertIs(imgs1, proc._raw_data)
 
     def testImageShapeChangeOnTheFly(self):
-        # TODO
-        pass
+        proc = self._proc
+        proc._image_mask = np.ones((2, 2), dtype=np.bool)
+
+        proc.process({
+            'processed': ProcessedData(1),
+            'assembled': np.random.randn(4, 2, 2)
+        })
+
+        # image shape changes
+        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+            proc.process({
+                'processed': ProcessedData(2),
+                'assembled': np.random.randn(4, 4, 2)
+            })
+        # image mask remains the same, one needs to clear it by hand
+        np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
+        proc._image_mask = None
+
+        # assign a reference image
+        proc._reference = np.ones((4, 2), dtype=np.float32)
+        # image shape changes
+        with self.assertRaisesRegex(ProcessingError, 'reference'):
+            proc.process({
+                'processed': ProcessedData(3),
+                'assembled': np.random.randn(4, 2, 2)
+            })
+        # image mask remains the same, one needs to clear it by hand
+        np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
+        proc._reference = None
+
+        # Number of pulses per train changes, but no exception will be raised
+        proc.process({
+            'processed': ProcessedData(4),
+            'assembled': np.random.randn(8, 2, 2)
+        })
 
 
 class TestImageProcessorTrainTr(unittest.TestCase):
-    """Test train-resolved ImageProcessor."""
+    """Test train-resolved ImageProcessor.
+
+    For train-resolved data.
+    """
     def setUp(self):
         self._proc = ImageProcessorTrain()
         self._proc._on_indices = [0]
