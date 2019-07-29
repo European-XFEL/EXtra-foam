@@ -465,6 +465,51 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._reset1)
         self.assertTrue(proc._reset2)
 
+    def testStatisticsCtrlWidget(self):
+        widget = self.gui.statistics_ctrl_widget
+        scheduler = self.scheduler
+        proc = scheduler._statistics
+        proc.update()
+
+        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
+        self.assertTrue(proc._pulse_resolved)
+        self.assertEqual(10, proc._num_bins)
+
+        widget._analysis_type_cb.setCurrentIndex(1)
+        proc.update()
+        self.assertTrue(proc._reset)
+        self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
+
+        proc._reset = False
+        widget._analysis_type_cb.setCurrentIndex(2)
+        proc.update()
+        self.assertTrue(proc._reset)
+        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG_PULSE,
+                         proc.analysis_type)
+
+        proc._reset = False
+        widget._pulse_resolved_cb.setChecked(False)
+        proc.update()
+        self.assertTrue(proc._reset)
+        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG,
+                         proc.analysis_type)
+
+        proc._reset = False
+        widget._analysis_type_cb.setCurrentIndex(1)
+        proc.update()
+        self.assertTrue(proc._reset)
+        self.assertEqual(AnalysisType.ROI1, proc.analysis_type)
+
+        widget._num_bins_le.setText("100")
+        proc.update()
+        self.assertEqual(100, proc._num_bins)
+
+        proc._reset = False
+        widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
+
+
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
