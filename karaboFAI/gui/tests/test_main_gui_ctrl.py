@@ -466,17 +466,20 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         proc = scheduler._statistics
         proc.update()
 
+        analysis_types = {value: key for key, value in
+                          widget._analysis_types.items()}
+
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertTrue(proc._pulse_resolved)
         self.assertEqual(10, proc._num_bins)
 
-        widget._analysis_type_cb.setCurrentIndex(1)
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1])
         proc.update()
         self.assertTrue(proc._reset)
         self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
 
         proc._reset = False
-        widget._analysis_type_cb.setCurrentIndex(2)
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.AZIMUTHAL_INTEG])
         proc.update()
         self.assertTrue(proc._reset)
         self.assertEqual(AnalysisType.AZIMUTHAL_INTEG_PULSE,
@@ -639,3 +642,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
     def testGeometryCtrlWidget(self):
         widget = self.gui.geometry_ctrl_widget
         self.assertFalse(widget.isEnabled())
+
+    def testStatisticsCtrlWidget(self):
+        pass
+        # TODO
