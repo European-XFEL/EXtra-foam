@@ -54,7 +54,7 @@ class StatisticsProcessor(CompositeProcessor):
 
         analysis_type = AnalysisType(int(cfg['analysis_type']))
         if self._pulse_resolved and analysis_type != AnalysisType.UNDEFINED:
-            analysis_type = AnalysisType(int(cfg['analysis_type']) + 2700)
+            analysis_type = AnalysisType(analysis_type + 2700)
 
         if self._update_analysis(analysis_type):
             self._reset = True

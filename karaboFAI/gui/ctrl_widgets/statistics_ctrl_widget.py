@@ -34,6 +34,7 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
         self._analysis_type_cb.addItems(self._analysis_types.keys())
 
         self._pulse_resolved_cb = QtGui.QCheckBox("Pulse resolved")
+        self._pulse_resolved_cb.setChecked(True)
 
         self._num_bins_le = SmartLineEdit("10")
         self._num_bins_le.setValidator(QtGui.QIntValidator(1, 10000))
@@ -54,9 +55,10 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._analysis_type_cb, 1)
         layout.addWidget(QtGui.QLabel("# of bins: "), 4, AR)
         layout.addWidget(self._num_bins_le, 2)
-        if self._pulse_resolved:
-            layout.addWidget(self._pulse_resolved_cb, 5, AR)
-            self._pulse_resolved_cb.setChecked(True)
+        layout.addWidget(self._pulse_resolved_cb, 5, AR)
+        if not self._pulse_resolved:
+            self._pulse_resolved_cb.setChecked(False)
+            self._pulse_resolved_cb.setEnabled(False)
 
         layout.addWidget(self._reset_btn, AR)
         self.setLayout(layout)
