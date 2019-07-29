@@ -153,12 +153,15 @@ class MaskItem(GraphicsObject):
 
         self._image_item.update()
 
-    def clearMask(self):
-        """Clear the current mask."""
-        if self._mask is None:
-            return
+    def removeMask(self):
+        """Completely remove the current mask."""
+        # The following sequence ensures that it can be used to rescue if
+        # there is discrepancy between ImageTool and the ImageProcessor.
 
         self._mask_pub.remove()
+
+        if self._mask is None:
+            return
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()

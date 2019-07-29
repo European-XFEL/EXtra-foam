@@ -78,7 +78,6 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
 
         self._reset_btn.clicked.connect(mediator.onStReset)
 
-
     def updateMetaData(self):
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
@@ -87,5 +86,3 @@ class StatisticsCtrlWidget(AbstractCtrlWidget):
             self._pulse_resolved_cb.isChecked())
 
         return True
-
-

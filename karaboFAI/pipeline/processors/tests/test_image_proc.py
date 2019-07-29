@@ -73,6 +73,10 @@ class TestImageProcessorPulse(unittest.TestCase):
         #        xtensor-python has a new release.
         # self.assertIs(imgs1, proc._raw_data)
 
+    def testImageShapeChangeOnTheFly(self):
+        # TODO
+        pass
+
 
 class TestImageProcessorTrainTr(unittest.TestCase):
     """Test train-resolved ImageProcessor."""

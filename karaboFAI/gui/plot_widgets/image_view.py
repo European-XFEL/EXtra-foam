@@ -320,7 +320,7 @@ class ImageAnalysis(ImageView):
 
     @QtCore.pyqtSlot()
     def onClearImageMask(self):
-        self._mask_item.clearMask()
+        self._mask_item.removeMask()
 
     def saveImageMask(self):
         file_path = QtGui.QFileDialog.getSaveFileName()[0]

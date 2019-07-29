@@ -227,10 +227,12 @@ class TestImageTool(unittest.TestCase):
 
         data = self._get_data()
 
+        # test setting reference (no image)
         widget.set_ref_btn.clicked.emit()
         proc.process(data)
         self.assertIsNone(proc._reference)
 
+        # test setting reference
         self.view._image = 2 * np.ones((10, 10), np.float32)
         widget.set_ref_btn.clicked.emit()
         # FIXME: the test could fail randomly
@@ -238,18 +240,67 @@ class TestImageTool(unittest.TestCase):
         proc.process(data)
         np.testing.assert_array_equal(self.view._image, proc._reference)
 
+        # test removing reference
         widget.remove_ref_btn.clicked.emit()
         proc.process(data)
         self.assertIsNone(proc._reference)
 
+        # test setting reference but the reference shape is different
+        # from the image shape
         with self.assertRaises(ProcessingError):
             self.view._image = np.ones((2, 2), np.float32)
             widget.set_ref_btn.clicked.emit()
-            time.sleep(0.2)
             proc.process(data)
 
     def testDrawMask(self):
-        pass
+        # TODO: test by really drawing something on ImageTool
+        from karaboFAI.ipc import ImageMaskPub
+
+        pub = ImageMaskPub()
+        proc = self.image_worker._image_proc_pulse
+
+        # trigger the subscriber
+        data = self._get_data()
+        proc.process(data)
+        time.sleep(0.2)
+
+        mask_gt = np.zeros(data['assembled'].shape[-2:], dtype=np.bool)
+
+        # FIXME: the test could fail randomly
+        # test adding mask
+        pub.add((0, 0, 2, 3))
+        proc.process(data)
+        mask_gt[0:3, 0:2] = True
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # add one more mask region
+        pub.add((1, 1, 2, 3))
+        proc.process(data)
+        mask_gt[1:4, 1:3] = True
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test erasing mask
+        pub.erase((2, 2, 3, 3))
+        proc.process(data)
+        mask_gt[2:5, 2:5] = False
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test trashing mask
+        action = self.image_tool._tool_bar_mask.actions()[2]
+        action.trigger()
+        proc.process(data)
+        self.assertIsNone(proc._image_mask)
+
+        # test set mask
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test set a mask which has a different shape from the image
+        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        with self.assertRaises(ProcessingError):
+            proc.process(data)
 
     def _get_data(self):
         return {'assembled': np.ones((4, 10, 10), np.float32),

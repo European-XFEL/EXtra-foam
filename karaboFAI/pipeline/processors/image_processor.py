@@ -103,30 +103,30 @@ class ImageProcessorPulse(_BaseProcessor):
         image_data.poi_indices = self._poi_indices
 
     def _update_image_mask(self, image_shape):
-        self._image_mask = self._mask_sub.update(
-            self._image_mask, image_shape)
+        image_mask = self._mask_sub.update(self._image_mask, image_shape)
+        if image_mask is not None and image_mask.shape != image_shape:
+            # This could only happen when the mask is loaded from the files
+            # and the image shapes in the ImageTool is different from the
+            # shape of the live images.
+            # The original image mask remains the same.
+            raise ProcessingError(
+                f"The shape of the image mask {image_mask.shape} is "
+                f"different from the shape of the image {image_shape}!")
 
-        if self._image_mask is not None:
-            if self._image_mask.shape != image_shape:
-                # This could only happen when the mask is loaded from the files
-                # and the image shapes in the ImageTool is different from the
-                # shape of the live images.
-                raise ProcessingError(
-                    f"The shape of the image mask {self._image_mask.shape} is "
-                    f"different from the shape of the image {image_shape}!")
+        self._image_mask = image_mask
 
     def _update_reference(self, image_shape):
-        ref = self._ref_sub.get()
-        if ref is not None:
-            if isinstance(ref, np.ndarray):
-                self._reference = ref
-                if ref.ndim != 2 or ref.shape != image_shape:
-                    raise ProcessingError(
-                        f"The shape of the reference image {ref.shape} is "
-                        f"different from the shape of the image data "
-                        f"{image_shape}")
-            else:
-                self._reference = None
+        ref = self._ref_sub.update(self._reference)
+
+        if ref is not None and ref.shape != image_shape:
+            # The original reference remains the same. It ensures the error
+            # message if the shape of the image changes (e.g. quadrant
+            # positions change on the fly).
+            raise ProcessingError(
+                f"The shape of the reference {ref.shape} is different "
+                f"from the shape of the image {image_shape}!")
+
+        self._reference = ref
 
 
 class ImageProcessorTrain(_BaseProcessor):

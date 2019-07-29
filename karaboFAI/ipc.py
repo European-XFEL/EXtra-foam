@@ -214,17 +214,15 @@ class ReferencePub:
 class ReferenceSub:
     _sub = RedisSubscriber("command:reference_image", decode_responses=False)
 
-    def get(self):
-        """Try to get the reference image.
+    def update(self, image):
+        """Parse all reference image operations.
 
-        :return: None for no update; numpy.ndarray for receiving a new
-            reference image; -1 for removing the current reference image.
+        :return numpy.ndarray: the updated reference image.
         """
         sub = self._sub
         if sub is None:
-            return
+            return image
 
-        ref = None
         # process all messages related to reference
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
@@ -234,12 +232,12 @@ class ReferenceSub:
 
             action = msg['data']
             if action == b'next':
-                ref = deserialize_image(sub.get_message()['data'])
+                image = deserialize_image(sub.get_message()['data'])
             else:
                 # remove reference
-                ref = -1
+                image = None
 
-        return ref
+        return image
 
 
 class ImageMaskPub:
@@ -275,11 +273,12 @@ class ImageMaskSub:
         :param numpy.ndarray mask: image mask. dtype = np.bool.
         :param tuple/list shape: shape of the image.
 
-        :return: a list of masking operations.
+        :return numpy.ndarray: the updated mask.
         """
         sub = self._sub
         if sub is None:
-            return
+            return mask
+
         # process all messages related to mask
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
