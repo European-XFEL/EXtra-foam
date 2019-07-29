@@ -51,13 +51,7 @@ class StatisticsProcessor(CompositeProcessor):
         self._pulse_resolved = cfg['pulse_resolved'] == 'True'
 
         self._num_bins = int(cfg['n_bins'])
-        # analysis_type = AnalysisType.UNDEFINED
 
-        # if AnalysisType(int(cfg['analysis_type'])) != AnalysisType.UNDEFINED:
-        #     if self._pulse_resolved:
-        #         analysis_type = AnalysisType(2700+int(cfg['analysis_type']))
-        #     else:
-        #         analysis_type = AnalysisType(int(cfg['analysis_type']))
         analysis_type = AnalysisType(int(cfg['analysis_type']))
         if self._pulse_resolved and analysis_type != AnalysisType.UNDEFINED:
             analysis_type = AnalysisType(int(cfg['analysis_type']) + 2700)
