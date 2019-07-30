@@ -5,25 +5,54 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
+#include "tbb/tick_count.h"
 
-static const std::size_t N = 23;
+
+static const std::size_t N = 21;
+
+// Finds largest matching substrings.
+void SerialSubStringFinder (const std::string &str,
+                            std::vector<std::size_t> &max_array,
+                            std::vector<std::size_t> &pos_array) {
+  for (std::size_t i = 0; i < str.size(); ++i) {
+    std::size_t max_size = 0, max_pos = 0;
+    for (std::size_t j = 0; j < str.size(); ++j)
+      if (j != i) {
+        std::size_t limit = str.size()-(std::max)(i, j);
+        for (std::size_t k = 0; k < limit; ++k) {
+          if (str[i+k] != str[j+k])
+            break;
+          if (k > max_size) {
+            max_size = k;
+            max_pos = j;
+          }
+        }
+      }
+    max_array[i] = max_size;
+    pos_array[i] = max_pos;
+  }
+}
 
 
+// Finds largest matching substrings (parallel version).
 class SubStringFinder {
-  const std::string &str;
-  std::vector<std::size_t> &max_array;
-  std::vector<std::size_t> &pos_array;
+  const char *str_;
+  const std::size_t len_;
+  std::size_t *max_array_;
+  std::size_t *pos_array_;
 public:
-  void operator() (const tbb::blocked_range<std::size_t> &r) const {
+  void operator() (const tbb::blocked_range<std::size_t>& r) const {
     for (std::size_t i = r.begin(); i != r.end(); ++i) {
       std::size_t max_size = 0, max_pos = 0;
-      for (std::size_t j = 0; j < str.size(); ++j) {
+      for (std::size_t j = 0; j < len_; ++j) {
         if (j != i) {
-          std::size_t limit = str.size() - (std::max)(i, j);
+          std::size_t limit = len_ - (std::max)(i, j);
           for (std::size_t k = 0; k < limit; ++k) {
-            if (str[i+k] != str[j+k]) break;
+            if (str_[i+k] != str_[j+k])
+              break;
             if (k > max_size) {
               max_size = k;
               max_pos = j;
@@ -31,29 +60,42 @@ public:
           }
         }
       }
-      max_array[i] = max_size;
-      pos_array[i] = max_pos;
+      max_array_[i] = max_size;
+      pos_array_[i] = max_pos;
     }
   }
-
-  SubStringFinder(const std::string &s, std::vector<std::size_t> &m, std::vector<std::size_t> &p):
-    str(s), max_array(m), pos_array(p) {}
+  // We do not use std::vector for compatibility with offload execution
+  SubStringFinder(const char *s, const std::size_t s_len, std::size_t *m, std::size_t *p) :
+    str_(s), len_(s_len), max_array_(m), pos_array_(p) {}
 };
 
 
-TEST(TestTBB, GeneralTest) {
-  std::string str[N] = {std::string("a"), std::string("b")};
-  for (std::size_t i = 2; i < N; ++i) str[i] = str[i-1] + str[i-2];
+TEST(TestTBB, GeneralSubStringFinder) {
+  using namespace tbb;
 
+  std::string str[N] = {std::string("a"), std::string("b")};
+  for (std::size_t i = 2; i < N; ++i) str[i] = str[i-1]+str[i-2];
   std::string &to_scan = str[N-1];
   const std::size_t num_elem = to_scan.size();
 
-  std::vector<std::size_t> max(num_elem);
-  std::vector<std::size_t> pos(num_elem);
+  std::vector<std::size_t> max1(num_elem);
+  std::vector<std::size_t> pos1(num_elem);
+  std::vector<std::size_t> max2(num_elem);
+  std::vector<std::size_t> pos2(num_elem);
 
-  tbb::parallel_for(tbb::blocked_range<std::size_t>(0, num_elem),
-    SubStringFinder(to_scan, max, pos));
+  tick_count serial_t0 = tick_count::now();
+  SerialSubStringFinder(to_scan, max2, pos2);
+  std::cout << "Serial version 'SubStringFinder' ran in " << (tick_count::now() - serial_t0).seconds()
+            << " seconds" << std::endl;
 
-  for (std::size_t i = 0; i < num_elem; ++i)
-    std::cout << " " << max[i] << "(" << pos[i] << ")" << std::endl;
+  tick_count parallel_t0 = tick_count::now();
+  parallel_for(blocked_range<std::size_t>(0, num_elem, 100),
+               SubStringFinder(to_scan.c_str(), num_elem, &max1[0], &pos1[0]));
+  std::cout << "Parallel version 'SubStringFinder' ran in " <<  (tick_count::now() - parallel_t0).seconds()
+            << " seconds" << std::endl;
+
+  for (std::size_t i = 0; i < num_elem; ++i) {
+    ASSERT_EQ(max1[i], max2[i]);
+    ASSERT_EQ(pos1[i], pos2[i]);
+  }
 }
