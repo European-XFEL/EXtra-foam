@@ -1,3 +1,4 @@
+import contextlib
 import os
 import os.path as osp
 import platform
@@ -21,6 +22,16 @@ def find_version():
         raise RuntimeError("Unable to find version string.")
 
 
+@contextlib.contextmanager
+def changed_cwd(dirname):
+    oldcwd = os.getcwd()
+    os.chdir(dirname)
+    try:
+        yield
+    finally:
+        os.chdir(oldcwd)
+
+
 class CMakeExtension(Extension):
     def __init__(self, name, source_dir=''):
         super().__init__(name, sources=[])
@@ -40,17 +51,19 @@ class BuildExt(build_ext):
     ]
 
     description = "Build the C++ extensions for karaboFAI"
-    user_options = build_ext.user_options.extend([
+    user_options = [
         ('with-tbb', None, 'build xtensor with intel TBB'),
         # https://quantstack.net/xsimd.html
         ('with-xsimd', None, 'build xtensor with XSIMD'),
-    ])
+        ('with-tests', None, 'build cpp unittests'),
+    ] + build_ext.user_options
 
     def initialize_options(self):
         super().initialize_options()
 
         self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '1'))
         self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '0'))
+        self.with_tests = strtobool(os.environ.get('FAI_WITH_TESTS', '0'))
 
     def run(self):
         try:
@@ -90,16 +103,24 @@ class BuildExt(build_ext):
         if self.with_xsimd:
             cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
 
+        if self.with_tests:
+            cmake_options.append('-DBUILD_FAI_TESTS=ON')
+
         build_options = ['--', '-j4']
 
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
 
-        os.chdir(self.build_temp)
-        self.spawn(['cmake', ext.source_dir] + cmake_options)
-        self.spawn(['cmake', '--build', '.'] + build_options)
+        with changed_cwd(self.build_temp):
+            # generate build files
+            print("-- Running cmake for karaboFAI")
+            self.spawn(['cmake', ext.source_dir] + cmake_options)
+            print("-- Finished cmake for karaboFAI")
 
-        print()  # add an empty line to improve output readability
+            # build
+            print("-- Running cmake --build for karaboFAI")
+            self.spawn(['cmake', '--build', '.'] + build_options)
+            print("-- Finished cmake --build for karaboFAI")
 
     def _move_file(self, filename):
         """Move file to the system folder."""
