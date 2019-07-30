@@ -174,6 +174,14 @@ class _Config(dict):
             "MODULE_SHAPE": [256, 256],
             "PIXEL_SIZE": 0.5e-3,
         },
+        "JungFrauPR": {
+            "REDIS_PORT": 6391,
+            "PULSE_RESOLVED": True,
+            "REQUIRE_GEOMETRY": False,
+            "NUMBER_OF_MODULES": 1,
+            "MODULE_SHAPE": [512, 1024],
+            "PIXEL_SIZE": 0.075e-3,
+        },
         "JungFrau": {
             "REDIS_PORT": 6380,
             "PULSE_RESOLVED": False,
@@ -299,6 +307,27 @@ class _Config(dict):
             "SAMPLE_DISTANCE": 0.4,
             "CENTER_Y": 620,
             "CENTER_X": 570,
+            "PHOTON_ENERGY": 9.3,
+        },
+        "JungFrauPR": {
+            "SERVER_ADDR": "10.253.0.53",
+            "SERVER_PORT": 4501,
+            # Source name from bridge not yet known.
+            "SOURCE_NAME_BRIDGE": [
+                "FXE_XAD_JF1M/DET/RECEIVER-1:display",
+                "FXE_XAD_JF1M/DET/RECEIVER-2:display",
+            ],
+            # Source name from files not yet known.
+            "SOURCE_NAME_FILE": [
+                "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
+                "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
+                "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
+                "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
+            ],
+            "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
+            "SAMPLE_DISTANCE": 2.0,
+            "CENTER_Y": 512,
+            "CENTER_X": 1400,
             "PHOTON_ENERGY": 9.3,
         },
         "JungFrau": {

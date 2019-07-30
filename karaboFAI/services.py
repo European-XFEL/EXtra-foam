@@ -247,6 +247,9 @@ def _parse_detector_name(detector):
     if detector == 'BASLERCAMERA':
         return 'BaslerCamera'
 
+    if detector == 'JUNGFRAUPR':
+        return 'JungFrauPR'
+
     return detector.upper()
 
 
