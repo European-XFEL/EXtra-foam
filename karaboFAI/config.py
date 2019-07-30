@@ -175,10 +175,10 @@ class _Config(dict):
             "PIXEL_SIZE": 0.5e-3,
         },
         "JungFrauPR": {
-            "REDIS_PORT": 6391,
+            "REDIS_PORT": 6383,
             "PULSE_RESOLVED": True,
             "REQUIRE_GEOMETRY": False,
-            "NUMBER_OF_MODULES": 1,
+            "NUMBER_OF_MODULES": 2,
             "MODULE_SHAPE": [512, 1024],
             "PIXEL_SIZE": 0.075e-3,
         },
@@ -314,15 +314,15 @@ class _Config(dict):
             "SERVER_PORT": 4501,
             # Source name from bridge not yet known.
             "SOURCE_NAME_BRIDGE": [
-                "FXE_XAD_JF1M/DET/RECEIVER-1:display",
-                "FXE_XAD_JF1M/DET/RECEIVER-2:display",
+                "FXE_XAD_JF1M/CAL/APPEND",
+                "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
+                "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
+                "FXE_XAD_JF500K/DET/RECEIVER:display",
             ],
             # Source name from files not yet known.
             "SOURCE_NAME_FILE": [
                 "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
                 "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
-                "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
-                "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "SAMPLE_DISTANCE": 2.0,
