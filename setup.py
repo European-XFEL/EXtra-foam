@@ -62,7 +62,7 @@ class BuildExt(build_ext):
         super().initialize_options()
 
         self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '1'))
-        self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '0'))
+        self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '1'))
         self.with_tests = strtobool(os.environ.get('FAI_WITH_TESTS', '0'))
 
     def run(self):
@@ -101,7 +101,7 @@ class BuildExt(build_ext):
             cmake_options.append('-DFAI_WITH_TBB=ON')
 
         if self.with_xsimd:
-            cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
+            cmake_options.append('-DFAI_WITH_XSIMD=ON')
 
         if self.with_tests:
             cmake_options.append('-DBUILD_FAI_TESTS=ON')

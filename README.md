@@ -35,7 +35,7 @@ $ cd karaboFAI
 
 # optional
 $ export FAI_WITH_TBB=0  # turn off TBB
-$ export FAI_WITH_XSIMD=1
+$ export FAI_WITH_XSIMD=0  # turn off XSIMD
 
 # Note: This step is also required if one wants to change the above 
 #       environmental parameters.

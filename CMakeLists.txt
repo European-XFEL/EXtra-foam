@@ -47,8 +47,12 @@ add_subdirectory(thirdparty/xtl)
 set(xtl_DIR ${PROJECT_BINARY_DIR}/thirdparty/xtl)
 
 # xsimd
-add_subdirectory(thirdparty/xsimd)
-set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
+if(FAI_WITH_XSIMD)
+    add_subdirectory(thirdparty/xsimd)
+    set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
+    find_package(xsimd 7.2 REQUIRED)
+    set(XTENSOR_USE_XSIMD ON CACHE BOOL "Build XTENSOR with XSIMD")
+endif()
 
 # xtensor
 add_subdirectory(thirdparty/xtensor)

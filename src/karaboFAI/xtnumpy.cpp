@@ -3,7 +3,7 @@
  * integration of different data acquired with various detectors at
  * European XFEL.
  *
- * Numpy funcionalities implemented in xtensor.
+ * Numpy functions implemented in xtensor.
  *
  * Author: Jun Zhu <jun.zhu@xfel.eu>
  * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
