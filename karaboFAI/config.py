@@ -278,11 +278,10 @@ class _Config(dict):
             #                    [-278.0, -275.0]],
             # For lpd_mar18_axesfixed.h5 and LPD_1MGeometry in karabo_data
             # The geometry uses XFEL standard coordinate directions.
-            "QUAD_POSITIONS": [(11.4, 299),
-                               (-11.5, 8),
-                               (254.5, -16),
-                               (278.5, 275)],
-
+            "QUAD_POSITIONS": [[11.4, 299],
+                               [-11.5, 8],
+                               [254.5, -16],
+                               [278.5, 275]],
             "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
@@ -396,6 +395,7 @@ class _Config(dict):
         self.__setitem__("DETECTOR", detector)
         # config (self) does not have a detector hierarchy!
         self.update(self._detector_readonly_config[detector])
+        self.update(self._detector_reconfigurable_config[detector])
         self.from_file(detector)
 
     def from_file(self, detector):
@@ -416,7 +416,22 @@ class _Config(dict):
                 invalid_keys.append(key)
 
         # check detector configuration
-        # FIXME: what if the detector config does not exist
+        if detector not in config_from_file:
+            msg = f"\nThe detector config cannot be found in the config " \
+                  f"file:\n\n{self._filename}.\n\nThis could be caused by a " \
+                  f"version update.\nCreate a new config file? The default " \
+                  f"config will be used otherwise."
+
+            if query_yes_no(msg):
+                self._generate_new_config_file()
+                with open(self._filename, 'r') as fp:
+                    config_from_file = json.load(fp)
+
+            # Whether the new config file is generated or not, the default
+            # configuration has already been applied.
+            return
+
+        # validate keys in config file
         for key in config_from_file[detector]:
             if key not in self._detector_reconfigurable_config['DEFAULT']:
                 invalid_keys.append(f"{detector}.{key}")
@@ -431,18 +446,11 @@ class _Config(dict):
                 raise ValueError(
                     f"Invalid config keys: {', '.join(invalid_keys)}")
 
-            backup_file = self._filename + ".bak"
-            if not osp.exists(backup_file):
-                shutil.move(self._filename, backup_file)
-            else:
-                # up to two backup files
-                shutil.move(backup_file, backup_file + '.bak')
-                shutil.move(self._filename, backup_file)
+            self._generate_new_config_file()
 
-            # generate a new config file
-            self.ensure_file()
-            with open(self._filename, 'r') as fp:
-                config_from_file = json.load(fp)
+            # We use the default configuration and there is no need to read
+            # the newly generated config file.
+            return
 
         # update system configuration
         for key in self._system_reconfigurable_config:
@@ -450,7 +458,20 @@ class _Config(dict):
                 self.__setitem__(key, config_from_file[key])
 
         # update detector configuration
-        self.update(config_from_file[detector])
+        if detector in config_from_file:
+            self.update(config_from_file[detector])
+
+    def _generate_new_config_file(self):
+        backup_file = self._filename + ".bak"
+        if not osp.exists(backup_file):
+            shutil.move(self._filename, backup_file)
+        else:
+            # up to two backup files
+            shutil.move(backup_file, backup_file + '.bak')
+            shutil.move(self._filename, backup_file)
+
+        # generate a new config file
+        self.ensure_file()
 
 
 class ConfigWrapper(collections.Mapping):

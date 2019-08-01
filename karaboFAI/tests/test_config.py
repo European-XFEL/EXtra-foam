@@ -50,6 +50,9 @@ class TestLaserOnOffWindow(unittest.TestCase):
                 set(cfg[det].keys()),
                 set(_Config._detector_reconfigurable_config['DEFAULT'].keys()))
 
+            for key, value in _Config._detector_reconfigurable_config[det].items():
+                self.assertEqual(value, cfg[det][key])
+
     def testLoadLPD(self):
         cfg = self._cfg
 
@@ -150,3 +153,31 @@ class TestLaserOnOffWindow(unittest.TestCase):
         with mock.patch('builtins.input', return_value='n'):
             with self.assertRaisesRegex(ValueError, 'LPD.UNKNOWN, LPD.TIMEOUT'):
                 self._cfg.load(detector)
+
+    def testInvalidDetectors(self):
+        # detector config is missing in config
+        with open(_Config._filename, 'r') as fp:
+            cfg = json.load(fp)
+
+        det = "LPD"
+
+        del cfg[det]
+        with open(_Config._filename, 'w') as fp:
+            json.dump(cfg, fp, indent=4)
+
+        with mock.patch('builtins.input', return_value='n'):
+            # nothing will happen since the default configuration will be used
+            self._cfg.load(det)
+            self.assertFalse(osp.exists(_Config._filename + '.bak'))
+            # check the current config
+            self.assertEqual(_Config._detector_reconfigurable_config[det]['GEOMETRY_FILE'],
+                             self._cfg['GEOMETRY_FILE'])
+
+        with mock.patch('builtins.input', return_value='y'):
+            self._cfg.load(det)
+            # check the backup file has been generated
+            self.assertTrue(osp.exists(_Config._filename + '.bak'))
+            with open(_Config._filename, 'r') as fp:
+                cfg = json.load(fp)
+                # test the detector config is in the new config file
+                self.assertTrue(det in cfg)
