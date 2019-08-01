@@ -94,6 +94,8 @@ class TestLpdAssembler(unittest.TestCase):
                 {key_name: np.ones((4, 256, 256))},
         }}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape
@@ -124,6 +126,8 @@ class TestLpdAssembler(unittest.TestCase):
         # (modules, x, y, memory cells)
         data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape
@@ -146,6 +150,8 @@ class TestJungfrauAssembler(unittest.TestCase):
 
         data = {'raw': {src_name: {key_name: np.ones((1, 512, 1024))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((1, 100, 100))}}}
@@ -164,6 +170,8 @@ class TestJungfrauAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}}}
@@ -188,6 +196,8 @@ class TestFastccdAssembler(unittest.TestCase):
 
         data = {'raw': {src_name: {key_name: np.ones((1934, 960))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100))}}}
@@ -202,6 +212,8 @@ class TestFastccdAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1934, 960, 1))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}}}
@@ -221,6 +233,8 @@ class TestBaslerCameraAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1024, 1024))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
 
 class TestDSSCAssembler(unittest.TestCase):
@@ -253,6 +267,8 @@ class TestDSSCAssembler(unittest.TestCase):
                 {key_name: np.ones((4, 128, 512))},
         }}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape
@@ -283,6 +299,8 @@ class TestDSSCAssembler(unittest.TestCase):
         # (modules, x, y, memory cells)
         data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4))}}}
         self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
 
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape

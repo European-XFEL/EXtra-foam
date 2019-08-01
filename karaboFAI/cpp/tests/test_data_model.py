@@ -3,8 +3,7 @@ import time
 
 import numpy as np
 
-from karaboFAI.pipeline.processors.image_processor import \
-    RawImageData as RawImageDataPy
+from karaboFAI.pipeline.data_model import RawImageData as RawImageDataPy
 
 from karaboFAI.cpp import (
     RawImageDataFloat, RawImageDataDouble,

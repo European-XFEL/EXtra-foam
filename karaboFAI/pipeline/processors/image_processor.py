@@ -40,6 +40,9 @@ class ImageProcessorPulse(_BaseProcessor):
         _poi_indices (list): indices of POI pulses.
         _image_mask (numpy.ndarray): image mask array (dtype=np.bool).
     """
+
+    # TODO: in the future, the data should be store at a shared
+    #       memory space.
     _raw_data = RawImageData()
 
     def __init__(self):

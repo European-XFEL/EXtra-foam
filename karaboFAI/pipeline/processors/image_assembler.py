@@ -10,6 +10,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
+import re
 
 import json
 import numpy as np
@@ -71,6 +72,17 @@ class ImageAssemblerFactory(ABC):
             """Get modules data from file."""
             pass
 
+        def _clear_det_data(self, data, src_name):
+            """Delete detector related data from the raw data."""
+            try:
+                del data[src_name]
+            except KeyError:
+                # stream multi-module detector data from files
+                devices = [dev for dev in data.keys()]
+                for device in devices:
+                    if re.search(r'/DET/(\d+)CH', device):
+                        del data[device]
+
         def load_geometry(self, filepath, quad_positions):
             """Load geometry from file.
 
@@ -111,6 +123,8 @@ class ImageAssemblerFactory(ABC):
                     modules_data = self._get_modules_bridge(raw, src_name)
                 else:
                     raise ValueError(f"Unknown source type: {src_type}")
+
+                self._clear_det_data(raw, src_name)
             except (ValueError, IndexError, KeyError) as e:
                 raise AssemblingError(e)
 
@@ -137,11 +151,10 @@ class ImageAssemblerFactory(ABC):
 
             image_dtype = config['IMAGE_DTYPE']
             if assembled.dtype != image_dtype:
-                # FIXME: dtype of the incoming data could be integer, but integer
-                #        array does not have nanmean.
+                # FIXME: in order to avoid the copy, it would need
+                #   position_modules_fast to allow select output data type.
                 assembled = assembled.astype(image_dtype)
-            # TODO: in the future, the data should be store at a shared
-            #       memory space.
+
             data['assembled'] = assembled
 
     class AgipdImageAssembler(BaseAssembler):
