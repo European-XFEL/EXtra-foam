@@ -162,14 +162,14 @@ class FileServer(Process):
         detector = \
             self._detector if self._detector is not None else config["DETECTOR"]
 
-        if detector in ["LPD", "FXE", "DSSC"]:
+        if detector in ["LPD", "AGIPD", "DSSC"]:
             fast_devices = [("*DET/*CH0:xtdf", "image.data")]
         elif detector == "JungFrau":
             fast_devices = [("*/DET/*:daqOutput", "data.adc")]
         elif detector == "FastCCD":
             fast_devices = [("*/DAQ/*:daqOutput", "data.image.pixels")]
         else:
-            fast_devices = None
+            raise NotImplementedError(f"Unknown Detector: {detector}")
 
         serve_files(self._folder, self._port, slow_devices=self._slow_devices,
                     fast_devices=fast_devices, require_all=True,
