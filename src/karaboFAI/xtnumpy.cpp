@@ -9,13 +9,17 @@
  * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
  * All rights reserved.
  */
+#include <iostream>
 
-#include <pybind11/pybind11.h>
+#include "pybind11/pybind11.h"
 
-#include "xtensor/xview.hpp"
-#include "xtensor/xarray.hpp"
+#if defined(FAI_WITH_TBB)
+#include "tbb/parallel_for.h"
+#include "tbb/blocked_range2d.h"
+#endif
+
 #include "xtensor/xmath.hpp"
-#include "xtensor/xreducer.hpp"
+#include "xtensor/xarray.hpp"
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pyvectorize.hpp"
 #include "xtensor-python/pyarray.hpp"
@@ -23,9 +27,43 @@
 
 
 template<typename T>
-inline xt::pyarray<T> nanmeanImages(const xt::pyarray<T>& arr) {
-  if (arr.shape().size() != 3)
-    throw std::invalid_argument("Input must be a three dimensional array!");
+inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr) {
+
+  auto shape = arr.shape();
+  auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
+    [&arr, &shape, &mean] (const tbb::blocked_range2d<int> &block) {
+      for(int j=block.rows().begin(); j != block.rows().end(); ++j){
+        for(int k=block.cols().begin(); k != block.cols().end(); ++k){
+#else
+  for (std::size_t j=0; j < shape[1]; ++j) {
+    for (std::size_t k=0; k < shape[2]; ++k) {
+#endif
+          T count = 0;
+          T sum = 0;
+          for (std::size_t i=0; i < shape[0]; ++i) {
+            auto v = arr(i, j, k);
+            if (! std::isnan(v)) {
+              count += T(1);
+              sum += v;
+            }
+          }
+          mean(j, k) = sum / count;
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+
+  return mean;
+}
+
+
+template<typename T>
+inline xt::pytensor<T, 2> nanmeanImagesOld(const xt::pytensor<T, 3>& arr) {
   return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
 }
 
@@ -60,6 +98,8 @@ PYBIND11_MODULE(xtnumpy, m) {
   // only works for float since np.nan is a float?
   m.def("xt_nanmean_images", &nanmeanImages<double>);
   m.def("xt_nanmean_images", &nanmeanImages<float>);
+  m.def("xt_nanmean_images_old", &nanmeanImagesOld<double>);
+  m.def("xt_nanmean_images_old", &nanmeanImagesOld<float>);
   m.def("xt_nanmean_two_images", xt::pyvectorize(nanmeanScalar<double>));
   m.def("xt_nanmean_two_images", xt::pyvectorize(nanmeanScalar<float>));
   m.def("xt_moving_average", &movingAverage<double>);

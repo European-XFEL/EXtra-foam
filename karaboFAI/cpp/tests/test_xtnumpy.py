@@ -4,13 +4,15 @@ import time
 import numpy as np
 
 from karaboFAI.cpp import (
-    xt_nanmean_images, xt_nanmean_two_images, xt_moving_average
+    xt_nanmean_images, xt_nanmean_two_images, xt_moving_average,
 )
-from karaboFAI.algorithms import nanmean_images
+from karaboFAI.algorithms import nanmean_images, mask_image
+
+from karaboFAI.cpp.xtnumpy import xt_nanmean_images_old
 
 
 class TestXtnumpy(unittest.TestCase):
-    def nanmean_images_compare_cpp_py(self, data_type):
+    def _nanmean_images_performance(self, data_type):
         data = np.ones((64, 1024, 1024), dtype=data_type)
         data[::2, ::2, ::2] = np.nan
 
@@ -19,21 +21,25 @@ class TestXtnumpy(unittest.TestCase):
         dt_cpp = time.perf_counter() - t0
 
         t0 = time.perf_counter()
+        ret_cpp = xt_nanmean_images_old(data)
+        dt_cpp_old = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
         ret_py = nanmean_images(data)
         dt_py = time.perf_counter() - t0
 
         print(f"nanmean_images with {data_type} - "
-              f"dt (cpp): {dt_cpp:.4f}, dt (numpy_para): {dt_py:.4f}")
+              f"dt (cpp): {dt_cpp:.4f}, dt (cpp) old: {dt_cpp_old:.4f}, dt (numpy_para): {dt_py:.4f}")
 
-    def nanmean_two_images_compare_cpp_py(self, data_type):
-        img = np.ones((1024, 1024), dtype=np.float32)
+    def _nanmean_two_images_performance(self, data_type):
+        img = np.ones((1024, 1024), dtype=data_type)
         img[::2, ::2] = np.nan
 
         t0 = time.perf_counter()
         ret_cpp = xt_nanmean_two_images(img, img)
         dt_cpp = time.perf_counter() - t0
 
-        imgs = np.ones((2, 1024, 1024), dtype=np.float32)
+        imgs = np.ones((2, 1024, 1024), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
@@ -65,8 +71,8 @@ class TestXtnumpy(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected, xt_nanmean_images(data))
 
         # test performance
-        self.nanmean_images_compare_cpp_py(np.float32)
-        self.nanmean_images_compare_cpp_py(np.float64)
+        self._nanmean_images_performance(np.float32)
+        self._nanmean_images_performance(np.float64)
 
     def testXtNanMeanTwoImages(self):
         # test nanmean
@@ -78,8 +84,8 @@ class TestXtnumpy(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected, xt_nanmean_two_images(img1, img2))
 
         # test performance
-        self.nanmean_two_images_compare_cpp_py(np.float32)
-        self.nanmean_two_images_compare_cpp_py(np.float64)
+        self._nanmean_two_images_performance(np.float32)
+        self._nanmean_two_images_performance(np.float64)
 
     def testMovingAverage(self):
         arr = np.ones(100, dtype=np.float32)

@@ -8,9 +8,13 @@ pybind11_add_module(xtnumpy xtnumpy.cpp)
 
 target_include_directories(xtnumpy
     PRIVATE
-        ${xtensor-python_INCLUDE_DIRS})
+        ${xtensor-python_INCLUDE_DIRS}
+        ${TBB_INCLUDE_DIRS})
 
-target_link_libraries(xtnumpy PRIVATE xtensor-python)
+target_link_libraries(xtnumpy
+    PRIVATE
+        xtensor-python
+        ${TBB_LIBRARIES})
 
 # image data
 

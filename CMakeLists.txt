@@ -20,6 +20,8 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 if(FAI_WITH_TBB)
+    add_definitions(-DFAI_WITH_TBB)
+
     # TODO: try to find TBB in the system first?
     set(tbb_root_dir ${PROJECT_SOURCE_DIR}/thirdparty/tbb)
 
