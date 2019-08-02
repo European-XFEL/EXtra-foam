@@ -170,11 +170,13 @@ Steps to follow in case you are facing issues operating **karaboFAI**
      Note: you are not able to kill other users' instances!
      Send SIGKILL? (y/n)
 
-  It is better to select *n* (NO) and proceed since you cannnot kill other users
-  instance. But be aware that, if the other **karaboFAI** instance is also running
-  with the same detector argument then this may cause an undefined behavior in the
-  analysis since change of analysis parameters by one user will be reflected in
-  your instance too.
+  It is safe and encourage to select *y* since you cannot kill other users instance and
+  it helps you to kill zombie processes of **karaboFAI**. However, there is a known bug
+  that if you have another instance with a different detector running, selecting *y* will kill
+  that instance which indeed has no conflict with the new instance. But be aware that,
+  if the other **karaboFAI** instance is also running with the same detector argument
+  then this may cause an undefined behavior in the analysis since change of analysis
+  parameters by one user will be reflected in your instance too.
 
   **karaboFAI** receive data from the **karabo bridge** (*PipeToZeroMQ*) device
   and therefore running multiple instances may lead to data loss.
