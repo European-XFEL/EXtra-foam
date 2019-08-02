@@ -1,30 +1,41 @@
-Data Analysis with karaboFAI
-============================
+GETTING STARTED
+===============
 
 
-To start **karaboFAI** on online or `Maxwell` clusters:
+Choose the correct version
+--------------------------
+
+**karaboFAI** can be started on both online and `Maxwell` clusters. Currently, there
+are two versions of **karaboFAI** deployed. Please always consult your contact person
+if you are not sure which version to use.
+
+
+I. Stable version
++++++++++++++++++
+
+This is the latest version which has been successfully used in at least one
+commissioning shift or user experiment.
+
+To start the **stable** version on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    # stable version
     module load exfel exfel_anaconda3
     karaboFAI DETECTOR_NAME
 
-Valid detectors are `AGIPD`, `LPD`, `JungFrau` and `FastCCD`.
-
-You are also encouraged to try the latest version (more features). However, the
-latest version is **not** supported by OCD.
-
-.. code-block:: bash
-
-    # latest version
-    module load exfel exfel_anaconda3/beta
-    karaboFAI DETECTOR_NAME
+.. note::
+    The installation is temporary removed since there is conflict in config files between
+    the latest deployed 0.5.0 and previous version. Please check the **Pre-release version**
+    instead.
 
 .. note::
-    It usually takes some time to start **karaboFAI** for the first time! This
+    It usually takes a few minutes to start **karaboFAI** for the first time! This
     is actually an issue related to the infrastructure and not because
     **karaboFAI** is slow.
+
+.. note::
+    If you are connecting to the online or `Maxwell` clusters via SSH, you will need
+    to enable X11 forwarding by including the -X option.
 
 .. note::
     In order to have a better experience with **karaboFAI** on the `Maxwell` cluster,
@@ -36,17 +47,30 @@ latest version is **not** supported by OCD.
 .. _max-display: https://max-display.desy.de:3443/
 
 
+II. Pre-release version
++++++++++++++++++++++++
+
+This is the release candidate which has passed our unittest and integration test, but is
+still being tested by beamline scientists. This version usually contains (much) more
+features than the **stable** version. Normally, the **pre-release** version should be as
+stable as the **stable** version.
+
+.. code-block:: bash
+
+    module load exfel exfel_anaconda3/beta
+    karaboFAI DETECTOR_NAME
+
+
 Data analysis in real time
 --------------------------
 
+For real-time data analysis, the (calibrated) data is streamed via a `ZMQ bridge`, which is
+a `Karabo` device (`PipeToZeroMQ`) running inside the control network. Normally, the user
+should not need to modify ``Hostname``, ``Port`` and ``Detector source name`` in the
+``Data source`` panel.
 
-For real-time data analysis, the (calibrated) data is streamed via a
-`ZMQ bridge`, which is a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
-Normally, the user should not modify ``Hostname``, ``Port`` and ``Source`` in
-the ``Data source`` panel.
-
-.. image:: images/data_source_real_time.png
-   :width: 300
+.. image:: images/data_source_from_bridge.png
+   :width: 500
 
 .. list-table:: Suggested online clusters
    :header-rows: 1
@@ -67,20 +91,34 @@ the ``Data source`` panel.
    * - SQS
      - sa1-br-kc-comp-3
      - exflonc15
+   * - MID
+     - ...
+     - ...
+   * - HED
+     - ...
+     - ...
 
 Data analysis with files
 ------------------------
 
-**karaboFAI** can be used to replay the experiment with files.
+**karaboFAI** can be used to replay experiments with files. Click on the
+*Offline* window on the tool bar that opens the following window.
 
+.. image:: images/file_stream_control.png
 
-The data is streamed from files after the ``Serve`` button is clicked. The user
-is free to use any available ``port``. ``Hostname`` should be `localhost` and
-the user needs to specify the full path of the directory which contains the
-(calibrated) files.
+The run folder is browsed through the ``Load Run Folder`` button. The corrected image
+data will be streamed from the run folder. If the run folder has path structure
+as on `Maxwell GPFS` (/gpfs/exfel/exp/instrument/cycle/proposal/proc/runnumber) then once
+the run folder is loaded, all the  slow/control sources available in the
+corresponding *raw* folder (or same data folder if no corresponding raw
+folder is found) are listed. Users can then choose slow data sources to stream
+along with the fast image data.
+
+The data is streamed from files after the ``Stream files`` button is clicked. The user
+is free to use any available ``port``. ``Hostname`` should be `localhost`.
 
 .. image:: images/data_source_from_file.png
-   :width: 300
+   :width: 500
 
 .. list-table:: Example files
    :header-rows: 1
@@ -93,6 +131,102 @@ the user needs to specify the full path of the directory which contains the
    * - LPD
      - /gpfs/exfel/exp/FXE/201701/p002026/proc/r0078
    * - JungFrau
-     - /gpfs/exfel/exp/FXE/201801/p002118/proc/r0143
+     - /gpfs/exfel/exp/FXE/201930/p900063/proc/r1051
    * - FastCCD
      - /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141
+   * - DSSC
+     - /gpfs/exfel/exp/SCS/
+
+
+Trouble Shooting
+-----------------
+
+Steps to follow in case you are facing issues operating **karaboFAI**
+
+- While trying to run **karaboFAI** remotely on the online cluster (exflonc12, etc), if you
+  end up with error messages similar to,
+
+  .. code-block:: console
+
+     qt.qpa.xcb: could not connect to display
+     qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+     This application failed to start because no Qt platform plugin could be initialized.
+     Reinstalling the application may fix this problem.
+
+  please make sure that you have done X11 forwarding while logging to the online cluster.
+  Using **karaboFAI** on Maxwell cluster, it is better to use FastX2_ at max-display_ as
+  explained in previous section.
+
+- If you are prompted to warnings like,
+
+  .. code-block:: console
+
+     [user@exflonc12 ~]$ karaboFAI JUNGFRAU
+
+     Warning: Found old karaboFAI instance(s) running in this machine!!!
+     Running more than two karaboFAI instances with the same
+     detector can result in undefined behavior. You can try to
+     kill the other instances if it is owned by you.
+     Note: you are not able to kill other users' instances!
+     Send SIGKILL? (y/n)
+
+  It is safe and encourage to select *y* since you cannot kill other users instance and
+  it helps you to kill zombie processes of **karaboFAI**. However, there is a known bug
+  that if you have another instance with a different detector running, selecting *y* will kill
+  that instance which indeed has no conflict with the new instance. But be aware that,
+  if the other **karaboFAI** instance is also running with the same detector argument
+  then this may cause an undefined behavior in the analysis since change of analysis
+  parameters by one user will be reflected in your instance too.
+
+  **karaboFAI** receive data from the **karabo bridge** (*PipeToZeroMQ*) device
+  and therefore running multiple instances may lead to data loss.
+
+ .. note:: 
+
+   It is therefore recommended not to run multiple instances of
+   **karaboFAI** for the same detector argument on the same online cluster
+
+- If you are prompted to warning like,
+
+  .. code-block:: console
+
+     The following invalid keys were found in /home/user/.karaboFAI/config.json:
+
+     LPD.GEOMETRY_FIL1.
+
+     This could be caused by a version update.
+     Create a new config file? (y/n)
+
+  This warning is triggered when the local config file `/home/user/.karaboFAI/config.json` 
+  was either created by an old version of **karaboFAI** or some keys name were manually
+  changed by the user by mistake like in the above warning "GEOMETRY_FILE" key that 
+  is expected by karaboFAI was manually changed to "GEOMETRY_FIL1" by the user in their
+  local config file.
+
+ .. note::
+
+    It is recommended to say **y** (YES) and proceed and a new local config file will
+    be generated by **karaboFAI** which user can edit later for convenience.
+
+- If **karaboFAI** opens up fine and running it by clicking on *start* button does
+  nothing, please make sure that relevant **PipeToZeroMQ** device is properly
+  configured, activated and its *data sent* property is updating. This device
+  can be configured only with the help of experts (CAS support and beamline scientists).
+
+- While performing correlation or binning analysis in **karaboFAI**, if you are
+  prompted to error messages like,
+
+  .. code-block:: console
+
+     ERROR - ProcessingError("[Correlation] Device 'FXE_SMS_USR/MOTOR/UM02' is not in the data!",)
+
+  This can happen due to several reasons for.eg. Relevant **Data Correlator** (*DataCorrelator*)
+  device is not running, or the slow source was not added to the **Data Correlator**
+  device or **karaboFAI** is not listening to the correct port where the **karabo bridge**
+  is sending the correlated data. 
+
+ .. note::
+
+    The entire data analysis workflow with relevant hostnames and ports are provided in the instrument support
+    `documentation <https://in.xfel.eu/readthedocs/docs/fxe-instrument-control-infrastructure/en/latest/fxe_dataanalysis_toolbox.html>`__
+
