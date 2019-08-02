@@ -6,8 +6,8 @@ import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xt_moving_average,
+    maskImage, maskTrainImages
 )
-from karaboFAI.algorithms import mask_image
 
 
 def nanmean_images_para(data, *, chunk_size=10, max_workers=4):
@@ -188,3 +188,84 @@ class TestXtnumpy(unittest.TestCase):
         ma = xt_moving_average(ma, data, 2)
 
         np.testing.assert_array_equal(2 * arr, ma)
+
+    def testMaskImage(self):
+        # test invalid input
+        with self.assertRaises(TypeError):
+            maskImage()
+
+        # test incorrect shape
+        with self.assertRaises(RuntimeError):
+            maskImage(np.ones((2, 2, 2)), 1, 2)
+        with self.assertRaises(RuntimeError):
+            maskImage(np.ones(2), 1, 2)
+
+        # ------------
+        # single image
+        # ------------
+
+        # threshold mask
+        img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
+        img = maskImage(img, 2, 3)
+        np.testing.assert_array_equal(
+            np.array([[0, 2, 3], [3, 0, 0]], dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        img = maskImage(img, img_mask)
+        np.testing.assert_array_equal(
+            np.array([[0, 0, 3], [0, 4, 0]], dtype=np.float32), img)
+
+        # ------------
+        # train images
+        # ------------
+
+        # threshold mask
+        img = np.array([[[1, 2, 3], [3, 4, 5]],
+                        [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
+        img = maskTrainImages(img, 2, 3)
+        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, 0, 0]],
+                                                [[0, 2, 3], [3, 0, 0]]],
+                                               dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[[1, 2, 3], [3, 4, 5]],
+                        [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        img = maskTrainImages(img, img_mask)
+        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 4, 0]],
+                                                [[0, 0, 3], [0, 4, 0]]],
+                                               dtype=np.float32), img)
+
+    def _mask_image_performance(self, data_type):
+        # mask by threshold
+        data = np.ones((64, 1024, 512), dtype=data_type)
+
+        t0 = time.perf_counter()
+        maskTrainImages(data, 1, 2)
+        dt_cpp_th = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        data[(data > 2) | (data < 1)] = 0
+        dt_py_th = time.perf_counter() - t0
+
+        # mask by image
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        mask = np.ones((1024, 512), dtype=np.bool)
+
+        t0 = time.perf_counter()
+        maskTrainImages(data, mask)
+        dt_cpp = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        data[:, mask] = 0
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nMask image with {data_type} - "
+              f"dt (cpp) threshold: {dt_cpp_th:.4f}, dt (numpy) threshold: {dt_py_th:.4f}, "
+              f"dt (cpp) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
+
+    def testMaskImagePerformance(self):
+        self._mask_image_performance(np.float32)
+        self._mask_image_performance(np.float64)

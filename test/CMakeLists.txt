@@ -38,6 +38,7 @@ find_package(Threads REQUIRED)
 add_executable(run_test
     main.cpp
     test_tbb.cpp
+    test_xtnumpy.cpp
 )
 
 target_include_directories(run_test

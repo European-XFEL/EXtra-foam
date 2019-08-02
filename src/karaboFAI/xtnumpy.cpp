@@ -3,7 +3,7 @@
  * integration of different data acquired with various detectors at
  * European XFEL.
  *
- * Numpy functions implemented in C++ (xtensor-python).
+ * Numpy functions implemented in C++.
  *
  * Author: Jun Zhu <jun.zhu@xfel.eu>
  * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -25,6 +25,10 @@
 #include "xtensor-python/pyarray.hpp"
 #include "xtensor-python/pytensor.hpp"
 
+#include "../image_proc.hpp"
+
+
+namespace fai {
 
 namespace detail {
   template<typename T>
@@ -108,7 +112,14 @@ namespace detail {
 
     return mean;
   }
+
 } // detail
+
+template<typename T, std::size_t N, xt::layout_type L>
+struct is_tensor<xt::pytensor<T, N, L>> : std::true_type {};
+
+template<typename T, xt::layout_type L>
+struct is_array<xt::pyarray<T, L>> : std::true_type {};
 
 /**
  * Calculate the nanmean of the selected images from an array of images.
@@ -118,7 +129,8 @@ namespace detail {
  * @return: the nanmean image. shape = (y, x)
  */
 template<typename T>
-inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr, const std::vector<size_t>& keep) {
+inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr,
+                                        const std::vector<size_t>& keep) {
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
   return detail::nanmeanImagesImp(arr, keep);
 }
@@ -140,7 +152,8 @@ inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr) {
 template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 2>& img1,
                                         const xt::pytensor<T, 2>& img2) {
-  if (img1.shape() != img2.shape()) throw std::invalid_argument("Images have different shapes!");
+  if (img1.shape() != img2.shape())
+    throw std::invalid_argument("Images have different shapes!");
   return detail::nanmeanTwoImagesImp(img1, img2);
 }
 
@@ -156,10 +169,12 @@ inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr) {
 }
 
 template<typename T>
-inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma, xt::pyarray<T>& data, size_t count) {
+inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma,
+                                    xt::pyarray<T>& data, size_t count) {
   return ma + (data - ma) / T(count);
 }
 
+} // fai
 
 namespace py = pybind11;
 
@@ -167,6 +182,8 @@ namespace py = pybind11;
 PYBIND11_MODULE(xtnumpy, m) {
 
   xt::import_numpy();
+
+  using namespace fai;
 
   m.doc() = "Calculate the mean of images, ignoring NaNs.";
 
@@ -181,7 +198,7 @@ PYBIND11_MODULE(xtnumpy, m) {
   m.def("nanmeanImages",
     (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&, const std::vector<size_t>&))
     &nanmeanImages<float>);
-  // the following overload fails because:
+  // FIXME: nanmeanTwoImages -> nanmeanImage when the following bug gets fixed
   // https://github.com/QuantStack/xtensor-python/issues/178
   m.def("nanmeanTwoImages",
     (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
@@ -192,7 +209,25 @@ PYBIND11_MODULE(xtnumpy, m) {
 
   m.def("xtNanmeanImages", &xtNanmeanImages<double>);
   m.def("xtNanmeanImages", &xtNanmeanImages<float>);
-
+  
   m.def("xt_moving_average", &movingAverage<double>);
   m.def("xt_moving_average", &movingAverage<float>);
+
+  m.def("maskImage", (xt::pytensor<double, 2> (*)(xt::pytensor<double, 2>&, double, double))
+                     &maskImage<double, xt::pytensor<double, 2>>);
+  m.def("maskImage", (xt::pytensor<float, 2> (*)(xt::pytensor<float, 2>&, float, float))
+                     &maskImage<float, xt::pytensor<float, 2>>);
+  m.def("maskImage", (xt::pytensor<double, 2> (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
+                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>);
+  m.def("maskImage", (xt::pytensor<float, 2> (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
+                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>);
+
+  m.def("maskTrainImages", (xt::pytensor<double, 3> (*)(xt::pytensor<double, 3>&, double, double))
+                           &maskTrainImages<double, xt::pytensor<double, 3>>);
+  m.def("maskTrainImages", (xt::pytensor<float, 3> (*)(xt::pytensor<float, 3>&, float, float))
+                           &maskTrainImages<float, xt::pytensor<float, 3>>);
+  m.def("maskTrainImages", (xt::pytensor<double, 3> (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
+                           &maskTrainImages<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>);
+  m.def("maskTrainImages", (xt::pytensor<float, 3> (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
+                           &maskTrainImages<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>);
 }
