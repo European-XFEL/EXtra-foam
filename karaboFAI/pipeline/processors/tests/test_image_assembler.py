@@ -252,19 +252,19 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler = ImageAssemblerFactory.create("DSSC")
         self._assembler.load_geometry(self._geom_file, self._quad_positions)
 
-    def testAssembleFile(self):
+    def testAssembleFileCal(self):
         self._assembler._source_type = DataSource.FILE
         key_name = 'image.data'
 
         data = {'raw': {
             'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
-                {key_name: np.ones((4, 128, 512))},
+                {key_name: np.ones((4, 128, 512), dtype=np.float32)},
             'SCS_DET_DSSC1M-1/DET/7CH0:xtdf':
-                {key_name: np.ones((4, 128, 512))},
+                {key_name: np.ones((4, 128, 512), dtype=np.float32)},
             'SCS_DET_DSSC1M-1/DET/8CH0:xtdf':
-                {key_name: np.ones((4, 128, 512))},
+                {key_name: np.ones((4, 128, 512), dtype=np.float32)},
             'SCS_DET_DSSC1M-1/DET/3CH0:xtdf':
-                {key_name: np.ones((4, 128, 512))},
+                {key_name: np.ones((4, 128, 512), dtype=np.float32)},
         }}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -275,6 +275,38 @@ class TestDSSCAssembler(unittest.TestCase):
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
+
+    def testAssembleFileRaw(self):
+        self._assembler._source_type = DataSource.FILE
+        key_name = 'image.data'
+
+        data = {'raw': {
+            'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
+                {key_name: np.ones((4, 1, 128, 512), dtype=np.uint16)},
+        }}
+        self._assembler.process(data)
+        self.assertFalse(bool(data['raw']))
+
+        self.assertEqual(3, data['assembled'].ndim)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(4, assembled_shape[0])
+        self.assertGreater(assembled_shape[1], 1024)
+        self.assertGreater(assembled_shape[2], 1024)
+
+        # test invalid data type
+        data = {'raw': {
+            'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
+                {key_name: np.ones((4, 1, 128, 512), dtype=np.float64)},
+        }}
+        with self.assertRaises(AssemblingError):
+            self._assembler.process(data)
+
+        data = {'raw': {
+            'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
+                {key_name: np.ones((4, 1, 128, 512), dtype=np.int64)},
+        }}
+        with self.assertRaises(AssemblingError):
+            self._assembler.process(data)
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
                                "MODULE_SHAPE": [128, 512]})

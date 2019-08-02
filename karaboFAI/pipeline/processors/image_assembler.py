@@ -246,13 +246,21 @@ class ImageAssemblerFactory(ABC):
         @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
-            # (memory cells, modules, y, x)
             modules_data = stack_detector_data(data, "image.data")
-            # ndim = len(modules_data.shape)
-            # Raw files contain (memory cell, 1 , modules, y, x)
-            # if ndim == 5:
-            #     modules_data = np.squeeze(modules_data, axis=1)
-            return modules_data
+
+            dtype = modules_data.dtype
+
+            # calibrated data
+            if dtype == np.float32:
+                # (memory cells, modules, y, x)
+                return modules_data
+
+            # raw data
+            if dtype == np.uint16:
+                # (memory cell, 1, modules, y, x) -> (memory cells, modules, y, x)
+                return np.squeeze(modules_data, axis=1)
+
+            raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
