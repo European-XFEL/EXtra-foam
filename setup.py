@@ -52,9 +52,11 @@ class BuildExt(build_ext):
 
     description = "Build the C++ extensions for karaboFAI"
     user_options = [
-        ('with-tbb', None, 'build xtensor with intel TBB'),
+        ('with-tbb', None, 'build with intel TBB'),
+        ('xtensor-with-tbb', None, 'build xtensor with intel TBB'),
         # https://quantstack.net/xsimd.html
-        ('with-xsimd', None, 'build xtensor with XSIMD'),
+        ('with-xsimd', None, 'build with XSIMD'),
+        ('xtensor-with-xsimd', None, 'build xtensor with XSIMD'),
         ('with-tests', None, 'build cpp unittests'),
     ] + build_ext.user_options
 
@@ -62,7 +64,9 @@ class BuildExt(build_ext):
         super().initialize_options()
 
         self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '1'))
+        self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
         self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '1'))
+        self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
         self.with_tests = strtobool(os.environ.get('FAI_WITH_TESTS', '0'))
 
     def run(self):
@@ -99,12 +103,31 @@ class BuildExt(build_ext):
 
         if self.with_tbb:
             cmake_options.append('-DFAI_WITH_TBB=ON')
+        else:
+            # necessary to switch from ON to OFF
+            cmake_options.append('-DFAI_WITH_TBB=OFF')
+
+        if self.xtensor_with_tbb:
+            # cmake option in thirdparty/xtensor
+            cmake_options.append('-DXTENSOR_USE_TBB=ON')
+        else:
+            cmake_options.append('-DXTENSOR_USE_TBB=OFF')
 
         if self.with_xsimd:
             cmake_options.append('-DFAI_WITH_XSIMD=ON')
+        else:
+            cmake_options.append('-DFAI_WITH_XSIMD=OFF')
+
+        if self.xtensor_with_xsimd:
+            # cmake option in thirdparty/xtensor
+            cmake_options.append('-DXTENSOR_USE_XSIMD=ON')
+        else:
+            cmake_options.append('-DXTENSOR_USE_XSIMD=OFF')
 
         if self.with_tests:
             cmake_options.append('-DBUILD_FAI_TESTS=ON')
+        else:
+            cmake_options.append('-DBUILD_FAI_TESTS=OFF')
 
         build_options = ['--', '-j4']
 

@@ -19,10 +19,14 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-if(FAI_WITH_TBB)
-    add_definitions(-DFAI_WITH_TBB)
+OPTION(FAI_WITH_TBB "Build karaboFAI (xtensor is not included) with intel TBB" ON)
 
-    # TODO: try to find TBB in the system first?
+OPTION(FAI_WITH_XSIMD "Build karaboFAI (xtensor is not included) with XSIMD" ON)
+
+OPTION(BUILD_FAI_TESTS "Build c++ unit test" OFF)
+
+# tbb
+if(FAI_WITH_TBB OR XTENSOR_USE_TBB)
     set(tbb_root_dir ${PROJECT_SOURCE_DIR}/thirdparty/tbb)
 
     include(${tbb_root_dir}/cmake/TBBBuild.cmake)
@@ -32,49 +36,57 @@ if(FAI_WITH_TBB)
                   tbb_build_prefix=tbb_cmake_build)
 
     find_package(TBB REQUIRED tbb tbbmalloc)
+    # TBB_FOUND will silence xtensor/cmake/FindTBB.cmake, which does not work here
     get_target_property(TBB_INCLUDE_DIRS TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
     get_target_property(TBB_LIBRARIES TBB::tbb IMPORTED_LOCATION_RELEASE)
 
-    message(STATUS "FOUND TBB: ${TBB_VERSION}, ${TBB_LIBRARIES}")
+    message(STATUS "Found TBB: ${TBB_VERSION}, ${TBB_LIBRARIES}")
 
-    set(XTENSOR_USE_TBB ON CACHE BOOL "Build XTENSOR with TBB")
+    if(FAI_WITH_TBB)
+        message(STATUS "Build karaboFAI with intel TBB")
+
+        if(${CMAKE_VERSION} VERSION_LESS 3.13)
+            add_definitions(-DFAI_WITH_TBB)
+        else()
+            add_compile_definitions(FAI_WITH_TBB)
+        endif()
+    endif()
+endif()
+
+# xsimd
+if(FAI_WITH_XSIMD OR XTENSOR_USE_XSIMD)
+    add_subdirectory(thirdparty/xsimd)
+    set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
+
+    if(FAI_WITH_XSIMD)
+        message(STATUS "Build karaboFAI with XSIMD")
+
+        if(${CMAKE_VERSION} VERSION_LESS 3.13)
+            add_definitions(-DFAI_WITH_XSIMD)
+        else()
+            add_compile_definitions(FAI_WITH_XSIMD)
+        endif()
+    endif()
+
 endif()
 
 # pybind11
 add_subdirectory(thirdparty/pybind11)
-set(pybind11_INCLUDE_DIRS PYBIND11_INCLUDE_DIR)
+find_package(pybind11 REQUIRED)
 
 # xtl
 add_subdirectory(thirdparty/xtl)
-set(xtl_DIR ${PROJECT_BINARY_DIR}/thirdparty/xtl)
-
-# xsimd
-if(FAI_WITH_XSIMD)
-    add_subdirectory(thirdparty/xsimd)
-    set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
-    find_package(xsimd 7.2 REQUIRED)
-    set(XTENSOR_USE_XSIMD ON CACHE BOOL "Build XTENSOR with XSIMD")
-endif()
+set(xtl_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtl)
 
 # xtensor
 add_subdirectory(thirdparty/xtensor)
-set(xtensor_DIR ${PROJECT_BINARY_DIR}/thirdparty/xtensor)
-set(xtensor_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/thirdparty/xtensor/include)
+set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
 
 # xtensor-python
-set(xtensor-python_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/thirdparty/xtensor-python/include)
+add_subdirectory(thirdparty/xtensor-python)
 
-find_package(NumPy REQUIRED)
-
-add_library(xtensor-python INTERFACE)
-target_include_directories(xtensor-python INTERFACE
-    "$<BUILD_INTERFACE:${xtensor-python_INCLUDE_DIR}>;${NUMPY_INCLUDE_DIRS}"
-    $<INSTALL_INTERFACE:include>)
-target_link_libraries(xtensor-python INTERFACE xtensor)
-
+# karaboFAI
 add_subdirectory(src/karaboFAI)
-
-OPTION(BUILD_FAI_TESTS "test suit" OFF)
 
 if(BUILD_FAI_TESTS)
     enable_testing()

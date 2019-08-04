@@ -42,8 +42,6 @@ add_executable(run_test
 
 target_include_directories(run_test
     PRIVATE
-        ${xtl_INCLUDE_DIRS}
-        ${xtensor_INCLUDE_DIRS}
         ${GTEST_INCLUDE_DIRS}
         ${GMOCK_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS}
@@ -53,6 +51,7 @@ target_link_libraries(run_test
     PRIVATE
         gtest
         pthread
+        xtensor
         ${TBB_LIBRARIES}
 )
 add_test(NAME unittest COMMAND run_test)

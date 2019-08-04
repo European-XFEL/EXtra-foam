@@ -1,3 +1,8 @@
+# TODO: separate xtensor-python binding with others in the fugure
+set(xtensor-python_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor-python)
+find_package(xtensor-python)
+
+
 # algo
 
 pybind11_add_module(algo algo.cpp)
@@ -8,7 +13,6 @@ pybind11_add_module(xtnumpy xtnumpy.cpp)
 
 target_include_directories(xtnumpy
     PRIVATE
-        ${xtensor-python_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS})
 
 target_link_libraries(xtnumpy
