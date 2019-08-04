@@ -67,7 +67,7 @@ inline xt::pytensor<T, 2> nanmeanImagesOld(const xt::pytensor<T, 3>& arr) {
   return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
 }
 
-
+// this is even faster than the parallel version of nanmeanImages for np.float32
 template<typename T>
 inline T nanmeanScalar(T x, T y) {
   if (std::isnan(x) and std::isnan(y)) return 0;
@@ -76,7 +76,7 @@ inline T nanmeanScalar(T x, T y) {
 
   if (std::isnan(y)) return x;
 
-  return (x + y) / 2;
+  return T(0.5) * (x + y);
 }
 
 
