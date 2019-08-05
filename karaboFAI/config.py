@@ -253,7 +253,9 @@ class _Config(dict):
             "SOURCE_NAME_BRIDGE": [
                 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
                 'MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
-            "SOURCE_NAME_FILE": ['SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
+            "SOURCE_NAME_FILE": [
+                'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
+                'MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
             "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
