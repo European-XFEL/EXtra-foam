@@ -235,3 +235,12 @@ class Mediator(QObject):
 
     def onDrFomRangeChange(self, value: tuple):
         self._meta.set(mt.DATA_REDUCTION_PROC, "fom_range", str(value))
+
+    def onRdStateChange(self, value: bool):
+        self._meta.set(mt.GLOBAL_PROC, "recording_dark", str(value))
+
+    def onRdRemoveDark(self):
+        self._meta.set(mt.GLOBAL_PROC, "remove_dark", 1)
+
+    def onRdProcessStateChange(self, value: bool):
+        self._meta.set(mt.GLOBAL_PROC, "process_dark", str(value))
