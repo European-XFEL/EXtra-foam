@@ -135,6 +135,40 @@ class TestLpdAssembler(unittest.TestCase):
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
 
+    def testOutArray(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'lpd_modules'
+        key_name = 'image.data'
+        self._assembler._detector_source_name = src_name
+
+        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4))}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)
+        np.testing.assert_array_equal(self._assembler._extra_shape, assembled_shape[0])
+        self.assertEqual(np.float64, self._assembler._out_array.dtype)
+
+        # Test output array shape change on the fly
+        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 10))}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)
+        np.testing.assert_array_equal(self._assembler._extra_shape,
+                                      assembled_shape[0])
+
+       # Test dtype change and shape change on the fly
+        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+        np.testing.assert_array_equal(self._assembler._extra_shape,
+                                      assembled_shape[0])
+        self.assertEqual(np.float32, self._assembler._out_array.dtype)
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)
+
 
 class TestJungfrauAssembler(unittest.TestCase):
     def setUp(self):
@@ -339,3 +373,37 @@ class TestDSSCAssembler(unittest.TestCase):
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
+
+    def testOutArray(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'lpd_modules'
+        key_name = 'image.data'
+        self._assembler._detector_source_name = src_name
+
+        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4))}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)
+        np.testing.assert_array_equal(self._assembler._extra_shape,
+                                      assembled_shape[0])
+        self.assertEqual(np.float64, self._assembler._out_array.dtype)
+
+        # Test output array shape change on the fly
+        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 10))}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)
+        np.testing.assert_array_equal(self._assembler._extra_shape,
+                                      assembled_shape[0])
+
+        # Test dtype change and shape change on the fly
+        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4),
+                                                      dtype=np.float32)}}}
+        self._assembler.process(data)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(np.float32, self._assembler._out_array.dtype)
+        np.testing.assert_array_equal(self._assembler._out_array.shape,
+            assembled_shape)

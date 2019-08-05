@@ -46,6 +46,7 @@ class ImageAssemblerFactory(ABC):
             self._geom = None
             self._out_array = None
             self._extra_shape = None
+            self._dtype = None
 
         def update(self):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
@@ -98,10 +99,17 @@ class ImageAssemblerFactory(ABC):
             if self._geom is not None:
                 # karabo_data interface
                 extra_shape = (modules.shape[0], )
-                if self._out_array is None or self._extra_shape != extra_shape:
+                dtype = modules.dtype
+                if self._out_array is None or \
+                    self._extra_shape != extra_shape or self._dtype != dtype:
+
                     self._extra_shape = extra_shape
-                    self._out_array = self._geom.output_array_for_position_fast(
-                        extra_shape=self._extra_shape)
+                    self._dtype = dtype
+                    # karabo_data provides `output_array_for_position_fast`
+                    # without dtype argument. Therefore using `make_output_array`
+                    # from the snapped geometry class. Probably not a good idea
+                    self._out_array = self._geom._snapped().make_output_array(
+                        extra_shape=self._extra_shape, dtype=self._dtype)
 
                 assembled, centre = self._geom.position_all_modules(modules,
                     out=self._out_array)
