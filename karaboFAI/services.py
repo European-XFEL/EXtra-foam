@@ -160,14 +160,17 @@ def health_check():
             "Note: you are not able to kill other users' instances! \n\n"
             "Send SIGKILL?"
         ):
-            for p in residual:
-                p.kill()
+            try:
+                for p in residual:
+                    p.kill()
+            except psutil.AccessDenied:
+                pass
 
         gone, alive = psutil.wait_procs(residual, timeout=1.0)
         if alive:
             for p in alive:
-                print(f"process {p} survived SIGKILL, "
-                      f"please contact the user: {p.username()}")
+                print(f"{p} survived SIGKILL, please contact the user: " 
+                      f"{p.username()}")
         else:
             print("Residual processes have been terminated!!!")
 
