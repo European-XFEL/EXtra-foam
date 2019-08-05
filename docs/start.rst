@@ -10,23 +10,16 @@ are two versions of **karaboFAI** deployed. Please always consult your contact p
 if you are not sure which version to use.
 
 
-I. Stable version
-+++++++++++++++++
+I. Latest version
++++++++++++++++++++++++
 
-This is the latest version which has been successfully used in at least one
-commissioning shift or user experiment.
-
-To start the **stable** version on online or `Maxwell` clusters:
+This is the latest release of **karaboFAI**. This version usually contains more
+features than the **stable** version.
 
 .. code-block:: bash
 
-    module load exfel exfel_anaconda3
+    module load exfel exfel_anaconda3/beta
     karaboFAI DETECTOR_NAME
-
-.. note::
-    The installation is temporary removed since there is conflict in config files between
-    the latest deployed 0.5.0 and previous version. Please check the **Pre-release version**
-    instead.
 
 .. note::
     It usually takes a few minutes to start **karaboFAI** for the first time! This
@@ -47,17 +40,14 @@ To start the **stable** version on online or `Maxwell` clusters:
 .. _max-display: https://max-display.desy.de:3443/
 
 
-II. Pre-release version
-+++++++++++++++++++++++
+II. Stable version
+++++++++++++++++++
 
-This is the release candidate which has passed our unittest and integration test, but is
-still being tested by beamline scientists. This version usually contains (much) more
-features than the **stable** version. Normally, the **pre-release** version should be as
-stable as the **stable** version.
+To start the **stable** version on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    module load exfel exfel_anaconda3/beta
+    module load exfel karaboFAI
     karaboFAI DETECTOR_NAME
 
 

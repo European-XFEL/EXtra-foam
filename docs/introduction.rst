@@ -35,8 +35,8 @@ Performance
 
 For train-resolved detectors like JungFrau and FastCCD, **karaboFAI** can process and visualize the data
 at **10 Hz**. For large detectors like AGIPD, LPD and DSSC, the processing and visualization rate is
-**2 Hz** with 64 pulses/train. It can even process the DSSC data with **400 pulses/train** at a rate of
-about 0.25 Hz.
+**2 ~ 3 Hz** with 64 pulses/train. It can even process the DSSC data with **400 pulses/train** at a rate of
+about 0.3 ~ 0.4 Hz.
 
 
 Galleries
