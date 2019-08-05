@@ -36,8 +36,10 @@ Install karaboFAI
     $ cd karaboFAI
 
     # optional
-    $ export FAI_WITH_TBB=0  # turn off TBB
-    $ export FAI_WITH_XSIMD=0  # turn off XSIMD
+    $ export FAI_WITH_TBB=0  # turn off intel TBB in karaboFAI
+    $ export XTENSOR_WITH_TBB=0  # turn off intel TBB in xtensor
+    $ export FAI_WITH_XSIMD=0  # turn off XSIMD in karaboFAI
+    $ export XTENSOR_WITH_XSIMD=0  # turn off XSIMD in xtensor
 
     # Note: This step is also required if one wants to change the above
     #       environmental parameters.
