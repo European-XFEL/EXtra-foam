@@ -59,15 +59,14 @@ class TestXtnumpy(unittest.TestCase):
         with self.assertRaises(ValueError):
             nanmean_images(data)
 
-        # test nanmean
+        # test the correctness
+        data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
+                         [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
+                         [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
 
-        data = np.ones([2, 4, 2], dtype=np.float64)
-        data[0, 0, 1] = np.nan
-        data[1, 0, 1] = np.nan
-        data[1, 2, 0] = np.nan
-        data[0, 3, 1] = np.inf
-
-        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
+        # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
+        expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
+        np.testing.assert_array_almost_equal(expected, np.nanmean(data, axis=0))
         np.testing.assert_array_almost_equal(expected, xt_nanmean_images(data))
 
         # test performance
