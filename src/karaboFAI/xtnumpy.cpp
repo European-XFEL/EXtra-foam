@@ -28,8 +28,8 @@
 
 namespace detail {
   template<typename T>
-  inline xt::pytensor<T, 2> _nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
-                                              const std::vector<size_t>& keep = {}) {
+  inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
+                                             const std::vector<size_t>& keep = {}) {
     auto shape = arr.shape();
     auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
   
@@ -39,8 +39,8 @@ namespace detail {
         for(int j=block.rows().begin(); j != block.rows().end(); ++j) {
           for(int k=block.cols().begin(); k != block.cols().end(); ++k) {
   #else
-    for (std::size_t j=0; j < shape[1]; ++j) {
-      for (std::size_t k=0; k < shape[2]; ++k) {
+        for (std::size_t j=0; j < shape[1]; ++j) {
+          for (std::size_t k=0; k < shape[2]; ++k) {
   #endif
             T count = 0;
             T sum = 0;
@@ -74,8 +74,8 @@ namespace detail {
   }
 
   template<typename T>
-  inline xt::pytensor<T, 2> _nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
-                                                 const xt::pytensor<T, 2>& img2) {
+  inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
+                                                const xt::pytensor<T, 2>& img2) {
     auto shape = img1.shape();
     auto mean = xt::pytensor<T, 2>({shape[0], shape[1]});
 
@@ -85,8 +85,8 @@ namespace detail {
         for(int j=block.rows().begin(); j != block.rows().end(); ++j) {
           for(int k=block.cols().begin(); k != block.cols().end(); ++k) {
 #else
-    for (std::size_t j=0; j < shape[1]; ++j) {
-      for (std::size_t k=0; k < shape[2]; ++k) {
+        for (std::size_t j=0; j < shape[1]; ++j) {
+          for (std::size_t k=0; k < shape[2]; ++k) {
 #endif
             auto x = img1(j, k);
             auto y = img2(j, k);
@@ -120,7 +120,7 @@ namespace detail {
 template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr, const std::vector<size_t>& keep) {
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
-  return detail::_nanmeanImagesImp(arr, keep);
+  return detail::nanmeanImagesImp(arr, keep);
 }
 
 /**
@@ -131,7 +131,7 @@ inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr, const std
  */
 template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr) {
-  return detail::_nanmeanImagesImp(arr);
+  return detail::nanmeanImagesImp(arr);
 }
 
 /**
@@ -141,7 +141,7 @@ template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 2>& img1,
                                         const xt::pytensor<T, 2>& img2) {
   if (img1.shape() != img2.shape()) throw std::invalid_argument("Images have different shapes!");
-  return detail::_nanmeanTwoImagesImp(img1, img2);
+  return detail::nanmeanTwoImagesImp(img1, img2);
 }
 
 /**
@@ -176,15 +176,19 @@ PYBIND11_MODULE(xtnumpy, m) {
   m.def("nanmeanImages",
     (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&)) &nanmeanImages<float>);
   m.def("nanmeanImages",
-    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&, const std::vector<size_t>&)) &nanmeanImages<double>);
+    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&, const std::vector<size_t>&))
+    &nanmeanImages<double>);
   m.def("nanmeanImages",
-    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&, const std::vector<size_t>&)) &nanmeanImages<float>);
+    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&, const std::vector<size_t>&))
+    &nanmeanImages<float>);
   // the following overload fails because:
   // https://github.com/QuantStack/xtensor-python/issues/178
   m.def("nanmeanTwoImages",
-    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&)) &nanmeanImages<double>);
+    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+    &nanmeanImages<double>);
   m.def("nanmeanTwoImages",
-    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&)) &nanmeanImages<float>);
+    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+    &nanmeanImages<float>);
 
   m.def("xtNanmeanImages", &xtNanmeanImages<double>);
   m.def("xtNanmeanImages", &xtNanmeanImages<float>);

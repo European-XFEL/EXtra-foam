@@ -1,12 +1,83 @@
 import unittest
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xt_moving_average,
 )
-from karaboFAI.algorithms import nanmean_images, mask_image
+from karaboFAI.algorithms import mask_image
+
+
+def nanmean_images_para(data, *, chunk_size=10, max_workers=4):
+    """Calculate nanmean of an array of images.
+
+    This function is only used for benchmark.
+
+    :param numpy.ndarray data: an array of images. (index, y, x).
+    :param int chunk_size: the slice size of along the second dimension
+        of the input data.
+    :param int max_workers: The maximum number of threads that can be
+        used to execute the given calls.
+
+    :return numpy.ndarray: averaged input data along the first axis if
+        the dimension of input data is larger than 3, otherwise the
+        original data.
+    """
+    def nanmean_imp(out, start, end):
+        """Implementation of parallelized nanmean.
+
+        :param numpy.ndarray out: result 2D array. (y, x)
+        :param int start: start index
+        :param int end: end index (not included)
+        """
+        with np.warnings.catch_warnings():
+            np.warnings.filterwarnings('ignore', category=RuntimeWarning)
+
+            out[start:end, :] = np.nanmean(data[:, start:end, :], axis=0)
+
+    if data.ndim != 3:
+        raise ValueError("Input must be a three dimensional numpy.array!")
+
+    ret = np.zeros_like(data[0, ...])
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        start = 0
+        max_idx = data.shape[1]
+        while start < max_idx:
+            executor.submit(nanmean_imp, ret, start,
+                            min(start + chunk_size, max_idx))
+            start += chunk_size
+
+    return ret
+
+
+class TestPynumpy(unittest.TestCase):
+    def test_nanmeanparaimp(self):
+        # test invalid shapes
+        data = np.ones([2, 2])
+        with self.assertRaises(ValueError):
+            nanmean_images_para(data)
+
+        data = np.ones([2, 2, 2, 2])
+        with self.assertRaises(ValueError):
+            nanmean_images_para(data)
+
+        # test 3D array
+        data = np.ones([2, 4, 2])
+        data[0, 0, 1] = np.nan
+        data[1, 0, 1] = np.nan
+        data[1, 2, 0] = np.nan
+        data[0, 3, 1] = np.inf
+
+        ret = nanmean_images_para(data, chunk_size=2, max_workers=2)
+        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
+        np.testing.assert_array_almost_equal(expected, ret)
+
+        ret = nanmean_images_para(data, chunk_size=1, max_workers=1)
+        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
+        np.testing.assert_array_almost_equal(expected, ret)
 
 
 class TestXtnumpy(unittest.TestCase):
@@ -28,7 +99,6 @@ class TestXtnumpy(unittest.TestCase):
         with self.assertRaises(ValueError):
             nanmeanImages(data, [])
 
-        # test nanmean on the whole array
         data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
                          [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
                          [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
@@ -43,9 +113,9 @@ class TestXtnumpy(unittest.TestCase):
             np.testing.assert_array_almost_equal(expected, xtNanmeanImages(data))
 
             # test nanmean on the sliced array
-            np.testing.assert_array_almost_equal(np.nanmean(data[[0, 1, 2], ...], axis=0),
+            np.testing.assert_array_almost_equal(np.nanmean(data[0:3, ...], axis=0),
                                                  nanmeanImages(data, [0, 1, 2]))
-            np.testing.assert_array_almost_equal(np.nanmean(data[[1], ...], axis=0),
+            np.testing.assert_array_almost_equal(np.nanmean(data[1:2, ...], axis=0),
                                                  nanmeanImages(data, [1]))
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
                                                  nanmeanImages(data, [0, 2]))
@@ -67,7 +137,7 @@ class TestXtnumpy(unittest.TestCase):
         dt_cpp_xt = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        nanmean_images(data)
+        nanmean_images_para(data)
         dt_py = time.perf_counter() - t0
 
         print(f"\nnanmean_images with {data_type} - "
