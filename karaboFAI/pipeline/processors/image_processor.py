@@ -23,7 +23,7 @@ from ...utils import profiler
 from ...config import PumpProbeMode
 
 from karaboFAI.cpp import (
-    nanmeanImages, xt_nanmean_two_images, xt_moving_average
+    nanmeanImages, nanmeanTwoImages, xt_moving_average
 )
 
 
@@ -181,7 +181,7 @@ class ImageProcessorTrain(_BaseProcessor):
             if len(curr_means) == 1:
                 images_mean = curr_means[0].copy()
             else:
-                images_mean = xt_nanmean_two_images(on_image, off_image)
+                images_mean = nanmeanTwoImages(on_image, off_image)
         else:
             if assembled.ndim == 3:
                 images_mean = nanmeanImages(assembled)
