@@ -4,11 +4,9 @@ import time
 import numpy as np
 
 from karaboFAI.cpp import (
-    xt_nanmean_images, xt_nanmean_two_images, xt_moving_average,
+    nanmeanImages, xtNanmeanImages, xt_nanmean_two_images, xt_moving_average,
 )
 from karaboFAI.algorithms import nanmean_images, mask_image
-
-from karaboFAI.cpp.xtnumpy import xt_nanmean_images_old
 
 
 class TestXtnumpy(unittest.TestCase):
@@ -17,19 +15,61 @@ class TestXtnumpy(unittest.TestCase):
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        ret_cpp = xt_nanmean_images(data)
+        nanmeanImages(data)
         dt_cpp = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        ret_cpp = xt_nanmean_images_old(data)
+        nanmeanImages(data, list(range(len(data))))
+        dt_cpp_sliced = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        xtNanmeanImages(data)
         dt_cpp_old = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        ret_py = nanmean_images(data)
+        nanmean_images(data)
         dt_py = time.perf_counter() - t0
 
-        print(f"nanmean_images with {data_type} - "
-              f"dt (cpp): {dt_cpp:.4f}, dt (cpp) old: {dt_cpp_old:.4f}, dt (numpy_para): {dt_py:.4f}")
+        print(f"\nnanmean_images with {data_type} - "
+              f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
+              f"dt (cpp xtensor): {dt_cpp_old:.4f}, dt (numpy para): {dt_py:.4f}")
+
+    def testXtNanmeanImages(self):
+        # test invalid shapes
+        data = np.ones([2, 2])
+        with self.assertRaises(RuntimeError):
+            nanmeanImages(data)
+
+        data = np.ones([2, 2, 2, 2])
+        with self.assertRaises(RuntimeError):
+            nanmeanImages(data)
+
+        # test passing empty keep list
+        data = np.ones([2, 2, 2])
+        with self.assertRaises(ValueError):
+            nanmeanImages(data, [])
+
+        # test nanmean on the whole array
+        data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
+                         [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
+                         [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
+
+        # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
+        expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
+        np.testing.assert_array_almost_equal(expected, np.nanmean(data, axis=0))
+        np.testing.assert_array_almost_equal(expected, nanmeanImages(data))
+
+        # test nanmean on the sliced array
+        np.testing.assert_array_almost_equal(np.nanmean(data[[0, 1, 2], ...], axis=0),
+                                             nanmeanImages(data, [0, 1, 2]))
+        np.testing.assert_array_almost_equal(np.nanmean(data[[1], ...], axis=0),
+                                             nanmeanImages(data, [1]))
+        np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
+                                             nanmeanImages(data, [0, 2]))
+
+    def testXtNanmeanImagesPerformance(self):
+        self._nanmean_images_performance(np.float32)
+        self._nanmean_images_performance(np.float64)
 
     def _nanmean_two_images_performance(self, data_type):
         img = np.ones((1024, 1024), dtype=data_type)
@@ -43,35 +83,11 @@ class TestXtnumpy(unittest.TestCase):
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        ret_py = nanmean_images(imgs)
+        ret_py = nanmeanImages(imgs)
         dt_py = time.perf_counter() - t0
 
-        print(f"nanmean_two_images with {data_type} - "
-              f"dt (cpp): {dt_cpp:.4f}, dt (numpy_para): {dt_py:.4f}")
-
-    def testXtNanmeanImage(self):
-        # test invalid shapes
-        data = np.ones([2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images(data)
-
-        data = np.ones([2, 2, 2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images(data)
-
-        # test the correctness
-        data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
-                         [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
-                         [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
-
-        # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
-        expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
-        np.testing.assert_array_almost_equal(expected, np.nanmean(data, axis=0))
-        np.testing.assert_array_almost_equal(expected, xt_nanmean_images(data))
-
-        # test performance
-        self._nanmean_images_performance(np.float32)
-        self._nanmean_images_performance(np.float64)
+        print(f"\nnanmean_two_images with {data_type} - "
+              f"dt (cpp): {dt_cpp:.4f}, dt (numpy para): {dt_py:.4f}")
 
     def testXtNanMeanTwoImages(self):
         # test nanmean
