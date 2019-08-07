@@ -153,3 +153,37 @@ def parse_table_widget(widget):
     for i in range(n_col):
         ret.append([float(widget.item(j, i).text()) for j in range(n_row)])
     return ret
+
+
+def parse_slice(text):
+    """Parse a string into list which can be converted into a slice object.
+
+    :param str text: the input string.
+
+    :return tuple: a list which can be converted into a slice object.
+
+    :raise ValueError
+
+    Examples:
+
+    Input IDs separated by comma:
+
+    parse_slice(":") == [None, None]
+    parse_slice("1:2") == [1, 2]
+    parse_slice("0:10:2") == [0, 10, 2]
+    """
+    err_msg = f"Failed to convert '{text}' to a slice object."
+
+    if text:
+        parts = text.split(':')
+        if len(parts) == 1:
+            # slice(stop)
+            parts = [None, parts[0]]
+        # else: slice(start, stop[, step])
+    else:
+        raise ValueError(err_msg)
+
+    try:
+        return [int(p) if p else None for p in parts]
+    except Exception:
+        raise ValueError(err_msg)

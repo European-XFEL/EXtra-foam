@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from karaboFAI.gui.gui_helpers import parse_boundary, parse_ids
+from karaboFAI.gui.gui_helpers import parse_boundary, parse_ids, parse_slice
 
 
 class TestGUI(unittest.TestCase):
@@ -51,3 +51,29 @@ class TestGUI(unittest.TestCase):
         for v in invalid_inputs:
             with self.assertRaises(ValueError):
                 parse_ids(v)
+
+    def test_parseslice(self):
+        with self.assertRaises(ValueError):
+            parse_slice("")
+
+        self.assertEqual(slice(2), slice(*parse_slice('2')))
+        self.assertEqual(slice(2, 3), slice(*parse_slice('2:3')))
+        self.assertEqual(slice(-3, -1), slice(*parse_slice('-3:-1')))
+        self.assertEqual(slice(None), slice(*parse_slice(":")))
+        self.assertEqual(slice(2, None), slice(*parse_slice("2:")))
+        self.assertEqual(slice(None, 3), slice(*parse_slice(':3')))
+        self.assertEqual(slice(1, 4, 2), slice(*parse_slice('1:4:2')))
+        # input with space in between
+        self.assertEqual(slice(1, 4, 2), slice(*parse_slice(' 1 :  4 : 2   ')))
+        self.assertEqual(slice(1, -4, 2), slice(*parse_slice('1:-4:2')))
+        self.assertEqual(slice(2, None, 4), slice(*parse_slice('2::4')))
+        self.assertEqual(slice(1, 3, None), slice(*parse_slice('1:3:')))
+        self.assertEqual(slice(None, None, 4), slice(*parse_slice('::4')))
+        self.assertEqual(slice(2, None, None), slice(*parse_slice('2::')))
+        self.assertEqual(slice(None, None), slice(*parse_slice('::')))
+
+        with self.assertRaises(ValueError):
+            parse_slice('2.0')
+
+        with self.assertRaises(ValueError):
+            parse_slice('2:3.0:2.0')
