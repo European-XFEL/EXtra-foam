@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
+from .smart_widgets import SmartLineEdit, SmartSliceLineEdit
 from ...config import config
 
 
@@ -28,7 +28,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         poi_index1 = 0
         poi_index2 = 0
 
-        self._pulse_index_filter_le = SmartRangeLineEdit(":")
+        self._pulse_index_filter_le = SmartSliceLineEdit(":")
 
         self._poi_index1_le = SmartLineEdit(str(poi_index1))
         self._poi_index1_le.setValidator(self._pulse_index_validator)
