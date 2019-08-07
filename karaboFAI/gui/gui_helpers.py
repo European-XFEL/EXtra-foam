@@ -184,6 +184,9 @@ def parse_slice(text):
         raise ValueError(err_msg)
 
     try:
-        return [int(p) if p else None for p in parts]
+        ret = [int(p) if p else None for p in parts]
+        if len(ret) > 3:
+            raise ValueError(err_msg)
+        return ret
     except Exception:
         raise ValueError(err_msg)

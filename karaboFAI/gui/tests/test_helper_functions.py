@@ -56,6 +56,12 @@ class TestGUI(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_slice("")
 
+        with self.assertRaises(ValueError):
+            parse_slice(":::")
+
+        with self.assertRaises(ValueError):
+            parse_slice("1:5:2:1")
+
         self.assertEqual(slice(2), slice(*parse_slice('2')))
         self.assertEqual(slice(2, 3), slice(*parse_slice('2:3')))
         self.assertEqual(slice(-3, -1), slice(*parse_slice('-3:-1')))
