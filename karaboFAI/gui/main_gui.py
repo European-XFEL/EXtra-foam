@@ -32,7 +32,7 @@ from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
     OverviewWindow, ProcessMonitor, AzimuthalIntegrationWindow,
     StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow, RoiWindow,
-    XasWindow, FileStreamControllerWindow
+    XasWindow, FileStreamControllerWindow, AboutWindow
 )
 from .. import __version__
 from ..config import config
@@ -209,6 +209,9 @@ class MainGUI(QtGui.QMainWindow):
         open_file_stream_window_at.triggered.connect(
             self.openFileStreamControllerWindow)
 
+        open_help_at = self._addAction("About karaboFAI", "about.png")
+        open_help_at.triggered.connect(self.openAboutWindow)
+
         # *************************************************************
         # Miscellaneous
         # *************************************************************
@@ -377,6 +380,12 @@ class MainGUI(QtGui.QMainWindow):
 
         w = FileStreamControllerWindow(parent=self)
         return w
+
+    def openAboutWindow(self):
+        if self._checkWindowExistence(AboutWindow):
+            return
+
+        return AboutWindow(parent=self)
 
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:
