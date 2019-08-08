@@ -164,8 +164,9 @@ class TestLpdAssembler(unittest.TestCase):
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
         np.testing.assert_array_equal(
-            self._assembler._extra_shape, assembled_shape[0])
-        self.assertEqual(np.float32, self._assembler._out_array.dtype)
+            self._assembler._n_images, assembled_shape[0])
+        self.assertEqual(config["IMAGE_DTYPE"],
+                         self._assembler._out_array.dtype)
 
         # Test output array shape change on the fly
         data = {'raw': {
@@ -175,7 +176,7 @@ class TestLpdAssembler(unittest.TestCase):
         assembled_shape = data['assembled'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
-        np.testing.assert_array_equal(self._assembler._extra_shape,
+        np.testing.assert_array_equal(self._assembler._n_images,
                                       assembled_shape[0])
 
     def testAssembleDtype(self):
@@ -424,8 +425,10 @@ class TestDSSCAssembler(unittest.TestCase):
 
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
-        np.testing.assert_array_equal(self._assembler._extra_shape,
+        np.testing.assert_array_equal(self._assembler._n_images,
                                       assembled_shape[0])
+        self.assertEqual(config["IMAGE_DTYPE"],
+                         self._assembler._out_array.dtype)
 
         # Test output array shape change on the fly
         data = {'raw': {
@@ -435,7 +438,7 @@ class TestDSSCAssembler(unittest.TestCase):
         assembled_shape = data['assembled'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
-        np.testing.assert_array_equal(self._assembler._extra_shape,
+        np.testing.assert_array_equal(self._assembler._n_images,
                                       assembled_shape[0])
 
     def testAssembleDtype(self):
