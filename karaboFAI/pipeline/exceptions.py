@@ -37,3 +37,8 @@ class AssemblingError(StopPipelineError):
 class PumpProbeIndexError(StopPipelineError):
     """Raised when the pulse indices are invalid."""
     pass
+
+
+class DropAllPulsesError(StopPipelineError):
+    """Raised when no pulse is valid after data reduction."""
+    pass

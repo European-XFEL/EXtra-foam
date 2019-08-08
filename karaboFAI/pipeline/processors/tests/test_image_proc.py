@@ -211,11 +211,13 @@ class TestImageProcessorTrainTr(unittest.TestCase):
     def _gen_data(self, tid):
         data = {'processed': ProcessedData(tid),
                 'assembled': np.random.randn(2, 2)}
-        image_data = ImageData()
-        image_data._background = 0
-        image_data._threshold_mask = (-100, 100)
-        image_data._pulse_index_filter = [-1]
-        image_data._poi_indices = [0, 0]
+
+        data['processed'].image = ImageData.from_array(
+            data['assembled'],
+            threshold_mask=(-100, 100),
+            background=0,
+            poi_indices=[0, 0],
+        )
         return data
 
     def testPpUndefined(self):
@@ -330,11 +332,14 @@ class TestImageProcessorTrainPr(unittest.TestCase):
     def _gen_data(self, tid):
         data = {'processed': ProcessedData(tid),
                 'assembled': np.random.randn(4, 2, 2)}
-        image_data = ImageData()
-        image_data._background = 0
-        image_data._threshold_mask = (-100, 100)
-        image_data._pulse_index_filter = [-1]
-        image_data._poi_indices = [0, 0]
+
+        data['processed'].image = ImageData.from_array(
+            data['assembled'],
+            threshold_mask=(-100, 100),
+            background=0,
+            poi_indices=[0, 0],
+        )
+
         return data
 
     def testInvalidPulseIndices(self):

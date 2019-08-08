@@ -14,3 +14,4 @@ from .roi import RoiProcessorTrain, RoiProcessorPulse
 from .xas import XasProcessor
 from .xgm import XgmProcessor
 from .statistics import StatisticsProcessor
+from .data_reduction import DataReductionProcessor

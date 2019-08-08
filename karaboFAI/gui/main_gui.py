@@ -24,8 +24,9 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, DataCtrlWidget, StatisticsCtrlWidget,
-    GeometryCtrlWidget, PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
+    CorrelationCtrlWidget, DataCtrlWidget, DataReductionCtrlWidget,
+    StatisticsCtrlWidget, GeometryCtrlWidget, PumpProbeCtrlWidget,
+    RoiCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
@@ -280,6 +281,9 @@ class MainGUI(QtGui.QMainWindow):
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
+        self.data_reduction_ctrl_widget = DataReductionCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+
         self.bin_ctrl_widget = BinCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -306,6 +310,7 @@ class MainGUI(QtGui.QMainWindow):
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
+        misc_layout.addWidget(self.data_reduction_ctrl_widget)
         misc_layout.addWidget(self.statistics_ctrl_widget)
         misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)

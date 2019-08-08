@@ -15,7 +15,7 @@ from threading import Lock
 import numpy as np
 
 from ..algorithms import mask_image
-from ..config import AnalysisType, config
+from ..config import config
 
 from karaboFAI.cpp import nanmeanImages, xt_moving_average
 
@@ -418,16 +418,22 @@ class PumpProbeData(DataItem):
 class ImageData:
     """Image data model.
 
-    ImageData is a container for storing self-consistent image data.
-    Once constructed, the internal data are not allowed to be modified.
-
     Attributes:
-        pixel_size (float): pixel size of the detector.
+        pixel_size (float): pixel size (in meter) of the detector.
         images (list): a list of pulse images in the train. A value of
             None only indicates that the corresponding pulse image is
             not needed (in the main process).
         ma_count (int): current moving average count.
         n_images (int): number of images in the train.
+        sliced_indices (list): a list of indices which is selected by
+            pulse slicer. The slicing is applied before applying any data
+            reduction algorithm to select pulses with a certain pattern.
+            It can be used to reconstruct the indices of the selected images
+            in the original data providing the number of pulses and the slicer
+            are both known.
+        dropped_indices (list): a list of indices which is determined by
+            data reduction and will not be used in further analysis of the
+            train, e.g. calculating the average of (on/off) images.
         poi_indices (list): indices of pulses of interest.
         background (float): a uniform background value.
         image_mask (numpy.ndarray): image mask with dtype=np.bool.
@@ -445,13 +451,13 @@ class ImageData:
         self.images = None
         self.ma_count = 0
 
-        self.poi_indices = [0, 0]
+        self.sliced_indices = None
+        self.dropped_indices = []
+        self.poi_indices = None
 
         self.background = None
         self.image_mask = None
         self.threshold_mask = None
-
-        self.index_mask = None
 
         self.reference = None
 
@@ -467,9 +473,7 @@ class ImageData:
         if self.images is None:
             return 0
 
-        if isinstance(self.images, list):
-            return len(self.images)
-        return 1
+        return len(self.images)
 
     @classmethod
     def from_array(cls, arr, *,
@@ -477,41 +481,55 @@ class ImageData:
                    background=0.0,
                    image_mask=None,
                    threshold_mask=None,
+                   sliced_indices=None,
                    poi_indices=None):
-        """Construct a self-consistant ImageData."""
-        if arr is not None:
-            if not isinstance(arr, np.ndarray):
-                raise TypeError(r"Image data must be numpy.ndarray!")
+        """Construct a self-consistent ImageData."""
+        if not isinstance(arr, np.ndarray):
+            raise TypeError(r"Image data must be numpy.ndarray!")
 
-            if arr.ndim <= 1 or arr.ndim > 3:
-                raise ValueError(f"The shape of image data must be (y, x) or "
-                                 f"(n_pulses, y, x)!")
+        if arr.ndim <= 1 or arr.ndim > 3:
+            raise ValueError(f"The shape of image data must be (y, x) or "
+                             f"(n_pulses, y, x)!")
 
-            image_dtype = config['IMAGE_DTYPE']
-            if arr.dtype != image_dtype:
-                # FIXME: dtype of the incoming data could be integer, but integer
-                #        array does not have nanmean.
-                arr = arr.astype(image_dtype)
+        image_dtype = config['IMAGE_DTYPE']
+        if arr.dtype != image_dtype:
+            arr = arr.astype(image_dtype)
 
         instance = cls()
-        instance.images = arr
         instance.ma_count = ma_count
 
         if arr.ndim == 3:
-            arr_mean = nanmeanImages(arr)
-            image_list = [None] * len(arr)
+            n_images = len(arr)
+            instance.images = [None] * n_images
             if poi_indices is None:
                 poi_indices = [0, 0]
             for i in poi_indices:
-                image_list[i] = arr[i]
-            instance.images = image_list
+                instance.images[i] = arr[i]
+
+            instance.mean = nanmeanImages(arr)
+
+            if sliced_indices is None:
+                instance.sliced_indices = list(range(n_images))
+            else:
+                sliced_indices = list(set(sliced_indices))
+                n_indices = len(sliced_indices)
+                if n_indices != n_images:
+                    raise ValueError(f"Length of sliced indices {sliced_indices} "
+                                     f"!= number of images {n_images}")
+                instance.sliced_indices = sliced_indices
         else:
-            arr_mean = arr
+            instance.images = [None]
+
+            instance.mean = arr
+
+            if sliced_indices is not None:
+                raise ValueError("Train-resolved data does not support "
+                                 "'sliced_indices'!")
+            instance.sliced_indices = [0]  # be consistent
 
         instance.poi_indices = poi_indices
 
-        instance.mean = arr_mean
-        instance.masked_mean = mask_image(arr_mean,
+        instance.masked_mean = mask_image(instance.mean,
                                           threshold_mask=threshold_mask,
                                           image_mask=image_mask,
                                           inplace=False)

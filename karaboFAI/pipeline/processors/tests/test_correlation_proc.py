@@ -19,17 +19,15 @@ from karaboFAI.pipeline.processors import CorrelationProcessor
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
 
+from . import _BaseProcessorTest
 
-class TestCorrelationProcessor(unittest.TestCase):
+
+class TestCorrelationProcessor(_BaseProcessorTest):
     def testGeneral(self):
         proc = CorrelationProcessor()
         proc._reset = True
 
-        processed = ProcessedData(1001)
-        processed.image = ImageData.from_array(np.random.randn(2, 2))
-        data = {'tid': 1001,
-                'processed': processed,
-                'raw': dict()}
+        data, processed = self.simple_data(1001, (2, 2))
 
         proc.process(data)
 
@@ -41,11 +39,7 @@ class TestCorrelationProcessor(unittest.TestCase):
     def testFomExtraction(self):
         proc = CorrelationProcessor()
 
-        processed = ProcessedData(1001)
-        processed.image = ImageData.from_array(np.random.randn(2, 2))
-        data = {'tid': 1001,
-                'processed': processed,
-                'raw': dict()}
+        data, processed = self.simple_data(1001, (2, 2))
 
         # PUMP_PROBE_FOM
         proc.analysis_type = AnalysisType.PUMP_PROBE
@@ -147,8 +141,7 @@ class TestCorrelationProcessor(unittest.TestCase):
 
         processed = ProcessedData(1001)
         processed.image = ImageData.from_array(np.random.randn(2, 2))
-        data = {'tid': 1001,
-                'processed': processed,
+        data = {'processed': processed,
                 'raw': {
                     'A': {'e': 1},
                     'B': {'f': 2},

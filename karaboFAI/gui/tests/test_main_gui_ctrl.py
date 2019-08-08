@@ -116,11 +116,11 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertAlmostEqual(1e-10, ai_proc._wavelength)
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
         image_proc.update()
-        self.assertEqual(slice(None, None), image_proc._pulse_index_filter)
+        self.assertEqual(slice(None, None), image_proc._pulse_slicer)
 
-        widget._pulse_index_filter_le.setText("1:5:2")
+        widget._pulse_slicer_le.setText("1:5:2")
         image_proc.update()
-        self.assertEqual(slice(1, 5, 2), image_proc._pulse_index_filter)
+        self.assertEqual(slice(1, 5, 2), image_proc._pulse_slicer)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -330,6 +330,24 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(self.gui.updateMetaData())
 
         self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
+
+    def testDataReductionCtrlWidget(self):
+        widget = self.gui.data_reduction_ctrl_widget
+        image_worker = self.image_worker
+        proc = image_worker._data_reduction_proc
+        proc.update()
+
+        analysis_types = {value: key for key, value in
+                          widget._analysis_types.items()}
+
+        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), proc._fom_range)
+
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1])
+        widget._fom_range_le.setText("-1, 1")
+        proc.update()
+        self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
+        self.assertEqual((-1, 1), proc._fom_range)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -587,7 +605,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
 
-        self.assertFalse(widget._pulse_index_filter_le.isEnabled())
+        self.assertFalse(widget._pulse_slicer_le.isEnabled())
         self.assertFalse(widget._poi_index1_le.isEnabled())
         self.assertFalse(widget._poi_index2_le.isEnabled())
 
