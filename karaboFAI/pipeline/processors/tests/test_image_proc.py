@@ -17,7 +17,6 @@ import numpy as np
 from karaboFAI.pipeline.processors.image_processor import (
     ImageProcessorTrain, ImageProcessorPulse
 )
-from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
     PumpProbeIndexError, ProcessingError

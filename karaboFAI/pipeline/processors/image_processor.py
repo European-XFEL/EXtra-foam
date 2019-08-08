@@ -60,7 +60,7 @@ class ImageProcessorPulse(_BaseProcessor):
         self._reference = None
 
         self._pulse_slicer = slice(None, None)
-        self._poi_indices = None
+        self._poi_indices = [0, 0]
 
         self._ref_sub = ReferenceSub()
         self._mask_sub = ImageMaskSub()
@@ -94,6 +94,7 @@ class ImageProcessorPulse(_BaseProcessor):
         pulse_slicer = self._pulse_slicer
         data['assembled'] = assembled[pulse_slicer]
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
+        n_images = len(sliced_indices)
 
         # Make it the moving average for train resolved detectors
         # It is worth noting that the moving average here does not use
@@ -107,16 +108,18 @@ class ImageProcessorPulse(_BaseProcessor):
         self._update_image_mask(image_shape)
         self._update_reference(image_shape)
 
+        # Avoid sending all images around
         # consider to use the 'virtual stack' in karabo_data
         # https://github.com/European-XFEL/karabo_data/pull/196
-        image_data.images = [None] * len(sliced_indices)
+        image_data.images = [None] * n_images
+        image_data.poi_indices = self._poi_indices
+        self._update_pois(image_data, assembled)
         image_data.ma_count = self.__class__._raw_data.count
         image_data.background = self._background
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask
         image_data.reference = self._reference
         image_data.sliced_indices = sliced_indices
-        image_data.poi_indices = self._poi_indices
 
     def _update_image_mask(self, image_shape):
         image_mask = self._mask_sub.update(self._image_mask, image_shape)
@@ -143,6 +146,26 @@ class ImageProcessorPulse(_BaseProcessor):
                 f"from the shape of the image {image_shape}!")
 
         self._reference = ref
+
+    def _update_pois(self, image_data, assembled):
+        if assembled.ndim != 3:
+            return
+
+        n_images = image_data.n_images
+        out_of_bound_poi_indices = []
+        for i in image_data.poi_indices:
+            if i < n_images:
+                image_data.images[i] = mask_image(
+                    assembled[i],
+                    threshold_mask=self._threshold_mask,
+                    image_mask=self._image_mask
+                )
+            else:
+                out_of_bound_poi_indices.append(i)
+
+        if out_of_bound_poi_indices:
+            raise ProcessingError(f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
+                                  f"is out of bound (0 - {n_images-1}")
 
 
 class ImageProcessorTrain(_BaseProcessor):
@@ -238,27 +261,6 @@ class ImageProcessorTrain(_BaseProcessor):
 
             processed.pp.image_on = on_image
             processed.pp.image_off = off_image
-
-        # avoid sending all images around
-        err_msgs = []
-        if assembled.ndim == 3:
-            n_images = len(assembled)
-            processed.image.images = [None] * n_images
-            for i in processed.image.poi_indices:
-                if i < n_images:
-                    # TODO: check whether inplace is legal here
-                    processed.image.images[i] = mask_image(
-                        assembled[i],
-                        threshold_mask=threshold_mask,
-                        image_mask=image_mask,
-                        inplace=True
-                    )
-                else:
-                    err_msgs.append(
-                        f"POI index {i} is out of bound (0 - {n_images-1}")
-
-        for msg in err_msgs:
-            raise ProcessingError('[Image processor] ' + msg)
 
     def _compute_on_off_images(self, tid, assembled, dropped_indices,
                                *, reference=None):
