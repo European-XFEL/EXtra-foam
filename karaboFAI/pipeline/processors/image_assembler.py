@@ -44,6 +44,8 @@ class ImageAssemblerFactory(ABC):
             self._geom_file = None
             self._quad_position = None
             self._geom = None
+            self._out_array = None
+            self._n_images = None
 
         def update(self):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
@@ -93,9 +95,17 @@ class ImageAssemblerFactory(ABC):
 
         def _modules_to_assembled(self, modules):
             """Convert modules data to assembled image data."""
+            image_dtype = config["IMAGE_DTYPE"]
             if self._geom is not None:
                 # karabo_data interface
-                assembled, centre = self._geom.position_all_modules(modules)
+                n_images = (modules.shape[0], )
+                if self._out_array is None or self._n_images != n_images:
+                    self._n_images = n_images
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        extra_shape=self._n_images, dtype=image_dtype)
+
+                assembled, centre = self._geom.position_all_modules(modules,
+                    out=self._out_array)
                 return assembled
 
             # For train-resolved detector, assembled is a reference
@@ -103,7 +113,7 @@ class ImageAssemblerFactory(ABC):
             # is only readable since the data is owned by a pointer in
             # the zmq message (it is not copied). However, other data
             # like data['metadata'] is writeable.
-            return np.copy(modules)
+            return modules.astype(image_dtype)
 
         @profiler("Image Assembler")
         def process(self, data):
@@ -148,13 +158,6 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             assembled = self._modules_to_assembled(modules_data)
-
-            image_dtype = config['IMAGE_DTYPE']
-            if assembled.dtype != image_dtype:
-                # FIXME: in order to avoid the copy, it would need
-                #   position_modules_fast to allow select output data type.
-                assembled = assembled.astype(image_dtype)
-
             data['assembled'] = assembled
 
     class AgipdImageAssembler(BaseAssembler):
