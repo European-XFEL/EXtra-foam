@@ -255,6 +255,22 @@ Data source
 +----------------------------+--------------------------------------------------------------------+
 
 
+Data reduction setup
+""""""""""""""""""""
+
+Apply data reduction by setting the lower and upper boundary of the specified FOM. Currently,
+it affects calculating the average of images in a train as well as the averages of images of
+ON-/Off- pulses in a train. It only works for pulse-resolved detectors.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| *Analysis type*            | See AnalysisType_.                                                 |
++----------------------------+--------------------------------------------------------------------+
+| *FOM range*                | Number of bins of the histogram.                                   |
++----------------------------+--------------------------------------------------------------------+
+
+
 Statistics setup
 """"""""""""""""
 
