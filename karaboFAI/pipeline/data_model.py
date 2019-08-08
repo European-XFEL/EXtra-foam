@@ -17,7 +17,7 @@ import numpy as np
 from ..algorithms import mask_image
 from ..config import AnalysisType, config
 
-from karaboFAI.cpp import xt_nanmean_images, xt_moving_average
+from karaboFAI.cpp import nanmeanImages, xt_moving_average
 
 
 class PairData:
@@ -498,7 +498,7 @@ class ImageData:
         instance.ma_count = ma_count
 
         if arr.ndim == 3:
-            arr_mean = xt_nanmean_images(arr)
+            arr_mean = nanmeanImages(arr)
             image_list = [None] * len(arr)
             if poi_indices is None:
                 poi_indices = [0, 0]

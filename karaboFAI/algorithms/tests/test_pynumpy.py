@@ -2,35 +2,10 @@ import unittest
 
 import numpy as np
 
-from karaboFAI.algorithms import mask_image, nanmean_images
+from karaboFAI.algorithms import mask_image
 
 
 class TestPynumpy(unittest.TestCase):
-
-    def test_nanmeanparaimp(self):
-        # test invalid shapes
-        data = np.ones([2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images(data)
-
-        data = np.ones([2, 2, 2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images(data)
-
-        # test 3D array
-        data = np.ones([2, 4, 2])
-        data[0, 0, 1] = np.nan
-        data[1, 0, 1] = np.nan
-        data[1, 2, 0] = np.nan
-        data[0, 3, 1] = np.inf
-
-        ret = nanmean_images(data, chunk_size=2, max_workers=2)
-        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
-        np.testing.assert_array_almost_equal(expected, ret)
-
-        ret = nanmean_images(data, chunk_size=1, max_workers=1)
-        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
-        np.testing.assert_array_almost_equal(expected, ret)
 
     def testMaskImage(self):
         # test not in-place
