@@ -229,9 +229,8 @@ class ImageProcessorTrain(_BaseProcessor):
                 if dropped_indices:
                     indices = list(set(range(n_images)) - set(dropped_indices))
                     if not indices:
-                        if not indices:
-                            raise DropAllPulsesError(
-                                f"{tid}: all pulses were discarded")
+                        raise DropAllPulsesError(
+                            f"{tid}: all pulses were dropped")
                     images_mean = nanmeanImages(assembled, indices)
                 else:
                     # for performance
@@ -290,7 +289,7 @@ class ImageProcessorTrain(_BaseProcessor):
                     # pulse resolved
                     if not on_indices:
                         raise DropAllPulsesError(
-                            f"{tid}: all on pulses were discarded")
+                            f"{tid}: all on pulses were dropped")
                     on_image = nanmeanImages(assembled, on_indices)
 
                     curr_indices.extend(on_indices)
@@ -308,7 +307,7 @@ class ImageProcessorTrain(_BaseProcessor):
                     # train-resolved data does not have the mode 'SAME_TRAIN'
                     if not off_indices:
                         raise DropAllPulsesError(
-                            f"{tid}: all off pulses were discarded")
+                            f"{tid}: all off pulses were dropped")
                     off_image = nanmeanImages(assembled, off_indices)
                     curr_indices.extend(off_indices)
                     curr_means.append(off_image)
@@ -326,7 +325,7 @@ class ImageProcessorTrain(_BaseProcessor):
                     if assembled.ndim == 3:
                         if not on_indices:
                             raise DropAllPulsesError(
-                                f"{tid}: all on pulses were discarded")
+                                f"{tid}: all on pulses were dropped")
                         self._prev_unmasked_on = nanmeanImages(
                             assembled, on_indices)
                         curr_indices.extend(on_indices)
@@ -343,7 +342,7 @@ class ImageProcessorTrain(_BaseProcessor):
                         if assembled.ndim == 3:
                             if not off_indices:
                                 raise DropAllPulsesError(
-                                    f"{tid}: all off pulses are discarded")
+                                    f"{tid}: all off pulses were dropped")
                             off_image = nanmeanImages(assembled, off_indices)
                             curr_indices.extend(off_indices)
                             curr_means.append(off_image)

@@ -59,11 +59,13 @@ class DataReductionProcessor(_BaseProcessor):
                 foms = processed.pulse.roi.roi1.fom
                 if foms is None:
                     raise ProcessingError(
+                        "[Data reduction]: "
                         "Pulse resolved ROI1 sum result is not available")
             elif self.analysis_type == AnalysisType.ROI2_PULSE:
                 foms = processed.pulse.roi.roi2.fom
                 if foms is None:
                     raise ProcessingError(
+                        "[Data reduction]: "
                         "Pulse resolved ROI2 sum result is not available")
             else:
                 raise NotImplementedError(
