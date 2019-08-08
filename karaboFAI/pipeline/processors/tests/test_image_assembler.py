@@ -51,15 +51,21 @@ class TestAgipdAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((4, 16, 100, 100))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((4, 16, 100, 100), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {'raw': {src_name: {key_name: np.ones((4, 12, 512, 128))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((4, 12, 512, 128), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {'raw': {src_name: {key_name: np.ones((0, 16, 512, 128))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((0, 16, 512, 128), dtype=np.float32)}}}
             self._assembler.process(data)
 
         # TODO: add a test similar to the LPD one
@@ -85,13 +91,13 @@ class TestLpdAssembler(unittest.TestCase):
 
         data = {'raw': {
             'FXE_DET_LPD1M-1/DET/11CH0:xtdf':
-                {key_name: np.ones((4, 256, 256))},
+                {key_name: np.ones((4, 256, 256), dtype=np.float32)},
             'FXE_DET_LPD1M-1/DET/7CH0:xtdf':
-                {key_name: np.ones((4, 256, 256))},
+                {key_name: np.ones((4, 256, 256), dtype=np.float32)},
             'FXE_DET_LPD1M-1/DET/8CH0:xtdf':
-                {key_name: np.ones((4, 256, 256))},
+                {key_name: np.ones((4, 256, 256), dtype=np.float32)},
             'FXE_DET_LPD1M-1/DET/3CH0:xtdf':
-                {key_name: np.ones((4, 256, 256))},
+                {key_name: np.ones((4, 256, 256), dtype=np.float32)},
         }}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -112,23 +118,31 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((16, 100, 100, 4))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {'raw': {src_name: {key_name: np.ones((15, 256, 256, 4))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((15, 256, 256, 4), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 0))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 256, 256, 0), dtype=np.float32)}}}
             self._assembler.process(data)
 
         # (modules, x, y, memory cells)
-        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}}}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
-
+        assembled = data["assembled"]
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
@@ -141,23 +155,47 @@ class TestLpdAssembler(unittest.TestCase):
         key_name = 'image.data'
         self._assembler._detector_source_name = src_name
 
-        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
 
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
-        np.testing.assert_array_equal(self._assembler._extra_shape, assembled_shape[0])
+        np.testing.assert_array_equal(
+            self._assembler._extra_shape, assembled_shape[0])
         self.assertEqual(np.float32, self._assembler._out_array.dtype)
 
         # Test output array shape change on the fly
-        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 10))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape,
                                       assembled_shape[0])
+
+    def testAssembleDtype(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'lpd_modules'
+        key_name = 'image.data'
+        self._assembler._detector_source_name = src_name
+        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
+        with self.assertRaises(TypeError):
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 256, 256, 4), dtype=np.float64)}}}
+            self._assembler.process(data)
+
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 4), dtype=np.int16)}}}
+        self._assembler.process(data)
+        assembled_dtype = data["assembled"].dtype
+        self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)
 
 
 class TestJungfrauAssembler(unittest.TestCase):
@@ -341,19 +379,27 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler._detector_source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((16, 100, 100, 4))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {'raw': {src_name: {key_name: np.ones((15, 512, 128, 4))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((15, 512, 128, 4), dtype=np.float32)}}}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 0))}}}
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 512, 128, 0), dtype=np.float32)}}}
             self._assembler.process(data)
 
         # (modules, x, y, memory cells)
-        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}}}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
@@ -370,7 +416,9 @@ class TestDSSCAssembler(unittest.TestCase):
         key_name = 'image.data'
         self._assembler._detector_source_name = src_name
 
-        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
 
@@ -380,10 +428,31 @@ class TestDSSCAssembler(unittest.TestCase):
                                       assembled_shape[0])
 
         # Test output array shape change on the fly
-        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 10))}}}
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 512, 128, 10), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape,
                                       assembled_shape[0])
+
+    def testAssembleDtype(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'dssc_modules'
+        key_name = 'image.data'
+        self._assembler._detector_source_name = src_name
+        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
+        with self.assertRaises(TypeError):
+            data = {'raw': {
+                src_name: {
+                    key_name: np.ones((16, 512, 128, 4), dtype=np.float64)}}}
+            self._assembler.process(data)
+
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 512, 128, 4), dtype=np.int16)}}}
+        self._assembler.process(data)
+        assembled_dtype = data["assembled"].dtype
+        self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)
