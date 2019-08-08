@@ -46,7 +46,6 @@ class ImageAssemblerFactory(ABC):
             self._geom = None
             self._out_array = None
             self._extra_shape = None
-            self._dtype = None
 
         def update(self):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
@@ -96,20 +95,14 @@ class ImageAssemblerFactory(ABC):
 
         def _modules_to_assembled(self, modules):
             """Convert modules data to assembled image data."""
+            image_dtype = config["IMAGE_DTYPE"]
             if self._geom is not None:
                 # karabo_data interface
                 extra_shape = (modules.shape[0], )
-                dtype = modules.dtype
-                if self._out_array is None or \
-                    self._extra_shape != extra_shape or self._dtype != dtype:
-
+                if self._out_array is None or self._extra_shape != extra_shape:
                     self._extra_shape = extra_shape
-                    self._dtype = dtype
-                    # karabo_data provides `output_array_for_position_fast`
-                    # without dtype argument. Therefore using `make_output_array`
-                    # from the snapped geometry class. Probably not a good idea
-                    self._out_array = self._geom._snapped().make_output_array(
-                        extra_shape=self._extra_shape, dtype=self._dtype)
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        extra_shape=self._extra_shape, dtype=image_dtype)
 
                 assembled, centre = self._geom.position_all_modules(modules,
                     out=self._out_array)
@@ -120,7 +113,7 @@ class ImageAssemblerFactory(ABC):
             # is only readable since the data is owned by a pointer in
             # the zmq message (it is not copied). However, other data
             # like data['metadata'] is writeable.
-            return np.copy(modules)
+            return modules.astype(image_dtype)
 
         @profiler("Image Assembler")
         def process(self, data):
@@ -165,13 +158,6 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             assembled = self._modules_to_assembled(modules_data)
-
-            image_dtype = config['IMAGE_DTYPE']
-            if assembled.dtype != image_dtype:
-                # FIXME: in order to avoid the copy, it would need
-                #   position_modules_fast to allow select output data type.
-                assembled = assembled.astype(image_dtype)
-
             data['assembled'] = assembled
 
     class AgipdImageAssembler(BaseAssembler):

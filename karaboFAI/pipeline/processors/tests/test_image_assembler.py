@@ -148,7 +148,7 @@ class TestLpdAssembler(unittest.TestCase):
         np.testing.assert_array_equal(self._assembler._out_array.shape,
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape, assembled_shape[0])
-        self.assertEqual(np.float64, self._assembler._out_array.dtype)
+        self.assertEqual(np.float32, self._assembler._out_array.dtype)
 
         # Test output array shape change on the fly
         data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 10))}}}
@@ -158,16 +158,6 @@ class TestLpdAssembler(unittest.TestCase):
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape,
                                       assembled_shape[0])
-
-       # Test dtype change and shape change on the fly
-        data = {'raw': {src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}}}
-        self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
-        np.testing.assert_array_equal(self._assembler._extra_shape,
-                                      assembled_shape[0])
-        self.assertEqual(np.float32, self._assembler._out_array.dtype)
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
 
 
 class TestJungfrauAssembler(unittest.TestCase):
@@ -376,7 +366,7 @@ class TestDSSCAssembler(unittest.TestCase):
 
     def testOutArray(self):
         self._assembler._source_type = DataSource.BRIDGE
-        src_name = 'lpd_modules'
+        src_name = 'dssc_modules'
         key_name = 'image.data'
         self._assembler._detector_source_name = src_name
 
@@ -388,7 +378,6 @@ class TestDSSCAssembler(unittest.TestCase):
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape,
                                       assembled_shape[0])
-        self.assertEqual(np.float64, self._assembler._out_array.dtype)
 
         # Test output array shape change on the fly
         data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 10))}}}
@@ -398,12 +387,3 @@ class TestDSSCAssembler(unittest.TestCase):
             assembled_shape)
         np.testing.assert_array_equal(self._assembler._extra_shape,
                                       assembled_shape[0])
-
-        # Test dtype change and shape change on the fly
-        data = {'raw': {src_name: {key_name: np.ones((16, 512, 128, 4),
-                                                      dtype=np.float32)}}}
-        self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
-        self.assertEqual(np.float32, self._assembler._out_array.dtype)
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
