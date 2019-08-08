@@ -19,7 +19,7 @@ from karaboFAI.pipeline.processors.image_processor import (
 )
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
-    PumpProbeIndexError, ProcessingError
+    DropAllPulsesError, PumpProbeIndexError, ProcessingError
 )
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
@@ -418,6 +418,25 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             processed.pp.image_on, np.mean(data['assembled'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
+        # --------------------
+        # test pulse reduction
+        # --------------------
+
+        data, processed = self._gen_data(1002)
+        image_data = processed.image
+        image_data.dropped_indices = [0, 2]
+        with self.assertRaises(DropAllPulsesError):
+            proc.process(data)
+
+        image_data.dropped_indices = [1, 3]
+        # no Exception
+        proc.process(data)
+
+        # test image_on correctness
+        image_data.dropped_indices = [0]
+        proc.process(data)
+        np.testing.assert_array_equal(processed.pp.image_on, data['assembled'][2])
+
     def testSameTrain(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.SAME_TRAIN
@@ -430,6 +449,25 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             processed.pp.image_on, np.mean(data['assembled'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
+
+        # --------------------
+        # test pulse reduction
+        # --------------------
+
+        data, processed = self._gen_data(1002)
+        image_data = processed.image
+        image_data.dropped_indices = [0, 2]
+        with self.assertRaises(DropAllPulsesError):
+            proc.process(data)
+        image_data.dropped_indices = [1, 3]
+        with self.assertRaises(DropAllPulsesError):
+            proc.process(data)
+
+        # test image_on correctness
+        image_data.dropped_indices = [0, 1]
+        proc.process(data)
+        np.testing.assert_array_equal(processed.pp.image_on, data['assembled'][2])
+        np.testing.assert_array_equal(processed.pp.image_off, data['assembled'][3])
 
     def testEvenOn(self):
         proc = self._proc
@@ -458,6 +496,40 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
 
+        # --------------------
+        # test pulse reduction
+        # --------------------
+
+        data, processed = self._gen_data(1002)
+        image_data = processed.image
+        image_data.dropped_indices = [0, 2]
+        with self.assertRaises(DropAllPulsesError):
+            proc.process(data)
+        image_data.dropped_indices = [1, 3]
+        # no Exception since this is an ON pulse
+        proc.process(data)
+        # drop one on/off indices each
+        image_data.dropped_indices = [0, 1]
+        proc.process(data)
+        np.testing.assert_array_equal(proc._prev_unmasked_on, data['assembled'][2])
+
+        data, processed = self._gen_data(1003)
+        image_data = processed.image
+        # drop all off indices
+        image_data.dropped_indices = [1, 3]
+        with self.assertRaises(DropAllPulsesError):
+            self.assertIsNotNone(proc._prev_unmasked_on)
+            proc.process(data)
+        # drop all on indices
+        image_data.dropped_indices = [0, 2]
+        # no Exception since this is an OFF pulse
+        proc.process(data)
+        # drop one on/off indices each
+        image_data.dropped_indices = [0, 1]
+        proc._prev_unmasked_on = np.ones((2, 2), np.float32)  # any value except None
+        proc.process(data)
+        np.testing.assert_array_equal(processed.pp.image_off, data['assembled'][3])
+
     def testOddOn(self):
         proc = self._proc
         proc._pp_mode = PumpProbeMode.ODD_TRAIN_ON
@@ -484,3 +556,8 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
+
+        # --------------------
+        # test pulse reduction
+        # --------------------
+        # not necessary according to the implementation
