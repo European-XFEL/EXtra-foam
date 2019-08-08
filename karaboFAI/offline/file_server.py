@@ -12,6 +12,7 @@ All rights reserved.
 import datetime
 import os.path as osp
 from multiprocessing import Process
+import re
 from time import time
 
 from karabo_data import RunDirectory, ZMQStreamer
@@ -20,8 +21,10 @@ from ..config import config
 from ..utils import profiler
 from ..logger import logger
 
-def get_info(run):
 
+def get_info(run):
+    """karabo data info method"""
+    DETECTOR_SOURCE_RE = re.compile(r'(.+)/DET/(\d+)CH')
     info = ""
     first_train = run.train_ids[0]
     last_train = run.train_ids[-1]
@@ -37,22 +40,12 @@ def get_info(run):
     # A run should only have one detector, but if that changes, don't hide it
     detector_name = ','.join(sorted(set(k[0] for k in detector_modules)))
 
-    # disp
     info += f'\n# of trains:   {train_count}'
     info += f'\nDuration:      {span_txt}'
-    info += f'\nFirst train ID:{first_train}'
+    info += f'\nFirst train ID: {first_train}'
     info += f'\nLast train ID: {last_train}\n'
 
-    print('# of trains:   ', train_count)
-    print('Duration:      ', span_txt)
-    print('First train ID:', first_train)
-    print('Last train ID: ', last_train)
-    print()
-
-    print("{} detector modules ({})".format(
-        len(run.detector_sources), detector_name
-    ))
-    info += f'\n{run.detector_sources} detector modules ({detector_name})'
+    info += f'\n{len(run.detector_sources)} detector modules ({detector_name})'
     if len(detector_modules) > 0:
         # Show detail on the first module (the others should be similar)
         mod_key = sorted(detector_modules)[0]
@@ -60,23 +53,23 @@ def get_info(run):
         dinfo = run.detector_info(mod_source)
         module = ' '.join(mod_key)
         dims = ' x '.join(str(d) for d in dinfo['dims'])
-        print("  e.g. module {} : {} pixels".format(module, dims))
-        print("  {} frames per train, {} total frames".format(
-            dinfo['frames_per_train'], dinfo['total_frames']
-        ))
         info += f"\n  e.g. module {module} : {dims} pixels"
-        info += 
-    print()
+        info += (f"\n  {dinfo['frames_per_train']} frames per train, "
+                 f" {dinfo['total_frames']} total frames")
 
+    info += "\n"
     non_detector_inst_srcs = run.instrument_sources - run.detector_sources
-    print(len(non_detector_inst_srcs), 'instrument sources (excluding detectors):')
+    info += (f"\n{len(non_detector_inst_srcs)} instrument sources "
+             f"(excluding detectors):")
+
     for d in sorted(non_detector_inst_srcs):
-        print('  -', d)
-    print()
-    print(len(run.control_sources), 'control sources:')
+        info += f"\n  -{d}"
+    info += "\n"
+    info += f"\n{len(run.control_sources)} control sources:"
     for d in sorted(run.control_sources):
-        print('  -', d)
-    print(info)
+        info += f"\n  -{d}"
+    return info
+
 
 @profiler("Gather sources")
 def gather_sources(path):
@@ -90,9 +83,12 @@ def gather_sources(path):
     Return:
     -------
     Slow sources: Frozenset
-          Set of slow sources available. Empty if none found.
+        Set of slow sources available. Empty if none found.
+    Run info: string
+        Information about the run. Empty string if no info found
     """
     slow = frozenset()
+    info = ""
     if osp.isdir(path):
         try:
             # This will work in case users are using data stored
@@ -102,7 +98,7 @@ def gather_sources(path):
             run = RunDirectory(
                         path.replace('/proc/', '/raw/'))
             slow = run.control_sources
-            get_info(run)
+            info = get_info(run)
         except Exception as ex:
             # Will be raised if no folder with 'raw' exist or no files
             # found in raw folder.
@@ -113,10 +109,11 @@ def gather_sources(path):
             try:
                 run = RunDirectory(path)
                 slow = run.control_sources
+                # info = get_info(run)
             except Exception as ex:
                 logger.error(repr(ex))
 
-    return slow
+    return slow, info
 
 
 def generate_meta(sources, tid):
