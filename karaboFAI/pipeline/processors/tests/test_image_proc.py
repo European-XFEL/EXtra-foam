@@ -345,6 +345,20 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
                                         background=0,
                                         poi_indices=[0, 0])
 
+    def testDataReductions(self):
+        proc = self._proc
+
+        data, processed = self._gen_data(1001)
+        image_data = processed.image
+        self.assertListEqual([], image_data.dropped_indices)
+        image_data.dropped_indices = [0, 2]
+        proc.process(data)
+        # test calculating the average image after data reduction
+        np.testing.assert_array_equal(
+            np.nanmean(data['assembled'][[1, 3]], axis=0),
+            image_data.mean
+        )
+
     def testInvalidPulseIndices(self):
         proc = self._proc
         proc._on_indices = [0, 1, 5]
@@ -356,6 +370,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             data, _ = self._gen_data(1001)
             proc.process(data)
 
+        proc._on_indices = [0, 1, 5]
         proc._off_indices = [1, 3]
         proc._pp_mode = PumpProbeMode.EVEN_TRAIN_ON
         with self.assertRaises(PumpProbeIndexError):
@@ -372,6 +387,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             proc.process(data)
 
         # off-indices check is not trigger in PRE_DEFINED_OFF mode
+        proc._on_indices = [0, 1]
         proc._off_indices = [5]
         proc._pp_mode = PumpProbeMode.PRE_DEFINED_OFF
         data, _ = self._gen_data(1001)
