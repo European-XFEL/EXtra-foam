@@ -17,8 +17,7 @@ import numpy as np
 from karaboFAI.pipeline.processors import DataReductionProcessor
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
-
-from . import _BaseProcessorTest
+from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 
 class TestCorrelationProcessor(_BaseProcessorTest):
