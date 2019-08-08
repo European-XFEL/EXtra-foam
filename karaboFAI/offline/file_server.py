@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import datetime
 import os.path as osp
 from multiprocessing import Process
 from time import time
@@ -19,6 +20,63 @@ from ..config import config
 from ..utils import profiler
 from ..logger import logger
 
+def get_info(run):
+
+    info = ""
+    first_train = run.train_ids[0]
+    last_train = run.train_ids[-1]
+    train_count = len(run.train_ids)
+    span_sec = (last_train - first_train) / 10
+    span_txt = str(datetime.timedelta(seconds=span_sec))
+
+    detector_modules = {}
+    for source in run.detector_sources:
+        name, modno = DETECTOR_SOURCE_RE.match(source).groups((1, 2))
+        detector_modules[(name, modno)] = source
+
+    # A run should only have one detector, but if that changes, don't hide it
+    detector_name = ','.join(sorted(set(k[0] for k in detector_modules)))
+
+    # disp
+    info += f'\n# of trains:   {train_count}'
+    info += f'\nDuration:      {span_txt}'
+    info += f'\nFirst train ID:{first_train}'
+    info += f'\nLast train ID: {last_train}\n'
+
+    print('# of trains:   ', train_count)
+    print('Duration:      ', span_txt)
+    print('First train ID:', first_train)
+    print('Last train ID: ', last_train)
+    print()
+
+    print("{} detector modules ({})".format(
+        len(run.detector_sources), detector_name
+    ))
+    info += f'\n{run.detector_sources} detector modules ({detector_name})'
+    if len(detector_modules) > 0:
+        # Show detail on the first module (the others should be similar)
+        mod_key = sorted(detector_modules)[0]
+        mod_source = detector_modules[mod_key]
+        dinfo = run.detector_info(mod_source)
+        module = ' '.join(mod_key)
+        dims = ' x '.join(str(d) for d in dinfo['dims'])
+        print("  e.g. module {} : {} pixels".format(module, dims))
+        print("  {} frames per train, {} total frames".format(
+            dinfo['frames_per_train'], dinfo['total_frames']
+        ))
+        info += f"\n  e.g. module {module} : {dims} pixels"
+        info += 
+    print()
+
+    non_detector_inst_srcs = run.instrument_sources - run.detector_sources
+    print(len(non_detector_inst_srcs), 'instrument sources (excluding detectors):')
+    for d in sorted(non_detector_inst_srcs):
+        print('  -', d)
+    print()
+    print(len(run.control_sources), 'control sources:')
+    for d in sorted(run.control_sources):
+        print('  -', d)
+    print(info)
 
 @profiler("Gather sources")
 def gather_sources(path):
@@ -41,8 +99,10 @@ def gather_sources(path):
             # in /gpfs/exfel/exp/INSTRUMENT/cycle/proposal/proc/runumber
             # or they have raw folder with same path instead of 'proc'
             # in it in the end.
-            slow = RunDirectory(
-                        path.replace('/proc/', '/raw/')).control_sources
+            run = RunDirectory(
+                        path.replace('/proc/', '/raw/'))
+            slow = run.control_sources
+            get_info(run)
         except Exception as ex:
             # Will be raised if no folder with 'raw' exist or no files
             # found in raw folder.
@@ -51,7 +111,8 @@ def gather_sources(path):
             # Fallback to corrected datapath. Will return empty
             # frozenset if no control source found.
             try:
-                slow = RunDirectory(path).control_sources
+                run = RunDirectory(path)
+                slow = run.control_sources
             except Exception as ex:
                 logger.error(repr(ex))
 

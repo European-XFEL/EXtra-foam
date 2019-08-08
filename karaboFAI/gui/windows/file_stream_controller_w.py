@@ -28,7 +28,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
         self._load_run_btn = QtGui.QPushButton("Load Run Folder")
 
-        self._data_folder_le = SmartLineEdit()
+        self._data_folder_le = SmartLineEdit("/home/kamile/jungfraudata/proc/r001")
 
         self._serve_start_btn = QtGui.QPushButton("Stream files")
         self._serve_terminate_btn = QtGui.QPushButton("Terminate")
