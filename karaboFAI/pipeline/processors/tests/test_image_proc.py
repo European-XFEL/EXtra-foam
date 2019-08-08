@@ -38,6 +38,24 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
 
+    def testPulseSlice(self):
+        # The sliced_indices for train-resolved data should always be [0]
+
+        data, processed = self.data_with_assembled(1, (2, 2))
+
+        self._proc.process(data)
+        # FIXME
+        # np.testing.assert_array_equal(data['assembled'], processed.image.images)
+        self.assertIsInstance(processed.image.images, list)
+        self.assertListEqual([0], processed.image.sliced_indices)
+
+        # set a slicer
+        self._proc._pulse_slicer = slice(0, 2)
+        self._proc.process(data)
+        # FIXME
+        # np.testing.assert_array_equal(data['assembled'], processed.image.images)
+        self.assertListEqual([0], processed.image.sliced_indices)
+
     def testMovingAverage(self):
         proc = self._proc
 
@@ -110,17 +128,48 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
 
-    def testGeneral(self):
+    def testPulseSlicing(self):
         data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled_gt = data['assembled'].copy()
 
         self._proc.process(data)
-        self.assertIsInstance(processed.image.images, list)
+        self.assertEqual(4, processed.image.n_images)
         self.assertListEqual([0, 1, 2, 3], processed.image.sliced_indices)
 
         # test slice to list of indices
         self._proc._pulse_slicer = slice(0, 2)
         self._proc.process(data)
+        # Note: this test ensures that POI and on/off pulse indices are all
+        # based on the assembled data after pulse slicing.
+        np.testing.assert_array_equal(assembled_gt[0:2], data['assembled'])
+        self.assertEqual(2, processed.image.n_images)
         self.assertListEqual([0, 1], processed.image.sliced_indices)
+
+    def testPOI(self):
+        proc = self._proc
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+
+        proc.process(data)
+        imgs = processed.image.images
+        self.assertIsInstance(imgs, list)
+        self.assertListEqual([0, 0], proc._poi_indices)
+        np.testing.assert_array_equal(imgs[0], data['assembled'][0])
+        self.assertIsNone(imgs[1])
+        self.assertIsNone(imgs[3])
+
+        # change POI indices
+        proc._poi_indices = [2, 3]
+        proc.process(data)
+        imgs = processed.image.images
+        self.assertIsNone(imgs[0])
+        self.assertIsNone(imgs[1])
+        np.testing.assert_array_equal(imgs[2], data['assembled'][2])
+        np.testing.assert_array_equal(imgs[3], data['assembled'][3])
+
+        # test invalid indices
+        proc._poi_indices = [3, 4]
+        with self.assertRaises(ProcessingError):
+            proc.process(data)
 
     def testMovingAverage(self):
         # The moving average test is redundant for now since pulse-resolved

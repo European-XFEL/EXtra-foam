@@ -109,8 +109,9 @@ class ImageProcessorPulse(_BaseProcessor):
         self._update_reference(image_shape)
 
         # Avoid sending all images around
-        # consider to use the 'virtual stack' in karabo_data
-        # https://github.com/European-XFEL/karabo_data/pull/196
+        # TODO: consider to use the 'virtual stack' in karabo_data, then
+        #       for train-resolved data, set image_data.images == assembled
+        #       https://github.com/European-XFEL/karabo_data/pull/196
         image_data.images = [None] * n_images
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, assembled)
@@ -148,11 +149,12 @@ class ImageProcessorPulse(_BaseProcessor):
         self._reference = ref
 
     def _update_pois(self, image_data, assembled):
-        if assembled.ndim != 3:
+        if assembled.ndim == 2:
             return
 
         n_images = image_data.n_images
         out_of_bound_poi_indices = []
+        # only keep POI in 'images'
         for i in image_data.poi_indices:
             if i < n_images:
                 image_data.images[i] = mask_image(
@@ -164,8 +166,9 @@ class ImageProcessorPulse(_BaseProcessor):
                 out_of_bound_poi_indices.append(i)
 
         if out_of_bound_poi_indices:
-            raise ProcessingError(f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
-                                  f"is out of bound (0 - {n_images-1}")
+            raise ProcessingError(
+                f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
+                f"is out of bound (0 - {n_images-1}")
 
 
 class ImageProcessorTrain(_BaseProcessor):
