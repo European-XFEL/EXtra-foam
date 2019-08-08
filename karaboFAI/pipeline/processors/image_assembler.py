@@ -45,7 +45,7 @@ class ImageAssemblerFactory(ABC):
             self._quad_position = None
             self._geom = None
             self._out_array = None
-            self._extra_shape = None
+            self._n_images = None
 
         def update(self):
             ds_cfg = self._meta.get_all(mt.DATA_SOURCE)
@@ -98,11 +98,11 @@ class ImageAssemblerFactory(ABC):
             image_dtype = config["IMAGE_DTYPE"]
             if self._geom is not None:
                 # karabo_data interface
-                extra_shape = (modules.shape[0], )
-                if self._out_array is None or self._extra_shape != extra_shape:
-                    self._extra_shape = extra_shape
+                n_images = (modules.shape[0], )
+                if self._out_array is None or self._n_images != n_images:
+                    self._n_images = n_images
                     self._out_array = self._geom.output_array_for_position_fast(
-                        extra_shape=self._extra_shape, dtype=image_dtype)
+                        extra_shape=self._n_images, dtype=image_dtype)
 
                 assembled, centre = self._geom.position_all_modules(modules,
                     out=self._out_array)
