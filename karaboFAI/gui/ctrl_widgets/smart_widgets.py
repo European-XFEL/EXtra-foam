@@ -12,7 +12,7 @@ All rights reserved.
 from PyQt5 import QtCore, QtGui
 
 from ..misc_widgets import Colors
-from ..gui_helpers import parse_boundary, parse_ids
+from ..gui_helpers import parse_boundary, parse_ids, parse_slice
 
 
 class SmartLineEdit(QtGui.QLineEdit):
@@ -129,6 +129,39 @@ class SmartRangeLineEdit(SmartLineEdit):
         @staticmethod
         def parse(s):
             return parse_ids(s)
+
+    def __init__(self, content, parent=None):
+        super().__init__(content, parent=parent)
+
+        try:
+            self.Validator.parse(content)
+        except ValueError:
+            raise
+
+        self._cached = self.text()
+
+        self.setValidator(self.Validator())
+
+
+class SmartSliceLineEdit(SmartLineEdit):
+
+    value_changed_sgn = QtCore.pyqtSignal(object)
+
+    # TODO: make a base class for this
+    class Validator(QtGui.QValidator):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+
+        def validate(self, s, pos):
+            try:
+                self.parse(s)
+                return QtGui.QValidator.Acceptable, s, pos
+            except ValueError:
+                return QtGui.QValidator.Intermediate, s, pos
+
+        @staticmethod
+        def parse(s):
+            return parse_slice(s)
 
     def __init__(self, content, parent=None):
         super().__init__(content, parent=parent)

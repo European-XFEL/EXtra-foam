@@ -311,6 +311,19 @@ class _RedisParserMixin:
             return []
         return [handler(v) for v in text[1:-1].split(delimiter)]
 
+    @staticmethod
+    def str2slice(text):
+        """Convert a string to a slice object.
+
+        The string is expected to the result of str(lt), where lt can be
+        converted to a slice object by slice(*lt).
+
+        For example:
+            str2slice('[None, 2]' -> slice(None, 2)
+        """
+        return slice(*[None if v.strip() == 'None' else int(v)
+                       for v in text[1:-1].split(',')])
+
 
 class MetaProcessor(type):
     def __new__(mcs, name, bases, class_dict):

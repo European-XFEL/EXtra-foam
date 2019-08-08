@@ -73,8 +73,8 @@ class ImageProcessorPulse(_BaseProcessor):
         # global
         gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
 
-        self._pulse_index_filter = self.str2list(
-            gp_cfg['selected_pulse_indices'], handler=int)
+        self._pulse_index_filter = self.str2slice(
+            gp_cfg['selected_pulse_indices'])
 
         self._poi_indices = [int(gp_cfg['poi1_index']),
                              int(gp_cfg['poi2_index'])]

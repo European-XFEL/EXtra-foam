@@ -116,11 +116,11 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertAlmostEqual(1e-10, ai_proc._wavelength)
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
         image_proc.update()
-        self.assertListEqual([-1], image_proc._pulse_index_filter)
+        self.assertEqual(slice(None, None), image_proc._pulse_index_filter)
 
         widget._pulse_index_filter_le.setText("1:5:2")
         image_proc.update()
-        self.assertListEqual([1, 3], image_proc._pulse_index_filter)
+        self.assertEqual(slice(1, 5, 2), image_proc._pulse_index_filter)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
