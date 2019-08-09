@@ -91,12 +91,15 @@ Define the general analysis setup.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Pulse index filter*       | A filter which selects the specified indices in a train.           |
+| *Pulse slicer*             | The input will be used to construct a *slice* object in Python     |
+|                            | which is used to select the specified pulse pattern in a train.    |
 |                            | *Pulse-resolved detector only*.                                    |
 +----------------------------+--------------------------------------------------------------------+
-| *POI index 1*              | Index of the first pulse of interest (POI). Besides the average of |
-|                            | all pulses in a train, **karaboFAI** allows users to select two    |
-|                            | individual pulses to monitor. *Pulse-resolved detector only.*      |
+| *POI index 1*              | Index of the first pulse of interest (POI). It is used for         |
+|                            | visualizing a single image in the *Pulse-of-interest* window. **If |
+|                            | 'Pulse slicer' is used to slice a portion of the pulses in the     |
+|                            | train, this index is indeed the index of the pulse in the sliced   |
+|                            | train**. *Pulse-resolved detector only.*                           |
 +----------------------------+--------------------------------------------------------------------+
 | *POI index 2*              | Index of the 2nd POI pulse. *Pulse-resolved detector only.*        |
 +----------------------------+--------------------------------------------------------------------+
@@ -156,7 +159,10 @@ analysis is given by VFOM (on) - VFOM (off).
 +----------------------------+--------------------------------------------------------------------+
 | *Analysis type*            | See AnalysisType_.                                                 |
 +----------------------------+--------------------------------------------------------------------+
-| *On-pulse indices*         | Indices of all on-pulses. *Pulse-resolved detector only.*          |
+| *On-pulse indices*         | Indices of all on-pulses. **If 'Pulse slicer' is used to slice a   |
+|                            | portion of the pulses in the train, these indices are indeed the   |
+|                            | indices of the pulse in the sliced train**.                        |
+|                            | *Pulse-resolved detector only.*                                    |
 +----------------------------+--------------------------------------------------------------------+
 | *Off-pulse indices*        | Indices of all off-pulses. *Pulse-resolved detector only.*         |
 +----------------------------+--------------------------------------------------------------------+
@@ -246,6 +252,22 @@ Data source
 +----------------------------+--------------------------------------------------------------------+
 | *Detector source name*     | *KaraboDeviceID* for multi-module detectors and                    |
 |                            | *KaraboDeviceID:outputChannel* for single-module detectors         |
++----------------------------+--------------------------------------------------------------------+
+
+
+Data reduction setup
+""""""""""""""""""""
+
+Apply data reduction by setting the lower and upper boundary of the specified FOM. Currently,
+it affects calculating the average of images in a train as well as the averages of images of
+ON-/Off- pulses in a train. It only works for pulse-resolved detectors.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| *Analysis type*            | See AnalysisType_.                                                 |
++----------------------------+--------------------------------------------------------------------+
+| *FOM range*                | Number of bins of the histogram.                                   |
 +----------------------------+--------------------------------------------------------------------+
 
 
