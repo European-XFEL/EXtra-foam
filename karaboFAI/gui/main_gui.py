@@ -326,25 +326,42 @@ class MainGUI(QtGui.QMainWindow):
         if not self._running:
             return
 
-        try:
-            processed_data = self._input.get_nowait()
-            processed_data.update()
-            self._data.set(processed_data)
-        except Empty:
-            return
+        # Fetch all data in the queue and update history, then update plots.
+        # This prevent costly GUI updating from blocking data acquisition and
+        # processing.
+        tid = -1
+        plot_data = False
+        while True:
+            try:
+                processed = self._input.get_nowait()
+                plot_data = True
+                processed.update()
+                tid = processed.tid
+                self._data.set(processed)
+
+                logger.info(f"Updated train with ID: {tid}")
+            except Empty:
+                if plot_data:
+                    break
+                # no data
+                return
+            except Exception as e:
+                logger.error(f"Unexpected exception: {repr(e)}")
+                return
 
         # clear the previous plots no matter what comes next
         # for w in self._windows.keys():
         #     w.reset()
 
         if self._data.get().image is None:
-            logger.info("Bad train with ID: {}".format(self._data.get().tid))
+            # FIXME: will this happen? I guess this is some very
+            #        old code.
+            logger.info(f"Bad train with ID: {tid}")
             return
 
         for w in self._windows.keys():
             w.update()
-
-        logger.info("Updated train with ID: {}".format(self._data.get().tid))
+        logger.debug(f"Plot train with ID: {tid}")
 
     def _publish_process_info(self):
         self.process_info_sgn.emit(list_fai_processes())
