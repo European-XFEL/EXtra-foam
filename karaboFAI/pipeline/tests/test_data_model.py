@@ -259,10 +259,10 @@ class TestImageData(unittest.TestCase):
             ImageData.from_array()
 
         with self.assertRaises(ValueError):
-            ImageData.from_array(np.arange(2))
+            ImageData.from_array(np.ones(2))
 
         with self.assertRaises(ValueError):
-            ImageData.from_array(np.arange(16).reshape((2, 2, 2, 2)))
+            ImageData.from_array(np.ones((2, 2, 2, 2)))
 
     @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
     def testInitWithSpecifiedParameters(self):
@@ -270,6 +270,12 @@ class TestImageData(unittest.TestCase):
         # ---------------------
         # pulse-resolved data
         # ---------------------
+        with self.assertRaises(ValueError):
+            ImageData.from_array(np.ones((2, 2, 2)), sliced_indices=[0, 1, 2])
+
+        with self.assertRaises(ValueError):
+            ImageData.from_array(np.ones((2, 2, 2)), sliced_indices=[1, 1, 1])
+
         imgs = np.ones((3, 2, 2))
         imgs[:, 0, :] = 2
         image_data = ImageData.from_array(imgs,
@@ -278,8 +284,10 @@ class TestImageData(unittest.TestCase):
                                           poi_indices=[0, 1])
 
         self.assertEqual(2e-3, image_data.pixel_size)
+        self.assertIsInstance(image_data.images, list)
         self.assertEqual(3, image_data.n_images)
 
+        self.assertListEqual([0, 1, 2], image_data.sliced_indices)
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
                                       image_data.images[0])
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
@@ -290,21 +298,30 @@ class TestImageData(unittest.TestCase):
                                       image_data.mean)
         np.testing.assert_array_equal(np.array([[0., 0.], [1., 1.]]),
                                       image_data.masked_mean)
+
         self.assertEqual(-100, image_data.background)
         self.assertEqual((0, 1), image_data.threshold_mask)
 
         # ---------------------
         # train-resolved data
         # ---------------------
-        img = np.ones((2, 2))
-        img[0, 0] = 2
+        with self.assertRaises(ValueError):
+            ImageData.from_array(np.ones((2, 2)), sliced_indices=[0])
+
+        img = np.array([[2, 1], [1, 1]])
         image_data = ImageData.from_array(img, threshold_mask=(0, 1))
 
+        self.assertEqual([0], image_data.sliced_indices)
+        self.assertEqual([None], image_data.images)
         self.assertEqual(1, image_data.n_images)
+
         np.testing.assert_array_equal(np.array([[2., 1.], [1., 1.]]),
                                       image_data.mean)
         np.testing.assert_array_equal(np.array([[0., 1.], [1., 1.]]),
                                       image_data.masked_mean)
+
+        self.assertEqual(0, image_data.background)
+        self.assertEqual((0, 1), image_data.threshold_mask)
 
 
 class TestCorrelationData(unittest.TestCase):
