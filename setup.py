@@ -193,6 +193,7 @@ setup(
     package_data={
         'karaboFAI': [
             'gui/icons/*.png',
+            'gui/icons/*.jpg',
             'geometries/*.h5'
         ]
     },
