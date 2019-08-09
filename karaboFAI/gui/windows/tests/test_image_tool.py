@@ -190,7 +190,7 @@ class TestImageTool(unittest.TestCase):
         # moving average is disabled for pulse-resolved data
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
-    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
+    @patch("karaboFAI.gui.plot_widgets.image_views.ImageAnalysis."
            "onThresholdMaskChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageThresholdMaskChange")
     def testThresholdMask(self, on_mask_mediator, on_mask):
@@ -202,7 +202,7 @@ class TestImageTool(unittest.TestCase):
         on_mask.assert_called_once_with((1, 10))
         on_mask_mediator.assert_called_once_with((1, 10))
 
-    @patch("karaboFAI.gui.plot_widgets.image_view.ImageAnalysis."
+    @patch("karaboFAI.gui.plot_widgets.image_views.ImageAnalysis."
            "onBkgChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageBackgroundChange")
     def testBackground(self, on_bkg_mediator, on_bkg):

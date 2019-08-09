@@ -14,7 +14,7 @@ import os.path as osp
 from PyQt5 import QtCore, QtGui
 
 from .base_window import AbstractWindow
-from ..plot_widgets import ImageView
+from ..plot_widgets import ImageViewF
 from ..misc_widgets import Colors
 from ...config import config
 
@@ -93,7 +93,7 @@ class DarkRunWindow(AbstractWindow):
         self._ctrl_action_at.setDefaultWidget(self._ctrl_action)
         self._tool_bar_ctrl.addAction(self._ctrl_action_at)
 
-        self._image_view = ImageView(hide_axis=False, parent=self)
+        self._image_view = ImageViewF(hide_axis=False, parent=self)
 
         self.initUI()
         self.initConnections()

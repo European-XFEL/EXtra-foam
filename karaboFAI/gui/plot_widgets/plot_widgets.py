@@ -11,13 +11,13 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_plot_widget import PlotWidget
+from .plot_widget_base import PlotWidgetF
 
-from ..misc_widgets import make_brush, make_pen, SequentialColors
-from ...config import AnalysisType, config
+from ..misc_widgets import make_brush, make_pen
+from ...config import config
 
 
-class TrainAiWidget(PlotWidget):
+class TrainAiWidget(PlotWidgetF):
     """TrainAiWidget class.
 
     Widget for displaying azimuthal integration result for the average of all
@@ -43,7 +43,7 @@ class TrainAiWidget(PlotWidget):
         self._plot.setData(momentum, intensity)
 
 
-class PulsesInTrainFomWidget(PlotWidget):
+class PulsesInTrainFomWidget(PlotWidgetF):
     """PulsesInTrainFomWidget class.
 
     A widget which allows users to monitor the FOM of each pulse in a train.
@@ -67,7 +67,7 @@ class PulsesInTrainFomWidget(PlotWidget):
         self._plot.setData(range(len(fom_hist)), fom_hist)
 
 
-class CorrelationWidget(PlotWidget):
+class CorrelationWidget(PlotWidgetF):
     """CorrelationWidget class.
 
     Widget for displaying correlations between FOM and different parameters.
@@ -132,7 +132,7 @@ class CorrelationWidget(PlotWidget):
             self._plot.setData(correlator_hist, fom_hist.avg)
 
 
-class PumpProbeOnOffWidget(PlotWidget):
+class PumpProbeOnOffWidget(PlotWidgetF):
     """PumpProbeOnOffWidget class.
 
     Widget for displaying the pump and probe signal or their difference.
@@ -180,7 +180,7 @@ class PumpProbeOnOffWidget(PlotWidget):
             self._off_pulse.setData(x, off)
 
 
-class PumpProbeFomWidget(PlotWidget):
+class PumpProbeFomWidget(PlotWidgetF):
     """PumpProbeFomWidget class.
 
     Widget for displaying the evolution of FOM in pump-probe analysis.
@@ -201,7 +201,7 @@ class PumpProbeFomWidget(PlotWidget):
         self._plot.setData(tids, fom_hist)
 
 
-class XasSpectrumWidget(PlotWidget):
+class XasSpectrumWidget(PlotWidgetF):
     """XasSpectrumWidget class.
 
     Widget for displaying the XAS spectra.
@@ -230,7 +230,7 @@ class XasSpectrumWidget(PlotWidget):
         self._spectrum2.setData(bin_center, absorptions[1])
 
 
-class XasSpectrumDiffWidget(PlotWidget):
+class XasSpectrumDiffWidget(PlotWidgetF):
     """XasSpectrumDiffWidget class.
 
     Widget for displaying the difference of two XAS spectra.
@@ -253,7 +253,7 @@ class XasSpectrumDiffWidget(PlotWidget):
         self._plot.setData(bin_center, absorptions[1] - absorptions[0])
 
 
-class XasSpectrumBinCountWidget(PlotWidget):
+class XasSpectrumBinCountWidget(PlotWidgetF):
     """XasSpectrumBinCountWidget class.
 
     Widget for displaying the number of data points in each energy bins.
@@ -276,7 +276,7 @@ class XasSpectrumBinCountWidget(PlotWidget):
         self._plot.setData(bin_center, bin_count)
 
 
-class Bin1dHist(PlotWidget):
+class Bin1dHist(PlotWidgetF):
     """Bin1dHist class.
 
     Widget for visualizing histogram of count for 1D-binning.
@@ -317,7 +317,7 @@ class Bin1dHist(PlotWidget):
             self._plot.setData(bin.center, hist)
 
 
-class FomHistogramWidget(PlotWidget):
+class FomHistogramWidget(PlotWidgetF):
     """StatisticsWidget class
 
     Plot statistics of accumulated FOMs from different analysis

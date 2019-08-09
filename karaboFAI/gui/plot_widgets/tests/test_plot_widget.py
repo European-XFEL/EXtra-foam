@@ -1,9 +1,7 @@
 import unittest
 
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.plot_widgets.plot_widgets import (
-    PlotWidget
-)
+from karaboFAI.gui.plot_widgets.plot_widget_base import PlotWidgetF
 
 
 app = mkQApp()
@@ -11,7 +9,7 @@ app = mkQApp()
 
 class TestPlotWidget(unittest.TestCase):
     def setUp(self):
-        self._widget = PlotWidget()
+        self._widget = PlotWidgetF()
 
     def testGeneral(self):
         self._widget.plotCurve()
@@ -35,6 +33,9 @@ class TestPlotWidget(unittest.TestCase):
         # test if x and y have different lengths
         with self.assertRaises(ValueError):
             plot.setData([1, 2, 3], [])
+
+    def testBarPlotPerformance(self):
+        pass
 
     def testErrorBarPlot(self):
         # set any valid number

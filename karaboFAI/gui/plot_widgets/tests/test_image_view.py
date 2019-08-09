@@ -8,10 +8,11 @@ import numpy as np
 from karaboFAI.gui import mkQApp, pyqtgraph
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
 from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
-from karaboFAI.gui.plot_widgets.image_view import (
-    ImageView, ImageAnalysis, RoiImageView,
+from karaboFAI.gui.plot_widgets.image_view_base import ImageViewF
+from karaboFAI.gui.plot_widgets.image_views import (
+    ImageAnalysis, RoiImageView,
 )
-from karaboFAI.pipeline.data_model import ProcessedData, RoiData
+from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.logger import logger
 
 app = mkQApp()
@@ -21,13 +22,13 @@ logger.setLevel("CRITICAL")
 
 class TestImageView(unittest.TestCase):
     def testGeneral(self):
-        widget = ImageView()
+        widget = ImageViewF()
         plot_items = widget._plot_widget.plotItem.items
         self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
         for i in range(1, 5):
             self.assertIsInstance(plot_items[i], RectROI)
 
-        widget = ImageView(has_roi=False)
+        widget = ImageViewF(has_roi=False)
         self.assertEqual(1, len(widget._plot_widget.plotItem.items))
 
         with self.assertRaises(TypeError):
