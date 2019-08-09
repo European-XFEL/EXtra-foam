@@ -197,7 +197,7 @@ class PlotWidget(GraphicsView):
     sigTransformChanged = QtCore.Signal(object)
 
     _pen = make_pen(None)
-    _brush_size = 10
+    _brush_size = 8
 
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
