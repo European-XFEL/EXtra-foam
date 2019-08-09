@@ -37,26 +37,48 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
         self._stream_files_once_cb = QtGui.QCheckBox("Repeat Stream")
         self._stream_files_once_cb.setChecked(False)
         self._slow_source_list_widget = QtGui.QListWidget()
+        self._run_info_te = QtGui.QPlainTextEdit()
+        self._run_info_te.setReadOnly(True)
 
         self._slow_source_list_widget.setMinimumHeight(60)
         self.initCtrlUI()
 
     def initCtrlUI(self):
         """Override."""
+        GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
+                            'color: #8B008B;' \
+                            'border: 1px;' \
+                            'subcontrol-origin: margin;' \
+                            'subcontrol-position: top left;' \
+                            'padding-left: 10px;' \
+                            'padding-top: 10px;' \
+                            'margin-top: 0.0em;}'
         layout = QtGui.QVBoxLayout()
-        load_run_layout = QtGui.QHBoxLayout()
-        load_run_layout.addWidget(self._load_run_btn)
-        load_run_layout.addWidget(self._data_folder_le)
 
-        serve_file_layout = QtGui.QHBoxLayout()
-        serve_file_layout.addWidget(self._serve_start_btn)
-        serve_file_layout.addWidget(self._serve_terminate_btn)
+        load_stream_layout = QtGui.QGridLayout()
+        load_stream_gb = QtGui.QGroupBox("Load and Stream")
+        load_stream_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
-        layout.addLayout(load_run_layout)
-        layout.addLayout(serve_file_layout)
-        layout.addWidget(self._stream_files_once_cb)
-        layout.addWidget(self._slow_source_list_widget)
+        load_stream_layout.addWidget(self._load_run_btn, 0, 0)
+        load_stream_layout.addWidget(self._data_folder_le, 0, 1, 1, 2)
 
+        load_stream_layout.addWidget(self._stream_files_once_cb, 1, 0)
+        load_stream_layout.addWidget(self._serve_start_btn, 1, 1)
+        load_stream_layout.addWidget(self._serve_terminate_btn, 1, 2)
+
+        load_stream_gb.setLayout(load_stream_layout)
+
+        run_info_gb = QtGui.QGroupBox("Control Sources and Run Info")
+        run_info_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
+
+        run_info_layout = QtGui.QHBoxLayout()
+        run_info_layout.addWidget(self._slow_source_list_widget)
+        run_info_layout.addWidget(self._run_info_te)
+
+        run_info_gb.setLayout(run_info_layout)
+
+        layout.addWidget(load_stream_gb)
+        layout.addWidget(run_info_gb)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -82,8 +104,9 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
     def populateSlowSources(self, path):
         self._slow_source_list_widget.clear()
+        self._run_info_te.clear()
         if path:
-            sources = gather_sources(path)
+            sources, info = gather_sources(path)
             for src in sources:
                 item = QtGui.QListWidgetItem()
                 item.setCheckState(QtCore.Qt.Unchecked)
@@ -91,6 +114,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
                 self._slow_source_list_widget.addItem(item)
 
             self._slow_source_list_widget.sortItems()
+            self._run_info_te.appendPlainText(info)
 
     def onFileServerStarted(self):
         logger.info("File server started")
@@ -131,7 +155,7 @@ class FileStreamControllerWindow(AbstractSatelliteWindow):
         self._widget = self._file_stream_ctrl_widget
 
         self.initUI()
-        self.setMinimumSize(900, 150)
+        self.setMinimumSize(800, 500)
         self.setCentralWidget(self._cw)
 
         self.initConnections()
