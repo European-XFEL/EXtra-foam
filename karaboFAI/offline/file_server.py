@@ -109,7 +109,7 @@ def gather_sources(path):
             try:
                 run = RunDirectory(path)
                 slow = run.control_sources
-                # info = get_info(run)
+                info = get_info(run)
             except Exception as ex:
                 logger.error(repr(ex))
 
