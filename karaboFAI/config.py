@@ -48,6 +48,7 @@ class AnalysisType(IntEnum):
     PROJ_ROI1_SUB_ROI2 = 23
     PROJ_ROI1_ADD_ROI2 = 24
     AZIMUTHAL_INTEG = 41
+    PULSE = 2700
     ROI1_PULSE = 2711
     ROI2_PULSE = 2712
     ROI1_SUB_ROI2_PULSE = 2713
@@ -95,7 +96,7 @@ class _Config(dict):
         # max number of pulses per pulse train
         "MAX_N_PULSES_PER_TRAIN": 2700,
         # maximum length of a queue in data pipeline
-        "MAX_QUEUE_SIZE": 2,
+        "MAX_QUEUE_SIZE": 5,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
         # colors of for ROI 1 to 4

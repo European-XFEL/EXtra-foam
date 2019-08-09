@@ -229,3 +229,9 @@ class Mediator(QObject):
 
     def onStReset(self):
         self._meta.set(mt.STATISTICS_PROC, "reset", 1)
+
+    def onDrAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.DATA_REDUCTION_PROC, "analysis_type", int(value))
+
+    def onDrFomRangeChange(self, value: tuple):
+        self._meta.set(mt.DATA_REDUCTION_PROC, "fom_range", str(value))

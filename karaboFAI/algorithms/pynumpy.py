@@ -9,50 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from concurrent.futures import ThreadPoolExecutor
-
 import numpy as np
-
-
-def nanmean_images(data, *, chunk_size=10, max_workers=4):
-    """Calculate nanmean of an array of images.
-
-    :param numpy.ndarray data: an array of images. (index, y, x).
-    :param int chunk_size: the slice size of along the second dimension
-        of the input data.
-    :param int max_workers: The maximum number of threads that can be
-        used to execute the given calls.
-
-    :return numpy.ndarray: averaged input data along the first axis if
-        the dimension of input data is larger than 3, otherwise the
-        original data.
-    """
-    def nanmean_imp(out, start, end):
-        """Implementation of parallelized nanmean.
-
-        :param numpy.ndarray out: result 2D array. (y, x)
-        :param int start: start index
-        :param int end: end index (not included)
-        """
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings('ignore', category=RuntimeWarning)
-
-            out[start:end, :] = np.nanmean(data[:, start:end, :], axis=0)
-
-    if data.ndim != 3:
-        raise ValueError("Input must be a three dimensional numpy.array!")
-
-    ret = np.zeros_like(data[0, ...])
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        start = 0
-        max_idx = data.shape[1]
-        while start < max_idx:
-            executor.submit(nanmean_imp, ret, start,
-                            min(start + chunk_size, max_idx))
-            start += chunk_size
-
-    return ret
 
 
 def mask_image(image, *,

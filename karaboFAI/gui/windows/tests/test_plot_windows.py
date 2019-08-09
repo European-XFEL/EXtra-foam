@@ -128,7 +128,6 @@ class TestPlotWindows(unittest.TestCase):
 
         # the upper two plots have error bars
         data = ProcessedData(1)
-        data.image.images = np.arange(480).reshape((120, 2, 2))
         for i in range(1000):
             data.corr.correlation1.hist = (int(i/5), 100*i)
             data.corr.correlation2.hist = (int(i/5), -100*i)

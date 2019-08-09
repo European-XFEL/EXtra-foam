@@ -44,6 +44,10 @@ class TestRedisParserMixin(unittest.TestCase):
         self.assertListEqual([1], self._proc.str2list('[1]'))
         self.assertListEqual([], self._proc.str2list('[]'))
 
+    def testStr2Slice(self):
+        self.assertEqual(slice(None, 2), self._proc.str2slice('[None, 2]'))
+        self.assertEqual(slice(1, 10, 2), self._proc.str2slice('[1, 10, 2]'))
+
 
 class TestBaseProcessor(unittest.TestCase):
     @classmethod

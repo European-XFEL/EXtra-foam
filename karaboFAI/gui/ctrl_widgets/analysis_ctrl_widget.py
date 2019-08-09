@@ -12,7 +12,7 @@ All rights reserved.
 from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
-from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
+from .smart_widgets import SmartLineEdit, SmartSliceLineEdit
 from ...config import config
 
 
@@ -28,7 +28,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         poi_index1 = 0
         poi_index2 = 0
 
-        self._pulse_index_filter_le = SmartRangeLineEdit(":")
+        self._pulse_slicer_le = SmartSliceLineEdit(":")
 
         self._poi_index1_le = SmartLineEdit(str(poi_index1))
         self._poi_index1_le.setValidator(self._pulse_index_validator)
@@ -37,7 +37,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._poi_index2_le.setValidator(self._pulse_index_validator)
 
         if not self._pulse_resolved:
-            self._pulse_index_filter_le.setEnabled(False)
+            self._pulse_slicer_le.setEnabled(False)
             self._poi_index1_le.setEnabled(False)
             self._poi_index2_le.setEnabled(False)
 
@@ -63,8 +63,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Pulse index filter: "), 0, 0, AR)
-        layout.addWidget(self._pulse_index_filter_le, 0, 1, 1, 3)
+        layout.addWidget(QtGui.QLabel("Pulse slicer: "), 0, 0, AR)
+        layout.addWidget(self._pulse_slicer_le, 0, 1, 1, 3)
 
         layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
         layout.addWidget(self._poi_index1_le, 1, 1)
@@ -104,7 +104,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.onSampleDistanceChange(
                 float(self._sample_dist_le.text())))
 
-        self._pulse_index_filter_le.value_changed_sgn.connect(
+        self._pulse_slicer_le.value_changed_sgn.connect(
             mediator.onPulseIndexSelectorChange)
 
         self._ma_window_le.returnPressed.connect(
@@ -122,7 +122,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._sample_dist_le.returnPressed.emit()
 
-        self._pulse_index_filter_le.returnPressed.emit()
+        self._pulse_slicer_le.returnPressed.emit()
 
         self._ma_window_le.returnPressed.emit()
 

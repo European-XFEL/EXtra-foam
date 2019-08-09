@@ -15,6 +15,13 @@ Contents:
    windows
 
 
+.. toctree::
+   :caption: Development
+   :maxdepth: 1
+
+   changelog
+
+
 Indices and tables
 ==================
 

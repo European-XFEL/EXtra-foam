@@ -80,7 +80,7 @@ class StatisticsProcessor(_BaseProcessor):
                 if foms is None:
                     raise ProcessingError(
                         "Pulse resolved ROI1 sum result is not available")
-            if self.analysis_type == AnalysisType.ROI2_PULSE:
+            elif self.analysis_type == AnalysisType.ROI2_PULSE:
                 foms = processed.pulse.roi.roi2.fom
                 if foms is None:
                     raise ProcessingError(
@@ -95,7 +95,7 @@ class StatisticsProcessor(_BaseProcessor):
                 foms = processed.roi.roi1.fom
                 if foms is None:
                     raise ProcessingError("ROI1 sum result is not available")
-            if self.analysis_type == AnalysisType.ROI2:
+            elif self.analysis_type == AnalysisType.ROI2:
                 foms = processed.roi.roi2.fom
                 if foms is None:
                     raise ProcessingError("ROI2 sum result is not available")

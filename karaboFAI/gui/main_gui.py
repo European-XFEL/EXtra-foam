@@ -24,15 +24,16 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, DataCtrlWidget, StatisticsCtrlWidget,
-    GeometryCtrlWidget, PumpProbeCtrlWidget, RoiCtrlWidget, XasCtrlWidget
+    CorrelationCtrlWidget, DataCtrlWidget, DataReductionCtrlWidget,
+    StatisticsCtrlWidget, GeometryCtrlWidget, PumpProbeCtrlWidget,
+    RoiCtrlWidget, XasCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
     OverviewWindow, ProcessMonitor, AzimuthalIntegrationWindow,
     StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow, RoiWindow,
-    XasWindow, FileStreamControllerWindow
+    XasWindow, FileStreamControllerWindow, AboutWindow
 )
 from .. import __version__
 from ..config import config
@@ -209,6 +210,9 @@ class MainGUI(QtGui.QMainWindow):
         open_file_stream_window_at.triggered.connect(
             self.openFileStreamControllerWindow)
 
+        open_help_at = self._addAction("About karaboFAI", "about.png")
+        open_help_at.triggered.connect(self.openAboutWindow)
+
         # *************************************************************
         # Miscellaneous
         # *************************************************************
@@ -277,6 +281,9 @@ class MainGUI(QtGui.QMainWindow):
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
+        self.data_reduction_ctrl_widget = DataReductionCtrlWidget(
+            parent=self, pulse_resolved=self._pulse_resolved)
+
         self.bin_ctrl_widget = BinCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -303,6 +310,7 @@ class MainGUI(QtGui.QMainWindow):
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)
+        misc_layout.addWidget(self.data_reduction_ctrl_widget)
         misc_layout.addWidget(self.statistics_ctrl_widget)
         misc_layout.addWidget(self.bin_ctrl_widget)
         misc_layout.addWidget(self.correlation_ctrl_widget)
@@ -323,25 +331,42 @@ class MainGUI(QtGui.QMainWindow):
         if not self._running:
             return
 
-        try:
-            processed_data = self._input.get_nowait()
-            processed_data.update()
-            self._data.set(processed_data)
-        except Empty:
-            return
+        # Fetch all data in the queue and update history, then update plots.
+        # This prevent costly GUI updating from blocking data acquisition and
+        # processing.
+        tid = -1
+        plot_data = False
+        while True:
+            try:
+                processed = self._input.get_nowait()
+                plot_data = True
+                processed.update()
+                tid = processed.tid
+                self._data.set(processed)
+
+                logger.info(f"Updated train with ID: {tid}")
+            except Empty:
+                if plot_data:
+                    break
+                # no data
+                return
+            except Exception as e:
+                logger.error(f"Unexpected exception: {repr(e)}")
+                return
 
         # clear the previous plots no matter what comes next
         # for w in self._windows.keys():
         #     w.reset()
 
         if self._data.get().image is None:
-            logger.info("Bad train with ID: {}".format(self._data.get().tid))
+            # FIXME: will this happen? I guess this is some very
+            #        old code.
+            logger.info(f"Bad train with ID: {tid}")
             return
 
         for w in self._windows.keys():
             w.update()
-
-        logger.info("Updated train with ID: {}".format(self._data.get().tid))
+        logger.debug(f"Plot train with ID: {tid}")
 
     def _publish_process_info(self):
         self.process_info_sgn.emit(list_fai_processes())
@@ -377,6 +402,12 @@ class MainGUI(QtGui.QMainWindow):
 
         w = FileStreamControllerWindow(parent=self)
         return w
+
+    def openAboutWindow(self):
+        if self._checkWindowExistence(AboutWindow):
+            return
+
+        return AboutWindow(parent=self)
 
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:

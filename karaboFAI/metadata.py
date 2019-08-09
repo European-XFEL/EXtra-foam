@@ -31,6 +31,7 @@ class Metadata:
     BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
     STATISTICS_PROC = "metadata:proc:pulse_fom"
+    DATA_REDUCTION_PROC = "metadata:proc:data_reduction"
 
     _meta = {
         ANALYSIS_TYPE: [
