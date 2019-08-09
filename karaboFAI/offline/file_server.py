@@ -95,8 +95,7 @@ def gather_sources(path):
             # in /gpfs/exfel/exp/INSTRUMENT/cycle/proposal/proc/runumber
             # or they have raw folder with same path instead of 'proc'
             # in it in the end.
-            run = RunDirectory(
-                        path.replace('/proc/', '/raw/'))
+            run = RunDirectory(path.replace('/proc/', '/raw/'))
             slow = run.control_sources
             info = get_info(run)
         except Exception as ex:
