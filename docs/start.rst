@@ -171,7 +171,7 @@ Steps to follow in case you are facing issues operating **karaboFAI**
   **karaboFAI** receive data from the **karabo bridge** (*PipeToZeroMQ*) device
   and therefore running multiple instances may lead to data loss.
 
- .. note:: 
+ .. note::
 
    It is therefore recommended not to run multiple instances of
    **karaboFAI** for the same detector argument on the same online cluster
