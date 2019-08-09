@@ -38,6 +38,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
         self._stream_files_once_cb.setChecked(False)
         self._slow_source_list_widget = QtGui.QListWidget()
         self._run_info_te = QtGui.QPlainTextEdit()
+        self._run_info_te.setReadOnly(True)
 
         self._slow_source_list_widget.setMinimumHeight(60)
         self.initCtrlUI()
