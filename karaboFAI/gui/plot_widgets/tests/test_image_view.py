@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 import tempfile
@@ -125,6 +126,7 @@ class TestImageAnalysis(unittest.TestCase):
         widget = ImageAnalysis()
         widget._image = np.ones((3, 2))
 
+        # test empty input
         with self.assertLogs(logger, level='ERROR') as cm:
             widget._loadReferenceImageImp('')
         self.assertIn('Please specify the reference', cm.output[0])
@@ -140,3 +142,12 @@ class TestImageAnalysis(unittest.TestCase):
             img = widget._loadReferenceImageImp('abc')
             self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
             self.assertEqual((3, 2), img.shape)
+
+    def testSaveImage(self):
+        widget = ImageAnalysis()
+
+        # widget._image = np.ones((3, 2))
+        fp, filepath = tempfile.mkstemp(suffix='.tiff')
+        widget._writeImageImp(filepath)
+        os.close(fp)
+        os.remove(filepath)

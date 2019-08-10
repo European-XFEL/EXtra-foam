@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os.path as osp
+
 import imageio
 import numpy as np
 
@@ -237,6 +239,10 @@ class ImageAnalysis(ImageView):
     It provides tools like masking, etc.
     """
 
+    IMAGE_FILE_FILTER_SAVE = "TIFF (*.tif);; Numpy (*.npy)"
+    IMAGE_FILE_FILTER_LOAD = "All supported files (*.tif *.npy);; " \
+                             + IMAGE_FILE_FILTER_SAVE
+
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
@@ -280,10 +286,36 @@ class ImageAnalysis(ImageView):
 
         self.setImage(image_data.masked)
 
+    def writeImage(self):
+        """Write the current detector image to file.
+
+        Note: image mask is not included.
+        """
+        if self._image is None:
+            logger.error("Detector image is not available!")
+            return
+
+        filepath = QtGui.QFileDialog.getSaveFileName(
+            caption="Save image",
+            directory=osp.expanduser("~"),
+            filter=self.IMAGE_FILE_FILTER_SAVE)[0]
+        self._writeImageImp(filepath)
+
+    def _writeImageImp(self, filepath):
+        if not filepath:
+            logger.error("Please specify a file to save current image!")
+            return
+
+        try:
+            imageio.imwrite(filepath, self._image)
+            logger.info(f"Image saved in {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to write image to {filepath}: {repr(e)}")
+
     def setReferenceImage(self):
         """Set the displayed image as reference image.
 
-        Note: image mask is not included in self._image.
+        Note: image mask is not included.
         """
         self._ref_pub.set(self._image)
 
@@ -297,21 +329,24 @@ class ImageAnalysis(ImageView):
             logger.error("Cannot load reference image without detector image!")
             return
 
-        file_path = QtGui.QFileDialog.getOpenFileName()[0]
+        filepath = QtGui.QFileDialog.getOpenFileName(
+            caption="Load reference image",
+            directory=osp.expanduser("~"),
+            filter=self.IMAGE_FILE_FILTER_LOAD)[0]
 
-        img = self._loadReferenceImageImp(file_path)
+        img = self._loadReferenceImageImp(filepath)
 
         self._ref_pub.set(img)
 
-    def _loadReferenceImageImp(self, file_path):
-        if not file_path:
+    def _loadReferenceImageImp(self, filepath):
+        if not filepath:
             logger.error("Please specify the reference image file!")
             return
 
         try:
             # imread returns an Array object which is a subclass of
             # np.ndarray
-            ref = imageio.imread(file_path)
+            ref = imageio.imread(filepath)
             if ref.shape != self._image.shape:
                 logger.error(f"Shape of reference image {ref.shape} is "
                              f"different from the current detector image "
@@ -322,12 +357,12 @@ class ImageAnalysis(ImageView):
             if ref.dtype != image_dtype:
                 ref = ref.astype(image_dtype)
 
-            logger.info(f"Loaded reference image from {file_path}!")
+            logger.info(f"Loaded reference image from {filepath}")
 
             return ref
 
         except Exception as e:
-            logger.error(f"Failed to load reference image from {file_path}: {repr(e)}")
+            logger.error(f"Failed to load reference image from {filepath}: {repr(e)}")
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
@@ -362,47 +397,47 @@ class ImageAnalysis(ImageView):
         self._mask_item.removeMask()
 
     def saveImageMask(self):
-        file_path = QtGui.QFileDialog.getSaveFileName()[0]
-        if not file_path:
+        filepath = QtGui.QFileDialog.getSaveFileName()[0]
+        if not filepath:
             logger.error("Please specify the image mask file!")
             return
 
-        self._saveImageMaskImp(file_path)
+        self._saveImageMaskImp(filepath)
 
-    def _saveImageMaskImp(self, file_path):
+    def _saveImageMaskImp(self, filepath):
         if self._image_data is None:
             logger.error("Image is not found!")
             return
 
-        np.save(file_path, self._mask_item.toNDArray())
-        logger.info(f"Image mask saved in {file_path}.npy!")
+        np.save(filepath, self._mask_item.toNDArray())
+        logger.info(f"Image mask saved in {filepath}.npy")
 
     def loadImageMask(self):
-        file_path = QtGui.QFileDialog.getOpenFileName()[0]
-        if not file_path:
+        filepath = QtGui.QFileDialog.getOpenFileName()[0]
+        if not filepath:
             logger.error("Please specify the image mask file!")
             return
 
-        self._loadImageMaskImp(file_path)
+        self._loadImageMaskImp(filepath)
 
-    def _loadImageMaskImp(self, file_path):
+    def _loadImageMaskImp(self, filepath):
         if self._image is None:
             logger.error("Cannot load image mask without image!")
             return
 
         try:
-            image_mask = np.load(file_path)
+            image_mask = np.load(filepath)
             if image_mask.shape != self._image.shape:
                 logger.error(f"The shape of image mask {image_mask.shape} is "
                              f"different from the image {self._image.shape}!")
                 return
 
-            logger.info(f"Image mask loaded from {file_path}!")
+            logger.info(f"Image mask loaded from {filepath}!")
 
             self._mask_item.loadMask(image_mask)
 
         except (IOError, OSError) as e:
-            logger.error(f"Cannot load mask from {file_path}")
+            logger.error(f"Cannot load mask from {filepath}")
 
 
 class AssembledImageView(ImageView):
