@@ -27,7 +27,7 @@ class TestFileIO(unittest.TestCase):
     def testReadImage(self):
 
         # test empty input
-        with self.assertRaisesRegex(ValueError, 'Please specify the reference'):
+        with self.assertRaisesRegex(ValueError, 'Please specify'):
             read_image('')
 
         # test wrong shape

@@ -9,6 +9,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os.path as osp
+
+import numpy as np
 import imageio
 
 from .config import config
@@ -24,7 +27,10 @@ def write_image(img, filepath):
         raise ValueError("Please specify a file to save current image!")
 
     try:
-        imageio.imwrite(filepath, img)
+        if '.npy' == osp.splitext(filepath)[-1]:
+            np.save(filepath, img)
+        else:
+            imageio.imwrite(filepath, img)
     except Exception as e:
         raise ValueError(f"Failed to write image to {filepath}: {str(e)}")
 
@@ -41,9 +47,13 @@ def read_image(filepath, *, expected_shape=None):
         raise ValueError("Please specify the image file!")
 
     try:
-        # imread returns an Array object which is a subclass of
-        # np.ndarray
-        ref = imageio.imread(filepath)
+        if '.npy' == osp.splitext(filepath)[-1]:
+            ref = np.load(filepath)
+        else:
+            # imread returns an Array object which is a subclass of
+            # np.ndarray
+            ref = imageio.imread(filepath)
+
         if expected_shape is not None and ref.shape != expected_shape:
             raise ValueError(f"Shape of image {ref.shape} differs from "
                              f"expected {expected_shape}!")

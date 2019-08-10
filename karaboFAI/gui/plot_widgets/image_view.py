@@ -239,9 +239,7 @@ class ImageAnalysis(ImageView):
     It provides tools like masking, etc.
     """
 
-    IMAGE_FILE_FILTER_SAVE = "TIFF (*.tif);; Numpy (*.npy)"
-    IMAGE_FILE_FILTER_LOAD = "All supported files (*.tif *.npy);; " \
-                             + IMAGE_FILE_FILTER_SAVE
+    IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -298,7 +296,7 @@ class ImageAnalysis(ImageView):
         filepath = QtGui.QFileDialog.getSaveFileName(
             caption="Save image",
             directory=osp.expanduser("~"),
-            filter=self.IMAGE_FILE_FILTER_SAVE)[0]
+            filter=self.IMAGE_FILE_FILTER)[0]
 
         try:
             write_image(self._image, filepath)
@@ -327,7 +325,7 @@ class ImageAnalysis(ImageView):
         filepath = QtGui.QFileDialog.getOpenFileName(
             caption="Load reference image",
             directory=osp.expanduser("~"),
-            filter=self.IMAGE_FILE_FILTER_LOAD)[0]
+            filter=self.IMAGE_FILE_FILTER)[0]
 
         try:
             img = read_image(filepath, expected_shape=self._image.shape)
