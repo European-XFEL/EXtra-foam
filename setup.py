@@ -212,6 +212,7 @@ setup(
         'redis>=3.2.1',
         'pyarrow>=0.13.0',
         'psutil>=5.6.2',
+        'imageio>=2.5.0',
     ],
     extras_require={
         'docs': [

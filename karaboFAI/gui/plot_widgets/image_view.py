@@ -9,6 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import imageio
 import numpy as np
 
 from .. import pyqtgraph as pg
@@ -289,6 +290,44 @@ class ImageAnalysis(ImageView):
     def removeReferenceImage(self):
         """Remove reference image."""
         self._ref_pub.remove()
+
+    def loadReferenceImage(self):
+        """Load the reference image from a file."""
+        if self._image is None:
+            logger.error("Cannot load reference image without detector image!")
+            return
+
+        file_path = QtGui.QFileDialog.getOpenFileName()[0]
+
+        img = self._loadReferenceImageImp(file_path)
+
+        self._ref_pub.set(img)
+
+    def _loadReferenceImageImp(self, file_path):
+        if not file_path:
+            logger.error("Please specify the reference image file!")
+            return
+
+        try:
+            # imread returns an Array object which is a subclass of
+            # np.ndarray
+            ref = imageio.imread(file_path)
+            if ref.shape != self._image.shape:
+                logger.error(f"Shape of reference image {ref.shape} is "
+                             f"different from the current detector image "
+                             f"{self._image.shape}!")
+                return
+
+            image_dtype = config["IMAGE_DTYPE"]
+            if ref.dtype != image_dtype:
+                ref = ref.astype(image_dtype)
+
+            logger.info(f"Loaded reference image from {file_path}!")
+
+            return ref
+
+        except Exception as e:
+            logger.error(f"Failed to load reference image from {file_path}: {repr(e)}")
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):

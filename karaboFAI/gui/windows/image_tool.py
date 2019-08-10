@@ -324,6 +324,7 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         self.auto_level_btn = QtGui.QPushButton("Auto level")
         self.set_ref_btn = QtGui.QPushButton("Set reference")
         self.remove_ref_btn = QtGui.QPushButton("Remove reference")
+        self.load_ref_btn = QtGui.QPushButton("Load reference")
 
         self.initUI()
 
@@ -335,6 +336,7 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         layout.addWidget(self.auto_level_btn, 0, 2, 1, 2)
         layout.addWidget(self.set_ref_btn, 1, 0, 1, 2)
         layout.addWidget(self.remove_ref_btn, 1, 2, 1, 2)
+        layout.addWidget(self.load_ref_btn, 2, 0, 1, 2)
         self.setLayout(layout)
 
 
@@ -501,6 +503,9 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
             self._image_view.removeReferenceImage)
+
+        self._image_ctrl_widget.load_ref_btn.clicked.connect(
+            self._image_view.loadReferenceImage)
 
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import tempfile
 
 import numpy as np
@@ -12,6 +12,7 @@ from karaboFAI.gui.plot_widgets.image_view import (
 )
 from karaboFAI.pipeline.data_model import ProcessedData, RoiData
 from karaboFAI.logger import logger
+from karaboFAI.config import config
 
 app = mkQApp()
 
@@ -120,3 +121,22 @@ class TestImageAnalysis(unittest.TestCase):
 
         fp.close()
 
+    def testLoadReferenceImage(self):
+        widget = ImageAnalysis()
+        widget._image = np.ones((3, 2))
+
+        with self.assertLogs(logger, level='ERROR') as cm:
+            widget._loadReferenceImageImp('')
+        self.assertIn('Please specify the reference', cm.output[0])
+
+        # test wrong shape
+        with patch('imageio.imread', return_value=np.ones((2, 2))):
+            with self.assertLogs(logger, level='ERROR') as cm:
+                widget._loadReferenceImageImp('abc')
+            self.assertIn('Shape of reference image', cm.output[0])
+
+        # test dtype
+        with patch('imageio.imread', return_value=np.ones((3, 2))):
+            img = widget._loadReferenceImageImp('abc')
+            self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
+            self.assertEqual((3, 2), img.shape)
