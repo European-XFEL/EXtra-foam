@@ -11,7 +11,6 @@ All rights reserved.
 """
 import os.path as osp
 
-import imageio
 import numpy as np
 
 from .. import pyqtgraph as pg
@@ -21,6 +20,7 @@ from .base_plot_widget import PlotWidget
 from .plot_items import ImageItem, MaskItem, RectROI
 from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
+from ...file_io import read_image, write_image
 from ...ipc import ReferencePub
 from ...algorithms import quick_min_max
 from ...config import config
@@ -292,25 +292,19 @@ class ImageAnalysis(ImageView):
         Note: image mask is not included.
         """
         if self._image is None:
-            logger.error("Detector image is not available!")
+            logger.error(f"[Image tool] Detector image is not available!")
             return
 
         filepath = QtGui.QFileDialog.getSaveFileName(
             caption="Save image",
             directory=osp.expanduser("~"),
             filter=self.IMAGE_FILE_FILTER_SAVE)[0]
-        self._writeImageImp(filepath)
-
-    def _writeImageImp(self, filepath):
-        if not filepath:
-            logger.error("Please specify a file to save current image!")
-            return
 
         try:
-            imageio.imwrite(filepath, self._image)
-            logger.info(f"Image saved in {filepath}")
-        except Exception as e:
-            logger.error(f"Failed to write image to {filepath}: {repr(e)}")
+            write_image(self._image, filepath)
+            logger.info(f"[Image tool] Image saved in {filepath}")
+        except ValueError as e:
+            logger.error(f"[Image tool] {str(e)}")
 
     def setReferenceImage(self):
         """Set the displayed image as reference image.
@@ -326,7 +320,8 @@ class ImageAnalysis(ImageView):
     def loadReferenceImage(self):
         """Load the reference image from a file."""
         if self._image is None:
-            logger.error("Cannot load reference image without detector image!")
+            logger.error("[Image tool] Cannot load reference image without "
+                         "detector image!")
             return
 
         filepath = QtGui.QFileDialog.getOpenFileName(
@@ -334,35 +329,12 @@ class ImageAnalysis(ImageView):
             directory=osp.expanduser("~"),
             filter=self.IMAGE_FILE_FILTER_LOAD)[0]
 
-        img = self._loadReferenceImageImp(filepath)
-
-        self._ref_pub.set(img)
-
-    def _loadReferenceImageImp(self, filepath):
-        if not filepath:
-            logger.error("Please specify the reference image file!")
-            return
-
         try:
-            # imread returns an Array object which is a subclass of
-            # np.ndarray
-            ref = imageio.imread(filepath)
-            if ref.shape != self._image.shape:
-                logger.error(f"Shape of reference image {ref.shape} is "
-                             f"different from the current detector image "
-                             f"{self._image.shape}!")
-                return
-
-            image_dtype = config["IMAGE_DTYPE"]
-            if ref.dtype != image_dtype:
-                ref = ref.astype(image_dtype)
-
-            logger.info(f"Loaded reference image from {filepath}")
-
-            return ref
-
-        except Exception as e:
-            logger.error(f"Failed to load reference image from {filepath}: {repr(e)}")
+            img = read_image(filepath, expected_shape=self._image.shape)
+            logger.info(f"[Image tool] Loaded reference image from {filepath}")
+            self._ref_pub.set(img)
+        except ValueError as e:
+            logger.error(f"[Image tool] {str(e)}")
 
     @QtCore.pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
