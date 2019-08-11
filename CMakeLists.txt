@@ -89,6 +89,5 @@ add_subdirectory(thirdparty/xtensor-python)
 add_subdirectory(src/karaboFAI)
 
 if(BUILD_FAI_TESTS)
-    enable_testing()
     add_subdirectory(test)
 endif()

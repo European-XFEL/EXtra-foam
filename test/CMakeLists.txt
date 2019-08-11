@@ -35,24 +35,50 @@ set(GMOCK_INCLUDE_DIRS "${gmock_SOURCE_DIR}/include")
 
 find_package(Threads REQUIRED)
 
-add_executable(run_test
-    main.cpp
+set(FAI_TESTS
     test_tbb.cpp
     test_xtnumpy.cpp
 )
 
-target_include_directories(run_test
+foreach(filename IN LISTS FAI_TESTS)
+    string(REPLACE ".cpp" "" targetname ${filename})
+    add_executable(${targetname} main.cpp ${filename})
+    if(FAI_WITH_TBB)
+        target_compile_definitions(${targetname} PRIVATE FAI_WITH_TBB)
+        target_include_directories(${targetname} PRIVATE ${TBB_INCLUDE_DIRS})
+        target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARIES})
+    endif()
+    target_include_directories(${targetname}
+        PRIVATE
+            ${GTEST_INCLUDE_DIRS}
+            ${GMOCK_INCLUDE_DIRS}
+    )
+    target_link_libraries(${targetname} PRIVATE gtest pthread xtensor)
+    add_custom_target(
+        f${targetname}
+        COMMAND ${targetname}
+        DEPENDS ${targetname} ${filename}
+    )
+endforeach()
+
+add_executable(test_fai_cpp main.cpp ${FAI_TESTS})
+
+target_include_directories(test_fai_cpp
     PRIVATE
         ${GTEST_INCLUDE_DIRS}
         ${GMOCK_INCLUDE_DIRS}
-        ${TBB_INCLUDE_DIRS}
 )
 
-target_link_libraries(run_test
-    PRIVATE
-        gtest
-        pthread
-        xtensor
-        ${TBB_LIBRARIES}
+target_link_libraries(test_fai_cpp PRIVATE gtest pthread xtensor)
+
+if(FAI_WITH_TBB)
+    target_compile_definitions(test_fai_cpp PRIVATE FAI_WITH_TBB)
+    target_include_directories(test_fai_cpp PRIVATE ${TBB_INCLUDE_DIRS})
+    target_link_libraries(test_fai_cpp PRIVATE ${TBB_LIBRARIES})
+endif()
+
+add_custom_target(
+    ftest
+    COMMAND test_fai_cpp
+    DEPENDS test_fai_cpp
 )
-add_test(NAME unittest COMMAND run_test)
