@@ -76,7 +76,7 @@ class TestRawImageDataCpp(unittest.TestCase):
         self._run_performance_with_type(np.float64)
 
     def _run_performance_with_type(self, dtype):
-        imgs_cpp = np.ones((60, 1024, 1024), dtype=dtype)
+        imgs_cpp = np.ones((64, 1024, 512), dtype=dtype)
 
         t0 = time.perf_counter()
         data_cpp = RawImageDataFloat(imgs_cpp)
@@ -95,7 +95,7 @@ class TestRawImageDataCpp(unittest.TestCase):
         class Dummy:
             data = RawImageDataPy()
 
-        imgs_py = np.ones((60, 1024, 1024), dtype=dtype)
+        imgs_py = np.ones((64, 1024, 512), dtype=dtype)
 
         t0 = time.perf_counter()
         dummy =  Dummy()

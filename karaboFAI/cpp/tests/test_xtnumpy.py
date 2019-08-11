@@ -121,7 +121,7 @@ class TestXtnumpy(unittest.TestCase):
                                                  nanmeanImages(data, [0, 2]))
 
     def _nanmean_images_performance(self, data_type):
-        data = np.ones((64, 1024, 1024), dtype=data_type)
+        data = np.ones((64, 1024, 512), dtype=data_type)
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
@@ -159,14 +159,14 @@ class TestXtnumpy(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected, nanmeanTwoImages(img1, img2))
 
     def _nanmean_two_images_performance(self, data_type):
-        img = np.ones((1024, 1024), dtype=data_type)
+        img = np.ones((1024, 512), dtype=data_type)
         img[::2, ::2] = np.nan
 
         t0 = time.perf_counter()
         nanmeanTwoImages(img, img)
         dt_cpp_2 = time.perf_counter() - t0
 
-        imgs = np.ones((2, 1024, 1024), dtype=data_type)
+        imgs = np.ones((2, 1024, 512), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
