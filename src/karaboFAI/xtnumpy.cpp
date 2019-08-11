@@ -33,33 +33,46 @@ namespace fai {
 namespace detail {
   template<typename T>
   inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
-                                             const std::vector<size_t>& keep = {}) {
+                                             const std::vector<size_t>& keep = {})
+{
     auto shape = arr.shape();
     auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
   
   #if defined(FAI_WITH_TBB)
     tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
-      [&arr, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block) {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j) {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k) {
+      [&arr, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
   #else
-        for (std::size_t j=0; j < shape[1]; ++j) {
-          for (std::size_t k=0; k < shape[2]; ++k) {
+        for (std::size_t j=0; j < shape[1]; ++j)
+        {
+          for (std::size_t k=0; k < shape[2]; ++k)
+          {
   #endif
             T count = 0;
             T sum = 0;
-            if (keep.empty()) {
-              for (auto i=0; i<shape[0]; ++i) {
+            if (keep.empty())
+            {
+              for (auto i=0; i<shape[0]; ++i)
+              {
                 auto v = arr(i, j, k);
-                if (! std::isnan(v)) {
+                if (! std::isnan(v))
+                {
                   count += T(1);
                   sum += v;
                 }
               }
-            } else {
-              for (auto it=keep.begin(); it != keep.end(); ++it) {
+            }
+            else
+            {
+              for (auto it=keep.begin(); it != keep.end(); ++it)
+              {
                 auto v = arr(*it, j, k);
-                if (! std::isnan(v)) {
+                if (! std::isnan(v))
+                {
                   count += T(1);
                   sum += v;
                 }
@@ -79,18 +92,24 @@ namespace detail {
 
   template<typename T>
   inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
-                                                const xt::pytensor<T, 2>& img2) {
+                                                const xt::pytensor<T, 2>& img2)
+  {
     auto shape = img1.shape();
     auto mean = xt::pytensor<T, 2>({shape[0], shape[1]});
 
 #if defined(FAI_WITH_TBB)
     tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
-      [&img1, &img2, &shape, &mean] (const tbb::blocked_range2d<int> &block) {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j) {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k) {
+      [&img1, &img2, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
 #else
-        for (std::size_t j=0; j < shape[0]; ++j) {
-          for (std::size_t k=0; k < shape[1]; ++k) {
+        for (std::size_t j=0; j < shape[0]; ++j)
+        {
+          for (std::size_t k=0; k < shape[1]; ++k)
+          {
 #endif
             auto x = img1(j, k);
             auto y = img2(j, k);
@@ -130,7 +149,8 @@ struct is_array<xt::pyarray<T, L>> : std::true_type {};
  */
 template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr,
-                                        const std::vector<size_t>& keep) {
+                                        const std::vector<size_t>& keep)
+{
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
   return detail::nanmeanImagesImp(arr, keep);
 }
@@ -142,7 +162,8 @@ inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr,
  * @return: the nanmean image. shape = (y, x)
  */
 template<typename T>
-inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr) {
+inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr)
+{
   return detail::nanmeanImagesImp(arr);
 }
 
@@ -151,7 +172,8 @@ inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr) {
  */
 template<typename T>
 inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 2>& img1,
-                                        const xt::pytensor<T, 2>& img2) {
+                                        const xt::pytensor<T, 2>& img2)
+{
   if (img1.shape() != img2.shape())
     throw std::invalid_argument("Images have different shapes!");
   return detail::nanmeanTwoImagesImp(img1, img2);
@@ -164,13 +186,15 @@ inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 2>& img1,
  * @return: the nanmean image. shape = (y, x)
  */
 template<typename T>
-inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr) {
+inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr)
+{
   return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
 }
 
 template<typename T>
 inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma,
-                                    xt::pyarray<T>& data, size_t count) {
+                                    xt::pyarray<T>& data, size_t count)
+{
   return ma + (data - ma) / T(count);
 }
 
@@ -179,8 +203,8 @@ inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma,
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(xtnumpy, m) {
-
+PYBIND11_MODULE(xtnumpy, m)
+{
   xt::import_numpy();
 
   using namespace fai;
