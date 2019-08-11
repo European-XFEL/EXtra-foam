@@ -27,9 +27,16 @@ def write_image(img, filepath):
         raise ValueError("Please specify a file to save current image!")
 
     try:
-        if '.npy' == osp.splitext(filepath)[-1]:
+        suffix = osp.splitext(filepath)[-1]
+        if '.npy' == suffix:
             np.save(filepath, img)
         else:
+            # We do not perform a type check here to make 'write_image' and
+            # 'read_image' more generic. Users can in principle read
+            # unsupported file types in the GUI although the GUI has a filter.
+            # But as long as it does not crash the app and 'imageio' can
+            # handle it, it is the users to responsibility for the correctness
+            # of the result.
             imageio.imwrite(filepath, img)
     except Exception as e:
         raise ValueError(f"Failed to write image to {filepath}: {str(e)}")
@@ -47,7 +54,8 @@ def read_image(filepath, *, expected_shape=None):
         raise ValueError("Please specify the image file!")
 
     try:
-        if '.npy' == osp.splitext(filepath)[-1]:
+        suffix = osp.splitext(filepath)[-1]
+        if '.npy' == suffix:
             ref = np.load(filepath)
         else:
             # imread returns an Array object which is a subclass of
