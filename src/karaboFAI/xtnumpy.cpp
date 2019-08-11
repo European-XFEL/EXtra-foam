@@ -25,7 +25,7 @@
 #include "xtensor-python/pyarray.hpp"
 #include "xtensor-python/pytensor.hpp"
 
-#include "../image_proc.hpp"
+#include "image_proc.hpp"
 
 
 namespace fai {

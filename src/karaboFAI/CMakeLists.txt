@@ -19,6 +19,7 @@ pybind11_add_module(xtnumpy xtnumpy.cpp)
 
 target_include_directories(xtnumpy
     PRIVATE
+        ${FAI_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS})
 
 target_link_libraries(xtnumpy

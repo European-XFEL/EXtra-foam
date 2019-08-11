@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "../src/image_proc.hpp"
+#include "image_proc.hpp"
 
 TEST(TestMaskImage, General) {
 

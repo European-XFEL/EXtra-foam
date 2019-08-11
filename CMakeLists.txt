@@ -92,6 +92,8 @@ set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
 add_subdirectory(thirdparty/xtensor-python)
 
 # karaboFAI
+set(FAI_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/karaboFAI/include)
+
 add_subdirectory(src/karaboFAI)
 
 if(BUILD_FAI_TESTS)

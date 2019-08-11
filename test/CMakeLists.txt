@@ -56,6 +56,7 @@ foreach(filename IN LISTS FAI_TESTS)
     endif()
     target_include_directories(${targetname}
         PRIVATE
+            ${FAI_INCLUDE_DIRS}
             ${GTEST_INCLUDE_DIRS}
             ${GMOCK_INCLUDE_DIRS}
     )
@@ -71,6 +72,7 @@ add_executable(test_fai_cpp main.cpp ${FAI_TESTS})
 
 target_include_directories(test_fai_cpp
     PRIVATE
+        ${FAI_INCLUDE_DIRS}
         ${GTEST_INCLUDE_DIRS}
         ${GMOCK_INCLUDE_DIRS}
 )
