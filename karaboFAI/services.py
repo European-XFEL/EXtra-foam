@@ -262,7 +262,7 @@ def application():
     parser.add_argument("--topic", help="Name of the instrument",
                         type=lambda s: s.upper(),
                         choices=['FXE', 'HED', 'MID', 'SCS', 'SPB', 'SQS'],
-                        default='GENERAL')
+                        default='DEFAULT')
 
     args = parser.parse_args()
     health_check()
@@ -280,7 +280,8 @@ def application():
     app = mkQApp()
 
     # update global configuration
-    config.load(detector, topic)
+    config.load(detector)
+    config.load_topic(topic)
     print(config._data)
 
     fai = FAI().init()

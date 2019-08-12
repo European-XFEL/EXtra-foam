@@ -395,17 +395,19 @@ class _Config(dict):
             with open(self._filename, 'w') as fp:
                 json.dump(cfg, fp, indent=4)
 
-    def load(self, detector, topic):
+    def load(self, detector):
         """Update the config from the config file.
 
         :param str detector: detector name.
         """
         self.__setitem__("DETECTOR", detector)
-        self.__setitem__("TOPIC", topic)
         # config (self) does not have a detector hierarchy!
         self.update(self._detector_readonly_config[detector])
         self.update(self._detector_reconfigurable_config[detector])
         self.from_file(detector)
+
+    def load_topic(self, topic):
+        self.__setitem__("TOPIC", topic)
 
     def from_file(self, detector):
         """Update the config dictionary from the config file."""
@@ -497,8 +499,11 @@ class ConfigWrapper(collections.Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def load(self, detector, topic):
-        self._data.load(detector, topic)
+    def load(self, detector):
+        self._data.load(detector)
+
+    def load_topic(self, topic):
+        self._data.load_topic(topic)
 
     @property
     def detectors(self):

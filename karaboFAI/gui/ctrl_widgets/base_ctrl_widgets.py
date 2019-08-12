@@ -30,99 +30,6 @@ class CorrelationParam:
             self.properties = properties
 
 
-# Leave the default device ID empty since the available devices
-# in different instruments are different.
-#
-_TOPIC_DATA_CATEGORIES = {
-    "GENERAL": OrderedDict({
-        "": CorrelationParam(),
-        "User defined": CorrelationParam(),
-        "Train ID": CorrelationParam(
-            device_ids=["", "Any"],
-            properties=["timestamp.tid"]
-        )}),
-    "FXE": OrderedDict({
-        "": CorrelationParam(),
-        "XGM": CorrelationParam(
-            device_ids=[
-                "",
-                "SA1_XTD2_XGM/DOOCS/MAIN",
-                "SPB_XTD9_XGM/DOOCS/MAIN",
-            ],
-            properties=["data.intensityTD"],
-        ),
-        "Train ID": CorrelationParam(
-            device_ids=["", "Any"],
-            properties=["timestamp.tid"]
-        ),
-        "Motor": CorrelationParam(
-            device_ids=[
-                "",
-                "FXE_SMS_USR/MOTOR/UM01",
-                "FXE_SMS_USR/MOTOR/UM02",
-                "FXE_SMS_USR/MOTOR/UM04",
-                "FXE_SMS_USR/MOTOR/UM05",
-                "FXE_SMS_USR/MOTOR/UM13",
-                "FXE_AUXT_LIC/DOOCS/PPLASER",
-                "FXE_AUXT_LIC/DOOCS/PPODL",
-            ],
-            properties=["actualPosition"],
-        ),
-        "MonoChromator": CorrelationParam(
-            device_ids=[
-                "",
-                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
-            ],
-            properties=["actualEnergy"],
-        ),
-        "User defined": CorrelationParam()
-    }),
-    "SCS": OrderedDict({
-        "": CorrelationParam(),
-        "XGM": CorrelationParam(
-            device_ids=[
-                "",
-                "SA3_XTD10_XGM/XGM/DOOCS",
-                "SCS_BLU_XGM/XGM/DOOCS"
-            ],
-            properties=["data.intensityTD"],
-        ),
-        "Digitizer": CorrelationParam(
-            device_ids=[
-                "",
-                "SCS_UTC1_ADQ/ADC/1"
-            ],
-            properties=["MCP1", "MCP2", "MCP3", "MCP4"],
-        ),
-        "Train ID": CorrelationParam(
-            device_ids=["", "Any"],
-            properties=["timestamp.tid"]
-        ),
-        "Motor": CorrelationParam(
-            device_ids=[
-                "",
-                "SCS_SMS_USR/MOTOR/UM01",
-                "SCS_SMS_USR/MOTOR/UM02",
-                "SCS_SMS_USR/MOTOR/UM04",
-                "SCS_SMS_USR/MOTOR/UM05",
-                "SCS_SMS_USR/MOTOR/UM13",
-                "SCS_AUXT_LIC/DOOCS/PPLASER",
-                "SCS_AUXT_LIC/DOOCS/PPODL",
-            ],
-            properties=["actualPosition"],
-        ),
-        "MonoChromator": CorrelationParam(
-            device_ids=[
-                "",
-                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
-            ],
-            properties=["actualEnergy"],
-        ),
-        "User defined": CorrelationParam()
-    }),
-}
-
-
 class AbstractCtrlWidget(QtGui.QGroupBox):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
                             'color: #8B008B;' \
@@ -132,6 +39,63 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                             'padding-left: 10px;' \
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
+
+    _TOPIC_DATA_CATEGORIES = {
+        "DEFAULT": OrderedDict({
+            "": CorrelationParam(),
+            "Train ID": CorrelationParam(
+                device_ids=["", "Any"],
+                properties=["timestamp.tid"]
+            ),
+            "User defined": CorrelationParam()}),
+        "FXE": OrderedDict({
+            "XGM": CorrelationParam(
+                device_ids=[
+                    "",
+                    "SA1_XTD2_XGM/DOOCS/MAIN",
+                    "SPB_XTD9_XGM/DOOCS/MAIN",
+                ],
+                properties=["data.intensityTD"],
+            ),
+            "Motor": CorrelationParam(
+                device_ids=[
+                    "",
+                    "FXE_SMS_USR/MOTOR/UM01",
+                    "FXE_SMS_USR/MOTOR/UM02",
+                    "FXE_SMS_USR/MOTOR/UM04",
+                    "FXE_SMS_USR/MOTOR/UM05",
+                    "FXE_SMS_USR/MOTOR/UM13",
+                    "FXE_AUXT_LIC/DOOCS/PPLASER",
+                    "FXE_AUXT_LIC/DOOCS/PPODL",
+                ],
+                properties=["actualPosition"],
+            ),
+        }),
+        "SCS": OrderedDict({
+            "XGM": CorrelationParam(
+                device_ids=[
+                    "",
+                    "SA3_XTD10_XGM/XGM/DOOCS",
+                    "SCS_BLU_XGM/XGM/DOOCS"
+                ],
+                properties=["data.intensityTD"],
+            ),
+            "Digitizer": CorrelationParam(
+                device_ids=[
+                    "",
+                    "SCS_UTC1_ADQ/ADC/1"
+                ],
+                properties=["MCP1", "MCP2", "MCP3", "MCP4"],
+            ),
+            "MonoChromator": CorrelationParam(
+                device_ids=[
+                    "",
+                    "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
+                ],
+                properties=["actualEnergy"],
+            ),
+        }),
+    }
 
     def __init__(self, title, *, pulse_resolved=True, parent=None):
         """Initialization.
@@ -154,10 +118,14 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
 
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
+        # datacategories (Topic specific. Contain deviceids and props)
+        self._data_categories = self._TOPIC_DATA_CATEGORIES["DEFAULT"]
         try:
-            self._data_categories = _TOPIC_DATA_CATEGORIES[config["TOPIC"]]
+            self._data_categories.update(self._TOPIC_DATA_CATEGORIES[config["TOPIC"]])
+        # self._data_categories.update(self._TOPIC_DATA_CATEGORIES.get(
+        #     config["TOPIC"], self._TOPIC_DATA_CATEGORIES["DEFAULT"]))
         except KeyError:
-            self._data_categories = _TOPIC_DATA_CATEGORIES["GENERAL"]
+            pass
 
     def initUI(self):
         """Initialization of UI."""

@@ -36,7 +36,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('LPD')
-
         cls.fai = FAI().init()
 
         cls.gui = cls.fai._gui

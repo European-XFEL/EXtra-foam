@@ -295,6 +295,10 @@ class MainGUI(QtGui.QMainWindow):
             parent=self, pulse_resolved=self._pulse_resolved
         )
 
+        # StatusBar to display topic name
+        self.statusBar().showMessage(f"TOPIC: {config['TOPIC']}")
+        self.statusBar().setStyleSheet("QStatusBar{font-weight:bold;}")
+
         self.initUI()
         self.updateMetaData()
 
