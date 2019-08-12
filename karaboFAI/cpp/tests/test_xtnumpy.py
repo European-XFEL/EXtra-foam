@@ -5,8 +5,9 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
 from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xt_moving_average,
-    maskImage, maskTrainImages
+    nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
+    xt_moving_average,
+    maskImage, maskTrainImages, xtMaskTrainImages
 )
 
 
@@ -189,6 +190,7 @@ class TestXtnumpy(unittest.TestCase):
 
         np.testing.assert_array_equal(2 * arr, ma)
 
+    @unittest.skip("skip test until xtensor bug fix")
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
@@ -247,6 +249,10 @@ class TestXtnumpy(unittest.TestCase):
         dt_cpp_th = time.perf_counter() - t0
 
         t0 = time.perf_counter()
+        xtMaskTrainImages(data, 1, 2)
+        dt_cpp_xt = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
         data[(data > 2) | (data < 1)] = 0
         dt_py_th = time.perf_counter() - t0
 
@@ -263,7 +269,9 @@ class TestXtnumpy(unittest.TestCase):
         dt_py = time.perf_counter() - t0
 
         print(f"\nMask image with {data_type} - "
-              f"dt (cpp) threshold: {dt_cpp_th:.4f}, dt (numpy) threshold: {dt_py_th:.4f}, "
+              f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
+              f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
+              f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
               f"dt (cpp) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
 
     def testMaskImagePerformance(self):

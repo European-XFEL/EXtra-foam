@@ -216,12 +216,14 @@ PYBIND11_MODULE(xtnumpy, m)
     (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&)) &nanmeanImages<double>);
   m.def("nanmeanImages",
     (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&)) &nanmeanImages<float>);
+
   m.def("nanmeanImages",
     (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&, const std::vector<size_t>&))
     &nanmeanImages<double>);
   m.def("nanmeanImages",
     (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&, const std::vector<size_t>&))
     &nanmeanImages<float>);
+
   // FIXME: nanmeanTwoImages -> nanmeanImage when the following bug gets fixed
   // https://github.com/QuantStack/xtensor-python/issues/178
   m.def("nanmeanTwoImages",
@@ -237,21 +239,28 @@ PYBIND11_MODULE(xtnumpy, m)
   m.def("xt_moving_average", &movingAverage<double>);
   m.def("xt_moving_average", &movingAverage<float>);
 
-  m.def("maskImage", (xt::pytensor<double, 2> (*)(xt::pytensor<double, 2>&, double, double))
+  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, double, double))
                      &maskImage<double, xt::pytensor<double, 2>>);
-  m.def("maskImage", (xt::pytensor<float, 2> (*)(xt::pytensor<float, 2>&, float, float))
+  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, float, float))
                      &maskImage<float, xt::pytensor<float, 2>>);
-  m.def("maskImage", (xt::pytensor<double, 2> (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
+
+  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
                      &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>);
-  m.def("maskImage", (xt::pytensor<float, 2> (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
+  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
                      &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>);
 
-  m.def("maskTrainImages", (xt::pytensor<double, 3> (*)(xt::pytensor<double, 3>&, double, double))
+  m.def("maskTrainImages", (void (*)(xt::pytensor<double, 3>&, double, double))
                            &maskTrainImages<double, xt::pytensor<double, 3>>);
-  m.def("maskTrainImages", (xt::pytensor<float, 3> (*)(xt::pytensor<float, 3>&, float, float))
+  m.def("maskTrainImages", (void (*)(xt::pytensor<float, 3>&, float, float))
                            &maskTrainImages<float, xt::pytensor<float, 3>>);
-  m.def("maskTrainImages", (xt::pytensor<double, 3> (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
+
+  m.def("xtMaskTrainImages", (void (*)(xt::pytensor<double, 3>&, double, double))
+                           &xtMaskTrainImages<double, xt::pytensor<double, 3>>);
+  m.def("xtMaskTrainImages", (void (*)(xt::pytensor<float, 3>&, float, float))
+                           &xtMaskTrainImages<float, xt::pytensor<float, 3>>);
+
+  m.def("maskTrainImages", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
                            &maskTrainImages<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>);
-  m.def("maskTrainImages", (xt::pytensor<float, 3> (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
+  m.def("maskTrainImages", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
                            &maskTrainImages<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>);
 }

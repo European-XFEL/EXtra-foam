@@ -44,10 +44,18 @@ using check_container = std::enable_if_t<C<E>::value, bool>;
  */
 template <typename T, typename E, template <typename> class C = is_tensor,
     check_container<E, C> = false>
-inline E maskImage(E& img, T lb, T ub)
+inline void maskImage(E& img, T lb, T ub)
 {
-  xt::filter(img, img < lb | img > ub) = 0;
-  return img;
+  auto shape = img.shape();
+  // do not check lb <= ub
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      auto v = img(j, k);
+      if (v < lb || v > ub) img(j, k) = T(0);
+    }
+  }
 }
 
 /**
@@ -58,7 +66,7 @@ inline E maskImage(E& img, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
     fai::check_container<E, C> = false>
-inline E maskImage(E& img, const M& mask)
+inline void maskImage(E& img, const M& mask)
 {
   auto shape = img.shape();
   if (shape != mask.shape())
@@ -71,8 +79,6 @@ inline E maskImage(E& img, const M& mask)
       if (mask(j, k)) img(j, k) = 0;
     }
   }
-
-  return img;
 }
 
 /**
@@ -84,11 +90,39 @@ inline E maskImage(E& img, const M& mask)
  */
 template <typename T, typename E, template <typename> class C = is_tensor,
     check_container<E, C> = false>
-inline E maskTrainImages(E& img, T lb, T ub)
+inline void maskTrainImages(E& img, T lb, T ub)
 {
-  xt::filter(img, img < lb | img > ub) = 0;
-  return img;
+  auto shape = img.shape();
+  // do not check lb <= ub
+  for (size_t i = 0; i < shape[0]; ++i)
+  {
+    for (size_t j = 0; j < shape[1]; ++j)
+    {
+      for (size_t k = 0; k < shape[2]; ++k)
+      {
+        auto v = img(i, j, k);
+        if (v < lb || v > ub) img(i, j, k) = T(0);
+      }
+    }
+  }
 }
+
+/**
+ * Mask images in a train by an image mask inplace.
+ *
+ * Pure xtensor implementation.
+ *
+ * @param img: image array. shape = (slices, y, x)
+ * @param lb: lower threshold
+ * @param ub: upper threshold
+ */
+template <typename T, typename E, template <typename> class C = is_tensor,
+    check_container<E, C> = false>
+inline void xtMaskTrainImages(E& img, T lb, T ub)
+{
+  xt::filter(img, img < lb | img > ub) = T(0);
+}
+
 
 /**
  * Mask images in a train by an image mask inplace.
@@ -98,7 +132,7 @@ inline E maskTrainImages(E& img, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
     fai::check_container<E, C> = false>
-inline E maskTrainImages(E& img, const M& mask)
+inline void maskTrainImages(E& img, const M& mask)
 {
   auto shape = img.shape();
   auto msk_shape = mask.shape();
@@ -117,8 +151,6 @@ inline E maskTrainImages(E& img, const M& mask)
       }
     }
   }
-
-  return img;
 }
 
 } // fai
