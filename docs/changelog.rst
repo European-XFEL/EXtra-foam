@@ -1,6 +1,27 @@
 CHANGELOG
 =========
 
+karaboFAI 0.5.3 (16 August 2019)
+-------------------------------
+
+- **Bug Fix**
+
+    - Fix series nan mean two images !106
+
+- **Improvement**
+
+    - Introduce 'TOPIC' to separate instrument specific sources !114
+    - Implement masking image in cpp !110
+
+- **New Feature**
+
+    - Implement DarkRunWindow !109
+    - Allow save image and load reference in ImageTool !107
+
+- **Test**
+
+    - Integrate cpp unittest into setuptools and CI (both parallel and series) !110
+
 karaboFAI 0.5.2 (9 August 2019)
 -------------------------------
 
