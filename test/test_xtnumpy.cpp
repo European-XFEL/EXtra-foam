@@ -20,8 +20,9 @@
 
 namespace fai
 {
-TEST(TestMaskImage, TestThresholdMask) {
 
+TEST(TestMaskImage, TestThresholdMask)
+{
   // threshold mask
   xt::xtensor<float, 2> img {{1, 2, 3}, {4, 5, 6}};
 
@@ -30,8 +31,8 @@ TEST(TestMaskImage, TestThresholdMask) {
   EXPECT_EQ(img.storage(), masked_img_gt.storage());
 }
 
-TEST(TestMaskImage, TestImageMask) {
-
+TEST(TestMaskImage, TestImageMask)
+{
   // threshold mask
   xt::xtensor<float, 2> img {{1, 2, 3}, {4, 5, 6}};
   xt::xtensor<bool, 2> mask {{true, true, false}, {true, false, false}};
@@ -41,8 +42,8 @@ TEST(TestMaskImage, TestImageMask) {
   EXPECT_EQ(img.storage(), masked_img_gt.storage());
 }
 
-TEST(TestMaskTrainImages, TestThresholdMask) {
-
+TEST(TestMaskTrainImages, TestThresholdMask)
+{
   xt::xtensor<float, 3> imgs {{{1, 2, 3}, {4, 5, 6}}, {{1, 2, 3}, {4, 5, 6}}};
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 2, 3}, {4, 0, 0}}, {{0, 2, 3}, {4, 0, 0}}};
@@ -50,8 +51,8 @@ TEST(TestMaskTrainImages, TestThresholdMask) {
   EXPECT_EQ(imgs.storage(), masked_imgs_gt.storage());
 }
 
-TEST(TestXtMaskTrainImages, TestThresholdMask) {
-
+TEST(TestXtMaskTrainImages, TestThresholdMask)
+{
   xt::xtensor<float, 3> imgs {{{1, 2, 3}, {4, 5, 6}}, {{1, 2, 3}, {4, 5, 6}}};
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 2, 3}, {4, 0, 0}}, {{0, 2, 3}, {4, 0, 0}}};

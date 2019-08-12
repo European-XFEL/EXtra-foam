@@ -28,109 +28,111 @@
 #include "image_proc.hpp"
 
 
-namespace fai {
-
-namespace detail {
-  template<typename T>
-  inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
-                                             const std::vector<size_t>& keep = {})
+namespace fai
 {
-    auto shape = arr.shape();
-    auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
-  
-  #if defined(FAI_WITH_TBB)
-    tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
-      [&arr, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)
-      {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
-  #else
-        for (std::size_t j=0; j < shape[1]; ++j)
-        {
-          for (std::size_t k=0; k < shape[2]; ++k)
-          {
-  #endif
-            T count = 0;
-            T sum = 0;
-            if (keep.empty())
-            {
-              for (auto i=0; i<shape[0]; ++i)
-              {
-                auto v = arr(i, j, k);
-                if (! std::isnan(v))
-                {
-                  count += T(1);
-                  sum += v;
-                }
-              }
-            }
-            else
-            {
-              for (auto it=keep.begin(); it != keep.end(); ++it)
-              {
-                auto v = arr(*it, j, k);
-                if (! std::isnan(v))
-                {
-                  count += T(1);
-                  sum += v;
-                }
-              }
-            }
+namespace detail
+{
 
-            mean(j, k) = sum / count;
-          }
-        }
-  #if defined(FAI_WITH_TBB)
-      }
-    );
-  #endif
-    
-    return mean;
-  }
-
-  template<typename T>
-  inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
-                                                const xt::pytensor<T, 2>& img2)
-  {
-    auto shape = img1.shape();
-    auto mean = xt::pytensor<T, 2>({shape[0], shape[1]});
+template<typename T>
+inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
+                                           const std::vector<size_t>& keep = {})
+{
+  auto shape = arr.shape();
+  auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
 
 #if defined(FAI_WITH_TBB)
-    tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
-      [&img1, &img2, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
+    [&arr, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+    {
+      for(int j=block.rows().begin(); j != block.rows().end(); ++j)
       {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        for(int k=block.cols().begin(); k != block.cols().end(); ++k)
         {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
 #else
-        for (std::size_t j=0; j < shape[0]; ++j)
+      for (std::size_t j=0; j < shape[1]; ++j)
+      {
+        for (std::size_t k=0; k < shape[2]; ++k)
         {
-          for (std::size_t k=0; k < shape[1]; ++k)
-          {
 #endif
-            auto x = img1(j, k);
-            auto y = img2(j, k);
-
-            if (std::isnan(x) and std::isnan(y))
-              mean(j, k) = std::numeric_limits<T>::quiet_NaN();
-            else if (std::isnan(x))
-              mean(j, k) = y;
-            else if (std::isnan(y))
-              mean(j, k) = x;
-            else
-              mean(j, k)  = T(0.5) * (x + y);
+          T count = 0;
+          T sum = 0;
+          if (keep.empty())
+          {
+            for (auto i=0; i<shape[0]; ++i)
+            {
+              auto v = arr(i, j, k);
+              if (! std::isnan(v))
+              {
+                count += T(1);
+                sum += v;
+              }
+            }
           }
+          else
+          {
+            for (auto it=keep.begin(); it != keep.end(); ++it)
+            {
+              auto v = arr(*it, j, k);
+              if (! std::isnan(v))
+              {
+                count += T(1);
+                sum += v;
+              }
+            }
+          }
+
+          mean(j, k) = sum / count;
         }
+      }
 #if defined(FAI_WITH_TBB)
     }
   );
 #endif
 
-    return mean;
+  return mean;
+}
+
+template<typename T>
+inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
+                                              const xt::pytensor<T, 2>& img2)
+{
+  auto shape = img1.shape();
+  auto mean = xt::pytensor<T, 2>({shape[0], shape[1]});
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
+    [&img1, &img2, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+    {
+      for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+      {
+        for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+        {
+#else
+      for (std::size_t j=0; j < shape[0]; ++j)
+      {
+        for (std::size_t k=0; k < shape[1]; ++k)
+        {
+#endif
+          auto x = img1(j, k);
+          auto y = img2(j, k);
+
+          if (std::isnan(x) and std::isnan(y))
+            mean(j, k) = std::numeric_limits<T>::quiet_NaN();
+          else if (std::isnan(x))
+            mean(j, k) = y;
+          else if (std::isnan(y))
+            mean(j, k) = x;
+          else
+            mean(j, k)  = T(0.5) * (x + y);
+        }
+      }
+#if defined(FAI_WITH_TBB)
   }
+);
+#endif
+
+  return mean;
+}
 
 } // detail
 
