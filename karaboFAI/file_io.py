@@ -56,21 +56,21 @@ def read_image(filepath, *, expected_shape=None):
     try:
         suffix = osp.splitext(filepath)[-1]
         if '.npy' == suffix:
-            ref = np.load(filepath)
+            img = np.load(filepath)
         else:
             # imread returns an Array object which is a subclass of
             # np.ndarray
-            ref = imageio.imread(filepath)
+            img = imageio.imread(filepath)
 
-        if expected_shape is not None and ref.shape != expected_shape:
-            raise ValueError(f"Shape of image {ref.shape} differs from "
+        if expected_shape is not None and img.shape != expected_shape:
+            raise ValueError(f"Shape of image {img.shape} differs from "
                              f"expected {expected_shape}!")
 
         image_dtype = config["IMAGE_DTYPE"]
-        if ref.dtype != image_dtype:
-            ref = ref.astype(image_dtype)
+        if img.dtype != image_dtype:
+            img = img.astype(image_dtype)
 
-        return ref
+        return img
 
     except Exception as e:
         raise ValueError(f"Failed to load image from {filepath}: {str(e)}")
