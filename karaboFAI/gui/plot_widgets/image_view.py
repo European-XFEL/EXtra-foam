@@ -239,7 +239,7 @@ class ImageAnalysis(ImageView):
     It provides tools like masking, etc.
     """
 
-    IMAGE_FILE_FILTER = "All supported files (*.tif *.npy *.png)"
+    IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

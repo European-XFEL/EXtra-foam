@@ -26,7 +26,7 @@ logger.setLevel("CRITICAL")
 class TestFileIO(unittest.TestCase):
     def testReadImage(self):
 
-        # test empty input
+        # test read empty input
         with self.assertRaisesRegex(ValueError, 'Please specify'):
             read_image('')
 
@@ -41,9 +41,31 @@ class TestFileIO(unittest.TestCase):
             self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
             self.assertEqual((3, 2), img.shape)
 
+        # test read invalid file format
+        with tempfile.NamedTemporaryFile(suffix='.txt') as fp:
+            with self.assertRaisesRegex(ValueError, 'Could not find a format'):
+                read_image(fp.name)
+
     def testWriteImage(self):
-        img = np.ones((2, 2))
-        fp, filepath = tempfile.mkstemp(suffix='.tiff')
-        write_image(img, filepath)
-        os.close(fp)
-        os.remove(filepath)
+        # test write empty input
+        with self.assertRaisesRegex(ValueError, 'Please specify'):
+            read_image('')
+
+        # test write invalid file format
+        with tempfile.NamedTemporaryFile(suffix='.txt') as fp:
+            with self.assertRaisesRegex(ValueError, 'Could not find a format'):
+                read_image(fp.name)
+
+        # test read and write valid file formats
+        self._assert_write_read('.tif')
+        self._assert_write_read('.npy')
+
+        # test read and write .png file
+        self._assert_write_read('.png', scale=255)
+
+    def _assert_write_read(self, file_type, *, scale=1):
+        img = np.ones((2, 3), dtype=np.float32)
+        with tempfile.NamedTemporaryFile(suffix=file_type) as fp:
+            write_image(img, fp.name)
+            ref = read_image(fp.name)
+            np.testing.assert_array_equal(scale * img, ref)
