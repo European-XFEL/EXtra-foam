@@ -1,4 +1,5 @@
 import unittest
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -145,6 +146,7 @@ class TestXtnumpy(unittest.TestCase):
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
               f"dt (cpp xtensor): {dt_cpp_xt:.4f}, dt (numpy para): {dt_py:.4f}")
 
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanImagesPerformance(self):
         self._nanmean_images_performance(np.float32)
         self._nanmean_images_performance(np.float64)
@@ -177,6 +179,7 @@ class TestXtnumpy(unittest.TestCase):
         print(f"\nnanmean_two_images with {data_type} - "
               f"dt (cpp): {dt_cpp_2:.4f}, dt (cpp para): {dt_cpp:.4f}")
 
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanWithTwoImagesPerformance(self):
         self._nanmean_two_images_performance(np.float32)
         self._nanmean_two_images_performance(np.float64)
@@ -190,7 +193,7 @@ class TestXtnumpy(unittest.TestCase):
 
         np.testing.assert_array_equal(2 * arr, ma)
 
-    @unittest.skip("skip test until xtensor bug fix")
+    @unittest.skip("xtensor-python bug")
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
@@ -274,6 +277,7 @@ class TestXtnumpy(unittest.TestCase):
               f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
               f"dt (cpp) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
 
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testMaskImagePerformance(self):
         self._mask_image_performance(np.float32)
         self._mask_image_performance(np.float64)
