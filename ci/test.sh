@@ -3,4 +3,5 @@
 set -x
 set -e
 
-python -m pytest karaboFAI -v
+python setup.py build_ext --with-tests
+python setup.py test

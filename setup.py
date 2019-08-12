@@ -1,13 +1,25 @@
+"""
+Offline and online data analysis and visualization tool for azimuthal
+integration of different data acquired with various detectors at
+European XFEL.
+
+Build and install.
+
+Author: Jun Zhu <jun.zhu@xfel.eu>
+Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+All rights reserved.
+"""
 import contextlib
 import os
 import os.path as osp
-import platform
 import re
 import shutil
 import sys
+import sysconfig
 import subprocess
 from setuptools import setup, find_packages, Distribution, Extension
 from setuptools.command.build_ext import build_ext
+from setuptools.command.test import test as _TestCommand
 from distutils.command.clean import clean
 from distutils.version import LooseVersion
 from distutils.util import strtobool
@@ -159,6 +171,23 @@ class BuildExt(build_ext):
             shutil.copy(src, dst)
 
 
+class TestCommand(_TestCommand):
+    def _get_build_dir(self, dirname):
+        version = sys.version_info
+        return f"{dirname}.{sysconfig.get_platform()}-{version[0]}.{version[1]}"
+
+    def run(self):
+        # build and run cpp test
+        build_temp = osp.join('build', self._get_build_dir('temp'))
+        with changed_cwd(build_temp):
+            self.spawn(['make', 'ftest'])
+
+        # run Python test
+        import pytest
+        errno = pytest.main(['karaboFAI'])
+        sys.exit(errno)  # why do we need this?
+
+
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
@@ -185,9 +214,11 @@ setup(
         ],
     },
     ext_modules=ext_modules,
+    tests_require=['pytest'],
     cmdclass={
         'clean': clean,
         'build_ext': BuildExt,
+        'test': TestCommand,
     },
     distclass=BinaryDistribution,
     package_data={
