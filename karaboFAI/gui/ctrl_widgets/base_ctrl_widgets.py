@@ -14,6 +14,7 @@ from collections import OrderedDict
 from ..pyqtgraph import QtGui
 
 from ..mediator import Mediator
+from ...config import config
 
 
 class CorrelationParam:
@@ -32,51 +33,94 @@ class CorrelationParam:
 # Leave the default device ID empty since the available devices
 # in different instruments are different.
 #
-_DATA_CATEGORIES = OrderedDict({
-    "": CorrelationParam(),
-    # "XGM": CorrelationParam(
-    #     device_ids=[
-    #         "",
-    #         "SA1_XTD2_XGM/DOOCS/MAIN",
-    #         "SPB_XTD9_XGM/DOOCS/MAIN",
-    #         "SA3_XTD10_XGM/XGM/DOOCS",
-    #         "SCS_BLU_XGM/XGM/DOOCS"
-    #     ],
-    #     properties=["data.intensityTD"],
-    # ),
-    # "Digitizer": CorrelationParam(
-    #     device_ids=[
-    #         "",
-    #         "SCS_UTC1_ADQ/ADC/1"
-    #     ],
-    #     properties=["MCP1", "MCP2", "MCP3", "MCP4"],
-    # ),
-    "Train ID": CorrelationParam(
-        device_ids=["", "Any"],
-        properties=["timestamp.tid"]
-    ),
-    "Motor": CorrelationParam(
-        device_ids=[
-            "",
-            "FXE_SMS_USR/MOTOR/UM01",
-            "FXE_SMS_USR/MOTOR/UM02",
-            "FXE_SMS_USR/MOTOR/UM04",
-            "FXE_SMS_USR/MOTOR/UM05",
-            "FXE_SMS_USR/MOTOR/UM13",
-            "FXE_AUXT_LIC/DOOCS/PPLASER",
-            "FXE_AUXT_LIC/DOOCS/PPODL",
-        ],
-        properties=["actualPosition"],
-    ),
-    "MonoChromator": CorrelationParam(
-        device_ids=[
-            "",
-            "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
-        ],
-        properties=["actualEnergy"],
-    ),
-    "User defined": CorrelationParam()
-})
+_TOPIC_DATA_CATEGORIES = {
+    "GENERAL": OrderedDict({
+        "": CorrelationParam(),
+        "User defined": CorrelationParam(),
+        "Train ID": CorrelationParam(
+            device_ids=["", "Any"],
+            properties=["timestamp.tid"]
+        )}),
+    "FXE": OrderedDict({
+        "": CorrelationParam(),
+        "XGM": CorrelationParam(
+            device_ids=[
+                "",
+                "SA1_XTD2_XGM/DOOCS/MAIN",
+                "SPB_XTD9_XGM/DOOCS/MAIN",
+            ],
+            properties=["data.intensityTD"],
+        ),
+        "Train ID": CorrelationParam(
+            device_ids=["", "Any"],
+            properties=["timestamp.tid"]
+        ),
+        "Motor": CorrelationParam(
+            device_ids=[
+                "",
+                "FXE_SMS_USR/MOTOR/UM01",
+                "FXE_SMS_USR/MOTOR/UM02",
+                "FXE_SMS_USR/MOTOR/UM04",
+                "FXE_SMS_USR/MOTOR/UM05",
+                "FXE_SMS_USR/MOTOR/UM13",
+                "FXE_AUXT_LIC/DOOCS/PPLASER",
+                "FXE_AUXT_LIC/DOOCS/PPODL",
+            ],
+            properties=["actualPosition"],
+        ),
+        "MonoChromator": CorrelationParam(
+            device_ids=[
+                "",
+                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
+            ],
+            properties=["actualEnergy"],
+        ),
+        "User defined": CorrelationParam()
+    }),
+    "SCS": OrderedDict({
+        "": CorrelationParam(),
+        "XGM": CorrelationParam(
+            device_ids=[
+                "",
+                "SA3_XTD10_XGM/XGM/DOOCS",
+                "SCS_BLU_XGM/XGM/DOOCS"
+            ],
+            properties=["data.intensityTD"],
+        ),
+        "Digitizer": CorrelationParam(
+            device_ids=[
+                "",
+                "SCS_UTC1_ADQ/ADC/1"
+            ],
+            properties=["MCP1", "MCP2", "MCP3", "MCP4"],
+        ),
+        "Train ID": CorrelationParam(
+            device_ids=["", "Any"],
+            properties=["timestamp.tid"]
+        ),
+        "Motor": CorrelationParam(
+            device_ids=[
+                "",
+                "SCS_SMS_USR/MOTOR/UM01",
+                "SCS_SMS_USR/MOTOR/UM02",
+                "SCS_SMS_USR/MOTOR/UM04",
+                "SCS_SMS_USR/MOTOR/UM05",
+                "SCS_SMS_USR/MOTOR/UM13",
+                "SCS_AUXT_LIC/DOOCS/PPLASER",
+                "SCS_AUXT_LIC/DOOCS/PPODL",
+            ],
+            properties=["actualPosition"],
+        ),
+        "MonoChromator": CorrelationParam(
+            device_ids=[
+                "",
+                "SA3_XTD10_MONO/MDL/PHOTON_ENERGY"
+            ],
+            properties=["actualEnergy"],
+        ),
+        "User defined": CorrelationParam()
+    }),
+}
 
 
 class AbstractCtrlWidget(QtGui.QGroupBox):
@@ -110,6 +154,10 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
 
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
+        try:
+            self._data_categories = _TOPIC_DATA_CATEGORIES[config["TOPIC"]]
+        except KeyError:
+            self._data_categories = _TOPIC_DATA_CATEGORIES["GENERAL"]
 
     def initUI(self):
         """Initialization of UI."""

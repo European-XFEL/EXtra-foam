@@ -128,7 +128,6 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
-
         self._input = MpInQueue("gui:input")
         self._close_ev = mp.Event()
         self._input.run_in_thread(self._close_ev)

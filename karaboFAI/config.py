@@ -87,6 +87,8 @@ class _Config(dict):
     _system_readonly_config = {
         # detector name, leave it empty
         "DETECTOR": "",
+        # Topic name
+        "TOPIC": "",
         # QTimer interval for updating plots, in milliseconds
         "PLOT_UPDATE_INTERVAL": 10,
         # QTimer interval for monitoring processes, in milliseconds
@@ -393,12 +395,13 @@ class _Config(dict):
             with open(self._filename, 'w') as fp:
                 json.dump(cfg, fp, indent=4)
 
-    def load(self, detector):
+    def load(self, detector, topic):
         """Update the config from the config file.
 
         :param str detector: detector name.
         """
         self.__setitem__("DETECTOR", detector)
+        self.__setitem__("TOPIC", topic)
         # config (self) does not have a detector hierarchy!
         self.update(self._detector_readonly_config[detector])
         self.update(self._detector_reconfigurable_config[detector])
@@ -494,8 +497,8 @@ class ConfigWrapper(collections.Mapping):
     def __iter__(self):
         return iter(self._data)
 
-    def load(self, detector):
-        self._data.load(detector)
+    def load(self, detector, topic):
+        self._data.load(detector, topic)
 
     @property
     def detectors(self):

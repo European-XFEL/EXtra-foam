@@ -169,7 +169,7 @@ def health_check():
         gone, alive = psutil.wait_procs(residual, timeout=1.0)
         if alive:
             for p in alive:
-                print(f"{p} survived SIGKILL, please contact the user: " 
+                print(f"{p} survived SIGKILL, please contact the user: "
                       f"{p.username()}")
         else:
             print("Residual processes have been terminated!!!")
@@ -259,9 +259,12 @@ def application():
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
+    parser.add_argument("--topic", help="Name of the instrument",
+                        type=lambda s: s.upper(),
+                        choices=['FXE', 'HED', 'MID', 'SCS', 'SPB', 'SQS'],
+                        default='GENERAL')
 
     args = parser.parse_args()
-
     health_check()
 
     if args.debug:
@@ -270,14 +273,15 @@ def application():
         logger.setLevel("INFO")
 
     detector = _parse_detector_name(args.detector)
-
+    topic = args.topic
     if not faulthandler.is_enabled():
         faulthandler.enable(all_threads=False)
 
     app = mkQApp()
 
     # update global configuration
-    config.load(detector)
+    config.load(detector, topic)
+    print(config._data)
 
     fai = FAI().init()
 
