@@ -85,8 +85,8 @@ namespace detail {
         for(int j=block.rows().begin(); j != block.rows().end(); ++j) {
           for(int k=block.cols().begin(); k != block.cols().end(); ++k) {
 #else
-        for (std::size_t j=0; j < shape[1]; ++j) {
-          for (std::size_t k=0; k < shape[2]; ++k) {
+        for (std::size_t j=0; j < shape[0]; ++j) {
+          for (std::size_t k=0; k < shape[1]; ++k) {
 #endif
             auto x = img1(j, k);
             auto y = img2(j, k);
