@@ -16,7 +16,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ...config import AnalysisType, BinMode
+from ...config import AnalysisType, BinMode, config
 
 
 _N_PARAMS = 2
@@ -113,7 +113,7 @@ class BinCtrlWidget(AbstractCtrlWidget):
         table.setVerticalHeaderLabels(['1', '2'])
         for i_row in range(n_row):
             combo = QtGui.QComboBox()
-            for t in self._data_categories.keys():
+            for t in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]].keys():
                 combo.addItem(t)
             table.setCellWidget(i_row, 0, combo)
             combo.currentTextChanged.connect(
@@ -175,14 +175,14 @@ class BinCtrlWidget(AbstractCtrlWidget):
             self.onBinGroupChangeLe(i_row)
         else:
             combo_device_ids = QtGui.QComboBox()
-            for device_id in self._data_categories[text].device_ids:
+            for device_id in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].device_ids:
                 combo_device_ids.addItem(device_id)
             combo_device_ids.currentTextChanged.connect(functools.partial(
                 self.onBinGroupChangeCb, i_row))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
             combo_properties = QtGui.QComboBox()
-            for ppt in self._data_categories[text].properties:
+            for ppt in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].properties:
                 combo_properties.addItem(ppt)
             combo_properties.currentTextChanged.connect(functools.partial(
                 self.onBinGroupChangeCb, i_row))

@@ -48,7 +48,8 @@ class DataCtrlWidget(AbstractCtrlWidget):
 
         self._xgm_src_cb = QtGui.QComboBox()
         try:
-            self._xgms = self._data_categories["XGM"].device_ids
+            self._xgms = \
+                self._TOPIC_DATA_CATEGORIES[config["TOPIC"]]["XGM"].device_ids
         except KeyError:
             self._xgms = [""]
 

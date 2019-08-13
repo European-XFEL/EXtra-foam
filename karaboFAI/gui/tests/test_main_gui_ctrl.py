@@ -23,7 +23,6 @@ from karaboFAI.config import (
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
-
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
@@ -36,6 +35,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('LPD')
+        config.set_topic("FXE")
+
         cls.fai = FAI().init()
 
         cls.gui = cls.fai._gui
@@ -354,6 +355,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             _N_PARAMS, _DEFAULT_RESOLUTION)
 
         widget = self.gui.correlation_ctrl_widget
+
+        for i in range(_N_PARAMS):
+            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
+                         for j in range(widget._table.cellWidget(i, 0).count())]
+            self.assertEqual(
+                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+
         scheduler = self.scheduler
         proc = scheduler._correlation_proc
         self._correlation_action.trigger()
@@ -398,10 +406,16 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (
-            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
         )
 
         widget = self.gui.bin_ctrl_widget
+        for i in range(_N_PARAMS):
+            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
+                         for j in range(widget._table.cellWidget(i, 0).count())]
+            self.assertEqual(
+                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+
         scheduler = self.scheduler
         proc = scheduler._bin_proc
         proc.update()
