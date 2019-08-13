@@ -43,19 +43,19 @@ using check_container = std::enable_if_t<C<E>::value, bool>;
 /**
  * Mask a single image by threshold inplace.
  *
- * @param img: image array. shape = (y, x)
+ * @param src: image array. shape = (y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename T, typename E, template <typename> class C = is_tensor,
-    check_container<E, C> = false>
-inline void maskImage(E& img, T lb, T ub)
+template <typename E, typename T, template <typename> class C = is_tensor,
+  check_container<E, C> = false>
+inline void maskImage(E& src, T lb, T ub)
 {
-  auto shape = img.shape();
+  auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
-    [&img, lb, ub] (const tbb::blocked_range2d<int> &block)
+    [&src, lb, ub] (const tbb::blocked_range2d<int> &block)
     {
       for (int j = block.rows().begin(); j != block.rows().end(); ++j)
       {
@@ -67,8 +67,8 @@ inline void maskImage(E& img, T lb, T ub)
         for (size_t k = 0; k < shape[1]; ++k)
         {
 #endif
-        auto v = img(j, k);
-        if (v < lb || v > ub) img(j, k) = T(0);
+        auto v = src(j, k);
+        if (v < lb || v > ub) src(j, k) = T(0);
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -80,20 +80,20 @@ inline void maskImage(E& img, T lb, T ub)
 /**
  * Mask a single image by an image mask inplace.
  *
- * @param image: 2D image array. shape = (y, x)
+ * @param src: 2D image array. shape = (y, x)
  * @param mask: 2D image mask. shape = (y, x)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
-    fai::check_container<E, C> = false, fai::check_container<M, C> = false>
-inline void maskImage(E& img, const M& mask)
+  check_container<E, C> = false, check_container<M, C> = false>
+inline void maskImage(E& src, const M& mask)
 {
-  auto shape = img.shape();
+  auto shape = src.shape();
   if (shape != mask.shape())
     throw std::invalid_argument("Image and mask have different shapes!");
 
 #if defined(FAI_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
-    [&img, &mask] (const tbb::blocked_range2d<int> &block)
+    [&src, &mask] (const tbb::blocked_range2d<int> &block)
     {
       for (int j = block.rows().begin(); j != block.rows().end(); ++j)
       {
@@ -105,7 +105,7 @@ inline void maskImage(E& img, const M& mask)
         for (size_t k = 0; k < shape[1]; ++k)
         {
 #endif
-          if (mask(j, k)) img(j, k) = 0;
+          if (mask(j, k)) src(j, k) = 0;
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -117,19 +117,19 @@ inline void maskImage(E& img, const M& mask)
 /**
  * Mask images in a train by threshold inplace.
  *
- * @param img: image array. shape = (slices, y, x)
+ * @param src: image array. shape = (slices, y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename T, typename E, template <typename> class C = is_tensor,
-    check_container<E, C> = false>
-inline void maskTrainImages(E& img, T lb, T ub)
+template <typename E, typename T, template <typename> class C = is_tensor,
+  check_container<E, C> = false>
+inline void maskTrainImages(E& src, T lb, T ub)
 {
-  auto shape = img.shape();
+  auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&img, lb, ub] (const tbb::blocked_range3d<int> &block)
+    [&src, lb, ub] (const tbb::blocked_range3d<int> &block)
     {
       for(int i=block.pages().begin(); i != block.pages().end(); ++i)
       {
@@ -145,8 +145,8 @@ inline void maskTrainImages(E& img, T lb, T ub)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-          auto v = img(i, j, k);
-          if (v < lb || v > ub) img(i, j, k) = T(0);
+          auto v = src(i, j, k);
+          if (v < lb || v > ub) src(i, j, k) = T(0);
           }
         }
       }
@@ -161,29 +161,29 @@ inline void maskTrainImages(E& img, T lb, T ub)
  *
  * Pure xtensor implementation.
  *
- * @param img: image array. shape = (slices, y, x)
+ * @param src: image array. shape = (slices, y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename T, typename E, template <typename> class C = is_tensor,
-    check_container<E, C> = false>
-inline void xtMaskTrainImages(E& img, T lb, T ub)
+template <typename E, typename T, template <typename> class C = is_tensor,
+  check_container<E, C> = false>
+inline void xtMaskTrainImages(E& src, T lb, T ub)
 {
-  xt::filter(img, img < lb | img > ub) = T(0);
+  xt::filter(src, src < lb | src > ub) = T(0);
 }
 
 
 /**
  * Mask images in a train by an image mask inplace.
  *
- * @param image: an array of images. shape = (indices, y, x)
+ * @param src: an array of images. shape = (indices, y, x)
  * @param mask: 2D image mask. shape = (y, x)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
-    fai::check_container<E, C> = false, fai::check_container<M, C> = false>
-inline void maskTrainImages(E& img, const M& mask)
+  check_container<E, C> = false, check_container<M, C> = false>
+inline void maskTrainImages(E& src, const M& mask)
 {
-  auto shape = img.shape();
+  auto shape = src.shape();
   auto msk_shape = mask.shape();
   if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
   {
@@ -192,7 +192,7 @@ inline void maskTrainImages(E& img, const M& mask)
 
 #if defined(FAI_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&img, &mask] (const tbb::blocked_range3d<int> &block)
+    [&src, &mask] (const tbb::blocked_range3d<int> &block)
     {
       for(int i=block.pages().begin(); i != block.pages().end(); ++i)
       {
@@ -208,7 +208,7 @@ inline void maskTrainImages(E& img, const M& mask)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-          if (mask(j, k)) img(i, j, k) = 0;
+          if (mask(j, k)) src(i, j, k) = 0;
           }
         }
       }

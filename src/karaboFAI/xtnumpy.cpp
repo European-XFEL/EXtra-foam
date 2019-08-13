@@ -242,27 +242,33 @@ PYBIND11_MODULE(xtnumpy, m)
   m.def("xt_moving_average", &movingAverage<float>);
 
   m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, double, double))
-                     &maskImage<double, xt::pytensor<double, 2>>);
+                     &maskImage<xt::pytensor<double, 2>, double>,
+                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
   m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, float, float))
-                     &maskImage<float, xt::pytensor<float, 2>>);
+                     &maskImage<xt::pytensor<float, 2>, float>,
+                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
   m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>);
+                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
+                     py::arg("src").noconvert(), py::arg("mask").noconvert());
   m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>);
+                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
+                     py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("maskTrainImages", (void (*)(xt::pytensor<double, 3>&, double, double))
-                           &maskTrainImages<double, xt::pytensor<double, 3>>);
-  m.def("maskTrainImages", (void (*)(xt::pytensor<float, 3>&, float, float))
-                           &maskTrainImages<float, xt::pytensor<float, 3>>);
-
-  m.def("xtMaskTrainImages", (void (*)(xt::pytensor<double, 3>&, double, double))
-                           &xtMaskTrainImages<double, xt::pytensor<double, 3>>);
-  m.def("xtMaskTrainImages", (void (*)(xt::pytensor<float, 3>&, float, float))
-                           &xtMaskTrainImages<float, xt::pytensor<float, 3>>);
+  m.def("maskTrainImages", &maskTrainImages<xt::pytensor<double, 3>, double>,
+                           py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskTrainImages", &maskTrainImages<xt::pytensor<float, 3>, float>,
+                           py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
   m.def("maskTrainImages", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
-                           &maskTrainImages<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>);
+                           &maskTrainImages<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
+                           py::arg("src").noconvert(), py::arg("mask").noconvert());
   m.def("maskTrainImages", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
-                           &maskTrainImages<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>);
+                           &maskTrainImages<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
+                           py::arg("src").noconvert(), py::arg("mask").noconvert());
+
+  m.def("xtMaskTrainImages", &xtMaskTrainImages<xt::pytensor<double, 3>, double>,
+                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("xtMaskTrainImages", &xtMaskTrainImages<xt::pytensor<float, 3>, float>,
+                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 }

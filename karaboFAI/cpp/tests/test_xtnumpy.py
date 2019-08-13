@@ -193,7 +193,6 @@ class TestXtnumpy(unittest.TestCase):
 
         np.testing.assert_array_equal(2 * arr, ma)
 
-    @unittest.skip("xtensor-python bug")
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
@@ -211,14 +210,14 @@ class TestXtnumpy(unittest.TestCase):
 
         # threshold mask
         img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
-        img = maskImage(img, 2, 3)
+        maskImage(img, 2, 3)
         np.testing.assert_array_equal(
             np.array([[0, 2, 3], [3, 0, 0]], dtype=np.float32), img)
 
         # image mask
         img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        img = maskImage(img, img_mask)
+        maskImage(img, img_mask)
         np.testing.assert_array_equal(
             np.array([[0, 0, 3], [0, 4, 0]], dtype=np.float32), img)
 
@@ -229,7 +228,7 @@ class TestXtnumpy(unittest.TestCase):
         # threshold mask
         img = np.array([[[1, 2, 3], [3, 4, 5]],
                         [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
-        img = maskTrainImages(img, 2, 3)
+        maskTrainImages(img, 2, 3)
         np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, 0, 0]],
                                                 [[0, 2, 3], [3, 0, 0]]],
                                                dtype=np.float32), img)
@@ -238,7 +237,8 @@ class TestXtnumpy(unittest.TestCase):
         img = np.array([[[1, 2, 3], [3, 4, 5]],
                         [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        img = maskTrainImages(img, img_mask)
+        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        maskTrainImages(img, img_mask)
         np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 4, 0]],
                                                 [[0, 0, 3], [0, 4, 0]]],
                                                dtype=np.float32), img)
@@ -248,7 +248,7 @@ class TestXtnumpy(unittest.TestCase):
         data = np.ones((64, 1024, 512), dtype=data_type)
 
         t0 = time.perf_counter()
-        maskTrainImages(data, 1, 2)
+        maskTrainImages(data, 1., 2.)
         dt_cpp_th = time.perf_counter() - t0
 
         t0 = time.perf_counter()
