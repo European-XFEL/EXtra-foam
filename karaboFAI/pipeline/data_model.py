@@ -207,10 +207,17 @@ class AccumulatedPairData(PairData):
 class MovingAverageArray:
     """Stores moving average of raw images."""
 
-    def __init__(self):
+    def __init__(self, window=1):
+        """Initialization.
+
+        :param int window: moving average window size.
+        """
         self._data = None  # moving average
 
-        self._window = 1
+        if not isinstance(window, int) or window < 0:
+            raise ValueError("Moving average window must be a positive integer.")
+
+        self._window = window
         self._count = 0
 
     def __get__(self, instance, instance_type):
@@ -259,8 +266,8 @@ class MovingAverageArray:
 class RawImageData(MovingAverageArray):
     """Stores moving average of raw images."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, window=1):
+        super().__init__(window)
 
     @property
     def n_images(self):

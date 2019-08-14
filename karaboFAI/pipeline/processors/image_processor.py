@@ -58,7 +58,9 @@ class ImageProcessorPulse(_BaseProcessor):
     #       memory space.
     _raw_data = RawImageData()
 
-    _dark_run = RawImageData()
+    # give it a huge window for now since I don't want to touch the
+    # implementation of the base class for now.
+    _dark_run = RawImageData(1000000000)
 
     def __init__(self):
         super().__init__()
