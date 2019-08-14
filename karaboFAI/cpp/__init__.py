@@ -1,7 +1,7 @@
 from .algo import intersection
 
 from .xtnumpy import (
-    nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xt_moving_average,
+    nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xtMovingAverage,
     maskImage, maskTrainImages, xtMaskTrainImages
 )
 

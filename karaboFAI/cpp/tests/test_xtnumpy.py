@@ -7,7 +7,7 @@ import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
-    xt_moving_average,
+    xtMovingAverage,
     maskImage, maskTrainImages, xtMaskTrainImages
 )
 
@@ -189,9 +189,28 @@ class TestXtnumpy(unittest.TestCase):
         ma = arr.copy()
         data = 3 * arr
 
-        ma = xt_moving_average(ma, data, 2)
+        ma = xtMovingAverage(ma, data, 2)
 
         np.testing.assert_array_equal(2 * arr, ma)
+
+    def _moving_average_performance(self, data_type):
+        imgs = np.ones((64, 1024, 512), dtype=data_type)
+
+        t0 = time.perf_counter()
+        xtMovingAverage(imgs, imgs, 5)
+        dt_cpp = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        imgs + (imgs - imgs) / 5
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nmoving average with {data_type} - "
+              f"dt (cpp xtensor): {dt_cpp:.4f}, dt (python): {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
+    def testMovingAveragePerformance(self):
+        self._moving_average_performance(np.float32)
+        self._moving_average_performance(np.float64)
 
     def testMaskImage(self):
         # test invalid input

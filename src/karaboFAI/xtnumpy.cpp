@@ -194,10 +194,10 @@ inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr)
 }
 
 template<typename T>
-inline xt::pyarray<T> movingAverage(xt::pyarray<T>& ma,
+inline xt::pyarray<T> movingAverage(xt::pyarray<T>& src,
                                     xt::pyarray<T>& data, size_t count)
 {
-  return ma + (data - ma) / T(count);
+  return src + (data - src) / T(count);
 }
 
 } // fai
@@ -237,9 +237,11 @@ PYBIND11_MODULE(xtnumpy, m)
 
   m.def("xtNanmeanImages", &xtNanmeanImages<double>);
   m.def("xtNanmeanImages", &xtNanmeanImages<float>);
-  
-  m.def("xt_moving_average", &movingAverage<double>);
-  m.def("xt_moving_average", &movingAverage<float>);
+
+  m.def("xtMovingAverage", &movingAverage<double>,
+                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("xtMovingAverage", &movingAverage<float>,
+                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
 
   m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, double, double))
                      &maskImage<xt::pytensor<double, 2>, double>,
