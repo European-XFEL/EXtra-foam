@@ -228,38 +228,38 @@ class TestXtnumpy(unittest.TestCase):
         # ------------
 
         # threshold mask
-        img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
         maskImage(img, 2, 3)
         np.testing.assert_array_equal(
-            np.array([[0, 2, 3], [3, 0, 0]], dtype=np.float32), img)
+            np.array([[0, 2, np.nan], [3, 0, 0]], dtype=np.float32), img)
 
         # image mask
-        img = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         maskImage(img, img_mask)
         np.testing.assert_array_equal(
-            np.array([[0, 0, 3], [0, 4, 0]], dtype=np.float32), img)
+            np.array([[0, 0, np.nan], [0, 4, 0]], dtype=np.float32), img)
 
         # ------------
         # train images
         # ------------
 
         # threshold mask
-        img = np.array([[[1, 2, 3], [3, 4, 5]],
-                        [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
+        img = np.array([[[1, 2, 3], [3, np.nan, 5]],
+                        [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
         maskTrainImages(img, 2, 3)
-        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, 0, 0]],
-                                                [[0, 2, 3], [3, 0, 0]]],
+        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, np.nan, 0]],
+                                                [[0, 2, 3], [3, np.nan, 0]]],
                                                dtype=np.float32), img)
 
         # image mask
-        img = np.array([[[1, 2, 3], [3, 4, 5]],
-                        [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         maskTrainImages(img, img_mask)
-        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 4, 0]],
-                                                [[0, 0, 3], [0, 4, 0]]],
+        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, np.nan, 0]],
+                                                [[0, 0, 3], [0, np.nan, 0]]],
                                                dtype=np.float32), img)
 
     def _mask_image_performance(self, data_type):
@@ -290,7 +290,7 @@ class TestXtnumpy(unittest.TestCase):
         data[:, mask] = 0
         dt_py = time.perf_counter() - t0
 
-        print(f"\nMask image with {data_type} - "
+        print(f"\nMask a train of images with {data_type} - \n"
               f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
               f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
               f"dt (numpy) threshold: {dt_py_th:.4f}, \n"

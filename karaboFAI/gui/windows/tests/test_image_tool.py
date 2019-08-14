@@ -31,20 +31,20 @@ class TestSimpleImageData(unittest.TestCase):
         with self.assertRaises(TypeError):
             _SimpleImageData([1, 2, 3])
 
-        gt_data = np.arange(9).reshape(3, 3)
+        gt_data = np.random.randn(3, 3).astype(np.float32)
         img_data = _SimpleImageData.from_array(gt_data)
 
         img_data.background = 1
-        np.testing.assert_array_equal(gt_data - 1, img_data.masked)
+        np.testing.assert_array_almost_equal(gt_data - 1, img_data.masked)
         img_data.background = 0
-        np.testing.assert_array_equal(gt_data, img_data.masked)
+        np.testing.assert_array_almost_equal(gt_data, img_data.masked)
 
         img_data.threshold_mask = (3, 6)
-        np.testing.assert_array_equal(mask_image(gt_data, threshold_mask=(3, 6)),
-                                      img_data.masked)
+        np.testing.assert_array_almost_equal(
+            mask_image(gt_data, threshold_mask=(3, 6)), img_data.masked)
         img_data.background = 3
-        np.testing.assert_array_equal(mask_image(gt_data-3, threshold_mask=(3, 6)),
-                                      img_data.masked)
+        np.testing.assert_array_almost_equal(
+            mask_image(gt_data-3, threshold_mask=(3, 6)), img_data.masked)
 
         self.assertEqual(1.0e-3, img_data.pixel_size)
 
