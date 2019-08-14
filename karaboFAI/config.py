@@ -99,6 +99,8 @@ class _Config(dict):
         "MAX_QUEUE_SIZE": 5,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
+        # maximum number of trains in a dark run
+        "MAX_DARK_TRAIN_COUNT": 999999,
         # colors of for ROI 1 to 4
         "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4

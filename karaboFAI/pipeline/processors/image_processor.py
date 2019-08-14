@@ -22,7 +22,7 @@ from ...algorithms import mask_image
 from ...metadata import Metadata as mt
 from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
-from ...config import PumpProbeMode
+from ...config import config, PumpProbeMode
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtMovingAverage
@@ -41,7 +41,7 @@ class ImageProcessorPulse(_BaseProcessor):
             used only when _recording = True.
         _dark_run (numpy.ndarray): store the moving average of dark
             images in a train. Shape = (indices, y, x)
-        _dark_train (numpy.ndarray): average of all the dark image in
+        _dark_mean (numpy.ndarray): average of all the dark images in
             the dark run. Shape = (y, x)
         _image_mask (numpy.ndarray): image mask array. Shape = (y, x),
             dtype=np.bool
@@ -60,7 +60,7 @@ class ImageProcessorPulse(_BaseProcessor):
 
     # give it a huge window for now since I don't want to touch the
     # implementation of the base class for now.
-    _dark_run = RawImageData(1000000000)
+    _dark_run = RawImageData(config['MAX_DARK_TRAIN_COUNT'])
 
     def __init__(self):
         super().__init__()
@@ -69,8 +69,8 @@ class ImageProcessorPulse(_BaseProcessor):
 
         self._recording = False
         self._process_dark = False
-
         self._dark_mean = None
+
         self._image_mask = None
         self._threshold_mask = None
         self._reference = None
@@ -169,7 +169,8 @@ class ImageProcessorPulse(_BaseProcessor):
         self._update_pois(image_data, assembled)
         image_data.ma_count = self.__class__._raw_data.count
         image_data.background = self._background
-        image_data.dark = self._dark_mean
+        image_data.dark_mean = self._dark_mean
+        image_data.dark_count = self.__class__._dark_run.count
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask
         image_data.reference = self._reference

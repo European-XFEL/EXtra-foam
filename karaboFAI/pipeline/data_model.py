@@ -443,7 +443,9 @@ class ImageData:
             train, e.g. calculating the average of (on/off) images.
         poi_indices (list): indices of pulses of interest.
         background (float): a uniform background value.
-        dark (numpy.ndaray):
+        dark_mean (numpy.ndaray): average of all the dark images in
+            the dark run. Shape = (y, x)
+        dark_count (int): count of collected dark trains.
         image_mask (numpy.ndarray): image mask with dtype=np.bool.
         threshold_mask (tuple): (lower, upper) boundaries of the
             threshold mask.
@@ -464,7 +466,8 @@ class ImageData:
         self.poi_indices = None
 
         self.background = None
-        self.dark = None
+        self.dark_mean = None
+        self.dark_count = 0
         self.image_mask = None
         self.threshold_mask = None
 
