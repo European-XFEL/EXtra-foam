@@ -180,7 +180,8 @@ class ImageAssemblerFactory(ABC):
             """Overload."""
             # (memory cells, modules, y, x)
             modules_data = data[src_name]["image.data"]
-            if modules_data.shape[1] == config["MODULE_SHAPE"][1]:  # case for online-calib source (dim1 = fs = 128)
+            if modules_data.shape[1] == config["MODULE_SHAPE"][1]:
+                # online-calibrated data, if reshaping not done upstream
                 # (modules, fs, ss, pulses) -> (pulses, modules, ss, fs)
                 return np.transpose(modules_data, (3, 0, 2, 1))
             return modules_data

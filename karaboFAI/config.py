@@ -269,6 +269,12 @@ class _Config(dict):
             "SOURCE_NAME_FILE": [
                 'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
                 'MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
+            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
+                                      'geometries/agipd_mar18_v11.geom'),
+            "QUAD_POSITIONS": [[-526, 630],
+                               [-549, -4],
+                               [522, -157],
+                               [543, 477]],
             "AZIMUTHAL_INTEG_METHODS": [
                 'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
                 'lut',
