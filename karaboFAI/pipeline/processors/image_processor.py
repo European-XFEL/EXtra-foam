@@ -98,21 +98,17 @@ class ImageProcessorPulse(_BaseProcessor):
         self._poi_indices = [int(gp_cfg['poi1_index']),
                              int(gp_cfg['poi2_index'])]
 
-        if 'remove_dark' in gp_cfg:
-            self._meta.delete(mt.GLOBAL_PROC, 'remove_dark')
+        if 'reset_dark' in gp_cfg:
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_dark')
+            del self._dark_run
             self._dark_mean = None
 
         try:
-            recording = gp_cfg['recording_dark'] == 'True'
+            self._recording = gp_cfg['recording_dark'] == 'True'
         except KeyError:
             # TODO: we need a solution for widget that is not opened at
             #       start-up but is responsible for updating metadata.
-            recording = False
-        if recording and not self._recording:
-            # reset dark run and dark mean when starting a new recording
-            del self._dark_run
-            self._dark_mean = None
-        self._recording = recording
+            self._recording = False
 
         try:
             self._process_dark = gp_cfg['process_dark'] == 'True'

@@ -142,7 +142,7 @@ class DarkRunWindow(AbstractWindow):
         self._record_at.toggled.connect(self._mediator.onRdStateChange)
         self._record_at.toggled.connect(self.onRecordingToggled)
 
-        self._remove_at.triggered.connect(self._mediator.onRdRemoveDark)
+        self._remove_at.triggered.connect(self._mediator.onRdResetDark)
 
         self._ctrl_action.proc_data_cb.toggled.connect(
             self._mediator.onRdProcessStateChange)
