@@ -126,10 +126,14 @@ class DarkRunWindow(AbstractWindow):
         """
         data = self._data.get()
 
-        if data is None or data.image.dark_mean is None:
+        if data is None:
             return
 
-        self._image_view.setImage(data.image.dark_mean)
+        if data.image.dark_mean is None:
+            self._image_view.clear()
+        else:
+            self._image_view.setImage(data.image.dark_mean)
+
         self._ctrl_action.updateCount(data.image.dark_count)
 
     def updateMetaData(self):
