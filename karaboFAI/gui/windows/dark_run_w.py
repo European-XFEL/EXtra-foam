@@ -147,3 +147,8 @@ class DarkRunWindow(AbstractWindow):
         action = QtGui.QAction(icon, description, self)
         self._tool_bar.addAction(action)
         return action
+
+    def closeEvent(self, QCloseEvent):
+        if self._record_at.isChecked():
+            self._record_at.trigger()
+        super().closeEvent(QCloseEvent)

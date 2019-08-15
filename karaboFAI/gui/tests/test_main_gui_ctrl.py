@@ -541,7 +541,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertFalse(image_proc._recording)
         self.assertTrue(image_proc._process_dark)
 
-        # test "Recording dar" action
+        # test "Recording dark" action
         window._record_at.trigger()
         image_proc.update()
         self.assertTrue(image_proc._recording)
@@ -554,6 +554,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         image_proc.update()
         self.assertIsNone(image_proc._dark_run)
         self.assertIsNone(image_proc._dark_mean)
+
+        self.assertTrue(window._record_at.isChecked())
+
+        window.close()
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
