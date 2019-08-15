@@ -21,7 +21,7 @@
 namespace fai
 {
 
-TEST(TestMaskImage, TestThresholdMask)
+TEST(TestMaskPulse, TestThresholdMask)
 {
   // threshold mask
   xt::xtensor<float, 2> img {{1, 2, 3}, {4, 5, 6}};
@@ -31,7 +31,7 @@ TEST(TestMaskImage, TestThresholdMask)
   EXPECT_EQ(img, masked_img_gt);
 }
 
-TEST(TestMaskImage, TestImageMask)
+TEST(TestMaskPulse, TestImageMask)
 {
   // threshold mask
   xt::xtensor<float, 2> img {{1, 2, 3}, {4, 5, 6}};
@@ -70,7 +70,7 @@ TEST(TestMaskTrain, TestImageMask)
   EXPECT_EQ(imgs, masked_imgs_gt);
 }
 
-TEST(TestNanToZeroImage, TestGeneral)
+TEST(TestNanToZeroPulse, TestGeneral)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
   xt::xtensor<float, 2> img {{1, nan, 3}, {4, 5, nan}};
@@ -86,6 +86,32 @@ TEST(TestNanToZeroTrain, TestGeneral)
   xt::xtensor<float, 3> imgs_gt {{{1, 2, 0}, {4, 0, 6}}, {{0, 2, 3}, {4, 0, 6}}};
   nanToZeroTrain(imgs);
   EXPECT_EQ(imgs, imgs_gt);
+}
+
+TEST(TestMovingAveragePulse, TestGeneral)
+{
+  xt::xtensor<float, 2> img1 {{1, 2, 3}, {3, 4, 5}};
+  xt::xtensor<float, 2> img2 {{2, 3, 4}, {4, 5, 6}};
+  xt::xtensor<float, 2> img3 {{2, 3}, {4, 5}};
+  EXPECT_THROW(movingAveragePulse(img1, img2, 0), std::invalid_argument);
+  EXPECT_THROW(movingAveragePulse(img1, img3, 2), std::invalid_argument);
+
+  movingAveragePulse(img1, img2, 2);
+  xt::xtensor<float, 2> ma {{1.5, 2.5, 3.5}, {3.5, 4.5, 5.5}};
+  EXPECT_EQ(ma, img1);
+}
+
+TEST(TestMovingAverageTrain, TestGeneral)
+{
+  xt::xtensor<float, 3> imgs1 {{{1, 2, 3}, {3, 4, 5}}, {{1, 2, 3}, {3, 4, 5}}};
+  xt::xtensor<float, 3> imgs2 {{{2, 3, 4}, {4, 5, 6}}, {{2, 3, 4}, {4, 5, 6}}};
+  xt::xtensor<float, 3> imgs3 {{{2, 3}, {4, 5}}, {{2, 3}, {4, 5}}};
+  EXPECT_THROW(movingAveragePulse(imgs1, imgs2, 0), std::invalid_argument);
+  EXPECT_THROW(movingAveragePulse(imgs1, imgs3, 2), std::invalid_argument);
+
+  movingAverageTrain(imgs1, imgs2, 2);
+  xt::xtensor<float, 3> ma {{{1.5, 2.5, 3.5}, {3.5, 4.5, 5.5}}, {{1.5, 2.5, 3.5}, {3.5, 4.5, 5.5}}};
+  EXPECT_EQ(ma, imgs1);
 }
 
 } // fai

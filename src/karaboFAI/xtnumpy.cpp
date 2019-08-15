@@ -193,13 +193,6 @@ inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr)
   return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
 }
 
-template<typename T>
-inline xt::pyarray<T> movingAverage(xt::pyarray<T>& src,
-                                    xt::pyarray<T>& data, size_t count)
-{
-  return src + (data - src) / T(count);
-}
-
 } // fai
 
 namespace py = pybind11;
@@ -238,10 +231,15 @@ PYBIND11_MODULE(xtnumpy, m)
   m.def("xtNanmeanImages", &xtNanmeanImages<double>);
   m.def("xtNanmeanImages", &xtNanmeanImages<float>);
 
-  m.def("xtMovingAverage", &movingAverage<double>,
-                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
-  m.def("xtMovingAverage", &movingAverage<float>,
-                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAveragePulse", &movingAveragePulse<xt::pytensor<double, 2>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAveragePulse", &movingAveragePulse<xt::pytensor<float, 2>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+
+  m.def("movingAverageTrain", &movingAverageTrain<xt::pytensor<double, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAverageTrain", &movingAverageTrain<xt::pytensor<float, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
 
   m.def("maskPulse", (void (*)(xt::pytensor<double, 2>&, double, double))
                      &maskPulse<xt::pytensor<double, 2>, double>,

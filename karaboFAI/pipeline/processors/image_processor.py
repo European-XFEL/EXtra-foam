@@ -24,9 +24,7 @@ from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config, PumpProbeMode
 
-from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xtMovingAverage
-)
+from karaboFAI.cpp import nanmeanImages, nanmeanTwoImages
 
 
 class ImageProcessorPulse(_BaseProcessor):
