@@ -77,32 +77,7 @@ class DarkRunWindow(AbstractWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
-    __instance = None
-
-    @classmethod
-    def reset(cls):
-        cls.__instance = None
-
-    def __new__(cls, *args, **kwargs):
-        """Create a singleton."""
-        if cls.__instance is None:
-            instance = super().__new__(cls, *args, **kwargs)
-            instance._is_initialized = False
-            cls.__instance = instance
-            return instance
-
-        instance = cls.__instance
-        parent = instance.parent()
-        if parent is not None:
-            parent.registerWindow(instance)
-
-        instance.show()
-        instance.activateWindow()
-        return instance
-
     def __init__(self, *args, **kwargs):
-        if self._is_initialized:
-            return
         super().__init__(*args, **kwargs)
 
         self._tool_bar = self.addToolBar("Control")
@@ -126,8 +101,6 @@ class DarkRunWindow(AbstractWindow):
 
         self.resize(800, 600)
         self.update()
-
-        self._is_initialized = True
 
     def initUI(self):
         """Override."""
@@ -157,12 +130,8 @@ class DarkRunWindow(AbstractWindow):
         if data is None or data.image.dark_mean is None:
             return
 
-        self._image_view.setImage(
-            data.image.dark_mean, auto_levels=(not self._is_initialized))
+        self._image_view.setImage(data.image.dark_mean)
         self._ctrl_action.updateCount(data.image.dark_count)
-
-        if not self._is_initialized:
-            self._is_initialized = True
 
     def updateMetaData(self):
         """Override."""
