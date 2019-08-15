@@ -7,8 +7,8 @@ import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
-    xtMovingAverage, nanToZeroImage, nanToZeroTrainImages,
-    maskImage, maskTrainImages, xtMaskTrainImages
+    xtMovingAverage, nanToZeroPulse, nanToZeroTrain,
+    maskPulse, maskTrain, xtMaskTrain
 )
 
 
@@ -215,13 +215,13 @@ class TestXtnumpy(unittest.TestCase):
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
-            maskImage()
+            maskPulse()
 
         # test incorrect shape
         with self.assertRaises(RuntimeError):
-            maskImage(np.ones((2, 2, 2)), 1, 2)
+            maskPulse(np.ones((2, 2, 2)), 1, 2)
         with self.assertRaises(RuntimeError):
-            maskImage(np.ones(2), 1, 2)
+            maskPulse(np.ones(2), 1, 2)
 
         # ------------
         # single image
@@ -229,14 +229,14 @@ class TestXtnumpy(unittest.TestCase):
 
         # threshold mask
         img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
-        maskImage(img, 2, 3)
+        maskPulse(img, 2, 3)
         np.testing.assert_array_equal(
             np.array([[0, 2, np.nan], [3, 0, 0]], dtype=np.float32), img)
 
         # image mask
         img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskImage(img, img_mask)
+        maskPulse(img, img_mask)
         np.testing.assert_array_equal(
             np.array([[0, 0, np.nan], [0, 4, 0]], dtype=np.float32), img)
 
@@ -247,7 +247,7 @@ class TestXtnumpy(unittest.TestCase):
         # threshold mask
         img = np.array([[[1, 2, 3], [3, np.nan, 5]],
                         [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
-        maskTrainImages(img, 2, 3)
+        maskTrain(img, 2, 3)
         np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, np.nan, 0]],
                                                 [[0, 2, 3], [3, np.nan, 0]]],
                                                dtype=np.float32), img)
@@ -257,7 +257,7 @@ class TestXtnumpy(unittest.TestCase):
                         [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskTrainImages(img, img_mask)
+        maskTrain(img, img_mask)
         np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, np.nan, 0]],
                                                 [[0, 0, 3], [0, np.nan, 0]]],
                                                dtype=np.float32), img)
@@ -266,12 +266,12 @@ class TestXtnumpy(unittest.TestCase):
         # mask by threshold
         data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        maskTrainImages(data, 2., 3.)  # every elements are masked
+        maskTrain(data, 2., 3.)  # every elements are masked
         dt_cpp_th = time.perf_counter() - t0
 
         data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        xtMaskTrainImages(data, 2., 3.)
+        xtMaskTrain(data, 2., 3.)
         dt_cpp_xt = time.perf_counter() - t0
 
         data = np.ones((64, 1024, 512), dtype=data_type)
@@ -284,7 +284,7 @@ class TestXtnumpy(unittest.TestCase):
 
         data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        maskTrainImages(data, mask)
+        maskTrain(data, mask)
         dt_cpp = time.perf_counter() - t0
 
         data = np.ones((64, 1024, 512), dtype=data_type)
@@ -292,7 +292,7 @@ class TestXtnumpy(unittest.TestCase):
         data[:, mask] = 0
         dt_py = time.perf_counter() - t0
 
-        print(f"\nmaskTrainImages with {data_type} - \n"
+        print(f"\nmaskTrain with {data_type} - \n"
               f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
               f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
               f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
@@ -309,7 +309,7 @@ class TestXtnumpy(unittest.TestCase):
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        nanToZeroTrainImages(data)
+        nanToZeroTrain(data)
         dt_cpp = time.perf_counter() - t0
 
         # need a fresh data since number of nans determines the performance
@@ -320,7 +320,7 @@ class TestXtnumpy(unittest.TestCase):
         data[np.isnan(data)] = 0
         dt_py = time.perf_counter() - t0
 
-        print(f"\nnanToZeroTrainImages with {data_type} - "
+        print(f"\nnanToZeroTrain with {data_type} - "
               f"dt (cpp): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")

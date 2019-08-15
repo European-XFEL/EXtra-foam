@@ -49,7 +49,7 @@ using check_container = std::enable_if_t<C<E>::value, bool>;
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void maskImage(E& src, T lb, T ub)
+inline void maskPulse(E& src, T lb, T ub)
 {
   auto shape = src.shape();
 
@@ -85,7 +85,7 @@ inline void maskImage(E& src, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
   check_container<E, C> = false, check_container<M, C> = false>
-inline void maskImage(E& src, const M& mask)
+inline void maskPulse(E& src, const M& mask)
 {
   auto shape = src.shape();
   if (shape != mask.shape())
@@ -123,7 +123,7 @@ inline void maskImage(E& src, const M& mask)
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void maskTrainImages(E& src, T lb, T ub)
+inline void maskTrain(E& src, T lb, T ub)
 {
   auto shape = src.shape();
 
@@ -167,7 +167,7 @@ inline void maskTrainImages(E& src, T lb, T ub)
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void xtMaskTrainImages(E& src, T lb, T ub)
+inline void xtMaskTrain(E& src, T lb, T ub)
 {
   xt::filter(src, src < lb | src > ub) = T(0);
 }
@@ -181,7 +181,7 @@ inline void xtMaskTrainImages(E& src, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
   check_container<E, C> = false, check_container<M, C> = false>
-inline void maskTrainImages(E& src, const M& mask)
+inline void maskTrain(E& src, const M& mask)
 {
   auto shape = src.shape();
   auto msk_shape = mask.shape();
@@ -219,7 +219,7 @@ inline void maskTrainImages(E& src, const M& mask)
 }
 
 template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
-inline void nanToZeroImage(E& src)
+inline void nanToZeroPulse(E& src)
 {
   auto shape = src.shape();
 
@@ -247,7 +247,7 @@ inline void nanToZeroImage(E& src)
 }
 
 template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
-inline void nanToZeroTrainImages(E& src)
+inline void nanToZeroTrain(E& src)
 {
   auto shape = src.shape();
 
