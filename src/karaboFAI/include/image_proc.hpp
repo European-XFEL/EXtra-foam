@@ -218,6 +218,68 @@ inline void maskTrainImages(E& src, const M& mask)
 #endif
 }
 
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void nanToZeroImage(E& src)
+{
+  auto shape = src.shape();
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
+    [&src] (const tbb::blocked_range2d<int> &block)
+    {
+      for (int j = block.rows().begin(); j != block.rows().end(); ++j)
+      {
+        for (int k = block.cols().begin(); k != block.cols().end(); ++k)
+        {
+#else
+      for (size_t j = 0; j < shape[0]; ++j)
+      {
+        for (size_t k = 0; k < shape[1]; ++k)
+        {
+#endif
+          if (std::isnan(src(j, k))) src(j, k) = 0;
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void nanToZeroTrainImages(E& src)
+{
+  auto shape = src.shape();
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+          if (std::isnan(src(i, j, k))) src(i, j, k) = 0;
+          }
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+
 } // fai
 
 #endif //KARABOFAI_IMAGE_PROC_H

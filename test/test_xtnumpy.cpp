@@ -28,7 +28,7 @@ TEST(TestMaskImage, TestThresholdMask)
 
   xt::xtensor<float, 2> masked_img_gt {{0, 2, 3}, {4, 0, 0}};
   maskImage(img, 2, 4);
-  EXPECT_EQ(img.storage(), masked_img_gt.storage());
+  EXPECT_EQ(img, masked_img_gt);
 }
 
 TEST(TestMaskImage, TestImageMask)
@@ -39,7 +39,7 @@ TEST(TestMaskImage, TestImageMask)
 
   xt::xtensor<float, 2> masked_img_gt {{0, 0, 3}, {0, 5, 6}};
   maskImage(img, mask);
-  EXPECT_EQ(img.storage(), masked_img_gt.storage());
+  EXPECT_EQ(img, masked_img_gt);
 }
 
 TEST(TestMaskTrainImages, TestThresholdMask)
@@ -48,7 +48,7 @@ TEST(TestMaskTrainImages, TestThresholdMask)
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 2, 3}, {4, 0, 0}}, {{0, 2, 3}, {4, 0, 0}}};
   maskTrainImages(imgs, 2, 4);
-  EXPECT_EQ(imgs.storage(), masked_imgs_gt.storage());
+  EXPECT_EQ(imgs, masked_imgs_gt);
 }
 
 TEST(TestXtMaskTrainImages, TestThresholdMask)
@@ -57,7 +57,7 @@ TEST(TestXtMaskTrainImages, TestThresholdMask)
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 2, 3}, {4, 0, 0}}, {{0, 2, 3}, {4, 0, 0}}};
   xtMaskTrainImages(imgs, 2, 4);
-  EXPECT_EQ(imgs.storage(), masked_imgs_gt.storage());
+  EXPECT_EQ(imgs, masked_imgs_gt);
 }
 
 TEST(TestMaskTrainImages, TestImageMask)
@@ -67,7 +67,25 @@ TEST(TestMaskTrainImages, TestImageMask)
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 0, 3}, {0, 5, 6}}, {{0, 0, 3}, {0, 5, 6}}};
   maskTrainImages(imgs, mask);
-  EXPECT_EQ(imgs.storage(), masked_imgs_gt.storage());
+  EXPECT_EQ(imgs, masked_imgs_gt);
+}
+
+TEST(TestNanToZeroImage, TestGeneral)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  xt::xtensor<float, 2> img {{1, nan, 3}, {4, 5, nan}};
+  xt::xtensor<float, 2> img_gt {{1, 0, 3}, {4, 5, 0}};
+  nanToZeroImage(img);
+  EXPECT_EQ(img, img_gt);
+}
+
+TEST(TestNanToZeroTrainImages, TestGeneral)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  xt::xtensor<float, 3> imgs {{{1, 2, nan}, {4, nan, 6}}, {{nan, 2, 3}, {4, nan, 6}}};
+  xt::xtensor<float, 3> imgs_gt {{{1, 2, 0}, {4, 0, 6}}, {{0, 2, 3}, {4, 0, 6}}};
+  nanToZeroTrainImages(imgs);
+  EXPECT_EQ(imgs, imgs_gt);
 }
 
 } // fai

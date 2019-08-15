@@ -7,7 +7,7 @@ import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
-    xtMovingAverage,
+    xtMovingAverage, nanToZeroImage, nanToZeroTrainImages,
     maskImage, maskTrainImages, xtMaskTrainImages
 )
 
@@ -142,7 +142,7 @@ class TestXtnumpy(unittest.TestCase):
         nanmean_images_para(data)
         dt_py = time.perf_counter() - t0
 
-        print(f"\nnanmean_images with {data_type} - "
+        print(f"\nnanmeanImages with {data_type} - "
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
               f"dt (cpp xtensor): {dt_cpp_xt:.4f}, dt (numpy para): {dt_py:.4f}")
 
@@ -176,7 +176,7 @@ class TestXtnumpy(unittest.TestCase):
         nanmeanImages(imgs)
         dt_cpp = time.perf_counter() - t0
 
-        print(f"\nnanmean_two_images with {data_type} - "
+        print(f"\nnanmeanTwoImages with {data_type} - "
               f"dt (cpp): {dt_cpp_2:.4f}, dt (cpp para): {dt_cpp:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
@@ -265,32 +265,34 @@ class TestXtnumpy(unittest.TestCase):
     def _mask_image_performance(self, data_type):
         # mask by threshold
         data = np.ones((64, 1024, 512), dtype=data_type)
-
         t0 = time.perf_counter()
-        maskTrainImages(data, 1., 2.)
+        maskTrainImages(data, 2., 3.)  # every elements are masked
         dt_cpp_th = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        xtMaskTrainImages(data, 1, 2)
+        xtMaskTrainImages(data, 2., 3.)
         dt_cpp_xt = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        data[(data > 2) | (data < 1)] = 0
+        data[(data > 3) | (data < 2)] = 0
         dt_py_th = time.perf_counter() - t0
 
         # mask by image
-        data = np.ones((64, 1024, 512), dtype=data_type)
         mask = np.ones((1024, 512), dtype=np.bool)
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
         maskTrainImages(data, mask)
         dt_cpp = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
         data[:, mask] = 0
         dt_py = time.perf_counter() - t0
 
-        print(f"\nMask a train of images with {data_type} - \n"
+        print(f"\nmaskTrainImages with {data_type} - \n"
               f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
               f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
               f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
@@ -300,3 +302,28 @@ class TestXtnumpy(unittest.TestCase):
     def testMaskImagePerformance(self):
         self._mask_image_performance(np.float32)
         self._mask_image_performance(np.float64)
+
+    def _nan2zero_performance(self, data_type):
+        # mask by threshold
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        data[::2, ::2, ::2] = np.nan
+
+        t0 = time.perf_counter()
+        nanToZeroTrainImages(data)
+        dt_cpp = time.perf_counter() - t0
+
+        # need a fresh data since number of nans determines the performance
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        data[::2, ::2, ::2] = np.nan
+
+        t0 = time.perf_counter()
+        data[np.isnan(data)] = 0
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nnanToZeroTrainImages with {data_type} - "
+              f"dt (cpp): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
+    def testNanToZeroPerformance(self):
+        self._nan2zero_performance(np.float32)
+        self._nan2zero_performance(np.float64)

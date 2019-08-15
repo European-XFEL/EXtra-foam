@@ -273,4 +273,10 @@ PYBIND11_MODULE(xtnumpy, m)
                              py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
   m.def("xtMaskTrainImages", &xtMaskTrainImages<xt::pytensor<float, 3>, float>,
                              py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+
+  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<double, 2>>, py::arg("src").noconvert());
+  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<float, 2>>, py::arg("src").noconvert());
+
+  m.def("nanToZeroTrainImages", &nanToZeroTrainImages<xt::pytensor<double, 3>>, py::arg("src").noconvert());
+  m.def("nanToZeroTrainImages", &nanToZeroTrainImages<xt::pytensor<float, 3>>, py::arg("src").noconvert());
 }
