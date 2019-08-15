@@ -129,17 +129,21 @@ class ImageProcessorPulse(_BaseProcessor):
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
         n_images = len(sliced_indices)
 
-        # when a dark run is being recorded
         if self._recording:
-            self._dark_run = data['assembled']
-            if self._process_dark:
-                if self._dark_run.ndim == 3:
-                    # calculate the nanmean when recording, which has the risk
-                    # of dropping data due to the slow down of the pipeline.
-                    self._dark_mean = nanmeanImages(self._dark_run)
-                else:
-                    self._dark_mean = self._dark_run.copy()
-
+            # TODO: calculating the moving average for a train of images
+            #       is very expensive!!!
+            if self._dark_run is None:
+                # dark_run should not share memory with data['assembled']
+                self._dark_run = data['assembled'].copy()  # after pulse slicing
+            else:
+                self._dark_run = data['assembled']
+            # for visualizing the dark_mean
+            # This is also a relatively expensive operation. But, in principle,
+            # users should not trigger many other analysis when recording dark.
+            if self._dark_run.ndim == 3:
+                self._dark_mean = nanmeanImages(self._dark_run)
+            else:
+                self._dark_mean = self._dark_run.copy()
         # Make it the moving average for train resolved detectors
         # It is worth noting that the moving average here does not use
         # nanmean!!!
@@ -147,10 +151,16 @@ class ImageProcessorPulse(_BaseProcessor):
         # Be careful! data['assembled'] and self._raw_data share memory
         data['assembled'] = self._raw_data
         assembled = data['assembled']
-        if self._dark_mean is not None:
-            # While recording and self._process_dark = False, self._dark_mean
-            # should always be None.
-            assembled -= self._dark_mean
+        # subtract the dark_run from assembled if any
+        if (not self._recording and self._dark_run is not None) \
+                or (self._recording and self._process_dark):
+            if assembled.ndim == 3:
+                assembled -= self._dark_run
+            else:
+                # TODO: remove the moving average of images for train-resolved
+                #       detectors.
+                data['assembled'] = assembled - self._dark_run
+                assembled = data['assembled']
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)
