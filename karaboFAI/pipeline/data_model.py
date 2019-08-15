@@ -17,7 +17,7 @@ import numpy as np
 from ..algorithms import mask_image
 from ..config import config
 
-from karaboFAI.cpp import nanmeanImages, xt_moving_average
+from karaboFAI.cpp import nanmeanImages, xtMovingAverage
 
 
 class PairData:
@@ -227,10 +227,10 @@ class MovingAverageArray:
                 self._count <= self._window and data.shape == self._data.shape:
             if self._count < self._window:
                 self._count += 1
-                self._data = xt_moving_average(self._data, data, self._count)
+                self._data = xtMovingAverage(self._data, data, self._count)
             else:  # self._count == self._window
                 # here is an approximation
-                self._data = xt_moving_average(self._data, data, self._count)
+                self._data = xtMovingAverage(self._data, data, self._count)
 
         else:
             self._data = data

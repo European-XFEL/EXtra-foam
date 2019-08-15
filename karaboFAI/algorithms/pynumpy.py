@@ -20,7 +20,7 @@ def mask_image(image, *,
 
     The masked pixel value will will be set to 0.
 
-    :param numpy.ndarray image: array to be masked.
+    :param numpy.ndarray image: image array to be masked. Shape = (y, x)
     :param tuple/None threshold_mask: (min, max) of the threshold mask.
     :param numpy.ndarray/None image_mask: image mask. It assumes the shape
         of the image_mask is the same as the image.
@@ -28,6 +28,9 @@ def mask_image(image, *,
 
     :return numpy.ndarray: masked data.
     """
+    if image.ndim != 2:
+        raise ValueError("'image' must be a two dimensional array!")
+
     if not inplace:
         masked = image.copy()
     else:

@@ -25,7 +25,7 @@ from ...utils import profiler
 from ...config import PumpProbeMode
 
 from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xt_moving_average
+    nanmeanImages, nanmeanTwoImages, xtMovingAverage
 )
 
 
