@@ -113,7 +113,6 @@ class DarkRunWindow(AbstractWindow):
     def initConnections(self):
         """Override."""
         self._record_at.toggled.connect(self._mediator.onRdStateChange)
-        self._record_at.toggled.connect(self.onRecordingToggled)
 
         self._remove_at.triggered.connect(self._mediator.onRdResetDark)
 
@@ -138,13 +137,6 @@ class DarkRunWindow(AbstractWindow):
         self._ctrl_action.proc_data_cb.toggled.emit(
             self._ctrl_action.proc_data_cb.isChecked())
         return True
-
-    @QtCore.pyqtSlot(bool)
-    def onRecordingToggled(self, state):
-        if state:
-            self._ctrl_action.proc_data_cb.setEnabled(False)
-        else:
-            self._ctrl_action.proc_data_cb.setEnabled(True)
 
     def _addAction(self, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/" + filename))
