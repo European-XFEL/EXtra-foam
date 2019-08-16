@@ -1,13 +1,15 @@
 import unittest
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
 from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xt_moving_average,
+    nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
+    xtMovingAverage,
+    maskImage, maskTrainImages, xtMaskTrainImages
 )
-from karaboFAI.algorithms import mask_image
 
 
 def nanmean_images_para(data, *, chunk_size=10, max_workers=4):
@@ -121,7 +123,7 @@ class TestXtnumpy(unittest.TestCase):
                                                  nanmeanImages(data, [0, 2]))
 
     def _nanmean_images_performance(self, data_type):
-        data = np.ones((64, 1024, 1024), dtype=data_type)
+        data = np.ones((64, 1024, 512), dtype=data_type)
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
@@ -144,6 +146,7 @@ class TestXtnumpy(unittest.TestCase):
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
               f"dt (cpp xtensor): {dt_cpp_xt:.4f}, dt (numpy para): {dt_py:.4f}")
 
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanImagesPerformance(self):
         self._nanmean_images_performance(np.float32)
         self._nanmean_images_performance(np.float64)
@@ -159,14 +162,14 @@ class TestXtnumpy(unittest.TestCase):
         np.testing.assert_array_almost_equal(expected, nanmeanTwoImages(img1, img2))
 
     def _nanmean_two_images_performance(self, data_type):
-        img = np.ones((1024, 1024), dtype=data_type)
+        img = np.ones((1024, 512), dtype=data_type)
         img[::2, ::2] = np.nan
 
         t0 = time.perf_counter()
         nanmeanTwoImages(img, img)
         dt_cpp_2 = time.perf_counter() - t0
 
-        imgs = np.ones((2, 1024, 1024), dtype=data_type)
+        imgs = np.ones((2, 1024, 512), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
@@ -176,6 +179,7 @@ class TestXtnumpy(unittest.TestCase):
         print(f"\nnanmean_two_images with {data_type} - "
               f"dt (cpp): {dt_cpp_2:.4f}, dt (cpp para): {dt_cpp:.4f}")
 
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanWithTwoImagesPerformance(self):
         self._nanmean_two_images_performance(np.float32)
         self._nanmean_two_images_performance(np.float64)
@@ -185,6 +189,114 @@ class TestXtnumpy(unittest.TestCase):
         ma = arr.copy()
         data = 3 * arr
 
-        ma = xt_moving_average(ma, data, 2)
+        ma = xtMovingAverage(ma, data, 2)
 
         np.testing.assert_array_equal(2 * arr, ma)
+
+    def _moving_average_performance(self, data_type):
+        imgs = np.ones((64, 1024, 512), dtype=data_type)
+
+        t0 = time.perf_counter()
+        xtMovingAverage(imgs, imgs, 5)
+        dt_cpp = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        imgs + (imgs - imgs) / 5
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nmoving average with {data_type} - "
+              f"dt (cpp xtensor): {dt_cpp:.4f}, dt (python): {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
+    def testMovingAveragePerformance(self):
+        self._moving_average_performance(np.float32)
+        self._moving_average_performance(np.float64)
+
+    def testMaskImage(self):
+        # test invalid input
+        with self.assertRaises(TypeError):
+            maskImage()
+
+        # test incorrect shape
+        with self.assertRaises(RuntimeError):
+            maskImage(np.ones((2, 2, 2)), 1, 2)
+        with self.assertRaises(RuntimeError):
+            maskImage(np.ones(2), 1, 2)
+
+        # ------------
+        # single image
+        # ------------
+
+        # threshold mask
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        maskImage(img, 2, 3)
+        np.testing.assert_array_equal(
+            np.array([[0, 2, np.nan], [3, 0, 0]], dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        maskImage(img, img_mask)
+        np.testing.assert_array_equal(
+            np.array([[0, 0, np.nan], [0, 4, 0]], dtype=np.float32), img)
+
+        # ------------
+        # train images
+        # ------------
+
+        # threshold mask
+        img = np.array([[[1, 2, 3], [3, np.nan, 5]],
+                        [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
+        maskTrainImages(img, 2, 3)
+        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, np.nan, 0]],
+                                                [[0, 2, 3], [3, np.nan, 0]]],
+                                               dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        maskTrainImages(img, img_mask)
+        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, np.nan, 0]],
+                                                [[0, 0, 3], [0, np.nan, 0]]],
+                                               dtype=np.float32), img)
+
+    def _mask_image_performance(self, data_type):
+        # mask by threshold
+        data = np.ones((64, 1024, 512), dtype=data_type)
+
+        t0 = time.perf_counter()
+        maskTrainImages(data, 1., 2.)
+        dt_cpp_th = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        xtMaskTrainImages(data, 1, 2)
+        dt_cpp_xt = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        data[(data > 2) | (data < 1)] = 0
+        dt_py_th = time.perf_counter() - t0
+
+        # mask by image
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        mask = np.ones((1024, 512), dtype=np.bool)
+
+        t0 = time.perf_counter()
+        maskTrainImages(data, mask)
+        dt_cpp = time.perf_counter() - t0
+
+        t0 = time.perf_counter()
+        data[:, mask] = 0
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nMask a train of images with {data_type} - \n"
+              f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
+              f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
+              f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
+              f"dt (cpp) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
+    def testMaskImagePerformance(self):
+        self._mask_image_performance(np.float32)
+        self._mask_image_performance(np.float64)

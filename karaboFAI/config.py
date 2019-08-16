@@ -87,6 +87,8 @@ class _Config(dict):
     _system_readonly_config = {
         # detector name, leave it empty
         "DETECTOR": "",
+        # Instrument name
+        "TOPIC": "",
         # QTimer interval for updating plots, in milliseconds
         "PLOT_UPDATE_INTERVAL": 10,
         # QTimer interval for monitoring processes, in milliseconds
@@ -99,6 +101,8 @@ class _Config(dict):
         "MAX_QUEUE_SIZE": 5,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
+        # maximum number of trains in a dark run
+        "MAX_DARK_TRAIN_COUNT": 999999,
         # colors of for ROI 1 to 4
         "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4
@@ -402,6 +406,13 @@ class _Config(dict):
         self.update(self._detector_reconfigurable_config[detector])
         self.from_file(detector)
 
+    def set_topic(self, topic):
+        """Set the topic key in system read only config
+
+        :param str topic: topic name.
+        """
+        self.__setitem__("TOPIC", topic)
+
     def from_file(self, detector):
         """Update the config dictionary from the config file."""
         with open(self._filename, 'r') as fp:
@@ -494,6 +505,9 @@ class ConfigWrapper(collections.Mapping):
 
     def load(self, detector):
         self._data.load(detector)
+
+    def set_topic(self, topic):
+        self._data.set_topic(topic)
 
     @property
     def detectors(self):

@@ -30,10 +30,11 @@ from .ctrl_widgets import (
 )
 from .misc_widgets import GuiLogger
 from .windows import (
-    Bin1dWindow, Bin2dWindow, CorrelationWindow, ImageToolWindow,
-    OverviewWindow, ProcessMonitor, AzimuthalIntegrationWindow,
-    StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow, RoiWindow,
-    XasWindow, FileStreamControllerWindow, AboutWindow
+    Bin1dWindow, Bin2dWindow, CorrelationWindow, DarkRunWindow,
+    ImageToolWindow, OverviewWindow, ProcessMonitor,
+    AzimuthalIntegrationWindow, StatisticsWindow, PulseOfInterestWindow,
+    PumpProbeWindow, RoiWindow, XasWindow, FileStreamControllerWindow,
+    AboutWindow
 )
 from .. import __version__
 from ..config import config
@@ -127,7 +128,6 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
-
         self._input = MpInQueue("gui:input")
         self._close_ev = mp.Event()
         self._input.run_in_thread(self._close_ev)
@@ -199,6 +199,10 @@ class MainGUI(QtGui.QMainWindow):
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, RoiWindow))
+
+        open_dark_run_window_at = self._addAction("Dark run", "dark_run.png")
+        open_dark_run_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, DarkRunWindow))
 
         self._tool_bar.addSeparator()
 
@@ -290,6 +294,10 @@ class MainGUI(QtGui.QMainWindow):
         self.statistics_ctrl_widget = StatisticsCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved
         )
+
+        # StatusBar to display topic name
+        self.statusBar().showMessage(f"TOPIC: {config['TOPIC']}")
+        self.statusBar().setStyleSheet("QStatusBar{font-weight:bold;}")
 
         self.initUI()
         self.updateMetaData()

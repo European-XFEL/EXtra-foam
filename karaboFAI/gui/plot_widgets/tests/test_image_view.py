@@ -1,5 +1,6 @@
+import os
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import tempfile
 
 import numpy as np
@@ -119,4 +120,3 @@ class TestImageAnalysis(unittest.TestCase):
             widget._loadImageMaskImp(fp)
 
         fp.close()
-

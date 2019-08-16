@@ -1,3 +1,9 @@
+###################################################################
+# Author: Jun Zhu <jun.zhu@xfel.eu>                               #
+# Copyright (C) European X-Ray Free-Electron Laser Facility GmbH. #
+# All rights reserved.                                            #
+###################################################################
+
 cmake_minimum_required(VERSION 3.8)
 
 if(${CMAKE_VERSION} VERSION_LESS 3.13)
@@ -86,9 +92,10 @@ set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
 add_subdirectory(thirdparty/xtensor-python)
 
 # karaboFAI
+set(FAI_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/karaboFAI/include)
+
 add_subdirectory(src/karaboFAI)
 
 if(BUILD_FAI_TESTS)
-    enable_testing()
     add_subdirectory(test)
 endif()

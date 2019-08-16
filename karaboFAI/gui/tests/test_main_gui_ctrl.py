@@ -15,7 +15,7 @@ from karabo_data.geometry2 import LPD_1MGeometry
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import ImageToolWindow, PulseOfInterestWindow
+from karaboFAI.gui.windows import DarkRunWindow, PulseOfInterestWindow
 from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
@@ -23,7 +23,6 @@ from karaboFAI.config import (
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
-
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
@@ -36,6 +35,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('LPD')
+        config.set_topic("FXE")
 
         cls.fai = FAI().init()
 
@@ -54,6 +54,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls._poi_action = cls._actions[9]
         cls._xas_action = cls._actions[10]
         cls._ai_action = cls._actions[11]
+        cls._darkrun_action = cls._actions[13]
 
     @classmethod
     def tearDownClass(cls):
@@ -354,6 +355,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             _N_PARAMS, _DEFAULT_RESOLUTION)
 
         widget = self.gui.correlation_ctrl_widget
+
+        for i in range(_N_PARAMS):
+            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
+                         for j in range(widget._table.cellWidget(i, 0).count())]
+            self.assertEqual(
+                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+
         scheduler = self.scheduler
         proc = scheduler._correlation_proc
         self._correlation_action.trigger()
@@ -398,10 +406,16 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testBinCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.bin_ctrl_widget import (
-            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
+            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
         )
 
         widget = self.gui.bin_ctrl_widget
+        for i in range(_N_PARAMS):
+            combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
+                         for j in range(widget._table.cellWidget(i, 0).count())]
+            self.assertEqual(
+                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+
         scheduler = self.scheduler
         proc = scheduler._bin_proc
         proc.update()
@@ -525,6 +539,40 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         proc.update()
         self.assertTrue(proc._reset)
 
+    def testDarkRunWindow(self):
+        image_proc = self.image_worker._image_proc_pulse
+
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
+        self.assertFalse(image_proc._process_dark)
+
+        # now we open the DarkRunWindow
+        self._darkrun_action.trigger()
+        window = [w for w in self.gui._windows
+                  if isinstance(w, DarkRunWindow)][0]
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
+        self.assertTrue(image_proc._process_dark)
+
+        # test "Recording dark" action
+        window._record_at.trigger()
+        image_proc.update()
+        self.assertTrue(image_proc._recording)
+
+        # test "Remove dark" action
+        data = np.ones((10, 10), dtype=np.float32)
+        image_proc._dark_run = data
+        image_proc._dark_mean = data
+        window._remove_at.trigger()
+        image_proc.update()
+        self.assertIsNone(image_proc._dark_run)
+        self.assertIsNone(image_proc._dark_mean)
+
+        self.assertTrue(window._record_at.isChecked())
+
+        window.close()
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))

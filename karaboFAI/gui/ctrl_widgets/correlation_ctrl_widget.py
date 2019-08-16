@@ -14,9 +14,9 @@ import functools
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget, _DATA_CATEGORIES
+from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit
-from ...config import AnalysisType
+from ...config import AnalysisType, config
 
 _N_PARAMS = 4  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = "0.0"
@@ -94,7 +94,7 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         table.setVerticalHeaderLabels([str(i+1) for i in range(_N_PARAMS)])
         for i_row in range(_N_PARAMS):
             combo = QtGui.QComboBox()
-            for t in _DATA_CATEGORIES.keys():
+            for t in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]].keys():
                 combo.addItem(t)
             table.setCellWidget(i_row, 0, combo)
             combo.currentTextChanged.connect(
@@ -149,14 +149,15 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
             self.onCorrelationParamChangeLe(i_row)
         else:
             combo_device_ids = QtGui.QComboBox()
-            for device_id in _DATA_CATEGORIES[text].device_ids:
+            for device_id in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].device_ids:
                 combo_device_ids.addItem(device_id)
+
             combo_device_ids.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
             combo_properties = QtGui.QComboBox()
-            for ppt in _DATA_CATEGORIES[text].properties:
+            for ppt in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].properties:
                 combo_properties.addItem(ppt)
             combo_properties.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))

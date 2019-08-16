@@ -1,6 +1,6 @@
 from .image_view import (
     AssembledImageView, Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
-    PumpProbeImageView, RoiImageView, SinglePulseImageView
+    ImageView, PumpProbeImageView, RoiImageView, SinglePulseImageView
 )
 from .plot_widgets import (
     Bin1dHist,

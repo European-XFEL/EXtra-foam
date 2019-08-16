@@ -3,7 +3,7 @@ WINDOWS
 
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 .. _clipping: https://docs.scipy.org/doc/numpy/reference/generated/numpy.clip.html
-
+.. _imageio: https://github.com/imageio/imageio
 
 One can open windows via the icons in the action bar of the MainGUI. Generally speaking, windows
 serve different purposes: providing addition controls, grouping data visualization as well as
@@ -69,6 +69,10 @@ Other buttons in the *ImageTool* window:
 | *Auto level*               | Update the detector images (not only in the *ImageTool* window,    |
 |                            | but also in other PlotWindows) by automatically selecting levels   |
 |                            | based on the maximum and minimum values in the data.               |
++----------------------------+--------------------------------------------------------------------+
+| *Save image*               | Save the current image to file. Please also see ImageFileFormat_   |
++----------------------------+--------------------------------------------------------------------+
+| *Load reference*           | Load a reference image from file. Please also see ImageFileFormat_ |
 +----------------------------+--------------------------------------------------------------------+
 | *Set reference*            | Set the current displayed image as a reference image. For now,     |
 |                            | reference image is used as a stationary off-image in the           |
@@ -169,3 +173,14 @@ A satellite control window which is used to stream image data together with slow
 from files.
 
 .. image:: images/file_stream_control.png
+
+
+.. _ImageFileFormat:
+
+.. Note:: Image file format
+
+    The two recommended image file formats are `.npy` and `.tif`. However,
+    depending on the OS, the opened file dialog may allow you to enter any filename.
+    Therefore, in principle, users can save and load any other image file formats
+    supported by imageio_. However, it can be wrong if one writes and then loads a
+    `.png` file due to the auto scaling of pixel values.

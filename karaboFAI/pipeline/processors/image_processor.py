@@ -22,10 +22,10 @@ from ...algorithms import mask_image
 from ...metadata import Metadata as mt
 from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
-from ...config import PumpProbeMode
+from ...config import config, PumpProbeMode
 
 from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xt_moving_average
+    nanmeanImages, nanmeanTwoImages, xtMovingAverage
 )
 
 
@@ -36,7 +36,15 @@ class ImageProcessorPulse(_BaseProcessor):
         _raw_data (RawImageData): store the moving average of the
             raw images in a train.
         _background (float): a uniform background value.
-        _image_mask (numpy.ndarray): image mask array (dtype=np.bool).
+        _recording (bool): whether a dark run is being recorded.
+        _process_dark (bool): whether process the dark run while recording.
+            used only when _recording = True.
+        _dark_run (numpy.ndarray): store the moving average of dark
+            images in a train. Shape = (indices, y, x)
+        _dark_mean (numpy.ndarray): average of all the dark images in
+            the dark run. Shape = (y, x)
+        _image_mask (numpy.ndarray): image mask array. Shape = (y, x),
+            dtype=np.bool
         _threshold_mask (tuple): threshold mask.
         _reference (numpy.ndarray): reference image.
         _pulse_slicer (slice): a slice object which will be used to slice
@@ -50,10 +58,18 @@ class ImageProcessorPulse(_BaseProcessor):
     #       memory space.
     _raw_data = RawImageData()
 
+    # give it a huge window for now since I don't want to touch the
+    # implementation of the base class for now.
+    _dark_run = RawImageData(config['MAX_DARK_TRAIN_COUNT'])
+
     def __init__(self):
         super().__init__()
 
         self._background = 0.0
+
+        self._recording = False
+        self._process_dark = False
+        self._dark_mean = None
 
         self._image_mask = None
         self._threshold_mask = None
@@ -82,7 +98,24 @@ class ImageProcessorPulse(_BaseProcessor):
         self._poi_indices = [int(gp_cfg['poi1_index']),
                              int(gp_cfg['poi2_index'])]
 
-    @profiler("Image Processor")
+        if 'reset_dark' in gp_cfg:
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_dark')
+            del self._dark_run
+            self._dark_mean = None
+
+        try:
+            self._recording = gp_cfg['recording_dark'] == 'True'
+        except KeyError:
+            # TODO: we need a solution for widget that is not opened at
+            #       start-up but is responsible for updating metadata.
+            self._recording = False
+
+        try:
+            self._process_dark = gp_cfg['process_dark'] == 'True'
+        except KeyError:
+            self._process_dark = False
+
+    @profiler("Image Processor (pulse)")
     def process(self, data):
         image_data = data['processed'].image
         assembled = data['assembled']
@@ -96,6 +129,21 @@ class ImageProcessorPulse(_BaseProcessor):
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
         n_images = len(sliced_indices)
 
+        if self._recording:
+            # TODO: calculating the moving average for a train of images
+            #       is very expensive!!!
+            if self._dark_run is None:
+                # dark_run should not share memory with data['assembled']
+                self._dark_run = data['assembled'].copy()  # after pulse slicing
+            else:
+                self._dark_run = data['assembled']
+            # for visualizing the dark_mean
+            # This is also a relatively expensive operation. But, in principle,
+            # users should not trigger many other analysis when recording dark.
+            if self._dark_run.ndim == 3:
+                self._dark_mean = nanmeanImages(self._dark_run)
+            else:
+                self._dark_mean = self._dark_run.copy()
         # Make it the moving average for train resolved detectors
         # It is worth noting that the moving average here does not use
         # nanmean!!!
@@ -103,6 +151,16 @@ class ImageProcessorPulse(_BaseProcessor):
         # Be careful! data['assembled'] and self._raw_data share memory
         data['assembled'] = self._raw_data
         assembled = data['assembled']
+        # subtract the dark_run from assembled if any
+        if (not self._recording and self._dark_run is not None) \
+                or (self._recording and self._process_dark):
+            if assembled.ndim == 3:
+                assembled -= self._dark_run
+            else:
+                # TODO: remove the moving average of images for train-resolved
+                #       detectors.
+                data['assembled'] = assembled - self._dark_run
+                assembled = data['assembled']
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)
@@ -117,6 +175,8 @@ class ImageProcessorPulse(_BaseProcessor):
         self._update_pois(image_data, assembled)
         image_data.ma_count = self.__class__._raw_data.count
         image_data.background = self._background
+        image_data.dark_mean = self._dark_mean
+        image_data.dark_count = self.__class__._dark_run.count
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask
         image_data.reference = self._reference
@@ -200,7 +260,7 @@ class ImageProcessorTrain(_BaseProcessor):
         self._off_indices = self.str2list(
             pp_cfg['off_pulse_indices'], handler=int)
 
-    @profiler("Image Processor")
+    @profiler("Image Processor (train)")
     def process(self, data):
         processed = data['processed']
         assembled = data['assembled']

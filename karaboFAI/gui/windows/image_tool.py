@@ -322,6 +322,8 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
 
         self.update_image_btn = QtGui.QPushButton("Update image")
         self.auto_level_btn = QtGui.QPushButton("Auto level")
+        self.save_image_btn = QtGui.QPushButton("Save image")
+        self.load_ref_btn = QtGui.QPushButton("Load reference")
         self.set_ref_btn = QtGui.QPushButton("Set reference")
         self.remove_ref_btn = QtGui.QPushButton("Remove reference")
 
@@ -333,8 +335,10 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
 
         layout.addWidget(self.update_image_btn, 0, 0, 1, 2)
         layout.addWidget(self.auto_level_btn, 0, 2, 1, 2)
-        layout.addWidget(self.set_ref_btn, 1, 0, 1, 2)
-        layout.addWidget(self.remove_ref_btn, 1, 2, 1, 2)
+        layout.addWidget(self.save_image_btn, 1, 0, 1, 2)
+        layout.addWidget(self.load_ref_btn, 1, 2, 1, 2)
+        layout.addWidget(self.set_ref_btn, 2, 0, 1, 2)
+        layout.addWidget(self.remove_ref_btn, 2, 2, 1, 2)
         self.setLayout(layout)
 
 
@@ -450,7 +454,7 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.onDrawToggled, MaskState.UNMASK))
 
         clear_mask_at = self._addAction(
-            self._tool_bar_mask, "Trash mask", "trash_mask.png")
+            self._tool_bar_mask, "Clear mask", "delete.png")
         clear_mask_at.triggered.connect(self._image_view.onClearImageMask)
 
         save_img_mask_at = self._addAction(
@@ -495,6 +499,12 @@ class ImageToolWindow(AbstractWindow):
 
         self._image_ctrl_widget.update_image_btn.clicked.connect(
             self.updateImage)
+
+        self._image_ctrl_widget.save_image_btn.clicked.connect(
+            self._image_view.writeImage)
+
+        self._image_ctrl_widget.load_ref_btn.clicked.connect(
+            self._image_view.loadReferenceImage)
 
         self._image_ctrl_widget.set_ref_btn.clicked.connect(
             self._image_view.setReferenceImage)

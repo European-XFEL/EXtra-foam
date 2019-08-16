@@ -1,3 +1,14 @@
+/**
+ * Offline and online data analysis and visualization tool for azimuthal
+ * integration of different data acquired with various detectors at
+ * European XFEL.
+ *
+ * Unittest for intel TBB.
+ *
+ * Author: Jun Zhu <jun.zhu@xfel.eu>
+ * Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+ * All rights reserved.
+ */
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
@@ -6,10 +17,11 @@
 #include <vector>
 #include <algorithm>
 
+#if defined(FAI_WITH_TBB)
+
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
 #include "tbb/tick_count.h"
-
 
 static const std::size_t N = 21;
 
@@ -99,3 +111,5 @@ TEST(TestTBB, GeneralSubStringFinder) {
     ASSERT_EQ(pos1[i], pos2[i]);
   }
 }
+
+#endif // FAI_WITH_TBB

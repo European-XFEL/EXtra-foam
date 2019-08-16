@@ -1,3 +1,9 @@
+###################################################################
+# Author: Jun Zhu <jun.zhu@xfel.eu>                               #
+# Copyright (C) European X-Ray Free-Electron Laser Facility GmbH. #
+# All rights reserved.                                            #
+###################################################################
+
 # TODO: separate xtensor-python binding with others in the fugure
 set(xtensor-python_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor-python)
 find_package(xtensor-python)
@@ -13,6 +19,7 @@ pybind11_add_module(xtnumpy xtnumpy.cpp)
 
 target_include_directories(xtnumpy
     PRIVATE
+        ${FAI_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS})
 
 target_link_libraries(xtnumpy
