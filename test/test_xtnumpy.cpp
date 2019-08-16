@@ -42,6 +42,9 @@ TEST(TestMaskPulse, TestImageMask)
   xt::xtensor<float, 2> img {{1, 2, 3}, {4, 5, 6}};
   xt::xtensor<bool, 2> mask {{true, true, false}, {true, false, false}};
 
+  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+  EXPECT_THROW(maskPulse(img, mask_w), std::invalid_argument);
+
   xt::xtensor<float, 2> masked_img_gt {{0, 0, 3}, {0, 5, 6}};
   maskPulse(img, mask);
   EXPECT_THAT(img, ElementsAreArray(masked_img_gt));
@@ -69,6 +72,9 @@ TEST(TestMaskTrain, TestImageMask)
 {
   xt::xtensor<float, 3> imgs {{{1, 2, 3}, {4, 5, 6}}, {{1, 2, 3}, {4, 5, 6}}};
   xt::xtensor<bool, 2> mask {{true, true, false}, {true, false, false}};
+
+  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+  EXPECT_THROW(maskTrain(imgs, mask_w), std::invalid_argument);
 
   xt::xtensor<float, 3> masked_imgs_gt {{{0, 0, 3}, {0, 5, 6}}, {{0, 0, 3}, {0, 5, 6}}};
   maskTrain(imgs, mask);

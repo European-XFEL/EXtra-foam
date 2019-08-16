@@ -187,7 +187,7 @@ inline void maskTrain(E& src, const M& mask)
   auto msk_shape = mask.shape();
   if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
   {
-    throw std::invalid_argument("Image in the train and mask have different shapes!");
+    throw std::invalid_argument("Image and mask have different shapes!");
   }
 
 #if defined(FAI_WITH_TBB)
