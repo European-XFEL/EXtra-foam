@@ -331,8 +331,8 @@ inline void movingAveragePulse(E& src, const E& data, size_t count)
 /**
  * Inplace moving average of images in a train.
  *
- * @param src: moving average of train image data. shape = (y, x)
- * @param data: new train image data. shape = (y, x)
+ * @param src: moving average of train image data. shape = (indices, y, x)
+ * @param data: new train image data. shape = (indices, y, x)
  * @param count: new moving average count.
  */
 template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>

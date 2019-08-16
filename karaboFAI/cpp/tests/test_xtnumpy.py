@@ -168,17 +168,17 @@ class TestXtnumpy(unittest.TestCase):
 
         t0 = time.perf_counter()
         nanmeanTwoImages(img, img)
-        dt_cpp_2 = time.perf_counter() - t0
+        dt_cpp = time.perf_counter() - t0
 
         imgs = np.ones((2, 1024, 512), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
         nanmeanImages(imgs)
-        dt_cpp = time.perf_counter() - t0
+        dt_cpp_2 = time.perf_counter() - t0
 
         print(f"\nnanmeanTwoImages with {data_type} - "
-              f"dt (cpp): {dt_cpp_2:.4f}, dt (cpp para): {dt_cpp:.4f}")
+              f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanWithTwoImagesPerformance(self):
@@ -244,6 +244,32 @@ class TestXtnumpy(unittest.TestCase):
 
         np.testing.assert_array_equal(ma_gt, imgs1)
 
+    def testMovingAverageWithNan(self):
+        # ------------
+        # single image
+        # ------------
+
+        img1 = np.array([[1, np.nan, 3], [np.nan, 4, 5]], dtype=np.float32)
+        img2 = np.array([[2,      3, 4], [np.nan, 5, 6]], dtype=np.float32)
+        movingAveragePulse(img1, img2, 2)
+        ma_gt = np.array([[1.5, np.nan, 3.5], [np.nan, 4.5, 5.5]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, img1)
+
+        # ------------
+        # train images
+        # ------------
+
+        imgs1 = np.array([[[1, np.nan, 3], [np.nan, 4, 5]],
+                          [[1,      2, 3], [np.nan, 4, 5]]], dtype=np.float32)
+        imgs2 = np.array([[[2,      3, 4], [     4, 5, 6]],
+                          [[2,      3, 4], [     4, 5, 6]]], dtype=np.float32)
+        movingAverageTrain(imgs1, imgs2, 2)
+        ma_gt = np.array([[[1.5, np.nan, 3.5], [np.nan, 4.5, 5.5]],
+                          [[1.5,    2.5, 3.5], [np.nan, 4.5, 5.5]]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, imgs1)
+
     def _moving_average_performance(self, data_type):
         imgs = np.ones((64, 1024, 512), dtype=data_type)
 
@@ -256,7 +282,7 @@ class TestXtnumpy(unittest.TestCase):
         dt_py = time.perf_counter() - t0
 
         print(f"\nmoving average with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (python): {dt_py:.4f}")
+              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testMovingAveragePerformance(self):
