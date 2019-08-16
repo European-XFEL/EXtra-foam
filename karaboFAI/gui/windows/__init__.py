@@ -8,10 +8,12 @@ from .xas_w import XasWindow
 from .bin_w import Bin1dWindow, Bin2dWindow
 from .statistics_w import StatisticsWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
+from .dark_run_w import DarkRunWindow
 
 __all__ = [
     "Bin1dWindow",
     "CorrelationWindow",
+    "DarkRunWindow",
     "ImageToolWindow",
     "OverviewWindow",
     "PulseOfInterestWindow",

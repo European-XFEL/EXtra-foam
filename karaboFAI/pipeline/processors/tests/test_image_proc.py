@@ -33,10 +33,10 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         self._proc = ImageProcessorPulse()
 
         del self._proc._raw_data
-
-        ImageProcessorPulse._raw_data.window = 3
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
+
+        self.assertEqual(1, ImageProcessorPulse._raw_data.window)
 
     def testPulseSlice(self):
         # The sliced_indices for train-resolved data should always be [0]
@@ -56,6 +56,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         # np.testing.assert_array_equal(data['assembled'], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
 
+    @MagicMock('ImageProcessorPulse._raw_data.window', return_value=3)
     def testMovingAverage(self):
         proc = self._proc
 
@@ -123,10 +124,64 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         self._proc = ImageProcessorPulse()
 
         del self._proc._raw_data
+        del self._proc._dark_run
 
-        ImageProcessorPulse._raw_data.window = 3
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
+
+        self.assertEqual(1, ImageProcessorPulse._raw_data.window)
+
+    def testDarkRun(self):
+        self._proc._recording = True
+        self._proc._process_dark = False  # no dark subtraction
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        dark_run_gt = data['assembled'].copy()
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
+        np.testing.assert_array_almost_equal(
+            np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+
+        # test moving average is going on
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled_gt = data['assembled'].copy()
+        dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
+        np.testing.assert_array_almost_equal(
+            np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+        np.testing.assert_array_almost_equal(data['assembled'], assembled_gt)
+
+        # ------------------------------
+        # test self._process_dark = True
+        # ------------------------------
+
+        self._proc._process_dark = True  # with subtraction
+
+        del self._proc._dark_run
+        self._proc._dark_mean = None
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        dark_run_gt = data['assembled'].copy()
+        assembled_gt = dark_run_gt
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
+        np.testing.assert_array_almost_equal(
+            np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+        # test 'assembled' is dark run subtracted
+        np.testing.assert_array_almost_equal(
+            data['assembled'], assembled_gt - self._proc._dark_run)
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled_gt = data['assembled'].copy()
+        dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
+        np.testing.assert_array_almost_equal(
+            np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+        # test 'assembled' is dark run subtracted
+        np.testing.assert_array_almost_equal(
+            data['assembled'], assembled_gt - self._proc._dark_run)
 
     def testPulseSlicing(self):
         data, processed = self.data_with_assembled(1, (4, 2, 2))
@@ -171,10 +226,12 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         with self.assertRaises(ProcessingError):
             proc.process(data)
 
+    @MagicMock('ImageProcessorPulse._raw_data.window', return_value=3)
     def testMovingAverage(self):
         # The moving average test is redundant for now since pulse-resolved
         # detector is not allow to set moving average on images on ImageToolWindow.
         proc = self._proc
+        # ImageProcessorPulse._raw_data.window = 3
 
         data, _ = self.data_with_assembled(1, (4, 2, 2))
         imgs1 = data['assembled']

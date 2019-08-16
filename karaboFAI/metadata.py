@@ -32,6 +32,7 @@ class Metadata:
     IMAGE_PROC = "metadata:proc:image"
     STATISTICS_PROC = "metadata:proc:pulse_fom"
     DATA_REDUCTION_PROC = "metadata:proc:data_reduction"
+    DARK_RUN = "metadata:proc:data_run"
 
     _meta = {
         ANALYSIS_TYPE: [
@@ -128,7 +129,7 @@ class Metadata:
             "analysis_type",
             "n_bins",
             "pulse_resolved",
-        ]
+        ],
     }
 
 

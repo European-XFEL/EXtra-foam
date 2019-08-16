@@ -454,7 +454,7 @@ class ImageToolWindow(AbstractWindow):
             self._image_view.onDrawToggled, MaskState.UNMASK))
 
         clear_mask_at = self._addAction(
-            self._tool_bar_mask, "Trash mask", "trash_mask.png")
+            self._tool_bar_mask, "Clear mask", "delete.png")
         clear_mask_at.triggered.connect(self._image_view.onClearImageMask)
 
         save_img_mask_at = self._addAction(

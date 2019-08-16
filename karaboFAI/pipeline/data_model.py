@@ -207,10 +207,17 @@ class AccumulatedPairData(PairData):
 class MovingAverageArray:
     """Stores moving average of raw images."""
 
-    def __init__(self):
+    def __init__(self, window=1):
+        """Initialization.
+
+        :param int window: moving average window size.
+        """
         self._data = None  # moving average
 
-        self._window = 1
+        if not isinstance(window, int) or window < 0:
+            raise ValueError("Moving average window must be a positive integer.")
+
+        self._window = window
         self._count = 0
 
     def __get__(self, instance, instance_type):
@@ -259,8 +266,8 @@ class MovingAverageArray:
 class RawImageData(MovingAverageArray):
     """Stores moving average of raw images."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, window=1):
+        super().__init__(window)
 
     @property
     def n_images(self):
@@ -436,6 +443,9 @@ class ImageData:
             train, e.g. calculating the average of (on/off) images.
         poi_indices (list): indices of pulses of interest.
         background (float): a uniform background value.
+        dark_mean (numpy.ndaray): average of all the dark images in
+            the dark run. Shape = (y, x)
+        dark_count (int): count of collected dark trains.
         image_mask (numpy.ndarray): image mask with dtype=np.bool.
         threshold_mask (tuple): (lower, upper) boundaries of the
             threshold mask.
@@ -456,6 +466,8 @@ class ImageData:
         self.poi_indices = None
 
         self.background = None
+        self.dark_mean = None
+        self.dark_count = 0
         self.image_mask = None
         self.threshold_mask = None
 
