@@ -128,7 +128,6 @@ class MainGUI(QtGui.QMainWindow):
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
-
         self._input = MpInQueue("gui:input")
         self._close_ev = mp.Event()
         self._input.run_in_thread(self._close_ev)
@@ -295,6 +294,10 @@ class MainGUI(QtGui.QMainWindow):
         self.statistics_ctrl_widget = StatisticsCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved
         )
+
+        # StatusBar to display topic name
+        self.statusBar().showMessage(f"TOPIC: {config['TOPIC']}")
+        self.statusBar().setStyleSheet("QStatusBar{font-weight:bold;}")
 
         self.initUI()
         self.updateMetaData()

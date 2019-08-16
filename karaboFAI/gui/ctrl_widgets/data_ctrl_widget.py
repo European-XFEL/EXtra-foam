@@ -26,14 +26,6 @@ class DataCtrlWidget(AbstractCtrlWidget):
         "ZeroMQ bridge": DataSource.BRIDGE,
     })
 
-    _xgms = [
-        "",
-        "SA1_XTD2_XGM/DOOCS/MAIN",
-        "SPB_XTD9_XGM/DOOCS/MAIN",
-        "SA3_XTD10_XGM/XGM/DOOCS",
-        "SCS_BLU_XGM/XGM/DOOCS",
-    ]
-
     # signal used in updateShareParameters since currentTextChanged
     # will affect other entries
     source_type_sgn = QtCore.pyqtSignal(object)
@@ -55,6 +47,12 @@ class DataCtrlWidget(AbstractCtrlWidget):
         self._detector_src_cb = QtGui.QComboBox()
 
         self._xgm_src_cb = QtGui.QComboBox()
+        try:
+            self._xgms = \
+                self._TOPIC_DATA_CATEGORIES[config["TOPIC"]]["XGM"].device_ids
+        except KeyError:
+            self._xgms = [""]
+
         for src in self._xgms:
             self._xgm_src_cb.addItem(src)
 
