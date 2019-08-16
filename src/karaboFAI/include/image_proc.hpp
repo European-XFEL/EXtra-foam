@@ -218,6 +218,11 @@ inline void maskTrain(E& src, const M& mask)
 #endif
 }
 
+/**
+ * Inplace converting nan to zero for an image.
+ *
+ * @param src: an image data. shape = (y, x)
+ */
 template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
 inline void nanToZeroPulse(E& src)
 {
@@ -246,6 +251,11 @@ inline void nanToZeroPulse(E& src)
 #endif
 }
 
+/**
+ * Inplace converting nan to zero for a train of images.
+ *
+ * @param src: a train of image data. shape = (indices, y, x)
+ */
 template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
 inline void nanToZeroTrain(E& src)
 {
