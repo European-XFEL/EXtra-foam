@@ -51,6 +51,7 @@ template <typename E, typename T, template <typename> class C = is_pulse,
   check_container<E, C> = false>
 inline void maskPulse(E& src, T lb, T ub)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
@@ -68,7 +69,7 @@ inline void maskPulse(E& src, T lb, T ub)
         {
 #endif
         auto v = src(j, k);
-        if (v < lb || v > ub) src(j, k) = T(0);
+        if (v < lb || v > ub) src(j, k) = value_type(0);
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -87,6 +88,7 @@ template <typename E, typename M, template <typename> class C = is_pulse,
   check_container<E, C> = false, check_container<M, C> = false>
 inline void maskPulse(E& src, const M& mask)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
   if (shape != mask.shape())
     throw std::invalid_argument("Image and mask have different shapes!");
@@ -105,7 +107,7 @@ inline void maskPulse(E& src, const M& mask)
         for (size_t k = 0; k < shape[1]; ++k)
         {
 #endif
-          if (mask(j, k)) src(j, k) = 0;
+          if (mask(j, k)) src(j, k) = value_type(0);
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -125,6 +127,7 @@ template <typename E, typename T, template <typename> class C = is_train,
   check_container<E, C> = false>
 inline void maskTrain(E& src, T lb, T ub)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
@@ -146,7 +149,7 @@ inline void maskTrain(E& src, T lb, T ub)
           {
 #endif
           auto v = src(i, j, k);
-          if (v < lb || v > ub) src(i, j, k) = T(0);
+          if (v < lb || v > ub) src(i, j, k) = value_type(0);
           }
         }
       }
@@ -169,7 +172,8 @@ template <typename E, typename T, template <typename> class C = is_train,
   check_container<E, C> = false>
 inline void xtMaskTrain(E& src, T lb, T ub)
 {
-  xt::filter(src, src < lb | src > ub) = T(0);
+  using value_type = typename E::value_type;
+  xt::filter(src, src < lb | src > ub) = value_type(0);
 }
 
 
@@ -184,6 +188,7 @@ template <typename E, typename M,
   check_container<E, C> = false, check_container<M, D> = false>
 inline void maskTrain(E& src, const M& mask)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
   auto msk_shape = mask.shape();
   if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
@@ -209,7 +214,7 @@ inline void maskTrain(E& src, const M& mask)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-          if (mask(j, k)) src(i, j, k) = 0;
+          if (mask(j, k)) src(i, j, k) = value_type(0);
           }
         }
       }
@@ -227,6 +232,7 @@ inline void maskTrain(E& src, const M& mask)
 template <typename E, template <typename> class C = is_pulse, check_container<E, C> = false>
 inline void nanToZeroPulse(E& src)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
@@ -243,7 +249,7 @@ inline void nanToZeroPulse(E& src)
         for (size_t k = 0; k < shape[1]; ++k)
         {
 #endif
-          if (std::isnan(src(j, k))) src(j, k) = 0;
+          if (std::isnan(src(j, k))) src(j, k) = value_type(0);
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -260,6 +266,7 @@ inline void nanToZeroPulse(E& src)
 template <typename E, template <typename> class C = is_train, check_container<E, C> = false>
 inline void nanToZeroTrain(E& src)
 {
+  using value_type = typename E::value_type;
   auto shape = src.shape();
 
 #if defined(FAI_WITH_TBB)
@@ -280,7 +287,7 @@ inline void nanToZeroTrain(E& src)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-          if (std::isnan(src(i, j, k))) src(i, j, k) = 0;
+          if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
           }
         }
       }
@@ -302,6 +309,7 @@ inline void movingAveragePulse(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
 
+  using value_type = typename E::value_type;
   auto shape = src.shape();
   if (shape != data.shape())
     throw std::invalid_argument("Inconsistent data shape!");
@@ -320,7 +328,7 @@ inline void movingAveragePulse(E& src, const E& data, size_t count)
         for (size_t k = 0; k < shape[1]; ++k)
         {
 #endif
-          src(j, k) += (data(j, k) - src(j, k)) / count;
+          src(j, k) += (data(j, k) - src(j, k)) / value_type(count);
         }
       }
 #if defined(FAI_WITH_TBB)
@@ -341,6 +349,7 @@ inline void movingAverageTrain(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
 
+  using value_type = typename E::value_type;
   auto shape = src.shape();
   if (shape != data.shape())
     throw std::invalid_argument("Inconsistent data shape!");
@@ -363,7 +372,7 @@ inline void movingAverageTrain(E& src, const E& data, size_t count)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-          src(i, j, k) += (data(i, j, k) - src(i, j, k)) / count;
+          src(i, j, k) += (data(i, j, k) - src(i, j, k)) / value_type(count);
           }
         }
       }
