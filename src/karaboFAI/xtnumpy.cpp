@@ -136,11 +136,11 @@ inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
 
 } // detail
 
-template<typename T, std::size_t N, xt::layout_type L>
-struct is_tensor<xt::pytensor<T, N, L>> : std::true_type {};
+template<typename T, xt::layout_type L>
+struct is_pulse<xt::pytensor<T, 2, L>> : std::true_type {};
 
 template<typename T, xt::layout_type L>
-struct is_array<xt::pyarray<T, L>> : std::true_type {};
+struct is_train<xt::pytensor<T, 3, L>> : std::true_type {};
 
 /**
  * Calculate the nanmean of the selected images from an array of images.

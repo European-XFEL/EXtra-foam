@@ -26,28 +26,28 @@
 namespace fai {
 
 template<typename T>
-struct is_tensor : std::false_type {};
-
-template<typename T, std::size_t N, xt::layout_type L>
-struct is_tensor<xt::xtensor<T, N, L>> : std::true_type {};
-
-template<typename T>
-struct is_array : std::false_type {};
+struct is_pulse : std::false_type {};
 
 template<typename T, xt::layout_type L>
-struct is_array<xt::xarray<T, L>> : std::true_type {};
+struct is_pulse<xt::xtensor<T, 2, L>> : std::true_type {};
+
+template<typename T>
+struct is_train : std::false_type {};
+
+template<typename T, xt::layout_type L>
+struct is_train<xt::xtensor<T, 3, L>> : std::true_type {};
 
 template<typename E, template<typename> class C>
 using check_container = std::enable_if_t<C<E>::value, bool>;
 
 /**
- * Mask a single image by threshold inplace.
+ * Mask an image by threshold inplace.
  *
- * @param src: image array. shape = (y, x)
+ * @param src: image data. shape = (y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename T, template <typename> class C = is_tensor,
+template <typename E, typename T, template <typename> class C = is_pulse,
   check_container<E, C> = false>
 inline void maskPulse(E& src, T lb, T ub)
 {
@@ -78,12 +78,12 @@ inline void maskPulse(E& src, T lb, T ub)
 }
 
 /**
- * Mask a single image by an image mask inplace.
+ * Mask an image by an image mask inplace.
  *
- * @param src: 2D image array. shape = (y, x)
- * @param mask: 2D image mask. shape = (y, x)
+ * @param src: image data. shape = (y, x)
+ * @param mask: image mask. shape = (y, x)
  */
-template <typename E, typename M, template <typename> class C = is_tensor,
+template <typename E, typename M, template <typename> class C = is_pulse,
   check_container<E, C> = false, check_container<M, C> = false>
 inline void maskPulse(E& src, const M& mask)
 {
@@ -115,13 +115,13 @@ inline void maskPulse(E& src, const M& mask)
 }
 
 /**
- * Mask images in a train by threshold inplace.
+ * Mask an array of images by threshold inplace.
  *
- * @param src: image array. shape = (slices, y, x)
+ * @param src: image data. shape = (slices, y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename T, template <typename> class C = is_tensor,
+template <typename E, typename T, template <typename> class C = is_train,
   check_container<E, C> = false>
 inline void maskTrain(E& src, T lb, T ub)
 {
@@ -157,15 +157,15 @@ inline void maskTrain(E& src, T lb, T ub)
 }
 
 /**
- * Mask images in a train by threshold inplace.
+ * Mask an array of images by threshold inplace.
  *
  * Pure xtensor implementation.
  *
- * @param src: image array. shape = (slices, y, x)
+ * @param src: image data. shape = (slices, y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename T, template <typename> class C = is_tensor,
+template <typename E, typename T, template <typename> class C = is_train,
   check_container<E, C> = false>
 inline void xtMaskTrain(E& src, T lb, T ub)
 {
@@ -174,13 +174,14 @@ inline void xtMaskTrain(E& src, T lb, T ub)
 
 
 /**
- * Mask images in a train by an image mask inplace.
+ * Mask an array of images by an image mask inplace.
  *
- * @param src: an array of images. shape = (indices, y, x)
- * @param mask: 2D image mask. shape = (y, x)
+ * @param src: image data. shape = (indices, y, x)
+ * @param mask: image mask. shape = (y, x)
  */
-template <typename E, typename M, template <typename> class C = is_tensor,
-  check_container<E, C> = false, check_container<M, C> = false>
+template <typename E, typename M,
+  template <typename> class C = is_train, template <typename> class D = is_pulse,
+  check_container<E, C> = false, check_container<M, D> = false>
 inline void maskTrain(E& src, const M& mask)
 {
   auto shape = src.shape();
@@ -221,9 +222,9 @@ inline void maskTrain(E& src, const M& mask)
 /**
  * Inplace converting nan to zero for an image.
  *
- * @param src: an image data. shape = (y, x)
+ * @param src: image data. shape = (y, x)
  */
-template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+template <typename E, template <typename> class C = is_pulse, check_container<E, C> = false>
 inline void nanToZeroPulse(E& src)
 {
   auto shape = src.shape();
@@ -252,11 +253,11 @@ inline void nanToZeroPulse(E& src)
 }
 
 /**
- * Inplace converting nan to zero for a train of images.
+ * Inplace converting nan to zero for an array of images.
  *
- * @param src: a train of image data. shape = (indices, y, x)
+ * @param src: image data. shape = (indices, y, x)
  */
-template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+template <typename E, template <typename> class C = is_train, check_container<E, C> = false>
 inline void nanToZeroTrain(E& src)
 {
   auto shape = src.shape();
@@ -296,7 +297,7 @@ inline void nanToZeroTrain(E& src)
  * @param data: new image data. shape = (y, x)
  * @param count: new moving average count.
  */
-template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+template <typename E, template <typename> class C = is_pulse, check_container<E, C> = false>
 inline void movingAveragePulse(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
@@ -329,13 +330,13 @@ inline void movingAveragePulse(E& src, const E& data, size_t count)
 }
 
 /**
- * Inplace moving average of images in a train.
+ * Inplace moving average of an array of images.
  *
- * @param src: moving average of train image data. shape = (indices, y, x)
- * @param data: new train image data. shape = (indices, y, x)
+ * @param src: moving average of image data. shape = (indices, y, x)
+ * @param data: new image data. shape = (indices, y, x)
  * @param count: new moving average count.
  */
-template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+template <typename E, template <typename> class C = is_train, check_container<E, C> = false>
 inline void movingAverageTrain(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
