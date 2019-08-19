@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 import os
 import tempfile
+import copy
 
 import numpy as np
 
@@ -161,23 +162,35 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
 
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
-        np.testing.assert_array_equal(
-            self._assembler._n_images, assembled_shape[0])
-        self.assertEqual(config["IMAGE_DTYPE"],
-                         self._assembler._out_array.dtype)
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        self.assertEqual(config["IMAGE_DTYPE"], self._assembler._out_array.dtype)
 
-        # Test output array shape change on the fly
+        # Test number of pulses change on the fly
         data = {'raw': {
             src_name: {
                 key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images,
-                                      assembled_shape[0])
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+
+        # test quad_positions (geometry) change on the fly
+        quad_positions = copy.deepcopy(self._quad_positions)
+        quad_positions[0][1] += 2  # modify the quad positions
+        quad_positions[3][0] -= 4
+        self._assembler.load_geometry(self._geom_file, quad_positions)
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}}}
+        self._assembler.process(data)
+        assembled_shape_old = assembled_shape
+        assembled_shape = data['assembled'].shape
+        self.assertNotEqual(assembled_shape_old, assembled_shape)
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        # change the geometry back
+        self._assembler.load_geometry(self._geom_file, self._quad_positions)
 
     def testAssembleDtype(self):
         self._assembler._source_type = DataSource.BRIDGE

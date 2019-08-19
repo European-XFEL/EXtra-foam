@@ -103,9 +103,16 @@ class ImageAssemblerFactory(ABC):
                     self._n_images = n_images
                     self._out_array = self._geom.output_array_for_position_fast(
                         extra_shape=self._n_images, dtype=image_dtype)
+                try:
+                    assembled, centre = self._geom.position_all_modules(
+                        modules, out=self._out_array)
+                except Exception:  # raise AssertionError if shape changes
+                    # recreate the output array
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        extra_shape=self._n_images, dtype=image_dtype)
+                    assembled, centre = self._geom.position_all_modules(
+                        modules, out=self._out_array)
 
-                assembled, centre = self._geom.position_all_modules(modules,
-                    out=self._out_array)
                 return assembled
 
             # For train-resolved detector, assembled is a reference
