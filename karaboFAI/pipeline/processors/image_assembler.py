@@ -103,11 +103,23 @@ class ImageAssemblerFactory(ABC):
                     self._n_images = n_images
                     self._out_array = self._geom.output_array_for_position_fast(
                         extra_shape=self._n_images, dtype=image_dtype)
+                try:
+                    assembled, centre = self._geom.position_all_modules(
+                        modules, out=self._out_array)
+                except Exception:  # raise AssertionError if shape changes
+                    # recreate the output array
+                    self._out_array = self._geom.output_array_for_position_fast(
+                        extra_shape=self._n_images, dtype=image_dtype)
+                    assembled, centre = self._geom.position_all_modules(
+                        modules, out=self._out_array)
 
-                assembled, centre = self._geom.position_all_modules(modules,
-                    out=self._out_array)
                 return assembled
 
+            # for Pulse resolved JungFrau without geometry
+            shape = modules.shape
+            if config["DETECTOR"] == "JungFrauPR":
+                # Stacking modules vertically along y axis.
+                return modules.reshape(shape[0], -1, shape[-1])
             # For train-resolved detector, assembled is a reference
             # to the array data received from the pyzmq. This array data
             # is only readable since the data is owned by a pointer in
@@ -139,7 +151,6 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             shape = modules_data.shape
-
             ndim = len(shape)
             try:
                 n_modules = config["NUMBER_OF_MODULES"]
@@ -149,8 +160,12 @@ class ImageAssemblerFactory(ABC):
                     raise ValueError(f"Expected module shape {module_shape}, "
                                      f"but get {shape[-2:]} instead!")
                 elif ndim >= 3 and shape[-3] != n_modules:
-                    raise ValueError(f"Expected {n_modules} modules, but get "
-                                     f"{shape[0]} instead!")
+                    if config["DETECTOR"] != "JungFrauPR":
+                        raise ValueError(f"Expected {n_modules} modules, but get "
+                                         f"{shape[0]} instead!")
+                    elif shape[-3] > 2:
+                        raise ValueError(f"Expected 1 or 2 modules, but get "
+                                         f"{shape[0]} instead!")
                 elif ndim == 4 and not shape[0]:
                     raise ValueError("Number of memory cells is zero!")
 
@@ -216,6 +231,30 @@ class ImageAssemblerFactory(ABC):
                 return modules_data.squeeze(axis=0)
             else:
                 raise NotImplementedError("Number of modules > 1")
+
+    class JungFrauPulseResolvedImageAssembler(BaseAssembler):
+        def _get_modules_bridge(self, data, src_name):
+            """Overload."""
+            modules_data = data[src_name]["data.adc"]
+            shape = modules_data.shape
+            ndim = len(shape)
+            if ndim == 3:
+                # (y, x, memory cells) -> (memory cells, 1 module, y, x)
+                return np.moveaxis(modules_data, -1, 0)[:, np.newaxis, ...]
+            # (modules, y, x, memory cells) -> (memory cells, modules, y, x)
+            return np.moveaxis(modules_data, -1, 0)
+
+        def _get_modules_file(self, data, src_name):
+            """Overload."""
+            # modules_data = data[src_name]["data.adc"]
+            # shape = modules_data.shape
+            # ndim = len(shape)
+            # if ndim == 3:
+            #     # (pusles, y, x) -> (pulses, 1 module, y, x)
+            #     return modules_data[:, np.newaxis, :]
+            # # (pulses, modules, y, x,) -> (pulses, modules, y, x)
+            # return modules_data
+            raise NotImplementedError
 
     class FastCCDImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src_name):
@@ -293,5 +332,8 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'DSSC':
             return cls.DsscImageAssembler()
+
+        if detector == 'JungFrauPR':
+            return cls.JungFrauPulseResolvedImageAssembler()
 
         raise NotImplementedError(f"Unknown detector type {detector}!")

@@ -19,7 +19,31 @@ features than the **stable** version.
 .. code-block:: bash
 
     module load exfel exfel_anaconda3/beta
-    karaboFAI DETECTOR_NAME
+    karaboFAI DETECTOR_NAME --topic TOPIC_NAME
+
+.. note::
+
+   *TOPIC_NAME* command line option is available for karaboFAI version >= 0.5.3
+
+More info on command line arguments can be obtained as
+
+.. code-block:: console
+
+   [user@exflonc12 ~]$ karaboFAI --help
+
+   usage: karaboFAI [-h] [-V] [--debug] [--topic {FXE,HED,MID,SCS,SPB,SQS}]
+                  {AGIPD,LPD,JUNGFRAU,FASTCCD,BASLERCAMERA,DSSC}
+
+   positional arguments:
+      {AGIPD,LPD,JUNGFRAU,FASTCCD,BASLERCAMERA,DSSC}
+                          detector name (case insensitive)
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -V, --version         show program's version number and exit
+     --debug               Run in debug mode
+     --topic {FXE,HED,MID,SCS,SPB,SQS}
+                           Name of the instrument
 
 .. note::
     It usually takes a few minutes to start **karaboFAI** for the first time! This
@@ -48,7 +72,7 @@ To start the **stable** version on online or `Maxwell` clusters:
 .. code-block:: bash
 
     module load exfel karaboFAI
-    karaboFAI DETECTOR_NAME
+    karaboFAI DETECTOR_NAME --topic TOPIC_NAME
 
 
 Data analysis in real time

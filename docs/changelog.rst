@@ -1,8 +1,23 @@
 CHANGELOG
 =========
 
+karaboFAI 0.5.4 (20 August 2019)
+---------------------------------
+
+- **Bug Fix**
+
+    - Fix bug if shape changes when using out array for assembling !122
+
+- **Improvement**
+
+- **New Feature**
+
+    - Support pulse-resolved and two-module JungFrau !83
+
+- **Test**
+
 karaboFAI 0.5.3 (16 August 2019)
--------------------------------
+---------------------------------
 
 - **Bug Fix**
 

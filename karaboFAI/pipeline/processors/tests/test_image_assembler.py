@@ -9,10 +9,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import copy
 import unittest
 from unittest.mock import patch
 import os
 import tempfile
+import copy
 
 import numpy as np
 
@@ -161,23 +163,35 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
 
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
-        np.testing.assert_array_equal(
-            self._assembler._n_images, assembled_shape[0])
-        self.assertEqual(config["IMAGE_DTYPE"],
-                         self._assembler._out_array.dtype)
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        self.assertEqual(config["IMAGE_DTYPE"], self._assembler._out_array.dtype)
 
-        # Test output array shape change on the fly
+        # Test number of pulses change on the fly
         data = {'raw': {
             src_name: {
                 key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}}}
         self._assembler.process(data)
         assembled_shape = data['assembled'].shape
-        np.testing.assert_array_equal(self._assembler._out_array.shape,
-            assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images,
-                                      assembled_shape[0])
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+
+        # test quad_positions (geometry) change on the fly
+        quad_positions = copy.deepcopy(self._quad_positions)
+        quad_positions[0][1] += 2  # modify the quad positions
+        quad_positions[3][0] -= 4
+        self._assembler.load_geometry(self._geom_file, quad_positions)
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}}}
+        self._assembler.process(data)
+        assembled_shape_old = assembled_shape
+        assembled_shape = data['assembled'].shape
+        self.assertNotEqual(assembled_shape_old, assembled_shape)
+        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
+        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        # change the geometry back
+        self._assembler.load_geometry(self._geom_file, self._quad_positions)
 
     def testAssembleDtype(self):
         self._assembler._source_type = DataSource.BRIDGE
@@ -244,6 +258,63 @@ class TestJungfrauAssembler(unittest.TestCase):
             data = {'raw': {src_name: {key_name: np.ones((512, 1024, 2))}}}
             self._assembler.process(data)
 
+
+class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
+
+    def setUp(self):
+        self._assembler = ImageAssemblerFactory.create("JungFrauPR")
+
+    @patch.dict(config._data, {"DETECTOR":"JungFrauPR",
+                               "NUMBER_OF_MODULES": 2,
+                               "MODULE_SHAPE": [512, 1024]})
+    def testAssembleBridge(self):
+        self._assembler._source_type = DataSource.BRIDGE
+        src_name = 'jungfrau_modules'
+        key_name = 'data.adc'
+        self._assembler._detector_source_name = src_name
+        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}}}
+        self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
+
+        assembled = data["assembled"]
+        self.assertTupleEqual(assembled.shape, (1, 512, 1024))
+
+        # test multi-frame (16 here), single module JungFrau received
+        # in the old array shape.
+        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 16))}}}
+
+        temp = self._assembler._get_modules_bridge(data['raw'], src_name)
+        self.assertTupleEqual(temp.shape, (16, 1, 512, 1024))
+
+        self._assembler.process(data)
+        assembled = data["assembled"]
+        self.assertTupleEqual(assembled.shape, (16, 512, 1024))
+
+        # test multi-frame (16 here), two-modules JungFrau in new array shape
+        data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024, 16))}}}
+
+        temp = self._assembler._get_modules_bridge(data['raw'], src_name)
+        self.assertTupleEqual(temp.shape, (16, 2, 512, 1024))
+
+        self._assembler.process(data)
+        assembled = data["assembled"]
+        self.assertTupleEqual(assembled.shape, (16, 1024, 1024))
+
+        # test multi-frame, three-modules JungFrau
+        with self.assertRaisesRegex(AssemblingError, 'Expected 1 or 2 module'):
+            data = {'raw': {src_name: {key_name: np.ones((3, 512, 1024, 16))}}}
+            self._assembler.process(data)
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}}}
+            self._assembler.process(data)
+
+    @patch.dict(config._data, {"DETECTOR":"JungFrauPR",
+                               "NUMBER_OF_MODULES": 2,
+                               "MODULE_SHAPE": [512, 1024]})
+    def testAssembleFile(self):
+        pass
 
 class TestFastccdAssembler(unittest.TestCase):
     def setUp(self):
