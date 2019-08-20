@@ -375,7 +375,9 @@ class _Config(dict):
             "SERVER_ADDR": '10.253.0.140',
             "SERVER_PORT": 4511,
             "SOURCE_NAME_BRIDGE": [
-                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED'],
+                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED',
+                'SCS_CDIDET_DSSC/CAL/APPEND_RAW',
+            ],
             "SOURCE_NAME_FILE": ['SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED'],
             "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
                                       'geometries/dssc_geo_june19.h5'),
