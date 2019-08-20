@@ -12,6 +12,8 @@
 #ifndef KARABOFAI_IMAGE_PROC_H
 #define KARABOFAI_IMAGE_PROC_H
 
+#include <type_traits>
+
 #include "xtensor/xtensor.hpp"
 #include "xtensor/xmath.hpp"
 #include "xtensor/xview.hpp"
@@ -23,7 +25,8 @@
 #include "tbb/blocked_range3d.h"
 #endif
 
-namespace fai {
+namespace fai
+{
 
 template<typename T>
 struct is_pulse : std::false_type {};
@@ -39,6 +42,84 @@ struct is_train<xt::xtensor<T, 3, L>> : std::true_type {};
 
 template<typename E, template<typename> class C>
 using check_container = std::enable_if_t<C<E>::value, bool>;
+
+
+namespace detail
+{
+
+template<typename E, template <typename> class C = is_pulse,
+  check_container<std::decay_t<E>, C> = false>
+inline auto nanmeanTwoImp(E&& src1, E&& src2)
+{
+  using value_type = typename std::decay_t<E>::value_type;
+  auto shape = src1.shape();
+  auto shape2 = src2.shape();
+  if (shape != shape2) throw std::invalid_argument("Images have different shapes!");
+
+  auto mean = std::decay_t<E>({shape[0], shape[1]});
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
+    [&src1, &src2, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+    {
+      for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+      {
+        for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+        {
+#else
+      for (std::size_t j=0; j < shape[0]; ++j)
+      {
+        for (std::size_t k=0; k < shape[1]; ++k)
+        {
+#endif
+          auto x = src1(j, k);
+          auto y = src2(j, k);
+
+          if (std::isnan(x) and std::isnan(y))
+            mean(j, k) = std::numeric_limits<value_type>::quiet_NaN();
+          else if (std::isnan(x))
+            mean(j, k) = y;
+          else if (std::isnan(y))
+            mean(j, k) = x;
+          else
+            mean(j, k)  = value_type(0.5) * (x + y);
+        }
+      }
+#if defined(FAI_WITH_TBB)
+  }
+);
+#endif
+
+  return mean;
+}
+
+} // detail
+
+/**
+ * Calculate the nanmean of two images.
+ *
+ * @param src1: image data. shape = (y, x)
+ * @param src2: image data. shape = (y, x)
+ * @return: the nanmean image. shape = (y, x)
+ */
+template<typename E>
+inline auto nanmeanTrain(E&& src1, E&& src2)
+{
+  return detail::nanmeanTwoImp<E>(std::forward<E>(src1), std::forward<E>(src2));
+}
+
+/**
+ * Calculate the nanmean of an array of images.
+ *
+ * @param src: image data. shape = (indices, y, x)
+ * @return: the nanmean image. shape = (y, x)
+ */
+template<typename E, template <typename> class C = is_train,
+  check_container<std::decay_t<E>, C> = false>
+inline auto xtNanmeanTrain(E&& src)
+{
+  return xt::nanmean(std::forward<E>(src), {0}, xt::evaluation_strategy::immediate);
+}
 
 /**
  * Mask an image by threshold inplace.

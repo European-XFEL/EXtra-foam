@@ -33,16 +33,20 @@ namespace fai
 namespace detail
 {
 
-template<typename T>
-inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
-                                           const std::vector<size_t>& keep = {})
+template<typename E, template <typename> class C = is_train,
+  check_container<std::decay_t<E>, C> = false>
+inline auto nanmeanImagesImp(E&& src, const std::vector<size_t>& keep = {})
 {
-  auto shape = arr.shape();
-  auto mean = xt::pytensor<T, 2>({shape[1], shape[2]});
+  using value_type = typename std::decay_t<E>::value_type;
+  using container_type = typename std::decay_t<E>::base_type;
+  auto shape = src.shape();
+
+  // TODO: deduce result type
+  auto mean = xt::pytensor<value_type, 2>({shape[1], shape[2]});
 
 #if defined(FAI_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[1], 0, shape[2]),
-    [&arr, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)
+    [&src, &keep, &shape, &mean] (const tbb::blocked_range2d<int> &block)
     {
       for(int j=block.rows().begin(); j != block.rows().end(); ++j)
       {
@@ -54,16 +58,16 @@ inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
         for (std::size_t k=0; k < shape[2]; ++k)
         {
 #endif
-          T count = 0;
-          T sum = 0;
+          std::size_t count = 0;
+          value_type sum = 0;
           if (keep.empty())
           {
             for (auto i=0; i<shape[0]; ++i)
             {
-              auto v = arr(i, j, k);
+              auto v = src(i, j, k);
               if (! std::isnan(v))
               {
-                count += T(1);
+                count += 1;
                 sum += v;
               }
             }
@@ -72,65 +76,22 @@ inline xt::pytensor<T, 2> nanmeanImagesImp(const xt::pytensor<T, 3>& arr,
           {
             for (auto it=keep.begin(); it != keep.end(); ++it)
             {
-              auto v = arr(*it, j, k);
+              auto v = src(*it, j, k);
               if (! std::isnan(v))
               {
-                count += T(1);
+                count += 1;
                 sum += v;
               }
             }
           }
 
-          mean(j, k) = sum / count;
+          mean(j, k) = sum / value_type(count);
         }
       }
 #if defined(FAI_WITH_TBB)
     }
   );
 #endif
-
-  return mean;
-}
-
-template<typename T>
-inline xt::pytensor<T, 2> nanmeanTwoImagesImp(const xt::pytensor<T, 2>& img1,
-                                              const xt::pytensor<T, 2>& img2)
-{
-  auto shape = img1.shape();
-  auto mean = xt::pytensor<T, 2>({shape[0], shape[1]});
-
-#if defined(FAI_WITH_TBB)
-  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
-    [&img1, &img2, &shape, &mean] (const tbb::blocked_range2d<int> &block)
-    {
-      for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-      {
-        for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-        {
-#else
-      for (std::size_t j=0; j < shape[0]; ++j)
-      {
-        for (std::size_t k=0; k < shape[1]; ++k)
-        {
-#endif
-          auto x = img1(j, k);
-          auto y = img2(j, k);
-
-          if (std::isnan(x) and std::isnan(y))
-            mean(j, k) = std::numeric_limits<T>::quiet_NaN();
-          else if (std::isnan(x))
-            mean(j, k) = y;
-          else if (std::isnan(y))
-            mean(j, k) = x;
-          else
-            mean(j, k)  = T(0.5) * (x + y);
-        }
-      }
-#if defined(FAI_WITH_TBB)
-  }
-);
-#endif
-
   return mean;
 }
 
@@ -145,52 +106,27 @@ struct is_train<xt::pytensor<T, 3, L>> : std::true_type {};
 /**
  * Calculate the nanmean of the selected images from an array of images.
  *
- * @param arr: an array of images. shape = (indices, y, x)
+ * @param src: image data. shape = (indices, y, x)
  * @param keep: a list of selected indices.
  * @return: the nanmean image. shape = (y, x)
  */
-template<typename T>
-inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr,
-                                        const std::vector<size_t>& keep)
+template<typename E>
+inline auto nanmeanTrain(E&& src, const std::vector<size_t>& keep)
 {
   if (keep.empty()) throw std::invalid_argument("keep cannot be empty!");
-  return detail::nanmeanImagesImp(arr, keep);
+  return detail::nanmeanImagesImp(std::forward<E>(src), keep);
 }
 
 /**
  * Calculate the nanmean of an array of images.
  *
- * @param arr: an array of images. shape = (indices, y, x)
+ * @param src: image data. shape = (indices, y, x)
  * @return: the nanmean image. shape = (y, x)
  */
-template<typename T>
-inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 3>& arr)
+template<typename E>
+inline auto nanmeanTrain(E&& src)
 {
-  return detail::nanmeanImagesImp(arr);
-}
-
-/**
- * Calculate the nanmean of two images.
- */
-template<typename T>
-inline xt::pytensor<T, 2> nanmeanImages(const xt::pytensor<T, 2>& img1,
-                                        const xt::pytensor<T, 2>& img2)
-{
-  if (img1.shape() != img2.shape())
-    throw std::invalid_argument("Images have different shapes!");
-  return detail::nanmeanTwoImagesImp(img1, img2);
-}
-
-/**
- * Calculate the nanmean of an array of images.
- *
- * @param arr: an array of images. shape = (indices, y, x)
- * @return: the nanmean image. shape = (y, x)
- */
-template<typename T>
-inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr)
-{
-  return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
+  return detail::nanmeanImagesImp(std::forward<E>(src));
 }
 
 } // fai
@@ -206,30 +142,27 @@ PYBIND11_MODULE(xtnumpy, m)
 
   m.doc() = "Calculate the mean of images, ignoring NaNs.";
 
-  // TODO: Do we need the integer overload since np.nan is a float?
-  m.def("nanmeanImages",
-    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&)) &nanmeanImages<double>);
-  m.def("nanmeanImages",
-    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&)) &nanmeanImages<float>);
+  m.def("nanmeanTrain", [] (const xt::pytensor<double, 3>& src) { return nanmeanTrain(src); },
+                        py::arg("src").noconvert());
+  m.def("nanmeanTrain", [] (const xt::pytensor<float, 3>& src) { return nanmeanTrain(src); },
+                        py::arg("src").noconvert());
 
-  m.def("nanmeanImages",
-    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 3>&, const std::vector<size_t>&))
-    &nanmeanImages<double>);
-  m.def("nanmeanImages",
-    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 3>&, const std::vector<size_t>&))
-    &nanmeanImages<float>);
+  m.def("nanmeanTrain", [] (const xt::pytensor<double, 3>& src, const std::vector<size_t>& keep)
+    { return nanmeanTrain(src, keep); }, py::arg("src").noconvert(), py::arg("keep"));
+  m.def("nanmeanTrain", [] (const xt::pytensor<float, 3>& src, const std::vector<size_t>& keep)
+    { return nanmeanTrain(src, keep); }, py::arg("src").noconvert(), py::arg("keep"));
 
-  // FIXME: nanmeanTwoImages -> nanmeanImage when the following bug gets fixed
+  // FIXME: nanmeanTwo -> nanmeanImage when the following bug gets fixed
   // https://github.com/QuantStack/xtensor-python/issues/178
-  m.def("nanmeanTwoImages",
-    (xt::pytensor<double, 2> (*)(const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-    &nanmeanImages<double>);
-  m.def("nanmeanTwoImages",
-    (xt::pytensor<float, 2> (*)(const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-    &nanmeanImages<float>);
+  m.def("nanmeanTwo", [] (const xt::pytensor<double, 2>& src1, const xt::pytensor<double, 2>& src2)
+    { return nanmeanTrain(src1, src2); }, py::arg("src1").noconvert(), py::arg("src2").noconvert());
+  m.def("nanmeanTwo", [] (const xt::pytensor<float, 2>& src1, const xt::pytensor<float, 2>& src2)
+    { return nanmeanTrain(src1, src2); }, py::arg("src1").noconvert(), py::arg("src2").noconvert());
 
-  m.def("xtNanmeanImages", &xtNanmeanImages<double>);
-  m.def("xtNanmeanImages", &xtNanmeanImages<float>);
+  m.def("xtNanmeanTrain", [] (const xt::pytensor<double, 3>& src) -> xt::pytensor<double, 2>
+                          { return xtNanmeanTrain(src); }, py::arg("src").noconvert());
+  m.def("xtNanmeanTrain", [] (const xt::pytensor<float, 3>& src) -> xt::pytensor<float, 2>
+                          { return xtNanmeanTrain(src); }, py::arg("src").noconvert());
 
   m.def("movingAveragePulse", &movingAveragePulse<xt::pytensor<double, 2>>,
                               py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));

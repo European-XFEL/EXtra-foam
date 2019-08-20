@@ -18,7 +18,7 @@ from ..algorithms import mask_image
 from ..config import config
 
 from karaboFAI.cpp import (
-    nanmeanImages, movingAveragePulse, movingAverageTrain
+    nanmeanTrain, movingAveragePulse, movingAverageTrain
 )
 
 
@@ -529,7 +529,7 @@ class ImageData:
             for i in poi_indices:
                 instance.images[i] = arr[i]
 
-            instance.mean = nanmeanImages(arr)
+            instance.mean = nanmeanTrain(arr)
 
             if sliced_indices is None:
                 instance.sliced_indices = list(range(n_images))

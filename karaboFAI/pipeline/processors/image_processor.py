@@ -24,7 +24,7 @@ from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config, PumpProbeMode
 
-from karaboFAI.cpp import nanmeanImages, nanmeanTwoImages
+from karaboFAI.cpp import nanmeanTrain, nanmeanTwo
 
 
 class ImageProcessorPulse(_BaseProcessor):
@@ -139,7 +139,7 @@ class ImageProcessorPulse(_BaseProcessor):
             # This is also a relatively expensive operation. But, in principle,
             # users should not trigger many other analysis when recording dark.
             if self._dark_run.ndim == 3:
-                self._dark_mean = nanmeanImages(self._dark_run)
+                self._dark_mean = nanmeanTrain(self._dark_run)
             else:
                 self._dark_mean = self._dark_run.copy()
         # Make it the moving average for train resolved detectors
@@ -281,7 +281,7 @@ class ImageProcessorTrain(_BaseProcessor):
             if len(curr_means) == 1:
                 images_mean = curr_means[0].copy()
             else:
-                images_mean = nanmeanTwoImages(on_image, off_image)
+                images_mean = nanmeanTwo(on_image, off_image)
         else:
             if assembled.ndim == 3:
                 if dropped_indices:
@@ -289,10 +289,10 @@ class ImageProcessorTrain(_BaseProcessor):
                     if not indices:
                         raise DropAllPulsesError(
                             f"{tid}: all pulses were dropped")
-                    images_mean = nanmeanImages(assembled, indices)
+                    images_mean = nanmeanTrain(assembled, indices)
                 else:
                     # for performance
-                    images_mean = nanmeanImages(assembled)
+                    images_mean = nanmeanTrain(assembled)
             else:
                 # Note: _image is _mean for train-resolved detectors
                 images_mean = assembled
@@ -348,7 +348,7 @@ class ImageProcessorTrain(_BaseProcessor):
                     if not on_indices:
                         raise DropAllPulsesError(
                             f"{tid}: all on pulses were dropped")
-                    on_image = nanmeanImages(assembled, on_indices)
+                    on_image = nanmeanTrain(assembled, on_indices)
 
                     curr_indices.extend(on_indices)
                     curr_means.append(on_image)
@@ -366,7 +366,7 @@ class ImageProcessorTrain(_BaseProcessor):
                     if not off_indices:
                         raise DropAllPulsesError(
                             f"{tid}: all off pulses were dropped")
-                    off_image = nanmeanImages(assembled, off_indices)
+                    off_image = nanmeanTrain(assembled, off_indices)
                     curr_indices.extend(off_indices)
                     curr_means.append(off_image)
 
@@ -384,7 +384,7 @@ class ImageProcessorTrain(_BaseProcessor):
                         if not on_indices:
                             raise DropAllPulsesError(
                                 f"{tid}: all on pulses were dropped")
-                        self._prev_unmasked_on = nanmeanImages(
+                        self._prev_unmasked_on = nanmeanTrain(
                             assembled, on_indices)
                         curr_indices.extend(on_indices)
                         curr_means.append(self._prev_unmasked_on)
@@ -401,7 +401,7 @@ class ImageProcessorTrain(_BaseProcessor):
                             if not off_indices:
                                 raise DropAllPulsesError(
                                     f"{tid}: all off pulses were dropped")
-                            off_image = nanmeanImages(assembled, off_indices)
+                            off_image = nanmeanTrain(assembled, off_indices)
                             curr_indices.extend(off_indices)
                             curr_means.append(off_image)
                         else:
