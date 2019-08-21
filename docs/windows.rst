@@ -10,10 +10,10 @@ serve different purposes: providing addition controls, grouping data visualizati
 monitoring the internal status.
 
 
-ImageTool
----------
+Image tool
+----------
 
-The *ImageTool* is the second control window which provides various operations on images.
+The *Image tool* is the second control window which provides various operations on images.
 
 .. image:: images/ImageTool.png
    :width: 800
@@ -59,7 +59,7 @@ the ROI on the image or entering numbers. You can avoid modifying an ROI unwitti
 **Lock**\ing it.
 
 
-Other buttons in the *ImageTool* window:
+Other buttons in the *Image tool* window:
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
@@ -159,6 +159,32 @@ Azimuthal integration window
 +---------------------------------------------------------------------------+
 | Azimuthal integration of the average of all pulses in the current train   |
 +---------------------------------------------------------------------------+
+
+Dark run window
+---------------
+
+The *Dark run* window allows users to record a "dark run", which consists of a number of trains.
+The moving average of the each "dark pulse" in the train will be calculated, which will then be
+used to apply dark subtraction to image data pulse-by-pulse.
+
+.. Note::
+
+    The moving average here is not calculated by nanmean_, which means that if a pixel of the image
+    in a certain pulse is *NaN*, the moving average of that pixel will be *NaN* for that pulse.
+
+.. image:: images/dark-run_window.png
+   :width: 800
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| *Record dark*              | Start and stop dark run recording.                                 |
++----------------------------+--------------------------------------------------------------------+
+| *Remove dark*              | Remove the recorded dark run.                                      |
++----------------------------+--------------------------------------------------------------------+
+| *Process while recording*  | If checked, the dark subtraction will be applied during recording. |
++----------------------------+--------------------------------------------------------------------+
+
 
 Process monitor
 ---------------
