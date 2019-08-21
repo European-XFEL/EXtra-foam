@@ -74,48 +74,67 @@ class StatisticsProcessor(_BaseProcessor):
             self._fom.clear()
             self._reset = False
 
-        foms = None
+        fom = None
         if self._pulse_resolved:
             if self.analysis_type == AnalysisType.ROI1_PULSE:
-                foms = processed.pulse.roi.roi1.fom
-                if foms is None:
+                fom = processed.pulse.roi.roi1.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] Pulse resolved ROI1 "
                                           "sum result is not available")
             elif self.analysis_type == AnalysisType.ROI2_PULSE:
-                foms = processed.pulse.roi.roi2.fom
-                if foms is None:
+                fom = processed.pulse.roi.roi2.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] Pulse resolved ROI2 "
                                           "sum result is not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
-                foms = processed.pulse.ai.fom
-                if foms is None:
+                fom = processed.pulse.ai.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] Pulse resolved azimuthal "
                                           "int. result is not available")
         else:
             if self.analysis_type == AnalysisType.ROI1:
-                foms = processed.roi.roi1.fom
-                if foms is None:
+                fom = processed.roi.roi1.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] ROI1 sum result is "
                                           "not available")
             elif self.analysis_type == AnalysisType.ROI2:
-                foms = processed.roi.roi2.fom
-                if foms is None:
+                fom = processed.roi.roi2.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] ROI2 sum result is "
                                           "not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-                foms = processed.ai.fom
-                if foms is None:
+                fom = processed.ai.fom
+                if fom is None:
                     raise ProcessingError("[Statistics] Azimuthal int. result "
                                           "is not available")
 
-        if foms is not None:
-            processed.st.fom_hist = foms if self._pulse_resolved else None
-            if isinstance(foms, list):
-                self._fom.extend(foms)
+        if fom is not None:
+            processed.st.fom_hist = fom if self._pulse_resolved else None
+            if isinstance(fom, list):
+                # pulse resolved
+                self._fom.extend(fom)
             else:
-                self._fom.append(foms)
+                # train resolved
+                self._fom.append(fom)
 
-        hist, bins_edges = np.histogram(self._fom, bins=self._num_bins)
-        bins_center = (bins_edges[1:]+bins_edges[:-1])/2.0
+        fom_array = np.array(self._fom)  # inevitable copy
+        hist, bins_edges = np.histogram(fom_array, bins=self._num_bins)
+        bins_center = (bins_edges[1:] + bins_edges[:-1]) / 2.0
         processed.st.fom_bin_center = bins_center
         processed.st.fom_counts = hist
+
+        self._process_poi(processed, fom_array)
+
+    def _process_poi(self, processed, fom_hist):
+        if not self._pulse_resolved:
+            return
+
+        n_pulses = processed.n_pulses
+        processed.st.poi_fom_bin_centers = [None] * n_pulses
+        processed.st.poi_fom_counts = [None] * n_pulses
+        for i in processed.image.poi_indices:
+            poi_fom = fom_hist[i::n_pulses]
+            hist, bins_edges = np.histogram(poi_fom, bins=self._num_bins)
+            processed.st.poi_fom_bin_centers[i] = \
+                (bins_edges[1:] + bins_edges[:-1]) / 2.0
+            processed.st.poi_fom_counts[i] = hist

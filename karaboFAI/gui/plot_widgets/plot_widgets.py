@@ -67,6 +67,55 @@ class PulsesInTrainFomWidget(PlotWidgetF):
         self._plot.setData(range(len(fom_hist)), fom_hist)
 
 
+class FomHistogramWidget(PlotWidgetF):
+    """StatisticsWidget class
+
+    Plot statistics of accumulated FOMs from different analysis
+    """
+    def __init__(self, *, parent=None):
+        super().__init__(parent=parent)
+
+        self.setTitle("FOM Histogram")
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'FOM')
+        self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
+
+    def update(self, data):
+        center = data.st.fom_bin_center
+        counts = data.st.fom_counts
+        if center is None:
+            self.reset()
+            return
+        self._plot.setData(center, counts)
+
+
+class PoiStatisticsWidget(PlotWidgetF):
+    """PoiStatisticsWidget class.
+
+    A widget which allows users to monitor the statistics of the FOM of
+    the POI pulse.
+    """
+    def __init__(self, idx, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self.pulse_index = idx
+        self._plot = self.plotBar()
+
+        self.setTitle("FOM Histogram")
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'FOM')
+
+    def update(self, data):
+        """Override."""
+        center = data.st.poi_fom_bin_centers[self.pulse_index]
+        counts = data.st.poi_fom_counts[self.pulse_index]
+        if center is None:
+            self.reset()
+            return
+        self._plot.setData(center, counts)
+
+
 class CorrelationWidget(PlotWidgetF):
     """CorrelationWidget class.
 
@@ -315,25 +364,3 @@ class Bin1dHist(PlotWidgetF):
         if hist is not None:
             self.setLabel('bottom', bin.label)
             self._plot.setData(bin.center, hist)
-
-
-class FomHistogramWidget(PlotWidgetF):
-    """StatisticsWidget class
-
-    Plot statistics of accumulated FOMs from different analysis
-    """
-    def __init__(self, *, parent=None):
-        super().__init__(parent=parent)
-
-        self.setTitle("FOM Histogram")
-        self.setLabel('left', 'Counts')
-        self.setLabel('bottom', 'FOM')
-        self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
-
-    def update(self, data):
-        center = data.st.fom_bin_center
-        counts = data.st.fom_counts
-        if center is None:
-            self.reset()
-            return
-        self._plot.setData(center, counts)
