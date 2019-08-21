@@ -378,7 +378,10 @@ class _Config(dict):
                 'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED',
                 'SCS_CDIDET_DSSC/CAL/APPEND_RAW',
             ],
-            "SOURCE_NAME_FILE": ['SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED'],
+            "SOURCE_NAME_FILE": [
+                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED',
+                'SCS_CDIDET_DSSC/CAL/APPEND_RAW',
+            ],
             "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
                                       'geometries/dssc_geo_june19.h5'),
             "QUAD_POSITIONS": [[-124.100,    3.112],

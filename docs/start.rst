@@ -86,31 +86,12 @@ should not need to modify ``Hostname``, ``Port`` and ``Detector source name`` in
 .. image:: images/data_source_from_bridge.png
    :width: 500
 
-.. list-table:: Suggested online clusters
-   :header-rows: 1
 
-   * - Instrument
-     - Alias
-     - DNS primary name
+.. _online-clusters: https://in.xfel.eu/readthedocs/docs/data-analysis-user-documentation/en/latest/computing.html#online-cluster
 
-   * - SPB
-     - sa1-br-onc-comp-spb
-     - exflonc05
-   * - FXE
-     - sa1-br-onc-comp-fxe
-     - exflonc12
-   * - SCS
-     - sa1-br-kc-comp-1
-     - exflonc13
-   * - SQS
-     - sa1-br-kc-comp-3
-     - exflonc15
-   * - MID
-     - ...
-     - ...
-   * - HED
-     - ...
-     - ...
+.. note::
+    Please check the online-clusters_ available for users at different instruments.
+
 
 Data analysis with files
 ------------------------
