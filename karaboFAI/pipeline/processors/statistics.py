@@ -36,6 +36,7 @@ class StatisticsProcessor(_BaseProcessor):
     _MAX_FOM_SIZE = 250000
     # 128 pulses/s * 60 seconds * 30 minutes = 153600
     # So 250000 is sufficient.
+
     def __init__(self):
         super().__init__()
 
@@ -78,32 +79,34 @@ class StatisticsProcessor(_BaseProcessor):
             if self.analysis_type == AnalysisType.ROI1_PULSE:
                 foms = processed.pulse.roi.roi1.fom
                 if foms is None:
-                    raise ProcessingError(
-                        "Pulse resolved ROI1 sum result is not available")
+                    raise ProcessingError("[Statistics] Pulse resolved ROI1 "
+                                          "sum result is not available")
             elif self.analysis_type == AnalysisType.ROI2_PULSE:
                 foms = processed.pulse.roi.roi2.fom
                 if foms is None:
-                    raise ProcessingError(
-                        "Pulse resolved ROI2 sum result is not available")
+                    raise ProcessingError("[Statistics] Pulse resolved ROI2 "
+                                          "sum result is not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
                 foms = processed.pulse.ai.fom
                 if foms is None:
-                    raise ProcessingError(
-                        "Pulse resolved azimuthal int. result is not available")
+                    raise ProcessingError("[Statistics] Pulse resolved azimuthal "
+                                          "int. result is not available")
         else:
             if self.analysis_type == AnalysisType.ROI1:
                 foms = processed.roi.roi1.fom
                 if foms is None:
-                    raise ProcessingError("ROI1 sum result is not available")
+                    raise ProcessingError("[Statistics] ROI1 sum result is "
+                                          "not available")
             elif self.analysis_type == AnalysisType.ROI2:
                 foms = processed.roi.roi2.fom
                 if foms is None:
-                    raise ProcessingError("ROI2 sum result is not available")
+                    raise ProcessingError("[Statistics] ROI2 sum result is "
+                                          "not available")
             elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
                 foms = processed.ai.fom
                 if foms is None:
-                    raise ProcessingError(
-                        "Azimuthal int. result is not available")
+                    raise ProcessingError("[Statistics] Azimuthal int. result "
+                                          "is not available")
 
         if foms is not None:
             processed.st.fom_hist = foms if self._pulse_resolved else None
