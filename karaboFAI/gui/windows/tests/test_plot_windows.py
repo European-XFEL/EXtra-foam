@@ -3,8 +3,6 @@ from collections import Counter
 import os
 import tempfile
 
-import numpy as np
-
 from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
@@ -17,7 +15,7 @@ from karaboFAI.gui.windows import (
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget, FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsesInTrainFomWidget, SinglePulseImageView,
+    PoiStatisticsWidget, PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
     XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
@@ -170,12 +168,13 @@ class TestPlotWindows(unittest.TestCase):
     def testPulseOfInterestWindow(self):
         win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(2, len(win._plot_widgets))
+        self.assertEqual(4, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(2, counter[SinglePulseImageView])
+        self.assertEqual(2, counter[PoiStatisticsWidget])
 
     def testAzimuthalIntegrationWindow(self):
         gui = MainGUI()

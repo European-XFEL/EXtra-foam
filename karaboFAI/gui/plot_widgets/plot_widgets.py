@@ -82,7 +82,7 @@ class FomHistogramWidget(PlotWidgetF):
 
     def update(self, data):
         center = data.st.fom_bin_center
-        counts = data.st.fom_counts
+        counts = data.st.fom_count
         if center is None:
             self.reset()
             return
@@ -108,8 +108,12 @@ class PoiStatisticsWidget(PlotWidgetF):
 
     def update(self, data):
         """Override."""
-        center = data.st.poi_fom_bin_centers[self.pulse_index]
-        counts = data.st.poi_fom_counts[self.pulse_index]
+        bin_centers = data.st.poi_fom_bin_center
+        if bin_centers is None:
+            return
+
+        center = bin_centers[self.pulse_index]
+        counts = data.st.poi_fom_count[self.pulse_index]
         if center is None:
             self.reset()
             return

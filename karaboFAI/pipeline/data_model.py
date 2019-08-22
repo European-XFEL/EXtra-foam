@@ -704,20 +704,20 @@ class StatisticsData:
     Attributes:
         fom_hist (np.array): 1D array for pulse resolved FOMs in a train
         fom_bin_center (np.array): 1D array for bins centers
-        fom_counts (np.array): 1D array for counts in each bin.
-        poi_fom_bin_centers (list): a list of histogram bin centers for
+        fom_count (np.array): 1D array for counts in each bin.
+        poi_fom_bin_center (list): a list of histogram bin centers for
             individual pulses in a train.
-        poi_fom_counts (list): a list of histogram bin counts for individual
+        poi_fom_count (list): a list of histogram bin counts for individual
             pulses in a train.
     """
 
     def __init__(self):
         self.fom_hist = None
         self.fom_bin_center = None
-        self.fom_counts = None
+        self.fom_count = None
 
-        self.poi_fom_bin_centers = None
-        self.poi_fom_counts = None
+        self.poi_fom_bin_center = None
+        self.poi_fom_count = None
 
 
 class ProcessedData:

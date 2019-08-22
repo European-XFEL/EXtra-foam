@@ -117,11 +117,12 @@ class StatisticsProcessor(_BaseProcessor):
                 # train resolved
                 self._fom.append(fom)
 
+        # ought to calculate the histogram even if there is no new FOM coming
         fom_array = np.array(self._fom)  # inevitable copy
         hist, bins_edges = np.histogram(fom_array, bins=self._num_bins)
         bins_center = (bins_edges[1:] + bins_edges[:-1]) / 2.0
         processed.st.fom_bin_center = bins_center
-        processed.st.fom_counts = hist
+        processed.st.fom_count = hist
 
         self._process_poi(processed, fom_array)
 
@@ -130,11 +131,11 @@ class StatisticsProcessor(_BaseProcessor):
             return
 
         n_pulses = processed.n_pulses
-        processed.st.poi_fom_bin_centers = [None] * n_pulses
-        processed.st.poi_fom_counts = [None] * n_pulses
+        processed.st.poi_fom_bin_center = [None] * n_pulses
+        processed.st.poi_fom_count = [None] * n_pulses
         for i in processed.image.poi_indices:
             poi_fom = fom_hist[i::n_pulses]
             hist, bins_edges = np.histogram(poi_fom, bins=self._num_bins)
-            processed.st.poi_fom_bin_centers[i] = \
+            processed.st.poi_fom_bin_center[i] = \
                 (bins_edges[1:] + bins_edges[:-1]) / 2.0
-            processed.st.poi_fom_counts[i] = hist
+            processed.st.poi_fom_count[i] = hist
