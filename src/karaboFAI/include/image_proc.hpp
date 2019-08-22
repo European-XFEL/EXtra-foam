@@ -49,7 +49,7 @@ using check_container = std::enable_if_t<C<E>::value, bool>;
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void maskImage(E& src, T lb, T ub)
+inline void maskPulse(E& src, T lb, T ub)
 {
   auto shape = src.shape();
 
@@ -85,7 +85,7 @@ inline void maskImage(E& src, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
   check_container<E, C> = false, check_container<M, C> = false>
-inline void maskImage(E& src, const M& mask)
+inline void maskPulse(E& src, const M& mask)
 {
   auto shape = src.shape();
   if (shape != mask.shape())
@@ -123,7 +123,7 @@ inline void maskImage(E& src, const M& mask)
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void maskTrainImages(E& src, T lb, T ub)
+inline void maskTrain(E& src, T lb, T ub)
 {
   auto shape = src.shape();
 
@@ -167,7 +167,7 @@ inline void maskTrainImages(E& src, T lb, T ub)
  */
 template <typename E, typename T, template <typename> class C = is_tensor,
   check_container<E, C> = false>
-inline void xtMaskTrainImages(E& src, T lb, T ub)
+inline void xtMaskTrain(E& src, T lb, T ub)
 {
   xt::filter(src, src < lb | src > ub) = T(0);
 }
@@ -181,13 +181,13 @@ inline void xtMaskTrainImages(E& src, T lb, T ub)
  */
 template <typename E, typename M, template <typename> class C = is_tensor,
   check_container<E, C> = false, check_container<M, C> = false>
-inline void maskTrainImages(E& src, const M& mask)
+inline void maskTrain(E& src, const M& mask)
 {
   auto shape = src.shape();
   auto msk_shape = mask.shape();
   if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
   {
-    throw std::invalid_argument("Image in the train and mask have different shapes!");
+    throw std::invalid_argument("Image and mask have different shapes!");
   }
 
 #if defined(FAI_WITH_TBB)
@@ -217,6 +217,162 @@ inline void maskTrainImages(E& src, const M& mask)
   );
 #endif
 }
+
+/**
+ * Inplace converting nan to zero for an image.
+ *
+ * @param src: an image data. shape = (y, x)
+ */
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void nanToZeroPulse(E& src)
+{
+  auto shape = src.shape();
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
+    [&src] (const tbb::blocked_range2d<int> &block)
+    {
+      for (int j = block.rows().begin(); j != block.rows().end(); ++j)
+      {
+        for (int k = block.cols().begin(); k != block.cols().end(); ++k)
+        {
+#else
+      for (size_t j = 0; j < shape[0]; ++j)
+      {
+        for (size_t k = 0; k < shape[1]; ++k)
+        {
+#endif
+          if (std::isnan(src(j, k))) src(j, k) = 0;
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+ * Inplace converting nan to zero for a train of images.
+ *
+ * @param src: a train of image data. shape = (indices, y, x)
+ */
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void nanToZeroTrain(E& src)
+{
+  auto shape = src.shape();
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+          if (std::isnan(src(i, j, k))) src(i, j, k) = 0;
+          }
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+ * Inplace moving average of an image
+ *
+ * @param src: moving average of image data. shape = (y, x)
+ * @param data: new image data. shape = (y, x)
+ * @param count: new moving average count.
+ */
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void movingAveragePulse(E& src, const E& data, size_t count)
+{
+  if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
+
+  auto shape = src.shape();
+  if (shape != data.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, shape[0], 0, shape[1]),
+    [&src, &data, count] (const tbb::blocked_range2d<int> &block)
+    {
+      for (int j = block.rows().begin(); j != block.rows().end(); ++j)
+      {
+        for (int k = block.cols().begin(); k != block.cols().end(); ++k)
+        {
+#else
+      for (size_t j = 0; j < shape[0]; ++j)
+      {
+        for (size_t k = 0; k < shape[1]; ++k)
+        {
+#endif
+          src(j, k) += (data(j, k) - src(j, k)) / count;
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+ * Inplace moving average of images in a train.
+ *
+ * @param src: moving average of train image data. shape = (indices, y, x)
+ * @param data: new train image data. shape = (indices, y, x)
+ * @param count: new moving average count.
+ */
+template <typename E, template <typename> class C = is_tensor, check_container<E, C> = false>
+inline void movingAverageTrain(E& src, const E& data, size_t count)
+{
+  if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
+
+  auto shape = src.shape();
+  if (shape != data.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+#if defined(FAI_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, &data, count] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+          src(i, j, k) += (data(i, j, k) - src(i, j, k)) / count;
+          }
+        }
+      }
+#if defined(FAI_WITH_TBB)
+    }
+  );
+#endif
+}
+
+
 
 } // fai
 

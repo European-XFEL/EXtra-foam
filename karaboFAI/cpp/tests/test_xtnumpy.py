@@ -7,8 +7,9 @@ import numpy as np
 
 from karaboFAI.cpp import (
     nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
-    xtMovingAverage,
-    maskImage, maskTrainImages, xtMaskTrainImages
+    movingAveragePulse, movingAverageTrain,
+    nanToZeroPulse, nanToZeroTrain,
+    maskPulse, maskTrain, xtMaskTrain
 )
 
 
@@ -142,7 +143,7 @@ class TestXtnumpy(unittest.TestCase):
         nanmean_images_para(data)
         dt_py = time.perf_counter() - t0
 
-        print(f"\nnanmean_images with {data_type} - "
+        print(f"\nnanmeanImages with {data_type} - "
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
               f"dt (cpp xtensor): {dt_cpp_xt:.4f}, dt (numpy para): {dt_py:.4f}")
 
@@ -167,17 +168,17 @@ class TestXtnumpy(unittest.TestCase):
 
         t0 = time.perf_counter()
         nanmeanTwoImages(img, img)
-        dt_cpp_2 = time.perf_counter() - t0
+        dt_cpp = time.perf_counter() - t0
 
         imgs = np.ones((2, 1024, 512), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
         nanmeanImages(imgs)
-        dt_cpp = time.perf_counter() - t0
+        dt_cpp_2 = time.perf_counter() - t0
 
-        print(f"\nnanmean_two_images with {data_type} - "
-              f"dt (cpp): {dt_cpp_2:.4f}, dt (cpp para): {dt_cpp:.4f}")
+        print(f"\nnanmeanTwoImages with {data_type} - "
+              f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testNanmeanWithTwoImagesPerformance(self):
@@ -185,19 +186,95 @@ class TestXtnumpy(unittest.TestCase):
         self._nanmean_two_images_performance(np.float64)
 
     def testMovingAverage(self):
-        arr = np.ones(100, dtype=np.float32)
-        ma = arr.copy()
-        data = 3 * arr
+        arr1d = np.ones(2, dtype=np.float32)
+        arr2d = np.ones((2, 2), dtype=np.float32)
+        arr3d = np.ones((2, 2, 2), dtype=np.float32)
 
-        ma = xtMovingAverage(ma, data, 2)
+        # test invalid input
+        with self.assertRaises(TypeError):
+            movingAveragePulse()
+        # test incorrect shape
+        with self.assertRaises(RuntimeError):
+            movingAveragePulse(arr1d, arr1d, 2)
+        with self.assertRaises(RuntimeError):
+            movingAveragePulse(arr3d, arr3d, 2)
+        with self.assertRaises(ValueError):
+            # 0 count
+            movingAveragePulse(arr2d, arr2d, 0)
+        with self.assertRaises(ValueError):
+            # inconsistent shape
+            movingAveragePulse(arr2d, np.ones((2, 3), dtype=np.float32), 2)
 
-        np.testing.assert_array_equal(2 * arr, ma)
+        # test invalid input
+        with self.assertRaises(TypeError):
+            movingAverageTrain()
+        with self.assertRaises(RuntimeError):
+            movingAverageTrain(arr1d, arr1d, 2)
+        with self.assertRaises(RuntimeError):
+            movingAverageTrain(arr2d, arr2d, 2)
+        with self.assertRaises(ValueError):
+            # 0 count
+            movingAverageTrain(arr3d, arr3d, 0)
+        with self.assertRaises(ValueError):
+            # inconsistent shape
+            movingAverageTrain(arr3d, np.ones((2, 3, 2), dtype=np.float32), 2)
+
+        # ------------
+        # single image
+        # ------------
+
+        img1 = np.array([[1, 2, 3], [3, 4, 5]], dtype=np.float32)
+        img2 = np.array([[2, 3, 4], [4, 5, 6]], dtype=np.float32)
+        movingAveragePulse(img1, img2, 2)
+        ma_gt = np.array([[1.5, 2.5, 3.5], [3.5, 4.5, 5.5]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, img1)
+
+        # ------------
+        # train images
+        # ------------
+
+        imgs1 = np.array([[[1, 2, 3], [3, 4, 5]],
+                          [[1, 2, 3], [3, 4, 5]]], dtype=np.float32)
+        imgs2 = np.array([[[2, 3, 4], [4, 5, 6]],
+                          [[2, 3, 4], [4, 5, 6]]], dtype=np.float32)
+        movingAverageTrain(imgs1, imgs2, 2)
+        ma_gt = np.array([[[1.5, 2.5, 3.5], [3.5, 4.5, 5.5]],
+                         [[1.5, 2.5, 3.5], [3.5, 4.5, 5.5]]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, imgs1)
+
+    def testMovingAverageWithNan(self):
+        # ------------
+        # single image
+        # ------------
+
+        img1 = np.array([[1, np.nan, 3], [np.nan, 4, 5]], dtype=np.float32)
+        img2 = np.array([[2,      3, 4], [np.nan, 5, 6]], dtype=np.float32)
+        movingAveragePulse(img1, img2, 2)
+        ma_gt = np.array([[1.5, np.nan, 3.5], [np.nan, 4.5, 5.5]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, img1)
+
+        # ------------
+        # train images
+        # ------------
+
+        imgs1 = np.array([[[1, np.nan, 3], [np.nan, 4, 5]],
+                          [[1,      2, 3], [np.nan, 4, 5]]], dtype=np.float32)
+        imgs2 = np.array([[[2,      3, 4], [     4, 5, 6]],
+                          [[2,      3, 4], [     4, 5, 6]]], dtype=np.float32)
+        movingAverageTrain(imgs1, imgs2, 2)
+        ma_gt = np.array([[[1.5, np.nan, 3.5], [np.nan, 4.5, 5.5]],
+                          [[1.5,    2.5, 3.5], [np.nan, 4.5, 5.5]]], dtype=np.float32)
+
+        np.testing.assert_array_equal(ma_gt, imgs1)
 
     def _moving_average_performance(self, data_type):
         imgs = np.ones((64, 1024, 512), dtype=data_type)
 
         t0 = time.perf_counter()
-        xtMovingAverage(imgs, imgs, 5)
+        movingAverageTrain(imgs, imgs, 5)
         dt_cpp = time.perf_counter() - t0
 
         t0 = time.perf_counter()
@@ -205,7 +282,7 @@ class TestXtnumpy(unittest.TestCase):
         dt_py = time.perf_counter() - t0
 
         print(f"\nmoving average with {data_type} - "
-              f"dt (cpp xtensor): {dt_cpp:.4f}, dt (python): {dt_py:.4f}")
+              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testMovingAveragePerformance(self):
@@ -215,13 +292,20 @@ class TestXtnumpy(unittest.TestCase):
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
-            maskImage()
-
+            maskPulse()
         # test incorrect shape
         with self.assertRaises(RuntimeError):
-            maskImage(np.ones((2, 2, 2)), 1, 2)
+            maskPulse(np.ones((2, 2, 2)), 1, 2)
         with self.assertRaises(RuntimeError):
-            maskImage(np.ones(2), 1, 2)
+            maskPulse(np.ones(2), 1, 2)
+
+        # test invalid input
+        with self.assertRaises(TypeError):
+            maskTrain()
+        with self.assertRaises(RuntimeError):
+            maskTrain(np.ones((2, 2)), 1, 2)
+        with self.assertRaises(RuntimeError):
+            maskTrain(np.ones(2), 1, 2)
 
         # ------------
         # single image
@@ -229,14 +313,14 @@ class TestXtnumpy(unittest.TestCase):
 
         # threshold mask
         img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
-        maskImage(img, 2, 3)
+        maskPulse(img, 2, 3)
         np.testing.assert_array_equal(
             np.array([[0, 2, np.nan], [3, 0, 0]], dtype=np.float32), img)
 
         # image mask
         img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskImage(img, img_mask)
+        maskPulse(img, img_mask)
         np.testing.assert_array_equal(
             np.array([[0, 0, np.nan], [0, 4, 0]], dtype=np.float32), img)
 
@@ -247,7 +331,7 @@ class TestXtnumpy(unittest.TestCase):
         # threshold mask
         img = np.array([[[1, 2, 3], [3, np.nan, 5]],
                         [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
-        maskTrainImages(img, 2, 3)
+        maskTrain(img, 2, 3)
         np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, np.nan, 0]],
                                                 [[0, 2, 3], [3, np.nan, 0]]],
                                                dtype=np.float32), img)
@@ -257,7 +341,7 @@ class TestXtnumpy(unittest.TestCase):
                         [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskTrainImages(img, img_mask)
+        maskTrain(img, img_mask)
         np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, np.nan, 0]],
                                                 [[0, 0, 3], [0, np.nan, 0]]],
                                                dtype=np.float32), img)
@@ -265,38 +349,65 @@ class TestXtnumpy(unittest.TestCase):
     def _mask_image_performance(self, data_type):
         # mask by threshold
         data = np.ones((64, 1024, 512), dtype=data_type)
-
         t0 = time.perf_counter()
-        maskTrainImages(data, 1., 2.)
+        maskTrain(data, 2., 3.)  # every elements are masked
         dt_cpp_th = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        xtMaskTrainImages(data, 1, 2)
+        xtMaskTrain(data, 2., 3.)
         dt_cpp_xt = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        data[(data > 2) | (data < 1)] = 0
+        data[(data > 3) | (data < 2)] = 0
         dt_py_th = time.perf_counter() - t0
 
         # mask by image
-        data = np.ones((64, 1024, 512), dtype=data_type)
         mask = np.ones((1024, 512), dtype=np.bool)
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        maskTrainImages(data, mask)
+        maskTrain(data, mask)
         dt_cpp = time.perf_counter() - t0
 
+        data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
         data[:, mask] = 0
         dt_py = time.perf_counter() - t0
 
-        print(f"\nMask a train of images with {data_type} - \n"
-              f"dt (cpp) threshold: {dt_cpp_th:.4f}, "
+        print(f"\nmaskTrain with {data_type} - \n"
+              f"dt (cpp para) threshold: {dt_cpp_th:.4f}, "
               f"dt (cpp xtensor) threshold: {dt_cpp_xt:.4f}, "
               f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
-              f"dt (cpp) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
+              f"dt (cpp para) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
     def testMaskImagePerformance(self):
         self._mask_image_performance(np.float32)
         self._mask_image_performance(np.float64)
+
+    def _nan2zero_performance(self, data_type):
+        # mask by threshold
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        data[::2, ::2, ::2] = np.nan
+
+        t0 = time.perf_counter()
+        nanToZeroTrain(data)
+        dt_cpp = time.perf_counter() - t0
+
+        # need a fresh data since number of nans determines the performance
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        data[::2, ::2, ::2] = np.nan
+
+        t0 = time.perf_counter()
+        data[np.isnan(data)] = 0
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nnanToZeroTrain with {data_type} - "
+              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")
+    def testNanToZeroPerformance(self):
+        self._nan2zero_performance(np.float32)
+        self._nan2zero_performance(np.float64)

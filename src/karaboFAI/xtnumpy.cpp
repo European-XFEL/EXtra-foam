@@ -193,13 +193,6 @@ inline xt::pytensor<T, 2> xtNanmeanImages(const xt::pytensor<T, 3>& arr)
   return xt::nanmean<T>(arr, {0}, xt::evaluation_strategy::immediate);
 }
 
-template<typename T>
-inline xt::pyarray<T> movingAverage(xt::pyarray<T>& src,
-                                    xt::pyarray<T>& data, size_t count)
-{
-  return src + (data - src) / T(count);
-}
-
 } // fai
 
 namespace py = pybind11;
@@ -238,39 +231,50 @@ PYBIND11_MODULE(xtnumpy, m)
   m.def("xtNanmeanImages", &xtNanmeanImages<double>);
   m.def("xtNanmeanImages", &xtNanmeanImages<float>);
 
-  m.def("xtMovingAverage", &movingAverage<double>,
-                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
-  m.def("xtMovingAverage", &movingAverage<float>,
-                           py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAveragePulse", &movingAveragePulse<xt::pytensor<double, 2>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAveragePulse", &movingAveragePulse<xt::pytensor<float, 2>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
 
-  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, double, double))
-                     &maskImage<xt::pytensor<double, 2>, double>,
+  m.def("movingAverageTrain", &movingAverageTrain<xt::pytensor<double, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+  m.def("movingAverageTrain", &movingAverageTrain<xt::pytensor<float, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
+
+  m.def("maskPulse", (void (*)(xt::pytensor<double, 2>&, double, double))
+                     &maskPulse<xt::pytensor<double, 2>, double>,
                      py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, float, float))
-                     &maskImage<xt::pytensor<float, 2>, float>,
+  m.def("maskPulse", (void (*)(xt::pytensor<float, 2>&, float, float))
+                     &maskPulse<xt::pytensor<float, 2>, float>,
                      py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
+  m.def("maskPulse", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
+                     &maskPulse<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
                      py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
+  m.def("maskPulse", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
+                     &maskPulse<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
                      py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("maskTrainImages", &maskTrainImages<xt::pytensor<double, 3>, double>,
-                           py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskTrainImages", &maskTrainImages<xt::pytensor<float, 3>, float>,
-                           py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskTrain", &maskTrain<xt::pytensor<double, 3>, double>,
+                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskTrain", &maskTrain<xt::pytensor<float, 3>, float>,
+                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskTrainImages", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
-                           &maskTrainImages<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
-                           py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskTrainImages", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
-                           &maskTrainImages<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
-                           py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskTrain", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
+                     &maskTrain<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
+                     py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskTrain", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
+                     &maskTrain<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
+                     py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("xtMaskTrainImages", &xtMaskTrainImages<xt::pytensor<double, 3>, double>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("xtMaskTrainImages", &xtMaskTrainImages<xt::pytensor<float, 3>, float>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("xtMaskTrain", &xtMaskTrain<xt::pytensor<double, 3>, double>,
+                       py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("xtMaskTrain", &xtMaskTrain<xt::pytensor<float, 3>, float>,
+                       py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+
+  m.def("nanToZeroPulse", &nanToZeroPulse<xt::pytensor<double, 2>>, py::arg("src").noconvert());
+  m.def("nanToZeroPulse", &nanToZeroPulse<xt::pytensor<float, 2>>, py::arg("src").noconvert());
+
+  m.def("nanToZeroTrain", &nanToZeroTrain<xt::pytensor<double, 3>>, py::arg("src").noconvert());
+  m.def("nanToZeroTrain", &nanToZeroTrain<xt::pytensor<float, 3>>, py::arg("src").noconvert());
 }

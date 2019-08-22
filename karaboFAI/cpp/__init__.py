@@ -1,8 +1,10 @@
 from .algo import intersection
 
 from .xtnumpy import (
-    nanmeanImages, nanmeanTwoImages, xtNanmeanImages, xtMovingAverage,
-    maskImage, maskTrainImages, xtMaskTrainImages
+    nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
+    movingAveragePulse, movingAverageTrain,
+    nanToZeroPulse, nanToZeroTrain,
+    maskPulse, maskTrain, xtMaskTrain
 )
 
 from .data_model import (
