@@ -146,6 +146,15 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(
             data['assembled'], assembled_gt - self._proc._dark_run)
 
+        # test image has different shape from the dark
+        # (this test should use the env from the above test
+
+        # when recording, the shape inconsistency will be covered
+        self._proc._recording = False
+        data, processed = self.data_with_assembled(1, (4, 3, 2))
+        with self.assertRaisesRegex(ProcessingError, "Shape of the dark"):
+            self._proc.process(data)
+
     def testPulseSlicing(self):
         data, processed = self.data_with_assembled(1, (4, 2, 2))
         assembled_gt = data['assembled'].copy()

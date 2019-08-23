@@ -141,7 +141,12 @@ class ImageProcessorPulse(_BaseProcessor):
         # subtract the dark_run from assembled if any
         if (not self._recording and self._dark_run is not None) \
                 or (self._recording and self._process_dark):
-            # TODO: check shape?
+            dt_shape = assembled.shape
+            dk_shape = self._dark_run.shape
+
+            if dt_shape != dk_shape:
+                raise ProcessingError(f"Shape of the dark train {dk_shape} is "
+                                      f"different from the data {dt_shape}")
             assembled -= self._dark_run
 
         image_shape = assembled.shape[-2:]
