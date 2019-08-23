@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 
 from karaboFAI.cpp import (
-    nanmeanImages, nanmeanTwoImages, xtNanmeanImages,
+    nanmeanTrain, nanmeanTwo, xtNanmeanTrain,
     movingAveragePulse, movingAverageTrain,
     nanToZeroPulse, nanToZeroTrain,
     maskPulse, maskTrain, xtMaskTrain
@@ -88,19 +88,19 @@ class TestXtnumpy(unittest.TestCase):
         # test invalid shapes
         data = np.ones([2, 2])
         with self.assertRaises(RuntimeError):
-            nanmeanImages(data)
+            nanmeanTrain(data)
 
         with self.assertRaises(RuntimeError):
-            nanmeanImages(data, data)
+            nanmeanTrain(data, data)
 
         data = np.ones([2, 2, 2, 2])
         with self.assertRaises(RuntimeError):
-            nanmeanImages(data)
+            nanmeanTrain(data)
 
         # test passing empty keep list
         data = np.ones([2, 2, 2])
         with self.assertRaises(ValueError):
-            nanmeanImages(data, [])
+            nanmeanTrain(data, [])
 
         data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
                          [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
@@ -112,38 +112,38 @@ class TestXtnumpy(unittest.TestCase):
             # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
             expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
             np.testing.assert_array_almost_equal(expected, np.nanmean(data, axis=0))
-            np.testing.assert_array_almost_equal(expected, nanmeanImages(data))
-            np.testing.assert_array_almost_equal(expected, xtNanmeanImages(data))
+            np.testing.assert_array_almost_equal(expected, nanmeanTrain(data))
+            np.testing.assert_array_almost_equal(expected, xtNanmeanTrain(data))
 
             # test nanmean on the sliced array
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3, ...], axis=0),
-                                                 nanmeanImages(data, [0, 1, 2]))
+                                                 nanmeanTrain(data, [0, 1, 2]))
             np.testing.assert_array_almost_equal(np.nanmean(data[1:2, ...], axis=0),
-                                                 nanmeanImages(data, [1]))
+                                                 nanmeanTrain(data, [1]))
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
-                                                 nanmeanImages(data, [0, 2]))
+                                                 nanmeanTrain(data, [0, 2]))
 
     def _nanmean_images_performance(self, data_type):
         data = np.ones((64, 1024, 512), dtype=data_type)
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        nanmeanImages(data)
+        nanmeanTrain(data)
         dt_cpp = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        nanmeanImages(data, list(range(len(data))))
+        nanmeanTrain(data, list(range(len(data))))
         dt_cpp_sliced = time.perf_counter() - t0
 
         t0 = time.perf_counter()
-        xtNanmeanImages(data)
+        xtNanmeanTrain(data)
         dt_cpp_xt = time.perf_counter() - t0
 
         t0 = time.perf_counter()
         nanmean_images_para(data)
         dt_py = time.perf_counter() - t0
 
-        print(f"\nnanmeanImages with {data_type} - "
+        print(f"\nnanmeanTrain with {data_type} - "
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
               f"dt (cpp xtensor): {dt_cpp_xt:.4f}, dt (numpy para): {dt_py:.4f}")
 
@@ -154,30 +154,30 @@ class TestXtnumpy(unittest.TestCase):
 
     def testNanmeanWithTwoImages(self):
         with self.assertRaises(ValueError):
-            nanmeanTwoImages(np.ones((2, 2)), np.ones((2, 3)))
+            nanmeanTwo(np.ones((2, 2)), np.ones((2, 3)))
 
         img1 = np.array([[1, 1, 2], [np.inf, np.nan, 0]], dtype=np.float32)
         img2 = np.array([[np.nan, 0, 4], [2, np.nan, -np.inf]], dtype=np.float32)
 
         expected = np.array([[1., 0.5, 3], [np.inf, np.nan, -np.inf]])
-        np.testing.assert_array_almost_equal(expected, nanmeanTwoImages(img1, img2))
+        np.testing.assert_array_almost_equal(expected, nanmeanTwo(img1, img2))
 
     def _nanmean_two_images_performance(self, data_type):
         img = np.ones((1024, 512), dtype=data_type)
         img[::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        nanmeanTwoImages(img, img)
+        nanmeanTwo(img, img)
         dt_cpp = time.perf_counter() - t0
 
         imgs = np.ones((2, 1024, 512), dtype=data_type)
         imgs[:, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        nanmeanImages(imgs)
+        nanmeanTrain(imgs)
         dt_cpp_2 = time.perf_counter() - t0
 
-        print(f"\nnanmeanTwoImages with {data_type} - "
+        print(f"\nnanmeanTwo with {data_type} - "
               f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
 
     @unittest.skipIf(os.environ.get("FAI_WITH_TBB", '1') == '0', "TBB only")

@@ -4,8 +4,8 @@ from unittest.mock import patch
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AccumulatedPairData, CorrelationData, ImageData, PairData, ProcessedData,
-    PumpProbeData, RawImageData
+    AccumulatedPairData, CorrelationData, MovingAverageArray, ImageData,
+    PairData, ProcessedData, PumpProbeData, RawImageData
 )
 from karaboFAI.config import config
 
@@ -123,8 +123,49 @@ class TestPairData(unittest.TestCase):
         self.assertEqual(2*(Dummy.hist.MAX_LENGTH + overflow - 1) + 0.5, fom_hist.avg[-1])
 
 
+class TestMovingAverageData(unittest.TestCase):
+    def test1darray(self):
+        class Dummy:
+            data = MovingAverageArray()
+
+        dm = Dummy()
+
+        arr = np.array([1, np.nan, 3], dtype=np.float32)
+        dm.data = arr.copy()
+
+        self.assertEqual(1, Dummy.data.window)
+
+        Dummy.data.window = 5
+        self.assertEqual(5, Dummy.data.window)
+        self.assertEqual(1, Dummy.data.count)
+        dm.data = np.array([3, 2, np.nan], dtype=np.float32)
+        self.assertEqual(5, Dummy.data.window)
+        self.assertEqual(2, Dummy.data.count)
+        np.testing.assert_array_equal(
+            np.array([2, np.nan, np.nan], dtype=np.float32), dm.data)
+
+        # set a ma window which is smaller than the current window
+        Dummy.data.window = 3
+        self.assertEqual(3, Dummy.data.window)
+        self.assertEqual(2, Dummy.data.count)
+        np.testing.assert_array_equal(
+            np.array([2, np.nan, np.nan], dtype=np.float32), dm.data)
+
+        # set a data with a different shape
+        new_arr = np.array([2, np.nan, 1, 3], dtype=np.float32)
+        dm.data = new_arr
+        self.assertEqual(3, Dummy.data.window)
+        self.assertEqual(1, Dummy.data.count)
+        np.testing.assert_array_equal(new_arr, dm.data)
+
+        del dm.data
+        self.assertIsNone(dm.data)
+        self.assertEqual(3, Dummy.data.window)
+        self.assertEqual(0, Dummy.data.count)
+
+
 class TestRawImageData(unittest.TestCase):
-    # This also tests MovingAverageArray
+    # This tests 2d and 3d MovingAverageArray
     def testTrainResolved(self):
         class Dummy:
             data = RawImageData()
@@ -132,23 +173,29 @@ class TestRawImageData(unittest.TestCase):
         dm = Dummy()
 
         arr = np.ones((3, 3), dtype=np.float32)
-        dm.data = arr.copy()
+        arr[0][2] = np.nan
+        dm.data = arr
 
         self.assertEqual(1, Dummy.data.n_images)
 
         Dummy.data.window = 5
         self.assertEqual(5, Dummy.data.window)
         self.assertEqual(1, Dummy.data.count)
-        dm.data = 3 * arr
+        arr = 3 * np.ones((3, 3), dtype=np.float32)
+        arr[1][2] = np.nan
+        dm.data = arr
         self.assertEqual(5, Dummy.data.window)
         self.assertEqual(2, Dummy.data.count)
-        np.testing.assert_array_equal(2 * arr, dm.data)
+        expected = 2 * np.ones((3, 3), dtype=np.float32)
+        expected[1][2] = np.nan
+        expected[0][2] = np.nan
+        np.testing.assert_array_equal(expected, dm.data)
 
         # set a ma window which is smaller than the current window
         Dummy.data.window = 3
         self.assertEqual(3, Dummy.data.window)
         self.assertEqual(2, Dummy.data.count)
-        np.testing.assert_array_equal(2 * arr, dm.data)
+        np.testing.assert_array_equal(expected, dm.data)
 
         # set an image with a different shape
         new_arr = 2*np.ones((3, 1), dtype=np.float32)
@@ -169,28 +216,32 @@ class TestRawImageData(unittest.TestCase):
         dm = Dummy()
 
         arr = np.ones((3, 4, 4), dtype=np.float32)
-
+        arr[1][2][1] = np.nan
         self.assertEqual(0, Dummy.data.n_images)
 
-        dm.data = arr.copy()
+        dm.data = arr
         self.assertEqual(3, Dummy.data.n_images)
 
         Dummy.data.window = 10
         self.assertEqual(10, Dummy.data.window)
         self.assertEqual(1, Dummy.data.count)
-        dm.data = 5 * arr
+        dm.data = 5 * np.ones((3, 4, 4), dtype=np.float32)
+        dm.data[2][3][3] = np.nan
         self.assertEqual(10, Dummy.data.window)
         self.assertEqual(2, Dummy.data.count)
-        np.testing.assert_array_equal(3 * arr, dm.data)
+        expected = 3 * np.ones((3, 4, 4), dtype=np.float32)
+        expected[1][2][1] = np.nan
+        expected[2][3][3] = np.nan
+        np.testing.assert_array_equal(expected, dm.data)
 
         # set a ma window which is smaller than the current window
         Dummy.data.window = 2
         self.assertEqual(2, Dummy.data.window)
         self.assertEqual(2, Dummy.data.count)
-        np.testing.assert_array_equal(3 * arr, dm.data)
+        np.testing.assert_array_equal(expected, dm.data)
 
         # set a data with a different number of images
-        new_arr = 5*np.ones((5, 4, 4))
+        new_arr = 5 * np.ones((5, 4, 4))
         dm.data = new_arr
         self.assertEqual(2, Dummy.data.window)
         self.assertEqual(1, Dummy.data.count)

@@ -26,6 +26,25 @@ namespace testing
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
+
+TEST(TestNanmeanTrain, TestTwoImages)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto inf = std::numeric_limits<float>::infinity();
+
+  // lvalue
+  xt::xtensor<float, 2> img1 {{1, -inf, 2}, {4, 5, nan}};
+  xt::xtensor<float, 2> img2 {{1, 2, 3}, {inf, nan, 6}};
+  xt::xtensor<float, 2> ret_gt {{1, -inf, 2.5}, {inf, 5, 6}};
+  EXPECT_THAT(nanmeanTrain(img1, img2), ElementsAreArray(ret_gt));
+
+  xt::xtensor<float, 2> img3 {{1, 2, 3}, {inf, nan, nan}};
+  EXPECT_TRUE(std::isnan(nanmeanTrain(img1, img3)(1, 2)));
+
+  // rvalue
+  EXPECT_THAT(nanmeanTrain(std::move(img1), std::move(img2)), ElementsAreArray(ret_gt));
+}
+
 TEST(TestMaskPulse, TestThresholdMask)
 {
   // threshold mask
