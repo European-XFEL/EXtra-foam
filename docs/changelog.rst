@@ -1,6 +1,28 @@
 CHANGELOG
 =========
 
+karaboFAI 0.5.5 (26 August 2019)
+---------------------------------
+
+- **Bug Fix**
+
+    - Fix user defined control data in 1D binning analysis !134
+    - Fix image mask in pulse-resolved ROI !133
+
+- **Improvement**
+
+    - Allow instrument sources to stream apart from DET !135
+    - Allow shutdown idling karaboFAI instance remotely !130
+    - Rearrange plot widgets !121
+    - Improve the API for C++ image processing code !116 !129
+    - AGIPD also works with bridge data with 'ONDA' format !115
+
+- **New Feature**
+
+    - Add statistics plot for pulse of interest !127
+
+- **Test**
+
 karaboFAI 0.5.4 (20 August 2019)
 ---------------------------------
 
