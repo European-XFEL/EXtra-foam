@@ -14,7 +14,6 @@ import unittest
 from unittest.mock import patch
 import os
 import tempfile
-import copy
 
 import numpy as np
 
@@ -38,14 +37,46 @@ class TestAgipdAssembler(unittest.TestCase):
 
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
-        # FIXME: we need a geometry for this test
-        # self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._assembler.load_geometry(self._geom_file, self._quad_positions)
 
     def testAssembleFile(self):
-        pass
+        self._assembler._source_type = DataSource.FILE
+        key_name = 'image.data'
+
+        data = {'raw': {
+            # According to which criteria are the sample module #s chosen?
+            'SPB_DET_AGIPD1M-1/DET/11CH0:xtdf':
+                {key_name: np.ones((4, 512, 128), dtype=np.float32)},
+            'SPB_DET_AGIPD1M-1/DET/7CH0:xtdf':
+                {key_name: np.ones((4, 512, 128), dtype=np.float32)},
+            'SPB_DET_AGIPD1M-1/DET/8CH0:xtdf':
+                {key_name: np.ones((4, 512, 128), dtype=np.float32)},
+            'SPB_DET_AGIPD1M-1/DET/3CH0:xtdf':
+                {key_name: np.ones((4, 512, 128), dtype=np.float32)},
+        }}
+        self._assembler.process(data)
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
+
+        self.assertEqual(3, data['assembled'].ndim)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(4, assembled_shape[0])
+        self.assertGreater(assembled_shape[1], 1024)
+        self.assertGreater(assembled_shape[2], 1024)
+
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
                                "MODULE_SHAPE": [512, 128]})
+
+    def _check_result(self, data):
+        # test the module keys have been deleted
+        self.assertFalse(bool(data['raw']))
+        self.assertEqual(3, data['assembled'].ndim)
+        assembled_shape = data['assembled'].shape
+        self.assertEqual(4, assembled_shape[0])
+        self.assertGreater(assembled_shape[1], 1024)
+        self.assertGreater(assembled_shape[2], 1024)
+
     def testAssembleBridge(self):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
@@ -70,7 +101,20 @@ class TestAgipdAssembler(unittest.TestCase):
                     key_name: np.ones((0, 16, 512, 128), dtype=np.float32)}}}
             self._assembler.process(data)
 
-        # TODO: add a test similar to the LPD one
+        expected_shape = (4, 16, 512, 128)
+        # (modules, fs, ss, memory cells)
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((16, 128, 512, 4), dtype=np.float32)}}}
+        self._assembler.process(data)
+        self._check_result(data)
+
+        # (memory cells, modules, ss, fs)
+        data = {'raw': {
+            src_name: {
+                key_name: np.ones((4, 16, 512, 128), dtype=np.float32)}}}
+        self._assembler.process(data)
+        self._check_result(data)
 
 
 class TestLpdAssembler(unittest.TestCase):

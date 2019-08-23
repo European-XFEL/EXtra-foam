@@ -179,7 +179,12 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return data[src_name]["image.data"]
+            modules_data = data[src_name]["image.data"]
+            if modules_data.shape[1] == config["MODULE_SHAPE"][1]:
+                # online-calibrated data, if reshaping not done upstream
+                # (modules, fs, ss, pulses) -> (pulses, modules, ss, fs)
+                return np.transpose(modules_data, (3, 0, 2, 1))
+            return modules_data
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
