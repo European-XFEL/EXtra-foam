@@ -256,11 +256,11 @@ class SinglePulseImageView(ImageViewF):
 
     Widget for displaying the assembled image of a single pulse.
     """
-    def __init__(self, *, pulse_index=0, parent=None):
+    def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_index = pulse_index
+        self.pulse_index = idx
 
     def update(self, data):
         """Override."""
