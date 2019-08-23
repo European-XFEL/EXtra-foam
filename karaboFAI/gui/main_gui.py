@@ -40,7 +40,7 @@ from .. import __version__
 from ..config import config
 from ..logger import logger
 from ..utils import profiler
-from ..ipc import RedisPSubscriber
+from ..ipc import RedisConnection, RedisPSubscriber
 from ..pipeline import MpInQueue
 from ..processes import list_fai_processes, shutdown_all
 
@@ -117,6 +117,8 @@ class MainGUI(QtGui.QMainWindow):
     stop_sgn = pyqtSignal()
 
     process_info_sgn = pyqtSignal(object)
+
+    _db = RedisConnection()
 
     def __init__(self, *, start_thread_logger=False):
         """Initialization.
@@ -251,10 +253,10 @@ class MainGUI(QtGui.QMainWindow):
 
         # For process monitoring
         self._proc_monitor_timer = QtCore.QTimer()
-        self._proc_monitor_timer.timeout.connect(self._publish_process_info)
+        self._proc_monitor_timer.timeout.connect(self._update_process_monitoring)
         self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
-        # a file server which streams data from files
+        self.__redis_connection_fails = 0
 
         # *************************************************************
         # control widgets
@@ -376,8 +378,25 @@ class MainGUI(QtGui.QMainWindow):
             w.update()
         logger.debug(f"Plot train with ID: {tid}")
 
-    def _publish_process_info(self):
+    def _update_process_monitoring(self):
         self.process_info_sgn.emit(list_fai_processes())
+
+        try:
+            self._db.ping()
+            self.__redis_connection_fails = 0
+        except ConnectionError:
+            self.__redis_connection_fails += 1
+            rest_attempts = config["MAX_REDIS_PING_ATTEMPTS"] - \
+                self.__redis_connection_fails
+
+            if rest_attempts > 0:
+                logger.warning(f"No response from the Redis server! Shutting "
+                               f"down karaboFAI after {rest_attempts} "
+                               f"attempts ...")
+            else:
+                logger.warning(f"No response from the Redis server! "
+                               f"Shutting down karaboFAI!")
+                self.close()
 
     def _addAction(self, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
