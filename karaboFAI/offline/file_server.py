@@ -87,7 +87,8 @@ def gather_sources(path):
     Run info: string
         Information about the run. Empty string if no info found
     """
-    slow = frozenset()
+    DETECTOR_SOURCE_RE = re.compile(r'(.+)/DET/(.+):(.+)')
+    sources = frozenset()
     info = ""
     if osp.isdir(path):
         try:
@@ -96,7 +97,8 @@ def gather_sources(path):
             # or they have raw folder with same path instead of 'proc'
             # in it in the end.
             run = RunDirectory(path.replace('/proc/', '/raw/'))
-            slow = run.control_sources
+            sources = frozenset(src for src in run.control_sources.union(
+                run.instrument_sources) if not DETECTOR_SOURCE_RE.match(src))
             info = get_info(run)
         except Exception as ex:
             # Will be raised if no folder with 'raw' exist or no files
@@ -107,12 +109,13 @@ def gather_sources(path):
             # frozenset if no control source found.
             try:
                 run = RunDirectory(path)
-                slow = run.control_sources
+                sources = frozenset(src for src in run.control_sources.union(
+                    run.instrument_sources) if not DETECTOR_SOURCE_RE.match(src))
                 info = get_info(run)
             except Exception as ex:
                 logger.error(repr(ex))
 
-    return slow, info
+    return sources, info
 
 
 def generate_meta(sources, tid):
