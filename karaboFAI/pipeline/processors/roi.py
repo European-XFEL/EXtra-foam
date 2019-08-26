@@ -533,10 +533,15 @@ class RoiProcessorPulse(_RoiProcessBase):
         self._has_img1 = img1 is not None
 
         if self._has_img1:
+            roi_img_mask = None
+            if image_mask is not None:
+                x, y, w, h = self._roi1.intersect(image_mask)
+                roi_img_mask = image_mask[y:y + h, x:x + w]
+
             foms = []
             for i in range(len(img1)):
                 foms.append(np.sum(mask_image(img1[i],
-                                              image_mask=image_mask,
+                                              image_mask=roi_img_mask,
                                               threshold_mask=threshold_mask)))
             roi.roi1.fom = foms
 
@@ -560,9 +565,14 @@ class RoiProcessorPulse(_RoiProcessBase):
         self._has_img2 = img2 is not None
 
         if self._has_img2:
+            roi_img_mask = None
+            if image_mask is not None:
+                x, y, w, h = self._roi2.intersect(image_mask)
+                roi_img_mask = image_mask[y:y + h, x:x + w]
+
             foms = []
             for i in range(len(img2)):
                 foms.append(np.sum(mask_image(img2[i],
-                                              image_mask=image_mask,
+                                              image_mask=roi_img_mask,
                                               threshold_mask=threshold_mask)))
             roi.roi2.fom = foms
