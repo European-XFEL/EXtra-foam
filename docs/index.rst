@@ -14,11 +14,11 @@ Contents:
    gui
    windows
 
-
 .. toctree::
    :caption: Development
    :maxdepth: 1
 
+   developer
    changelog
 
 
