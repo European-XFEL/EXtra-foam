@@ -93,6 +93,8 @@ class _Config(dict):
         "PLOT_UPDATE_INTERVAL": 10,
         # QTimer interval for monitoring processes, in milliseconds
         "PROCESS_MONITOR_HEART_BEAT": 5000,
+        # Maximum attempts to ping the Redis server before shutting down GUI
+        "MAX_REDIS_PING_ATTEMPTS": 10,
         # timeout when cleaning up remnant processes, in second
         "PROCESS_CLEANUP_TIMEOUT": 1,
         # max number of pulses per pulse train
