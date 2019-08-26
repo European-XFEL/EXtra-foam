@@ -21,13 +21,20 @@ class _BaseProcessorTest(unittest.TestCase):
         return data, processed
 
     def data_with_assembled(self, tid, shape, *,
-                            dtype=np.float32, fill=None, **kwargs):
+                            dtype=np.float32,
+                            fill=None,
+                            with_image_mask=False, **kwargs):
         processed = ProcessedData(tid)
         if fill is None:
             imgs = np.random.randn(*shape).astype(dtype)
         else:
             imgs = np.ones(shape, dtype=dtype)
         processed.image = ImageData.from_array(imgs, **kwargs)
+
+        if with_image_mask:
+            image_mask = np.zeros(shape[-2:], dtype=np.bool)
+            image_mask[::2, ::2] = True
+            processed.image.image_mask = image_mask
 
         data = {'processed': processed,
                 'raw': dict(),
