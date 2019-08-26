@@ -68,7 +68,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
         load_stream_gb.setLayout(load_stream_layout)
 
-        run_info_gb = QtGui.QGroupBox("Control Sources and Run Info")
+        run_info_gb = QtGui.QGroupBox("Data Sources and Run Info")
         run_info_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
         run_info_layout = QtGui.QHBoxLayout()
@@ -83,7 +83,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
     def initConnections(self):
         self._data_folder_le.returnPressed.connect(
-            lambda: self.populateSlowSources(
+            lambda: self.populateSources(
                 self._data_folder_le.text()))
 
         self._data_folder_le.returnPressed.emit()
@@ -102,7 +102,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
             self._slow_source_list_widget.clear()
             self._data_folder_le.setText(folder_name)
 
-    def populateSlowSources(self, path):
+    def populateSources(self, path):
         self._slow_source_list_widget.clear()
         self._run_info_te.clear()
         if path:
