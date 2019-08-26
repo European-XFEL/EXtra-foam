@@ -448,14 +448,21 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         proc._reset1 = False
         proc._reset2 = False
         # bin parameter 1
-        widget._table.cellWidget(0, 0).setCurrentIndex(1)
-        widget._table.cellWidget(0, 1).setCurrentIndex(1)
+        widget._table.cellWidget(0, 0).setCurrentText('Train ID')
+        self.assertEqual("Train ID", widget._table.cellWidget(0, 0).currentText())
+        widget._table.cellWidget(0, 1).setCurrentText('Any')
+        self.assertEqual("Any", widget._table.cellWidget(0, 1).currentText())
+        self.assertEqual("timestamp.tid", widget._table.cellWidget(0, 2).currentText())
         proc.update()
         self.assertTrue(proc._reset1)
         self.assertFalse(proc._reset2)
         # bin parameter 2
-        widget._table.cellWidget(1, 0).setCurrentIndex(1)
-        widget._table.cellWidget(1, 1).setCurrentIndex(1)
+        widget._table.cellWidget(1, 0).setCurrentText('User defined')
+        self.assertEqual("User defined", widget._table.cellWidget(1, 0).currentText())
+        widget._table.cellWidget(1, 1).setText('Any')
+        self.assertEqual("Any", widget._table.cellWidget(1, 1).text())
+        widget._table.cellWidget(1, 2).setText('timestamp.tid')
+        self.assertEqual("timestamp.tid", widget._table.cellWidget(1, 2).text())
         proc.update()
         self.assertTrue(proc._reset1)
         self.assertTrue(proc._reset2)
