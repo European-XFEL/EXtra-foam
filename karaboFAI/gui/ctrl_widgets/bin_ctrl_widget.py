@@ -163,9 +163,9 @@ class BinCtrlWidget(AbstractCtrlWidget):
                 property_le.returnPressed.connect(functools.partial(
                     self.onBinGroupChangeLe, i_row))
                 range_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeCb, i_row))
+                    self.onBinGroupChangeLe, i_row))
                 n_bins_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeCb, i_row))
+                    self.onBinGroupChangeLe, i_row))
 
             self._table.setCellWidget(i_row, 1, device_id_le)
             self._table.setCellWidget(i_row, 2, property_le)
