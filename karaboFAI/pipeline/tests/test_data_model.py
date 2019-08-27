@@ -123,7 +123,7 @@ class TestPairData(unittest.TestCase):
         self.assertEqual(2*(Dummy.hist.MAX_LENGTH + overflow - 1) + 0.5, fom_hist.avg[-1])
 
 
-class TestMovingAverageData(unittest.TestCase):
+class TestMovingAverageArray1D(unittest.TestCase):
     def test1darray(self):
         class Dummy:
             data = MovingAverageArray()
