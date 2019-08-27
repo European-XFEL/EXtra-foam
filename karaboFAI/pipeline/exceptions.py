@@ -29,6 +29,11 @@ class StopPipelineError(Exception):
     pass
 
 
+class ImageProcessingError(StopPipelineError):
+    """Raised when ImageProcessorPulse.process fails."""
+    pass
+
+
 class AssemblingError(StopPipelineError):
     """Raised when image assembling fails."""
     pass

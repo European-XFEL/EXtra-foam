@@ -16,7 +16,7 @@ from karaboFAI.gui.windows import ImageToolWindow
 from karaboFAI.gui.windows.image_tool import _SimpleImageData
 from karaboFAI.logger import logger
 from karaboFAI.pipeline.data_model import ImageData, ProcessedData
-from karaboFAI.pipeline.exceptions import ProcessingError
+from karaboFAI.pipeline.exceptions import ImageProcessingError, ProcessingError
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.services import FAI
 
@@ -247,7 +247,7 @@ class TestImageTool(unittest.TestCase):
 
         # test setting reference but the reference shape is different
         # from the image shape
-        with self.assertRaises(ProcessingError):
+        with self.assertRaises(ImageProcessingError):
             self.view._image = np.ones((2, 2), np.float32)
             widget.set_ref_btn.clicked.emit()
             proc.process(data)
@@ -307,7 +307,7 @@ class TestImageTool(unittest.TestCase):
         # test set a mask which has a different shape from the image
         mask_gt = np.zeros((2, 2), dtype=np.bool)
         pub.set(mask_gt)
-        with self.assertRaises(ProcessingError):
+        with self.assertRaises(ImageProcessingError):
             proc.process(data)
 
     def _get_data(self):

@@ -19,7 +19,8 @@ from karaboFAI.pipeline.processors.image_processor import (
 )
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
-    DropAllPulsesError, PumpProbeIndexError, ProcessingError
+    DropAllPulsesError, ImageProcessingError, PumpProbeIndexError,
+    ProcessingError
 )
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
@@ -61,7 +62,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         proc.process(data)
 
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+        with self.assertRaisesRegex(ImageProcessingError, 'image mask'):
             data, _ = self.data_with_assembled(2, (4, 2))
             proc.process(data)
 
@@ -72,7 +73,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         # assign a reference image
         proc._reference = np.ones((4, 2), dtype=np.float32)
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'reference'):
+        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
             data, _ = self.data_with_assembled(3, (2, 2))
             proc.process(data)
 
@@ -152,7 +153,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         # when recording, the shape inconsistency will be covered
         self._proc._recording = False
         data, processed = self.data_with_assembled(1, (4, 3, 2))
-        with self.assertRaisesRegex(ProcessingError, "Shape of the dark"):
+        with self.assertRaisesRegex(ImageProcessingError, "Shape of the dark"):
             self._proc.process(data)
 
     def testPulseSlicing(self):
@@ -206,7 +207,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         proc.process(data)
 
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+        with self.assertRaisesRegex(ImageProcessingError, 'image mask'):
             data, _ = self.data_with_assembled(2, (4, 4, 2))
             proc.process(data)
 
@@ -217,7 +218,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         # assign a reference image
         proc._reference = np.ones((4, 2), dtype=np.float32)
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'reference'):
+        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
             data, _ = self.data_with_assembled(3, (4, 2, 2))
             proc.process(data)
 

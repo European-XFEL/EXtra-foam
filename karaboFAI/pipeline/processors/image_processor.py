@@ -9,14 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
-
 import numpy as np
 
 from .base_processor import _BaseProcessor
 from ..data_model import RawImageData
 from ..exceptions import (
-    ProcessingError, PumpProbeIndexError, DropAllPulsesError
+    DropAllPulsesError, ImageProcessingError, ProcessingError,
+    PumpProbeIndexError,
 )
 from ...algorithms import mask_image
 from ...metadata import Metadata as mt
@@ -145,8 +144,9 @@ class ImageProcessorPulse(_BaseProcessor):
             dk_shape = self._dark_run.shape
 
             if dt_shape != dk_shape:
-                raise ProcessingError(f"Shape of the dark train {dk_shape} is "
-                                      f"different from the data {dt_shape}")
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the dark train {dk_shape} "
+                    f"is different from the data {dt_shape}")
             assembled -= self._dark_run
 
         image_shape = assembled.shape[-2:]
@@ -175,9 +175,10 @@ class ImageProcessorPulse(_BaseProcessor):
             # and the image shapes in the ImageTool is different from the
             # shape of the live images.
             # The original image mask remains the same.
-            raise ProcessingError(
-                f"The shape of the image mask {image_mask.shape} is "
-                f"different from the shape of the image {image_shape}!")
+            raise ImageProcessingError(
+                f"[Image processor] The shape of the image mask "
+                f"{image_mask.shape} is different from the shape of the image "
+                f"{image_shape}!")
 
         self._image_mask = image_mask
 
@@ -188,9 +189,9 @@ class ImageProcessorPulse(_BaseProcessor):
             # The original reference remains the same. It ensures the error
             # message if the shape of the image changes (e.g. quadrant
             # positions change on the fly).
-            raise ProcessingError(
-                f"The shape of the reference {ref.shape} is different "
-                f"from the shape of the image {image_shape}!")
+            raise ImageProcessingError(
+                f"[Image processor] The shape of the reference {ref.shape} is "
+                f"different from the shape of the image {image_shape}!")
 
         self._reference = ref
 
@@ -212,6 +213,8 @@ class ImageProcessorPulse(_BaseProcessor):
                 out_of_bound_poi_indices.append(i)
 
         if out_of_bound_poi_indices:
+            # This is still ProcessingError since it is not fatal and should
+            # not stop the pipeline.
             raise ProcessingError(
                 f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
                 f"is out of bound (0 - {n_images-1}")
