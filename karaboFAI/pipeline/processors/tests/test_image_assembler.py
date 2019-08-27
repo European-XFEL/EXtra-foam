@@ -64,10 +64,8 @@ class TestAgipdAssembler(unittest.TestCase):
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
 
-
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
                                "MODULE_SHAPE": [512, 128]})
-
     def _check_result(self, data):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))

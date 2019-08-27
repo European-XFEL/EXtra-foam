@@ -140,77 +140,6 @@ def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
     return normalized_on, normalized_off
 
 
-class MovingAverageData:
-    """Moving average data descriptor."""
-    def __init__(self, n=1):
-        """Initialization.
-
-        :param int n: number of moving average data.
-        """
-        self._data = [None] * n
-
-        self._ma_window = 1
-        self._ma_count = 0
-
-    def __get__(self, instance, instance_type):
-        return self._data
-
-    def __set__(self, instance, data):
-        if not isinstance(data, (tuple, list)):
-            data = [data]
-
-        if self._data[0] is not None \
-                and hasattr(self._data[0], 'shape') \
-                and self._data[0].shape != data[0].shape:
-            # reset moving average if data shape changes
-            self._ma_count = 0
-            self._data = [None] * len(self._data)
-
-        if self._ma_window > 1 and self._ma_count > 0:
-            if self._ma_count < self._ma_window:
-                self._ma_count += 1
-                denominator = self._ma_count
-            else:   # self._ma_count == self._ma_window
-                # here is an approximation
-                denominator = self._ma_window
-
-            for i in range(len(self._data)):
-                self._data[i] += (data[i] - self._data[i]) / denominator
-
-        else:  # self._ma_window == 1
-            for i in range(len(self._data)):
-                self._data[i] = data[i]
-            if self._ma_window > 1:
-                self._ma_count = 1  # 0 -> 1
-
-    @property
-    def moving_average_window(self):
-        return self._ma_window
-
-    @moving_average_window.setter
-    def moving_average_window(self, v):
-        if not isinstance(v, int) or v <= 0:
-            v = 1
-
-        if v < self._ma_window:
-            # if the new window size is smaller than the current one,
-            # we reset everything
-            self._ma_window = v
-            self._ma_count = 0
-            self._data = [None] * len(self._data)
-
-        self._ma_window = v
-
-    @property
-    def moving_average_count(self):
-        return self._ma_count
-
-    def clear(self):
-        self._ma_window = 1
-        self._ma_count = 0
-        self._data = [None] * len(self._data)
-
-
 class State(ABC):
     """Base class of processor state."""
     @abstractmethod
@@ -404,7 +333,6 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         return False
 
-    @abstractmethod
     def run_once(self, processed):
         """Composition interface.
 
@@ -420,6 +348,3 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     def process(self, processed):
         """Process data."""
         raise NotImplementedError
-
-    def reset(self):
-        pass
