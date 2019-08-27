@@ -72,9 +72,6 @@ class Mediator(QObject):
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.set(mt.IMAGE_PROC, "threshold_mask", str(value))
 
-    def onImageMaWindowChange(self, value: int):
-        self._meta.set(mt.IMAGE_PROC, "ma_window", value)
-
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
 

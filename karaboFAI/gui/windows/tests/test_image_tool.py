@@ -186,8 +186,9 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
     def testMovingAverageQLineEdit(self):
+        # TODO: remove it in the future
         widget = self.image_tool._image_action
-        # moving average is disabled for pulse-resolved data
+        # moving average is disabled
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
     @patch("karaboFAI.gui.plot_widgets.image_views.ImageAnalysis."
@@ -346,11 +347,8 @@ class TestImageToolTs(unittest.TestCase):
         self._action.trigger()
         self.image_tool = list(self.gui._windows.keys())[-1]
 
-    @patch("karaboFAI.gui.mediator.Mediator.onImageMaWindowChange")
-    def testImageAction1(self, on_ma_mediator):
+    def testMovingAverageQLineEdit(self):
+        # TODO: remove it in the future
         widget = self.image_tool._image_action
-
-        widget.moving_avg_le.clear()
-        QTest.keyClicks(widget.moving_avg_le, "10")
-        QTest.keyPress(widget.moving_avg_le, Qt.Key_Enter)
-        on_ma_mediator.assert_called_once_with(10)
+        # moving average is disabled
+        self.assertFalse(widget.moving_avg_le.isEnabled())
