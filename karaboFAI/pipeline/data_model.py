@@ -441,7 +441,6 @@ class ImageData:
         images (list): a list of pulse images in the train. A value of
             None only indicates that the corresponding pulse image is
             not needed (in the main process).
-        ma_count (int): current moving average count.
         n_images (int): number of images in the train.
         sliced_indices (list): a list of indices which is selected by
             pulse slicer. The slicing is applied before applying any data
@@ -470,7 +469,6 @@ class ImageData:
         self._pixel_size = config['PIXEL_SIZE']
 
         self.images = None
-        self.ma_count = 0
 
         self.sliced_indices = None
         self.dropped_indices = []
@@ -500,7 +498,6 @@ class ImageData:
 
     @classmethod
     def from_array(cls, arr, *,
-                   ma_count=1.0,
                    background=0.0,
                    image_mask=None,
                    threshold_mask=None,
@@ -519,7 +516,6 @@ class ImageData:
             arr = arr.astype(image_dtype)
 
         instance = cls()
-        instance.ma_count = ma_count
 
         if arr.ndim == 3:
             n_images = len(arr)

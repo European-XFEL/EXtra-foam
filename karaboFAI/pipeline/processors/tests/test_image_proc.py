@@ -19,7 +19,8 @@ from karaboFAI.pipeline.processors.image_processor import (
 )
 from karaboFAI.config import PumpProbeMode
 from karaboFAI.pipeline.exceptions import (
-    DropAllPulsesError, PumpProbeIndexError, ProcessingError
+    DropAllPulsesError, ImageProcessingError, PumpProbeIndexError,
+    ProcessingError
 )
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
@@ -32,11 +33,8 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
     def setUp(self):
         self._proc = ImageProcessorPulse()
 
-        del self._proc._raw_data
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
-
-        self.assertEqual(1, ImageProcessorPulse._raw_data.window)
 
     def testPulseSlice(self):
         # The sliced_indices for train-resolved data should always be [0]
@@ -56,37 +54,6 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         # np.testing.assert_array_equal(data['assembled'], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
 
-    @MagicMock('ImageProcessorPulse._raw_data.window', return_value=3)
-    def testMovingAverage(self):
-        proc = self._proc
-
-        data, _ = self.data_with_assembled(1, (2, 2))
-        imgs1 = data['assembled']
-        imgs1_gt = imgs1.copy()
-
-        proc.process(data)
-
-        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
-
-        data, processed = self.data_with_assembled(2, (2, 2))
-        imgs2 = data['assembled']
-        imgs2_gt = imgs2.copy()
-
-        proc.process(data)
-
-        self.assertEqual(proc._background, processed.image.background)
-        self.assertTupleEqual(proc._threshold_mask, processed.image.threshold_mask)
-        # The moving average test is redundant for now since pulse-resolved
-        # detector is not allow to set moving average on images on ImageToolWindow.
-        self.assertEqual(2, processed.image.ma_count)
-        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
-
-        # test the internal data of _raw_data shares memory with the first data
-        # FIXME: This not true with the c++ code. But will be fixed when
-        #        xtensor-python has a new release.
-        # self.assertIs(imgs1, proc._raw_data)
-
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
         proc._image_mask = np.ones((2, 2), dtype=np.bool)
@@ -95,7 +62,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         proc.process(data)
 
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+        with self.assertRaisesRegex(ImageProcessingError, 'image mask'):
             data, _ = self.data_with_assembled(2, (4, 2))
             proc.process(data)
 
@@ -106,7 +73,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         # assign a reference image
         proc._reference = np.ones((4, 2), dtype=np.float32)
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'reference'):
+        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
             data, _ = self.data_with_assembled(3, (2, 2))
             proc.process(data)
 
@@ -123,13 +90,10 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
     def setUp(self):
         self._proc = ImageProcessorPulse()
 
-        del self._proc._raw_data
         del self._proc._dark_run
 
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
-
-        self.assertEqual(1, ImageProcessorPulse._raw_data.window)
 
     def testDarkRun(self):
         self._proc._recording = True
@@ -183,6 +147,15 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(
             data['assembled'], assembled_gt - self._proc._dark_run)
 
+        # test image has different shape from the dark
+        # (this test should use the env from the above test
+
+        # when recording, the shape inconsistency will be covered
+        self._proc._recording = False
+        data, processed = self.data_with_assembled(1, (4, 3, 2))
+        with self.assertRaisesRegex(ImageProcessingError, "Shape of the dark"):
+            self._proc.process(data)
+
     def testPulseSlicing(self):
         data, processed = self.data_with_assembled(1, (4, 2, 2))
         assembled_gt = data['assembled'].copy()
@@ -226,38 +199,6 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         with self.assertRaises(ProcessingError):
             proc.process(data)
 
-    @MagicMock('ImageProcessorPulse._raw_data.window', return_value=3)
-    def testMovingAverage(self):
-        # The moving average test is redundant for now since pulse-resolved
-        # detector is not allow to set moving average on images on ImageToolWindow.
-        proc = self._proc
-        # ImageProcessorPulse._raw_data.window = 3
-
-        data, _ = self.data_with_assembled(1, (4, 2, 2))
-        imgs1 = data['assembled']
-        imgs1_gt = imgs1.copy()
-
-        proc.process(data)
-
-        np.testing.assert_array_equal(imgs1_gt, proc._raw_data)
-
-        data, processed = self.data_with_assembled(1, (4, 2, 2))
-        imgs2 = data['assembled']
-        imgs2_gt = imgs2.copy()
-
-        proc.process(data)
-
-        self.assertEqual(proc._background, processed.image.background)
-        self.assertTupleEqual(proc._threshold_mask, processed.image.threshold_mask)
-        self.assertEqual(2, processed.image.ma_count)
-        ma_gt = (imgs1_gt + imgs2_gt) / 2.0
-        np.testing.assert_array_almost_equal(ma_gt, proc._raw_data)
-
-        # test the internal data of _raw_data shares memory with the first data
-        # FIXME: This not true with the c++ code. But will be fixed when
-        #        xtensor-python has a new release.
-        # self.assertIs(imgs1, proc._raw_data)
-
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
         proc._image_mask = np.ones((2, 2), dtype=np.bool)
@@ -266,7 +207,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         proc.process(data)
 
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'image mask'):
+        with self.assertRaisesRegex(ImageProcessingError, 'image mask'):
             data, _ = self.data_with_assembled(2, (4, 4, 2))
             proc.process(data)
 
@@ -277,7 +218,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         # assign a reference image
         proc._reference = np.ones((4, 2), dtype=np.float32)
         # image shape changes
-        with self.assertRaisesRegex(ProcessingError, 'reference'):
+        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
             data, _ = self.data_with_assembled(3, (4, 2, 2))
             proc.process(data)
 

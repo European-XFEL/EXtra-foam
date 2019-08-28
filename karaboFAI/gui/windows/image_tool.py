@@ -348,12 +348,11 @@ class _ImageActionWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
+        # It is just a placeholder
         self.moving_avg_le = SmartLineEdit(str(1))
         self.moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
         self.moving_avg_le.setMinimumWidth(60)
-
-        if config['PULSE_RESOLVED']:
-            self.moving_avg_le.setEnabled(False)
+        self.moving_avg_le.setEnabled(False)
 
         self.threshold_mask_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["MASK_RANGE"]]))
@@ -515,9 +514,6 @@ class ImageToolWindow(AbstractWindow):
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)
 
-        self._image_action.moving_avg_le.value_changed_sgn.connect(
-            lambda x: mediator.onImageMaWindowChange(int(x)))
-
         self._image_action.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._image_view.onThresholdMaskChange(x))
         self._image_action.threshold_mask_le.value_changed_sgn.connect(
@@ -530,7 +526,6 @@ class ImageToolWindow(AbstractWindow):
 
     def updateMetaData(self):
         """Override."""
-        self._image_action.moving_avg_le.returnPressed.emit()
         self._image_action.threshold_mask_le.returnPressed.emit()
         self._image_action.bkg_le.returnPressed.emit()
         return True

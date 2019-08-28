@@ -9,14 +9,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import time
-
 import numpy as np
 
 from .base_processor import _BaseProcessor
 from ..data_model import RawImageData
 from ..exceptions import (
-    ProcessingError, PumpProbeIndexError, DropAllPulsesError
+    DropAllPulsesError, ImageProcessingError, ProcessingError,
+    PumpProbeIndexError,
 )
 from ...algorithms import mask_image
 from ...metadata import Metadata as mt
@@ -31,14 +30,13 @@ class ImageProcessorPulse(_BaseProcessor):
     """ImageProcessorPulse class.
 
     Attributes:
-        _raw_data (RawImageData): store the moving average of the
-            raw images in a train.
         _background (float): a uniform background value.
         _recording (bool): whether a dark run is being recorded.
         _process_dark (bool): whether process the dark run while recording.
             used only when _recording = True.
-        _dark_run (numpy.ndarray): store the moving average of dark
-            images in a train. Shape = (indices, y, x)
+        _dark_run (RawImageData): store the moving average of dark
+            images in a train. Shape = (indices, y, x) for pulse-resolved
+            and shape = (y, x) for train-resolved
         _dark_mean (numpy.ndarray): average of all the dark images in
             the dark run. Shape = (y, x)
         _image_mask (numpy.ndarray): image mask array. Shape = (y, x),
@@ -51,10 +49,6 @@ class ImageProcessorPulse(_BaseProcessor):
             pulses.
         _poi_indices (list): indices of POI pulses.
     """
-
-    # TODO: in the future, the data should be store at a shared
-    #       memory space.
-    _raw_data = RawImageData()
 
     # give it a huge window for now since I don't want to touch the
     # implementation of the base class for now.
@@ -83,7 +77,6 @@ class ImageProcessorPulse(_BaseProcessor):
         # image
         cfg = self._meta.get_all(mt.IMAGE_PROC)
 
-        self.__class__._raw_data.window = int(cfg['ma_window'])
         self._background = float(cfg['background'])
         self._threshold_mask = self.str2tuple(cfg['threshold_mask'],
                                               handler=float)
@@ -128,13 +121,13 @@ class ImageProcessorPulse(_BaseProcessor):
         n_images = len(sliced_indices)
 
         if self._recording:
-            # TODO: calculating the moving average for a train of images
-            #       is very expensive!!!
             if self._dark_run is None:
                 # dark_run should not share memory with data['assembled']
                 self._dark_run = data['assembled'].copy()  # after pulse slicing
             else:
+                # moving average
                 self._dark_run = data['assembled']
+
             # for visualizing the dark_mean
             # This is also a relatively expensive operation. But, in principle,
             # users should not trigger many other analysis when recording dark.
@@ -142,23 +135,19 @@ class ImageProcessorPulse(_BaseProcessor):
                 self._dark_mean = nanmeanTrain(self._dark_run)
             else:
                 self._dark_mean = self._dark_run.copy()
-        # Make it the moving average for train resolved detectors
-        # It is worth noting that the moving average here does not use
-        # nanmean!!!
-        self._raw_data = data['assembled']
-        # Be careful! data['assembled'] and self._raw_data share memory
-        data['assembled'] = self._raw_data
+
         assembled = data['assembled']
         # subtract the dark_run from assembled if any
         if (not self._recording and self._dark_run is not None) \
                 or (self._recording and self._process_dark):
-            if assembled.ndim == 3:
-                assembled -= self._dark_run
-            else:
-                # TODO: remove the moving average of images for train-resolved
-                #       detectors.
-                data['assembled'] = assembled - self._dark_run
-                assembled = data['assembled']
+            dt_shape = assembled.shape
+            dk_shape = self._dark_run.shape
+
+            if dt_shape != dk_shape:
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the dark train {dk_shape} "
+                    f"is different from the data {dt_shape}")
+            assembled -= self._dark_run
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)
@@ -171,7 +160,6 @@ class ImageProcessorPulse(_BaseProcessor):
         image_data.images = [None] * n_images
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, assembled)
-        image_data.ma_count = self.__class__._raw_data.count
         image_data.background = self._background
         image_data.dark_mean = self._dark_mean
         image_data.dark_count = self.__class__._dark_run.count
@@ -187,9 +175,10 @@ class ImageProcessorPulse(_BaseProcessor):
             # and the image shapes in the ImageTool is different from the
             # shape of the live images.
             # The original image mask remains the same.
-            raise ProcessingError(
-                f"The shape of the image mask {image_mask.shape} is "
-                f"different from the shape of the image {image_shape}!")
+            raise ImageProcessingError(
+                f"[Image processor] The shape of the image mask "
+                f"{image_mask.shape} is different from the shape of the image "
+                f"{image_shape}!")
 
         self._image_mask = image_mask
 
@@ -200,9 +189,9 @@ class ImageProcessorPulse(_BaseProcessor):
             # The original reference remains the same. It ensures the error
             # message if the shape of the image changes (e.g. quadrant
             # positions change on the fly).
-            raise ProcessingError(
-                f"The shape of the reference {ref.shape} is different "
-                f"from the shape of the image {image_shape}!")
+            raise ImageProcessingError(
+                f"[Image processor] The shape of the reference {ref.shape} is "
+                f"different from the shape of the image {image_shape}!")
 
         self._reference = ref
 
@@ -224,6 +213,8 @@ class ImageProcessorPulse(_BaseProcessor):
                 out_of_bound_poi_indices.append(i)
 
         if out_of_bound_poi_indices:
+            # This is still ProcessingError since it is not fatal and should
+            # not stop the pipeline.
             raise ProcessingError(
                 f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
                 f"is out of bound (0 - {n_images-1}")

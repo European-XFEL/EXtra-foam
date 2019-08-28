@@ -41,29 +41,31 @@ class BulletinWidget(QtGui.QWidget):
         self._pulse_resolved = pulse_resolved
 
         self._trainid_lb = self.DescriptionLabel("Train ID: ")
-        self._npulses_lb = self.DescriptionLabel("Number of images per train: ")
-        self._moving_average_lb = self.DescriptionLabel("Moving average count: ")
+        self._n_total_pulses_lb = self.DescriptionLabel(
+            "Total # of pulses/train: ")
+        self._n_filtered_pulses_lb = self.DescriptionLabel(
+            "# of filtered pulses/train: ")
 
         self._trainid_no = self.NumberLabel(" ")
-        self._npulses_no = self.NumberLabel(" ")
-        self._moving_average_no = self.NumberLabel(" ")
+        self._n_total_pulses_no = self.NumberLabel(" ")
+        self._n_filtered_pulses_no = self.NumberLabel(" ")
 
         if not vertical:
             layout = QtGui.QHBoxLayout()
             layout.addWidget(self._trainid_lb, 1)
             layout.addWidget(self._trainid_no, 2)
-            layout.addWidget(self._npulses_lb, 2)
-            layout.addWidget(self._npulses_no, 1)
-            layout.addWidget(self._moving_average_lb, 2)
-            layout.addWidget(self._moving_average_no, 1)
+            layout.addWidget(self._n_total_pulses_lb, 2)
+            layout.addWidget(self._n_total_pulses_no, 1)
+            layout.addWidget(self._n_filtered_pulses_lb, 2)
+            layout.addWidget(self._n_filtered_pulses_no, 1)
         else:
             layout = QtGui.QGridLayout()
             layout.addWidget(self._trainid_lb, 0, 0)
             layout.addWidget(self._trainid_no, 0, 1)
-            layout.addWidget(self._npulses_lb, 1, 0)
-            layout.addWidget(self._npulses_no, 1, 1)
-            layout.addWidget(self._moving_average_lb, 2, 0)
-            layout.addWidget(self._moving_average_no, 2, 1)
+            layout.addWidget(self._n_total_pulses_lb, 1, 0)
+            layout.addWidget(self._n_total_pulses_no, 1, 1)
+            layout.addWidget(self._n_filtered_pulses_lb, 2, 0)
+            layout.addWidget(self._n_filtered_pulses_no, 2, 1)
         self.setLayout(layout)
 
         self.reset()
@@ -73,9 +75,11 @@ class BulletinWidget(QtGui.QWidget):
 
     def update(self, data):
         """Override."""
-        self._set_text(data.tid, data.image.n_images, data.image.ma_count)
+        n_total = data.n_pulses
+        n_dropped = len(data.image.dropped_indices)
+        self._set_text(data.tid, n_total, n_total - n_dropped)
 
-    def _set_text(self, tid="", n_pulses="", ma_count=""):
+    def _set_text(self, tid="", n_total="", n_filtered=""):
         self._trainid_no.setText(f"{tid}")
-        self._npulses_no.setText(f"{n_pulses}")
-        self._moving_average_no.setText(f"{ma_count}")
+        self._n_total_pulses_no.setText(f"{n_total}")
+        self._n_filtered_pulses_no.setText(f"{n_filtered}")
