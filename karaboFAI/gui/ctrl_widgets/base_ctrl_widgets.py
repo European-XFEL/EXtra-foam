@@ -39,6 +39,14 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                 properties=["timestamp.tid"]
             ),
             "User defined": SourcePropertyItem()}),
+        "SPB": OrderedDict({
+            "": SourcePropertyItem(),
+            "Train ID": SourcePropertyItem(
+                device_ids=["", "Any"],
+                properties=["timestamp.tid"]
+            ),
+            "User defined": SourcePropertyItem(),
+        }),
         "FXE": OrderedDict({
             "": SourcePropertyItem(),
             "Train ID": SourcePropertyItem(
@@ -78,6 +86,7 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                 device_ids=[
                     "",
                     "SCS_ILH_LAS/PHASESHIFTER/DOOCS",
+                    "SCS_ILH_LAS/DOOCS/PP800_PHASESHIFTER",
                     "SCS_ILH_LAS/MOTOR/LT3",
                 ],
                 properties=["actualPosition"],
@@ -90,7 +99,15 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
                 properties=["actualCurrent"],
             ),
         }),
-        "SPB": OrderedDict({
+        "SQS": OrderedDict({
+            "": SourcePropertyItem(),
+            "Train ID": SourcePropertyItem(
+                device_ids=["", "Any"],
+                properties=["timestamp.tid"]
+            ),
+            "User defined": SourcePropertyItem(),
+        }),
+        "MID": OrderedDict({
             "": SourcePropertyItem(),
             "Train ID": SourcePropertyItem(
                 device_ids=["", "Any"],
@@ -99,14 +116,6 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
             "User defined": SourcePropertyItem(),
         }),
         "HED": OrderedDict({
-            "": SourcePropertyItem(),
-            "Train ID": SourcePropertyItem(
-                device_ids=["", "Any"],
-                properties=["timestamp.tid"]
-            ),
-            "User defined": SourcePropertyItem(),
-        }),
-        "SQS": OrderedDict({
             "": SourcePropertyItem(),
             "Train ID": SourcePropertyItem(
                 device_ids=["", "Any"],
