@@ -1,6 +1,26 @@
 CHANGELOG
 =========
 
+karaboFAI 0.6.0 (31 August 2019)
+---------------------------------
+
+- **Bug Fix**
+
+    - Assembling image from files, when non-detector source available in data !140
+    - Add mid specific data sources in ctrl widget !139
+
+- **Improvement**
+
+    - Code clean-up ! 138
+    - Remove moving average of images !128
+    - Display number of filtered pulses/train in OverviewWindow !128
+    - Raise StopPipelineError in ImageProcessorPulse instead of ProcessingError !128
+
+- **New Feature**
+
+
+- **Test**
+
 karaboFAI 0.5.5 (26 August 2019)
 ---------------------------------
 
