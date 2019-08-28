@@ -13,6 +13,7 @@ import copy
 import unittest
 from unittest.mock import patch
 import os
+import re
 import tempfile
 
 import numpy as np
@@ -142,10 +143,16 @@ class TestLpdAssembler(unittest.TestCase):
                 {key_name: np.ones((4, 256, 256), dtype=np.float32)},
             'FXE_DET_LPD1M-1/DET/3CH0:xtdf':
                 {key_name: np.ones((4, 256, 256), dtype=np.float32)},
+            # Non detector data source included in streaming from files.
+            # To test stack_detector_data
+            'XGM':{"data.intensitySa1TD": np.ones(60)}
         }}
+        # Only LPD modules related keys
+        module_keys = [key for key in data['raw'].keys()
+                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
         self._assembler.process(data)
         # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertFalse(any([key in data['raw'] for key in module_keys]))
 
         self.assertEqual(3, data['assembled'].ndim)
         assembled_shape = data['assembled'].shape
