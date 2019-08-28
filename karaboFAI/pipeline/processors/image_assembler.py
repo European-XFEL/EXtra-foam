@@ -189,7 +189,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data")
+            return stack_detector_data(data, "image.data", only="AGIPD")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -208,7 +208,7 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_file(self, data, src_name):
             """Overload."""
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data")
+            return stack_detector_data(data, "image.data", only="LPD")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -293,7 +293,7 @@ class ImageAssemblerFactory(ABC):
         @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
-            modules_data = stack_detector_data(data, "image.data")
+            modules_data = stack_detector_data(data, "image.data", only="DSSC")
 
             dtype = modules_data.dtype
 
