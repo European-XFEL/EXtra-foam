@@ -16,122 +16,40 @@ import redis
 from karaboFAI.ipc import RedisConnection
 
 
-class Metadata:
+class MetaMetadata(type):
+    def __new__(mcs, name, bases, class_dict):
+        proc_list = []
+        for k, v in class_dict.items():
+            if isinstance(v, str):
+                s = v.split(":")
+                if len(s) == 3 and s[1] == 'proc':
+                    proc_list.append(s[2])
 
-    DATA_SOURCE = "metadata:source"
+        class_dict['processors'] = proc_list
+        cls = type.__new__(mcs, name, bases, class_dict)
+        return cls
 
-    ANALYSIS_TYPE = "metadata:analysis_type"
-    ANALYSIS_TYPE_PULSE = "metadata:analysis_type_pulse"
 
-    GLOBAL_PROC = "metadata:proc:global"
-    GEOMETRY_PROC = "metadata:proc:geometry"
-    AZIMUTHAL_INTEG_PROC = "metadata:proc:azimuthal_integration"
-    PUMP_PROBE_PROC = "metadata:proc:pump_probe"
-    ROI_PROC = "metadata:proc:roi"
-    CORRELATION_PROC = "metadata:proc:correlation"
-    BIN_PROC = "metadata:proc:bin"
-    IMAGE_PROC = "metadata:proc:image"
-    STATISTICS_PROC = "metadata:proc:pulse_fom"
-    DATA_REDUCTION_PROC = "metadata:proc:data_reduction"
-    DARK_RUN = "metadata:proc:data_run"
+class Metadata(metaclass=MetaMetadata):
 
-    _meta = {
-        SESSION: [
-            "detector",
-            "topic",
-        ],
-        ANALYSIS_TYPE: [
-            "analysis_types",
-        ],
-        DATA_SOURCE: [
-            "endpoint",
-            "detector_source_name",
-            "source_type",
-            "xgm_source_name",
-        ]
-    }
+    SESSION = "meta:session"
 
-    _proc_meta = {
-        GLOBAL_PROC: [
-            "sample_distance",
-            "photon_energy",
-            "selected_pulse_indices",
-            "ma_window",
-        ],
-        IMAGE_PROC: [
-            "threshold_mask",
-            "ma_window",
-            "background",
-        ],
-        GEOMETRY_PROC: [
-            "geometry_file",
-        ],
-        # region and visibility must be give first since the image tool window
-        # is not opened by default
-        ROI_PROC: [
-            "region1",
-            "region2",
-            "region3",
-            "region4",
-            "visibility1",
-            "visibility2",
-            "visibility3",
-            "visibility4",
-            "proj:direction",
-            "proj:normalizer",
-            "proj:auc_range",
-            "proj:fom_integ_range",
-        ],
-        AZIMUTHAL_INTEG_PROC: [
-            "integ_center_x",
-            "integ_center_y",
-            "integ_method",
-            "integ_points",
-            "integ_range",
-            "normalizer",
-            "auc_range",
-            "fom_integ_range",
-        ],
-        PUMP_PROBE_PROC: [
-            "analysis_type",
-            "mode",
-            "on_pulse_indices",
-            "off_pulse_indices",
-            "abs_difference",
-        ],
-        CORRELATION_PROC: [
-            "analysis_type",
-            "device_id1",
-            "device_id2",
-            "device_id3",
-            "device_id4",
-            "property1",
-            "property2",
-            "property3",
-            "property4",
-            "resolution1",
-            "resolution2",
-            "resolution3",
-            "resolution4",
-        ],
-        BIN_PROC: [
-            "analysis_type",
-            "device_id_x",
-            "device_id_y",
-            "property_x",
-            "property_y",
-            "n_bins_x",
-            "n_bins_y",
-            "bin_range_x",
-            "bin_range_y",
-            "mode",
-        ],
-        STATISTICS_PROC: [
-            "analysis_type",
-            "n_bins",
-            "pulse_resolved",
-        ],
-    }
+    DATA_SOURCE = "meta:source"
+
+    ANALYSIS_TYPE = "meta:analysis_type"
+
+    GLOBAL_PROC = "meta:proc:global"
+    IMAGE_PROC = "meta:proc:image"
+    GEOMETRY_PROC = "meta:proc:geometry"
+    AZIMUTHAL_INTEG_PROC = "meta:proc:azimuthal_integration"
+    PUMP_PROBE_PROC = "meta:proc:pump_probe"
+    ROI_PROC = "meta:proc:roi"
+    XAS_PROC = "meta:proc:xas"
+    CORRELATION_PROC = "meta:proc:correlation"
+    BIN_PROC = "meta:proc:bin"
+    STATISTICS_PROC = "meta:proc:pulse_fom"
+    DATA_REDUCTION_PROC = "meta:proc:data_reduction"
+    DARK_RUN_PROC = "meta:proc:dark_run"
 
 
 def redis_except_handler(return_value):
