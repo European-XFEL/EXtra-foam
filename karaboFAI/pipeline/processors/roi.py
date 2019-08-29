@@ -17,7 +17,7 @@ from .base_processor import (
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve, mask_image
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...config import AnalysisType, VFomNormalizer
 from ...utils import profiler
 

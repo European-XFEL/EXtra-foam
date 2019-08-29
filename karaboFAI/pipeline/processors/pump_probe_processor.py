@@ -11,7 +11,7 @@ All rights reserved.
 """
 from .base_processor import _BaseProcessor
 from ...config import AnalysisType, PumpProbeMode
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 
 
 class PumpProbeProcessor(_BaseProcessor):

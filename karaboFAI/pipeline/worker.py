@@ -15,9 +15,9 @@ import sys
 import traceback
 import time
 
-from .exceptions import StopPipelineError, ProcessingError, ProcessingError
-from ..metadata import MetaProxy
-from ..metadata import Metadata as mt
+from .exceptions import StopPipelineError, ProcessingError
+from ..database import MetaProxy
+from ..database import Metadata as mt
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
 

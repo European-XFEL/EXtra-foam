@@ -62,7 +62,10 @@ def try_to_connect_redis_server(host, port, *, n_attempts=5):
 
 
 def start_redis_client():
-    """Start a Redis client."""
+    """Start a Redis client.
+
+    This function is for the command line tool: karaboFAI-redis-cli.
+    """
     exec_ = config["REDIS_EXECUTABLE"].replace("redis-server", "redis-cli")
 
     if not os.path.isfile(exec_):

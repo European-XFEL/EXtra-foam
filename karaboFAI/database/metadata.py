@@ -11,7 +11,7 @@ All rights reserved.
 """
 import redis
 
-from .ipc import RedisConnection
+from karaboFAI.ipc import RedisConnection
 
 
 class Metadata:

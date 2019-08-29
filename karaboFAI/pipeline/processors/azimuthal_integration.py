@@ -21,10 +21,9 @@ from .base_processor import (
     _BaseProcessor, _normalize_vfom, _normalize_vfom_pp
 )
 from ..data_model import MovingAverageArray
-from ..exceptions import ProcessingError
 from ...algorithms import mask_image, slice_curve
 from ...config import VFomNormalizer, AnalysisType, config
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...utils import profiler
 
 

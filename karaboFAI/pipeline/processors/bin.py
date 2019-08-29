@@ -15,7 +15,7 @@ from .base_processor import (
     _BaseProcessor, _get_slow_data
 )
 from ..exceptions import ProcessingError
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...config import AnalysisType, BinMode
 from ...utils import profiler
 

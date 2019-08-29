@@ -20,8 +20,8 @@ from .data_model import ProcessedData
 from ..config import config
 from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
-from ..metadata import MetaProxy
-from ..metadata import Metadata as mt
+from ..database import MetaProxy
+from ..database import Metadata as mt
 
 
 class Pipe:

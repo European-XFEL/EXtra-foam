@@ -18,7 +18,7 @@ from ..exceptions import (
     PumpProbeIndexError,
 )
 from ...algorithms import mask_image
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config, PumpProbeMode

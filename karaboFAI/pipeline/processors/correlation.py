@@ -12,7 +12,7 @@ All rights reserved.
 from .base_processor import _BaseProcessor, _get_slow_data
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...utils import profiler
 
 

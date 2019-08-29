@@ -10,11 +10,10 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
-import copy
 
 from ..exceptions import ProcessingError
-from ...metadata import MetaProxy
-from ...metadata import Metadata as mt
+from ...database import MetaProxy
+from ...database import Metadata as mt
 from ...algorithms import normalize_auc
 from ...config import AnalysisType, VFomNormalizer
 

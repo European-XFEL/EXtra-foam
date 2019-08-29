@@ -11,7 +11,7 @@ All rights reserved.
 """
 from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...utils import profiler
 
 

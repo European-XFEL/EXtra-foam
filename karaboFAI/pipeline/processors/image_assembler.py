@@ -22,7 +22,7 @@ from karabo_data.geometry2 import (
 from .base_processor import _BaseProcessor, _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, DataSource
-from ...metadata import Metadata as mt
+from ...database import Metadata as mt
 from ...utils import profiler
 
 

@@ -13,11 +13,10 @@ from PyQt5 import QtCore, QtGui
 from zmq.error import ZMQError
 
 from .base_window import AbstractSatelliteWindow
-from ...config import config
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
 from ...logger import logger
-from ...metadata import Metadata as mt
-from ...metadata import MetaProxy
+from ...database import Metadata as mt
+from ...database import MetaProxy
 from ...offline import gather_sources, FileServer
 
 
