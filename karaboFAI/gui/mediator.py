@@ -14,8 +14,8 @@ import json
 
 from PyQt5.QtCore import pyqtSignal,  QObject
 
-from ..database.metadata import Metadata as mt
-from ..database.metadata import MetaProxy
+from ..database import Metadata as mt
+from ..database import MetaProxy
 from ..ipc import RedisConnection
 
 

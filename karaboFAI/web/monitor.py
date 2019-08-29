@@ -17,7 +17,8 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 
 from ..config import config
-from ..database import Metadata, MonitorProxy
+from ..database import Metadata, MetaProxy, MonitorProxy
+from ..database import Metadata as mt
 
 
 class Color:
@@ -43,6 +44,7 @@ app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True
 app.config['suppress_callback_exceptions'] = True
 
+meta_proxy = MetaProxy()
 proxy = MonitorProxy()
 
 
@@ -72,9 +74,11 @@ def get_top_bar():
     else:
         _, tid = ret
 
+    sess = meta_proxy.get_all(mt.SESSION)
+
     return [
-        get_top_bar_cell("Detector", config['DETECTOR']),
-        get_top_bar_cell("Topic", config['TOPIC']),
+        get_top_bar_cell("Detector", sess['detector']),
+        get_top_bar_cell("Topic", sess['topic']),
         get_top_bar_cell("Train ID", tid),
     ]
 
@@ -256,7 +260,10 @@ app.layout = html.Div(
 
 
 def web_monitor():
-    """Start the web monitor in the terminal."""
+    """Start a Flask server for the monitor.
+
+    This function is for the command line tool: karaboFAI-monitor.
+    """
     ap = argparse.ArgumentParser(prog="karaboFAI-monitor")
     ap.add_argument("port", help="TCP port to run server on")
 

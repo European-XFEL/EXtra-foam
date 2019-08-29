@@ -211,6 +211,7 @@ setup(
             'karaboFAI-kill=karaboFAI.services:kill_application',
             'karaboFAI-stream=karaboFAI.services:stream_file',
             'karaboFAI-redis-cli=karaboFAI.services:start_redis_client',
+            'karaboFAI-monitor=karaboFAI.web.monitor:web_monitor'
         ],
     },
     ext_modules=ext_modules,
@@ -244,6 +245,7 @@ setup(
         'pyarrow>=0.13.0',
         'psutil>=5.6.2',
         'imageio>=2.5.0',
+        'dash>=1.1.0',
     ],
     extras_require={
         'docs': [

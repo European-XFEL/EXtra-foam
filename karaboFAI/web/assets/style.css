@@ -1,0 +1,63 @@
+body{
+  background-color: #3AAFA9;
+}
+
+.display-none{
+  display: none;
+}
+
+.display-inlineblock{
+  display: inline-block;
+}
+
+#processor_list{
+  margin-top: 15px;
+  width: 30%;
+}
+
+#analysis_type{
+  margin-left: 30px;
+  width: 20%;
+}
+
+.float-right{
+  float:right;
+}
+
+.header-title{
+  font-family: Arial Narrow;
+  font-weight: 400;
+  color: #DEF2F1;
+}
+
+.div-top-bar{
+  color: #FEFFFF;
+  font-size: 24px;
+}
+
+.p-top-bar{
+  color: #17252A;
+  font-size: 18px;
+}
+
+.div-info{
+  color: #FEFFFF;
+  font-weight: 300;
+}
+
+.p-info{
+  color: #17252A;
+  font-size: 18px;
+}
+
+.two-col{
+  display: inline-block;
+  width: 50%;
+  text-align: center;
+}
+
+.three-col{
+  display: inline-block;
+  width: 33%;
+  text-align: center;
+}

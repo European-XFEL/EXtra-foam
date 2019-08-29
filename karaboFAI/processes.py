@@ -37,8 +37,7 @@ ProcessInfoList = namedtuple("ProcessInfoList", [
 
 # key: process_type
 # value: a dictionary, process name in karaboFAI:Process instance
-FaiProcesses = namedtuple("FaiProcesses",
-                          ['redis', 'pipeline'])
+FaiProcesses = namedtuple("FaiProcesses", ['redis', 'pipeline'])
 
 _fai_processes = FaiProcesses({}, {})
 
@@ -47,7 +46,7 @@ def register_fai_process(process_info):
     """Register a new process."""
     proc = process_info.process
     name = process_info.name
-    if name == 'redis':
+    if name.lower() == 'redis':
         _fai_processes.redis[name] = proc
     else:
         assert isinstance(proc, ProcessWorker)

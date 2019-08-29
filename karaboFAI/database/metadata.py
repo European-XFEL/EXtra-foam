@@ -3,17 +3,12 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Proxy for metadata which is stored in Redis.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import functools
-
-import redis
-
-from karaboFAI.ipc import RedisConnection
+from .db_utils import redis_except_handler
+from ..ipc import RedisConnection
 
 
 class MetaMetadata(type):
@@ -50,18 +45,6 @@ class Metadata(metaclass=MetaMetadata):
     STATISTICS_PROC = "meta:proc:pulse_fom"
     DATA_REDUCTION_PROC = "meta:proc:data_reduction"
     DARK_RUN_PROC = "meta:proc:dark_run"
-
-
-def redis_except_handler(return_value):
-    def wrap(f):
-        @functools.wraps(f)
-        def catched_f(*args, **kwargs):
-            try:
-                return f(*args, **kwargs)
-            except redis.exceptions.ConnectionError:
-                return return_value
-        return catched_f
-    return wrap
 
 
 class MetaProxy:
