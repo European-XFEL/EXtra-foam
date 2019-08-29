@@ -23,6 +23,8 @@ import redis
 
 from . import __version__
 from .config import config
+from .database import Metadata as mt
+from .database import MetaProxy
 from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
 from .gui import MainGUI, mkQApp
@@ -188,6 +190,10 @@ class FAI:
             start_redis_server()
         except (ConnectionError, FileNotFoundError):
             sys.exit(1)
+
+        proxy = MetaProxy()
+        proxy.mset(mt.SESSION, {'detector': config['DETECTOR'],
+                                'topic': config['TOPIC']})
 
         try:
             # process which runs the image assembler and processor

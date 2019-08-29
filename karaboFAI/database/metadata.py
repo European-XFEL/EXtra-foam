@@ -9,6 +9,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import functools
+
 import redis
 
 from karaboFAI.ipc import RedisConnection
@@ -34,6 +36,10 @@ class Metadata:
     DARK_RUN = "metadata:proc:data_run"
 
     _meta = {
+        SESSION: [
+            "detector",
+            "topic",
+        ],
         ANALYSIS_TYPE: [
             "analysis_types",
         ],
@@ -128,12 +134,25 @@ class Metadata:
     }
 
 
+def redis_except_handler(return_value):
+    def wrap(f):
+        @functools.wraps(f)
+        def catched_f(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except redis.exceptions.ConnectionError:
+                return return_value
+        return catched_f
+    return wrap
+
+
 class MetaProxy:
     _db = RedisConnection()
 
     def reset(self):
         self._db = None
 
+    @redis_except_handler(-1)
     def set(self, name, key, value):
         """Set a Hash.
 
@@ -141,37 +160,32 @@ class MetaProxy:
                    1 if created a new field;
                    0 if set on a new field.
         """
-        try:
-            return self._db.hset(name, key, value)
-        except redis.exceptions.ConnectionError:
-            return -1
+        return self._db.hset(name, key, value)
 
+    @redis_except_handler(-1)
+    def mset(self, name, mapping):
+        return self._db.hmset(name, mapping)
+
+    @redis_except_handler(None)
     def get(self, name, key):
-        try:
-            return self._db.hget(name, key)
-        except redis.exceptions.ConnectionError:
-            pass
+        return self._db.hget(name, key)
 
+    @redis_except_handler(None)
+    def mget(self, name, keys):
+        return self._db.hmget(name, keys)
+
+    @redis_except_handler(None)
     def delete(self, name, key):
-        try:
-            return self._db.hdel(name, key)
-        except redis.exceptions.ConnectionError:
-            pass
+        return self._db.hdel(name, key)
 
+    @redis_except_handler(None)
     def get_all(self, name):
-        try:
-            return self._db.hgetall(name)
-        except redis.exceptions.ConnectionError:
-            pass
+        return self._db.hgetall(name)
 
+    @redis_except_handler(None)
     def increase_by(self, name, key, amount=1):
-        try:
-            return self._db.hincrby(name, key, amount)
-        except redis.exceptions.ConnectionError:
-            pass
+        return self._db.hincrby(name, key, amount)
 
+    @redis_except_handler(None)
     def increase_by_float(self, name, key, amount=1):
-        try:
-            return self._db.hincrbyfloat(name, key, amount)
-        except redis.exceptions.ConnectionError:
-            pass
+        return self._db.hincrbyfloat(name, key, amount)
