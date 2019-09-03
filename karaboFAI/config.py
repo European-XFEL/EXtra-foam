@@ -118,7 +118,7 @@ class _Config(dict):
         # dedicated REDIS port.
         "REDIS_PORT": 6379,
         # maximum allowed REDIS memory (fraction of system memory)
-        "REDIS_MAX_MEMORY_FRAC": 0.2,
+        "REDIS_MAX_MEMORY_FRAC": 0.2,  # must <= 0.5
         # password to access the Redis server
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
     }

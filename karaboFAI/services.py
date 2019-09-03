@@ -31,7 +31,7 @@ from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow, ImageToolWindow
 
-_N_CPUS, _N_GPUS, _SYS_MEMORY = check_system_resource()
+_CPU_INFO, _GPU_INFO, _MEMORY_INFO = check_system_resource()
 
 
 def try_to_connect_redis_server(host, port, *, n_attempts=5):
@@ -121,14 +121,13 @@ def start_redis_server():
 
         logger.info(f"Redis server started at {host}:{port}")
 
-        register_fai_process(ProcessInfo(name="redis",
-                                         process=process))
+        register_fai_process(ProcessInfo(name="redis", process=process))
 
         try:
-            mem_frac = config["REDIS_MAX_MEMORY_FRAC"]
-            if mem_frac < 0.001 or mem_frac > 0.5:
-                mem_frac = 0.3
-            client.config_set("maxmemory", int(mem_frac * _SYS_MEMORY))
+            frac = config["REDIS_MAX_MEMORY_FRAC"]
+            if frac < 0.01 or frac > 0.5:
+                frac = 0.3  # in case of evil configuration
+            client.config_set("maxmemory", int(frac*_MEMORY_INFO.total_memory))
             mem_in_bytes = int(client.config_get('maxmemory')['maxmemory'])
             logger.info(f"Redis memory is capped at "
                         f"{mem_in_bytes / 1024 ** 3:.1f} GB")
@@ -204,9 +203,7 @@ class FAI:
             sys.exit(1)
 
     def init(self):
-        logger.info(f"Number of available CPUs: {_N_CPUS}, "
-                    f"number of available GPUs: {_N_GPUS}, "
-                    f"total system memory: {_SYS_MEMORY/1024**3:.1f} GB")
+        logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
         self.image_worker.start()
         register_fai_process(ProcessInfo(name=self.image_worker.name,
                                          process=self.image_worker))

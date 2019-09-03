@@ -3,15 +3,15 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Helper functions.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os
 import psutil
 import multiprocessing as mp
 import functools
+import subprocess
 from threading import RLock
 import time
 
@@ -98,20 +98,98 @@ class cached_property:
         return val
 
 
-def get_system_memory():
-    """Get the total system memory."""
-    return psutil.virtual_memory().total
+def _get_system_cpu_info():
+    """Get the system cpu information."""
+    class CpuInfo:
+        def __init__(self, n_cpus=None):
+            self.n_cpus = n_cpus
+
+        def __repr__(self):
+            return f"[CPU] count: {self.n_cpus}"
+
+    return CpuInfo(mp.cpu_count())
+
+
+def _get_system_memory_info():
+    """Get the system memory information."""
+    class MemoryInfo:
+        def __init__(self, total_memory=None, used_memory=None):
+            self.total_memory = total_memory
+            self.used_memory = used_memory
+
+        def __repr__(self):
+            return f"[Memory] " \
+                   f"total: {self.total_memory / 1024**3:.1f} GB, " \
+                   f"used: {self.used_memory / 1024**3:.1f} GB"
+
+    mem = psutil.virtual_memory()
+    return MemoryInfo(mem.total, mem.used)
+
+
+def _get_system_gpu_info():
+    """Get the system GPU information."""
+    class GpuInfo:
+        def __init__(self,
+                     gpu_name=None,
+                     total_memory=None,
+                     used_memory=None):
+            self.name = gpu_name
+            self.total_memory = total_memory
+            self.used_memory = used_memory
+
+        def __repr__(self):
+            if self.name is None:
+                return f"[GPU] Not found"
+            return f"[GPU] " \
+                   f"name: {self.name}, " \
+                   f"total: {self.total_memory / 1024**3:.1f} GB, " \
+                   f"used: {self.used_memory / 1024**3:.1f} GB"
+
+    command = ["nvidia-smi",
+               "--query-gpu=name,memory.total,memory.used",
+               "--format=csv,noheader,nounits"]
+
+    try:
+        p = psutil.Popen(command, stdout=subprocess.PIPE)
+        stdout, _ = p.communicate()
+
+        output = stdout.decode('UTF-8')
+        info = []
+        for line in output.split(os.linesep):
+            if line:
+                splitted = line.split(',')
+                if len(splitted) != 3:
+                    logger.error(
+                        f"Received unexpected query result for GPU: {line}")
+                    info.append(GpuInfo())
+                else:
+                    name = splitted[0]
+                    total = int(splitted[1]) * 1024**2  # MB -> byte
+                    used = int(splitted[2]) * 1024**2  # MB -> byte
+                    info.append(GpuInfo(name, total, used))
+
+        if len(info) == 1:
+            return info[0]
+        return info
+    except FileNotFoundError as e:
+        # raised when 'nvidia-smi' does not exist
+        logger.error(repr(e))
+        return GpuInfo()
+    except Exception as e:
+        # We don't want to prevent karaboFAI from starting simply because
+        # failing to get the GPU information.
+        logger.error(
+            f"Unexpected error when querying GPU information: {repr(e)}")
+        return GpuInfo()
 
 
 def check_system_resource():
     """Check the resource of the current system"""
-    n_cpus = mp.cpu_count()
+    cpu_info = _get_system_cpu_info()
+    gpu_info = _get_system_gpu_info()
+    memory_info = _get_system_memory_info()
 
-    n_gpus = 0
-
-    total_memory = get_system_memory()
-
-    return n_cpus, n_gpus, total_memory
+    return cpu_info, gpu_info, memory_info
 
 
 class _MetaSingleton(type):
