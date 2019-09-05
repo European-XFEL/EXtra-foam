@@ -65,45 +65,90 @@ def redis_except_handler(return_value):
 
 
 class MetaProxy:
+    """Proxy for retrieving metadata."""
     _db = RedisConnection()
 
     def reset(self):
         self._db = None
 
-    @redis_except_handler(-1)
+    @redis_except_handler
     def set(self, name, key, value):
-        """Set a Hash.
+        """Set a key-value pair of a hash.
 
-        :returns: -1 if connection fails;
-                   1 if created a new field;
-                   0 if set on a new field.
+        :returns: None if the connection failed;
+                  1 if created a new field;
+                  0 if set on an old field.
         """
         return self._db.hset(name, key, value)
 
-    @redis_except_handler(-1)
+    @redis_except_handler
     def mset(self, name, mapping):
+        """Set a mapping of a hash.
+
+        :return: None if the connection failed;
+                 True if set.
+        """
         return self._db.hmset(name, mapping)
 
-    @redis_except_handler(None)
+    @redis_except_handler
     def get(self, name, key):
+        """Get the value for a given key of a hash.
+
+        :return: None if the connection failed or key was not found;
+                 otherwise, the value.
+        """
         return self._db.hget(name, key)
 
-    @redis_except_handler(None)
+    @redis_except_handler
     def mget(self, name, keys):
+        """Get values for a list of keys of a hash.
+
+        :return: None if the connection failed;
+                 otherwise, a list of values.
+        """
         return self._db.hmget(name, keys)
 
-    @redis_except_handler(None)
+    @redis_except_handler
     def delete(self, name, key):
+        """Delete a key of a hash.
+
+        :return: None if the connection failed;
+                 1 if key was found and deleted;
+                 0 if key was not found.
+        """
         return self._db.hdel(name, key)
 
-    @redis_except_handler(None)
+    @redis_except_handler
     def get_all(self, name):
+        """Get all key-value pairs of a hash.
+
+        :return: None if the connection failed;
+                 otherwise, a dictionary of key-value pairs. If the hash
+                 does not exist, an empty dictionary will be returned.
+        """
         return self._db.hgetall(name)
 
-    @redis_except_handler(None)
+    @redis_except_handler
     def increase_by(self, name, key, amount=1):
+        """Increase the value of a key in a hash by the given amount.
+
+        :return: None if the connection failed;
+                 value after the increment if the initial value is an integer;
+                 amount if key does not exist (set initial value to 0).
+
+        :raise: redis.exceptions.ResponseError if value is not an integer.
+        """
         return self._db.hincrby(name, key, amount)
 
-    @redis_except_handler(None)
-    def increase_by_float(self, name, key, amount=1):
+    @redis_except_handler
+    def increase_by_float(self, name, key, amount=1.0):
+        """Increase the value of a key in a hash by the given amount.
+
+        :return: None if the connection failed;
+                 value after the increment if the initial value can be
+                 converted to a float;
+                 amount if key does not exist (set initial value to 0).
+
+        :raise: redis.exceptions.ResponseError if value is not a float.
+        """
         return self._db.hincrbyfloat(name, key, amount)
