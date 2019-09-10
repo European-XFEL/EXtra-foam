@@ -15,7 +15,8 @@ from multiprocessing import Process
 import re
 from time import time
 
-from karabo_data import RunDirectory, ZMQStreamer
+from karabo_data import RunDirectory
+from karabo_data.export import ZMQStreamer
 
 from ..config import config
 from ..utils import profiler
