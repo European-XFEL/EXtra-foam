@@ -61,7 +61,7 @@ def _normalize_vfom(processed, y, normalizer, *, x=None, auc_range=None):
     """
     if normalizer == VFomNormalizer.AUC:
         # normalized by area under curve (AUC)
-        normalized = normalize_auc(y, x, *auc_range)
+        normalized = normalize_auc(y, x, auc_range)
     else:
         # normalized by ROI
         if normalizer == VFomNormalizer.ROI3:
@@ -99,8 +99,8 @@ def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
     """
     if normalizer == VFomNormalizer.AUC:
         # normalized by area under curve (AUC)
-        normalized_on = normalize_auc(y_on, x, *auc_range)
-        normalized_off = normalize_auc(y_off, x, *auc_range)
+        normalized_on = normalize_auc(y_on, x, auc_range)
+        normalized_off = normalize_auc(y_off, x, auc_range)
     else:
         # normalized by ROI
         on = processed.roi.on

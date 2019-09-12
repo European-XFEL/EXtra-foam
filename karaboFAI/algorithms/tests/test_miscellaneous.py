@@ -19,11 +19,11 @@ class TestMiscellaneous(unittest.TestCase):
         # share memory space with the original y
 
         # normal case
-        y_normalized = normalize_auc(y, x, 1, 3)
+        y_normalized = normalize_auc(y, x, (1, 3))
         self.assertTrue(np.array_equal(y_normalized, np.array([0.5]*6)))
 
         # x_min and x_max are -inf/inf
-        y_normalized = normalize_auc(y, x, -np.inf, np.inf)
+        y_normalized = normalize_auc(y, x, (-np.inf, np.inf))
         self.assertTrue(np.array_equal(y_normalized, np.array([0.2]*6)))
 
         # AUC is zero
@@ -32,7 +32,7 @@ class TestMiscellaneous(unittest.TestCase):
         with self.assertRaises(ValueError):
             normalize_auc(y, x)
         with self.assertRaises(ValueError):
-            normalize_auc(y, x, 2, 3)
+            normalize_auc(y, x, (2, 3))
 
         # normalize an all-zero curve
         y = np.array([0, 0, 0, 0, 0, 0])

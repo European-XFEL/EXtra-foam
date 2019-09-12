@@ -14,13 +14,12 @@ import numpy as np
 from .sampling import slice_curve
 
 
-def normalize_auc(y, x, x_min=None, x_max=None):
+def normalize_auc(y, x, auc_range=None):
     """Normalize a curve a given area under the curve (AUC).
 
     :param numpy.ndarray y: 1D array.
     :param numpy.ndarray x: 1D array.
-    :param None/float x_min: minimum x value.
-    :param None/float x_max: maximum x value.
+    :param None/tuple auc_range: x range for calculating AUC.
 
     :return numpy.ndarray: the normalized y.
 
@@ -31,7 +30,10 @@ def normalize_auc(y, x, x_min=None, x_max=None):
         return np.copy(y)
 
     # get the integration
-    itgt = np.trapz(*slice_curve(y, x, x_min, x_max))
+    if auc_range is None:
+        itgt = np.trapz(*slice_curve(y, x))
+    else:
+        itgt = np.trapz(*slice_curve(y, x, *auc_range))
 
     if itgt == 0:
         raise ValueError("Normalized by 0!")
