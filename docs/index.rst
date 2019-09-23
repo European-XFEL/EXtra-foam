@@ -15,6 +15,12 @@ Contents:
    windows
 
 .. toctree::
+   :caption: Tutorials
+   :maxdepth: 1
+
+   tutorial_data_flow
+
+.. toctree::
    :caption: Development
    :maxdepth: 1
 
