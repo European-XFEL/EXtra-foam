@@ -244,18 +244,20 @@ setup(
         'redis>=3.2.1',
         'psutil>=5.6.2',
         'imageio>=2.5.0',
-        'dash>=1.1.0',
     ],
     extras_require={
         'docs': [
-          'sphinx',
-          'nbsphinx',
-          'ipython',  # For nbsphinx syntax highlighting
+            'sphinx',
+            'nbsphinx',
+            'ipython',  # For nbsphinx syntax highlighting
         ],
         'test': [
-          'pytest',
-          'pytest-cov',
-        ]
+            'pytest',
+            'pytest-cov',
+        ],
+        'web': [
+            'dash>=1.1.0',
+        ],
     },
     python_requires='>=3.6',
     classifiers=[
