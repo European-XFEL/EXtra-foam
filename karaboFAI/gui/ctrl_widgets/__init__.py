@@ -5,7 +5,6 @@ from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .data_ctrl_widget import DataCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
-from .xas_ctrl_widget import XasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .data_reduction_ctrl_widget import DataReductionCtrlWidget
@@ -23,5 +22,4 @@ __all__ = [
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",
-    "XasCtrlWidget",
 ]

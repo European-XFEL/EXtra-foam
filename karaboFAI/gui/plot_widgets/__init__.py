@@ -24,9 +24,6 @@ from .plot_widgets import (
     PumpProbeOnOffWidget,
     PumpProbeFomWidget,
     TrainAiWidget,
-    XasSpectrumWidget,
-    XasSpectrumDiffWidget,
-    XasSpectrumBinCountWidget
 )
 
 # add plot widgets
@@ -39,7 +36,4 @@ __all__.extend([
     "PumpProbeFomWidget",
     "PumpProbeOnOffWidget",
     "TrainAiWidget",
-    "XasSpectrumBinCountWidget",
-    "XasSpectrumDiffWidget",
-    "XasSpectrumWidget",
 ])

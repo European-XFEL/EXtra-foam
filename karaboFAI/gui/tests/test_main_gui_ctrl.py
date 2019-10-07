@@ -52,9 +52,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls._bin1d_action = cls._actions[7]
         cls._bin2d_action = cls._actions[8]
         cls._poi_action = cls._actions[9]
-        cls._xas_action = cls._actions[10]
-        cls._ai_action = cls._actions[11]
-        cls._darkrun_action = cls._actions[13]
+
+        cls._ai_action = cls._actions[10]
+        cls._darkrun_action = cls._actions[12]
 
     @classmethod
     def tearDownClass(cls):
@@ -249,26 +249,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
-
-    def testXasCtrlWidget(self):
-        widget = self.gui.xas_ctrl_widget
-        proc = self.scheduler._xas_proc
-        proc.update()
-
-        # check initial value is set
-        self.assertEqual("", proc._mono_src)
-        self.assertEqual(int(widget._n_bins_le.text()), proc._n_bins)
-        self.assertTupleEqual((0.7, 0.9), proc._bin_range)
-
-        # set another value
-        widget._n_bins_le.setText("40")
-        widget._bin_range_le.setText("0.9, 1.0")
-        proc.update()
-
-        self.assertEqual(40, proc._n_bins)
-        self.assertTupleEqual((0.9, 1.0), proc._bin_range)
-
-        widget._reset_btn.clicked.emit()
 
     @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
                                "SOURCE_NAME_FILE": ["A", "B"]})

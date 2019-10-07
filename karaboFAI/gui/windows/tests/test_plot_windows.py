@@ -10,14 +10,12 @@ from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
     Bin1dWindow, Bin2dWindow, OverviewWindow, AzimuthalIntegrationWindow,
     StatisticsWindow, PumpProbeWindow, RoiWindow, PulseOfInterestWindow,
-    XasWindow
 )
 from karaboFAI.gui.plot_widgets import (
     AssembledImageView, TrainAiWidget, FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
     PoiStatisticsWidget, PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
-    XasSpectrumBinCountWidget, XasSpectrumWidget, XasSpectrumDiffWidget,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
     CorrelationWidget,
 )
@@ -63,19 +61,6 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[PumpProbeImageView])
         self.assertEqual(2, counter[PumpProbeOnOffWidget])
         self.assertEqual(1, counter[PumpProbeFomWidget])
-
-    def testXasWindow(self):
-        win = XasWindow(pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(6, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
-        self.assertEqual(3, counter[RoiImageView])
-        self.assertEqual(1, counter[XasSpectrumWidget])
-        self.assertEqual(1, counter[XasSpectrumDiffWidget])
-        self.assertEqual(1, counter[XasSpectrumBinCountWidget])
 
     def testRoiWindow(self):
         win = RoiWindow(pulse_resolved=True, parent=self.gui)

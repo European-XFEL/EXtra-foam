@@ -325,18 +325,6 @@ class XgmData:
         self.pos = DataItem()
 
 
-class XasData:
-    # TODO: fix me
-    def __init__(self):
-        super().__init__()
-
-        # show the expected data type
-        self.bin_center = np.array([])
-        self.bin_count = np.array([])
-        self.xgm = np.array([])
-        self.absorptions = [np.array([]), np.array([])]
-
-
 class _RoiAuxData:
     """_RoiAuxTrain class.
 
@@ -726,7 +714,6 @@ class ProcessedData:
         ai (AzimuthalIntegrationData): azimuthal integration train-resolved data.
         pp (PumpProbeData): pump-probe train-resolved data.
         roi (RoiData): ROI train-resolved data.
-        xas (XasData): XAS train-resolved data.
 
         st (StatisticsData): statistics data.
         correlation (CorrelationData): correlation data.
@@ -749,7 +736,6 @@ class ProcessedData:
         self.xgm = XgmData()
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
-        self.xas = XasData()
 
         self.st = StatisticsData()
         self.corr = CorrelationData()

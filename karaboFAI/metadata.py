@@ -27,7 +27,6 @@ class Metadata:
     PUMP_PROBE_PROC = "metadata:proc:pump_probe"
     ROI_PROC = "metadata:proc:roi"
     CORRELATION_PROC = "metadata:proc:correlation"
-    XAS_PROC = "metadata:proc:xas"
     BIN_PROC = "metadata:proc:bin"
     IMAGE_PROC = "metadata:proc:image"
     STATISTICS_PROC = "metadata:proc:pulse_fom"
@@ -108,10 +107,6 @@ class Metadata:
             "resolution2",
             "resolution3",
             "resolution4",
-        ],
-        XAS_PROC: [
-            "n_bins",
-            "bin_range",
         ],
         BIN_PROC: [
             "analysis_type",

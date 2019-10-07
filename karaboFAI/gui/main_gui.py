@@ -26,15 +26,14 @@ from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, DataCtrlWidget, DataReductionCtrlWidget,
     StatisticsCtrlWidget, GeometryCtrlWidget, PumpProbeCtrlWidget,
-    RoiCtrlWidget, XasCtrlWidget
+    RoiCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, DarkRunWindow,
     ImageToolWindow, OverviewWindow, ProcessMonitor,
     AzimuthalIntegrationWindow, StatisticsWindow, PulseOfInterestWindow,
-    PumpProbeWindow, RoiWindow, XasWindow, FileStreamControllerWindow,
-    AboutWindow
+    PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow
 )
 from .. import __version__
 from ..config import config
@@ -189,10 +188,6 @@ class MainGUI(QtGui.QMainWindow):
         if not self._pulse_resolved:
             open_poi_window_at.setEnabled(False)
 
-        open_xas_window_at = self._addAction("XAS", "xas.png")
-        open_xas_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, XasWindow))
-
         open_ai_window_at = self._addAction(
             "Azimuthal Integration", "azimuthal_integration.png")
         open_ai_window_at.triggered.connect(
@@ -281,9 +276,6 @@ class MainGUI(QtGui.QMainWindow):
         self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
-        self.xas_ctrl_widget = XasCtrlWidget(
-            pulse_resolved=self._pulse_resolved, parent=self)
-
         self.data_ctrl_widget = DataCtrlWidget(
             parent=self, pulse_resolved=self._pulse_resolved)
 
@@ -316,7 +308,6 @@ class MainGUI(QtGui.QMainWindow):
         analysis_layout.addWidget(self.pump_probe_ctrl_widget)
         analysis_layout.addWidget(self.azimuthal_integ_ctrl_widget)
         analysis_layout.addWidget(self.roi_ctrl_widget)
-        analysis_layout.addWidget(self.xas_ctrl_widget)
 
         misc_layout = QtGui.QVBoxLayout()
         misc_layout.addWidget(self.data_ctrl_widget)

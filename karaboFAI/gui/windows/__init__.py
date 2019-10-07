@@ -4,7 +4,6 @@ from .overview_w import OverviewWindow
 from .azimuthal_integration_w import AzimuthalIntegrationWindow
 from .pump_probe_w import PumpProbeWindow
 from .roi_w import RoiWindow
-from .xas_w import XasWindow
 from .bin_w import Bin1dWindow, Bin2dWindow
 from .statistics_w import StatisticsWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
@@ -21,7 +20,6 @@ __all__ = [
     "StatisticsWindow",
     "PumpProbeWindow",
     "RoiWindow",
-    'XasWindow',
 ]
 
 

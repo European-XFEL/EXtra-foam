@@ -184,18 +184,6 @@ class Mediator(QObject):
     def onCorrelationReset(self):
         self._meta.set(mt.CORRELATION_PROC, "reset", 1)
 
-    def onXasMonoSourceNameChange(self, value: str):
-        self._meta.set(mt.XAS_PROC, "mono_source_name", value)
-
-    def onXasEnergyBinsChange(self, value: int):
-        self._meta.set(mt.XAS_PROC, "n_bins", value)
-
-    def onXasBinRangeChange(self, value: tuple):
-        self._meta.set(mt.XAS_PROC, "bin_range", str(value))
-
-    def onXasReset(self):
-        self._meta.set(mt.XAS_PROC, "reset", 1)
-
     def onBinGroupChange(self, value: tuple):
         # index, device ID, property name, bin_range, number of bins,
         # where the index starts from 1
