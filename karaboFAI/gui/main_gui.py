@@ -42,7 +42,7 @@ from ..utils import profiler
 from ..ipc import RedisConnection, RedisPSubscriber
 from ..pipeline import MpInQueue
 from ..processes import list_fai_processes, shutdown_all
-from ..database import MonitorProxy
+from ..database import MonProxy
 
 
 class Data4Visualization:
@@ -254,7 +254,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self.__redis_connection_fails = 0
 
-        self._monitor_proxy = MonitorProxy()
+        self._mon_proxy = MonProxy()
 
         # *************************************************************
         # control widgets
@@ -347,7 +347,7 @@ class MainGUI(QtGui.QMainWindow):
                 processed.update()
                 tid = processed.tid
 
-                self._monitor_proxy.add_tid_with_timestamp(tid)
+                self._mon_proxy.add_tid_with_timestamp(tid)
 
                 self._data.set(processed)
 

@@ -1,2 +1,2 @@
 from .metadata import Metadata, MetaProxy
-from .monitor_data import MonitorData, MonitorProxy
+from .mondata import MonData, MonProxy

@@ -17,7 +17,7 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 
 from ..config import config
-from ..database import Metadata, MetaProxy, MonitorProxy
+from ..database import Metadata, MetaProxy, MonProxy
 from ..database import Metadata as mt
 
 
@@ -45,7 +45,7 @@ app.scripts.config.serve_locally = True
 app.config['suppress_callback_exceptions'] = True
 
 meta_proxy = MetaProxy()
-proxy = MonitorProxy()
+proxy = MonProxy()
 
 
 def get_top_bar_cell(name, value):
