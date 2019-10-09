@@ -75,21 +75,24 @@ def get_top_bar():
         _, tid = ret
 
     sess = meta_proxy.get_all(mt.SESSION)
-
     return [
-        get_top_bar_cell("Detector", sess['detector']),
-        get_top_bar_cell("Topic", sess['topic']),
+        get_top_bar_cell("Detector",
+                         "Unknown" if sess is None else sess['detector']),
+        get_top_bar_cell("Topic",
+                         "Unknown" if sess is None else sess['topic']),
         get_top_bar_cell("Train ID", tid),
     ]
 
 
 def get_analysis_types():
     """Query and parse analysis types."""
-    query = proxy.get_all_analysis()
     ret = []
-    for k, v in query.items():
-        if k != 'AnalysisType.UNDEFINED' and int(v) > 0:
-            ret.append({'type': k.split(".")[-1], 'count': v})
+
+    query = proxy.get_all_analysis()
+    if query is not None:
+        for k, v in query.items():
+            if k != 'AnalysisType.UNDEFINED' and int(v) > 0:
+                ret.append({'type': k.split(".")[-1], 'count': v})
     return ret
 
 
