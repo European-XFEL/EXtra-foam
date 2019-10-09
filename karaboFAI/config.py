@@ -555,5 +555,21 @@ class ConfigWrapper(collections.Mapping):
     def detectors(self):
         return _Config.detectors
 
+    @staticmethod
+    def parse_detector_name(detector):
+        if detector == 'JUNGFRAU':
+            return 'JungFrau'
+
+        if detector == 'FASTCCD':
+            return 'FastCCD'
+
+        if detector == 'BASLERCAMERA':
+            return 'BaslerCamera'
+
+        if detector == 'JUNGFRAUPR':
+            return 'JungFrauPR'
+
+        return detector.upper()
+
 
 config = ConfigWrapper()  # global configuration

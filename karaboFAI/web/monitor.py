@@ -19,6 +19,7 @@ import plotly.graph_objs as go
 from ..config import config
 from ..database import Metadata, MetaProxy, MonProxy
 from ..database import Metadata as mt
+from ..ipc import reset_redis_connections
 
 
 class Color:
@@ -45,7 +46,7 @@ app.scripts.config.serve_locally = True
 app.config['suppress_callback_exceptions'] = True
 
 meta_proxy = MetaProxy()
-proxy = MonProxy()
+mon_proxy = MonProxy()
 
 
 def get_top_bar_cell(name, value):
@@ -66,7 +67,7 @@ def get_top_bar_cell(name, value):
 
 def get_top_bar():
     """Get Div for the top bar."""
-    ret = proxy.get_last_tid()
+    ret = mon_proxy.get_last_tid()
 
     if not ret:
         # [] or None
@@ -88,7 +89,7 @@ def get_analysis_types():
     """Query and parse analysis types."""
     ret = []
 
-    query = proxy.get_all_analysis()
+    query = mon_proxy.get_all_analysis()
     if query is not None:
         for k, v in query.items():
             if k != 'AnalysisType.UNDEFINED' and int(v) > 0:
@@ -100,7 +101,7 @@ def get_processor_params(proc=None):
     """Query and parse processor metadata."""
     if proc is None:
         return []
-    query = proxy.get_processor_params(proc)
+    query = mon_proxy.get_processor_params(proc)
     if query is None:
         return []
     return [{'param': k, 'value': v} for k, v in query.items()]
@@ -130,7 +131,9 @@ def update_processor_params(n_intervals, proc):
 @app.callback(output=Output('performance', 'figure'),
               inputs=[Input('slow_interval', 'n_intervals')])
 def update_performance(n_intervals):
-    ret = proxy.get_latest_tids()
+    ret = mon_proxy.get_latest_tids()
+    if ret is None:
+        raise dash.exceptions.PreventUpdate()
 
     tids = []
     freqs = []
@@ -268,8 +271,17 @@ def web_monitor():
     This function is for the command line tool: karaboFAI-monitor.
     """
     ap = argparse.ArgumentParser(prog="karaboFAI-monitor")
+    ap.add_argument("detector", help="detector name (case insensitive)",
+                    choices=[det.upper() for det in config.detectors],
+                    type=lambda s: s.upper())
     ap.add_argument("port", help="TCP port to run server on")
 
     args = ap.parse_args()
+
+    reset_redis_connections()
+    meta_proxy.reset()
+    mon_proxy.reset()
+
+    config.load(config.parse_detector_name(args.detector))
 
     app.run_server(port=args.port)

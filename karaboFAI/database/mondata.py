@@ -28,7 +28,7 @@ class MonProxy:
     _db = RedisConnection()
 
     def reset(self):
-        self._db = None
+        self.__class__.__dict__["_db"].reset()
 
     @redis_except_handler
     def add_tid_with_timestamp(self, tid):

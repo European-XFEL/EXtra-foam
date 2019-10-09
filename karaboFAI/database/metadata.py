@@ -52,7 +52,7 @@ class MetaProxy:
     _db = RedisConnection()
 
     def reset(self):
-        self._db = None
+        self.__class__.__dict__["_db"].reset()
 
     @redis_except_handler
     def set(self, name, key, value):
