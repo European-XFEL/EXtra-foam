@@ -11,7 +11,7 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtGui
 
 from ..mediator import Mediator
 
@@ -134,10 +134,6 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         super().__init__(title, parent=parent)
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
-        parent = self.parent()
-        if parent is not None:
-            parent.registerCtrlWidget(self)
-
         self._mediator = Mediator()
 
         # widgets whose values are not allowed to change after the "run"
@@ -150,6 +146,10 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
     def initUI(self):
         """Initialization of UI."""
         raise NotImplementedError
+
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        pass
 
     def onStart(self):
         for widget in self._non_reconfigurable_widgets:

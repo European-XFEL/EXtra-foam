@@ -65,7 +65,6 @@ class GuiLogger(logging.Handler):
 
         self.widget.setReadOnly(True)
         self.widget.setMaximumBlockCount(500)
-        self.widget.setMinimumHeight(200)
 
     def emit(self, record):
         # guard logger from other threads

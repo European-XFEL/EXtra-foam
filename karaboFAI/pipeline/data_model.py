@@ -726,9 +726,15 @@ class ProcessedData:
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
 
-    def __init__(self, tid):
+    def __init__(self, tid, sources=None):
         """Initialization."""
         self._tid = tid  # train ID
+
+        # all sources (device IDs) received
+        if sources is None:
+            self._sources = []
+        else:
+            self._sources = sources
 
         self.image = ImageData()
 
@@ -746,6 +752,10 @@ class ProcessedData:
     @property
     def tid(self):
         return self._tid
+
+    @property
+    def sources(self):
+        return self._sources
 
     @property
     def n_pulses(self):

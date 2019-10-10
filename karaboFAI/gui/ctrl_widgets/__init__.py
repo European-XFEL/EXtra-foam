@@ -8,6 +8,7 @@ from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .data_reduction_ctrl_widget import DataReductionCtrlWidget
+from .data_source_widget import DataSourceWidget
 
 
 # add control widgets
@@ -18,6 +19,7 @@ __all__ = [
     "CorrelationCtrlWidget",
     "DataCtrlWidget",
     "DataReductionCtrlWidget",
+    "DataSourceWidget",
     "StatisticsCtrlWidget",
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",

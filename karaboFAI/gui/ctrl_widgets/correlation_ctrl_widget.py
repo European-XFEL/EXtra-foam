@@ -53,8 +53,6 @@ class CorrelationCtrlWidget(AbstractCtrlWidget):
         self.initUI()
         self.initConnections()
 
-        self.setFixedHeight(self.minimumSizeHint().height())
-
     def initUI(self):
         """Overload."""
         layout = QtGui.QGridLayout()

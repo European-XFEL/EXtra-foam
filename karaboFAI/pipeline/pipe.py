@@ -194,8 +194,11 @@ class KaraboBridge(PipeIn):
         #          mandatory.
         tid = next(iter(meta.values()))["timestamp.tid"]
 
+        sources = list(meta.keys())
+        processed = ProcessedData(tid, sources)
+
         return {
-            "processed": ProcessedData(tid),
+            "processed": processed,
             "raw": raw
         }
 

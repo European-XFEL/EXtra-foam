@@ -17,7 +17,7 @@ from weakref import WeakKeyDictionary
 import functools
 import multiprocessing as mp
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
 
 from redis import ConnectionError
@@ -25,8 +25,8 @@ from redis import ConnectionError
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, DataCtrlWidget, DataReductionCtrlWidget,
-    StatisticsCtrlWidget, GeometryCtrlWidget, PumpProbeCtrlWidget,
-    RoiCtrlWidget
+    DataSourceWidget, StatisticsCtrlWidget, GeometryCtrlWidget,
+    PumpProbeCtrlWidget, RoiCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .windows import (
@@ -118,6 +118,8 @@ class MainGUI(QtGui.QMainWindow):
 
     process_info_sgn = pyqtSignal(object)
 
+    device_list_sgn = pyqtSignal(object)
+
     _db = RedisConnection()
 
     def __init__(self, *, start_thread_logger=False):
@@ -139,8 +141,27 @@ class MainGUI(QtGui.QMainWindow):
         self.title = f"karaboFAI {__version__} ({config['DETECTOR']})"
         self.setWindowTitle(self.title + " - main GUI")
 
-        self._cw = QtGui.QWidget()
+        # *************************************************************
+        # Central widget
+        # *************************************************************
+
+        self._cw = QtWidgets.QSplitter()
+        self._cw.setChildrenCollapsible(False)
         self.setCentralWidget(self._cw)
+
+        self._left_cw = QtWidgets.QTabWidget()
+        self._middle_cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._middle_cw.setChildrenCollapsible(False)
+
+        self._source_cw = DataSourceWidget()
+
+        self._ctrl_panel_cw = QtWidgets.QTabWidget()
+        self._analysis_cw = QtWidgets.QScrollArea()
+        self._analysis_cw.setWidgetResizable(True)
+        self._geometry_cw = QtWidgets.QScrollArea()
+        self._geometry_cw.setWidgetResizable(True)
+
+        self._util_panel_cw = QtWidgets.QTabWidget()
 
         # *************************************************************
         # Tool bar
@@ -260,37 +281,24 @@ class MainGUI(QtGui.QMainWindow):
         # control widgets
         # *************************************************************
 
-        self.azimuthal_integ_ctrl_widget = AzimuthalIntegCtrlWidget(
-            parent=self)
+        # analysis control widgets
+        self.azimuthal_integ_ctrl_widget = self.createCtrlWidget(
+            AzimuthalIntegCtrlWidget)
+        self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
+        self.roi_ctrl_widget = self.createCtrlWidget(RoiCtrlWidget)
+        self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
+        self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
+        self.data_ctrl_widget = self.createCtrlWidget(DataCtrlWidget)
+        self.data_reduction_ctrl_widget = self.createCtrlWidget(DataReductionCtrlWidget)
+        self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
+        self.statistics_ctrl_widget = self.createCtrlWidget(StatisticsCtrlWidget)
 
-        self.geometry_ctrl_widget = GeometryCtrlWidget(parent=self)
-        if not config['REQUIRE_GEOMETRY']:
-            self.geometry_ctrl_widget.setEnabled(False)
+        # geometry control widgets
+        self.geometry_ctrl_widget = self.createCtrlWidget(GeometryCtrlWidget)
 
-        self.analysis_ctrl_widget = AnalysisCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.roi_ctrl_widget = RoiCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.correlation_ctrl_widget = CorrelationCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.pump_probe_ctrl_widget = PumpProbeCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.data_ctrl_widget = DataCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.data_reduction_ctrl_widget = DataReductionCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.bin_ctrl_widget = BinCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved)
-
-        self.statistics_ctrl_widget = StatisticsCtrlWidget(
-            parent=self, pulse_resolved=self._pulse_resolved
-        )
+        # *************************************************************
+        # status bar
+        # *************************************************************
 
         # StatusBar to display topic name
         self.statusBar().showMessage(f"TOPIC: {config['TOPIC']}")
@@ -301,30 +309,86 @@ class MainGUI(QtGui.QMainWindow):
 
         image_tool_at.trigger()
 
-        self.setFixedHeight(self.minimumSizeHint().height())
+        self.setMinimumSize(640, 480)
+        # FIXME:
+        self.resize(1650, 1000)
 
         self.show()
 
+    def createCtrlWidget(self, widget_class):
+        widget = widget_class(pulse_resolved=self._pulse_resolved)
+        self.registerCtrlWidget(widget)
+        return widget
+
     def initUI(self):
-        analysis_layout = QtGui.QVBoxLayout()
-        analysis_layout.addWidget(self.analysis_ctrl_widget)
-        analysis_layout.addWidget(self.pump_probe_ctrl_widget)
-        analysis_layout.addWidget(self.azimuthal_integ_ctrl_widget)
-        analysis_layout.addWidget(self.roi_ctrl_widget)
+        self._cw.addWidget(self._left_cw)
+        self._cw.addWidget(self._middle_cw)
 
-        misc_layout = QtGui.QVBoxLayout()
-        misc_layout.addWidget(self.data_ctrl_widget)
-        misc_layout.addWidget(self.data_reduction_ctrl_widget)
-        misc_layout.addWidget(self.statistics_ctrl_widget)
-        misc_layout.addWidget(self.bin_ctrl_widget)
-        misc_layout.addWidget(self.correlation_ctrl_widget)
-        misc_layout.addWidget(self.geometry_ctrl_widget)
+        self._middle_cw.addWidget(self._ctrl_panel_cw)
+        self._middle_cw.addWidget(self._util_panel_cw)
 
-        layout = QtGui.QGridLayout()
-        layout.addLayout(analysis_layout, 0, 0, 3, 1)
-        layout.addLayout(misc_layout, 0, 1, 3, 3)
-        layout.addWidget(self._logger.widget, 4, 0, 1, 4)
-        self._cw.setLayout(layout)
+        self.initLeftUI()
+        self.initMiddleUI()
+
+    def initLeftUI(self):
+        self._left_cw.setTabPosition(
+            QtWidgets.QTabWidget.TabPosition.West)
+
+        self._left_cw.addTab(self._source_cw, "Data source")
+
+        self.device_list_sgn.connect(
+            self._source_cw.device_list_widget.setDeviceList)
+
+    def initMiddleUI(self):
+        self.initCtrlUI()
+        self.initUtilUI()
+
+    def initCtrlUI(self):
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "Analysis setup")
+        geom_tab = self._ctrl_panel_cw.addTab(
+            self._geometry_cw, "Geometry setup")
+        if not config['REQUIRE_GEOMETRY']:
+            self._ctrl_panel_cw.setTabEnabled(geom_tab, False)
+
+        self.initAnalysisUI()
+        self.initGeometryUI()
+
+    def initAnalysisUI(self):
+        left_ctrl_widget = QtWidgets.QWidget()
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self.analysis_ctrl_widget)
+        layout.addWidget(self.pump_probe_ctrl_widget)
+        layout.addWidget(self.azimuthal_integ_ctrl_widget)
+        layout.addWidget(self.roi_ctrl_widget)
+        left_ctrl_widget.setLayout(layout)
+
+        right_ctrl_widget = QtWidgets.QWidget()
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self.data_ctrl_widget)
+        layout.addWidget(self.data_reduction_ctrl_widget)
+        layout.addWidget(self.statistics_ctrl_widget)
+        layout.addWidget(self.bin_ctrl_widget)
+        layout.addWidget(self.correlation_ctrl_widget)
+        right_ctrl_widget.setLayout(layout)
+
+        container = QtWidgets.QWidget()
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(left_ctrl_widget)
+        layout.addWidget(right_ctrl_widget)
+        container.setLayout(layout)
+        self._analysis_cw.setWidget(container)
+
+    def initGeometryUI(self):
+        layout = QtGui.QVBoxLayout()
+        layout.addWidget(self.geometry_ctrl_widget)
+        layout.addStretch(1)
+        self._geometry_cw.setLayout(layout)
+
+    def initUtilUI(self):
+        self._util_panel_cw.addTab(self._logger.widget, "Logger")
+
+        self._util_panel_cw.setTabPosition(
+            QtWidgets.QTabWidget.TabPosition.South)
 
     def connectInputToOutput(self, output):
         self._input.connect(output)
@@ -350,6 +414,8 @@ class MainGUI(QtGui.QMainWindow):
                 self._mon_proxy.add_tid_with_timestamp(tid)
 
                 self._data.set(processed)
+
+                self.device_list_sgn.emit(processed.sources)
 
                 logger.info(f"Updated train with ID: {tid}")
             except Empty:
