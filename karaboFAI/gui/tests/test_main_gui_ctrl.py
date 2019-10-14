@@ -16,7 +16,6 @@ from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import DarkRunWindow, PulseOfInterestWindow
-from karaboFAI.pipeline.data_model import ProcessedData
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
     DataSource, VFomNormalizer, PumpProbeMode
@@ -252,8 +251,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
                                "SOURCE_NAME_FILE": ["A", "B"]})
-    def testDataCtrlWidget(self):
-        widget = self.gui.data_ctrl_widget
+    def testConnectionCtrlWidget(self):
+        from karaboFAI.gui.ctrl_widgets.data_source_widget import ConnectionCtrlWidget
+
+        for widget in self.gui._ctrl_widgets:
+            if isinstance(widget, ConnectionCtrlWidget):
+                break
+
         scheduler = self.scheduler
         image_worker = self.image_worker
         assembler = image_worker._assembler
@@ -303,7 +307,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
     def testGeometryCtrlWidget(self):
-        widget = self.gui.geometry_ctrl_widget
+        from karaboFAI.gui.ctrl_widgets import GeometryCtrlWidget
+
+        for widget in self.gui._ctrl_widgets:
+            if isinstance(widget, GeometryCtrlWidget):
+                break
+
         image_worker = self.image_worker
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])

@@ -2,7 +2,6 @@ from .azimuthal_integ_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .bin_ctrl_widget import BinCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
-from .data_ctrl_widget import DataCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
@@ -17,7 +16,6 @@ __all__ = [
     "AnalysisCtrlWidget",
     "BinCtrlWidget",
     "CorrelationCtrlWidget",
-    "DataCtrlWidget",
     "DataReductionCtrlWidget",
     "DataSourceWidget",
     "StatisticsCtrlWidget",
