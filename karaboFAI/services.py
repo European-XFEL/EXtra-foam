@@ -271,6 +271,9 @@ def application():
         faulthandler.enable(all_threads=False)
 
     app = mkQApp()
+    app.setStyleSheet(
+        "QTabWidget::pane { border: 0; }"
+    )
 
     # update global configuration
     config.load(detector)

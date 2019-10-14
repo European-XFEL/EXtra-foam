@@ -58,16 +58,16 @@ class Mediator(QObject):
         self._is_initialized = True
 
     def onBridgeEndpointChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "endpoint", value)
-
-    def onDetectorSourceNameChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "detector_source_name", value)
-
-    def onXgmSourceNameChange(self, value: str):
-        self._meta.set(mt.DATA_SOURCE, "xgm_source_name", value)
+        self._meta.set(mt.CONNECTION, "endpoint", value)
 
     def onSourceTypeChange(self, value: IntEnum):
-        self._meta.set(mt.DATA_SOURCE, "source_type", int(value))
+        self._meta.set(mt.CONNECTION, "source_type", int(value))
+
+    def onDataSourceToggled(self, item, checked: bool):
+        if checked:
+            self._meta.add_data_source(item)
+        else:
+            self._meta.remove_data_source(item)
 
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.set(mt.IMAGE_PROC, "threshold_mask", str(value))

@@ -86,7 +86,7 @@ class ProcessWorker(mp.Process):
                     # update source type, which determines the behavior of
                     # pipeline
                     src_type = DataSource(
-                        int(self._meta.get(mt.DATA_SOURCE, 'source_type')))
+                        int(self._meta.get(mt.CONNECTION, 'source_type')))
 
                     # tell input and output channels to update
                     for inp in self._inputs:

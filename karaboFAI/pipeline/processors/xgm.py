@@ -24,9 +24,7 @@ class XgmProcessor(_BaseProcessor):
         self._xgm_src = None
 
     def update(self):
-        cfg = self._meta.get_all(mt.DATA_SOURCE)
-
-        self._xgm_src = cfg['xgm_source_name']
+        pass
 
     @profiler("XGM Processor")
     def process(self, data):

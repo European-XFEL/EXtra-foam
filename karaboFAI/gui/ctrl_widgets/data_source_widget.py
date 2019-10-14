@@ -7,16 +7,203 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import OrderedDict
+import copy
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from ..mediator import Mediator
+from ...database import DATA_SOURCE_CATEGORIES, SourceItem
 from ...config import config, DataSource
 
 
-class DeviceListModel(QtCore.QAbstractListModel):
-    """List model interface for monitoring devices."""
+class DataSourceTreeItem:
+    """Item used in DataSourceTreeModel."""
+    def __init__(self, data, parent=None):
+        self._children = []
+        self._data = data
+        self._parent = parent
+
+        self._checked = False
+
+    def child(self, number):
+        """Return the child at an index position."""
+        try:
+            return self._children[number]
+        except IndexError:
+            return None
+
+    def appendChild(self, item):
+        """Append a child item."""
+        if not isinstance(item, DataSourceTreeItem):
+            raise TypeError(f"Child item must be a {self.__class__}")
+        self._children.append(item)
+
+    def childCount(self):
+        """Return the total number of children."""
+        return len(self._children)
+
+    def row(self):
+        """Return the index of child in its parents' list of children."""
+        if self._parent is not None:
+            return self._parent._children.index(self)
+
+        return 0
+
+    def columnCount(self):
+        """Return the length of the item data."""
+        return len(self._data)
+
+    def data(self, column):
+        """Get data by column index."""
+        try:
+            return self._data[column]
+        except IndexError:
+            return None
+
+    def parent(self):
+        return self._parent
+
+    def isChecked(self):
+        return self._checked
+
+    def setChecked(self, checked):
+        self._checked = checked
+
+
+class DataSourceTreeModel(QtCore.QAbstractItemModel):
+    """Tree model interface for managing data sources."""
+
+    device_toggled_sgn = pyqtSignal(object, bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._mediator = Mediator()
+
+        self._root = DataSourceTreeItem(["Source name"])
+        self.setupModelData()
+
+        self.device_toggled_sgn.connect(self._mediator.onDataSourceToggled)
+
+    def data(self, index, role=None):
+        """Override."""
+        if not index.isValid():
+            return
+
+        item = index.internalPointer()
+
+        if role == Qt.DisplayRole:
+            return item.data(index.column())
+
+        if role == Qt.CheckStateRole and index.column() == 0 and item.parent().parent():
+            return Qt.Checked if item.isChecked() else Qt.Unchecked
+
+        return
+
+    def setData(self, index, value, role=None) -> bool:
+        """Override."""
+        if role == Qt.CheckStateRole:
+            item = index.internalPointer()
+            item.setChecked(value)
+
+            src_item = SourceItem(item.parent().data(0), item.data(0))
+            self.device_toggled_sgn.emit(src_item, item.isChecked())
+            return True
+        return False
+
+    def flags(self, index):
+        if not index.isValid():
+            return Qt.NoItemFlags
+
+        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+        if index.column() == 0:
+            flags |= Qt.ItemIsUserCheckable
+
+        return flags
+
+    def headerData(self, section, orientation, role=None):
+        """Override."""
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            return self._root.data(section)
+
+    def index(self, row, column, parent=None, *args, **kwargs) -> QModelIndex:
+        """Override."""
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+
+        if parent is None or not parent.isValid():
+            parent_item = self._root
+        else:
+            parent_item = parent.internalPointer()
+
+        child_item = parent_item.child(row)
+        if child_item is None:
+            return QModelIndex()
+        return self.createIndex(row, column, child_item)
+
+    def parent(self, index=None) -> QModelIndex:
+        """Override."""
+        if not index.isValid():
+            return QModelIndex()
+
+        child_item = index.internalPointer()
+        parent_item = child_item.parent()
+
+        if parent_item == self._root:
+            return QModelIndex()
+
+        return self.createIndex(parent_item.row(), 0, parent_item)
+
+    def rowCount(self, parent=None, *args, **kwargs) -> int:
+        """Override."""
+        if parent.column() > 0:
+            return 0
+
+        if not parent.isValid():
+            parent_item = self._root
+        else:
+            parent_item = parent.internalPointer()
+
+        return parent_item.childCount()
+
+    def columnCount(self, parent=None, *args, **kwargs) -> int:
+        """Override."""
+        if parent.isValid():
+            return parent.internalPointer().columnCount()
+        return self._root.columnCount()
+
+    def setupModelData(self):
+        """Setup the data for the whole tree."""
+        topic = config["TOPIC"]
+        det = config["DETECTOR"]
+
+        sources = copy.deepcopy(DATA_SOURCE_CATEGORIES[topic])
+
+        if det not in sources:
+            raise KeyError(f"{det} is not installed in instrument {topic}")
+
+        sources[det].update(config["SOURCE_NAME_BRIDGE"])
+        sources[det].update(config["SOURCE_NAME_FILE"])
+        sources[det] = sorted(sources[det])
+
+        for ctg, srcs in sources.items():
+            self._root.appendChild(DataSourceTreeItem([ctg], self._root))
+
+            last_child = self._root.child(-1)
+
+            try:
+                for src in srcs:
+                    last_child.appendChild(
+                        DataSourceTreeItem([src], self._root.child(-1)))
+            except KeyError:
+                pass
+
+
+class DataSourceListModel(QtCore.QAbstractListModel):
+    """List model interface for monitoring available sources."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -27,38 +214,18 @@ class DeviceListModel(QtCore.QAbstractListModel):
         if not index.isValid() or index.row() > len(self._devices):
             return None
 
-        if role == QtCore.Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return self._devices[index.row()]
 
     def rowCount(self, parent=None, *args, **kwargs):
         """Override."""
         return len(self._devices)
 
-    def setDeviceList(self, devices):
-        if self._devices != devices:
+    def setupModelData(self, device_list):
+        if self._devices != device_list:
             self.beginResetModel()
-            self._devices = devices
+            self._devices = device_list
             self.endResetModel()
-
-
-class DeviceListWidget(AbstractCtrlWidget):
-    """Widget used to visualize a DeviceListModel."""
-    def __init__(self, *args, **kwargs):
-        super().__init__("Monitor", *args, **kwargs)
-
-        self._view = QtWidgets.QListView()
-        self._model = DeviceListModel()
-        self._view.setModel(self._model)
-
-        self.initUI()
-
-    def initUI(self):
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self._view)
-        self.setLayout(layout)
-
-    def setDeviceList(self, devices):
-        self._model.setDeviceList(devices)
 
 
 class ConnectionCtrlWidget(AbstractCtrlWidget):
@@ -78,22 +245,8 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
         self._source_type_cb.setCurrentIndex(config['DEFAULT_SOURCE_TYPE'])
         self._current_source_type = None
 
-        # fill the combobox in the run time based on the source type
-        self._detector_src_cb = QtGui.QComboBox()
-
-        self._xgm_src_cb = QtGui.QComboBox()
-        try:
-            self._xgms = \
-                self._TOPIC_DATA_CATEGORIES[config["TOPIC"]]["XGM"].device_ids
-        except KeyError:
-            self._xgms = [""]
-
-        for src in self._xgms:
-            self._xgm_src_cb.addItem(src)
-
         self._non_reconfigurable_widgets = [
             self._source_type_cb,
-            self._detector_src_cb,
             self._hostname_le,
             self._port_le,
         ]
@@ -103,7 +256,7 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
 
     def initUI(self):
         layout = QtGui.QVBoxLayout()
-        AR = QtCore.Qt.AlignRight
+        AR = Qt.AlignRight
 
         src_layout = QtGui.QGridLayout()
         src_layout.addWidget(QtGui.QLabel("Data streamed from: "), 0, 0, AR)
@@ -112,10 +265,6 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
         src_layout.addWidget(self._hostname_le, 1, 1)
         src_layout.addWidget(QtGui.QLabel("Port: "), 2, 0, AR)
         src_layout.addWidget(self._port_le, 2, 1)
-        src_layout.addWidget(QtGui.QLabel("Detector source name: "), 3, 0, AR)
-        src_layout.addWidget(self._detector_src_cb, 3, 1)
-        src_layout.addWidget(QtGui.QLabel("XGM source name: "), 4, 0, AR)
-        src_layout.addWidget(self._xgm_src_cb, 4, 1)
 
         layout.addLayout(src_layout)
         self.setLayout(layout)
@@ -138,24 +287,12 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
         self._hostname_le.textChanged.connect(self.onEndpointChange)
         self._port_le.textChanged.connect(self.onEndpointChange)
 
-        self._detector_src_cb.currentTextChanged.connect(
-            mediator.onDetectorSourceNameChange)
-
-        self._xgm_src_cb.currentTextChanged.connect(
-            mediator.onXgmSourceNameChange)
-
     def updateMetaData(self):
         self._source_type_cb.currentIndexChanged.emit(
             self._source_type_cb.currentIndex())
 
         self._hostname_le.textChanged.emit(self._hostname_le.text())
         self._port_le.textChanged.emit(self._port_le.text())
-
-        self._detector_src_cb.currentTextChanged.emit(
-            self._detector_src_cb.currentText())
-
-        self._xgm_src_cb.currentTextChanged.emit(
-            self._xgm_src_cb.currentText())
 
         return True
 
@@ -170,22 +307,15 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
             return
         self._current_source_type = source_type
 
-        while self._detector_src_cb.currentIndex() >= 0:
-            self._detector_src_cb.removeItem(0)
-
         if source_type == DataSource.BRIDGE:
-            sources = config["SOURCE_NAME_BRIDGE"]
             hostname = config["SERVER_ADDR"]
             port = config["SERVER_PORT"]
         else:
-            sources = config["SOURCE_NAME_FILE"]
             hostname = config["LOCAL_HOST"]
             port = config["LOCAL_PORT"]
 
         self._hostname_le.setText(hostname)
         self._port_le.setText(str(port))
-
-        self._detector_src_cb.addItems(sources)
 
 
 class DataSourceWidget(QtWidgets.QWidget):
@@ -194,16 +324,41 @@ class DataSourceWidget(QtWidgets.QWidget):
     A widget container which holds ConnectionCtrlWidget, DeviceListWidget
     and DeviceTreeWidget.
     """
+
+    SPLITTER_HANDLE_WIDTH = 9
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.connection_ctrl_widget = ConnectionCtrlWidget()
-        self.device_list_widget = DeviceListWidget()
+
+        self._tree_view = QtWidgets.QTreeView()
+        self._tree_model = DataSourceTreeModel()
+        self._tree_view.setModel(self._tree_model)
+
+        self._list_container = QtWidgets.QTabWidget()
+        self._list_view = QtWidgets.QListView()
+        self._list_model = DataSourceListModel()
+        self._list_view.setModel(self._list_model)
 
         self.initUI()
 
     def initUI(self):
+        self._list_container.addTab(self._list_view, "Available sources")
+
+        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
+        splitter.setChildrenCollapsible(False)
+        splitter.addWidget(self._tree_view)
+        splitter.addWidget(self._list_container)
+
+        self._tree_view.expandToDepth(1)
+        self._tree_view.resizeColumnToContents(0)
+
         layout = QtGui.QVBoxLayout()
         layout.addWidget(self.connection_ctrl_widget)
-        layout.addWidget(self.device_list_widget)
+        layout.addWidget(splitter)
         self.setLayout(layout)
+
+    def updateDeviceList(self, devices):
+        self._list_model.setupModelData(devices)

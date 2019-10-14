@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import pickle
+
 from .db_utils import redis_except_handler
 from ..ipc import RedisConnection
 
@@ -29,7 +31,7 @@ class Metadata(metaclass=MetaMetadata):
 
     SESSION = "meta:session"
 
-    DATA_SOURCE = "meta:source"
+    CONNECTION = "meta:connection"
 
     ANALYSIS_TYPE = "meta:analysis_type"
 
@@ -46,10 +48,18 @@ class Metadata(metaclass=MetaMetadata):
     DATA_REDUCTION_PROC = "meta:proc:data_reduction"
     DARK_RUN_PROC = "meta:proc:dark_run"
 
+    # This is different from all the previous ones, which are all hashes.
+    # The real key depends on the category of the data source. For example,
+    # 'XGM' has the key 'meta:sources:XGM' and 'DSSC' has the key
+    # 'meta:sources:DSSC'. Also, the value is an unordered set for
+    # each source.
+    DATA_SOURCES = "meta:sources"
+
 
 class MetaProxy:
     """Proxy for retrieving metadata."""
     _db = RedisConnection()
+    _db_decodeoff = RedisConnection(decode_responses=False)
 
     def reset(self):
         self.__class__.__dict__["_db"].reset()
@@ -135,3 +145,33 @@ class MetaProxy:
         :raise: redis.exceptions.ResponseError if value is not a float.
         """
         return self._db.hincrbyfloat(name, key, amount)
+
+    @redis_except_handler
+    def add_data_source(self, src):
+        """Add a data source.
+
+        :return: the number of elements that were added to the set, not
+                 including all the elements already present into the set.
+        """
+        return self._db.sadd(f'{Metadata.DATA_SOURCES}:{src.category}',
+                             pickle.dumps(src))
+
+    @redis_except_handler
+    def remove_data_source(self, src):
+        """Remove a data source.
+
+        :return: the number of members that were removed from the set,
+                 not including non existing members.
+        """
+        return self._db.srem(f'{Metadata.DATA_SOURCES}:{src.category}',
+                             pickle.dumps(src))
+
+    @redis_except_handler
+    def get_all_data_sources(self, category):
+        """Get all the data sources in a category.
+
+        :return: a list of SourceItem.
+        """
+        return [pickle.loads(src) for src in
+                self._db_decodeoff.smembers(
+                    f'{Metadata.DATA_SOURCES}:{category}')]

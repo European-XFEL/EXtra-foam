@@ -80,7 +80,7 @@ class TestAgipdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'detector_data'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {
@@ -166,7 +166,7 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'lpd_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {
@@ -204,7 +204,7 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'lpd_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         data = {'raw': {
             src_name: {
@@ -246,7 +246,7 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'lpd_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         # dtype conversion float64 -> float32 throws TypeError (karabo_data)
         with self.assertRaises(TypeError):
             data = {'raw': {
@@ -272,7 +272,7 @@ class TestJungfrauAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.FILE
         src_name = 'jungfrau_modules'
         key_name = 'data.adc'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         data = {'raw': {src_name: {key_name: np.ones((1, 512, 1024))}}}
         self._assembler.process(data)
@@ -293,7 +293,7 @@ class TestJungfrauAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'jungfrau_modules'
         key_name = 'data.adc'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}}}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -320,7 +320,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'jungfrau_modules'
         key_name = 'data.adc'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}}}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -375,7 +375,7 @@ class TestFastccdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.FILE
         src_name = 'fastccd_module'
         key_name = 'data.image.pixels'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         data = {'raw': {src_name: {key_name: np.ones((1934, 960))}}}
         self._assembler.process(data)
@@ -392,7 +392,7 @@ class TestFastccdAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'fastccd_module'
         key_name = 'data.image'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1934, 960, 1))}}}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -413,7 +413,7 @@ class TestBaslerCameraAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'baslercamera_module'
         key_name = 'data.image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1024, 1024))}}}
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -497,7 +497,7 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'dssc_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {
@@ -535,7 +535,7 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'dssc_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
 
         data = {'raw': {
             src_name: {
@@ -565,7 +565,7 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler._source_type = DataSource.BRIDGE
         src_name = 'dssc_modules'
         key_name = 'image.data'
-        self._assembler._detector_source_name = src_name
+        self._assembler._source_name = src_name
         # dtype conversion float64 -> float32 throws TypeError (karabo_data)
         with self.assertRaises(TypeError):
             data = {'raw': {

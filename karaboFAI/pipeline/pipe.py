@@ -141,7 +141,7 @@ class KaraboBridge(PipeIn):
         client = None
         while not close_ev.is_set():
             if update_ev.is_set():
-                endpoint = self._meta.get(mt.DATA_SOURCE, 'endpoint')
+                endpoint = self._meta.get(mt.CONNECTION, 'endpoint')
 
                 if client is None:
                     # destroy the zmq socket
@@ -194,7 +194,7 @@ class KaraboBridge(PipeIn):
         #          mandatory.
         tid = next(iter(meta.values()))["timestamp.tid"]
 
-        sources = list(meta.keys())
+        sources = sorted(meta.keys())
         processed = ProcessedData(tid, sources)
 
         return {

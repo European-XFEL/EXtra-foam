@@ -118,9 +118,11 @@ class MainGUI(QtGui.QMainWindow):
 
     process_info_sgn = pyqtSignal(object)
 
-    device_list_sgn = pyqtSignal(object)
+    available_sources_sgn = pyqtSignal(object)
 
     _db = RedisConnection()
+
+    SPLITTER_HANDLE_WIDTH = 9
 
     def __init__(self, *, start_thread_logger=False):
         """Initialization.
@@ -147,10 +149,12 @@ class MainGUI(QtGui.QMainWindow):
 
         self._cw = QtWidgets.QSplitter()
         self._cw.setChildrenCollapsible(False)
+        self._cw.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
         self.setCentralWidget(self._cw)
 
         self._left_cw = QtWidgets.QTabWidget()
         self._middle_cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._middle_cw.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
         self._middle_cw.setChildrenCollapsible(False)
 
         self._source_cw = DataSourceWidget()
@@ -337,8 +341,7 @@ class MainGUI(QtGui.QMainWindow):
 
         self._left_cw.addTab(self._source_cw, "Data source")
 
-        self.device_list_sgn.connect(
-            self._source_cw.device_list_widget.setDeviceList)
+        self.available_sources_sgn.connect(self._source_cw.updateDeviceList)
 
     def initMiddleUI(self):
         self.initCtrlUI()
@@ -415,7 +418,7 @@ class MainGUI(QtGui.QMainWindow):
 
                 self._data.set(processed)
 
-                self.device_list_sgn.emit(processed.sources)
+                self.available_sources_sgn.emit(processed.sources)
 
                 logger.info(f"Updated train with ID: {tid}")
             except Empty:

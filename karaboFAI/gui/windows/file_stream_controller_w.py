@@ -200,7 +200,7 @@ class FileStreamControllerWindow(AbstractSatelliteWindow):
         if self._port is not None:
             port = self._port
         else:
-            cfg = self._meta.get_all(mt.DATA_SOURCE)
+            cfg = self._meta.get_all(mt.CONNECTION)
             try:
                 port = cfg['endpoint'].split(':')[-1]
             except KeyError as e:
