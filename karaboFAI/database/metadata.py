@@ -42,7 +42,7 @@ class Metadata(metaclass=MetaMetadata):
     XAS_PROC = "meta:proc:xas"
     CORRELATION_PROC = "meta:proc:correlation"
     BIN_PROC = "meta:proc:bin"
-    STATISTICS_PROC = "meta:proc:pulse_fom"
+    STATISTICS_PROC = "meta:proc:statistics"
     DATA_REDUCTION_PROC = "meta:proc:data_reduction"
     DARK_RUN_PROC = "meta:proc:dark_run"
 

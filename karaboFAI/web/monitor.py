@@ -59,29 +59,18 @@ def get_top_bar_cell(name, value):
         className="three-col",
         children=[
             html.P(className="p-top-bar", children=name),
-            html.P(id=name, className="display-none", children=value),
-            html.P(children=value),
+            html.P(className="display-none", children=value),
+            html.P(id=name, children=value),
         ],
     )
 
 
 def get_top_bar():
     """Get Div for the top bar."""
-    ret = mon_proxy.get_last_tid()
-
-    if not ret:
-        # [] or None
-        tid = '0' * 9
-    else:
-        _, tid = ret
-
-    sess = meta_proxy.get_all(mt.SESSION)
     return [
-        get_top_bar_cell("Detector",
-                         "Unknown" if sess is None else sess['detector']),
-        get_top_bar_cell("Topic",
-                         "Unknown" if sess is None else sess['topic']),
-        get_top_bar_cell("Train ID", tid),
+        get_top_bar_cell("Detector", "Unknown"),
+        get_top_bar_cell("Topic", "Unknown"),
+        get_top_bar_cell("Train ID", '0' * 9),
     ]
 
 
@@ -109,10 +98,25 @@ def get_processor_params(proc=None):
 
 # define callback functions
 
-@app.callback(output=Output('top_bar', 'children'),
+@app.callback(output=[Output('Detector', 'children'),
+                      Output('Topic', 'children'),
+                      Output('Train ID', 'children')],
               inputs=[Input('fast_interval1', 'n_intervals')])
 def update_top_bar(n_intervals):
-    return get_top_bar()
+    ret = mon_proxy.get_last_tid()
+
+    if not ret:
+        # [] or None
+        tid = '0' * 9
+    else:
+        _, tid = ret
+
+    sess = meta_proxy.get_all(mt.SESSION)
+
+    detector = "Unknown" if sess is None else sess['detector']
+    topic = "Unknown" if sess is None else sess['topic']
+
+    return detector, topic, tid
 
 
 @app.callback(output=Output('analysis_type_table', 'data'),
