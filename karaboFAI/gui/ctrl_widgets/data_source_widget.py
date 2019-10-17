@@ -64,15 +64,6 @@ class DeviceListWidget(AbstractCtrlWidget):
 class ConnectionCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the TCP connection."""
 
-    _available_sources = OrderedDict({
-        "run directory": DataSource.FILE,
-        "ZeroMQ bridge": DataSource.BRIDGE,
-    })
-
-    # signal used in updateShareParameters since currentTextChanged
-    # will affect other entries
-    source_type_sgn = QtCore.pyqtSignal(object)
-
     def __init__(self, *args, **kwargs):
         super().__init__("Connection", *args, **kwargs)
 
@@ -82,9 +73,10 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
         self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
 
         self._source_type_cb = QtGui.QComboBox()
-        for src in self._available_sources:
-            self._source_type_cb.addItem(src)
+        self._source_type_cb.addItem("run directory", DataSource.FILE)
+        self._source_type_cb.addItem("ZeroMQ bridge", DataSource.BRIDGE)
         self._source_type_cb.setCurrentIndex(config['DEFAULT_SOURCE_TYPE'])
+        self._current_source_type = None
 
         # fill the combobox in the run time based on the source type
         self._detector_src_cb = QtGui.QComboBox()
@@ -131,16 +123,16 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._source_type_cb.currentTextChanged.connect(
-            lambda x: self.onSourceTypeChange(self._available_sources[x]))
-        self._source_type_cb.currentTextChanged.connect(
+        self._source_type_cb.currentIndexChanged.connect(
+            lambda x: self.onSourceTypeChange(
+                self._source_type_cb.itemData(x)))
+        self._source_type_cb.currentIndexChanged.connect(
             lambda x: mediator.onSourceTypeChange(
-                self._available_sources[x]))
+                self._source_type_cb.itemData(x)))
+
         # Emit once to fill the QLineEdit
-        self._source_type_cb.currentTextChanged.emit(
-            self._source_type_cb.currentText())
-        self.source_type_sgn.connect(lambda x: mediator.onSourceTypeChange(
-                self._available_sources[x]))
+        self._source_type_cb.currentIndexChanged.emit(
+            self._source_type_cb.currentIndex())
 
         # Note: use textChanged signal for non-reconfigurable QLineEdit
         self._hostname_le.textChanged.connect(self.onEndpointChange)
@@ -153,8 +145,10 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
             mediator.onXgmSourceNameChange)
 
     def updateMetaData(self):
-        self.source_type_sgn.emit(self._source_type_cb.currentText())
+        self._source_type_cb.currentIndexChanged.emit(
+            self._source_type_cb.currentIndex())
 
+        self._hostname_le.textChanged.emit(self._hostname_le.text())
         self._port_le.textChanged.emit(self._port_le.text())
 
         self._detector_src_cb.currentTextChanged.emit(
@@ -172,6 +166,10 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
 
     @QtCore.pyqtSlot(object)
     def onSourceTypeChange(self, source_type):
+        if source_type == self._current_source_type:
+            return
+        self._current_source_type = source_type
+
         while self._detector_src_cb.currentIndex() >= 0:
             self._detector_src_cb.removeItem(0)
 

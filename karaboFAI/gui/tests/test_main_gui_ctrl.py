@@ -261,25 +261,22 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
         assembler = image_worker._assembler
-        xgm = scheduler._xgm_proc
 
         # test passing tcp hostname and port
 
+        # TODO: testit
         # hostname = config['SERVER_ADDR']
         # port = config['SERVER_PORT']
         # self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
+
         #
         # widget._hostname_le.setText('127.0.0.1')
         # widget._port_le.setText('12345')
-        #
-        # bridge.update()
         # self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
 
-        # test passing data source types and detector source name
-
+        # test source_type == FILE
         source_type = DataSource.FILE
         widget._source_type_cb.setCurrentIndex(source_type)
-
         assembler.update()
         self.assertEqual("A", assembler._detector_source_name)
         items = []
@@ -287,24 +284,15 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["A", "B"], items)
 
-        xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
-
         # change source_type from FILE to BRIDGE
-
         source_type = DataSource.BRIDGE
         widget._source_type_cb.setCurrentIndex(source_type)
-        widget._xgm_src_cb.setCurrentIndex(1)
-
         assembler.update()
         self.assertEqual("E", assembler._detector_source_name)
         items = []
         for i in range(widget._detector_src_cb.count()):
             items.append(widget._detector_src_cb.itemText(i))
         self.assertListEqual(["E", "F", "G"], items)
-
-        xgm.update()
-        self.assertEqual(widget._xgm_src_cb.currentText(), xgm._xgm_src)
 
     def testGeometryCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets import GeometryCtrlWidget
