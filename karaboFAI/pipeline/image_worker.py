@@ -14,7 +14,7 @@ from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
     AzimuthalIntegrationProcessorPulse, DataReductionProcessor,
     ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain,
-    RoiProcessorPulse
+    RoiProcessorPulse, XgmProcessor
 )
 from ..config import config
 
@@ -28,6 +28,7 @@ class ImageWorker(ProcessWorker):
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
 
+        self._xgm_proc = XgmProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc_pulse = ImageProcessorPulse()
         self._roi_proc = RoiProcessorPulse()
@@ -36,6 +37,7 @@ class ImageWorker(ProcessWorker):
         self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
+            self._xgm_proc,
             self._assembler,
             self._image_proc_pulse,
             self._roi_proc,

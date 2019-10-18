@@ -5,13 +5,12 @@ European XFEL.
 
 XgmProcessor.
 
-Author: Jun Zhu <jun.zhu@xfel.eu>
+Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import _BaseProcessor
+from .base_processor import _BaseProcessor, _get_slow_data
 from ..exceptions import ProcessingError
-from ...database import Metadata as mt
 from ...utils import profiler
 
 
@@ -21,32 +20,37 @@ class XgmProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-        self._xgm_src = None
+        self._pipeline_srcs = []
+        self._instrument_srcs = []
 
     def update(self):
-        pass
+        srcs = self._meta.get_all_data_sources("XGM")
+        self._pipeline_srcs = []
+        self._instrument_srcs = []
+        for src in srcs:
+            if src.name.split(":")[-1] == "output":
+                self._pipeline_srcs.append(src)
+            else:
+                self._instrument_srcs.append(src)
 
     @profiler("XGM Processor")
     def process(self, data):
-        """Processor XGM train data."""
-        xgm_src = self._xgm_src
-
+        """Process XGM data"""
         processed = data['processed']
         raw = data['raw']
+        src_type = data['source_type']
+        tid = processed.tid
 
-        if not xgm_src:
-            processed.xgm.source = None
-            processed.xgm.intensity = 0
-            return
+        err_msgs = []
 
-        if xgm_src not in raw:
-            raise ProcessingError(
-                f"XGM device '{xgm_src}' is not in the data!")
+        for src in self._instrument_srcs:
+            fom, err = _get_slow_data(tid, raw, src.name, "pulseEnergy.photonFlux")
+            processed.xgm.fom = fom
+            if err:
+                err_msgs.append(err)
 
-        xgm_data = raw[xgm_src]
-        ppt = 'pulseEnergy.photonFlux'
-        if ppt not in xgm_data:
-            ppt = f"{ppt}.value"  # From the file
+        for src in self._pipeline_srcs:
+            print(raw[src.name]["data.intensitySa3TD"])
 
-        processed.xgm.source = xgm_src
-        processed.xgm.intensity = xgm_data[ppt]
+        for msg in err_msgs:
+            raise ProcessingError('[XGM] ' + msg)

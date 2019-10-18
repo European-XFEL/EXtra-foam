@@ -14,7 +14,6 @@ from .pipe import MpInQueue, MpOutQueue
 from .processors import (
     AzimuthalIntegrationProcessorTrain, BinProcessor, CorrelationProcessor,
     PumpProbeProcessor, RoiProcessorTrain, StatisticsProcessor,
-    XgmProcessor,
 )
 
 
@@ -27,8 +26,6 @@ class Scheduler(ProcessWorker):
         self._inputs = [MpInQueue(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output", gui=True)
 
-        self._xgm_proc = XgmProcessor()
-
         self._pp_proc = PumpProbeProcessor()
         self._correlation_proc = CorrelationProcessor()
         self._bin_proc = BinProcessor()
@@ -39,7 +36,6 @@ class Scheduler(ProcessWorker):
         self._statistics = StatisticsProcessor()
 
         self._tasks = [
-            self._xgm_proc,
             self._pp_proc,
             self._roi_proc,
             self._ai_proc,
