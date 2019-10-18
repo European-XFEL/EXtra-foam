@@ -332,18 +332,21 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         return False
 
-    def run_once(self, processed):
+    def run_once(self, data):
         """Composition interface.
 
-        :param ProcessedData processed: processed data.
+        :param dict data: data which contains raw and processed data, etc.
         """
         self.update()
-        self.process(processed)
+        self.process(data)
 
     def update(self):
         """Update metadata."""
         raise NotImplementedError
 
-    def process(self, processed):
-        """Process data."""
+    def process(self, data):
+        """Process data.
+
+        :param dict data: data which contains raw and processed data, etc.
+        """
         raise NotImplementedError

@@ -42,8 +42,6 @@ class ProcessWorker(mp.Process):
         self._pause_ev = mp.Event()
         self._close_ev = mp.Event()
 
-        self._meta = MetaProxy()
-
         self._timeout = config["TIMEOUT"]
 
         # the time when the previous data processing was finished
@@ -71,7 +69,6 @@ class ProcessWorker(mp.Process):
     def run(self):
         """Override."""
         timeout = self._timeout
-        src_type = None
 
         # start input and output pipes
         for inp in self._inputs:
@@ -83,11 +80,6 @@ class ProcessWorker(mp.Process):
                 if not self.running:
                     self._pause_ev.wait()
 
-                    # update source type, which determines the behavior of
-                    # pipeline
-                    src_type = DataSource(
-                        int(self._meta.get(mt.CONNECTION, 'source_type')))
-
                     # tell input and output channels to update
                     for inp in self._inputs:
                         inp.update()
@@ -97,6 +89,7 @@ class ProcessWorker(mp.Process):
                     try:
                         # get the data from pipe-in
                         data = inp.get(timeout=timeout)
+                        src_type = data['source_type']
                     except Empty:
                         continue
 

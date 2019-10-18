@@ -17,7 +17,7 @@ import time
 from karabo_bridge import Client
 
 from .data_model import ProcessedData
-from ..config import config
+from ..config import config, DataSource
 from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
 from ..database import MetaProxy
@@ -141,7 +141,9 @@ class KaraboBridge(PipeIn):
         client = None
         while not close_ev.is_set():
             if update_ev.is_set():
-                endpoint = self._meta.get(mt.CONNECTION, 'endpoint')
+                cfg = self._meta.get_all(mt.CONNECTION)
+                endpoint = cfg['endpoint']
+                src_type = DataSource(int(cfg['source_type']))
 
                 if client is None:
                     # destroy the zmq socket
@@ -164,7 +166,7 @@ class KaraboBridge(PipeIn):
                     self.log.debug(f"Bridge recv FPS: {fps:>4.1f} Hz")
                 prev_data_arrival_time = time.time()
 
-                data = self._preprocess(data)
+                data = self._preprocess(data, src_type)
 
                 # wait until data in the queue has been processed
                 # Note: if the queue is full, whether the data should be dropped
@@ -183,7 +185,7 @@ class KaraboBridge(PipeIn):
     def _recv_imp(self, client):
         return client.next()
 
-    def _preprocess(self, data):
+    def _preprocess(self, data, src_type):
         raw, meta = data
 
         # get the train ID of the first metadata
@@ -199,7 +201,8 @@ class KaraboBridge(PipeIn):
 
         return {
             "processed": processed,
-            "raw": raw
+            "raw": raw,
+            "source_type": src_type,
         }
 
 
@@ -258,7 +261,8 @@ class MpOutQueue(PipeOut):
             if self._gui:
                 data_out = data['processed']
             else:
-                data_out = {key: data[key] for key in ['processed', 'raw']}
+                data_out = {key: data[key] for key
+                            in ['processed', 'raw', 'source_type']}
 
             while not close_ev.is_set():
                 # push the stored data into client

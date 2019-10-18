@@ -274,20 +274,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # widget._port_le.setText('12345')
         # self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
 
-        # test source type == FILE
-        widget._source_type_cb.setCurrentIndex(DataSource.FILE)
-        assembler.update()
-        self.assertEqual(DataSource.FILE, assembler._source_type)
         # self.assertEqual("A", assembler._source_name)
         # items = []
         # for i in range(widget._detector_src_cb.count()):
         #     items.append(widget._detector_src_cb.itemText(i))
         # self.assertListEqual(["A", "B"], items)
 
-        # change source_type from FILE to BRIDGE
-        widget._source_type_cb.setCurrentIndex(DataSource.BRIDGE)
-        assembler.update()
-        self.assertEqual(DataSource.BRIDGE, assembler._source_type)
         # self.assertEqual("E", assembler._source_name)
         # items = []
         # for i in range(widget._detector_src_cb.count()):
@@ -307,6 +299,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.assertTrue(self.gui.updateMetaData())
 
+        image_worker._assembler.update()
         self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
 
     def testDataReductionCtrlWidget(self):

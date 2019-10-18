@@ -32,14 +32,12 @@ class ImageAssemblerFactory(ABC):
 
         Attributes:
             _source_name (str): detector data source name.
-            _source_type (DataSource): detector data source type.
         """
         def __init__(self):
             """Initialization."""
             super().__init__()
 
             self._source_name = None
-            self._source_type = None
 
             self._geom_file = None
             self._quad_position = None
@@ -48,10 +46,8 @@ class ImageAssemblerFactory(ABC):
             self._n_images = None
 
         def update(self):
-            self._source_type = DataSource(int(
-                self._meta.get(mt.CONNECTION, "source_type")))
-
             srcs = self._meta.get_all_data_sources(config["DETECTOR"])
+
             if srcs:
                 self._source_name = srcs[-1].name
 
@@ -137,8 +133,7 @@ class ImageAssemblerFactory(ABC):
             :returns assembled: assembled detector image data.
             """
             src_name = self._source_name
-            src_type = self._source_type
-
+            src_type = data['source_type']
             raw = data['raw']
 
             try:
