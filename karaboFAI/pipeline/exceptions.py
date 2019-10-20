@@ -45,5 +45,5 @@ class PumpProbeIndexError(StopPipelineError):
 
 
 class DropAllPulsesError(StopPipelineError):
-    """Raised when no pulse is valid after data reduction."""
+    """Raised when no pulse is valid after pulse filtering."""
     pass

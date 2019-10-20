@@ -302,10 +302,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         image_worker._assembler.update()
         self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
 
-    def testDataReductionCtrlWidget(self):
-        widget = self.gui.data_reduction_ctrl_widget
+    def testPulseFilterCtrlWidget(self):
+        widget = self.gui.pulse_filter_ctrl_widget
         image_worker = self.image_worker
-        proc = image_worker._data_reduction_proc
+        proc = image_worker._pulse_filter_proc
         proc.update()
 
         analysis_types = {value: key for key, value in
@@ -313,12 +313,15 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertTupleEqual((-np.inf, np.inf), proc._fom_range)
+        self.assertTupleEqual((0, np.inf), proc._xgm_intensity_range)
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1])
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1_PULSE])
         widget._fom_range_le.setText("-1, 1")
+        widget._xgm_intensity_range_le.setText("1, 1000")
         proc.update()
         self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
         self.assertEqual((-1, 1), proc._fom_range)
+        self.assertEqual((1, 1000), proc._xgm_intensity_range)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (

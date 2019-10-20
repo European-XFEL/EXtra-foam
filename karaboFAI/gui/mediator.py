@@ -64,7 +64,6 @@ class Mediator(QObject):
         self._meta.set(mt.CONNECTION, "source_type", int(value))
 
     def onDataSourceToggled(self, item, checked: bool):
-        print(item.name, checked)
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -216,11 +215,14 @@ class Mediator(QObject):
     def onStReset(self):
         self._meta.set(mt.STATISTICS_PROC, "reset", 1)
 
-    def onDrAnalysisTypeChange(self, value: IntEnum):
-        self._meta.set(mt.DATA_REDUCTION_PROC, "analysis_type", int(value))
+    def onPfAnalysisTypeChange(self, value: IntEnum):
+        self._meta.set(mt.PULSE_FILTER_PROC, "analysis_type", int(value))
 
-    def onDrFomRangeChange(self, value: tuple):
-        self._meta.set(mt.DATA_REDUCTION_PROC, "fom_range", str(value))
+    def onPfFomRangeChange(self, value: tuple):
+        self._meta.set(mt.PULSE_FILTER_PROC, "fom_range", str(value))
+
+    def onPfXgmIntensityRangeChange(self, value: tuple):
+        self._meta.set(mt.PULSE_FILTER_PROC, "xgm_intensity_range", str(value))
 
     def onRdStateChange(self, value: bool):
         self._meta.set(mt.GLOBAL_PROC, "recording_dark", str(value))

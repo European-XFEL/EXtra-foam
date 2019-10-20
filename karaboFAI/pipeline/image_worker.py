@@ -12,7 +12,7 @@ All rights reserved.
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessorPulse, DataReductionProcessor,
+    AzimuthalIntegrationProcessorPulse, PulseFilterProcessor,
     ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain,
     RoiProcessorPulse, XgmProcessor
 )
@@ -33,7 +33,7 @@ class ImageWorker(ProcessWorker):
         self._image_proc_pulse = ImageProcessorPulse()
         self._roi_proc = RoiProcessorPulse()
         self._ai_proc = AzimuthalIntegrationProcessorPulse()
-        self._data_reduction_proc = DataReductionProcessor()
+        self._pulse_filter_proc = PulseFilterProcessor()
         self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
@@ -42,6 +42,6 @@ class ImageWorker(ProcessWorker):
             self._image_proc_pulse,
             self._roi_proc,
             self._ai_proc,
-            self._data_reduction_proc,
+            self._pulse_filter_proc,
             self._image_proc_train,
         ]

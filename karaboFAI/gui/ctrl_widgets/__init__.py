@@ -6,7 +6,7 @@ from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
-from .data_reduction_ctrl_widget import DataReductionCtrlWidget
+from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 
 
@@ -16,7 +16,7 @@ __all__ = [
     "AnalysisCtrlWidget",
     "BinCtrlWidget",
     "CorrelationCtrlWidget",
-    "DataReductionCtrlWidget",
+    "PulseFilterCtrlWidget",
     "DataSourceWidget",
     "StatisticsCtrlWidget",
     "GeometryCtrlWidget",

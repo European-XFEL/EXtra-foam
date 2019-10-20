@@ -431,13 +431,12 @@ class ImageData:
             not needed (in the main process).
         n_images (int): number of images in the train.
         sliced_indices (list): a list of indices which is selected by
-            pulse slicer. The slicing is applied before applying any data
-            reduction algorithm to select pulses with a certain pattern.
-            It can be used to reconstruct the indices of the selected images
-            in the original data providing the number of pulses and the slicer
-            are both known.
+            pulse slicer. The slicing is applied before applying any pulse
+            filters to select pulses with a certain pattern. It can be used
+            to reconstruct the indices of the selected images in the original
+            data providing the number of pulses and the slicer are both known.
         dropped_indices (list): a list of indices which is determined by
-            data reduction and will not be used in further analysis of the
+            pulse filtering and will not be used in further analysis of the
             train, e.g. calculating the average of (on/off) images.
         poi_indices (list): indices of pulses of interest.
         background (float): a uniform background value.

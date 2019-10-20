@@ -343,7 +343,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
                                         background=0,
                                         poi_indices=[0, 0])
 
-    def testDataReductions(self):
+    def testPulseFilter(self):
         proc = self._proc
 
         data, processed = self._gen_data(1001)
@@ -351,7 +351,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         self.assertListEqual([], image_data.dropped_indices)
         image_data.dropped_indices = [0, 2]
         proc.process(data)
-        # test calculating the average image after data reduction
+        # test calculating the average image after pulse filtering
         np.testing.assert_array_equal(
             np.nanmean(data['assembled'][[1, 3]], axis=0),
             image_data.mean
@@ -417,7 +417,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
         # --------------------
-        # test pulse reduction
+        # test pulse filtering
         # --------------------
 
         data, processed = self._gen_data(1002)
@@ -449,7 +449,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
 
         # --------------------
-        # test pulse reduction
+        # test pulse filtering
         # --------------------
 
         data, processed = self._gen_data(1002)
@@ -495,7 +495,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
 
         # --------------------
-        # test pulse reduction
+        # test pulse filtering
         # --------------------
 
         data, processed = self._gen_data(1002)
@@ -556,6 +556,6 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
             processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
 
         # --------------------
-        # test pulse reduction
+        # test pulse filtering
         # --------------------
         # not necessary according to the implementation

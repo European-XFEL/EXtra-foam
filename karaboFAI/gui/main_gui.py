@@ -24,7 +24,7 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, DataReductionCtrlWidget, DataSourceWidget,
+    CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
     StatisticsCtrlWidget, GeometryCtrlWidget,
     PumpProbeCtrlWidget, RoiCtrlWidget
 )
@@ -294,7 +294,7 @@ class MainGUI(QtGui.QMainWindow):
         self.roi_ctrl_widget = self.createCtrlWidget(RoiCtrlWidget)
         self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
-        self.data_reduction_ctrl_widget = self.createCtrlWidget(DataReductionCtrlWidget)
+        self.pulse_filter_ctrl_widget = self.createCtrlWidget(PulseFilterCtrlWidget)
         self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
         self.statistics_ctrl_widget = self.createCtrlWidget(StatisticsCtrlWidget)
 
@@ -368,7 +368,7 @@ class MainGUI(QtGui.QMainWindow):
 
         right_ctrl_widget = QtWidgets.QWidget()
         layout = QtGui.QVBoxLayout()
-        layout.addWidget(self.data_reduction_ctrl_widget)
+        layout.addWidget(self.pulse_filter_ctrl_widget)
         layout.addWidget(self.statistics_ctrl_widget)
         layout.addWidget(self.bin_ctrl_widget)
         layout.addWidget(self.correlation_ctrl_widget)

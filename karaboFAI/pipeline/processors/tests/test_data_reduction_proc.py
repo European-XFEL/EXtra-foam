@@ -3,7 +3,7 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Unittest for DataReductionProcessor.
+Unittest for PulseFilterProcessor.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from karaboFAI.pipeline.processors import DataReductionProcessor
+from karaboFAI.pipeline.processors import PulseFilterProcessor
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
@@ -22,14 +22,14 @@ from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 class TestCorrelationProcessor(_BaseProcessorTest):
     def testGeneral(self):
-        proc = DataReductionProcessor()
+        proc = PulseFilterProcessor()
 
         data, processed = self.simple_data(1001, (2, 2, 2))
 
         proc.process(data)
 
     def testPulseResolved(self):
-        proc = DataReductionProcessor()
+        proc = PulseFilterProcessor()
         proc._pulse_resolved = True
 
         # Note: sequence of the test should be the opposite of the sequence
@@ -72,7 +72,7 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         self.assertEqual([], processed.image.dropped_indices)
 
     def testTrainResolved(self):
-        proc = DataReductionProcessor()
+        proc = PulseFilterProcessor()
         proc._pulse_resolved = False
 
         # ROI2

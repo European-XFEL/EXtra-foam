@@ -45,7 +45,7 @@ class Metadata(metaclass=MetaMetadata):
     CORRELATION_PROC = "meta:proc:correlation"
     BIN_PROC = "meta:proc:bin"
     STATISTICS_PROC = "meta:proc:statistics"
-    DATA_REDUCTION_PROC = "meta:proc:data_reduction"
+    PULSE_FILTER_PROC = "meta:proc:pulse_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
 
     # This is different from all the previous ones, which are all hashes.

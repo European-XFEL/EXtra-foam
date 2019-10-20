@@ -45,8 +45,7 @@ class ImageProcessorPulse(_BaseProcessor):
         _reference (numpy.ndarray): reference image.
         _pulse_slicer (slice): a slice object which will be used to slice
             images for pulse-resolved analysis. The slicing is applied
-            before applying any data reduction algorithm to select less
-            pulses.
+            before applying any pulse filters to select less pulses.
         _poi_indices (list): indices of POI pulses.
     """
 
