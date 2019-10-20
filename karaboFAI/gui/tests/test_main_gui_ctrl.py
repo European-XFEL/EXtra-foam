@@ -71,6 +71,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         image_proc = image_worker._image_proc_pulse
         ai_proc = scheduler._ai_proc
+        xgm_proc = image_worker._xgm_proc
 
         # --------------------------
         # test setting POI pulse indices
@@ -117,10 +118,14 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
         image_proc.update()
         self.assertEqual(slice(None, None), image_proc._pulse_slicer)
+        self.assertEqual(slice(None, None), xgm_proc._pulse_slicer)
 
         widget._pulse_slicer_le.setText("1:5:2")
+        widget._xgm_pulse_slicer_le.setText("2:10:2")
         image_proc.update()
+        xgm_proc.update()
         self.assertEqual(slice(1, 5, 2), image_proc._pulse_slicer)
+        self.assertEqual(slice(2, 10, 2), xgm_proc._pulse_slicer)
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -305,23 +310,25 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
         image_worker = self.image_worker
-        proc = image_worker._pulse_filter_proc
-        proc.update()
+        pre_proc = image_worker._prepf_proc
+        post_proc = image_worker._postpf_proc
 
         analysis_types = {value: key for key, value in
                           widget._analysis_types.items()}
-
-        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
-        self.assertTupleEqual((-np.inf, np.inf), proc._fom_range)
-        self.assertTupleEqual((0, np.inf), proc._xgm_intensity_range)
+        post_proc.update()
+        self.assertEqual(AnalysisType.UNDEFINED, post_proc.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), post_proc._fom_range)
+        pre_proc.update()
+        self.assertTupleEqual((0, np.inf), pre_proc._xgm_intensity_range)
 
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1_PULSE])
         widget._fom_range_le.setText("-1, 1")
         widget._xgm_intensity_range_le.setText("1, 1000")
-        proc.update()
-        self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
-        self.assertEqual((-1, 1), proc._fom_range)
-        self.assertEqual((1, 1000), proc._xgm_intensity_range)
+        post_proc.update()
+        self.assertEqual(AnalysisType.ROI1_PULSE, post_proc.analysis_type)
+        self.assertEqual((-1, 1), post_proc._fom_range)
+        pre_proc.update()
+        self.assertEqual((1, 1000), pre_proc._xgm_intensity_range)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (

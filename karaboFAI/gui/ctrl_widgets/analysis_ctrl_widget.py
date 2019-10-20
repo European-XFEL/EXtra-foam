@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-AnalysisCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -29,6 +27,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         poi_index2 = 0
 
         self._pulse_slicer_le = SmartSliceLineEdit(":")
+        self._xgm_pulse_slicer_le = SmartSliceLineEdit(":")
 
         self._poi_index1_le = SmartLineEdit(str(poi_index1))
         self._poi_index1_le.setValidator(self._pulse_index_validator)
@@ -63,22 +62,28 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Pulse slicer: "), 0, 0, AR)
-        layout.addWidget(self._pulse_slicer_le, 0, 1, 1, 3)
+        row = 0
+        layout.addWidget(QtGui.QLabel("Pulse slicer: "), row, 0, AR)
+        layout.addWidget(self._pulse_slicer_le, row, 1)
+        layout.addWidget(QtGui.QLabel("XGM pulse slicer: "), row, 2, AR)
+        layout.addWidget(self._xgm_pulse_slicer_le, row, 3)
 
-        layout.addWidget(QtGui.QLabel("POI index 1: "), 1, 0, AR)
-        layout.addWidget(self._poi_index1_le, 1, 1)
-        layout.addWidget(QtGui.QLabel("POI index 2: "), 1, 2, AR)
-        layout.addWidget(self._poi_index2_le, 1, 3)
+        row += 1
+        layout.addWidget(QtGui.QLabel("POI index 1: "), row, 0, AR)
+        layout.addWidget(self._poi_index1_le, row, 1)
+        layout.addWidget(QtGui.QLabel("POI index 2: "), row, 2, AR)
+        layout.addWidget(self._poi_index2_le, row, 3)
 
-        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), 2, 0, AR)
-        layout.addWidget(self._photon_energy_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("Sample distance (m): "), 2, 2, AR)
-        layout.addWidget(self._sample_dist_le, 2, 3)
+        row += 1
+        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), row, 0, AR)
+        layout.addWidget(self._photon_energy_le, row, 1)
+        layout.addWidget(QtGui.QLabel("Sample distance (m): "), row, 2, AR)
+        layout.addWidget(self._sample_dist_le, row, 3)
 
-        layout.addWidget(QtGui.QLabel("M.A. window: "), 3, 0, AR)
-        layout.addWidget(self._ma_window_le, 3, 1)
-        layout.addWidget(self._ma_reset_btn, 3, 3, AR)
+        row += 1
+        layout.addWidget(QtGui.QLabel("M.A. window: "), row, 0, AR)
+        layout.addWidget(self._ma_window_le, row, 1)
+        layout.addWidget(self._ma_reset_btn, row, 3, AR)
 
         self.setLayout(layout)
 
@@ -106,6 +111,8 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
 
         self._pulse_slicer_le.value_changed_sgn.connect(
             mediator.onPulseIndexSelectorChange)
+        self._xgm_pulse_slicer_le.value_changed_sgn.connect(
+            mediator.onXgmPulseIndexSelectorChange)
 
         self._ma_window_le.returnPressed.connect(
             lambda: mediator.onMaWindowChange(
@@ -123,6 +130,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._sample_dist_le.returnPressed.emit()
 
         self._pulse_slicer_le.returnPressed.emit()
+        self._xgm_pulse_slicer_le.returnPressed.emit()
 
         self._ma_window_le.returnPressed.emit()
 

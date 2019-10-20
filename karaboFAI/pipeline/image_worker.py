@@ -12,9 +12,10 @@ All rights reserved.
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessorPulse, PulseFilterProcessor,
-    ImageAssemblerFactory, ImageProcessorPulse, ImageProcessorTrain,
-    RoiProcessorPulse, XgmProcessor
+    AzimuthalIntegrationProcessorPulse, PrePulseFilterProcessor,
+    PostPulseFilterProcessor, ImageAssemblerFactory,
+    ImageProcessorPulse, ImageProcessorTrain, RoiProcessorPulse,
+    XgmProcessor
 )
 from ..config import config
 
@@ -33,15 +34,18 @@ class ImageWorker(ProcessWorker):
         self._image_proc_pulse = ImageProcessorPulse()
         self._roi_proc = RoiProcessorPulse()
         self._ai_proc = AzimuthalIntegrationProcessorPulse()
-        self._pulse_filter_proc = PulseFilterProcessor()
+        # FIXME: move '_prepf_proc' before '_assembler'
+        self._prepf_proc = PrePulseFilterProcessor()
+        self._postpf_proc = PostPulseFilterProcessor()
         self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
             self._xgm_proc,
+            self._prepf_proc,
             self._assembler,
             self._image_proc_pulse,
             self._roi_proc,
             self._ai_proc,
-            self._pulse_filter_proc,
+            self._postpf_proc,
             self._image_proc_train,
         ]

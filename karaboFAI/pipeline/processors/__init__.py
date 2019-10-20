@@ -13,4 +13,4 @@ from .pump_probe_processor import PumpProbeProcessor
 from .roi import RoiProcessorTrain, RoiProcessorPulse
 from .xgm import XgmProcessor
 from .statistics import StatisticsProcessor
-from .pulse_filter import PulseFilterProcessor
+from .pulse_filter import PrePulseFilterProcessor, PostPulseFilterProcessor

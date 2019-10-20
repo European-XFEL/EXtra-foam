@@ -320,9 +320,14 @@ class DataItem:
 
 
 class XgmData:
+    """XgmData class.
+
+    Store XGM pipeline data.
+    """
     def __init__(self):
-        self.intensity = DataItem()
-        self.pos = DataItem()
+        self.intensity = None  # FEL intensity
+        self.x = None  # x position
+        self.y = None  # y position
 
 
 class _RoiAuxData:
@@ -724,6 +729,7 @@ class ProcessedData:
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
+            self.xgm = XgmData()
 
     def __init__(self, tid, sources=None):
         """Initialization."""
@@ -737,8 +743,9 @@ class ProcessedData:
 
         self.image = ImageData()
 
-        self.roi = RoiData()
         self.xgm = XgmData()
+
+        self.roi = RoiData()
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
 

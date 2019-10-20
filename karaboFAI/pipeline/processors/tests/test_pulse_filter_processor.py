@@ -14,23 +14,20 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from karaboFAI.pipeline.processors import PulseFilterProcessor
+from karaboFAI.pipeline.processors import (
+    PrePulseFilterProcessor, PostPulseFilterProcessor
+)
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 
 class TestCorrelationProcessor(_BaseProcessorTest):
-    def testGeneral(self):
-        proc = PulseFilterProcessor()
+    def testPreProcessor(self):
+        proc = PrePulseFilterProcessor()
 
-        data, processed = self.simple_data(1001, (2, 2, 2))
-
-        proc.process(data)
-
-    def testPulseResolved(self):
-        proc = PulseFilterProcessor()
-        proc._pulse_resolved = True
+    def testPostProcessor(self):
+        proc = PostPulseFilterProcessor()
 
         # Note: sequence of the test should be the opposite of the sequence
         #       of "if elif else" in the 'process' method
@@ -64,28 +61,6 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         proc._fom_range = [0, 2.5]
         proc.process(data)
         self.assertEqual([0, 1, 2, 3], processed.image.dropped_indices)
-
-        # UNDEFINED
-        data, processed = self.simple_data(1001, (4, 2, 2))
-        proc.analysis_type = AnalysisType.UNDEFINED
-        proc.process(data)
-        self.assertEqual([], processed.image.dropped_indices)
-
-    def testTrainResolved(self):
-        proc = PulseFilterProcessor()
-        proc._pulse_resolved = False
-
-        # ROI2
-        data, processed = self.simple_data(1001, (4, 2, 2))
-        proc.analysis_type = AnalysisType.ROI2
-        with self.assertRaises(NotImplementedError):
-            proc.process(data)
-
-        # ROI1
-        data, processed = self.simple_data(1001, (4, 2, 2))
-        proc.analysis_type = AnalysisType.ROI1
-        with self.assertRaises(NotImplementedError):
-            proc.process(data)
 
         # UNDEFINED
         data, processed = self.simple_data(1001, (4, 2, 2))

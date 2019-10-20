@@ -21,7 +21,9 @@ _MISC_CATEGORIES = [
     "Magnet"
 ]
 
-# The source names of image detectors will be injected at run time.
+# 1. The source names of image detectors will be injected at run time.
+# 2. For sources like Digitizer, XGM and so on, we assume there is only
+#    device which is interested.
 
 # the "set"s will be converted to list at last
 DATA_SOURCE_CATEGORIES = {
@@ -40,8 +42,6 @@ DATA_SOURCE_CATEGORIES = {
         "XGM": {
             "SA1_XTD2_XGM/DOOCS/MAIN",
             "SA1_XTD2_XGM/DOOCS/MAIN:output",
-            "SPB_XTD9_XGM/DOOCS/MAIN",
-            "SPB_XTD9_XGM/DOOCS/MAIN:output",
         },
         "Motor": {
             "FXE_SMS_USR/MOTOR/UM01",
@@ -59,8 +59,6 @@ DATA_SOURCE_CATEGORIES = {
         },
         "FastCCD": set(),
         "XGM": {
-            "SA3_XTD10_XGM/XGM/DOOCS",
-            "SA3_XTD10_XGM/XGM/DOOCS:output",
             "SCS_BLU_XGM/XGM/DOOCS",
             "SCS_BLU_XGM/XGM/DOOCS:output"
         },
