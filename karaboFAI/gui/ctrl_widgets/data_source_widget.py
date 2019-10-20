@@ -14,8 +14,35 @@ from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
-from ...database import DATA_SOURCE_CATEGORIES, SourceItem
+from ...database import (
+    DATA_SOURCE_CATEGORIES, DATA_SOURCE_PROPERTIES, SourceItem
+)
 from ...config import config, DataSource
+
+
+class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        """Override."""
+        cb = QtWidgets.QComboBox(parent)
+        channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
+        ctg = index.parent().data(Qt.DisplayRole)
+        cb.addItems(DATA_SOURCE_PROPERTIES[ctg if len(channels) == 1
+                                           else f"{ctg}:{channels[-1]}"])
+        return cb
+
+    def setEditorData(self, editor, index):
+        """Override."""
+        value = index.data(Qt.EditRole)
+        editor.setCurrentText(value)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.currentText(), Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
 
 
 class DataSourceTreeItem:
@@ -24,6 +51,8 @@ class DataSourceTreeItem:
         self._children = []
         self._data = data
         self._parent = parent
+
+        self._rank = 0 if parent is None else parent.rank() + 1
 
         self._checked = False
 
@@ -62,6 +91,10 @@ class DataSourceTreeItem:
         except IndexError:
             return None
 
+    def setData(self, value, column):
+        if 0 <= column < len(self._data):
+            self._data[column] = value
+
     def parent(self):
         return self._parent
 
@@ -70,6 +103,9 @@ class DataSourceTreeItem:
 
     def setChecked(self, checked):
         self._checked = checked
+
+    def rank(self):
+        return self._rank
 
 
 class DataSourceTreeModel(QtCore.QAbstractItemModel):
@@ -82,7 +118,7 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
 
         self._mediator = Mediator()
 
-        self._root = DataSourceTreeItem(["Source name"])
+        self._root = DataSourceTreeItem(["Source name", "Property"])
         self.setupModelData()
 
         self.device_toggled_sgn.connect(self._mediator.onDataSourceToggled)
@@ -97,18 +133,21 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
         if role == Qt.DisplayRole:
             return item.data(index.column())
 
-        if role == Qt.CheckStateRole and index.column() == 0 and item.parent().parent():
+        if role == Qt.CheckStateRole and index.column() == 0 and item.rank() > 1:
             return Qt.Checked if item.isChecked() else Qt.Unchecked
 
         return
 
     def setData(self, index, value, role=None) -> bool:
         """Override."""
-        if role == Qt.CheckStateRole:
+        if role == Qt.CheckStateRole or role == Qt.EditRole:
             item = index.internalPointer()
-            item.setChecked(value)
+            if role == Qt.CheckStateRole:
+                item.setChecked(value)
+            else:
+                item.setData(value, index.column())
 
-            src_item = SourceItem(item.parent().data(0), item.data(0))
+            src_item = SourceItem(item.parent().data(0), item.data(0), item.data(1))
             self.device_toggled_sgn.emit(src_item, item.isChecked())
             return True
         return False
@@ -119,8 +158,12 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
 
         flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-        if index.column() == 0:
-            flags |= Qt.ItemIsUserCheckable
+        item = index.internalPointer()
+        if item.rank() > 1:
+            if index.column() == 0:
+                flags |= Qt.ItemIsUserCheckable
+            elif item.isChecked() and index.column() >= 1:
+                flags |= Qt.ItemIsEditable
 
         return flags
 
@@ -190,14 +233,17 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
         sources[det] = sorted(sources[det])
 
         for ctg, srcs in sources.items():
-            self._root.appendChild(DataSourceTreeItem([ctg], self._root))
+            self._root.appendChild(DataSourceTreeItem([ctg, ""], self._root))
 
             last_child = self._root.child(-1)
 
             try:
                 for src in srcs:
+                    channels = src.split(':')
+                    key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
+                    default_ppt = DATA_SOURCE_PROPERTIES[key][0]
                     last_child.appendChild(
-                        DataSourceTreeItem([src], self._root.child(-1)))
+                        DataSourceTreeItem([src, default_ppt], last_child))
             except KeyError:
                 pass
 
@@ -333,8 +379,10 @@ class DataSourceWidget(QtWidgets.QWidget):
         self.connection_ctrl_widget = ConnectionCtrlWidget()
 
         self._tree_view = QtWidgets.QTreeView()
-        self._tree_model = DataSourceTreeModel()
+        self._tree_model = DataSourceTreeModel(self)
+        self._tree_ppt_delegate = DSPropertyDelegate(self)
         self._tree_view.setModel(self._tree_model)
+        self._tree_view.setItemDelegateForColumn(1, self._tree_ppt_delegate)
 
         self._list_container = QtWidgets.QTabWidget()
         self._list_view = QtWidgets.QListView()

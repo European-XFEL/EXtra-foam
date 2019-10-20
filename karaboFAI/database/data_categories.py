@@ -32,7 +32,9 @@ DATA_SOURCE_CATEGORIES = {
         "AGIPD": set(),
     },
     "FXE": {
-        "LPD": set(),
+        "LPD": {
+            "FXE_DET_LPD1M-1/DET/*CH0:xtdf"
+        },
         "JungFrau": set(),
         "JungFrauPR": set(),
         "XGM": {
@@ -52,16 +54,15 @@ DATA_SOURCE_CATEGORIES = {
         },
     },
     "SCS": {
-        "DSSC": set(),
+        "DSSC": {
+            "SCS_DET_DSSC1M-1/DET/*CH0:xtdf",
+        },
         "FastCCD": set(),
         "XGM": {
             "SA3_XTD10_XGM/XGM/DOOCS",
             "SA3_XTD10_XGM/XGM/DOOCS:output",
             "SCS_BLU_XGM/XGM/DOOCS",
             "SCS_BLU_XGM/XGM/DOOCS:output"
-        },
-        "Digitizer": {
-            "SCS_UTC1_ADQ/ADC/1:network",
         },
         "Magnet": {
             "SCS_CDIFFT_MAG/SUPPLY/CURRENT",
@@ -83,6 +84,72 @@ DATA_SOURCE_CATEGORIES = {
     "HED": {
         "JungFrau": set(),
     },
+}
+
+
+DATA_SOURCE_PROPERTIES = {
+    "AGIPD": [
+        "image.data"
+    ],
+    "AGIPD:xtdf": [
+        "image.data"
+    ],
+    "LPD": [
+        "image.data"
+    ],
+    "LPD:xtdf": [
+        "image.data"
+    ],
+    "DSSC": [
+        "image.data"
+    ],
+    "DSSC:xtdf": {
+        "image.data"
+    },
+    "JungFrau": [
+        "image.data"
+    ],
+    "JungFrau:display": [
+        "image.data"
+    ],
+    "JungFrau:daqOutput": [
+        "image.data"
+    ],
+    "JungFrauPR": [
+        "image.data"
+    ],
+    "JungFrauPR:display": [
+        "image.data"
+    ],
+    "JungFrauPR:daqOutput": [
+        "image.data"
+    ],
+    "FastCCD:output": [
+        "image.data"
+    ],
+    "FastCCD:daqOutput": [
+        "data.image.pixels"
+    ],
+    "XGM": [
+        "photonEnergy.photonFlux",
+    ],
+    "XGM:output": [
+        "intensityTD",
+        "sa1IntensityTD",
+        "sa3IntensityTD",
+    ],
+    "Magnet": [
+        "actualCurrent",
+    ],
+    "MonoChromator": [
+        "actualEnergy",
+    ],
+    "Motor": [
+        "actualPosition",
+    ],
+    "Metadata": [
+        "timestamp.tid",
+    ]
 }
 
 
@@ -110,13 +177,14 @@ for topic in DATA_SOURCE_CATEGORIES:
             topic_data[ctg] = sorted(topic_data[ctg])
 
     topic_data["Metadata"] = {
-        "Train ID",
+        "metadata",
     }
 
     DATA_SOURCE_CATEGORIES[topic] = _sort_dict(DATA_SOURCE_CATEGORIES[topic])
 
 
 class SourceItem:
-    def __init__(self, category, name):
+    def __init__(self, category, name, ppt):
         self.category = category
         self.name = name
+        self.property = ppt

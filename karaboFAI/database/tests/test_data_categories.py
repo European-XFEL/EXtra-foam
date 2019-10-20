@@ -20,7 +20,7 @@ class TestGUI(unittest.TestCase):
                     self.assertIn(det, topic_data)
 
                 if det in topic_data:
-                    self.assertEqual(set(), topic_data[det])
+                    self.assertIsInstance(topic_data[det], set)
 
             if topic == "FXE":
                 self.assertNotIn("AGIPD", topic_data)

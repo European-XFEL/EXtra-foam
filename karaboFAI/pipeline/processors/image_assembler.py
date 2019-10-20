@@ -49,6 +49,7 @@ class ImageAssemblerFactory(ABC):
             srcs = self._meta.get_all_data_sources(config["DETECTOR"])
 
             if srcs:
+                # FIXME
                 self._source_name = srcs[-1].name
 
             if config['REQUIRE_GEOMETRY']:
