@@ -67,10 +67,11 @@ class BinMode(IntEnum):
 
 class VFomNormalizer(IntEnum):
     AUC = 0  # area under curve
-    ROI3 = 1
-    ROI4 = 2
-    ROI3_SUB_ROI4 = 3
-    ROI3_ADD_ROI4 = 4
+    XGM = 1
+    ROI3 = 2
+    ROI4 = 3
+    ROI3_SUB_ROI4 = 4
+    ROI3_ADD_ROI4 = 5
 
 
 # a simple class saves the trouble when the attribute needs to be read/write
