@@ -86,6 +86,7 @@ DATA_SOURCE_CATEGORIES = {
     },
 }
 
+EXCLUSIVE_SOURCE_CATEGORIES = config.detectors.copy()
 
 DATA_SOURCE_PROPERTIES = {
     "AGIPD": [
@@ -177,7 +178,7 @@ for topic in DATA_SOURCE_CATEGORIES:
             topic_data[ctg] = sorted(topic_data[ctg])
 
     topic_data["Metadata"] = {
-        "metadata",
+        "Metadata",
     }
 
     DATA_SOURCE_CATEGORIES[topic] = _sort_dict(DATA_SOURCE_CATEGORIES[topic])

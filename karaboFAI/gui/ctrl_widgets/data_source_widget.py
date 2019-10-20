@@ -15,7 +15,8 @@ from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..mediator import Mediator
 from ...database import (
-    DATA_SOURCE_CATEGORIES, DATA_SOURCE_PROPERTIES, SourceItem
+    DATA_SOURCE_CATEGORIES, EXCLUSIVE_SOURCE_CATEGORIES,
+    DATA_SOURCE_PROPERTIES, SourceItem
 )
 from ...config import config, DataSource
 
@@ -47,10 +48,12 @@ class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
 
 class DataSourceTreeItem:
     """Item used in DataSourceTreeModel."""
-    def __init__(self, data, parent=None):
+    def __init__(self, data, exclusive=False, parent=None):
         self._children = []
         self._data = data
         self._parent = parent
+
+        self._exclusive = exclusive
 
         self._rank = 0 if parent is None else parent.rank() + 1
 
@@ -107,6 +110,9 @@ class DataSourceTreeItem:
     def rank(self):
         return self._rank
 
+    def isExclusive(self):
+        return self._exclusive
+
 
 class DataSourceTreeModel(QtCore.QAbstractItemModel):
     """Tree model interface for managing data sources."""
@@ -143,12 +149,30 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
         if role == Qt.CheckStateRole or role == Qt.EditRole:
             item = index.internalPointer()
             if role == Qt.CheckStateRole:
+                n_rows = index.model().rowCount(index.parent())
+                if item.isExclusive() and not item.isChecked():
+                    for i in range(n_rows):
+                        if i != index.row():
+                            item_sb = index.sibling(i, 0).internalPointer()
+                            if item_sb.isChecked():
+                                item_sb.setChecked(False)
+                                self.dataChanged.emit(index.sibling(i, 0),
+                                                      index.sibling(i, 0))
+                                self.device_toggled_sgn.emit(
+                                    SourceItem(item_sb.parent().data(0),
+                                               item_sb.data(0),
+                                               item_sb.data(1)),
+                                    False)
+                                break
+
                 item.setChecked(value)
             else:
                 item.setData(value, index.column())
 
-            src_item = SourceItem(item.parent().data(0), item.data(0), item.data(1))
-            self.device_toggled_sgn.emit(src_item, item.isChecked())
+            self.device_toggled_sgn.emit(SourceItem(item.parent().data(0),
+                                                    item.data(0),
+                                                    item.data(1)),
+                                         item.isChecked())
             return True
         return False
 
@@ -233,17 +257,20 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
         sources[det] = sorted(sources[det])
 
         for ctg, srcs in sources.items():
-            self._root.appendChild(DataSourceTreeItem([ctg, ""], self._root))
+            self._root.appendChild(DataSourceTreeItem([ctg, ""],
+                                                      exclusive=False,
+                                                      parent=self._root))
 
             last_child = self._root.child(-1)
 
             try:
+                exclusive = ctg in EXCLUSIVE_SOURCE_CATEGORIES
                 for src in srcs:
                     channels = src.split(':')
                     key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
                     default_ppt = DATA_SOURCE_PROPERTIES[key][0]
-                    last_child.appendChild(
-                        DataSourceTreeItem([src, default_ppt], last_child))
+                    last_child.appendChild(DataSourceTreeItem(
+                        [src, default_ppt], exclusive, parent=last_child))
             except KeyError:
                 pass
 

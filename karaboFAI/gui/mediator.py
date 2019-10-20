@@ -64,6 +64,7 @@ class Mediator(QObject):
         self._meta.set(mt.CONNECTION, "source_type", int(value))
 
     def onDataSourceToggled(self, item, checked: bool):
+        print(item.name, checked)
         if checked:
             self._meta.add_data_source(item)
         else:
