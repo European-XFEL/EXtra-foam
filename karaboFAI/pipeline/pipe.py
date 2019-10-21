@@ -202,7 +202,9 @@ class KaraboBridge(PipeIn):
         return {
             "processed": processed,
             "raw": raw,
-            "source_type": src_type,
+            "meta": {
+                "source_type": src_type,
+            },
         }
 
 
@@ -262,7 +264,7 @@ class MpOutQueue(PipeOut):
                 data_out = data['processed']
             else:
                 data_out = {key: data[key] for key
-                            in ['processed', 'raw', 'source_type']}
+                            in ['processed', 'raw', 'meta']}
 
             while not close_ev.is_set():
                 # push the stored data into client

@@ -16,10 +16,8 @@ from ...config import AnalysisType
 from ...utils import profiler
 
 
-class PrePulseFilterProcessor(_BaseProcessor):
-    """PrePulseFilterProcessor class.
-
-    Apply filters to pulse-resolved data before processing pulsed data.
+class XgmPulseFilter(_BaseProcessor):
+    """XgmPulseFilter class.
 
     Attributes:
         _xgm_intensity_range (tuple):  if the pulsed XGM intensity falls
@@ -51,10 +49,10 @@ class PrePulseFilterProcessor(_BaseProcessor):
         processed.image.dropped_indices = dropped
 
 
-class PostPulseFilterProcessor(_BaseProcessor):
-    """PulseFilterProcessor class.
+class PostPulseFilter(_BaseProcessor):
+    """PostPulseFilter class.
 
-    Apply filters to pulse-resolved data after processing pulsed data.
+    Filter applied after pulse-resolved image analysis.
 
     Attributes:
         analysis_type (AnalysisType): analysis type.

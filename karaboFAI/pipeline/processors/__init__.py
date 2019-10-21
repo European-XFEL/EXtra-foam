@@ -11,6 +11,6 @@ from .image_processor import ImageProcessorPulse, ImageProcessorTrain
 from .image_assembler import ImageAssemblerFactory
 from .pump_probe_processor import PumpProbeProcessor
 from .roi import RoiProcessorTrain, RoiProcessorPulse
-from .xgm import XgmProcessor
+from .xgm import XgmExtractor
 from .statistics import StatisticsProcessor
-from .pulse_filter import PrePulseFilterProcessor, PostPulseFilterProcessor
+from .pulse_filter import XgmPulseFilter, PostPulseFilter

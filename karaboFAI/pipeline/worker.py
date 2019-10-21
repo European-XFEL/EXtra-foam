@@ -16,8 +16,6 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from ..database import MetaProxy
-from ..database import Metadata as mt
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
 
@@ -89,7 +87,7 @@ class ProcessWorker(mp.Process):
                     try:
                         # get the data from pipe-in
                         data = inp.get(timeout=timeout)
-                        src_type = data['source_type']
+                        src_type = data['meta']['source_type']
                     except Empty:
                         continue
 
@@ -121,6 +119,7 @@ class ProcessWorker(mp.Process):
                     else:
                         raise ProcessingError(
                             f"Unknown source type {src_type}!")
+
             except Exception as e:
                 self.log.error(repr(e))
 

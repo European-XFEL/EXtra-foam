@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PumpProbeProcessors.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -109,10 +107,7 @@ class ImageProcessorPulse(_BaseProcessor):
     def process(self, data):
         image_data = data['processed'].image
         assembled = data['assembled']
-        if assembled.ndim == 3:
-            n_total = assembled.shape[0]
-        else:
-            n_total = 1
+        n_total = assembled.shape[0] if assembled.ndim == 3 else 1
 
         pulse_slicer = self._pulse_slicer
         data['assembled'] = assembled[pulse_slicer]

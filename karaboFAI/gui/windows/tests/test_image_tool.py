@@ -99,7 +99,7 @@ class TestImageTool(unittest.TestCase):
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
         # default values are set correctly
-        proc = self.scheduler._roi_proc
+        proc = self.scheduler._roi_proc_train
         widget = self.image_tool._roi_ctrl_widget
 
         proc.update()
@@ -114,7 +114,7 @@ class TestImageTool(unittest.TestCase):
     def testRoiCtrlWidget(self):
         widget = self.image_tool._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
-        proc = self.scheduler._roi_proc
+        proc = self.scheduler._roi_proc_train
         self.assertEqual(4, len(roi_ctrls))
 
         for ctrl in roi_ctrls:

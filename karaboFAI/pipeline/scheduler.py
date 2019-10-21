@@ -27,18 +27,18 @@ class Scheduler(ProcessWorker):
         self._output = MpOutQueue(f"{self._name}:output", gui=True)
 
         self._pp_proc = PumpProbeProcessor()
+
+        self._roi_proc_train = RoiProcessorTrain()
+        self._ai_proc_train = AzimuthalIntegrationProcessorTrain()
+
+        self._statistics = StatisticsProcessor()
         self._correlation_proc = CorrelationProcessor()
         self._bin_proc = BinProcessor()
 
-        self._roi_proc = RoiProcessorTrain()
-        self._ai_proc = AzimuthalIntegrationProcessorTrain()
-
-        self._statistics = StatisticsProcessor()
-
         self._tasks = [
             self._pp_proc,
-            self._roi_proc,
-            self._ai_proc,
+            self._roi_proc_train,
+            self._ai_proc_train,
             self._statistics,
             self._correlation_proc,
             self._bin_proc,

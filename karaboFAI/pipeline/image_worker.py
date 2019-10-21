@@ -12,10 +12,10 @@ All rights reserved.
 from .worker import ProcessWorker
 from .pipe import KaraboBridge, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessorPulse, PrePulseFilterProcessor,
-    PostPulseFilterProcessor, ImageAssemblerFactory,
+    AzimuthalIntegrationProcessorPulse,
+    PostPulseFilter, ImageAssemblerFactory,
     ImageProcessorPulse, ImageProcessorTrain, RoiProcessorPulse,
-    XgmProcessor
+    XgmExtractor, XgmPulseFilter
 )
 from ..config import config
 
@@ -29,23 +29,22 @@ class ImageWorker(ProcessWorker):
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
 
-        self._xgm_proc = XgmProcessor()
+        self._xgm_extractor = XgmExtractor()
+        self._xgm_pulse_filter = XgmPulseFilter()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc_pulse = ImageProcessorPulse()
-        self._roi_proc = RoiProcessorPulse()
-        self._ai_proc = AzimuthalIntegrationProcessorPulse()
-        # FIXME: move '_prepf_proc' before '_assembler'
-        self._prepf_proc = PrePulseFilterProcessor()
-        self._postpf_proc = PostPulseFilterProcessor()
+        self._roi_proc_pulse = RoiProcessorPulse()
+        self._ai_proc_pulse = AzimuthalIntegrationProcessorPulse()
+        self._post_pulse_filter = PostPulseFilter()
         self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
-            self._xgm_proc,
-            self._prepf_proc,
+            self._xgm_extractor,
+            self._xgm_pulse_filter,
             self._assembler,
             self._image_proc_pulse,
-            self._roi_proc,
-            self._ai_proc,
-            self._postpf_proc,
+            self._roi_proc_pulse,
+            self._ai_proc_pulse,
+            self._post_pulse_filter,
             self._image_proc_train,
         ]

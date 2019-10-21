@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PumpProbeProcessors.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -15,9 +13,7 @@ from ...database import Metadata as mt
 
 
 class PumpProbeProcessor(_BaseProcessor):
-    """PumpProbeImageExtractor.
-
-    Extract the pump and probe images in a train.
+    """PumpProbeProcessor.
 
     Attributes:
         analysis_type (AnalysisType): pump-probe analysis type.

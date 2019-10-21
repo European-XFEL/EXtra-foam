@@ -136,7 +136,7 @@ class ImageAssemblerFactory(ABC):
             if src_name is None:
                 raise AssemblingError(f"Unspecified {config['DETECTOR']} "
                                       f"source name!")
-            src_type = data['source_type']
+            src_type = data['meta']['source_type']
             raw = data['raw']
 
             try:

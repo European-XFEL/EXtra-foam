@@ -23,7 +23,6 @@ class PulseFilterCtrlWidget(AbstractCtrlWidget):
         "": AnalysisType.UNDEFINED,
         "ROI1 (sum)": AnalysisType.ROI1_PULSE,
         "ROI2 (sum)": AnalysisType.ROI2_PULSE,
-        "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG_PULSE,
     })
 
     def __init__(self, *args, **kwargs):

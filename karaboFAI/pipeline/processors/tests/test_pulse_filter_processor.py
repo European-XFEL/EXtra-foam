@@ -9,25 +9,22 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
 
-from karaboFAI.pipeline.processors import (
-    PrePulseFilterProcessor, PostPulseFilterProcessor
-)
+from karaboFAI.pipeline.processors import XgmPulseFilter, PostPulseFilter
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 
-class TestCorrelationProcessor(_BaseProcessorTest):
-    def testPreProcessor(self):
-        proc = PrePulseFilterProcessor()
+class TestPulseFilters(_BaseProcessorTest):
+    def testXgmPulseFilter(self):
+        proc = XgmPulseFilter()
 
-    def testPostProcessor(self):
-        proc = PostPulseFilterProcessor()
+    def testPostPulseFilter(self):
+        proc = PostPulseFilter()
 
         # Note: sequence of the test should be the opposite of the sequence
         #       of "if elif else" in the 'process' method
