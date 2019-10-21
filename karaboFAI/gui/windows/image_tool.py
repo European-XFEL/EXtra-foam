@@ -550,7 +550,7 @@ class ImageToolWindow(AbstractWindow):
         """
         data = self._data.get()
 
-        if data is None:
+        if data is None or data.image is None or data.image.mean is None:
             return
 
         self._image_view.setImageData(_SimpleImageData(data.image), **kwargs)
