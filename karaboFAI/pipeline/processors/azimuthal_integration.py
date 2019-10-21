@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-AzimuthalIntegrationProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -32,9 +30,7 @@ def energy2wavelength(energy):
 
 
 class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
-    """_AzimuthalIntegrationProcessorBase class.
-
-    Base class for azimuthal integration processor.
+    """Base class for AzimuthalIntegrationProcessors.
 
     Attributes:
         _sample_dist (float): distance from the sample to the
@@ -129,11 +125,70 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         return self._integrator
 
 
-class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
-    """AzimuthalIntegrationProcessorTrain class.
+class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
+    """Pulse-resolved azimuthal integration processor."""
 
-    Train-resolved azimuthal integration processor.
-    """
+    def _update_moving_average(self, v):
+        pass
+
+    @profiler("Azimuthal Integration Processor (Pulse)")
+    def process(self, data):
+        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
+            return
+
+        processed = data['processed']
+        assembled = data['assembled']
+
+        integrator = self._update_integrator()
+        itgt1d = functools.partial(integrator.integrate1d,
+                                   method=self._integ_method,
+                                   radial_range=self._integ_range,
+                                   correctSolidAngle=True,
+                                   polarization_factor=1,
+                                   unit="q_A^-1")
+        integ_points = self._integ_points
+
+        threshold_mask = processed.image.threshold_mask
+
+        def _integrate1d_imp(i):
+            masked = mask_image(assembled[i], threshold_mask=threshold_mask)
+            return itgt1d(masked, integ_points)
+
+        intensities = []  # pulsed A.I.
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            for i, ret in zip(range(len(assembled)),
+                              executor.map(_integrate1d_imp,
+                                           range(len(assembled)))):
+                if i == 0:
+                    momentum = ret.radial
+                intensities.append(ret.intensity)
+
+        # intensities = self._normalize_vfom(
+        #     processed, np.array(intensities), self._normalizer,
+        #     x=momentum, auc_range=self._auc_range)
+
+        # calculate the difference between each pulse and the
+        # first one
+        diffs = [p - intensities[0] for p in intensities]
+
+        # calculate the figure of merit for each pulse
+        foms = []
+        for diff in diffs:
+            fom = slice_curve(
+                diff, momentum, *self._fom_integ_range)[0]
+            foms.append(np.sum(np.abs(fom)))
+
+        processed.pulse.ai.x = momentum
+        processed.pulse.ai.vfom = intensities
+        processed.pulse.ai.fom = foms
+        # Note: It is not correct to calculate the mean of intensities
+        #       since the result is equivalent to setting all nan to zero
+        #       instead of nanmean.
+
+
+class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
+    """Train-resolved azimuthal integration processor."""
+
     _intensity_ma = MovingAverageArray()
     _intensity_on_ma = MovingAverageArray()
     _intensity_off_ma = MovingAverageArray()
@@ -230,66 +285,3 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                 pp.fom = fom
                 pp.x_label = processed.ai.x_label
                 pp.vfom_label = f"[pump-probe] {processed.ai.vfom_label}"
-
-
-class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
-    """AzimuthalIntegrationProcessorPulse class.
-
-    Pulse-resolved azimuthal integration processor.
-    """
-    def _update_moving_average(self, v):
-        pass
-
-    @profiler("Azimuthal Integration Processor (Pulse)")
-    def process(self, data):
-        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
-            return
-
-        processed = data['processed']
-        assembled = data['assembled']
-
-        integrator = self._update_integrator()
-        itgt1d = functools.partial(integrator.integrate1d,
-                                   method=self._integ_method,
-                                   radial_range=self._integ_range,
-                                   correctSolidAngle=True,
-                                   polarization_factor=1,
-                                   unit="q_A^-1")
-        integ_points = self._integ_points
-
-        threshold_mask = processed.image.threshold_mask
-
-        def _integrate1d_imp(i):
-            masked = mask_image(assembled[i], threshold_mask=threshold_mask)
-            return itgt1d(masked, integ_points)
-
-        intensities = []  # pulsed A.I.
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            for i, ret in zip(range(len(assembled)),
-                              executor.map(_integrate1d_imp,
-                                           range(len(assembled)))):
-                if i == 0:
-                    momentum = ret.radial
-                intensities.append(ret.intensity)
-
-        # intensities = self._normalize_vfom(
-        #     processed, np.array(intensities), self._normalizer,
-        #     x=momentum, auc_range=self._auc_range)
-
-        # calculate the difference between each pulse and the
-        # first one
-        diffs = [p - intensities[0] for p in intensities]
-
-        # calculate the figure of merit for each pulse
-        foms = []
-        for diff in diffs:
-            fom = slice_curve(
-                diff, momentum, *self._fom_integ_range)[0]
-            foms.append(np.sum(np.abs(fom)))
-
-        processed.pulse.ai.x = momentum
-        processed.pulse.ai.vfom = intensities
-        processed.pulse.ai.fom = foms
-        # Note: It is not correct to calculate the mean of intensities
-        #       since the result is equivalent to setting all nan to zero
-        #       instead of nanmean.

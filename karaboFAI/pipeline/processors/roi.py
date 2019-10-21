@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-RoiProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -110,10 +108,7 @@ def project_y(img):
 
 
 class _RoiProcessBase(_BaseProcessor):
-    """_RoiProcessBase class.
-
-    Base class for ROI Processors, which process FOM and 1D projection
-    of region of interest.
+    """Base class for RoiProcessors.
 
     Attributes:
         _normalizer (VFomNormalizer): normalizer type for calculating
@@ -171,11 +166,83 @@ class _RoiProcessBase(_BaseProcessor):
         pass
 
 
-class RoiProcessorTrain(_RoiProcessBase):
-    """RoiProcessorTrain class.
+class RoiProcessorPulse(_RoiProcessBase):
+    """Pulse-resolved RoiProcessor."""
+    @profiler("ROI Processor (pulse)")
+    def process(self, data):
+        processed = data['processed']
+        assembled = data['assembled']
 
-    Train-resolved RoiProcessor.
-    """
+        self._process_roi1(processed, assembled)
+        self._process_roi2(processed, assembled)
+
+    def _process_roi1(self, processed, assembled):
+        """Process pulse-resolved ROI1 FOM a train."""
+        if not self._has_analysis(AnalysisType.ROI1_PULSE):
+            return
+
+        threshold_mask = processed.image.threshold_mask
+        image_mask = processed.image.image_mask
+
+        # for speed
+        roi = processed.pulse.roi
+
+        roi.rect1 = self._roi1.intersect(assembled[0])
+
+        # get the current ROI images
+        img1 = self._roi1.get_images(assembled)
+
+        # set up the flags
+        self._has_img1 = img1 is not None
+
+        if self._has_img1:
+            roi_img_mask = None
+            if image_mask is not None:
+                x, y, w, h = self._roi1.intersect(image_mask)
+                roi_img_mask = image_mask[y:y + h, x:x + w]
+
+            foms = []
+            for i in range(len(img1)):
+                foms.append(np.sum(mask_image(img1[i],
+                                              image_mask=roi_img_mask,
+                                              threshold_mask=threshold_mask)))
+            roi.roi1.fom = foms
+
+    def _process_roi2(self, processed, assembled):
+        """Process pulse-resolved ROI2 FOM a train."""
+        if not self._has_analysis(AnalysisType.ROI2_PULSE):
+            return
+
+        threshold_mask = processed.image.threshold_mask
+        image_mask = processed.image.image_mask
+
+        # for speed
+        roi = processed.pulse.roi
+
+        roi.rect2 = self._roi2.intersect(assembled[0])
+
+        # get the current ROI images
+        img2 = self._roi2.get_images(assembled)
+
+        # set up the flags
+        self._has_img2 = img2 is not None
+
+        if self._has_img2:
+            roi_img_mask = None
+            if image_mask is not None:
+                x, y, w, h = self._roi2.intersect(image_mask)
+                roi_img_mask = image_mask[y:y + h, x:x + w]
+
+            foms = []
+            for i in range(len(img2)):
+                foms.append(np.sum(mask_image(img2[i],
+                                              image_mask=roi_img_mask,
+                                              threshold_mask=threshold_mask)))
+            roi.roi2.fom = foms
+
+
+class RoiProcessorTrain(_RoiProcessBase):
+    """Train-resolved RoiProcessor."""
 
     _img1 = MovingAverageArray()
     _img2 = MovingAverageArray()
@@ -496,81 +563,3 @@ class RoiProcessorTrain(_RoiProcessBase):
         pp.fom = fom
         pp.x_label = proj.x_label
         pp.vfom_label = f"[pump-probe] {proj.vfom_label}"
-
-
-class RoiProcessorPulse(_RoiProcessBase):
-    """RoiProcessorTrain class.
-
-    Pulse-resolved RoiProcessor.
-    """
-    @profiler("ROI Processor (pulse)")
-    def process(self, data):
-        processed = data['processed']
-        assembled = data['assembled']
-
-        self._process_roi1(processed, assembled)
-        self._process_roi2(processed, assembled)
-
-    def _process_roi1(self, processed, assembled):
-        """Process pulse-resolved ROI1 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI1_PULSE):
-            return
-
-        threshold_mask = processed.image.threshold_mask
-        image_mask = processed.image.image_mask
-
-        # for speed
-        roi = processed.pulse.roi
-
-        roi.rect1 = self._roi1.intersect(assembled[0])
-
-        # get the current ROI images
-        img1 = self._roi1.get_images(assembled)
-
-        # set up the flags
-        self._has_img1 = img1 is not None
-
-        if self._has_img1:
-            roi_img_mask = None
-            if image_mask is not None:
-                x, y, w, h = self._roi1.intersect(image_mask)
-                roi_img_mask = image_mask[y:y + h, x:x + w]
-
-            foms = []
-            for i in range(len(img1)):
-                foms.append(np.sum(mask_image(img1[i],
-                                              image_mask=roi_img_mask,
-                                              threshold_mask=threshold_mask)))
-            roi.roi1.fom = foms
-
-    def _process_roi2(self, processed, assembled):
-        """Process pulse-resolved ROI2 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI2_PULSE):
-            return
-
-        threshold_mask = processed.image.threshold_mask
-        image_mask = processed.image.image_mask
-
-        # for speed
-        roi = processed.pulse.roi
-
-        roi.rect2 = self._roi2.intersect(assembled[0])
-
-        # get the current ROI images
-        img2 = self._roi2.get_images(assembled)
-
-        # set up the flags
-        self._has_img2 = img2 is not None
-
-        if self._has_img2:
-            roi_img_mask = None
-            if image_mask is not None:
-                x, y, w, h = self._roi2.intersect(image_mask)
-                roi_img_mask = image_mask[y:y + h, x:x + w]
-
-            foms = []
-            for i in range(len(img2)):
-                foms.append(np.sum(mask_image(img2[i],
-                                              image_mask=roi_img_mask,
-                                              threshold_mask=threshold_mask)))
-            roi.roi2.fom = foms
