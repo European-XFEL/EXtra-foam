@@ -133,6 +133,9 @@ class ImageAssemblerFactory(ABC):
             :returns assembled: assembled detector image data.
             """
             src_name = self._source_name
+            if src_name is None:
+                raise AssemblingError(f"Unspecified {config['DETECTOR']} "
+                                      f"source name!")
             src_type = data['source_type']
             raw = data['raw']
 
@@ -186,6 +189,10 @@ class ImageAssemblerFactory(ABC):
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
+            if not src_name.endswith(":xtdf"):
+                # force to select the "correct" source name
+                raise KeyError(src_name)
+
             # (memory cells, modules, y, x)
             return stack_detector_data(data, "image.data", only="AGIPD")
 
@@ -205,6 +212,10 @@ class ImageAssemblerFactory(ABC):
 
         def _get_modules_file(self, data, src_name):
             """Overload."""
+            if not src_name.endswith(":xtdf"):
+                # force to select the "correct" source name
+                raise KeyError(src_name)
+
             # (memory cells, modules, y, x)
             return stack_detector_data(data, "image.data", only="LPD")
 
@@ -291,6 +302,10 @@ class ImageAssemblerFactory(ABC):
         @profiler("Prepare Module Data")
         def _get_modules_file(self, data, src_name):
             """Overload."""
+            if not src_name.endswith(":xtdf"):
+                # force to select the "correct" source name
+                raise KeyError(src_name)
+
             modules_data = stack_detector_data(data, "image.data", only="DSSC")
 
             dtype = modules_data.dtype

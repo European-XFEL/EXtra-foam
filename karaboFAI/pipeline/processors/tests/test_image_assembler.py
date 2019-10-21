@@ -57,6 +57,16 @@ class TestAgipdAssembler(unittest.TestCase):
                 },
             'source_type': DataSource.FILE,
         }
+        with self.assertRaises(AssemblingError):
+            # no source name
+            self._assembler.process(data)
+
+        self._assembler._source_name = "AGIPD modules"
+        with self.assertRaises(AssemblingError):
+            # source name must end with 'xtdf'
+            self._assembler.process(data)
+
+        self._assembler._source_name = "SPB_DET_AGIPD1M-1/DET/*CH0:xtdf"
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
@@ -165,6 +175,17 @@ class TestLpdAssembler(unittest.TestCase):
             },
             'source_type': DataSource.FILE
         }
+
+        with self.assertRaises(AssemblingError):
+            # no source name
+            self._assembler.process(data)
+
+        self._assembler._source_name = "LPD modules"
+        with self.assertRaises(AssemblingError):
+            # source name must end with 'xtdf'
+            self._assembler.process(data)
+
+        self._assembler._source_name = "FXE_DET_LPD1M-1/DET/*CH0:xtdf"
         # Only LPD modules related keys
         module_keys = [key for key in data['raw'].keys()
                        if re.match(r"(.+)/DET/(.+):(.+)", key)]
@@ -415,6 +436,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
     def testAssembleFile(self):
         pass
 
+
 class TestFastccdAssembler(unittest.TestCase):
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("FastCCD")
@@ -503,6 +525,8 @@ class TestDSSCAssembler(unittest.TestCase):
             },
             'source_type': DataSource.FILE
         }
+
+        self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
@@ -523,7 +547,19 @@ class TestDSSCAssembler(unittest.TestCase):
             },
             'source_type': DataSource.FILE
         }
+
+        with self.assertRaises(AssemblingError):
+            # no source name
+            self._assembler.process(data)
+
+        self._assembler._source_name = "DSSC modules"
+        with self.assertRaises(AssemblingError):
+            # source name must end with 'xtdf'
+            self._assembler.process(data)
+
+        self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
         self._assembler.process(data)
+        # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         self.assertEqual(3, data['assembled'].ndim)
