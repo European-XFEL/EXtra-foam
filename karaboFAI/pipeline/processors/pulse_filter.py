@@ -34,19 +34,19 @@ class XgmPulseFilter(_BaseProcessor):
 
         self._xgm_intensity_range = self.str2tuple(cfg["xgm_intensity_range"])
 
-    @profiler("Pre-pulse filter processor")
     def process(self, data):
         processed = data['processed']
+        intensity = processed.pulse.xgm.intensity
+        if intensity is None:
+            return
 
         dropped = []  # a list of dropped indices
         lb, ub = self._xgm_intensity_range
-        intensity = processed.pulse.xgm.intensity
-        if intensity is not None:
-            for i, v in enumerate(intensity):
-                if v < lb or v > ub:
-                    dropped.append(i)
+        for i, v in enumerate(intensity):
+            if v < lb or v > ub:
+                dropped.append(i)
 
-        processed.image.dropped_indices = dropped
+        processed.image.dropped_indices.extend(dropped)
 
 
 class PostPulseFilter(_BaseProcessor):
@@ -72,27 +72,27 @@ class PostPulseFilter(_BaseProcessor):
         self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
         self._fom_range = self.str2tuple(cfg['fom_range'])
 
-    @profiler("Post-pulse filter processor")
     def process(self, data):
         if self.analysis_type == AnalysisType.UNDEFINED:
             return
+
         processed = data['processed']
+
+        err_msgs = []
 
         if self.analysis_type == AnalysisType.ROI1_PULSE:
             foms = processed.pulse.roi.roi1.fom
             if foms is None:
-                raise ProcessingError(
-                    "[Pulse filter] "
-                    "Pulse resolved ROI1 sum result is not available")
+                err_msgs.append("Pulse resolved ROI1 sum result is not available")
         elif self.analysis_type == AnalysisType.ROI2_PULSE:
             foms = processed.pulse.roi.roi2.fom
             if foms is None:
-                raise ProcessingError(
-                    "[Pulse filter] "
-                    "Pulse resolved ROI2 sum result is not available")
+                err_msgs.append("Pulse resolved ROI2 sum result is not available")
         else:
-            raise NotImplementedError(
-                f'[Pulse filter] {repr(self.analysis_type)}')
+            err_msgs.append("NotImplemented {repr(self.analysis_type)}")
+
+        if err_msgs:
+            raise ProcessingError(f"[Post pulse filter] {err_msgs[0]}")
 
         dropped = []  # a list of dropped indices
         lb, ub = self._fom_range
