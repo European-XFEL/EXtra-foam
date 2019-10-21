@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import _BaseProcessor, _get_slow_data
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...utils import profiler
 from ...database import Metadata as mt
@@ -54,7 +54,7 @@ class XgmProcessor(_BaseProcessor):
         # instrument data
         src = self._instrument_src
 
-        v, err = _get_slow_data(tid, raw, src.name, src.property)
+        v, err = self._get_slow_data(tid, raw, src.name, src.property)
         processed.xgm.fom = v
         if err:
             err_msgs.append(err)

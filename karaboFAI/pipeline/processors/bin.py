@@ -11,9 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import (
-    _BaseProcessor, _get_slow_data
-)
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...database import Metadata as mt
 from ...config import AnalysisType, BinMode
@@ -361,7 +359,7 @@ class BinProcessor(_BaseProcessor):
 
     def _get_iloc(self, tid, raw, device_id, property, bin_edge):
         """Get the index of the bins."""
-        slow, err = _get_slow_data(tid, raw, device_id, property)
+        slow, err = self._get_slow_data(tid, raw, device_id, property)
 
         if slow is None:
             iloc = -1

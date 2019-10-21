@@ -18,127 +18,6 @@ from ...algorithms import normalize_auc
 from ...config import AnalysisType, VFomNormalizer
 
 
-def _get_slow_data(tid, raw, device_id, ppt):
-    """Get slow data.
-
-    :param int tid: train ID.
-    :param dict raw: raw data.
-    :param str device_id: device ID.
-    :param str ppt: property name.
-
-    :returns (value, error str)
-    """
-    if not device_id or not ppt:
-        # not activated is not an error
-        return None, ""
-
-    if device_id == "Any":
-        return tid, ""
-    else:
-        try:
-            device_data = raw[device_id]
-        except KeyError:
-            return None, f"Device '{device_id}' is not in the data!"
-
-        try:
-            if ppt not in device_data:
-                # from file
-                ppt += '.value'
-            return device_data[ppt], ""
-
-        except KeyError:
-            return None, f"'{device_id}'' does not have property '{ppt}'"
-
-
-def _normalize_vfom(processed, y, normalizer, *, x=None, auc_range=None):
-    """Normalize VFOM.
-
-    :param ProcessedData processed: processed data.
-    :param numpy.ndarray y: y values.
-    :param VFomNormalizer normalizer: normalizer type.
-    :param numpy.ndarray x: x values used with AUC normalizer..
-    :param tuple auc_range: normalization range with AUC normalizer.
-    """
-    if normalizer == VFomNormalizer.AUC:
-        # normalized by area under curve (AUC)
-        normalized = normalize_auc(y, x, auc_range)
-    else:
-        # normalized by ROI
-        if normalizer == VFomNormalizer.ROI3:
-            denominator = processed.roi.norm3
-        elif normalizer == VFomNormalizer.ROI4:
-            denominator = processed.roi.norm4
-        elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
-            denominator = processed.roi.norm3_sub_norm4
-        elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
-            denominator = processed.roi.norm3_add_norm4
-        else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
-
-        if denominator is None:
-            raise ProcessingError("ROI normalizer is not available!")
-
-        if denominator == 0:
-            raise ProcessingError("ROI normalizer is zero!")
-
-        normalized = y / denominator
-
-    return normalized
-
-
-def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
-                       x=None, auc_range=None):
-    """Normalize the azimuthal integration result.
-
-    :param ProcessedData processed: processed data.
-    :param numpy.ndarray y_on: pump y values.
-    :param numpy.ndarray y_off: probe y values.
-    :param VFomNormalizer normalizer: normalizer type.
-    :param numpy.ndarray x: x values used with AUC normalizer..
-    :param tuple auc_range: normalization range with AUC normalizer.
-    """
-    if normalizer == VFomNormalizer.AUC:
-        # normalized by area under curve (AUC)
-        normalized_on = normalize_auc(y_on, x, auc_range)
-        normalized_off = normalize_auc(y_off, x, auc_range)
-    else:
-        # normalized by ROI
-        on = processed.roi.on
-        off = processed.roi.off
-
-        if normalizer == VFomNormalizer.ROI3:
-            denominator_on = on.norm3
-            denominator_off = off.norm3
-        elif normalizer == VFomNormalizer.ROI4:
-            denominator_on = on.norm4
-            denominator_off = off.norm4
-        elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
-            denominator_on = on.norm3_sub_norm4
-            denominator_off = off.norm3_sub_norm4
-        elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
-            denominator_on = on.norm3_add_norm4
-            denominator_off = off.norm3_add_norm4
-        else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
-
-        if denominator_on is None:
-            raise ProcessingError("ROI normalizer (on) is not available!")
-
-        if denominator_off is None:
-            raise ProcessingError("ROI normalizer (off) is not available!")
-
-        if denominator_on == 0:
-            raise ProcessingError("ROI normalizer (on) is zero!")
-
-        if denominator_off == 0:
-            raise ProcessingError("ROI normalizer (off) is zero!")
-
-        normalized_on = y_on / denominator_on
-        normalized_off = y_off / denominator_off
-
-    return normalized_on, normalized_off
-
-
 class State(ABC):
     """Base class of processor state."""
     @abstractmethod
@@ -350,3 +229,124 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         :param dict data: data which contains raw and processed data, etc.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def _normalize_vfom(processed, y, normalizer, *, x=None, auc_range=None):
+        """Normalize VFOM.
+
+        :param ProcessedData processed: processed data.
+        :param numpy.ndarray y: y values.
+        :param VFomNormalizer normalizer: normalizer type.
+        :param numpy.ndarray x: x values used with AUC normalizer..
+        :param tuple auc_range: normalization range with AUC normalizer.
+        """
+        if normalizer == VFomNormalizer.AUC:
+            # normalized by area under curve (AUC)
+            normalized = normalize_auc(y, x, auc_range)
+        else:
+            # normalized by ROI
+            if normalizer == VFomNormalizer.ROI3:
+                denominator = processed.roi.norm3
+            elif normalizer == VFomNormalizer.ROI4:
+                denominator = processed.roi.norm4
+            elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+                denominator = processed.roi.norm3_sub_norm4
+            elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+                denominator = processed.roi.norm3_add_norm4
+            else:
+                raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+
+            if denominator is None:
+                raise ProcessingError("ROI normalizer is not available!")
+
+            if denominator == 0:
+                raise ProcessingError("ROI normalizer is zero!")
+
+            normalized = y / denominator
+
+        return normalized
+
+    @staticmethod
+    def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
+                           x=None, auc_range=None):
+        """Normalize the azimuthal integration result.
+
+        :param ProcessedData processed: processed data.
+        :param numpy.ndarray y_on: pump y values.
+        :param numpy.ndarray y_off: probe y values.
+        :param VFomNormalizer normalizer: normalizer type.
+        :param numpy.ndarray x: x values used with AUC normalizer..
+        :param tuple auc_range: normalization range with AUC normalizer.
+        """
+        if normalizer == VFomNormalizer.AUC:
+            # normalized by area under curve (AUC)
+            normalized_on = normalize_auc(y_on, x, auc_range)
+            normalized_off = normalize_auc(y_off, x, auc_range)
+        else:
+            # normalized by ROI
+            on = processed.roi.on
+            off = processed.roi.off
+
+            if normalizer == VFomNormalizer.ROI3:
+                denominator_on = on.norm3
+                denominator_off = off.norm3
+            elif normalizer == VFomNormalizer.ROI4:
+                denominator_on = on.norm4
+                denominator_off = off.norm4
+            elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+                denominator_on = on.norm3_sub_norm4
+                denominator_off = off.norm3_sub_norm4
+            elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+                denominator_on = on.norm3_add_norm4
+                denominator_off = off.norm3_add_norm4
+            else:
+                raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+
+            if denominator_on is None:
+                raise ProcessingError("ROI normalizer (on) is not available!")
+
+            if denominator_off is None:
+                raise ProcessingError("ROI normalizer (off) is not available!")
+
+            if denominator_on == 0:
+                raise ProcessingError("ROI normalizer (on) is zero!")
+
+            if denominator_off == 0:
+                raise ProcessingError("ROI normalizer (off) is zero!")
+
+            normalized_on = y_on / denominator_on
+            normalized_off = y_off / denominator_off
+
+        return normalized_on, normalized_off
+
+    @staticmethod
+    def _get_slow_data(tid, raw, device_id, ppt):
+        """Get slow data.
+
+        :param int tid: train ID.
+        :param dict raw: raw data.
+        :param str device_id: device ID.
+        :param str ppt: property name.
+    
+        :returns (value, error str)
+        """
+        if not device_id or not ppt:
+            # not activated is not an error
+            return None, ""
+
+        if device_id == "Any":
+            return tid, ""
+        else:
+            try:
+                device_data = raw[device_id]
+            except KeyError:
+                return None, f"Device '{device_id}' is not in the data!"
+
+            try:
+                if ppt not in device_data:
+                    # from file
+                    ppt += '.value'
+                return device_data[ppt], ""
+
+            except KeyError:
+                return None, f"'{device_id}'' does not have property '{ppt}'"

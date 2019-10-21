@@ -17,9 +17,7 @@ from scipy import constants
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
-from .base_processor import (
-    _BaseProcessor, _normalize_vfom, _normalize_vfom_pp
-)
+from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import mask_image, slice_curve
 from ...config import VFomNormalizer, AnalysisType, config
@@ -178,7 +176,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             mean_ret = itgt1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial
-            intensity = _normalize_vfom(
+            intensity = self._normalize_vfom(
                 processed, mean_ret.intensity, self._normalizer,
                 x=momentum, auc_range=self._auc_range)
 
@@ -213,7 +211,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                 self._intensity_on_ma = on_ret.intensity
                 self._intensity_off_ma = off_ret.intensity
 
-                vfom_on, vfom_off = _normalize_vfom_pp(
+                vfom_on, vfom_off = self._normalize_vfom_pp(
                     processed, self._intensity_on_ma, self._intensity_off_ma,
                     self._normalizer, x=on_ret.radial, auc_range=self._auc_range)
 
@@ -274,7 +272,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
                     momentum = ret.radial
                 intensities.append(ret.intensity)
 
-        # intensities = _normalize_vfom(
+        # intensities = self._normalize_vfom(
         #     processed, np.array(intensities), self._normalizer,
         #     x=momentum, auc_range=self._auc_range)
 

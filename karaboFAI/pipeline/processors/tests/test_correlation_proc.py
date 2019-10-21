@@ -154,8 +154,6 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         proc._properties = ['e', 'f', 'g', 'h']
         proc._resolutions = [0.0, 1.0, 2.0, 3.0]
 
-        _get_slow_data = MagicMock(return_value=1.0)
-
         # set any analysis type
         proc.analysis_type = AnalysisType.PUMP_PROBE
         processed.pp.fom = 10

@@ -11,9 +11,7 @@ All rights reserved.
 """
 import numpy as np
 
-from .base_processor import (
-    _BaseProcessor, _normalize_vfom, _normalize_vfom_pp
-)
+from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve, mask_image
@@ -387,8 +385,8 @@ class RoiProcessorTrain(_RoiProcessBase):
             proj1 = handler(self._img1)
             x = np.arange(len(proj1))
 
-            normalized = _normalize_vfom(processed, proj1, self._normalizer,
-                                         x=x, auc_range=self._auc_range)
+            normalized = self._normalize_vfom(processed, proj1, self._normalizer,
+                                              x=x, auc_range=self._auc_range)
 
             sliced = slice_curve(normalized, x, *self._fom_integ_range)[0]
 
@@ -402,8 +400,8 @@ class RoiProcessorTrain(_RoiProcessBase):
             proj2 = handler(self._img2)
             x = np.arange(len(proj2))
 
-            normalized = _normalize_vfom(processed, proj2, self._normalizer,
-                                         x=x, auc_range=self._auc_range)
+            normalized = self._normalize_vfom(processed, proj2, self._normalizer,
+                                              x=x, auc_range=self._auc_range)
 
             sliced = slice_curve(normalized, x, *self._fom_integ_range)[0]
 
@@ -478,7 +476,7 @@ class RoiProcessorTrain(_RoiProcessBase):
 
         x = np.arange(len(proj_on))
 
-        vfom_on, vfom_off = _normalize_vfom_pp(
+        vfom_on, vfom_off = self._normalize_vfom_pp(
             processed, proj_on, proj_off, self._normalizer,
             x=x, auc_range=self._auc_range)
 

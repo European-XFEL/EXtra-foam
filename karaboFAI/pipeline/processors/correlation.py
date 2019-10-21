@@ -9,7 +9,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .base_processor import _BaseProcessor, _get_slow_data
+from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...database import Metadata as mt
@@ -139,7 +139,7 @@ class CorrelationProcessor(_BaseProcessor):
                                           self._device_ids,
                                           self._properties,
                                           self._resolutions):
-            v, err = _get_slow_data(processed.tid, data['raw'], dev_id, ppt)
+            v, err = self._get_slow_data(processed.tid, data['raw'], dev_id, ppt)
             if err:
                 err_msgs.append(err)
             corr.update_params(v, fom, dev_id, ppt, res)
