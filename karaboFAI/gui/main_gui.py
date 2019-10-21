@@ -420,7 +420,7 @@ class MainGUI(QtGui.QMainWindow):
 
                 self.available_sources_sgn.emit(processed.sources)
 
-                logger.info(f"Updated train with ID: {tid}")
+                logger.info(f"[{tid}] updated")
             except Empty:
                 if plot_data:
                     break

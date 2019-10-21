@@ -320,33 +320,33 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         return normalized_on, normalized_off
 
     @staticmethod
-    def _get_slow_data(tid, raw, device_id, ppt):
-        """Get slow data.
+    def _fetch_property_data(tid, raw, src_name, ppt):
+        """Fetch property data from raw data.
 
         :param int tid: train ID.
         :param dict raw: raw data.
-        :param str device_id: device ID.
+        :param str src_name: device ID.
         :param str ppt: property name.
-    
+
         :returns (value, error str)
         """
-        if not device_id or not ppt:
+        if not src_name or not ppt:
             # not activated is not an error
             return None, ""
 
-        if device_id == "Any":
+        if src_name == "Any":
             return tid, ""
         else:
             try:
-                device_data = raw[device_id]
+                device_data = raw[src_name]
             except KeyError:
-                return None, f"Device '{device_id}' is not in the data!"
+                return None, f"[{tid}] source '{src_name}' is not in the data!"
 
             try:
                 if ppt not in device_data:
-                    # from file
+                    # instrument data from file
                     ppt += '.value'
                 return device_data[ppt], ""
 
             except KeyError:
-                return None, f"'{device_id}'' does not have property '{ppt}'"
+                return None, f"[{tid}] '{src_name}' does not have property '{ppt}'"

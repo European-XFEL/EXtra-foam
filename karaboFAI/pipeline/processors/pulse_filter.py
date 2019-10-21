@@ -42,9 +42,11 @@ class PrePulseFilterProcessor(_BaseProcessor):
 
         dropped = []  # a list of dropped indices
         lb, ub = self._xgm_intensity_range
-        for i, v in enumerate(processed.pulse.xgm.intensity):
-            if v < lb or v > ub:
-                dropped.append(i)
+        intensity = processed.pulse.xgm.intensity
+        if intensity:
+            for i, v in enumerate(intensity):
+                if v < lb or v > ub:
+                    dropped.append(i)
 
         processed.image.dropped_indices = dropped
 
@@ -82,17 +84,17 @@ class PostPulseFilterProcessor(_BaseProcessor):
             foms = processed.pulse.roi.roi1.fom
             if foms is None:
                 raise ProcessingError(
-                    "[Pulse filter]: "
+                    "[Pulse filter] "
                     "Pulse resolved ROI1 sum result is not available")
         elif self.analysis_type == AnalysisType.ROI2_PULSE:
             foms = processed.pulse.roi.roi2.fom
             if foms is None:
                 raise ProcessingError(
-                    "[Pulse filter]: "
+                    "[Pulse filter] "
                     "Pulse resolved ROI2 sum result is not available")
         else:
             raise NotImplementedError(
-                f'[Pulse filter]: {repr(self.analysis_type)}')
+                f'[Pulse filter] {repr(self.analysis_type)}')
 
         dropped = []  # a list of dropped indices
         lb, ub = self._fom_range

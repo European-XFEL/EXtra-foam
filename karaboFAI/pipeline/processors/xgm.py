@@ -53,16 +53,21 @@ class XgmProcessor(_BaseProcessor):
 
         # instrument data
         src = self._instrument_src
-
-        v, err = self._get_slow_data(tid, raw, src.name, src.property)
-        processed.xgm.fom = v
-        if err:
-            err_msgs.append(err)
+        if src:
+            v, err = self._fetch_property_data(
+                tid, raw, src.name, src.property)
+            processed.xgm.fom = v
+            if err:
+                err_msgs.append(err)
 
         # pipeline data
         src = self._pipeline_src
-
-        processed.pulse.xgm.intensity = raw[src.name][src.property]
+        if src:
+            v, err = self._fetch_property_data(
+                tid, raw, src.name, src.property)
+            processed.pulse.xgm.intensity = v
+            if err:
+                err_msgs.append(err)
 
         for msg in err_msgs:
-            raise ProcessingError('[XGM] ' + msg)
+            raise ProcessingError(f'[XGM] {msg}')

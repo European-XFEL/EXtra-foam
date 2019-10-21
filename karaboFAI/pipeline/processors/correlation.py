@@ -139,10 +139,10 @@ class CorrelationProcessor(_BaseProcessor):
                                           self._device_ids,
                                           self._properties,
                                           self._resolutions):
-            v, err = self._get_slow_data(processed.tid, data['raw'], dev_id, ppt)
+            v, err = self._fetch_property_data(processed.tid, data['raw'], dev_id, ppt)
             if err:
                 err_msgs.append(err)
             corr.update_params(v, fom, dev_id, ppt, res)
 
         for msg in err_msgs:
-            raise ProcessingError('[Correlation] ' + msg)
+            raise ProcessingError(f'[Correlation] {msg}')

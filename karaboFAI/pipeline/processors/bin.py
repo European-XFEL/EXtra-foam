@@ -359,7 +359,7 @@ class BinProcessor(_BaseProcessor):
 
     def _get_iloc(self, tid, raw, device_id, property, bin_edge):
         """Get the index of the bins."""
-        slow, err = self._get_slow_data(tid, raw, device_id, property)
+        slow, err = self._fetch_property_data(tid, raw, device_id, property)
 
         if slow is None:
             iloc = -1
