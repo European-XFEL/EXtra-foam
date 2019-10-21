@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-XgmProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -13,6 +11,7 @@ from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...utils import profiler
 from ...database import Metadata as mt
+from ...database import DATA_SOURCE_PROPERTIES
 
 
 class XgmProcessor(_BaseProcessor):
@@ -28,7 +27,10 @@ class XgmProcessor(_BaseProcessor):
 
     def update(self):
         srcs = self._meta.get_all_data_sources("XGM")
-        assert(len(srcs) <= 2)
+
+        # guard in case there is any src which is not unregistered properly
+        assert(len(srcs) < 10)
+
         for src in srcs:
             if src.name.split(":")[-1] == "output":
                 self._pipeline_src = src
@@ -38,15 +40,11 @@ class XgmProcessor(_BaseProcessor):
         self._pulse_slicer = self.str2slice(
             self._meta.get(mt.GLOBAL_PROC, 'selected_xgm_pulse_indices'))
 
-        # pump-probe
-        pp_cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
-
     @profiler("XGM Processor")
     def process(self, data):
         """Process XGM data"""
         processed = data['processed']
         raw = data['raw']
-        src_type = data['source_type']
         tid = processed.tid
 
         err_msgs = []
@@ -56,7 +54,9 @@ class XgmProcessor(_BaseProcessor):
         if src:
             v, err = self._fetch_property_data(
                 tid, raw, src.name, src.property)
-            processed.xgm.fom = v
+
+            xgm_ppts = DATA_SOURCE_PROPERTIES["XGM"]
+            processed.xgm.__dict__[xgm_ppts[src.property]] = v
             if err:
                 err_msgs.append(err)
 
@@ -65,7 +65,10 @@ class XgmProcessor(_BaseProcessor):
         if src:
             v, err = self._fetch_property_data(
                 tid, raw, src.name, src.property)
-            processed.pulse.xgm.intensity = v
+
+            xgm_ppts = DATA_SOURCE_PROPERTIES["XGM:output"]
+            # when streaming from files, it has a fixed length!!!
+            processed.pulse.xgm.__dict__[xgm_ppts[src.property]] = v
             if err:
                 err_msgs.append(err)
 

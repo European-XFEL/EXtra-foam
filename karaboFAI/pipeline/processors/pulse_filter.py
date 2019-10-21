@@ -43,7 +43,7 @@ class PrePulseFilterProcessor(_BaseProcessor):
         dropped = []  # a list of dropped indices
         lb, ub = self._xgm_intensity_range
         intensity = processed.pulse.xgm.intensity
-        if intensity:
+        if intensity is not None:
             for i, v in enumerate(intensity):
                 if v < lb or v > ub:
                     dropped.append(i)

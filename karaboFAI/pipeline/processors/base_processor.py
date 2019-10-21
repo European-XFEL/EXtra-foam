@@ -342,11 +342,12 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             except KeyError:
                 return None, f"[{tid}] source '{src_name}' is not in the data!"
 
+            ppt_orig = ppt
             try:
                 if ppt not in device_data:
                     # instrument data from file
                     ppt += '.value'
                 return device_data[ppt], ""
-
             except KeyError:
-                return None, f"[{tid}] '{src_name}' does not have property '{ppt}'"
+                return None, f"[{tid}] '{src_name}' does not contain " \
+                             f"property '{ppt_orig}'"

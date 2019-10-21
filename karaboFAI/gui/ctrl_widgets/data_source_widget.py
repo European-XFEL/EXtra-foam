@@ -167,7 +167,13 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
 
                 item.setChecked(value)
             else:
+                old_ppt = item.data(1)
                 item.setData(value, index.column())
+                if index.column() == 1:
+                    # remove registered item with the old property
+                    self.device_toggled_sgn.emit(
+                        SourceItem(item.parent().data(0), item.data(0), old_ppt),
+                        False)
 
             self.device_toggled_sgn.emit(SourceItem(item.parent().data(0),
                                                     item.data(0),
@@ -268,7 +274,7 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                 for src in srcs:
                     channels = src.split(':')
                     key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
-                    default_ppt = DATA_SOURCE_PROPERTIES[key][0]
+                    default_ppt = list(DATA_SOURCE_PROPERTIES[key].keys())[0]
                     last_child.appendChild(DataSourceTreeItem(
                         [src, default_ppt], exclusive, parent=last_child))
             except KeyError:

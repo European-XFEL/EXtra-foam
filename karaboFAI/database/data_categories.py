@@ -87,68 +87,70 @@ DATA_SOURCE_CATEGORIES = {
 EXCLUSIVE_SOURCE_CATEGORIES = config.detectors.copy()
 
 DATA_SOURCE_PROPERTIES = {
-    "AGIPD": [
-        "image.data"
-    ],
-    "AGIPD:xtdf": [
-        "image.data"
-    ],
-    "LPD": [
-        "image.data"
-    ],
-    "LPD:xtdf": [
-        "image.data"
-    ],
-    "DSSC": [
-        "image.data"
-    ],
-    "DSSC:xtdf": {
-        "image.data"
+    "AGIPD": {
+        "image.data": "pixel",
     },
-    "JungFrau": [
-        "image.data"
-    ],
-    "JungFrau:display": [
-        "image.data"
-    ],
-    "JungFrau:daqOutput": [
-        "image.data"
-    ],
-    "JungFrauPR": [
-        "image.data"
-    ],
-    "JungFrauPR:display": [
-        "image.data"
-    ],
-    "JungFrauPR:daqOutput": [
-        "image.data"
-    ],
-    "FastCCD:output": [
-        "image.data"
-    ],
-    "FastCCD:daqOutput": [
-        "data.image.pixels"
-    ],
-    "XGM": [
-        "photonEnergy.photonFlux",
-    ],
-    "XGM:output": [
-        "intensityTD",
-        "sa1IntensityTD",
-        "sa3IntensityTD",
-    ],
-    "Magnet": [
-        "actualCurrent",
-    ],
-    "MonoChromator": [
-        "actualEnergy",
-    ],
-    "Motor": [
-        "actualPosition",
-    ],
-    "Metadata": [
-        "timestamp.tid",
-    ]
+    "AGIPD:xtdf": {
+        "image.data": "pixel",
+    },
+    "LPD": {
+        "image.data": "pixel",
+    },
+    "LPD:xtdf": {
+        "image.data": "pixel",
+    },
+    "DSSC": {
+        "image.data": "pixel",
+    },
+    "DSSC:xtdf": {
+        "image.data": "pixel",
+    },
+    "JungFrau": {
+        "image.data": "pixel",
+    },
+    "JungFrau:display": {
+        "image.data": "pixel",
+    },
+    "JungFrau:daqOutput": {
+        "image.data": "pixel",
+    },
+    "JungFrauPR": {
+        "image.data": "pixel",
+    },
+    "JungFrauPR:display": {
+        "pixel": "image.data"
+    },
+    "JungFrauPR:daqOutput": {
+        "image.data": "pixel",
+    },
+    "FastCCD:output": {
+        "image.data": "pixel",
+    },
+    "FastCCD:daqOutput": {
+        "data.image.pixels": "pixel",
+    },
+    "XGM": {
+        "pulseEnergy.photonFlux": "intensity",
+        "beamPosition.ixPos": "x",
+        "beamPosition.iyPos": "y",
+    },
+    "XGM:output": {
+        "data.intensityTD": "intensity",
+        "data.intensitySa1TD": "intensity",
+        "data.intensitySa3TD": "intensity",
+    },
+    "Magnet": {
+        "actualCurrent": "current",
+    },
+    "MonoChromator": {
+        "actualEnergy": "energy",
+    },
+    "Motor": {
+        "actualPosition": "position",
+    },
+    "Metadata": {
+        "timestamp.tid": "tid",
+    }
 }
 
 
