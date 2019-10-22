@@ -16,6 +16,23 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
+from .pipe import KaraboBridge, MpInQueue, MpOutQueue
+from .processors import (
+    AzimuthalIntegrationProcessorPulse,
+    AzimuthalIntegrationProcessorTrain,
+    BinProcessor,
+    CorrelationProcessor,
+    ImageAssemblerFactory,
+    ImageProcessorPulse,
+    ImageProcessorTrain,
+    PostPulseFilter,
+    PumpProbeProcessor,
+    RoiProcessorPulse,
+    RoiProcessorTrain,
+    StatisticsProcessor,
+    XgmExtractor,
+    XgmPulseFilter,
+)
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
 
@@ -180,3 +197,61 @@ class ProcessWorker(mp.Process):
         Note: this method is called by the main process.
         """
         self._pause_ev.clear()
+
+
+class Scheduler(ProcessWorker):
+    """Pipeline scheduler."""
+    def __init__(self):
+        """Initialization."""
+        super().__init__('scheduler')
+
+        self._inputs = [MpInQueue(f"{self._name}:input")]
+        self._output = MpOutQueue(f"{self._name}:output", gui=True)
+
+        self._pp_proc = PumpProbeProcessor()
+
+        self._roi_proc_train = RoiProcessorTrain()
+        self._ai_proc_train = AzimuthalIntegrationProcessorTrain()
+
+        self._statistics = StatisticsProcessor()
+        self._correlation_proc = CorrelationProcessor()
+        self._bin_proc = BinProcessor()
+
+        self._tasks = [
+            self._pp_proc,
+            self._roi_proc_train,
+            self._ai_proc_train,
+            self._statistics,
+            self._correlation_proc,
+            self._bin_proc,
+        ]
+
+
+class ImageWorker(ProcessWorker):
+    """Pipeline scheduler."""
+    def __init__(self):
+        """Initialization."""
+        super().__init__('image_worker')
+
+        self._inputs = [KaraboBridge(f"{self._name}:input")]
+        self._output = MpOutQueue(f"{self._name}:output")
+
+        self._xgm_extractor = XgmExtractor()
+        self._xgm_pulse_filter = XgmPulseFilter()
+        self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
+        self._image_proc_pulse = ImageProcessorPulse()
+        self._roi_proc_pulse = RoiProcessorPulse()
+        self._ai_proc_pulse = AzimuthalIntegrationProcessorPulse()
+        self._post_pulse_filter = PostPulseFilter()
+        self._image_proc_train = ImageProcessorTrain()
+
+        self._tasks = [
+            self._xgm_extractor,
+            self._xgm_pulse_filter,
+            self._assembler,
+            self._image_proc_pulse,
+            self._roi_proc_pulse,
+            self._ai_proc_pulse,
+            self._post_pulse_filter,
+            self._image_proc_train,
+        ]
