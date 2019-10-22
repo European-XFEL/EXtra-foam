@@ -9,6 +9,7 @@ All rights reserved.
 """
 from collections import OrderedDict
 from itertools import chain
+import math
 
 from karaboFAI.config import config
 
@@ -185,7 +186,7 @@ for topic in DATA_SOURCE_CATEGORIES:
 
 
 class SourceItem:
-    def __init__(self, category, name, ppt, slicer=None):
+    def __init__(self, category, name, ppt, slicer=None, vrange=None):
         """Initialization.
 
         :param str category: source category, e.g. DSSC, XGM.
@@ -195,8 +196,10 @@ class SourceItem:
             differentiate from slice(None, None). Therefore, if one uses
             slicer on an, for example, instrument data, an exception will
             be raised.
+        :param tuple/None vrange: value range (lb, ub) for the range filter.
         """
         self.category = category
         self.name = name
         self.property = ppt
         self.slicer = slicer
+        self.vrange = (-math.inf, math.inf) if vrange is None else vrange

@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import math
+
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
@@ -15,8 +17,8 @@ from ...database import Metadata as mt
 from ...database import DATA_SOURCE_PROPERTIES
 
 
-class XgmExtractor(_BaseProcessor):
-    """XGM data extractor.
+class XgmProcessor(_BaseProcessor):
+    """XGM data processor.
 
     Attributes:
         _sources (list): a list of SourceItems.
@@ -96,6 +98,24 @@ class XgmExtractor(_BaseProcessor):
                 self._pulse_intensity_ma = v[src.slicer]
                 processed.pulse.xgm.__dict__[xgm_ppts[src.property]] = \
                     self._pulse_intensity_ma
+
+                # apply filter
+                dropped = []  # a list of dropped indices
+                lb, ub = src.vrange
+                if not math.isinf(lb) and not math.isinf(ub):
+                    for i, v in enumerate(self._pulse_intensity_ma):
+                        if v > ub or v < lb:
+                            dropped.append(i)
+                elif not math.isinf(lb):
+                    for i, v in enumerate(self._pulse_intensity_ma):
+                        if v < lb:
+                            dropped.append(i)
+                elif not math.isinf(ub):
+                    for i, v in enumerate(self._pulse_intensity_ma):
+                        if v > ub:
+                            dropped.append(i)
+
+                processed.image.dropped_indices.extend(dropped)
 
         for msg in err_msgs:
             raise ProcessingError(f'[XGM] {msg}')

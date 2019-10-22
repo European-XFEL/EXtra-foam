@@ -30,8 +30,7 @@ from .processors import (
     RoiProcessorPulse,
     RoiProcessorTrain,
     StatisticsProcessor,
-    XgmExtractor,
-    XgmPulseFilter,
+    XgmProcessor,
 )
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
@@ -236,8 +235,7 @@ class ImageWorker(ProcessWorker):
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
 
-        self._xgm_extractor = XgmExtractor()
-        self._xgm_pulse_filter = XgmPulseFilter()
+        self._xgm_proc = XgmProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc_pulse = ImageProcessorPulse()
         self._roi_proc_pulse = RoiProcessorPulse()
@@ -246,8 +244,7 @@ class ImageWorker(ProcessWorker):
         self._image_proc_train = ImageProcessorTrain()
 
         self._tasks = [
-            self._xgm_extractor,
-            self._xgm_pulse_filter,
+            self._xgm_proc,
             self._assembler,
             self._image_proc_pulse,
             self._roi_proc_pulse,

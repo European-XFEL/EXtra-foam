@@ -71,7 +71,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         image_proc = image_worker._image_proc_pulse
         ai_proc = scheduler._ai_proc_train
-        xgm_proc = image_worker._xgm_extractor
 
         # --------------------------
         # test setting POI pulse indices
@@ -116,9 +115,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         ai_proc.update()
         self.assertAlmostEqual(1e-10, ai_proc._wavelength)
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
-        image_proc.update()
-        self.assertEqual(slice(None, None), image_proc._pulse_slicer)
-        self.assertEqual(slice(None, None), xgm_proc._pulse_slicer)
 
         # test "Reset M.A." button
         # TODO
@@ -306,25 +302,19 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
         image_worker = self.image_worker
-        xgm_pulse_filter = image_worker._xgm_pulse_filter
-        post_pulse_filter= image_worker._post_pulse_filter
+        post_pulse_filter = image_worker._post_pulse_filter
 
         analysis_types = {value: key for key, value in
                           widget._analysis_types.items()}
         post_pulse_filter.update()
         self.assertEqual(AnalysisType.UNDEFINED, post_pulse_filter.analysis_type)
         self.assertTupleEqual((-np.inf, np.inf), post_pulse_filter._fom_range)
-        xgm_pulse_filter.update()
-        self.assertTupleEqual((0, np.inf), xgm_pulse_filter._xgm_intensity_range)
 
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1_PULSE])
         widget._fom_range_le.setText("-1, 1")
-        widget._xgm_intensity_range_le.setText("1, 1000")
         post_pulse_filter.update()
         self.assertEqual(AnalysisType.ROI1_PULSE, post_pulse_filter.analysis_type)
         self.assertEqual((-1, 1), post_pulse_filter._fom_range)
-        xgm_pulse_filter.update()
-        self.assertEqual((1, 1000), xgm_pulse_filter._xgm_intensity_range)
 
     def testCorrelationCtrlWidget(self):
         from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import (

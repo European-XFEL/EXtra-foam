@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Mediator class.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -64,6 +62,7 @@ class Mediator(QObject):
         self._meta.set(mt.CONNECTION, "source_type", int(value))
 
     def onDataSourceToggled(self, item, checked: bool):
+        print(item.vrange)
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -217,9 +216,6 @@ class Mediator(QObject):
 
     def onPfFomRangeChange(self, value: tuple):
         self._meta.set(mt.PULSE_FILTER_PROC, "fom_range", str(value))
-
-    def onPfXgmIntensityRangeChange(self, value: tuple):
-        self._meta.set(mt.PULSE_FILTER_PROC, "xgm_intensity_range", str(value))
 
     def onRdStateChange(self, value: bool):
         self._meta.set(mt.GLOBAL_PROC, "recording_dark", str(value))

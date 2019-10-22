@@ -13,40 +13,6 @@ from .base_processor import _BaseProcessor
 from ..exceptions import ProcessingError
 from ...database import Metadata as mt
 from ...config import AnalysisType
-from ...utils import profiler
-
-
-class XgmPulseFilter(_BaseProcessor):
-    """XgmPulseFilter class.
-
-    Attributes:
-        _xgm_intensity_range (tuple):  if the pulsed XGM intensity falls
-            within this range, we will acknowledge the data.
-    """
-    def __init__(self):
-        super().__init__()
-
-        self._xgm_intensity_range = (0, np.inf)
-
-    def update(self):
-        """Override."""
-        cfg = self._meta.get_all(mt.PULSE_FILTER_PROC)
-
-        self._xgm_intensity_range = self.str2tuple(cfg["xgm_intensity_range"])
-
-    def process(self, data):
-        processed = data['processed']
-        intensity = processed.pulse.xgm.intensity
-        if intensity is None:
-            return
-
-        dropped = []  # a list of dropped indices
-        lb, ub = self._xgm_intensity_range
-        for i, v in enumerate(intensity):
-            if v < lb or v > ub:
-                dropped.append(i)
-
-        processed.image.dropped_indices.extend(dropped)
 
 
 class PostPulseFilter(_BaseProcessor):

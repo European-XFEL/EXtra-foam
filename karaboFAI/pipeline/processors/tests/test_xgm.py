@@ -11,16 +11,16 @@ from karaboFAI.database import SourceItem
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 from karaboFAI.pipeline.processors.xgm import (
-    XgmExtractor
+    XgmProcessor
 )
 
 
-class TestXgmExtractor(_BaseProcessorTest):
+class TestXgmProcessor(_BaseProcessorTest):
     def testGeneral(self):
         data, processed = self.simple_data(1234, (2, 2))
 
         # empty source
-        proc = XgmExtractor()
+        proc = XgmProcessor()
         proc.process(data)
 
         # new instrument source

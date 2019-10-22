@@ -32,8 +32,6 @@ class PulseFilterCtrlWidget(AbstractCtrlWidget):
         self._analysis_type_cb.addItems(self._analysis_types.keys())
         self._fom_range_le = SmartBoundaryLineEdit("-Inf, Inf")
 
-        self._xgm_intensity_range_le = SmartBoundaryLineEdit("0, Inf")
-
         self.initUI()
 
         self.setFixedHeight(self.minimumSizeHint().height())
@@ -50,13 +48,6 @@ class PulseFilterCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Fom range: "), 0, 2, AR)
         layout.addWidget(self._fom_range_le, 0, 3)
 
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 1, 0, AR)
-        xgm_type_cb = QtGui.QComboBox()
-        xgm_type_cb.addItem("XGM intensity")
-        layout.addWidget(xgm_type_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("Value range: "), 1, 2, AR)
-        layout.addWidget(self._xgm_intensity_range_le, 1, 3)
-
         self.setLayout(layout)
 
         if not self._pulse_resolved:
@@ -71,13 +62,9 @@ class PulseFilterCtrlWidget(AbstractCtrlWidget):
         self._fom_range_le.value_changed_sgn.connect(
             mediator.onPfFomRangeChange)
 
-        self._xgm_intensity_range_le.value_changed_sgn.connect(
-            mediator.onPfXgmIntensityRangeChange)
-
     def updateMetaData(self):
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._fom_range_le.returnPressed.emit()
-        self._xgm_intensity_range_le.returnPressed.emit()
 
         return True

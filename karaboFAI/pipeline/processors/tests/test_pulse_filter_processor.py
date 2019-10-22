@@ -13,16 +13,13 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from karaboFAI.pipeline.processors import XgmPulseFilter, PostPulseFilter
+from karaboFAI.pipeline.processors import PostPulseFilter
 from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.config import AnalysisType
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 
 class TestPulseFilters(_BaseProcessorTest):
-    def testXgmPulseFilter(self):
-        proc = XgmPulseFilter()
-
     def testPostPulseFilter(self):
         proc = PostPulseFilter()
 
