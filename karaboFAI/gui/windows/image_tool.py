@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageToolWindow.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -391,6 +389,8 @@ class ImageToolWindow(AbstractWindow):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
+    _WIDTH, _HEIGHT = config['GUI']['IMAGE_TOOL_SIZE']
+
     __instance = None
 
     @classmethod
@@ -476,7 +476,7 @@ class ImageToolWindow(AbstractWindow):
         self.initConnections()
         self.updateMetaData()
 
-        self.resize(800, 800)
+        self.resize(self._WIDTH, self._HEIGHT)
         self.update()
 
         self._is_initialized = True

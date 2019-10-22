@@ -122,7 +122,9 @@ class MainGUI(QtGui.QMainWindow):
 
     _db = RedisConnection()
 
-    SPLITTER_HANDLE_WIDTH = 9
+    _SPLITTER_HANDLE_WIDTH = 9
+
+    _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
 
     def __init__(self, *, start_thread_logger=False):
         """Initialization.
@@ -149,12 +151,12 @@ class MainGUI(QtGui.QMainWindow):
 
         self._cw = QtWidgets.QSplitter()
         self._cw.setChildrenCollapsible(False)
-        self._cw.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
+        self._cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
         self.setCentralWidget(self._cw)
 
         self._left_cw = QtWidgets.QTabWidget()
         self._middle_cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self._middle_cw.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
+        self._middle_cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
         self._middle_cw.setChildrenCollapsible(False)
 
         self._source_cw = DataSourceWidget()
@@ -315,8 +317,7 @@ class MainGUI(QtGui.QMainWindow):
         image_tool_at.trigger()
 
         self.setMinimumSize(640, 480)
-        # FIXME:
-        self.resize(1650, 1000)
+        self.resize(self._WIDTH, self._HEIGHT)
 
         self.show()
 

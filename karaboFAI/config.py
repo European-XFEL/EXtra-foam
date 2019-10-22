@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Hold configuration related objects.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -137,7 +135,11 @@ class _Config(dict):
             # color map in contour plots, valid options are: thermal, flame,
             # yellowy, bipolar, spectrum, cyclic, greyclip, grey
             "COLOR_MAP": 'thermal',
-            # (width, height) of large plot window
+            # initial (width, height) of the main GUI
+            "MAIN_GUI_SIZE": [1680, 1080],
+            # initial (width, height) of the image tool
+            "IMAGE_TOOL_SIZE": [1080, 1080],
+            # initial (width, height) of a large plot window
             "PLOT_WINDOW_SIZE": [1440, 1080],
         }
     }
