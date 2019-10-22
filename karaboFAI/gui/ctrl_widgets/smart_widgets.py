@@ -34,7 +34,6 @@ class SmartLineEdit(QtGui.QLineEdit):
 
         self.textChanged.connect(self.onTextChanged)
 
-        self.returnPressed.connect(self.onTextChangeConfirmed)
         self.returnPressed.connect(self.onReturnPressed)
 
     def onTextChanged(self):
@@ -42,10 +41,6 @@ class SmartLineEdit(QtGui.QLineEdit):
             self.setStyleSheet(
                 f"QLineEdit {{ background: rgb{Colors().o[:3]}}}")
             self._text_modified = True
-
-    def onTextChangeConfirmed(self):
-        self.setStyleSheet("QLineEdit { background: rgb(255, 255, 255)}")
-        self._text_modified = False
 
     def setText(self, text):
         """'Press enter' after setText.
@@ -73,6 +68,9 @@ class SmartLineEdit(QtGui.QLineEdit):
             self.value_changed_sgn.emit(self.Validator.parse(self.text()))
         else:
             self.value_changed_sgn.emit(self.text())
+
+        self.setStyleSheet("QLineEdit { background: rgb(255, 255, 255)}")
+        self._text_modified = False
 
     def value(self):
         if hasattr(self, "Validator"):
