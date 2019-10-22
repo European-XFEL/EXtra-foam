@@ -173,12 +173,12 @@ def _get_system_gpu_info():
         return info
     except FileNotFoundError as e:
         # raised when 'nvidia-smi' does not exist
-        logger.error(repr(e))
+        logger.info(repr(e))
         return GpuInfo()
     except Exception as e:
         # We don't want to prevent karaboFAI from starting simply because
         # failing to get the GPU information.
-        logger.error(
+        logger.info(
             f"Unexpected error when querying GPU information: {repr(e)}")
         return GpuInfo()
 
