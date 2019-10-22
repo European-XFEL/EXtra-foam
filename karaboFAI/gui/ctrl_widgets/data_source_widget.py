@@ -13,6 +13,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 
 from .base_ctrl_widgets import AbstractCtrlWidget
+from .smart_widgets import SmartSliceLineEdit
+from ..gui_helpers import parse_slice
 from ..mediator import Mediator
 from ...database import (
     DATA_SOURCE_CATEGORIES, EXCLUSIVE_SOURCE_CATEGORIES,
@@ -41,6 +43,31 @@ class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.currentText(), Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
+
+
+class DSSlicerDelegate(QtWidgets.QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        """Override."""
+        channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
+        ctg = index.parent().data(Qt.DisplayRole)
+        if len(channels) > 1 or ctg in config.detectors:
+            # pipeline data
+            le = SmartSliceLineEdit(":", parent)
+            return le
+
+    def setEditorData(self, editor, index):
+        """Override."""
+        value = index.data(Qt.DisplayRole)
+        editor.setTextWithoutSignal(value)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.text(), Qt.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
@@ -114,6 +141,10 @@ class DataSourceTreeItem:
         return self._exclusive
 
 
+_DEFAULT_SLICER = ":"
+_DEFAULT_SLICER_NOT_SUPPORTED = ""
+
+
 class DataSourceTreeModel(QtCore.QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
@@ -124,7 +155,8 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
 
         self._mediator = Mediator()
 
-        self._root = DataSourceTreeItem(["Source name", "Property"])
+        self._root = DataSourceTreeItem([
+            "Source name", "Property", "Pulse slicer"])
         self.setupModelData()
 
         self.device_toggled_sgn.connect(self._mediator.onDataSourceToggled)
@@ -146,6 +178,9 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
 
     def setData(self, index, value, role=None) -> bool:
         """Override."""
+        def _parse_slice(x):
+            return slice(*parse_slice(x)) if x else None
+
         if role == Qt.CheckStateRole or role == Qt.EditRole:
             item = index.internalPointer()
             if role == Qt.CheckStateRole:
@@ -159,26 +194,39 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                                 self.dataChanged.emit(index.sibling(i, 0),
                                                       index.sibling(i, 0))
                                 self.device_toggled_sgn.emit(
-                                    SourceItem(item_sb.parent().data(0),
-                                               item_sb.data(0),
-                                               item_sb.data(1)),
+                                    SourceItem(
+                                        item_sb.parent().data(0),
+                                        item_sb.data(0),
+                                        item_sb.data(1),
+                                        _parse_slice(item_sb.data(2))
+                                    ),
                                     False)
                                 break
 
                 item.setChecked(value)
-            else:
+            else:  # role == Qt.EditRole
                 old_ppt = item.data(1)
+                old_slicer = item.data(2)
                 item.setData(value, index.column())
-                if index.column() == 1:
+                if index.column() >= 1:
                     # remove registered item with the old property
                     self.device_toggled_sgn.emit(
-                        SourceItem(item.parent().data(0), item.data(0), old_ppt),
+                        SourceItem(
+                            item.parent().data(0),
+                            item.data(0),
+                            old_ppt,
+                            _parse_slice(old_slicer)
+                        ),
                         False)
 
-            self.device_toggled_sgn.emit(SourceItem(item.parent().data(0),
-                                                    item.data(0),
-                                                    item.data(1)),
-                                         item.isChecked())
+            self.device_toggled_sgn.emit(
+                SourceItem(
+                    item.parent().data(0),
+                    item.data(0),
+                    item.data(1),
+                    _parse_slice(item.data(2))
+                ),
+                item.isChecked())
             return True
         return False
 
@@ -263,7 +311,7 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
         sources[det] = sorted(sources[det])
 
         for ctg, srcs in sources.items():
-            self._root.appendChild(DataSourceTreeItem([ctg, ""],
+            self._root.appendChild(DataSourceTreeItem([ctg, "", ""],
                                                       exclusive=False,
                                                       parent=self._root))
 
@@ -275,8 +323,14 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                     channels = src.split(':')
                     key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
                     default_ppt = list(DATA_SOURCE_PROPERTIES[key].keys())[0]
+                    if len(channels) > 1 or ctg in config.detectors:
+                        default_slicer = _DEFAULT_SLICER
+                    else:
+                        default_slicer = _DEFAULT_SLICER_NOT_SUPPORTED
                     last_child.appendChild(DataSourceTreeItem(
-                        [src, default_ppt], exclusive, parent=last_child))
+                        [src, default_ppt, default_slicer],
+                        exclusive,
+                        parent=last_child))
             except KeyError:
                 pass
 
@@ -414,8 +468,10 @@ class DataSourceWidget(QtWidgets.QWidget):
         self._tree_view = QtWidgets.QTreeView()
         self._tree_model = DataSourceTreeModel(self)
         self._tree_ppt_delegate = DSPropertyDelegate(self)
+        self._tree_slicer_delegate = DSSlicerDelegate(self)
         self._tree_view.setModel(self._tree_model)
         self._tree_view.setItemDelegateForColumn(1, self._tree_ppt_delegate)
+        self._tree_view.setItemDelegateForColumn(2, self._tree_slicer_delegate)
 
         self._list_container = QtWidgets.QTabWidget()
         self._list_view = QtWidgets.QListView()

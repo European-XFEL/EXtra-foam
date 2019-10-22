@@ -265,7 +265,7 @@ class TestImageTool(unittest.TestCase):
         proc.process(data)
         self.assertIsNone(proc._image_mask)
 
-        mask_gt = np.zeros(data['assembled'].shape[-2:], dtype=np.bool)
+        mask_gt = np.zeros(data['detector']['assembled'].shape[-2:], dtype=np.bool)
 
         pub.add((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
@@ -312,7 +312,9 @@ class TestImageTool(unittest.TestCase):
             proc.process(data)
 
     def _get_data(self):
-        return {'assembled': np.ones((4, 10, 10), np.float32),
+        return {'detector': {
+                    'assembled': np.ones((4, 10, 10), np.float32),
+                    'pulse_slicer': slice(None, None)},
                 'processed': ProcessedData(1001)}
 
 

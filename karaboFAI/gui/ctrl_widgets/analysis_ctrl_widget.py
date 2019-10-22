@@ -26,9 +26,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         poi_index1 = 0
         poi_index2 = 0
 
-        self._pulse_slicer_le = SmartSliceLineEdit(":")
-        self._xgm_pulse_slicer_le = SmartSliceLineEdit(":")
-
         self._poi_index1_le = SmartLineEdit(str(poi_index1))
         self._poi_index1_le.setValidator(self._pulse_index_validator)
 
@@ -36,7 +33,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._poi_index2_le.setValidator(self._pulse_index_validator)
 
         if not self._pulse_resolved:
-            self._pulse_slicer_le.setEnabled(False)
             self._poi_index1_le.setEnabled(False)
             self._poi_index2_le.setEnabled(False)
 
@@ -63,12 +59,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         AR = QtCore.Qt.AlignRight
 
         row = 0
-        layout.addWidget(QtGui.QLabel("Pulse slicer: "), row, 0, AR)
-        layout.addWidget(self._pulse_slicer_le, row, 1)
-        layout.addWidget(QtGui.QLabel("XGM pulse slicer: "), row, 2, AR)
-        layout.addWidget(self._xgm_pulse_slicer_le, row, 3)
-
-        row += 1
         layout.addWidget(QtGui.QLabel("POI index 1: "), row, 0, AR)
         layout.addWidget(self._poi_index1_le, row, 1)
         layout.addWidget(QtGui.QLabel("POI index 2: "), row, 2, AR)
@@ -109,11 +99,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.onSampleDistanceChange(
                 float(self._sample_dist_le.text())))
 
-        self._pulse_slicer_le.value_changed_sgn.connect(
-            mediator.onPulseIndexSelectorChange)
-        self._xgm_pulse_slicer_le.value_changed_sgn.connect(
-            mediator.onXgmPulseIndexSelectorChange)
-
         self._ma_window_le.returnPressed.connect(
             lambda: mediator.onMaWindowChange(
                 int(self._ma_window_le.text())))
@@ -128,9 +113,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._photon_energy_le.returnPressed.emit()
 
         self._sample_dist_le.returnPressed.emit()
-
-        self._pulse_slicer_le.returnPressed.emit()
-        self._xgm_pulse_slicer_le.returnPressed.emit()
 
         self._ma_window_le.returnPressed.emit()
 

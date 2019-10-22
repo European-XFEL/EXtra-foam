@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .base_processor import _BaseProcessor
+from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
 from ...utils import profiler
 from ...database import Metadata as mt
@@ -23,16 +24,35 @@ class XgmExtractor(_BaseProcessor):
             pulses for pulse-resolved pipeline data.
     """
 
+    _intensity_ma = MovingAverageArray()
+    _pulse_intensity_ma = MovingAverageArray()
+
     def __init__(self):
         super().__init__()
 
         self._sources = []
         self._pulse_slicer = slice(None, None)
 
+        self._ma_window = 1
+
     def update(self):
         self._sources = self._meta.get_all_data_sources("XGM")
-        self._pulse_slicer = self.str2slice(
-            self._meta.get(mt.GLOBAL_PROC, 'selected_xgm_pulse_indices'))
+
+        global_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+
+        # update moving average
+        if 'reset_ai' in global_cfg:
+            # reset moving average
+            del self._intensity_ma
+            del self._pulse_intensity_ma
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_xgm')
+
+        v = int(global_cfg['ma_window'])
+        if self._ma_window != v:
+            self.__class__._intensity_ma.window = v
+            self.__class__._pulse_intensity_ma.window = v
+
+        self._ma_window = v
 
     @profiler("XGM Processor")
     def process(self, data):
@@ -60,7 +80,9 @@ class XgmExtractor(_BaseProcessor):
                 err_msgs.append(err)
             else:
                 xgm_ppts = DATA_SOURCE_PROPERTIES["XGM"]
-                processed.xgm.__dict__[xgm_ppts[src.property]] = v
+                self._intensity_ma = v
+                processed.xgm.__dict__[xgm_ppts[src.property]] = \
+                    self._intensity_ma
 
         # pipeline data
         for src in pipeline_srcs:
@@ -71,8 +93,9 @@ class XgmExtractor(_BaseProcessor):
                 err_msgs.append(err)
             else:
                 xgm_ppts = DATA_SOURCE_PROPERTIES["XGM:output"]
-                processed.pulse.xgm.__dict__[xgm_ppts[src.property]] = v[
-                    self._pulse_slicer]
+                self._pulse_intensity_ma = v[src.slicer]
+                processed.pulse.xgm.__dict__[xgm_ppts[src.property]] = \
+                    self._pulse_intensity_ma
 
         for msg in err_msgs:
             raise ProcessingError(f'[XGM] {msg}')

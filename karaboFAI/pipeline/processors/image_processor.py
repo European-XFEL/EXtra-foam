@@ -81,8 +81,6 @@ class ImageProcessorPulse(_BaseProcessor):
         # global
         gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
 
-        self._pulse_slicer = self.str2slice(gp_cfg['selected_pulse_indices'])
-
         self._poi_indices = [int(gp_cfg['poi1_index']),
                              int(gp_cfg['poi2_index'])]
 
@@ -106,21 +104,21 @@ class ImageProcessorPulse(_BaseProcessor):
     @profiler("Image Processor (pulse)")
     def process(self, data):
         image_data = data['processed'].image
-        assembled = data['assembled']
+        assembled = data['detector']['assembled']
+        pulse_slicer = data['detector']['pulse_slicer']
         n_total = assembled.shape[0] if assembled.ndim == 3 else 1
 
-        pulse_slicer = self._pulse_slicer
-        data['assembled'] = assembled[pulse_slicer]
+        data['detector']['assembled'] = assembled[pulse_slicer]
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
         n_images = len(sliced_indices)
 
         if self._recording:
             if self._dark_run is None:
-                # dark_run should not share memory with data['assembled']
-                self._dark_run = data['assembled'].copy()  # after pulse slicing
+                # dark_run should not share memory with data['detector']['assembled']
+                self._dark_run = data['detector']['assembled'].copy()  # after pulse slicing
             else:
                 # moving average
-                self._dark_run = data['assembled']
+                self._dark_run = data['detector']['assembled']
 
             # for visualizing the dark_mean
             # This is also a relatively expensive operation. But, in principle,
@@ -130,7 +128,7 @@ class ImageProcessorPulse(_BaseProcessor):
             else:
                 self._dark_mean = self._dark_run.copy()
 
-        assembled = data['assembled']
+        assembled = data['detector']['assembled']
         # subtract the dark_run from assembled if any
         if (not self._recording and self._dark_run is not None) \
                 or (self._recording and self._process_dark):
@@ -248,7 +246,7 @@ class ImageProcessorTrain(_BaseProcessor):
     @profiler("Image Processor (train)")
     def process(self, data):
         processed = data['processed']
-        assembled = data['assembled']
+        assembled = data['detector']['assembled']
 
         tid = processed.tid
         image_data = processed.image

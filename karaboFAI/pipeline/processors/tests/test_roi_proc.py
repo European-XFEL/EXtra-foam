@@ -280,7 +280,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         proc.process(data)
 
         roi = processed.pulse.roi
-        fom1_gt = list(np.sum(data['assembled'][:, 0:3, 0:2], axis=(-1, -2)))
+        fom1_gt = list(np.sum(data['detector']['assembled'][:, 0:3, 0:2], axis=(-1, -2)))
         self.assertListEqual(fom1_gt, roi.roi1.fom)
         self.assertIsNone(roi.roi2.fom)
 
@@ -292,7 +292,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         proc.process(data)
 
         roi = processed.pulse.roi
-        fom2_gt = list(np.sum(data['assembled'][:, 0:3, 0:1], axis=(-1, -2)))
+        fom2_gt = list(np.sum(data['detector']['assembled'][:, 0:3, 0:1], axis=(-1, -2)))
         self.assertIsNone(roi.roi1.fom)
         self.assertListEqual(fom2_gt, roi.roi2.fom)
 
@@ -306,7 +306,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         proc.process(data)
 
         roi = processed.pulse.roi
-        masked_assembled = data['assembled'].copy()
+        masked_assembled = data['detector']['assembled'].copy()
         masked_assembled[:, processed.image.image_mask] = 0
         fom1_gt = list(np.sum(masked_assembled[:, 0:3, 0:2], axis=(-1, -2)))
         self.assertListEqual(fom1_gt, roi.roi1.fom)
@@ -320,7 +320,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         proc.process(data)
 
         roi = processed.pulse.roi
-        masked_assembled = data['assembled'].copy()
+        masked_assembled = data['detector']['assembled'].copy()
         masked_assembled[:, processed.image.image_mask] = 0
         fom2_gt = list(np.sum(masked_assembled[:, 0:3, 0:1], axis=(-1, -2)))
         self.assertIsNone(roi.roi1.fom)

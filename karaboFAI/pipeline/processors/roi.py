@@ -171,7 +171,7 @@ class RoiProcessorPulse(_RoiProcessBase):
     @profiler("ROI Processor (pulse)")
     def process(self, data):
         processed = data['processed']
-        assembled = data['assembled']
+        assembled = data['detector']['assembled']
 
         self._process_roi1(processed, assembled)
         self._process_roi2(processed, assembled)

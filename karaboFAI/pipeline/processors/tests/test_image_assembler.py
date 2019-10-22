@@ -69,8 +69,8 @@ class TestAgipdAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -80,8 +80,8 @@ class TestAgipdAssembler(unittest.TestCase):
     def _check_result(self, data):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -191,8 +191,8 @@ class TestLpdAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(any([key in data['raw'] for key in module_keys]))
 
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -241,9 +241,9 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
-        assembled = data["assembled"]
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        assembled = data['detector']['assembled']
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -260,7 +260,7 @@ class TestLpdAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE}
         }
         self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
+        assembled_shape = data['detector']['assembled'].shape
 
         self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
         self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
@@ -274,7 +274,7 @@ class TestLpdAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE}
         }
         self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
+        assembled_shape = data['detector']['assembled'].shape
         self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
         self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
 
@@ -291,7 +291,7 @@ class TestLpdAssembler(unittest.TestCase):
         }
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
-        assembled_shape = data['assembled'].shape
+        assembled_shape = data['detector']['assembled'].shape
         self.assertNotEqual(assembled_shape_old, assembled_shape)
         self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
         self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
@@ -319,7 +319,7 @@ class TestLpdAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE}
         }
         self._assembler.process(data)
-        assembled_dtype = data["assembled"].dtype
+        assembled_dtype = data['detector']['assembled'].dtype
         self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)
 
 
@@ -391,7 +391,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
-        assembled = data["assembled"]
+        assembled = data['detector']['assembled']
         self.assertTupleEqual(assembled.shape, (1, 512, 1024))
 
         # test multi-frame (16 here), single module JungFrau received
@@ -403,7 +403,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self.assertTupleEqual(temp.shape, (16, 1, 512, 1024))
 
         self._assembler.process(data)
-        assembled = data["assembled"]
+        assembled = data['detector']['assembled']
         self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
         # test multi-frame (16 here), two-modules JungFrau in new array shape
@@ -414,7 +414,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         self.assertTupleEqual(temp.shape, (16, 2, 512, 1024))
 
         self._assembler.process(data)
-        assembled = data["assembled"]
+        assembled = data['detector']['assembled']
         self.assertTupleEqual(assembled.shape, (16, 1024, 1024))
 
         # test multi-frame, three-modules JungFrau
@@ -529,8 +529,8 @@ class TestDSSCAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -560,8 +560,8 @@ class TestDSSCAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -628,8 +628,8 @@ class TestDSSCAssembler(unittest.TestCase):
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
-        self.assertEqual(3, data['assembled'].ndim)
-        assembled_shape = data['assembled'].shape
+        self.assertEqual(3, data['detector']['assembled'].ndim)
+        assembled_shape = data['detector']['assembled'].shape
         self.assertEqual(4, assembled_shape[0])
         self.assertGreater(assembled_shape[1], 1024)
         self.assertGreater(assembled_shape[2], 1024)
@@ -645,7 +645,7 @@ class TestDSSCAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE},
         }
         self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
+        assembled_shape = data['detector']['assembled'].shape
 
         np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
         np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
@@ -658,7 +658,7 @@ class TestDSSCAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE},
         }
         self._assembler.process(data)
-        assembled_shape = data['assembled'].shape
+        assembled_shape = data['detector']['assembled'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
         np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
 
@@ -682,5 +682,5 @@ class TestDSSCAssembler(unittest.TestCase):
             'meta': {'source_type': DataSource.BRIDGE},
         }
         self._assembler.process(data)
-        assembled_dtype = data["assembled"].dtype
+        assembled_dtype = data['detector']['assembled'].dtype
         self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)

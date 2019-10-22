@@ -185,7 +185,18 @@ for topic in DATA_SOURCE_CATEGORIES:
 
 
 class SourceItem:
-    def __init__(self, category, name, ppt):
+    def __init__(self, category, name, ppt, slicer=None):
+        """Initialization.
+
+        :param str category: source category, e.g. DSSC, XGM.
+        :param str name: source name.
+        :param str ppt: property name.
+        :param slice/None slicer: slicer object. None is used here to
+            differentiate from slice(None, None). Therefore, if one uses
+            slicer on an, for example, instrument data, an exception will
+            be raised.
+        """
         self.category = category
         self.name = name
         self.property = ppt
+        self.slicer = slicer

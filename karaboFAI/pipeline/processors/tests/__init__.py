@@ -38,5 +38,8 @@ class _BaseProcessorTest(unittest.TestCase):
 
         data = {'processed': processed,
                 'raw': dict(),
-                'assembled': imgs}
+                'detector': {
+                    'assembled': imgs,
+                    'pulse_slicer': slice(None, None),
+                }}
         return data, processed

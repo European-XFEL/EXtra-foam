@@ -120,12 +120,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(slice(None, None), image_proc._pulse_slicer)
         self.assertEqual(slice(None, None), xgm_proc._pulse_slicer)
 
-        widget._pulse_slicer_le.setText("1:5:2")
-        widget._xgm_pulse_slicer_le.setText("2:10:2")
-        image_proc.update()
-        xgm_proc.update()
-        self.assertEqual(slice(1, 5, 2), image_proc._pulse_slicer)
-        self.assertEqual(slice(2, 10, 2), xgm_proc._pulse_slicer)
+        # test "Reset M.A." button
+        # TODO
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
@@ -640,7 +636,6 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
 
-        self.assertFalse(widget._pulse_slicer_le.isEnabled())
         self.assertFalse(widget._poi_index1_le.isEnabled())
         self.assertFalse(widget._poi_index2_le.isEnabled())
 

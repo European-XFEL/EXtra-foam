@@ -48,7 +48,7 @@ class TestXgmExtractor(_BaseProcessorTest):
         self._reset_processed(processed)
 
         # new pipeline source
-        proc._sources.append(SourceItem('XGM', 'xgm1:output', "data.intensityTD"))
+        proc._sources.append(SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(None, None)))
         with self.assertRaises(ProcessingError):
             proc.process(data)
         # set correct source
@@ -61,12 +61,21 @@ class TestXgmExtractor(_BaseProcessorTest):
         self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity)
         self._reset_processed(processed)
 
+        # same pipeline source with a different slice
+        proc._sources.pop(-1)
+        proc._sources.append(SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(1, 3)))
+        proc.process(data)
+        self.assertEqual(0.02, processed.xgm.intensity)
+        self.assertEqual(1e-5, processed.xgm.x)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
+        self._reset_processed(processed)
+
         # remove instrument source
         proc._sources.pop(0)
         proc.process(data)
         self.assertIsNone(processed.xgm.intensity)
         self.assertEqual(1e-5, processed.xgm.x)
-        self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
         self._reset_processed(processed)
 
         # remove the other instrument source
@@ -74,7 +83,7 @@ class TestXgmExtractor(_BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.xgm.intensity)
         self.assertIsNone(processed.xgm.x)
-        self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
         self._reset_processed(processed)
 
         # remove pipeline source

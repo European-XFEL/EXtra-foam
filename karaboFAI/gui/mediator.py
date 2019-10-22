@@ -81,12 +81,6 @@ class Mediator(QObject):
     def onGeomQuadPositionsChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
-    def onPulseIndexSelectorChange(self, value: list):
-        self._meta.set(mt.GLOBAL_PROC, 'selected_pulse_indices', str(value))
-
-    def onXgmPulseIndexSelectorChange(self, value: list):
-        self._meta.set(mt.GLOBAL_PROC, 'selected_xgm_pulse_indices', str(value))
-
     def onPoiPulseIndexChange(self, vip_id: int, value: int):
         self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
 
@@ -105,9 +99,9 @@ class Mediator(QObject):
         self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
 
     def onMaReset(self):
-        # TODO: merge into one set
-        self._meta.set(mt.GLOBAL_PROC, "reset_ai", 1)
-        self._meta.set(mt.GLOBAL_PROC, "reset_roi", 1)
+        self._meta.mset(mt.GLOBAL_PROC, {"reset_ai": 1,
+                                         "reset_roi": 1,
+                                         "reset_xgm": 1})
 
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)

@@ -137,7 +137,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
             return
 
         processed = data['processed']
-        assembled = data['assembled']
+        assembled = data['detector']['assembled']
 
         integrator = self._update_integrator()
         itgt1d = functools.partial(integrator.integrate1d,

@@ -43,7 +43,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
 
         self._proc.process(data)
         # FIXME
-        # np.testing.assert_array_equal(data['assembled'], processed.image.images)
+        # np.testing.assert_array_equal(data['detector']['assembled'], processed.image.images)
         self.assertIsInstance(processed.image.images, list)
         self.assertListEqual([0], processed.image.sliced_indices)
 
@@ -51,7 +51,7 @@ class TestImageProcessorPulseTr(_BaseProcessorTest):
         self._proc._pulse_slicer = slice(0, 2)
         self._proc.process(data)
         # FIXME
-        # np.testing.assert_array_equal(data['assembled'], processed.image.images)
+        # np.testing.assert_array_equal(data['detector']['assembled'], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
 
     def testImageShapeChangeOnTheFly(self):
@@ -100,7 +100,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         self._proc._process_dark = False  # no dark subtraction
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        dark_run_gt = data['assembled'].copy()
+        dark_run_gt = data['detector']['assembled'].copy()
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
         np.testing.assert_array_almost_equal(
@@ -108,13 +108,13 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
 
         # test moving average is going on
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['assembled'].copy()
+        assembled_gt = data['detector']['assembled'].copy()
         dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
         np.testing.assert_array_almost_equal(
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
-        np.testing.assert_array_almost_equal(data['assembled'], assembled_gt)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], assembled_gt)
 
         # ------------------------------
         # test self._process_dark = True
@@ -126,7 +126,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         self._proc._dark_mean = None
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        dark_run_gt = data['assembled'].copy()
+        dark_run_gt = data['detector']['assembled'].copy()
         assembled_gt = dark_run_gt
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
@@ -134,10 +134,10 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
         # test 'assembled' is dark run subtracted
         np.testing.assert_array_almost_equal(
-            data['assembled'], assembled_gt - self._proc._dark_run)
+            data['detector']['assembled'], assembled_gt - self._proc._dark_run)
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['assembled'].copy()
+        assembled_gt = data['detector']['assembled'].copy()
         dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
@@ -145,7 +145,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
         # test 'assembled' is dark run subtracted
         np.testing.assert_array_almost_equal(
-            data['assembled'], assembled_gt - self._proc._dark_run)
+            data['detector']['assembled'], assembled_gt - self._proc._dark_run)
 
         # test image has different shape from the dark
         # (this test should use the env from the above test
@@ -158,18 +158,18 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
 
     def testPulseSlicing(self):
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['assembled'].copy()
+        assembled_gt = data['detector']['assembled'].copy()
 
         self._proc.process(data)
         self.assertEqual(4, processed.image.n_images)
         self.assertListEqual([0, 1, 2, 3], processed.image.sliced_indices)
 
         # test slice to list of indices
-        self._proc._pulse_slicer = slice(0, 2)
+        data['detector']['pulse_slicer'] = slice(0, 2)
         self._proc.process(data)
         # Note: this test ensures that POI and on/off pulse indices are all
         # based on the assembled data after pulse slicing.
-        np.testing.assert_array_equal(assembled_gt[0:2], data['assembled'])
+        np.testing.assert_array_equal(assembled_gt[0:2], data['detector']['assembled'])
         self.assertEqual(2, processed.image.n_images)
         self.assertListEqual([0, 1], processed.image.sliced_indices)
 
@@ -181,7 +181,7 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         imgs = processed.image.images
         self.assertIsInstance(imgs, list)
         self.assertListEqual([0, 0], proc._poi_indices)
-        np.testing.assert_array_equal(imgs[0], data['assembled'][0])
+        np.testing.assert_array_equal(imgs[0], data['detector']['assembled'][0])
         self.assertIsNone(imgs[1])
         self.assertIsNone(imgs[3])
 
@@ -191,8 +191,8 @@ class TestImageProcessorPulsePr(_BaseProcessorTest):
         imgs = processed.image.images
         self.assertIsNone(imgs[0])
         self.assertIsNone(imgs[1])
-        np.testing.assert_array_equal(imgs[2], data['assembled'][2])
-        np.testing.assert_array_equal(imgs[3], data['assembled'][3])
+        np.testing.assert_array_equal(imgs[2], data['detector']['assembled'][2])
+        np.testing.assert_array_equal(imgs[3], data['detector']['assembled'][3])
 
         # test invalid indices
         proc._poi_indices = [3, 4]
@@ -263,7 +263,7 @@ class TestImageProcessorTrainTr(_BaseProcessorTest):
         data, processed = self._gen_data(1001)
 
         proc.process(data)
-        np.testing.assert_array_almost_equal(processed.pp.image_on, data['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_on, data['detector']['assembled'])
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
     def testPpOddOn(self):
@@ -281,20 +281,20 @@ class TestImageProcessorTrainTr(_BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
 
-        np.testing.assert_array_almost_equal(data['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
 
         data, processed = self._gen_data(1005)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1006)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
-        np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
 
     def testPpEvenOn(self):
         proc = self._proc
@@ -310,21 +310,21 @@ class TestImageProcessorTrainTr(_BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
 
         # test when two 'on' are received successively
         data, processed = self._gen_data(1004)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1005)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
-        np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
 
 
 class TestImageProcessorTrainPr(_BaseProcessorTest):
@@ -353,7 +353,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         proc.process(data)
         # test calculating the average image after pulse filtering
         np.testing.assert_array_equal(
-            np.nanmean(data['assembled'][[1, 3]], axis=0),
+            np.nanmean(data['detector']['assembled'][[1, 3]], axis=0),
             image_data.mean
         )
 
@@ -413,7 +413,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         data, processed = self._gen_data(1001)
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_on, np.mean(data['assembled'][::2, :, :], axis=0))
+            processed.pp.image_on, np.mean(data['detector']['assembled'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
         # --------------------
@@ -433,7 +433,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # test image_on correctness
         image_data.dropped_indices = [0]
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_on, data['assembled'][2])
+        np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
 
     def testSameTrain(self):
         proc = self._proc
@@ -444,9 +444,9 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         data, processed = self._gen_data(1001)
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_on, np.mean(data['assembled'][::2, :, :], axis=0))
+            processed.pp.image_on, np.mean(data['detector']['assembled'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
 
         # --------------------
         # test pulse filtering
@@ -464,8 +464,8 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # test image_on correctness
         image_data.dropped_indices = [0, 1]
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_on, data['assembled'][2])
-        np.testing.assert_array_equal(processed.pp.image_off, data['assembled'][3])
+        np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
+        np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
 
     def testEvenOn(self):
         proc = self._proc
@@ -484,7 +484,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
         np.testing.assert_array_almost_equal(
-            np.mean(data['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.mean(data['detector']['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1003)  # off
@@ -492,7 +492,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
 
         # --------------------
         # test pulse filtering
@@ -509,7 +509,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # drop one on/off indices each
         image_data.dropped_indices = [0, 1]
         proc.process(data)
-        np.testing.assert_array_equal(proc._prev_unmasked_on, data['assembled'][2])
+        np.testing.assert_array_equal(proc._prev_unmasked_on, data['detector']['assembled'][2])
 
         data, processed = self._gen_data(1003)
         image_data = processed.image
@@ -526,7 +526,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         image_data.dropped_indices = [0, 1]
         proc._prev_unmasked_on = np.ones((2, 2), np.float32)  # any value except None
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_off, data['assembled'][3])
+        np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
 
     def testOddOn(self):
         proc = self._proc
@@ -545,7 +545,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
         np.testing.assert_array_almost_equal(
-            np.mean(data['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.mean(data['detector']['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1004)  # off
@@ -553,7 +553,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
 
         # --------------------
         # test pulse filtering

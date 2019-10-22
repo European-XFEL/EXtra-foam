@@ -32,12 +32,14 @@ class ImageAssemblerFactory(ABC):
 
         Attributes:
             _source_name (str): detector data source name.
+            _pulse_slicer (slice object): detector data pulse slicer.
         """
         def __init__(self):
             """Initialization."""
             super().__init__()
 
             self._source_name = None
+            self._pulse_slicer = None
 
             self._geom_file = None
             self._quad_position = None
@@ -50,6 +52,7 @@ class ImageAssemblerFactory(ABC):
             if srcs:
                 assert(len(srcs) == 1)
                 self._source_name = srcs[-1].name
+                self._pulse_slicer = srcs[-1].slicer
 
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
@@ -174,7 +177,9 @@ class ImageAssemblerFactory(ABC):
                 raise AssemblingError(e)
 
             assembled = self._modules_to_assembled(modules_data)
-            data['assembled'] = assembled
+            data['detector'] = dict()
+            data['detector']['assembled'] = assembled
+            data['detector']['pulse_slicer'] = self._pulse_slicer
 
     class AgipdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src_name):
