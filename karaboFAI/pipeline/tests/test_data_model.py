@@ -4,8 +4,8 @@ from unittest.mock import patch
 import numpy as np
 
 from karaboFAI.pipeline.data_model import (
-    AccumulatedPairData, CorrelationData, MovingAverageArray, ImageData,
-    PairData, ProcessedData, PumpProbeData, RawImageData
+    AccumulatedPairData, CorrelationData, PulseIndexMask, MovingAverageArray,
+    ImageData, PairData, ProcessedData, PumpProbeData, RawImageData
 )
 from karaboFAI.config import config
 
@@ -426,3 +426,20 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation1.update_params(1, 11, 'dev1', 'ppt1', 0.0)
         data.update_hist()
         self.assertIsInstance(data.correlation1.__class__.hist, PairData)
+
+
+class TestIndexMask(unittest.TestCase):
+    def testGeneral(self):
+        mask = PulseIndexMask()
+
+        mask.mask([0, 5])
+        mask.mask(7)
+        self.assertEqual(3, mask.n_dropped(10))
+        self.assertEqual(1, mask.n_dropped(4))
+        self.assertListEqual([0, 5, 7], mask.dropped_indices(100).tolist())
+        self.assertListEqual([0, 5], mask.dropped_indices(6).tolist())
+        self.assertEqual(97, len(mask.kept_indices(100)))
+        self.assertEqual(4, len(mask.kept_indices(6)))
+        for i in [0, 5, 7]:
+            self.assertNotIn(i, mask.kept_indices(100))
+            self.assertNotIn(i, mask.kept_indices(6))

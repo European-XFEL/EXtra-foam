@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Unittest for PulseFilterProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -37,27 +35,27 @@ class TestPulseFilters(_BaseProcessorTest):
         proc.analysis_type = AnalysisType.ROI1_PULSE
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        self.assertEqual([], processed.image.dropped_indices)
+        self.assertListEqual([], processed.pidx.dropped_indices(4).tolist())
         processed.pulse.roi.roi1.fom = [1, 2, 3, 4]
         proc.process(data)
-        self.assertEqual([], processed.image.dropped_indices)
+        self.assertListEqual([], processed.pidx.dropped_indices(4).tolist())
         proc._fom_range = [0, 2.5]
         proc.process(data)
-        self.assertEqual([2, 3], processed.image.dropped_indices)
+        self.assertListEqual([2, 3], processed.pidx.dropped_indices(4).tolist())
 
         # ROI1
         data, processed = self.simple_data(1001, (4, 2, 2))
         proc.analysis_type = AnalysisType.ROI2_PULSE
         with self.assertRaises(ProcessingError):
             proc.process(data)  # FOM is not available
-        self.assertEqual([], processed.image.dropped_indices)
+        self.assertListEqual([], processed.pidx.dropped_indices(4).tolist())
         processed.pulse.roi.roi2.fom = [4, 5, 6, 7]
         proc._fom_range = [0, 2.5]
         proc.process(data)
-        self.assertEqual([0, 1, 2, 3], processed.image.dropped_indices)
+        self.assertListEqual([0, 1, 2, 3], processed.pidx.dropped_indices(4).tolist())
 
         # UNDEFINED
         data, processed = self.simple_data(1001, (4, 2, 2))
         proc.analysis_type = AnalysisType.UNDEFINED
         proc.process(data)
-        self.assertEqual([], processed.image.dropped_indices)
+        self.assertListEqual([], processed.pidx.dropped_indices(4).tolist())

@@ -60,10 +60,8 @@ class PostPulseFilter(_BaseProcessor):
         if err_msgs:
             raise ProcessingError(f"[Post pulse filter] {err_msgs[0]}")
 
-        dropped = []  # a list of dropped indices
+        pidx = processed.pidx
         lb, ub = self._fom_range
         for i, fom in enumerate(foms):
             if fom < lb or fom > ub:
-                dropped.append(i)
-
-        processed.image.dropped_indices.extend(dropped)
+                pidx.mask(i)

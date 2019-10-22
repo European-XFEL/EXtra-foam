@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-BulletinWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -76,7 +74,7 @@ class BulletinWidget(QtGui.QWidget):
     def update(self, data):
         """Override."""
         n_total = data.n_pulses
-        n_dropped = len(data.image.dropped_indices)
+        n_dropped = data.pidx.n_dropped(n_total)
         self._set_text(data.tid, n_total, n_total - n_dropped)
 
     def _set_text(self, tid="", n_total="", n_filtered=""):

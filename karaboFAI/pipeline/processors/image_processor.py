@@ -254,9 +254,9 @@ class ImageProcessorTrain(_BaseProcessor):
         threshold_mask = image_data.threshold_mask
         reference = image_data.reference
         n_images = image_data.n_images
-        dropped_indices = image_data.dropped_indices
-
         intensity = processed.pulse.xgm.intensity
+
+        dropped_indices = processed.pidx.dropped_indices(n_images).tolist()
 
         # pump-probe means
         on_image, off_image, on_intensity, off_intensity, curr_indices, curr_means = \

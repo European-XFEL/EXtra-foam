@@ -348,8 +348,7 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
 
         data, processed = self._gen_data(1001)
         image_data = processed.image
-        self.assertListEqual([], image_data.dropped_indices)
-        image_data.dropped_indices = [0, 2]
+        processed.pidx.mask([0, 2])
         proc.process(data)
         # test calculating the average image after pulse filtering
         np.testing.assert_array_equal(
@@ -421,17 +420,17 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # --------------------
 
         data, processed = self._gen_data(1002)
-        image_data = processed.image
-        image_data.dropped_indices = [0, 2]
+        processed.pidx.mask([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
 
-        image_data.dropped_indices = [1, 3]
+        data, processed = self._gen_data(1002)
+        processed.pidx.mask([1, 3])
         # no Exception
         proc.process(data)
 
         # test image_on correctness
-        image_data.dropped_indices = [0]
+        processed.pidx.mask([0])
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
 
@@ -453,16 +452,18 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # --------------------
 
         data, processed = self._gen_data(1002)
-        image_data = processed.image
-        image_data.dropped_indices = [0, 2]
+        processed.pidx.mask([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
-        image_data.dropped_indices = [1, 3]
+
+        data, processed = self._gen_data(1002)
+        processed.pidx.mask([1, 3])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
 
         # test image_on correctness
-        image_data.dropped_indices = [0, 1]
+        data, processed = self._gen_data(1002)
+        processed.pidx.mask([0, 1])
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
         np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
@@ -499,31 +500,33 @@ class TestImageProcessorTrainPr(_BaseProcessorTest):
         # --------------------
 
         data, processed = self._gen_data(1002)
-        image_data = processed.image
-        image_data.dropped_indices = [0, 2]
+        processed.pidx.mask([0, 2])
         with self.assertRaises(DropAllPulsesError):
             proc.process(data)
-        image_data.dropped_indices = [1, 3]
+        data, processed = self._gen_data(1002)
+        processed.pidx.mask([1, 3])
         # no Exception since this is an ON pulse
         proc.process(data)
         # drop one on/off indices each
-        image_data.dropped_indices = [0, 1]
+        processed.pidx.mask([0, 1])
         proc.process(data)
         np.testing.assert_array_equal(proc._prev_unmasked_on, data['detector']['assembled'][2])
 
         data, processed = self._gen_data(1003)
-        image_data = processed.image
-        # drop all off indices
-        image_data.dropped_indices = [1, 3]
+        processed.pidx.mask([1, 3])  # drop all off indices
         with self.assertRaises(DropAllPulsesError):
             self.assertIsNotNone(proc._prev_unmasked_on)
             proc.process(data)
+
         # drop all on indices
-        image_data.dropped_indices = [0, 2]
+        data, processed = self._gen_data(1003)
+        processed.pidx.mask([0, 2])
         # no Exception since this is an OFF pulse
         proc.process(data)
+
         # drop one on/off indices each
-        image_data.dropped_indices = [0, 1]
+        data, processed = self._gen_data(1003)
+        processed.pidx.mask([0, 1])
         proc._prev_unmasked_on = np.ones((2, 2), np.float32)  # any value except None
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])

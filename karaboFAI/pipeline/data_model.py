@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data models for analysis and visualization.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -452,9 +450,6 @@ class ImageData:
             filters to select pulses with a certain pattern. It can be used
             to reconstruct the indices of the selected images in the original
             data providing the number of pulses and the slicer are both known.
-        dropped_indices (list): a list of indices which is determined by
-            pulse filtering and will not be used in further analysis of the
-            train, e.g. calculating the average of (on/off) images.
         poi_indices (list): indices of pulses of interest.
         background (float): a uniform background value.
         dark_mean (numpy.ndaray): average of all the dark images in
@@ -475,7 +470,6 @@ class ImageData:
         self.images = None
 
         self.sliced_indices = None
-        self.dropped_indices = []
         self.poi_indices = None
 
         self.background = None
@@ -720,6 +714,38 @@ class StatisticsData:
         self.poi_fom_count = None
 
 
+class PulseIndexMask:
+    LENGTH = config["MAX_N_PULSES_PER_TRAIN"]
+
+    def __init__(self):
+        self._indices = np.array([True] * self.LENGTH)
+
+    def mask(self, idx):
+        """Mask a given index/list of indices."""
+        self._indices[idx] = False
+
+    def n_dropped(self, n):
+        """Return number of dropped indices.
+
+        :param int n: total number of pulses.
+        """
+        return np.sum(~self._indices[:n])
+
+    def dropped_indices(self, n):
+        """Return a list of dropped indices.
+
+        :param int n: total number of pulses.
+        """
+        return np.where(~self._indices[:n])[0]
+
+    def kept_indices(self, n):
+        """Return a list of kept indices.
+
+        :param int n: total number of pulses.
+        """
+        return np.where(self._indices[:n])[0]
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
@@ -752,6 +778,8 @@ class ProcessedData:
             self._sources = []
         else:
             self._sources = sources
+
+        self.pidx = PulseIndexMask()
 
         self.image = ImageData()
 

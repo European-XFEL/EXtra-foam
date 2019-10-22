@@ -100,22 +100,20 @@ class XgmProcessor(_BaseProcessor):
                     self._pulse_intensity_ma
 
                 # apply filter
-                dropped = []  # a list of dropped indices
                 lb, ub = src.vrange
+                pidx = processed.pidx
                 if not math.isinf(lb) and not math.isinf(ub):
                     for i, v in enumerate(self._pulse_intensity_ma):
                         if v > ub or v < lb:
-                            dropped.append(i)
+                            pidx.mask(i)
                 elif not math.isinf(lb):
                     for i, v in enumerate(self._pulse_intensity_ma):
                         if v < lb:
-                            dropped.append(i)
+                            pidx.mask(i)
                 elif not math.isinf(ub):
                     for i, v in enumerate(self._pulse_intensity_ma):
                         if v > ub:
-                            dropped.append(i)
-
-                processed.image.dropped_indices.extend(dropped)
+                            pidx.mask(i)
 
         for msg in err_msgs:
             raise ProcessingError(f'[XGM] {msg}')
