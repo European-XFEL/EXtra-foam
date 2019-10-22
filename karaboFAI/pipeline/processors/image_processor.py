@@ -222,6 +222,7 @@ class ImageProcessorTrain(_BaseProcessor):
         _on_indices (list): a list of laser-on pulse indices.
         _off_indices (list): a list of laser-off pulse indices.
         _prev_unmasked_on (numpy.ndarray): the most recent on-pulse image.
+        _prev_xgm_on (double): the most recent xgm intensity
     """
 
     def __init__(self):
@@ -231,6 +232,7 @@ class ImageProcessorTrain(_BaseProcessor):
         self._on_indices = []
         self._off_indices = []
         self._prev_unmasked_on = None
+        self._prev_xgm_on = None
 
     def update(self):
         """Override."""
@@ -256,9 +258,11 @@ class ImageProcessorTrain(_BaseProcessor):
         n_images = image_data.n_images
         dropped_indices = image_data.dropped_indices
 
+        intensity = processed.pulse.xgm.intensity
+
         # pump-probe means
-        on_image, off_image, curr_indices, curr_means = \
-            self._compute_on_off_images(tid, assembled, dropped_indices,
+        on_image, off_image, on_intensity, off_intensity, curr_indices, curr_means = \
+            self._compute_on_off_images(tid, assembled, intensity, dropped_indices,
                                         reference=reference)
 
         # avoid calculating nanmean more than once
@@ -307,12 +311,17 @@ class ImageProcessorTrain(_BaseProcessor):
             processed.pp.image_on = on_image
             processed.pp.image_off = off_image
 
-    def _compute_on_off_images(self, tid, assembled, dropped_indices,
+            processed.xgm.on.intensity = on_intensity
+            processed.xgm.off.intensity = off_intensity
+
+    def _compute_on_off_images(self, tid, assembled, intensity, dropped_indices,
                                *, reference=None):
         curr_indices = []
         curr_means = []
         on_image = None
         off_image = None
+        on_intensity = None
+        off_intensity = None
 
         mode = self._pp_mode
         if mode != PumpProbeMode.UNDEFINED:
@@ -376,9 +385,12 @@ class ImageProcessorTrain(_BaseProcessor):
                     else:
                         self._prev_unmasked_on = assembled.copy()
 
+                    if intensity is not None:
+                        self._prev_xgm_on = np.mean(intensity[on_indices])
                 else:
                     if self._prev_unmasked_on is not None:
                         on_image = self._prev_unmasked_on
+                        on_intensity = self._prev_xgm_on
                         self._prev_unmasked_on = None
                         # acknowledge off image only if on image
                         # has been received
@@ -392,7 +404,10 @@ class ImageProcessorTrain(_BaseProcessor):
                         else:
                             off_image = assembled.copy()
 
-        return on_image, off_image, sorted(curr_indices), curr_means
+                        if intensity is not None:
+                            off_intensity = np.mean(intensity[off_indices])
+
+        return on_image, off_image, on_intensity, off_intensity, sorted(curr_indices), curr_means
 
     def _parse_on_off_indices(self, shape):
         if len(shape) == 3:

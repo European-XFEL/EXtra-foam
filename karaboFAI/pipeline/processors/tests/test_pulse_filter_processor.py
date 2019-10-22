@@ -32,7 +32,7 @@ class TestPulseFilters(_BaseProcessorTest):
         # AZIMUTHAL_INTEG
         data, processed = self.simple_data(1001, (4, 2, 2))
         proc.analysis_type = AnalysisType.AZIMUTHAL_INTEG_PULSE
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(ProcessingError):
             proc.process(data)
 
         # ROI2

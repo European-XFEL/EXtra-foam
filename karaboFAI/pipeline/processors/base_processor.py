@@ -11,6 +11,8 @@ All rights reserved.
 """
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 from ..exceptions import ProcessingError
 from ...database import MetaProxy
 from ...database import Metadata as mt
@@ -243,6 +245,17 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         if normalizer == VFomNormalizer.AUC:
             # normalized by area under curve (AUC)
             normalized = normalize_auc(y, x, auc_range)
+        elif normalizer == VFomNormalizer.XGM:
+            # normalized by XGM
+            intensity = processed.pulse.xgm.intensity
+            if intensity is None:
+                raise ProcessingError("XGM normalizer is not available!")
+            denominator = np.mean(intensity)
+
+            if denominator == 0:
+                raise ProcessingError("XGM normalizer is zero!")
+
+            normalized = y / denominator
         else:
             # normalized by ROI
             if normalizer == VFomNormalizer.ROI3:
@@ -282,6 +295,23 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             # normalized by area under curve (AUC)
             normalized_on = normalize_auc(y_on, x, auc_range)
             normalized_off = normalize_auc(y_off, x, auc_range)
+        elif normalizer == VFomNormalizer.XGM:
+            # normalized by XGM
+            denominator_on = processed.xgm.on.intensity
+            denominator_off = processed.xgm.off.intensity
+
+            if denominator_on is None or denominator_off is None:
+                raise ProcessingError("XGM normalizer is not available!")
+
+            if denominator_on == 0:
+                raise ProcessingError("XGM normalizer (on) is zero!")
+
+            if denominator_off == 0:
+                raise ProcessingError("XGM normalizer (off) is zero!")
+
+            normalized_on = y_on / denominator_on
+            normalized_off = y_off / denominator_off
+
         else:
             # normalized by ROI
             on = processed.roi.on

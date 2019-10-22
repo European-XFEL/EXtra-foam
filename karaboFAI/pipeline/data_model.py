@@ -319,8 +319,8 @@ class DataItem:
         self.has_vfom = has_vfom
 
 
-class XgmData:
-    """XgmData class.
+class _XgmDataItem:
+    """_XgmDataItem class.
 
     Store XGM pipeline data.
     """
@@ -328,6 +328,18 @@ class XgmData:
         self.intensity = None  # FEL intensity
         self.x = None  # x position
         self.y = None  # y position
+
+
+class XgmData(_XgmDataItem):
+    """XgmData class.
+
+    Store XGM pipeline data.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.on = _XgmDataItem()
+        self.off = _XgmDataItem()
 
 
 class _RoiAuxData:
