@@ -362,6 +362,10 @@ class ImageProcessorTrain(_BaseProcessor):
                     curr_indices.extend(off_indices)
                     curr_means.append(off_image)
 
+                if intensity is not None:
+                    on_intensity = np.mean(intensity[on_indices])
+                    off_intensity = np.mean(intensity[off_indices])
+
             if mode in (PumpProbeMode.EVEN_TRAIN_ON,
                         PumpProbeMode.ODD_TRAIN_ON):
                 # on and off are from different trains
