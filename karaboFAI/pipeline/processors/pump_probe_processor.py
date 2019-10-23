@@ -81,12 +81,18 @@ class PumpProbeProcessor(_BaseProcessor):
         processed = data['processed']
         assembled = data['detector']['assembled']
 
-        processed.pp.reset = self._reset
+        pp = processed.pp
+        pp.reset = self._reset
         self._reset = False
-        processed.pp.analysis_type = self.analysis_type
-        processed.pp.abs_difference = self._abs_difference
+        pp.mode = self._mode
+        pp.on_indices = self._on_indices
+        pp.off_indices = self._off_indices
+        pp.analysis_type = self.analysis_type
+        pp.abs_difference = self._abs_difference
 
         tid = processed.tid
+
+        # parameters used for processing pump-probe images
         image_data = processed.image
         image_mask = image_data.image_mask
         threshold_mask = image_data.threshold_mask

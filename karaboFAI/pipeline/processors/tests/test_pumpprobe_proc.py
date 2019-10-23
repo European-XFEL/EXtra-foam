@@ -42,6 +42,8 @@ class TestPumpProbeProcessorTr(_BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
 
+        self._check_pp_params_in_data_model(processed)
+
     def testPpPredefinedOff(self):
         proc = self._proc
         proc._mode = PumpProbeMode.PRE_DEFINED_OFF
@@ -51,6 +53,8 @@ class TestPumpProbeProcessorTr(_BaseProcessorTest):
         proc.process(data)
         np.testing.assert_array_almost_equal(processed.pp.image_on, data['detector']['assembled'])
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
+
+        self._check_pp_params_in_data_model(processed)
 
     def testPpOddOn(self):
         proc = self._proc
@@ -82,6 +86,8 @@ class TestPumpProbeProcessorTr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
 
+        self._check_pp_params_in_data_model(processed)
+
     def testPpEvenOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.EVEN_TRAIN_ON
@@ -111,6 +117,13 @@ class TestPumpProbeProcessorTr(_BaseProcessorTest):
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
+
+        self._check_pp_params_in_data_model(processed)
+
+    def _check_pp_params_in_data_model(self, data):
+        self.assertEqual(self._proc._mode, data.pp.mode)
+        self.assertListEqual(self._proc._on_indices, data.pp.on_indices)
+        self.assertListEqual(self._proc._off_indices, data.pp.off_indices)
 
 
 class TestPumpProbeProcessorPr(_BaseProcessorTest):
@@ -189,6 +202,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
 
+        self._check_pp_params_in_data_model(processed)
+
     def testPredefinedOff(self):
         proc = self._proc
         proc._mode = PumpProbeMode.PRE_DEFINED_OFF
@@ -219,6 +234,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
         processed.pidx.mask([0])
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
+
+        self._check_pp_params_in_data_model(processed)
 
     def testSameTrain(self):
         proc = self._proc
@@ -253,6 +270,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
         np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
+
+        self._check_pp_params_in_data_model(processed)
 
     def testEvenOn(self):
         proc = self._proc
@@ -317,6 +336,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
 
+        self._check_pp_params_in_data_model(processed)
+
     def testOddOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.ODD_TRAIN_ON
@@ -344,7 +365,14 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
 
+        self._check_pp_params_in_data_model(processed)
+
         # --------------------
         # test pulse filtering
         # --------------------
         # not necessary according to the implementation
+
+    def _check_pp_params_in_data_model(self, data):
+        self.assertEqual(self._proc._mode, data.pp.mode)
+        self.assertListEqual(self._proc._on_indices, data.pp.on_indices)
+        self.assertListEqual(self._proc._off_indices, data.pp.off_indices)

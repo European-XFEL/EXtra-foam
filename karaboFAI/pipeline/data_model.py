@@ -475,8 +475,13 @@ class PumpProbeData(DataItem):
 
         self.analysis_type = None
 
+        self.mode = None
+        self.on_indices = None
+        self.off_indices = None
+
         self.abs_difference = None
 
+        # TODO: image on/off should not be here
         # on/off images for the current train
         self.image_on = None
         self.image_off = None
