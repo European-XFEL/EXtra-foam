@@ -46,7 +46,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         self._ma_window_le = SmartLineEdit("1")
         self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
 
-        self._ma_reset_btn = QtGui.QPushButton("Reset M.A.")
+        self._reset_ma_btn = QtGui.QPushButton("Reset moving average")
 
         self.initUI()
         self.initConnections()
@@ -71,9 +71,9 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(self._sample_dist_le, row, 3)
 
         row += 1
-        layout.addWidget(QtGui.QLabel("M.A. window: "), row, 0, AR)
+        layout.addWidget(QtGui.QLabel("Moving average window: "), row, 0, AR)
         layout.addWidget(self._ma_window_le, row, 1)
-        layout.addWidget(self._ma_reset_btn, row, 3, AR)
+        layout.addWidget(self._reset_ma_btn, row, 3, AR)
 
         self.setLayout(layout)
 
@@ -103,7 +103,7 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.onMaWindowChange(
                 int(self._ma_window_le.text())))
 
-        self._ma_reset_btn.clicked.connect(mediator.onMaReset)
+        self._reset_ma_btn.clicked.connect(mediator.onResetMa)
 
     def updateMetaData(self):
         """Override"""

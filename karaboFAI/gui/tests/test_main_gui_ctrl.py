@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt
 
 from karabo_data.geometry2 import LPD_1MGeometry
 
+from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
@@ -70,7 +71,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         image_worker = self.image_worker
 
         image_proc = image_worker._image_proc_pulse
+        xgm_proc = image_worker._xgm_proc
         ai_proc = scheduler._ai_proc_train
+        roi_proc = scheduler._roi_proc_train
 
         # --------------------------
         # test setting POI pulse indices
@@ -116,8 +119,18 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertAlmostEqual(1e-10, ai_proc._wavelength)
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
 
-        # test "Reset M.A." button
-        # TODO
+        # test "Reset moving average" button
+        widget._reset_ma_btn.clicked.emit()
+        self.assertEqual('1', xgm_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        self.assertEqual('1', ai_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertEqual('1', roi_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_roi'))
+
+        xgm_proc.update()
+        self.assertIsNone(xgm_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        ai_proc.update()
+        self.assertIsNone(ai_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        roi_proc.update()
+        self.assertIsNone(roi_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_roi'))
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget

@@ -62,7 +62,6 @@ class Mediator(QObject):
         self._meta.set(mt.CONNECTION, "source_type", int(value))
 
     def onDataSourceToggled(self, item, checked: bool):
-        print(item.vrange)
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -97,10 +96,10 @@ class Mediator(QObject):
     def onMaWindowChange(self, value: int):
         self._meta.set(mt.GLOBAL_PROC, "ma_window", value)
 
-    def onMaReset(self):
-        self._meta.mset(mt.GLOBAL_PROC, {"reset_ai": 1,
-                                         "reset_roi": 1,
-                                         "reset_xgm": 1})
+    def onResetMa(self):
+        self._meta.mset(mt.GLOBAL_PROC, {"reset_ma_ai": 1,
+                                         "reset_ma_roi": 1,
+                                         "reset_ma_xgm": 1})
 
     def onAiIntegCenterXChange(self, value: int):
         self._meta.set(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
@@ -144,7 +143,7 @@ class Mediator(QObject):
     def onPpReset(self):
         self._meta.set(mt.PUMP_PROBE_PROC, "reset", 1)
         # reset moving average at the same time
-        self.onMaReset()
+        self.onResetMa()
 
     def onRoiRegionChange(self, value: tuple):
         rank, x, y, w, h = value

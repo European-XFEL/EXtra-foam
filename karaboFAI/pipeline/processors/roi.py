@@ -260,7 +260,7 @@ class RoiProcessorTrain(_RoiProcessBase):
     _img4_off = MovingAverageArray()
 
     def _update_moving_average(self, cfg):
-        if 'reset_roi' in cfg:
+        if 'reset_ma_roi' in cfg:
             # reset moving average
             del self._img1
             del self._img2
@@ -277,7 +277,7 @@ class RoiProcessorTrain(_RoiProcessBase):
             del self._img3_off
             del self._img4_off
 
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_roi')
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_roi')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

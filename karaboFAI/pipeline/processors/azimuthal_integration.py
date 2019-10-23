@@ -124,12 +124,12 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
 
         return self._integrator
 
+    def _update_moving_average(self, v):
+        pass
+
 
 class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
     """Pulse-resolved azimuthal integration processor."""
-
-    def _update_moving_average(self, v):
-        pass
 
     @profiler("Azimuthal Integration Processor (Pulse)")
     def process(self, data):
@@ -199,12 +199,12 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
         self._ma_window = 1
 
     def _update_moving_average(self, cfg):
-        if 'reset_ai' in cfg:
+        if 'reset_ma_ai' in cfg:
             # reset moving average
             del self._intensity_ma
             del self._intensity_on_ma
             del self._intensity_off_ma
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_ai')
+            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_ai')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
