@@ -224,7 +224,7 @@ class TestImageTool(unittest.TestCase):
 
     def testSetAndRemoveReference(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.image_worker._image_proc_pulse
+        proc = self.image_worker._image_proc
 
         data = self._get_data()
 
@@ -258,7 +258,7 @@ class TestImageTool(unittest.TestCase):
         from karaboFAI.ipc import ImageMaskPub
 
         pub = ImageMaskPub()
-        proc = self.image_worker._image_proc_pulse
+        proc = self.image_worker._image_proc
         data = self._get_data()
 
         # trigger the lazily evaluated subscriber

@@ -7,7 +7,7 @@ from .azimuthal_integration import (
 )
 from .bin import BinProcessor
 from .correlation import CorrelationProcessor
-from .image_processor import ImageProcessorPulse, ImageProcessorTrain
+from .image_processor import ImageProcessor
 from .image_assembler import ImageAssemblerFactory
 from .pump_probe_processor import PumpProbeProcessor
 from .roi import RoiProcessorTrain, RoiProcessorPulse

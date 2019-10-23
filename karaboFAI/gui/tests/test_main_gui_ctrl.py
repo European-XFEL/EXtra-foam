@@ -70,7 +70,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
 
-        image_proc = image_worker._image_proc_pulse
+        image_proc = image_worker._image_proc
         xgm_proc = image_worker._xgm_proc
         ai_proc = scheduler._ai_proc_train
         roi_proc = scheduler._roi_proc_train
@@ -206,8 +206,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc_train
-        pp_proc = self.scheduler._pp_proc
+        pp_proc = self.image_worker._pp_proc
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}
@@ -217,12 +216,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(pp_proc._abs_difference)
         self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
 
-        image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
-        self.assertListEqual([-1], image_proc._on_indices)
-        self.assertIsInstance(image_proc._on_indices[0], int)
-        self.assertListEqual([-1], image_proc._off_indices)
-        self.assertIsInstance(image_proc._off_indices[0], int)
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
+        self.assertListEqual([-1], pp_proc._on_indices)
+        self.assertIsInstance(pp_proc._on_indices[0], int)
+        self.assertListEqual([-1], pp_proc._off_indices)
+        self.assertIsInstance(pp_proc._off_indices[0], int)
 
         # change analysis type
         pp_proc._reset = False
@@ -256,10 +255,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # change on/off pulse indices
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-        image_proc.update()
-        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, image_proc._pp_mode)
-        self.assertListEqual([0, 2, 4, 6, 8], image_proc._on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], image_proc._off_indices)
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
+        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._off_indices)
 
         # test reset button
         pp_proc._reset = False
@@ -534,7 +533,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._reset)
 
     def testDarkRunWindow(self):
-        image_proc = self.image_worker._image_proc_pulse
+        image_proc = self.image_worker._image_proc
 
         image_proc.update()
         self.assertFalse(image_proc._recording)
@@ -650,7 +649,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget._poi_index1_le.isEnabled())
         self.assertFalse(widget._poi_index2_le.isEnabled())
 
-        image_proc = self.image_worker._image_proc_pulse
+        image_proc = self.image_worker._image_proc
 
         # Although the widgets are disabled, they still send values to
         # the processor - test default values
@@ -662,7 +661,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        image_proc = self.image_worker._image_proc_train
+        pp_proc = self.image_worker._pp_proc
 
         self.assertFalse(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
@@ -672,21 +671,20 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         # we only test train-resolved detector specific configuration
 
-        image_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, image_proc._pp_mode)
-        self.assertListEqual([-1], image_proc._on_indices)
-        self.assertListEqual([-1], image_proc._off_indices)
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
+        self.assertListEqual([-1], pp_proc._on_indices)
+        self.assertListEqual([-1], pp_proc._off_indices)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         self.assertEqual(1, len(spy))
 
-        image_proc.update()
-        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON),
-                         image_proc._pp_mode)
-        self.assertListEqual([-1], image_proc._on_indices)
-        self.assertListEqual([-1], image_proc._off_indices)
+        pp_proc.update()
+        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
+        self.assertListEqual([-1], pp_proc._on_indices)
+        self.assertListEqual([-1], pp_proc._off_indices)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
         self.assertEqual(2, len(spy))

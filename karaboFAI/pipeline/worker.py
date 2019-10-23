@@ -23,8 +23,7 @@ from .processors import (
     BinProcessor,
     CorrelationProcessor,
     ImageAssemblerFactory,
-    ImageProcessorPulse,
-    ImageProcessorTrain,
+    ImageProcessor,
     PostPulseFilter,
     PumpProbeProcessor,
     RoiProcessorPulse,
@@ -207,8 +206,6 @@ class Scheduler(ProcessWorker):
         self._inputs = [MpInQueue(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output", gui=True)
 
-        self._pp_proc = PumpProbeProcessor()
-
         self._roi_proc_train = RoiProcessorTrain()
         self._ai_proc_train = AzimuthalIntegrationProcessorTrain()
 
@@ -217,7 +214,6 @@ class Scheduler(ProcessWorker):
         self._bin_proc = BinProcessor()
 
         self._tasks = [
-            self._pp_proc,
             self._roi_proc_train,
             self._ai_proc_train,
             self._statistics,
@@ -237,18 +233,18 @@ class ImageWorker(ProcessWorker):
 
         self._xgm_proc = XgmProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
-        self._image_proc_pulse = ImageProcessorPulse()
+        self._image_proc = ImageProcessor()
         self._roi_proc_pulse = RoiProcessorPulse()
         self._ai_proc_pulse = AzimuthalIntegrationProcessorPulse()
         self._post_pulse_filter = PostPulseFilter()
-        self._image_proc_train = ImageProcessorTrain()
+        self._pp_proc = PumpProbeProcessor()
 
         self._tasks = [
             self._xgm_proc,
             self._assembler,
-            self._image_proc_pulse,
+            self._image_proc,
             self._roi_proc_pulse,
             self._ai_proc_pulse,
             self._post_pulse_filter,
-            self._image_proc_train,
+            self._pp_proc,
         ]

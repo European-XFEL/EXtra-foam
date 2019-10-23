@@ -30,7 +30,7 @@ class StopPipelineError(Exception):
 
 
 class ImageProcessingError(StopPipelineError):
-    """Raised when ImageProcessorPulse.process fails."""
+    """Raised when ImageProcessor.process fails."""
     pass
 
 
