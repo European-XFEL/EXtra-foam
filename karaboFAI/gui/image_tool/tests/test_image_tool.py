@@ -188,7 +188,7 @@ class TestImageTool(unittest.TestCase):
 
     def testMovingAverageQLineEdit(self):
         # TODO: remove it in the future
-        widget = self.image_tool._image_action
+        widget = self.image_tool._image_ctrl_widget
         # moving average is disabled
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
@@ -196,7 +196,7 @@ class TestImageTool(unittest.TestCase):
            "onThresholdMaskChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageThresholdMaskChange")
     def testThresholdMask(self, on_mask_mediator, on_mask):
-        widget = self.image_tool._image_action
+        widget = self.image_tool._image_ctrl_widget
 
         widget.threshold_mask_le.clear()
         QTest.keyClicks(widget.threshold_mask_le, "1, 10")
@@ -208,7 +208,7 @@ class TestImageTool(unittest.TestCase):
            "onBkgChange")
     @patch("karaboFAI.gui.mediator.Mediator.onImageBackgroundChange")
     def testBackground(self, on_bkg_mediator, on_bkg):
-        widget = self.image_tool._image_action
+        widget = self.image_tool._image_ctrl_widget
 
         widget.bkg_le.clear()
         QTest.keyClicks(widget.bkg_le, "1.1")
@@ -353,6 +353,6 @@ class TestImageToolTs(unittest.TestCase):
 
     def testMovingAverageQLineEdit(self):
         # TODO: remove it in the future
-        widget = self.image_tool._image_action
+        widget = self.image_tool._image_ctrl_widget
         # moving average is disabled
         self.assertFalse(widget.moving_avg_le.isEnabled())
