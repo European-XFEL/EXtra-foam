@@ -31,9 +31,8 @@ from .ctrl_widgets import (
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    Bin1dWindow, Bin2dWindow, CorrelationWindow, DarkRunWindow,
-    OverviewWindow, ProcessMonitor,
-    AzimuthalIntegrationWindow, StatisticsWindow, PulseOfInterestWindow,
+    AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
+    OverviewWindow, ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
     PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow
 )
 from .. import __version__
@@ -225,10 +224,6 @@ class MainGUI(QtGui.QMainWindow):
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, RoiWindow))
-
-        open_dark_run_window_at = self._addAction("Dark run", "dark_run.png")
-        open_dark_run_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, DarkRunWindow))
 
         self._tool_bar.addSeparator()
 

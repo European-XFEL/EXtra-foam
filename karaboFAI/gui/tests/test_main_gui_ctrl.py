@@ -16,7 +16,7 @@ from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import DarkRunWindow, PulseOfInterestWindow
+from karaboFAI.gui.windows import PulseOfInterestWindow
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
     DataSource, VFomNormalizer, PumpProbeMode
@@ -531,41 +531,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
-
-    def testDarkRunWindow(self):
-        image_proc = self.image_worker._image_proc
-
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
-        self.assertFalse(image_proc._process_dark)
-
-        # now we open the DarkRunWindow
-        self._darkrun_action.trigger()
-        window = [w for w in self.gui._windows
-                  if isinstance(w, DarkRunWindow)][0]
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
-        self.assertTrue(image_proc._process_dark)
-
-        # test "Recording dark" action
-        window._record_at.trigger()
-        image_proc.update()
-        self.assertTrue(image_proc._recording)
-
-        # test "Remove dark" action
-        data = np.ones((10, 10), dtype=np.float32)
-        image_proc._dark_run = data
-        image_proc._dark_mean = data
-        window._remove_at.trigger()
-        image_proc.update()
-        self.assertIsNone(image_proc._dark_run)
-        self.assertIsNone(image_proc._dark_mean)
-
-        self.assertTrue(window._record_at.isChecked())
-
-        window.close()
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))

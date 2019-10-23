@@ -86,6 +86,8 @@ class TestImageTool(unittest.TestCase):
     def tearDownClass(cls):
         cls.fai.terminate()
 
+        ImageToolWindow.reset()
+
         wait_until_redis_shutdown()
 
     def setUp(self):
@@ -93,9 +95,15 @@ class TestImageTool(unittest.TestCase):
         self._action.trigger()
         self.image_tool = list(self.gui._windows.keys())[-1]
 
-        self.view = self.image_tool._image_view
+        self.view = self.image_tool._data_view
         self.view.setImageData(None)
         self.view._image = None
+
+    def _get_data(self):
+        return {'detector': {
+                    'assembled': np.ones((4, 10, 10), np.float32),
+                    'pulse_slicer': slice(None, None)},
+                'processed': ProcessedData(1001)}
 
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
@@ -296,7 +304,7 @@ class TestImageTool(unittest.TestCase):
         np.testing.assert_array_equal(mask_gt, proc._image_mask)
 
         # test trashing mask
-        action = self.image_tool._tool_bar_mask.actions()[2]
+        action = self.image_tool._tool_bar.actions()[2]
         action.trigger()
         proc.process(data)
         self.assertIsNone(proc._image_mask)
@@ -312,11 +320,31 @@ class TestImageTool(unittest.TestCase):
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
 
-    def _get_data(self):
-        return {'detector': {
-                    'assembled': np.ones((4, 10, 10), np.float32),
-                    'pulse_slicer': slice(None, None)},
-                'processed': ProcessedData(1001)}
+    def testDarkRunActions(self):
+        image_proc = self.image_worker._image_proc
+
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
+        self.assertTrue(image_proc._process_dark)
+
+        # test "processing while recording" check box
+        self.image_tool._darkrun_action.proc_data_cb.setChecked(False)
+        image_proc.update()
+        self.assertFalse(image_proc._process_dark)
+
+        # test "Recording dark" action
+        self.image_tool._record_at.trigger()
+        image_proc.update()
+        self.assertTrue(image_proc._recording)
+
+        # test "Remove dark" action
+        data = np.ones((10, 10), dtype=np.float32)
+        image_proc._dark_run = data
+        image_proc._dark_mean = data
+        self.image_tool._remove_at.trigger()
+        image_proc.update()
+        self.assertIsNone(image_proc._dark_run)
+        self.assertIsNone(image_proc._dark_mean)
 
 
 class TestImageToolTs(unittest.TestCase):
@@ -343,6 +371,8 @@ class TestImageToolTs(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.fai.terminate()
+
+        ImageToolWindow.reset()
 
         wait_until_redis_shutdown()
 

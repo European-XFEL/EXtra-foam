@@ -10,18 +10,19 @@ All rights reserved.
 import os.path as osp
 import functools
 
-from karaboFAI.gui.pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-from karaboFAI.gui.windows.base_window import AbstractWindow
-from karaboFAI.gui.mediator import Mediator
-from karaboFAI.gui.plot_widgets import ImageAnalysis
-from karaboFAI.gui.ctrl_widgets.smart_widgets import (
+from ..misc_widgets import Colors
+from ..windows.base_window import AbstractWindow
+from ..mediator import Mediator
+from ..plot_widgets import ImageAnalysis, ImageViewF
+from ..ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
-from karaboFAI.pipeline.data_model import ImageData
-from karaboFAI.utils import cached_property
-from karaboFAI.config import config, MaskState
-from karaboFAI.algorithms import mask_image
+from ...pipeline.data_model import ImageData
+from ...utils import cached_property
+from ...config import config, MaskState
+from ...algorithms import mask_image
 
 
 class _SimpleImageData:
@@ -108,6 +109,43 @@ class _SimpleImageData:
     def from_array(cls, arr):
         """Instantiate from an array."""
         return cls(ImageData.from_array(arr))
+
+
+class DarkRunActionWidget(QtGui.QWidget):
+    """Ctrl widget for dark run in the action bar."""
+
+    class NumberLabel(QtGui.QLabel):
+        def __init__(self, text, parent=None):
+            super().__init__(text, parent=parent)
+            font = QtGui.QFont('times')
+            font.setBold(True)
+            self.setFont(font)
+            self.setStyleSheet(f"color: rgb{Colors().p[:3]};")
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        self.proc_data_cb = QtGui.QCheckBox("Process while recording")
+        self.proc_data_cb.setChecked(True)
+
+        self.dark_train_count_lb = self.NumberLabel("")
+        self.updateCount(0)
+
+        self.initUI()
+
+        self.setFixedSize(self.minimumSizeHint())
+
+    def initUI(self):
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(QtGui.QLabel("Count: "))
+        layout.addWidget(self.dark_train_count_lb)
+        layout.addWidget(self.proc_data_cb)
+
+        self.setLayout(layout)
+        self.layout().setContentsMargins(2, 1, 2, 1)
+
+    def updateCount(self, count):
+        self.dark_train_count_lb.setText(f"{count:0{4}d}")
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -332,7 +370,7 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         self.bkg_le = SmartLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
-        self.update_image_btn = QtGui.QPushButton("Update image")
+        self.update_image_btn = QtGui.QPushButton("Update corrected")
         self.auto_level_btn = QtGui.QPushButton("Auto level")
         self.save_image_btn = QtGui.QPushButton("Save image")
         self.load_ref_btn = QtGui.QPushButton("Load reference")
@@ -416,45 +454,52 @@ class ImageToolWindow(AbstractWindow):
             return
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageAnalysis(hide_axis=False, parent=self)
+        self._image_views = QtWidgets.QTabWidget(self)
+        self._data_view = ImageAnalysis(hide_axis=False)
+        self._dark_view = ImageViewF()
+        self._image_views.addTab(self._data_view, "Corrected")
+        self._image_views.addTab(self._dark_view, "Dark")
 
-        # mask tool bar
+        # --------
+        # tool bar
+        # --------
 
-        self._tool_bar_mask = self.addToolBar("mask")
+        # masking actions
 
-        mask_at = self._addAction(self._tool_bar_mask, "Mask", "mask.png")
-        mask_at.setCheckable(True)
-        # Note: the sequence of the following two 'connect'
-        mask_at.toggled.connect(self._exclude_actions)
-        mask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, MaskState.MASK))
+        self._tool_bar = self.addToolBar("tools")
 
-        unmask_at = self._addAction(
-            self._tool_bar_mask, "Unmask", "un_mask.png")
-        unmask_at.setCheckable(True)
-        # Note: the sequence of the following two 'connect'
-        unmask_at.toggled.connect(self._exclude_actions)
-        unmask_at.toggled.connect(functools.partial(
-            self._image_view.onDrawToggled, MaskState.UNMASK))
+        self._mask_at = self._addAction(self._tool_bar, "Mask", "mask.png")
+        self._mask_at.setCheckable(True)
+        self._unmask_at = self._addAction(
+            self._tool_bar, "Unmask", "un_mask.png")
+        self._unmask_at.setCheckable(True)
+        self._clear_mask_at = self._addAction(
+            self._tool_bar, "Clear mask", "clear_mask.png")
+        self._save_img_mask_at = self._addAction(
+            self._tool_bar, "Save image mask", "save_mask.png")
+        self._load_img_mask_at = self._addAction(
+            self._tool_bar, "Load image mask", "load_mask.png")
 
-        clear_mask_at = self._addAction(
-            self._tool_bar_mask, "Clear mask", "delete.png")
-        clear_mask_at.triggered.connect(self._image_view.onClearImageMask)
+        self._exclusive_actions = {self._mask_at, self._unmask_at}
 
-        save_img_mask_at = self._addAction(
-            self._tool_bar_mask, "Save image mask", "save_mask.png")
-        save_img_mask_at.triggered.connect(self._image_view.saveImageMask)
+        # dark run actions
+        self._tool_bar.addSeparator()
 
-        load_img_mask_at = self._addAction(
-            self._tool_bar_mask, "Load image mask", "load_mask.png")
-        load_img_mask_at.triggered.connect(self._image_view.loadImageMask)
+        self._record_at = self._addAction(
+            self._tool_bar, "Record dark", "record.png")
+        self._record_at.setCheckable(True)
+        self._remove_at = self._addAction(
+            self._tool_bar, "Remove dark", "remove_dark.png")
 
-        self._exclusive_actions = {mask_at, unmask_at}
+        self._darkrun_action = DarkRunActionWidget(self._tool_bar)
+        darkrun_at_widget = QtGui.QWidgetAction(self._darkrun_action)
+        darkrun_at_widget.setDefaultWidget(self._darkrun_action)
+        self._tool_bar.addAction(darkrun_at_widget)
 
         # ROI and Image ctrl widget
 
         self._roi_ctrl_widget = _RoiCtrlWidgetGroup(
-            self._image_view.rois, parent=self)
+            self._data_view.rois, parent=self)
         self._image_ctrl_widget = _ImageCtrlWidget(parent=self)
 
         self.initUI()
@@ -473,7 +518,7 @@ class ImageToolWindow(AbstractWindow):
         layout = QtGui.QGridLayout()
         AT = QtCore.Qt.AlignTop
 
-        layout.addWidget(self._image_view, 0, 0, 1, 4)
+        layout.addWidget(self._image_views, 0, 0, 1, 4)
         layout.addWidget(self._roi_ctrl_widget, 1, 0, 1, 4)
         layout.addWidget(self._image_ctrl_widget, 0, 4, 2, 1, AT)
 
@@ -483,38 +528,55 @@ class ImageToolWindow(AbstractWindow):
     def initConnections(self):
         mediator = self._mediator
 
-        # signal-slot connections of child widgets should also be set here
+        # Note: the sequence of the following two 'connect'
+        self._mask_at.toggled.connect(self._exclude_actions)
+        self._mask_at.toggled.connect(functools.partial(
+            self._data_view.onDrawToggled, MaskState.MASK))
+
+        # Note: the sequence of the following two 'connect'
+        self._unmask_at.toggled.connect(self._exclude_actions)
+        self._unmask_at.toggled.connect(functools.partial(
+            self._data_view.onDrawToggled, MaskState.UNMASK))
+
+        self._clear_mask_at.triggered.connect(
+            self._data_view.onClearImageMask)
+        self._save_img_mask_at.triggered.connect(
+            self._data_view.saveImageMask)
+        self._load_img_mask_at.triggered.connect(
+            self._data_view.loadImageMask)
+
+        self._record_at.toggled.connect(self._mediator.onRdStateChange)
+        self._remove_at.triggered.connect(self._mediator.onRdResetDark)
+
+        self._darkrun_action.proc_data_cb.toggled.connect(
+            self._mediator.onRdProcessStateChange)
 
         self._image_ctrl_widget.update_image_btn.clicked.connect(
             self.updateImage)
-
         self._image_ctrl_widget.save_image_btn.clicked.connect(
-            self._image_view.writeImage)
-
+            self._data_view.writeImage)
         self._image_ctrl_widget.load_ref_btn.clicked.connect(
-            self._image_view.loadReferenceImage)
-
+            self._data_view.loadReferenceImage)
         self._image_ctrl_widget.set_ref_btn.clicked.connect(
-            self._image_view.setReferenceImage)
-
+            self._data_view.setReferenceImage)
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
-            self._image_view.removeReferenceImage)
-
+            self._data_view.removeReferenceImage)
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)
-
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
-            lambda x: self._image_view.onThresholdMaskChange(x))
+            lambda x: self._data_view.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: mediator.onImageThresholdMaskChange(x))
-
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
-            lambda x: self._image_view.onBkgChange(float(x)))
+            lambda x: self._data_view.onBkgChange(float(x)))
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
             lambda x: mediator.onImageBackgroundChange(float(x)))
 
     def updateMetaData(self):
         """Override."""
+        self._darkrun_action.proc_data_cb.toggled.emit(
+            self._darkrun_action.proc_data_cb.isChecked())
+
         self._image_ctrl_widget.threshold_mask_le.returnPressed.emit()
         self._image_ctrl_widget.bkg_le.returnPressed.emit()
         return True
@@ -524,11 +586,28 @@ class ImageToolWindow(AbstractWindow):
 
         This method is called by the main GUI.
         """
+        self._update_data_view()
+        self._update_dark_view()
+
+    def _update_data_view(self):
         # Always automatically get an image
-        if self._image_view.image is not None:
+        if self._data_view.image is not None:
             return
 
         self.updateImage(auto_range=True, auto_levels=True)
+
+    def _update_dark_view(self):
+        data = self._data.get()
+
+        if data is None:
+            return
+
+        if data.image.dark_mean is None:
+            self._dark_view.clear()
+        else:
+            self._dark_view.setImage(data.image.dark_mean)
+
+        self._darkrun_action.updateCount(data.image.dark_count)
 
     def updateImage(self, **kwargs):
         """Update the current image.
@@ -542,7 +621,7 @@ class ImageToolWindow(AbstractWindow):
         if data is None or data.image is None or data.image.mean is None:
             return
 
-        self._image_view.setImageData(_SimpleImageData(data.image), **kwargs)
+        self._data_view.setImageData(_SimpleImageData(data.image), **kwargs)
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):
@@ -553,6 +632,6 @@ class ImageToolWindow(AbstractWindow):
 
     def _addAction(self, tool_bar, description, filename):
         icon = QtGui.QIcon(osp.join(self._root_dir, "../icons/" + filename))
-        action = QtGui.QAction(icon, description, self)
+        action = QtGui.QAction(icon, description, tool_bar)
         tool_bar.addAction(action)
         return action

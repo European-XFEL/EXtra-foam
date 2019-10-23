@@ -9,8 +9,7 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import (
     AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    DarkRunWindow, OverviewWindow, StatisticsWindow,
-    PulseOfInterestWindow, PumpProbeWindow
+    OverviewWindow, StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow
 )
 
 app = mkQApp()
@@ -46,14 +45,10 @@ class TestMainGui(unittest.TestCase):
         poi_action = actions[9]
         ai_action = actions[10]
         # TODO: add ROI
-        darkrun_action = actions[12]
 
         # ImageToolWindow is opened together with the MainGUI
         imagetool_window = list(self.gui._windows.keys())[-1]
         self.assertIsInstance(imagetool_window, ImageToolWindow)
-
-        darkrun_window = self._check_open_window(darkrun_action)
-        self.assertIsInstance(darkrun_window, DarkRunWindow)
 
         overview_window = self._check_open_window(overview_action)
         self.assertIsInstance(overview_window, OverviewWindow)
@@ -83,7 +78,6 @@ class TestMainGui(unittest.TestCase):
         self._check_open_window(ai_action, registered=False)
 
         self._check_close_window(imagetool_window)
-        self._check_close_window(darkrun_window)
         self._check_close_window(overview_window)
         self._check_close_window(pp_window)
         self._check_close_window(statistics_window)

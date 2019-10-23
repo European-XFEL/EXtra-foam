@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageView base class.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -28,7 +26,7 @@ class ImageViewF(QtGui.QWidget):
 
     A widget used for displaying 2D image data.
 
-    * Four ROIs and one MaskItem are included in this widget by default.
+    * Four ROIs are included in this widget by default.
 
     Note: it is different from the ImageView in pyqtgraph!
 

@@ -27,6 +27,8 @@ class TestImageProcessorTr(_BaseProcessorTest):
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
 
+        del self._proc._dark_run
+
     def testPulseSlice(self):
         # The sliced_indices for train-resolved data should always be [0]
 
