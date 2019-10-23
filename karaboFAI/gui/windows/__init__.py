@@ -1,5 +1,4 @@
 from .correlation_w import CorrelationWindow
-from .image_tool import ImageToolWindow
 from .overview_w import OverviewWindow
 from .azimuthal_integration_w import AzimuthalIntegrationWindow
 from .pump_probe_w import PumpProbeWindow
@@ -13,7 +12,6 @@ __all__ = [
     "Bin1dWindow",
     "CorrelationWindow",
     "DarkRunWindow",
-    "ImageToolWindow",
     "OverviewWindow",
     "PulseOfInterestWindow",
     "AzimuthalIntegrationWindow",

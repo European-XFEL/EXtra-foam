@@ -31,7 +31,8 @@ from .gui import MainGUI, mkQApp
 from .pipeline import ImageWorker, Scheduler
 from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource, query_yes_no
-from .gui.windows import FileStreamControllerWindow, ImageToolWindow
+from .gui.windows import FileStreamControllerWindow
+from .gui.image_tool import ImageToolWindow
 
 _CPU_INFO, _GPU_INFO, _MEMORY_INFO = check_system_resource()
 

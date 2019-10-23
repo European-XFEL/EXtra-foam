@@ -6,9 +6,10 @@ from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
+from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import (
     AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    DarkRunWindow, ImageToolWindow, OverviewWindow, StatisticsWindow,
+    DarkRunWindow, OverviewWindow, StatisticsWindow,
     PulseOfInterestWindow, PumpProbeWindow
 )
 

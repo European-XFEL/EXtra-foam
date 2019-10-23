@@ -29,9 +29,10 @@ from .ctrl_widgets import (
     PumpProbeCtrlWidget, RoiCtrlWidget
 )
 from .misc_widgets import GuiLogger
+from .image_tool import ImageToolWindow
 from .windows import (
     Bin1dWindow, Bin2dWindow, CorrelationWindow, DarkRunWindow,
-    ImageToolWindow, OverviewWindow, ProcessMonitor,
+    OverviewWindow, ProcessMonitor,
     AzimuthalIntegrationWindow, StatisticsWindow, PulseOfInterestWindow,
     PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow
 )

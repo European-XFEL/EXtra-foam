@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import os
 import tempfile
 import time
@@ -12,11 +12,11 @@ from PyQt5.QtCore import Qt, QPoint
 from karaboFAI.algorithms import mask_image
 from karaboFAI.config import config, _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.windows import ImageToolWindow
-from karaboFAI.gui.windows.image_tool import _SimpleImageData
+from karaboFAI.gui.image_tool import ImageToolWindow
+from karaboFAI.gui.image_tool.image_tool import _SimpleImageData
 from karaboFAI.logger import logger
-from karaboFAI.pipeline.data_model import ImageData, ProcessedData
-from karaboFAI.pipeline.exceptions import ImageProcessingError, ProcessingError
+from karaboFAI.pipeline.data_model import ProcessedData
+from karaboFAI.pipeline.exceptions import ImageProcessingError
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.services import FAI
 
@@ -67,6 +67,7 @@ class TestImageTool(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
         config.load('LPD')
+        config.set_topic("FXE")
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
@@ -325,6 +326,7 @@ class TestImageToolTs(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
         config.load('JungFrau')
+        config.set_topic("FXE")
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui

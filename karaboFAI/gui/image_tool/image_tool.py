@@ -10,18 +10,18 @@ All rights reserved.
 import os.path as osp
 import functools
 
-from ..pyqtgraph import QtCore, QtGui
+from karaboFAI.gui.pyqtgraph import QtCore, QtGui
 
-from .base_window import AbstractWindow
-from ..mediator import Mediator
-from ..plot_widgets import ImageAnalysis
-from ..ctrl_widgets.smart_widgets import (
+from karaboFAI.gui.windows.base_window import AbstractWindow
+from karaboFAI.gui.mediator import Mediator
+from karaboFAI.gui.plot_widgets import ImageAnalysis
+from karaboFAI.gui.ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
-from ...pipeline.data_model import ImageData
-from ...utils import cached_property
-from ...config import config, MaskState
-from ...algorithms import mask_image
+from karaboFAI.pipeline.data_model import ImageData
+from karaboFAI.utils import cached_property
+from karaboFAI.config import config, MaskState
+from karaboFAI.algorithms import mask_image
 
 
 class _SimpleImageData:
