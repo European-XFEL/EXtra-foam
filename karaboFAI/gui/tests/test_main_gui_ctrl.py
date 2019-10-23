@@ -119,6 +119,14 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertAlmostEqual(1e-10, ai_proc._wavelength)
         self.assertAlmostEqual(0.3, ai_proc._sample_dist)
 
+        # test "Moving average window"
+        widget._ma_window_le.setText("5")
+        xgm_proc.update()
+        self.assertEqual(5, xgm_proc.__class__._pulse_intensity_ma.window)
+        self.assertEqual(5, xgm_proc.__class__._intensity_ma.window)
+        self.assertEqual(5, xgm_proc.__class__._x_ma.window)
+        self.assertEqual(5, xgm_proc.__class__._y_ma.window)
+
         # test "Reset moving average" button
         widget._reset_ma_btn.clicked.emit()
         self.assertEqual('1', xgm_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_xgm'))

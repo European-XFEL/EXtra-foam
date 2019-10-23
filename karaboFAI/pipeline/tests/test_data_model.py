@@ -5,7 +5,8 @@ import numpy as np
 
 from karaboFAI.pipeline.data_model import (
     AccumulatedPairData, CorrelationData, PulseIndexMask, MovingAverageArray,
-    ImageData, PairData, ProcessedData, PumpProbeData, RawImageData
+    MovingAverageScalar, ImageData, PairData, ProcessedData, PumpProbeData,
+    RawImageData
 )
 from karaboFAI.config import config
 
@@ -121,6 +122,41 @@ class TestPairData(unittest.TestCase):
         self.assertEqual(2*overflow + 0.5, fom_hist.avg[0])
         self.assertEqual(2*(Dummy.hist.MAX_LENGTH + overflow - 1) + 0.5, corr_hist[-1])
         self.assertEqual(2*(Dummy.hist.MAX_LENGTH + overflow - 1) + 0.5, fom_hist.avg[-1])
+
+
+class TestMovingAverageScalar(unittest.TestCase):
+    def testGeneral(self):
+        class Dummy:
+            data = MovingAverageScalar()
+
+        dm = Dummy()
+
+        dm.data = 1.0
+        self.assertEqual(1, Dummy.data.window)
+        self.assertEqual(1.0, dm.data)
+
+        Dummy.data.window = 5
+        self.assertEqual(5, Dummy.data.window)
+        self.assertEqual(1, Dummy.data.count)
+        dm.data = 2.0
+        self.assertEqual(5, Dummy.data.window)
+        self.assertEqual(2, Dummy.data.count)
+        self.assertEqual(1.5, dm.data)
+        dm.data = 3.0
+        self.assertEqual(5, Dummy.data.window)
+        self.assertEqual(3, Dummy.data.count)
+        self.assertEqual(2.0, dm.data)
+
+        # set a ma window which is smaller than the current window
+        Dummy.data.window = 3
+        self.assertEqual(3, Dummy.data.window)
+        self.assertEqual(3, Dummy.data.count)
+        self.assertEqual(2.0, dm.data)
+
+        del dm.data
+        self.assertIsNone(dm.data)
+        self.assertEqual(3, Dummy.data.window)
+        self.assertEqual(0, Dummy.data.count)
 
 
 class TestMovingAverageArray1D(unittest.TestCase):

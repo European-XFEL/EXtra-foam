@@ -204,8 +204,8 @@ class AccumulatedPairData(PairData):
             # do not clear _info here!
 
 
-class MovingAverageArray:
-    """Stores moving average of raw images."""
+class MovingAverageScalar:
+    """Stores moving average of a scalar number."""
 
     def __init__(self, window=1):
         """Initialization.
@@ -215,7 +215,65 @@ class MovingAverageArray:
         self._data = None  # moving average
 
         if not isinstance(window, int) or window < 0:
-            raise ValueError("Moving average window must be a positive integer.")
+            raise ValueError("Window must be a positive integer.")
+
+        self._window = window
+        self._count = 0
+
+    def __get__(self, instance, instance_type):
+        if instance is None:
+            return self
+
+        return self._data
+
+    def __set__(self, instance, data):
+        if data is None:
+            return
+
+        if self._data is not None and self._window > 1 and \
+                self._count <= self._window:
+            if self._count < self._window:
+                self._count += 1
+                self._data += (data - self._data) / self._count
+            else:  # self._count == self._window
+                # here is an approximation
+                self._data += (data - self._data) / self._count
+        else:
+            self._data = data
+            self._count = 1
+
+    def __delete__(self, instance):
+        self._data = None
+        self._count = 0
+
+    @property
+    def window(self):
+        return self._window
+
+    @window.setter
+    def window(self, v):
+        if not isinstance(v, int) or v <= 0:
+            raise ValueError("Window must be a positive integer.")
+
+        self._window = v
+
+    @property
+    def count(self):
+        return self._count
+
+
+class MovingAverageArray:
+    """Stores moving average of 2D/3D (and higher dimension) array data."""
+
+    def __init__(self, window=1):
+        """Initialization.
+
+        :param int window: moving average window size.
+        """
+        self._data = None  # moving average
+
+        if not isinstance(window, int) or window < 0:
+            raise ValueError("Window must be a positive integer.")
 
         self._window = window
         self._count = 0
@@ -263,7 +321,7 @@ class MovingAverageArray:
     @window.setter
     def window(self, v):
         if not isinstance(v, int) or v <= 0:
-            raise ValueError("Input must be integer")
+            raise ValueError("Window must be a positive integer.")
 
         self._window = v
 

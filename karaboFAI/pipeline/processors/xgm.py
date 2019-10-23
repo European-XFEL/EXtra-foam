@@ -9,8 +9,10 @@ All rights reserved.
 """
 import math
 
+import numpy as np
+
 from .base_processor import _BaseProcessor
-from ..data_model import MovingAverageArray
+from ..data_model import MovingAverageArray, MovingAverageScalar
 from ..exceptions import ProcessingError
 from ...utils import profiler
 from ...database import Metadata as mt
@@ -25,8 +27,9 @@ class XgmProcessor(_BaseProcessor):
         _pulse_slicer (slice): a slice object which will be used to slice
             pulses for pulse-resolved pipeline data.
     """
-
-    _intensity_ma = MovingAverageArray()
+    _intensity_ma = MovingAverageScalar()
+    _x_ma = MovingAverageScalar()
+    _y_ma = MovingAverageScalar()
     _pulse_intensity_ma = MovingAverageArray()
 
     def __init__(self):
@@ -48,12 +51,16 @@ class XgmProcessor(_BaseProcessor):
         if 'reset_ma_xgm' in cfg:
             # reset moving average
             del self._intensity_ma
+            del self._x_ma
+            del self._y_ma
             del self._pulse_intensity_ma
             self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_xgm')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
             self.__class__._intensity_ma.window = v
+            self.__class__._x_ma.window = v
+            self.__class__._y_ma.window = v
             self.__class__._pulse_intensity_ma.window = v
 
         self._ma_window = v
@@ -83,10 +90,20 @@ class XgmProcessor(_BaseProcessor):
             if err:
                 err_msgs.append(err)
             else:
-                xgm_ppts = DATA_SOURCE_PROPERTIES["XGM"]
-                self._intensity_ma = v
-                processed.xgm.__dict__[xgm_ppts[src.property]] = \
-                    self._intensity_ma
+                ppt = DATA_SOURCE_PROPERTIES["XGM"][src.property]
+                if ppt == 'intensity':
+                    self._intensity_ma = v
+                    ret = self._intensity_ma
+                elif ppt == 'x':
+                    self._x_ma = v
+                    ret = self._x_ma
+                elif ppt == 'y':
+                    self._y_ma = v
+                    ret = self._y_ma
+                else:
+                    raise ProcessingError(f'[XGM] Unknown property: {ppt}')
+
+                processed.xgm.__dict__[ppt] = ret
 
         # pipeline data
         for src in pipeline_srcs:
@@ -97,7 +114,8 @@ class XgmProcessor(_BaseProcessor):
                 err_msgs.append(err)
             else:
                 xgm_ppts = DATA_SOURCE_PROPERTIES["XGM:output"]
-                self._pulse_intensity_ma = v[src.slicer]
+                self._pulse_intensity_ma = np.array(
+                    v[src.slicer], dtype=np.float32)
                 processed.pulse.xgm.__dict__[xgm_ppts[src.property]] = \
                     self._pulse_intensity_ma
 

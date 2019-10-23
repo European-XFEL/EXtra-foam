@@ -58,7 +58,7 @@ class TestXgmProcessor(_BaseProcessorTest):
         proc.process(data)
         self.assertEqual(0.02, processed.xgm.intensity)
         self.assertEqual(1e-5, processed.xgm.x)
-        self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # same pipeline source with a different slice
@@ -67,7 +67,7 @@ class TestXgmProcessor(_BaseProcessorTest):
         proc.process(data)
         self.assertEqual(0.02, processed.xgm.intensity)
         self.assertEqual(1e-5, processed.xgm.x)
-        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # remove instrument source
@@ -75,7 +75,7 @@ class TestXgmProcessor(_BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.xgm.intensity)
         self.assertEqual(1e-5, processed.xgm.x)
-        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # remove the other instrument source
@@ -83,7 +83,7 @@ class TestXgmProcessor(_BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.xgm.intensity)
         self.assertIsNone(processed.xgm.x)
-        self.assertListEqual([200, 300], processed.pulse.xgm.intensity)
+        self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # remove pipeline source
@@ -93,6 +93,52 @@ class TestXgmProcessor(_BaseProcessorTest):
         self.assertIsNone(processed.xgm.x)
         self.assertIsNone(processed.pulse.xgm.intensity)
         self._reset_processed(processed)
+
+    def testMovingAverage(self):
+        data, processed = self.simple_data(1234, (2, 2))
+        data['raw']['xgm1'] = {
+            "pulseEnergy.photonFlux": 0.02,
+            "beamPosition.ixPos": 1e-5,
+            "beamPosition.iyPos": -2e-5,
+        }
+        data['raw']['xgm1:output'] = {
+            "data.intensityTD": [100, 200, 300]
+        }
+
+        proc = XgmProcessor()
+        proc._update_moving_average({
+            'reset_ma_xgm': 1,
+            'ma_window': 5
+        })
+        proc._sources = [
+            SourceItem('XGM', 'xgm1', "pulseEnergy.photonFlux"),
+            SourceItem('XGM', 'xgm1', "beamPosition.ixPos"),
+            SourceItem('XGM', 'xgm1', "beamPosition.iyPos"),
+            SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(None, None)),
+        ]
+
+        # 1st train
+        proc.process(data)
+        self.assertAlmostEqual(0.02, processed.xgm.intensity)
+        self.assertAlmostEqual(1e-5, processed.xgm.x)
+        self.assertAlmostEqual(-2e-5, processed.xgm.y)
+        self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity.tolist())
+
+        data['raw']['xgm1'] = {
+            "pulseEnergy.photonFlux": 0.04,
+            "beamPosition.ixPos": 3e-5,
+            "beamPosition.iyPos": -4e-5,
+        }
+        data['raw']['xgm1:output'] = {
+            "data.intensityTD": [10, 20, 30]
+        }
+
+        # 2nd train
+        proc.process(data)
+        self.assertAlmostEqual(0.03, processed.xgm.intensity)
+        self.assertAlmostEqual(2e-5, processed.xgm.x)
+        self.assertAlmostEqual(-3e-5, processed.xgm.y)
+        self.assertListEqual([55, 110, 165], processed.pulse.xgm.intensity.tolist())
 
     def _reset_processed(self, processed):
         processed.xgm.intensity = None
