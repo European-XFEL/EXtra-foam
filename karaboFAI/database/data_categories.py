@@ -155,6 +155,19 @@ DATA_SOURCE_PROPERTIES = {
 }
 
 
+DATA_SOURCE_SLICER = {
+    "default": ":",
+    "not_supported": "",
+}
+
+
+DATA_SOURCE_VRANGE = {
+    "default": "-inf, inf",
+    "not_supported": "",
+    "XGM": "0, inf",
+}
+
+
 def _sort_dict(data):
     """Sort a dictionary by key.
 

@@ -18,15 +18,10 @@ from ..gui_helpers import parse_boundary, parse_slice
 from ..mediator import Mediator
 from ...database import (
     DATA_SOURCE_CATEGORIES, EXCLUSIVE_SOURCE_CATEGORIES,
-    DATA_SOURCE_PROPERTIES, SourceItem
+    DATA_SOURCE_PROPERTIES, DATA_SOURCE_SLICER, DATA_SOURCE_VRANGE,
+    SourceItem
 )
 from ...config import config, DataSource
-
-_DEFAULT_SLICER = ":"
-_DEFAULT_SLICER_NOT_SUPPORTED = ""
-
-_DEFAULT_V_RANGE = "-inf, inf"
-_DEFAULT_V_RANGE_NOT_SUPPORTED = ""
 
 
 class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
@@ -64,7 +59,7 @@ class DSSlicerDelegate(QtWidgets.QStyledItemDelegate):
         ctg = index.parent().data(Qt.DisplayRole)
         if len(channels) > 1 or ctg in config.detectors:
             # pipeline data
-            le = SmartSliceLineEdit(_DEFAULT_SLICER, parent)
+            le = SmartSliceLineEdit(DATA_SOURCE_SLICER['default'], parent)
             return le
 
     def setEditorData(self, editor, index):
@@ -89,7 +84,7 @@ class DSVrangeDelegate(QtWidgets.QStyledItemDelegate):
         ctg = index.parent().data(Qt.DisplayRole)
         # TODO: add more supports
         if ctg == 'XGM' and len(channels) > 1:
-            le = SmartBoundaryLineEdit(_DEFAULT_V_RANGE, parent)
+            le = SmartBoundaryLineEdit(DATA_SOURCE_VRANGE['XGM'], parent)
             return le
 
     def setEditorData(self, editor, index):
@@ -358,15 +353,15 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                     key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
                     default_ppt = list(DATA_SOURCE_PROPERTIES[key].keys())[0]
                     if len(channels) > 1 or ctg in config.detectors:
-                        default_slicer = _DEFAULT_SLICER
+                        default_slicer = DATA_SOURCE_SLICER['default']
                     else:
-                        default_slicer = _DEFAULT_SLICER_NOT_SUPPORTED
+                        default_slicer = DATA_SOURCE_SLICER['not_supported']
 
                     # TODO: add more supports
                     if ctg == 'XGM' and len(channels) > 1:
-                        default_v_range = _DEFAULT_V_RANGE
+                        default_v_range = DATA_SOURCE_VRANGE['XGM']
                     else:
-                        default_v_range = _DEFAULT_V_RANGE_NOT_SUPPORTED
+                        default_v_range = DATA_SOURCE_VRANGE['not_supported']
 
                     last_child.appendChild(DataSourceTreeItem(
                         [src, default_ppt, default_slicer, default_v_range],
