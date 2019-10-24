@@ -333,9 +333,18 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(image_proc._process_dark)
 
         # test "Recording dark" action
+        self.assertFalse(self.image_tool._record_at.isEnabled())
+        self.image_tool._image_views.setCurrentWidget(self.image_tool._dark_view)
+        self.assertTrue(self.image_tool._record_at.isEnabled())
         self.image_tool._record_at.trigger()
         image_proc.update()
         self.assertTrue(image_proc._recording)
+        self.image_tool._image_views.setCurrentWidget(self.image_tool._data_view)
+        # disable "record AT" and stop recording when tab changes
+        self.assertFalse(self.image_tool._record_at.isEnabled())
+        self.assertFalse(self.image_tool._record_at.isChecked())
+        image_proc.update()
+        self.assertFalse(image_proc._recording)
 
         # test "Remove dark" action
         data = np.ones((10, 10), dtype=np.float32)

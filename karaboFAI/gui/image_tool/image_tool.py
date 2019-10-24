@@ -494,6 +494,7 @@ class ImageToolWindow(AbstractWindow):
         self._record_at = self._addAction(
             self._tool_bar, "Record dark", "record.png")
         self._record_at.setCheckable(True)
+        self._record_at.setEnabled(False)
         self._remove_at = self._addAction(
             self._tool_bar, "Remove dark", "remove_dark.png")
 
@@ -501,6 +502,8 @@ class ImageToolWindow(AbstractWindow):
         darkrun_at_widget = QtGui.QWidgetAction(self._darkrun_action)
         darkrun_at_widget.setDefaultWidget(self._darkrun_action)
         self._tool_bar.addAction(darkrun_at_widget)
+
+        self._tool_bar.addSeparator()
 
         # ROI and Image ctrl widget
 
@@ -580,6 +583,9 @@ class ImageToolWindow(AbstractWindow):
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
             lambda x: mediator.onImageBackgroundChange(float(x)))
 
+        self._image_views.currentChanged.connect(
+            self.onImageViewTabChanged)
+
     def updateMetaData(self):
         """Override."""
         self._darkrun_action.proc_data_cb.toggled.emit(
@@ -647,3 +653,11 @@ class ImageToolWindow(AbstractWindow):
         action = QtGui.QAction(icon, description, tool_bar)
         tool_bar.addAction(action)
         return action
+
+    def onImageViewTabChanged(self, idx):
+        if self._image_views.tabText(idx) == 'Dark':
+            self._record_at.setEnabled(True)
+        else:
+            if self._record_at.isChecked():
+                self._record_at.trigger()
+            self._record_at.setEnabled(False)
