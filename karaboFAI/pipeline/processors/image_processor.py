@@ -49,6 +49,7 @@ class ImageProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
+        self._dark_subtraction = True
         self._background = 0.0
 
         self._recording = False
@@ -69,6 +70,7 @@ class ImageProcessor(_BaseProcessor):
         # image
         cfg = self._meta.get_all(mt.IMAGE_PROC)
 
+        self._dark_subtraction = cfg['dark_subtraction'] == 'True'
         self._background = float(cfg['background'])
         self._threshold_mask = self.str2tuple(cfg['threshold_mask'],
                                               handler=float)
@@ -126,17 +128,19 @@ class ImageProcessor(_BaseProcessor):
                 self._dark_mean = self._dark_run.copy()
 
         assembled = data['detector']['assembled']
-        # subtract the dark_run from assembled if any
-        if (not self._recording and self._dark_run is not None) \
-                or (self._recording and self._process_dark):
-            dt_shape = assembled.shape
-            dk_shape = self._dark_run.shape
 
-            if dt_shape != dk_shape:
-                raise ImageProcessingError(
-                    f"[Image processor] Shape of the dark train {dk_shape} "
-                    f"is different from the data {dt_shape}")
-            assembled -= self._dark_run
+        if self._dark_subtraction:
+            # subtract the dark_run from assembled if any
+            if (not self._recording and self._dark_run is not None) \
+                    or (self._recording and self._process_dark):
+                dt_shape = assembled.shape
+                dk_shape = self._dark_run.shape
+
+                if dt_shape != dk_shape:
+                    raise ImageProcessingError(
+                        f"[Image processor] Shape of the dark train {dk_shape} "
+                        f"is different from the data {dt_shape}")
+                assembled -= self._dark_run
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)

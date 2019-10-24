@@ -73,6 +73,9 @@ class Mediator(QObject):
     def onImageBackgroundChange(self, value: float):
         self._meta.set(mt.IMAGE_PROC, "background", value)
 
+    def onDarkSubtractionStateChange(self, value: bool):
+        self._meta.set(mt.IMAGE_PROC, "dark_subtraction", str(value))
+
     def onGeomFilenameChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "geometry_file", value)
 

@@ -367,6 +367,9 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         # avoid collapse on online and maxwell clusters
         self.threshold_mask_le.setMinimumWidth(160)
 
+        self.darksubtraction_cb = QtWidgets.QCheckBox("Subtract dark")
+        self.darksubtraction_cb.setChecked(True)
+
         self.bkg_le = SmartLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
@@ -391,6 +394,9 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         row += 1
         layout.addWidget(QtGui.QLabel("Threshold mask: "), row, 0, AR)
         layout.addWidget(self.threshold_mask_le, row, 1)
+
+        row += 1
+        layout.addWidget(self.darksubtraction_cb, row, 0, AR)
 
         row += 1
         layout.addWidget(QtGui.QLabel("Subtract background: "), row, 0, AR)
@@ -567,6 +573,8 @@ class ImageToolWindow(AbstractWindow):
             lambda x: self._data_view.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: mediator.onImageThresholdMaskChange(x))
+        self._image_ctrl_widget.darksubtraction_cb.toggled.connect(
+            self._mediator.onDarkSubtractionStateChange)
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
             lambda x: self._data_view.onBkgChange(float(x)))
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
@@ -577,8 +585,12 @@ class ImageToolWindow(AbstractWindow):
         self._darkrun_action.proc_data_cb.toggled.emit(
             self._darkrun_action.proc_data_cb.isChecked())
 
-        self._image_ctrl_widget.threshold_mask_le.returnPressed.emit()
-        self._image_ctrl_widget.bkg_le.returnPressed.emit()
+        widget = self._image_ctrl_widget
+        widget.threshold_mask_le.returnPressed.emit()
+        widget.darksubtraction_cb.toggled.emit(
+            widget.darksubtraction_cb.isChecked())
+        widget.bkg_le.returnPressed.emit()
+
         return True
 
     def update(self):

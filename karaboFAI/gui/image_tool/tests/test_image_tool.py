@@ -320,7 +320,7 @@ class TestImageTool(unittest.TestCase):
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
 
-    def testDarkRunActions(self):
+    def testDark(self):
         image_proc = self.image_worker._image_proc
 
         image_proc.update()
@@ -345,6 +345,12 @@ class TestImageTool(unittest.TestCase):
         image_proc.update()
         self.assertIsNone(image_proc._dark_run)
         self.assertIsNone(image_proc._dark_mean)
+
+        # test "subtract dark" checkbox
+        self.assertTrue(image_proc._dark_subtraction)
+        self.image_tool._image_ctrl_widget.darksubtraction_cb.setChecked(False)
+        image_proc.update()
+        self.assertFalse(image_proc._dark_subtraction)
 
 
 class TestImageToolTs(unittest.TestCase):
