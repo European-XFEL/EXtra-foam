@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageAssemblers for different detectors.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -53,6 +51,9 @@ class ImageAssemblerFactory(ABC):
                 assert(len(srcs) == 1)
                 self._source_name = srcs[-1].name
                 self._pulse_slicer = srcs[-1].slicer
+            else:
+                self._source_name = None
+                self._pulse_slicer = None
 
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
