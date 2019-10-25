@@ -356,6 +356,11 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
     def __init__(self, *, parent=None):
         super().__init__(parent)
 
+        self.auto_update_cb = QtWidgets.QCheckBox("Update automatically")
+        self.auto_update_cb.setChecked(True)
+        self.update_image_btn = QtGui.QPushButton("Update image")
+        self.update_image_btn.setEnabled(False)
+
         # It is just a placeholder
         self.moving_avg_le = SmartLineEdit(str(1))
         self.moving_avg_le.setValidator(QtGui.QIntValidator(1, 9999999))
@@ -373,7 +378,6 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         self.bkg_le = SmartLineEdit(str(0.0))
         self.bkg_le.setValidator(QtGui.QDoubleValidator())
 
-        self.update_image_btn = QtGui.QPushButton("Update corrected")
         self.auto_level_btn = QtGui.QPushButton("Auto level")
         self.save_image_btn = QtGui.QPushButton("Save image")
         self.load_ref_btn = QtGui.QPushButton("Load reference")
@@ -381,6 +385,7 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         self.remove_ref_btn = QtGui.QPushButton("Remove reference")
 
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Override."""
@@ -388,6 +393,13 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         AR = QtCore.Qt.AlignRight
 
         row = 0
+        layout.addWidget(self.update_image_btn, row, 0)
+        layout.addWidget(self.auto_update_cb, row, 1, AR)
+
+        row += 1
+        layout.addWidget(self.auto_level_btn, row, 0)
+
+        row += 1
         layout.addWidget(QtGui.QLabel("Moving average: "), row, 0, AR)
         layout.addWidget(self.moving_avg_le, row, 1)
 
@@ -403,10 +415,6 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         layout.addWidget(self.bkg_le, row, 1)
 
         row += 1
-        layout.addWidget(self.update_image_btn, row, 0)
-        layout.addWidget(self.auto_level_btn, row, 1)
-
-        row += 1
         layout.addWidget(self.save_image_btn, row, 0)
         layout.addWidget(self.load_ref_btn, row, 1)
 
@@ -416,6 +424,11 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
 
         layout.setVerticalSpacing(20)
         self.setLayout(layout)
+
+    def initConnections(self):
+        self.auto_update_cb.toggled.connect(
+            lambda: self.update_image_btn.setEnabled(
+                not self.sender().isChecked()))
 
 
 class ImageToolWindow(AbstractWindow):
@@ -511,6 +524,8 @@ class ImageToolWindow(AbstractWindow):
             self._data_view.rois, parent=self)
         self._image_ctrl_widget = _ImageCtrlWidget(parent=self)
 
+        self._auto_update = self._image_ctrl_widget.auto_update_cb.isChecked()
+
         self.initUI()
         self.initConnections()
         self.updateMetaData()
@@ -560,8 +575,12 @@ class ImageToolWindow(AbstractWindow):
         self._darkrun_action.proc_data_cb.toggled.connect(
             self._mediator.onRdProcessStateChange)
 
+        self._image_ctrl_widget.auto_update_cb.toggled.connect(
+            self._autoUpdateToggled)
         self._image_ctrl_widget.update_image_btn.clicked.connect(
             self.updateImage)
+        self._image_ctrl_widget.auto_level_btn.clicked.connect(
+            mediator.reset_image_level_sgn)
         self._image_ctrl_widget.save_image_btn.clicked.connect(
             self._data_view.writeImage)
         self._image_ctrl_widget.load_ref_btn.clicked.connect(
@@ -570,8 +589,6 @@ class ImageToolWindow(AbstractWindow):
             self._data_view.setReferenceImage)
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
             self._data_view.removeReferenceImage)
-        self._image_ctrl_widget.auto_level_btn.clicked.connect(
-            mediator.reset_image_level_sgn)
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._data_view.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
@@ -609,14 +626,11 @@ class ImageToolWindow(AbstractWindow):
 
     def _update_data_view(self):
         # Always automatically get an image
-        if self._data_view.image is not None:
-            return
-
-        self.updateImage(auto_range=True, auto_levels=True)
+        if self._data_view.image is None or self._auto_update:
+            self.updateImage(auto_range=True, auto_levels=True)
 
     def _update_dark_view(self):
         data = self._data.get()
-
         if data is None:
             return
 
@@ -635,11 +649,13 @@ class ImageToolWindow(AbstractWindow):
         It is only used for updating the image manually.
         """
         data = self._data.get()
-
-        if data is None or data.image is None or data.image.mean is None:
+        if data is None:
             return
 
-        self._data_view.setImageData(_SimpleImageData(data.image), **kwargs)
+        try:
+            self._data_view.setImageData(_SimpleImageData(data.image), **kwargs)
+        except (AttributeError, TypeError):
+            return
 
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):
@@ -661,3 +677,6 @@ class ImageToolWindow(AbstractWindow):
             if self._record_at.isChecked():
                 self._record_at.trigger()
             self._record_at.setEnabled(False)
+
+    def _autoUpdateToggled(self):
+        self._auto_update = self.sender().isChecked()

@@ -105,6 +105,22 @@ class TestImageTool(unittest.TestCase):
                     'pulse_slicer': slice(None, None)},
                 'processed': ProcessedData(1001)}
 
+    def testUpdateImage(self):
+        widget = self.image_tool._image_ctrl_widget
+
+        # test default values
+        self.assertFalse(widget.update_image_btn.isEnabled())
+        self.assertTrue(widget.auto_update_cb.isChecked())
+        self.assertTrue(self.image_tool._auto_update)
+
+        # test enabled and disable "update image" button
+        widget.auto_update_cb.setChecked(False)
+        self.assertTrue(widget.update_image_btn.isEnabled())
+        self.assertFalse(self.image_tool._auto_update)
+        widget.auto_update_cb.setChecked(True)
+        self.assertFalse(widget.update_image_btn.isEnabled())
+        self.assertTrue(self.image_tool._auto_update)
+
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
         # default values are set correctly
