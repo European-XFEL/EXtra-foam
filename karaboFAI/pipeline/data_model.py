@@ -16,7 +16,7 @@ from ..algorithms import mask_image
 from ..config import config
 
 from karaboFAI.cpp import (
-    nanmeanTrain, movingAveragePulse, movingAverageTrain
+    nanmeanImageArray, movingAverageImage, movingAverageImageArray
 )
 
 
@@ -293,17 +293,17 @@ class MovingAverageArray:
             if self._count < self._window:
                 self._count += 1
                 if data.ndim == 2:
-                    movingAveragePulse(self._data, data, self._count)
+                    movingAverageImage(self._data, data, self._count)
                 elif data.ndim == 3:
-                    movingAverageTrain(self._data, data, self._count)
+                    movingAverageImageArray(self._data, data, self._count)
                 else:
                     self._data += (data - self._data) / self._count
             else:  # self._count == self._window
                 # here is an approximation
                 if data.ndim == 2:
-                    movingAveragePulse(self._data, data, self._count)
+                    movingAverageImage(self._data, data, self._count)
                 elif data.ndim == 3:
-                    movingAverageTrain(self._data, data, self._count)
+                    movingAverageImageArray(self._data, data, self._count)
                 else:
                     self._data += (data - self._data) / self._count
         else:
@@ -586,7 +586,7 @@ class ImageData:
             for i in poi_indices:
                 instance.images[i] = arr[i]
 
-            instance.mean = nanmeanTrain(arr)
+            instance.mean = nanmeanImageArray(arr)
 
             if sliced_indices is None:
                 instance.sliced_indices = list(range(n_images))

@@ -43,7 +43,7 @@ find_package(Threads REQUIRED)
 
 set(FAI_TESTS
     test_tbb.cpp
-    test_xtnumpy.cpp
+    test_image_proc.cpp
 )
 
 foreach(filename IN LISTS FAI_TESTS)

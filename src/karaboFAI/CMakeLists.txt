@@ -13,16 +13,16 @@ find_package(xtensor-python)
 
 pybind11_add_module(algo algo.cpp)
 
-# xtnumpy
+# image_proc
 
-pybind11_add_module(xtnumpy xtnumpy.cpp)
+pybind11_add_module(image_proc image_proc.cpp)
 
-target_include_directories(xtnumpy
+target_include_directories(image_proc
     PRIVATE
         ${FAI_INCLUDE_DIRS}
         ${TBB_INCLUDE_DIRS})
 
-target_link_libraries(xtnumpy
+target_link_libraries(image_proc
     PRIVATE
         xtensor-python
         ${TBB_LIBRARIES})

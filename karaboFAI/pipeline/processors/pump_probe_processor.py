@@ -18,7 +18,7 @@ from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from karaboFAI.cpp import nanmeanTrain, nanmeanTwo
+from karaboFAI.cpp import nanmeanImageArray, nanmeanTwoImages
 
 
 class PumpProbeProcessor(_BaseProcessor):
@@ -117,7 +117,7 @@ class PumpProbeProcessor(_BaseProcessor):
             if len(curr_means) == 1:
                 images_mean = curr_means[0].copy()
             else:
-                images_mean = nanmeanTwo(on_image, off_image)
+                images_mean = nanmeanTwoImages(on_image, off_image)
         else:
             if assembled.ndim == 3:
                 if dropped_indices:
@@ -125,10 +125,10 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices:
                         raise DropAllPulsesError(
                             f"{tid}: all pulses were dropped")
-                    images_mean = nanmeanTrain(assembled, indices)
+                    images_mean = nanmeanImageArray(assembled, indices)
                 else:
                     # for performance
-                    images_mean = nanmeanTrain(assembled)
+                    images_mean = nanmeanImageArray(assembled)
             else:
                 # Note: _image is _mean for train-resolved detectors
                 images_mean = assembled
@@ -193,7 +193,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not on_indices:
                         raise DropAllPulsesError(
                             f"{tid}: all on pulses were dropped")
-                    on_image = nanmeanTrain(assembled, on_indices)
+                    on_image = nanmeanImageArray(assembled, on_indices)
 
                     curr_indices.extend(on_indices)
                     curr_means.append(on_image)
@@ -211,7 +211,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not off_indices:
                         raise DropAllPulsesError(
                             f"{tid}: all off pulses were dropped")
-                    off_image = nanmeanTrain(assembled, off_indices)
+                    off_image = nanmeanImageArray(assembled, off_indices)
                     curr_indices.extend(off_indices)
                     curr_means.append(off_image)
 
@@ -236,7 +236,7 @@ class PumpProbeProcessor(_BaseProcessor):
                         if not on_indices:
                             raise DropAllPulsesError(
                                 f"{tid}: all on pulses were dropped")
-                        self._prev_unmasked_on = nanmeanTrain(
+                        self._prev_unmasked_on = nanmeanImageArray(
                             assembled, on_indices)
                         curr_indices.extend(on_indices)
                         curr_means.append(self._prev_unmasked_on)
@@ -258,7 +258,7 @@ class PumpProbeProcessor(_BaseProcessor):
                             if not off_indices:
                                 raise DropAllPulsesError(
                                     f"{tid}: all off pulses were dropped")
-                            off_image = nanmeanTrain(assembled, off_indices)
+                            off_image = nanmeanImageArray(assembled, off_indices)
                             curr_indices.extend(off_indices)
                             curr_means.append(off_image)
                         else:

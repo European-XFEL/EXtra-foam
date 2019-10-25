@@ -16,7 +16,7 @@ from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config
 
-from karaboFAI.cpp import nanmeanTrain, nanmeanTwo
+from karaboFAI.cpp import nanmeanImageArray, nanmeanTwoImages
 
 
 class ImageProcessor(_BaseProcessor):
@@ -121,7 +121,7 @@ class ImageProcessor(_BaseProcessor):
             # This is also a relatively expensive operation. But, in principle,
             # users should not trigger many other analysis when recording dark.
             if self._dark_run.ndim == 3:
-                self._dark_mean = nanmeanTrain(self._dark_run)
+                self._dark_mean = nanmeanImageArray(self._dark_run)
             else:
                 self._dark_mean = self._dark_run.copy()
 
