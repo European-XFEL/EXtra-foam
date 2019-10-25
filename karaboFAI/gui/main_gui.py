@@ -32,7 +32,7 @@ from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    OverviewWindow, ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
+    ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
     PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow
 )
 from .. import __version__
@@ -185,10 +185,6 @@ class MainGUI(QtGui.QMainWindow):
         image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
-
-        open_overview_window_at = self._addAction("Overview", "overview.png")
-        open_overview_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, OverviewWindow))
 
         pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(

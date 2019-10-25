@@ -9,7 +9,7 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import (
     AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    OverviewWindow, StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow
+    StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow
 )
 
 app = mkQApp()
@@ -36,22 +36,18 @@ class TestMainGui(unittest.TestCase):
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
         imagetool_action = actions[2]
-        overview_action = actions[3]
-        pp_action = actions[4]
-        statistics_action = actions[5]
-        correlation_action = actions[6]
-        bin1d_action = actions[7]
-        bin2d_action = actions[8]
-        poi_action = actions[9]
-        ai_action = actions[10]
+        pp_action = actions[3]
+        statistics_action = actions[4]
+        correlation_action = actions[5]
+        bin1d_action = actions[6]
+        bin2d_action = actions[7]
+        poi_action = actions[8]
+        ai_action = actions[9]
         # TODO: add ROI
 
         # ImageToolWindow is opened together with the MainGUI
         imagetool_window = list(self.gui._windows.keys())[-1]
         self.assertIsInstance(imagetool_window, ImageToolWindow)
-
-        overview_window = self._check_open_window(overview_action)
-        self.assertIsInstance(overview_window, OverviewWindow)
 
         pp_window = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window, PumpProbeWindow)
@@ -78,7 +74,6 @@ class TestMainGui(unittest.TestCase):
         self._check_open_window(ai_action, registered=False)
 
         self._check_close_window(imagetool_window)
-        self._check_close_window(overview_window)
         self._check_close_window(pp_window)
         self._check_close_window(statistics_window)
         self._check_close_window(correlation_window)

@@ -119,6 +119,5 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         return True
 
     def updateVipPulseIDs(self):
-        """Called when OverviewWindow is opened."""
         self._poi_index1_le.returnPressed.emit()
         self._poi_index2_le.returnPressed.emit()

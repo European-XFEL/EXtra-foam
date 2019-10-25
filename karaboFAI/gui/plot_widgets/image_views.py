@@ -197,26 +197,6 @@ class ImageAnalysis(ImageViewF):
             logger.error(f"Cannot load mask from {filepath}")
 
 
-class AssembledImageView(ImageViewF):
-    """AssembledImageView class.
-
-    Widget for displaying the assembled image of the average of all pulses
-    in a train.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-    def update(self, data):
-        """Override."""
-        self.setImage(data.image.masked_mean,
-                      auto_levels=(not self._is_initialized))
-        self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
-
-
 class PumpProbeImageView(ImageViewF):
     """PumpProbeImageView class.
 

@@ -1,11 +1,10 @@
 from .image_views import (
-    AssembledImageView, Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
+    Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
     ImageViewF, PumpProbeImageView, RoiImageView, SinglePulseImageView
 )
 
 # add image views
 __all__ = ([
-    "AssembledImageView",
     "Bin1dHeatmap",
     "Bin2dHeatmap",
     "ImageAnalysis",

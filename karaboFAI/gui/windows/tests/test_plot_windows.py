@@ -6,13 +6,12 @@ import tempfile
 from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui import mkQApp, MainGUI
-from karaboFAI.gui.misc_widgets import BulletinWidget
 from karaboFAI.gui.windows import (
-    Bin1dWindow, Bin2dWindow, OverviewWindow, AzimuthalIntegrationWindow,
+    Bin1dWindow, Bin2dWindow, AzimuthalIntegrationWindow, CorrelationWindow,
     StatisticsWindow, PumpProbeWindow, RoiWindow, PulseOfInterestWindow,
 )
 from karaboFAI.gui.plot_widgets import (
-    AssembledImageView, TrainAiWidget, FomHistogramWidget,
+    TrainAiWidget, FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
     PoiStatisticsWidget, PulsesInTrainFomWidget, SinglePulseImageView,
     RoiImageView,
@@ -38,17 +37,6 @@ class TestPlotWindows(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
-
-    def testOverviewWindow(self):
-        win = OverviewWindow(pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(2, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
-        self.assertEqual(1, counter[BulletinWidget])
-        self.assertEqual(1, counter[AssembledImageView])
 
     def testPumpProbeWindow(self):
         win = PumpProbeWindow(pulse_resolved=True, parent=self.gui)
@@ -94,9 +82,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[Bin2dHeatmap])
 
     def testCorrelationWindow(self):
-
-        self.gui._tool_bar.actions()[6].trigger()
-        win = list(self.gui._windows.keys())[-1]
+        win = CorrelationWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(4, len(win._plot_widgets))
         counter = Counter()
