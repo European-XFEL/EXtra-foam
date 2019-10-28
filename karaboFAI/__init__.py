@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 
 
-__version__ = "0.6.1beta"
+__version__ = "0.6.1"
 
 # root path for storing config and log files
 ROOT_PATH = os.path.join(os.path.expanduser("~"), ".karaboFAI")

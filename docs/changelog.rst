@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+karaboFAI 0.6.1 (28 October 2019)
+---------------------------------
+
+- **Improvement**
+
+    - Remove XAS related code (GUI, processor, etc.) !154
+    - Update import location of ZMQStreamer !151
+    - Improve system information summary interface and enable detecting GPU resources !138
+
+- **New Feature**
+
+    - Implement normalization by XGM pipeline data !157
+    - New data source management interface !157
+    - Implemented web monitor in Dash !152
+
+
 karaboFAI 0.6.0 (31 August 2019)
 ---------------------------------
 
