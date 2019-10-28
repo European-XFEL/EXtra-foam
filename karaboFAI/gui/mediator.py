@@ -222,8 +222,5 @@ class Mediator(QObject):
     def onRdStateChange(self, value: bool):
         self._meta.set(mt.GLOBAL_PROC, "recording_dark", str(value))
 
-    def onRdResetDark(self):
-        self._meta.set(mt.GLOBAL_PROC, "reset_dark", 1)
-
-    def onRdProcessStateChange(self, value: bool):
-        self._meta.set(mt.GLOBAL_PROC, "process_dark", str(value))
+    def onRdRemoveDark(self):
+        self._meta.set(mt.GLOBAL_PROC, "remove_dark", 1)

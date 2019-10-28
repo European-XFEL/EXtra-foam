@@ -341,12 +341,6 @@ class TestImageTool(unittest.TestCase):
 
         image_proc.update()
         self.assertFalse(image_proc._recording)
-        self.assertTrue(image_proc._process_dark)
-
-        # test "processing while recording" check box
-        self.image_tool._darkrun_action.proc_data_cb.setChecked(False)
-        image_proc.update()
-        self.assertFalse(image_proc._process_dark)
 
         # test "Recording dark" action
         self.assertFalse(self.image_tool._record_at.isEnabled())

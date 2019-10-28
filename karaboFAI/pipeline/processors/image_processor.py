@@ -25,8 +25,6 @@ class ImageProcessor(_BaseProcessor):
     Attributes:
         _background (float): a uniform background value.
         _recording (bool): whether a dark run is being recorded.
-        _process_dark (bool): whether process the dark run while recording.
-            used only when _recording = True.
         _dark_run (RawImageData): store the moving average of dark
             images in a train. Shape = (indices, y, x) for pulse-resolved
             and shape = (y, x) for train-resolved
@@ -53,7 +51,6 @@ class ImageProcessor(_BaseProcessor):
         self._background = 0.0
 
         self._recording = False
-        self._process_dark = False
         self._dark_mean = None
 
         self._image_mask = None
@@ -81,22 +78,12 @@ class ImageProcessor(_BaseProcessor):
         self._poi_indices = [int(gp_cfg['poi1_index']),
                              int(gp_cfg['poi2_index'])]
 
-        if 'reset_dark' in gp_cfg:
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_dark')
+        if 'remove_dark' in gp_cfg:
+            self._meta.delete(mt.GLOBAL_PROC, 'remove_dark')
             del self._dark_run
             self._dark_mean = None
 
-        try:
-            self._recording = gp_cfg['recording_dark'] == 'True'
-        except KeyError:
-            # TODO: we need a solution for widget that is not opened at
-            #       start-up but is responsible for updating metadata.
-            self._recording = False
-
-        try:
-            self._process_dark = gp_cfg['process_dark'] == 'True'
-        except KeyError:
-            self._process_dark = False
+        self._recording = gp_cfg['recording_dark'] == 'True'
 
     @profiler("Image Processor (pulse)")
     def process(self, data):
@@ -129,18 +116,16 @@ class ImageProcessor(_BaseProcessor):
 
         assembled = data['detector']['assembled']
 
-        if self._dark_subtraction:
+        if self._dark_subtraction and self._dark_run is not None:
             # subtract the dark_run from assembled if any
-            if (not self._recording and self._dark_run is not None) \
-                    or (self._recording and self._process_dark):
-                dt_shape = assembled.shape
-                dk_shape = self._dark_run.shape
+            dt_shape = assembled.shape
+            dk_shape = self._dark_run.shape
 
-                if dt_shape != dk_shape:
-                    raise ImageProcessingError(
-                        f"[Image processor] Shape of the dark train {dk_shape} "
-                        f"is different from the data {dt_shape}")
-                assembled -= self._dark_run
+            if dt_shape != dk_shape:
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the dark train {dk_shape} "
+                    f"is different from the data {dt_shape}")
+            assembled -= self._dark_run
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)

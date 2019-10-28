@@ -125,9 +125,6 @@ class DarkRunActionWidget(QtGui.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.proc_data_cb = QtGui.QCheckBox("Process while recording")
-        self.proc_data_cb.setChecked(True)
-
         self.dark_train_count_lb = self.NumberLabel("")
         self.updateCount(0)
 
@@ -139,7 +136,6 @@ class DarkRunActionWidget(QtGui.QWidget):
         layout = QtGui.QHBoxLayout()
         layout.addWidget(QtGui.QLabel("Count: "))
         layout.addWidget(self.dark_train_count_lb)
-        layout.addWidget(self.proc_data_cb)
 
         self.setLayout(layout)
         self.layout().setContentsMargins(2, 1, 2, 1)
@@ -570,10 +566,8 @@ class ImageToolWindow(AbstractWindow):
             self._data_view.loadImageMask)
 
         self._record_at.toggled.connect(self._mediator.onRdStateChange)
-        self._remove_at.triggered.connect(self._mediator.onRdResetDark)
-
-        self._darkrun_action.proc_data_cb.toggled.connect(
-            self._mediator.onRdProcessStateChange)
+        self._record_at.toggled.emit(self._record_at.isChecked())
+        self._remove_at.triggered.connect(self._mediator.onRdRemoveDark)
 
         self._image_ctrl_widget.auto_update_cb.toggled.connect(
             self._autoUpdateToggled)
@@ -605,9 +599,6 @@ class ImageToolWindow(AbstractWindow):
 
     def updateMetaData(self):
         """Override."""
-        self._darkrun_action.proc_data_cb.toggled.emit(
-            self._darkrun_action.proc_data_cb.isChecked())
-
         widget = self._image_ctrl_widget
         widget.threshold_mask_le.returnPressed.emit()
         widget.darksubtraction_cb.toggled.emit(

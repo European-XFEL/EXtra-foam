@@ -90,7 +90,7 @@ class TestImageProcessorPr(_BaseProcessorTest):
 
     def testDarkRun(self):
         self._proc._recording = True
-        self._proc._process_dark = False  # no dark subtraction
+        self._proc._dark_subtraction = False
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
         dark_run_gt = data['detector']['assembled'].copy()
@@ -107,13 +107,14 @@ class TestImageProcessorPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
         np.testing.assert_array_almost_equal(
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+        # test 'assembled' is not subtracted by dark
         np.testing.assert_array_almost_equal(data['detector']['assembled'], assembled_gt)
 
-        # ------------------------------
-        # test self._process_dark = True
-        # ------------------------------
+        # --------------------------
+        # test with dark subtraction
+        # --------------------------
 
-        self._proc._process_dark = True  # with subtraction
+        self._proc._dark_subtraction = True  # with subtraction
 
         del self._proc._dark_run
         self._proc._dark_mean = None
@@ -136,7 +137,7 @@ class TestImageProcessorPr(_BaseProcessorTest):
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
         np.testing.assert_array_almost_equal(
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
-        # test 'assembled' is dark run subtracted
+        # test 'assembled' is subtracted by dark
         np.testing.assert_array_almost_equal(
             data['detector']['assembled'], assembled_gt - self._proc._dark_run)
 
