@@ -17,7 +17,7 @@ from karaboFAI.config import config
 _MISC_CATEGORIES = [
     "XGM",
     "Digitizer",
-    "Monochromator",
+    "MonoChromator",
     "Motor",
     "Magnet"
 ]
