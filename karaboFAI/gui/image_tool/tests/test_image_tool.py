@@ -380,8 +380,8 @@ class TestImageTool(unittest.TestCase):
         self.image_tool._data.set(processed)
         self.image_tool.update()
 
-        self.assertEqual(99, int(self.image_tool._dark_train_count_lb.text()))
         info_widget = self.image_tool._info_widget
+        self.assertEqual(99, int(info_widget._dark_train_counter.intValue()))
         self.assertEqual(1357, int(info_widget._current_tid.intValue()))
         self.assertEqual(10, int(info_widget._n_total_pulses.intValue()))
         self.assertEqual(6, int(info_widget._n_kept_pulses.intValue()))

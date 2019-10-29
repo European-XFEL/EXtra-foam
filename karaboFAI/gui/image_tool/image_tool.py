@@ -124,6 +124,7 @@ class _InformationWidget(QtWidgets.QFrame):
         self._current_tid = QtWidgets.QLCDNumber(self._LCD_DIGITS)
         self._n_total_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
         self._n_kept_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
+        self._dark_train_counter = QtWidgets.QLCDNumber(self._LCD_DIGITS)
 
         self.updatePulsesInfo(0, 0)
 
@@ -133,6 +134,7 @@ class _InformationWidget(QtWidgets.QFrame):
         self._setLcdStyle(self._current_tid)
         self._setLcdStyle(self._n_total_pulses)
         self._setLcdStyle(self._n_kept_pulses)
+        self._setLcdStyle(self._dark_train_counter)
 
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
@@ -143,6 +145,8 @@ class _InformationWidget(QtWidgets.QFrame):
         layout.addWidget(self._n_total_pulses, 1, 1)
         layout.addWidget(QtWidgets.QLabel("# of kept pulses/train: "), 2, 0, AR)
         layout.addWidget(self._n_kept_pulses, 2, 1)
+        layout.addWidget(QtWidgets.QLabel("# of dark trains: "), 3, 0, AR)
+        layout.addWidget(self._dark_train_counter, 3, 1)
         self.setLayout(layout)
 
     def _setLcdStyle(self, lcd):
@@ -158,6 +162,9 @@ class _InformationWidget(QtWidgets.QFrame):
     def updatePulsesInfo(self, n_total, n_kept):
         self._n_total_pulses.display(n_total)
         self._n_kept_pulses.display(n_kept)
+
+    def updateDarkTrainCount(self, count):
+        self._dark_train_counter.display(count)
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -528,16 +535,6 @@ class ImageToolWindow(AbstractWindow):
         self._remove_at = self._addAction(
             self._tool_bar, "Remove dark", "remove_dark.png")
 
-        self._dark_train_count_lb = QtWidgets.QLabel(self._tool_bar)
-        font = QtGui.QFont('times')
-        font.setBold(True)
-        self._dark_train_count_lb.setFont(font)
-        self._dark_train_count_lb.setStyleSheet(f"color: rgb{Colors().p[:3]};")
-        self._updateDarkTrainCount(0)
-
-        self._tool_bar.addWidget(QtWidgets.QLabel("Dark train count: "))
-        self._tool_bar.addWidget(self._dark_train_count_lb)
-
         self._tool_bar.addSeparator()
 
         # -----------------------------
@@ -671,7 +668,7 @@ class ImageToolWindow(AbstractWindow):
         else:
             self._dark_view.setImage(data.image.dark_mean)
 
-        self._updateDarkTrainCount(data.image.dark_count)
+        self._info_widget.updateDarkTrainCount(data.image.dark_count)
 
     def updateImage(self, **kwargs):
         """Update the current image.
@@ -717,7 +714,3 @@ class ImageToolWindow(AbstractWindow):
 
     def _autoUpdateToggled(self):
         self._auto_update = self.sender().isChecked()
-
-    def _updateDarkTrainCount(self, count):
-        self._dark_train_count_lb.setText(f"{count:0{4}d}")
-
