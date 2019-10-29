@@ -111,39 +111,6 @@ class _SimpleImageData:
         return cls(ImageData.from_array(arr))
 
 
-class DarkRunActionWidget(QtGui.QWidget):
-    """Ctrl widget for dark run in the action bar."""
-
-    class NumberLabel(QtGui.QLabel):
-        def __init__(self, text, parent=None):
-            super().__init__(text, parent=parent)
-            font = QtGui.QFont('times')
-            font.setBold(True)
-            self.setFont(font)
-            self.setStyleSheet(f"color: rgb{Colors().p[:3]};")
-
-    def __init__(self, parent=None):
-        super().__init__(parent=parent)
-
-        self.dark_train_count_lb = self.NumberLabel("")
-        self.updateCount(0)
-
-        self.initUI()
-
-        self.setFixedSize(self.minimumSizeHint())
-
-    def initUI(self):
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(QtGui.QLabel("Count: "))
-        layout.addWidget(self.dark_train_count_lb)
-
-        self.setLayout(layout)
-        self.layout().setContentsMargins(2, 1, 2, 1)
-
-    def updateCount(self, count):
-        self.dark_train_count_lb.setText(f"{count:0{4}d}")
-
-
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
 
@@ -479,7 +446,9 @@ class ImageToolWindow(AbstractWindow):
         # tool bar
         # --------
 
+        # ***************
         # masking actions
+        # ***************
 
         self._tool_bar = self.addToolBar("tools")
 
@@ -497,7 +466,10 @@ class ImageToolWindow(AbstractWindow):
 
         self._exclusive_actions = {self._mask_at, self._unmask_at}
 
+        # ****************
         # dark run actions
+        # ****************
+
         self._tool_bar.addSeparator()
 
         self._record_at = self._addAction(
@@ -507,10 +479,15 @@ class ImageToolWindow(AbstractWindow):
         self._remove_at = self._addAction(
             self._tool_bar, "Remove dark", "remove_dark.png")
 
-        self._darkrun_action = DarkRunActionWidget(self._tool_bar)
-        darkrun_at_widget = QtGui.QWidgetAction(self._darkrun_action)
-        darkrun_at_widget.setDefaultWidget(self._darkrun_action)
-        self._tool_bar.addAction(darkrun_at_widget)
+        self._dark_train_count_lb = QtWidgets.QLabel(self._tool_bar)
+        font = QtGui.QFont('times')
+        font.setBold(True)
+        self._dark_train_count_lb.setFont(font)
+        self._dark_train_count_lb.setStyleSheet(f"color: rgb{Colors().p[:3]};")
+        self._updateDarkTrainCount(0)
+
+        self._tool_bar.addWidget(QtWidgets.QLabel("Dark train count: "))
+        self._tool_bar.addWidget(self._dark_train_count_lb)
 
         self._tool_bar.addSeparator()
 
@@ -630,7 +607,7 @@ class ImageToolWindow(AbstractWindow):
         else:
             self._dark_view.setImage(data.image.dark_mean)
 
-        self._darkrun_action.updateCount(data.image.dark_count)
+        self._updateDarkTrainCount(data.image.dark_count)
 
     def updateImage(self, **kwargs):
         """Update the current image.
@@ -671,3 +648,6 @@ class ImageToolWindow(AbstractWindow):
 
     def _autoUpdateToggled(self):
         self._auto_update = self.sender().isChecked()
+
+    def _updateDarkTrainCount(self, count):
+        self._dark_train_count_lb.setText(f"{count:0{4}d}")
