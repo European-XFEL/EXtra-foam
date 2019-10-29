@@ -105,6 +105,11 @@ class MaskItem(GraphicsObject):
         self._p1 = None
         self._p2 = None
 
+    @classmethod
+    def resetMask(cls):
+        cls._mask = None
+        cls._mask_rect = QtCore.QRectF(0, 0, 0, 0)
+
     def boundingRect(self):
         """Override."""
         return self._mask_rect

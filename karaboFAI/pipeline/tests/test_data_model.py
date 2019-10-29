@@ -472,6 +472,8 @@ class TestIndexMask(unittest.TestCase):
         mask.mask(7)
         self.assertEqual(3, mask.n_dropped(10))
         self.assertEqual(1, mask.n_dropped(4))
+        self.assertEqual(7, mask.n_kept(10))
+        self.assertEqual(3, mask.n_kept(4))
         self.assertListEqual([0, 5, 7], mask.dropped_indices(100).tolist())
         self.assertListEqual([0, 5], mask.dropped_indices(6).tolist())
         self.assertEqual(97, len(mask.kept_indices(100)))

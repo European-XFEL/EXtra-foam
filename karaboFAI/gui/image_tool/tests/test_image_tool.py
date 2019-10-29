@@ -15,7 +15,7 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.image_tool.image_tool import _SimpleImageData
 from karaboFAI.logger import logger
-from karaboFAI.pipeline.data_model import ProcessedData
+from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.pipeline.exceptions import ImageProcessingError
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.services import FAI
@@ -336,7 +336,7 @@ class TestImageTool(unittest.TestCase):
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
 
-    def testDark(self):
+    def testDarkRun(self):
         image_proc = self.image_worker._image_proc
 
         image_proc.update()
@@ -370,6 +370,24 @@ class TestImageTool(unittest.TestCase):
         self.image_tool._image_ctrl_widget.darksubtraction_cb.setChecked(False)
         image_proc.update()
         self.assertFalse(image_proc._dark_subtraction)
+
+    def testInfoWidget(self):
+        processed = ProcessedData(1357)
+
+        processed.image = ImageData.from_array(np.ones((10, 4, 4), np.float32))
+        processed.image.dark_count = 99
+        processed.pidx.mask([1, 3, 5, 6])
+        self.image_tool._data.set(processed)
+        self.image_tool.update()
+
+        self.assertEqual(99, int(self.image_tool._dark_train_count_lb.text()))
+        info_widget = self.image_tool._info_widget
+        self.assertEqual(1357, int(info_widget._current_tid.intValue()))
+        self.assertEqual(10, int(info_widget._n_total_pulses.intValue()))
+        self.assertEqual(6, int(info_widget._n_kept_pulses.intValue()))
+
+        # clean-up important!
+        self.image_tool._data.set(None)
 
 
 class TestImageToolTs(unittest.TestCase):

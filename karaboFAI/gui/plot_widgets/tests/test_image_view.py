@@ -59,6 +59,10 @@ class TestImageView(unittest.TestCase):
 
 
 class TestImageAnalysis(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        MaskItem.resetMask()
+
     def testGeneral(self):
         widget = ImageAnalysis()
         plot_items = widget._plot_widget.plotItem.items

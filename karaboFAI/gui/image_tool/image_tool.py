@@ -621,12 +621,15 @@ class ImageToolWindow(AbstractWindow):
             self._data_view.setReferenceImage)
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
             self._data_view.removeReferenceImage)
+
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._data_view.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: mediator.onImageThresholdMaskChange(x))
+
         self._image_ctrl_widget.darksubtraction_cb.toggled.connect(
             self._mediator.onDarkSubtractionStateChange)
+
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
             lambda x: self._data_view.onBkgChange(float(x)))
         self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(

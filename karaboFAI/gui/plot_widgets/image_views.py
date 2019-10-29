@@ -190,7 +190,6 @@ class ImageAnalysis(ImageViewF):
                 return
 
             logger.info(f"Image mask loaded from {filepath}!")
-
             self._mask_item.loadMask(image_mask)
 
         except (IOError, OSError) as e:
