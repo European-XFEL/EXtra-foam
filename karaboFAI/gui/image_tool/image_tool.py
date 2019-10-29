@@ -111,6 +111,55 @@ class _SimpleImageData:
         return cls(ImageData.from_array(arr))
 
 
+class _InformationWidget(QtWidgets.QFrame):
+    """InformationWidget.
+
+    Widget used to display the basic information of the current image data.
+    """
+    _LCD_DIGITS = 12
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._current_tid = QtWidgets.QLCDNumber(self._LCD_DIGITS)
+        self._n_total_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
+        self._n_kept_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
+
+        self.updatePulsesInfo(0, 0)
+
+        self.initUI()
+
+    def initUI(self):
+        self._setLcdStyle(self._current_tid)
+        self._setLcdStyle(self._n_total_pulses)
+        self._setLcdStyle(self._n_kept_pulses)
+
+        layout = QtGui.QGridLayout()
+        AR = QtCore.Qt.AlignRight
+
+        layout.addWidget(QtWidgets.QLabel("Current train ID: "), 0, 0, AR)
+        layout.addWidget(self._current_tid, 0, 1)
+        layout.addWidget(QtWidgets.QLabel("Total # of pulses/train: "), 1, 0, AR)
+        layout.addWidget(self._n_total_pulses, 1, 1)
+        layout.addWidget(QtWidgets.QLabel("# of kept pulses/train: "), 2, 0, AR)
+        layout.addWidget(self._n_kept_pulses, 2, 1)
+        self.setLayout(layout)
+
+    def _setLcdStyle(self, lcd):
+        lcd.setLineWidth(0)
+        lcd.setSegmentStyle(QtWidgets.QLCDNumber.Flat)
+        palette = lcd.palette()
+        palette.setColor(palette.WindowText, QtGui.QColor(85, 85, 255))
+        lcd.setPalette(palette)
+
+    def updateTrainId(self, tid):
+        self._current_tid.display(tid)
+
+    def updatePulsesInfo(self, n_total, n_kept):
+        self._n_total_pulses.display(n_total)
+        self._n_kept_pulses.display(n_kept)
+
+
 class _RoiCtrlWidgetBase(QtGui.QWidget):
     """Base class for RoiCtrlWidget.
 
@@ -491,11 +540,15 @@ class ImageToolWindow(AbstractWindow):
 
         self._tool_bar.addSeparator()
 
-        # ROI and Image ctrl widget
+        # -----------------------------
+        # Other ctrl widgets
+        # -----------------------------
 
-        self._roi_ctrl_widget = _RoiCtrlWidgetGroup(
-            self._data_view.rois, parent=self)
-        self._image_ctrl_widget = _ImageCtrlWidget(parent=self)
+        self._roi_ctrl_widget = _RoiCtrlWidgetGroup(self._data_view.rois)
+
+        self._info_widget = _InformationWidget()
+
+        self._image_ctrl_widget = _ImageCtrlWidget()
 
         self._auto_update = self._image_ctrl_widget.auto_update_cb.isChecked()
 
@@ -504,20 +557,28 @@ class ImageToolWindow(AbstractWindow):
         self.updateMetaData()
 
         self.resize(self._WIDTH, self._HEIGHT)
-        self._image_ctrl_widget.setFixedSize(
-            self._image_ctrl_widget.minimumSizeHint())
+
         self.update()
 
         self._is_initialized = True
 
     def initUI(self):
         """Override."""
-        layout = QtGui.QGridLayout()
         AT = QtCore.Qt.AlignTop
+
+        right_panel = QtWidgets.QWidget()
+        right_panel_layout = QtGui.QVBoxLayout()
+        right_panel_layout.addWidget(self._info_widget)
+        right_panel_layout.addWidget(self._image_ctrl_widget)
+        right_panel_layout.addStretch(1)
+        right_panel.setLayout(right_panel_layout)
+
+        layout = QtGui.QGridLayout()
+        right_panel.setFixedSize(right_panel.minimumSizeHint())
 
         layout.addWidget(self._image_views, 0, 0, 1, 4)
         layout.addWidget(self._roi_ctrl_widget, 1, 0, 1, 4)
-        layout.addWidget(self._image_ctrl_widget, 0, 4, 2, 1, AT)
+        layout.addWidget(right_panel, 0, 4, 2, 1, AT)
 
         self._cw.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -625,6 +686,11 @@ class ImageToolWindow(AbstractWindow):
         except (AttributeError, TypeError):
             return
 
+        self._info_widget.updateTrainId(data.tid)
+
+        n_total = data.n_pulses
+        self._info_widget.updatePulsesInfo(n_total, data.pidx.n_kept(n_total))
+
     @QtCore.pyqtSlot(bool)
     def _exclude_actions(self, checked):
         if checked:
@@ -651,3 +717,4 @@ class ImageToolWindow(AbstractWindow):
 
     def _updateDarkTrainCount(self, count):
         self._dark_train_count_lb.setText(f"{count:0{4}d}")
+

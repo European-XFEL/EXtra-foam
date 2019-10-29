@@ -787,12 +787,19 @@ class PulseIndexMask:
         """Mask a given index/list of indices."""
         self._indices[idx] = False
 
+    def n_kept(self, n):
+        """Return number of kept indices.
+
+        :param int n: total number of kept pulses.
+        """
+        return np.sum(self._indices[:n])
+
     def n_dropped(self, n):
         """Return number of dropped indices.
 
-        :param int n: total number of pulses.
+        :param int n: total number of dropped pulses.
         """
-        return np.sum(~self._indices[:n])
+        return n - self.n_kept(n)
 
     def dropped_indices(self, n):
         """Return a list of dropped indices.
