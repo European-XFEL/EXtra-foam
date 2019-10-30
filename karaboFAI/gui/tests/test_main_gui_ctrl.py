@@ -19,7 +19,7 @@ from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import PulseOfInterestWindow
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
-    DataSource, VFomNormalizer, PumpProbeMode
+    DataSource, Normalizer, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
@@ -148,7 +148,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(default_integ_method, proc._integ_method)
-        default_normalizer = VFomNormalizer.AUC
+        default_normalizer = Normalizer.UNDEFINED
         self.assertEqual(default_normalizer, proc._normalizer)
         self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
         default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
@@ -161,7 +161,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         itgt_method = 'nosplit_csr'
         widget._itgt_method_cb.setCurrentText(itgt_method)
-        ai_normalizer = VFomNormalizer.ROI3_SUB_ROI4
+        ai_normalizer = Normalizer.ROI3_SUB_ROI4
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
@@ -180,14 +180,14 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(-1000*pixel_size, proc._poni2)
         self.assertEqual(1000*pixel_size, proc._poni1)
 
-    def testRoiCtrlWidget(self):
+    def testProjection1DCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
         proc = self.scheduler._roi_proc_train
         proc.update()
 
         # test default reconfigurable values
         self.assertEqual('x', proc._direction)
-        self.assertEqual(VFomNormalizer.AUC, proc._normalizer)
+        self.assertEqual(Normalizer.UNDEFINED, proc._normalizer)
         self.assertEqual((0, math.inf), proc._fom_integ_range)
         self.assertEqual((0, math.inf), proc._auc_range)
 
@@ -198,7 +198,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._auc_range_le.setText("30, 40")
         proc.update()
         self.assertEqual('y', proc._direction)
-        self.assertEqual(VFomNormalizer.ROI3_SUB_ROI4, proc._normalizer)
+        self.assertEqual(Normalizer.ROI3_SUB_ROI4, proc._normalizer)
         self.assertEqual((10, 20), proc._fom_integ_range)
         self.assertEqual((30, 40), proc._auc_range)
 

@@ -26,7 +26,7 @@ from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
     StatisticsCtrlWidget, GeometryCtrlWidget,
-    PumpProbeCtrlWidget, RoiCtrlWidget
+    PumpProbeCtrlWidget, Projection1DCtrlWidget
 )
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
@@ -285,7 +285,7 @@ class MainGUI(QtGui.QMainWindow):
         self.azimuthal_integ_ctrl_widget = self.createCtrlWidget(
             AzimuthalIntegCtrlWidget)
         self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
-        self.roi_ctrl_widget = self.createCtrlWidget(RoiCtrlWidget)
+        self.roi_ctrl_widget = self.createCtrlWidget(Projection1DCtrlWidget)
         self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
         self.pulse_filter_ctrl_widget = self.createCtrlWidget(PulseFilterCtrlWidget)

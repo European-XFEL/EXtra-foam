@@ -17,7 +17,7 @@ from ..exceptions import ProcessingError
 from ...database import MetaProxy
 from ...database import Metadata as mt
 from ...algorithms import normalize_auc
-from ...config import AnalysisType, VFomNormalizer
+from ...config import AnalysisType, Normalizer
 
 
 class State(ABC):
@@ -238,14 +238,17 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
         :param ProcessedData processed: processed data.
         :param numpy.ndarray y: y values.
-        :param VFomNormalizer normalizer: normalizer type.
+        :param Normalizer normalizer: normalizer type.
         :param numpy.ndarray x: x values used with AUC normalizer..
         :param tuple auc_range: normalization range with AUC normalizer.
         """
-        if normalizer == VFomNormalizer.AUC:
+        if normalizer == Normalizer.UNDEFINED:
+            return y
+
+        if normalizer == Normalizer.AUC:
             # normalized by area under curve (AUC)
             normalized = normalize_auc(y, x, auc_range)
-        elif normalizer == VFomNormalizer.XGM:
+        elif normalizer == Normalizer.XGM:
             # normalized by XGM
             intensity = processed.pulse.xgm.intensity
             if intensity is None:
@@ -258,13 +261,13 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized = y / denominator
         else:
             # normalized by ROI
-            if normalizer == VFomNormalizer.ROI3:
+            if normalizer == Normalizer.ROI3:
                 denominator = processed.roi.norm3
-            elif normalizer == VFomNormalizer.ROI4:
+            elif normalizer == Normalizer.ROI4:
                 denominator = processed.roi.norm4
-            elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+            elif normalizer == Normalizer.ROI3_SUB_ROI4:
                 denominator = processed.roi.norm3_sub_norm4
-            elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+            elif normalizer == Normalizer.ROI3_ADD_ROI4:
                 denominator = processed.roi.norm3_add_norm4
             else:
                 raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
@@ -287,15 +290,18 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         :param ProcessedData processed: processed data.
         :param numpy.ndarray y_on: pump y values.
         :param numpy.ndarray y_off: probe y values.
-        :param VFomNormalizer normalizer: normalizer type.
+        :param Normalizer normalizer: normalizer type.
         :param numpy.ndarray x: x values used with AUC normalizer..
         :param tuple auc_range: normalization range with AUC normalizer.
         """
-        if normalizer == VFomNormalizer.AUC:
+        if normalizer == Normalizer.UNDEFINED:
+            return y_on, y_off
+
+        if normalizer == Normalizer.AUC:
             # normalized by area under curve (AUC)
             normalized_on = normalize_auc(y_on, x, auc_range)
             normalized_off = normalize_auc(y_off, x, auc_range)
-        elif normalizer == VFomNormalizer.XGM:
+        elif normalizer == Normalizer.XGM:
             # normalized by XGM
             denominator_on = processed.xgm.on.intensity
             denominator_off = processed.xgm.off.intensity
@@ -317,16 +323,16 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             on = processed.roi.on
             off = processed.roi.off
 
-            if normalizer == VFomNormalizer.ROI3:
+            if normalizer == Normalizer.ROI3:
                 denominator_on = on.norm3
                 denominator_off = off.norm3
-            elif normalizer == VFomNormalizer.ROI4:
+            elif normalizer == Normalizer.ROI4:
                 denominator_on = on.norm4
                 denominator_off = off.norm4
-            elif normalizer == VFomNormalizer.ROI3_SUB_ROI4:
+            elif normalizer == Normalizer.ROI3_SUB_ROI4:
                 denominator_on = on.norm3_sub_norm4
                 denominator_off = off.norm3_sub_norm4
-            elif normalizer == VFomNormalizer.ROI3_ADD_ROI4:
+            elif normalizer == Normalizer.ROI3_ADD_ROI4:
                 denominator_on = on.norm3_add_norm4
                 denominator_off = off.norm3_add_norm4
             else:

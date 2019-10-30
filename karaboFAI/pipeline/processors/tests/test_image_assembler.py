@@ -51,7 +51,10 @@ class TestAgipdAssembler(unittest.TestCase):
                 'SPB_DET_AGIPD1M-1/DET/8CH0:xtdf':
                     {key_name: np.ones((4, 512, 128), dtype=np.float32)},
                 'SPB_DET_AGIPD1M-1/DET/3CH0:xtdf':
-                    {key_name: np.ones((4, 512, 128), dtype=np.float32)}
+                    {key_name: np.ones((4, 512, 128), dtype=np.float32)},
+                # Non detector data source included in streaming from files.
+                # To test stack_detector_data
+                'XGM': {"data.intensitySa1TD": np.ones(60)}
                 },
             'meta': {'source_type': DataSource.FILE},
         }
@@ -65,9 +68,12 @@ class TestAgipdAssembler(unittest.TestCase):
             self._assembler.process(data)
 
         self._assembler._source_name = "SPB_DET_AGIPD1M-1/DET/*CH0:xtdf"
+        # Only AGIPD modules related keys
+        module_keys = [key for key in data['raw'].keys()
+                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
         self._assembler.process(data)
         # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertFalse(any([key in data['raw'] for key in module_keys]))
 
         self.assertEqual(3, data['detector']['assembled'].ndim)
         assembled_shape = data['detector']['assembled'].shape
@@ -169,7 +175,7 @@ class TestLpdAssembler(unittest.TestCase):
                     {key_name: np.ones((4, 256, 256), dtype=np.float32)},
                 # Non detector data source included in streaming from files.
                 # To test stack_detector_data
-                'XGM':{"data.intensitySa1TD": np.ones(60)}
+                'XGM': {"data.intensitySa1TD": np.ones(60)}
             },
             'meta': {'source_type': DataSource.FILE}
         }
@@ -520,14 +526,20 @@ class TestDSSCAssembler(unittest.TestCase):
                     {key_name: np.ones((4, 128, 512), dtype=np.float32)},
                 'SCS_DET_DSSC1M-1/DET/3CH0:xtdf':
                     {key_name: np.ones((4, 128, 512), dtype=np.float32)},
+                # Non detector data source included in streaming from files.
+                # To test stack_detector_data
+                'XGM': {"data.intensitySa3TD": np.ones(60)}
             },
             'meta': {'source_type': DataSource.FILE}
         }
 
         self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
         self._assembler.process(data)
+        # Only DSSC modules related keys
+        module_keys = [key for key in data['raw'].keys()
+                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
         # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertFalse(any([key in data['raw'] for key in module_keys]))
 
         self.assertEqual(3, data['detector']['assembled'].ndim)
         assembled_shape = data['detector']['assembled'].shape

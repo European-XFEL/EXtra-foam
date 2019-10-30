@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-RoiCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -15,19 +13,20 @@ from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import VFomNormalizer
+from ...config import Normalizer
 
 
-class RoiCtrlWidget(AbstractCtrlWidget):
+class Projection1DCtrlWidget(AbstractCtrlWidget):
     """Analysis parameters setup for ROI analysis."""
 
     _available_normalizers = OrderedDict({
-        "AUC": VFomNormalizer.AUC,
-        "XGM": VFomNormalizer.XGM,
-        "ROI3": VFomNormalizer.ROI3,
-        "ROI4": VFomNormalizer.ROI4,
-        "ROI3 - ROI4": VFomNormalizer.ROI3_SUB_ROI4,
-        "ROI3 + ROI4": VFomNormalizer.ROI3_ADD_ROI4,
+        "": Normalizer.UNDEFINED,
+        "AUC": Normalizer.AUC,
+        "XGM": Normalizer.XGM,
+        "ROI3": Normalizer.ROI3,
+        "ROI4": Normalizer.ROI4,
+        "ROI3 - ROI4": Normalizer.ROI3_SUB_ROI4,
+        "ROI3 + ROI4": Normalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):

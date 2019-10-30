@@ -4,7 +4,7 @@ from .bin_ctrl_widget import BinCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
-from .roi_ctrl_widget import RoiCtrlWidget
+from .projection1d_ctrl_widget import Projection1DCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
@@ -21,5 +21,5 @@ __all__ = [
     "StatisticsCtrlWidget",
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",
-    "RoiCtrlWidget",
+    "Projection1DCtrlWidget",
 ]

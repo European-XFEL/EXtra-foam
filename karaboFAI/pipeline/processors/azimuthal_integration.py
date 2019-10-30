@@ -18,7 +18,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import mask_image, slice_curve
-from ...config import VFomNormalizer, AnalysisType, config
+from ...config import Normalizer, AnalysisType, config
 from ...database import Metadata as mt
 from ...utils import profiler
 
@@ -92,7 +92,7 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         self._integ_method = cfg['integ_method']
         self._integ_range = self.str2tuple(cfg['integ_range'])
         self._integ_points = int(cfg['integ_points'])
-        self._normalizer = VFomNormalizer(int(cfg['normalizer']))
+        self._normalizer = Normalizer(int(cfg['normalizer']))
         self._auc_range = self.str2tuple(cfg['auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['fom_integ_range'])
 

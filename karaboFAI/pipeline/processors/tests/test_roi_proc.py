@@ -18,7 +18,7 @@ from karaboFAI.pipeline.exceptions import ProcessingError
 from karaboFAI.pipeline.processors.roi import (
     _RectROI, RoiProcessorTrain, RoiProcessorPulse
 )
-from karaboFAI.config import AnalysisType, VFomNormalizer
+from karaboFAI.config import AnalysisType, Normalizer
 from karaboFAI.pipeline.processors.tests import _BaseProcessorTest
 
 
@@ -176,8 +176,8 @@ class TestRoiProcessorTrain(unittest.TestCase):
         proc._roi4.activated = True
         proc._roi4.rect = [1, 1, 4, 3]
 
-        # normalized by VFomNormalizer.ROI3_ADD_ROI4
-        proc._normalizer = VFomNormalizer.ROI3_ADD_ROI4
+        # normalized by Normalizer.ROI3_ADD_ROI4
+        proc._normalizer = Normalizer.ROI3_ADD_ROI4
 
         proc._has_analysis = MagicMock(return_value=True)
         proc._has_any_analysis = MagicMock(return_value=True)
@@ -189,8 +189,8 @@ class TestRoiProcessorTrain(unittest.TestCase):
         self.assertEqual(0.0, processed.roi.proj1_sub_proj2.fom)
         self.assertEqual(0.5, processed.roi.proj1_add_proj2.fom)
 
-        # normalized by VFomNormalizer.ROI3_SUB_ROI4
-        proc._normalizer = VFomNormalizer.ROI3_SUB_ROI4
+        # normalized by Normalizer.ROI3_SUB_ROI4
+        proc._normalizer = Normalizer.ROI3_SUB_ROI4
 
         proc._roi4.activated = False
         with self.assertRaises(ProcessingError):
