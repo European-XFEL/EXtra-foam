@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-AzimuthalIntegCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -15,19 +13,20 @@ from ..pyqtgraph import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
-from ...config import VFomNormalizer, config
+from ...config import Normalizer, config
 
 
 class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
-        "AUC": VFomNormalizer.AUC,
-        "XGM": VFomNormalizer.XGM,
-        "ROI3": VFomNormalizer.ROI3,
-        "ROI4": VFomNormalizer.ROI4,
-        "ROI3 - ROI4": VFomNormalizer.ROI3_SUB_ROI4,
-        "ROI3 + ROI4": VFomNormalizer.ROI3_ADD_ROI4,
+        "": Normalizer.UNDEFINED,
+        "AUC": Normalizer.AUC,
+        "XGM": Normalizer.XGM,
+        "ROI3": Normalizer.ROI3,
+        "ROI4": Normalizer.ROI4,
+        "ROI3 - ROI4": Normalizer.ROI3_SUB_ROI4,
+        "ROI3 + ROI4": Normalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):

@@ -14,7 +14,7 @@ from ..data_model import MovingAverageArray
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve, mask_image
 from ...database import Metadata as mt
-from ...config import AnalysisType, VFomNormalizer
+from ...config import AnalysisType, Normalizer
 from ...utils import profiler
 
 from karaboFAI.cpp import intersection
@@ -111,7 +111,7 @@ class _RoiProcessBase(_BaseProcessor):
     """Base class for RoiProcessors.
 
     Attributes:
-        _normalizer (VFomNormalizer): normalizer type for calculating
+        _normalizer (Normalizer): normalizer type for calculating
             FOM from 1D projection result.
         _auc_range (tuple): x range for calculating AUC.
         _fom_integ_range (tuple): integration range for calculating
@@ -134,7 +134,7 @@ class _RoiProcessBase(_BaseProcessor):
         self._has_img34 = False
 
         self._direction = 'x'
-        self._normalizer = VFomNormalizer.AUC
+        self._normalizer = Normalizer.AUC
 
         self._auc_range = None
         self._fom_integ_range = None
@@ -158,7 +158,7 @@ class _RoiProcessBase(_BaseProcessor):
         self._roi4.rect = self.str2list(cfg[f'region4'], handler=int)
 
         self._direction = cfg['proj:direction']
-        self._normalizer = VFomNormalizer(int(cfg['proj:normalizer']))
+        self._normalizer = Normalizer(int(cfg['proj:normalizer']))
         self._auc_range = self.str2tuple(cfg['proj:auc_range'])
         self._fom_integ_range = self.str2tuple(cfg['proj:fom_integ_range'])
 
