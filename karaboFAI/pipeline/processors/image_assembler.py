@@ -199,8 +199,9 @@ class ImageAssemblerFactory(ABC):
                 # force to select the "correct" source name
                 raise KeyError(src_name)
 
+            det_data = {k: v for k, v in data.items() if 'AGIPD' in k}
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="AGIPD")
+            return stack_detector_data(det_data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -222,8 +223,9 @@ class ImageAssemblerFactory(ABC):
                 # force to select the "correct" source name
                 raise KeyError(src_name)
 
+            det_data = {k: v for k, v in data.items() if 'LPD' in k}
             # (memory cells, modules, y, x)
-            return stack_detector_data(data, "image.data", only="LPD")
+            return stack_detector_data(det_data, "image.data")
 
         def load_geometry(self, filename, quad_positions):
             """Overload."""
@@ -312,7 +314,8 @@ class ImageAssemblerFactory(ABC):
                 # force to select the "correct" source name
                 raise KeyError(src_name)
 
-            modules_data = stack_detector_data(data, "image.data", only="DSSC")
+            det_data = {k: v for k, v in data.items() if 'DSSC' in k}
+            modules_data = stack_detector_data(det_data, "image.data")
 
             dtype = modules_data.dtype
 
