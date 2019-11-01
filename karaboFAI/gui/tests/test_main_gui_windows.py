@@ -36,12 +36,12 @@ class TestMainGui(unittest.TestCase):
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
         imagetool_action = actions[2]
-        pp_action = actions[3]
-        statistics_action = actions[4]
-        correlation_action = actions[5]
-        bin1d_action = actions[6]
-        bin2d_action = actions[7]
-        poi_action = actions[8]
+        poi_action = actions[3]
+        pp_action = actions[4]
+        statistics_action = actions[5]
+        correlation_action = actions[6]
+        bin1d_action = actions[7]
+        bin2d_action = actions[8]
         ai_action = actions[9]
         # TODO: add ROI
 

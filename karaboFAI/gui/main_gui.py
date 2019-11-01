@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Main karaboFAI GUI.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -186,6 +184,12 @@ class MainGUI(QtGui.QMainWindow):
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
 
+        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
+        open_poi_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
+        if not self._pulse_resolved:
+            open_poi_window_at.setEnabled(False)
+
         pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
@@ -205,12 +209,6 @@ class MainGUI(QtGui.QMainWindow):
         open_bin2d_window_at = self._addAction("Bin 2D", "heatmap.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin2dWindow))
-
-        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
-        open_poi_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
-        if not self._pulse_resolved:
-            open_poi_window_at.setEnabled(False)
 
         open_ai_window_at = self._addAction(
             "Azimuthal Integration", "azimuthal_integration.png")

@@ -46,12 +46,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls._actions = cls.gui._tool_bar.actions()
         cls._start_action = cls._actions[0]
         cls._stop_action = cls._actions[1]
-        cls._pp_action = cls._actions[3]
-        cls._statistics_action = cls._actions[4]
-        cls._correlation_action = cls._actions[5]
-        cls._bin1d_action = cls._actions[6]
-        cls._bin2d_action = cls._actions[7]
-        cls._poi_action = cls._actions[8]
+        cls._poi_action = cls._actions[3]
+        cls._pp_action = cls._actions[4]
+        cls._statistics_action = cls._actions[5]
+        cls._correlation_action = cls._actions[6]
+        cls._bin1d_action = cls._actions[7]
+        cls._bin2d_action = cls._actions[8]
         cls._ai_action = cls._actions[9]
 
     @classmethod

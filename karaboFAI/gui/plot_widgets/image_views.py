@@ -228,34 +228,6 @@ class PumpProbeImageView(ImageViewF):
             self._is_initialized = True
 
 
-class SinglePulseImageView(ImageViewF):
-    """SinglePulseImageView class.
-
-    Widget for displaying the assembled image of a single pulse.
-    """
-    def __init__(self, idx, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.pulse_index = idx
-
-    def update(self, data):
-        """Override."""
-        images = data.image.images
-
-        try:
-            self.setImage(images[self.pulse_index],
-                          auto_levels=(not self._is_initialized))
-        except IndexError:
-            self.clear()
-            return
-
-        self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
-
-
 class RoiImageView(ImageViewF):
     """RoiImageView class.
 

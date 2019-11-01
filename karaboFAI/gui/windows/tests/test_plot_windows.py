@@ -13,7 +13,7 @@ from karaboFAI.gui.windows import (
 from karaboFAI.gui.plot_widgets import (
     TrainAiWidget, FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PoiStatisticsWidget, PulsesInTrainFomWidget, SinglePulseImageView,
+    PulsesInTrainFomWidget,
     RoiImageView,
     Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
     CorrelationWidget,
@@ -137,6 +137,10 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(1, counter[FomHistogramWidget])
 
     def testPulseOfInterestWindow(self):
+        from karaboFAI.gui.windows.pulse_of_interest_w import (
+            SinglePulseImageView, PoiStatisticsWidget
+        )
+
         win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(4, len(win._plot_widgets))

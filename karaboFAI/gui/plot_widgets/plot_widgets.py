@@ -89,37 +89,6 @@ class FomHistogramWidget(PlotWidgetF):
         self._plot.setData(center, counts)
 
 
-class PoiStatisticsWidget(PlotWidgetF):
-    """PoiStatisticsWidget class.
-
-    A widget which allows users to monitor the statistics of the FOM of
-    the POI pulse.
-    """
-    def __init__(self, idx, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.pulse_index = idx
-        self._plot = self.plotBar()
-
-        self.setTitle("FOM Histogram")
-        self.setLabel('left', 'Counts')
-        self.setLabel('bottom', 'FOM')
-
-    def update(self, data):
-        """Override."""
-        bin_centers = data.st.poi_fom_bin_center
-        if bin_centers is None:
-            return
-
-        center = bin_centers[self.pulse_index]
-        counts = data.st.poi_fom_count[self.pulse_index]
-        if center is None:
-            self.reset()
-            return
-        self._plot.setData(center, counts)
-
-
 class CorrelationWidget(PlotWidgetF):
     """CorrelationWidget class.
 
