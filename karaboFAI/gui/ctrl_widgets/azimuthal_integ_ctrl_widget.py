@@ -37,9 +37,9 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._cx_le.setValidator(QtGui.QIntValidator())
         self._cy_le = SmartLineEdit(str(config["CENTER_Y"]))
         self._cy_le.setValidator(QtGui.QIntValidator())
-        self._itgt_method_cb = QtGui.QComboBox()
+        self._integ_method_cb = QtGui.QComboBox()
         for method in config["AZIMUTHAL_INTEG_METHODS"]:
-            self._itgt_method_cb.addItem(method)
+            self._integ_method_cb.addItem(method)
         self._integ_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
         self._integ_pts_le = SmartLineEdit(
@@ -71,7 +71,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Cy (pixel): "), 0, 2, AR)
         layout.addWidget(self._cy_le, 0, 3)
         layout.addWidget(QtGui.QLabel("Integ method: "), 1, 0, AR)
-        layout.addWidget(self._itgt_method_cb, 1, 1)
+        layout.addWidget(self._integ_method_cb, 1, 1)
         layout.addWidget(QtGui.QLabel("Integ points: "), 1, 2, AR)
         layout.addWidget(self._integ_pts_le, 1, 3)
         layout.addWidget(QtGui.QLabel("Integ range (1/A): "), 2, 0, AR)
@@ -96,7 +96,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
             lambda: mediator.onAiIntegCenterYChange(
                 int(self._cy_le.text())))
 
-        self._itgt_method_cb.currentTextChanged.connect(
+        self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)
 
         self._normalizers_cb.currentTextChanged.connect(
@@ -121,8 +121,8 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
 
         self._cy_le.returnPressed.emit()
 
-        self._itgt_method_cb.currentTextChanged.emit(
-            self._itgt_method_cb.currentText())
+        self._integ_method_cb.currentTextChanged.emit(
+            self._integ_method_cb.currentText())
 
         self._normalizers_cb.currentTextChanged.emit(
             self._normalizers_cb.currentText())

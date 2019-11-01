@@ -159,8 +159,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
         self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
-        itgt_method = 'nosplit_csr'
-        widget._itgt_method_cb.setCurrentText(itgt_method)
+        integ_method = 'nosplit_csr'
+        widget._integ_method_cb.setCurrentText(integ_method)
         ai_normalizer = Normalizer.ROI3_SUB_ROI4
         widget._normalizers_cb.setCurrentIndex(ai_normalizer)
         widget._integ_pts_le.setText(str(1024))
@@ -171,7 +171,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._cy_le.setText("1000")
 
         proc.update()
-        self.assertEqual(itgt_method, proc._integ_method)
+        self.assertEqual(integ_method, proc._integ_method)
         self.assertEqual(ai_normalizer, proc._normalizer)
         self.assertEqual(1024, proc._integ_points)
         self.assertTupleEqual((0.1, 0.2), proc._integ_range)
