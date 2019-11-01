@@ -3,17 +3,13 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Hold base classes for windows.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from weakref import WeakKeyDictionary
 
-from PyQt5 import QtGui
-
-from ..pyqtgraph.dockarea import DockArea
+from PyQt5 import QtGui, QtWidgets
 
 from ..mediator import Mediator
 
@@ -109,23 +105,13 @@ class AbstractWindow(QtGui.QMainWindow):
         super().closeEvent(QCloseEvent)
 
 
-class DockerWindow(AbstractWindow):
-    """QMainWindow displaying a single DockArea."""
+class PlotWindow(AbstractWindow):
+    """AbstractWindow consist of plot widgets."""
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._plot_widgets = WeakKeyDictionary()  # book-keeping opened windows
-
-        self._docker_area = DockArea()
-
-    def initUI(self):
-        """Override."""
-        self.initPlotUI()
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(self._docker_area)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self._cw.setLayout(layout)
+        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
 
     def update(self):
         """Update widgets.

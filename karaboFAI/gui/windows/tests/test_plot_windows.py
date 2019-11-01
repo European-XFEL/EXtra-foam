@@ -53,12 +53,12 @@ class TestPlotWindows(unittest.TestCase):
     def testRoiWindow(self):
         win = RoiWindow(pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(4, counter[RoiImageView])
+        self.assertEqual(2, counter[RoiImageView])
 
     def testBin1dWindow(self):
         win = Bin1dWindow(pulse_resolved=True, parent=self.gui)

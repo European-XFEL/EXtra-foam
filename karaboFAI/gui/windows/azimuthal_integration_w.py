@@ -3,20 +3,18 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-AzimuthalIntegrationWindow.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph.dockarea import Dock
+from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import DockerWindow
+from .base_window import PlotWindow
 from ..plot_widgets import TrainAiWidget
 from ...config import config
 
 
-class AzimuthalIntegrationWindow(DockerWindow):
+class AzimuthalIntegrationWindow(PlotWindow):
     """AzimuthalIntegrationWindow class."""
     title = "Azimuthal Integration"
 
@@ -37,11 +35,6 @@ class AzimuthalIntegrationWindow(DockerWindow):
 
     def initUI(self):
         """Override."""
-        super().initUI()
-
-    def initPlotUI(self):
-        """Override."""
-        ai_dock = Dock("Normalized azimuthal Integration",
-                       size=(self._TOTAL_W, self._TOTAL_H))
-        self._docker_area.addDock(ai_dock)
-        ai_dock.addWidget(self._ai)
+        self._cw = QtWidgets.QSplitter()
+        self._cw.addWidget(self._ai)
+        self.setCentralWidget(self._cw)
