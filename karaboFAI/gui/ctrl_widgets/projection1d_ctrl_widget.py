@@ -23,10 +23,10 @@ class Projection1DCtrlWidget(AbstractCtrlWidget):
         "": Normalizer.UNDEFINED,
         "AUC": Normalizer.AUC,
         "XGM": Normalizer.XGM,
-        "ROI3": Normalizer.ROI3,
-        "ROI4": Normalizer.ROI4,
-        "ROI3 - ROI4": Normalizer.ROI3_SUB_ROI4,
-        "ROI3 + ROI4": Normalizer.ROI3_ADD_ROI4,
+        "ROI3 (sum)": Normalizer.ROI3,
+        "ROI4 (sum)": Normalizer.ROI4,
+        "ROI3 (sum) - ROI4 (sum)": Normalizer.ROI3_SUB_ROI4,
+        "ROI3 (sum) + ROI4 (sum)": Normalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):
