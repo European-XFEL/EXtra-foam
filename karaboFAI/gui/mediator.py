@@ -135,7 +135,7 @@ class Mediator(QObject):
         # reset moving average at the same time
         self.onResetMa()
 
-    def onRoiRegionChange(self, value: tuple):
+    def onRoiGeometryChange(self, value: tuple):
         rank, x, y, w, h = value
         self._meta.set(mt.ROI_PROC, f'region{rank}', str((x, y, w, h)))
 

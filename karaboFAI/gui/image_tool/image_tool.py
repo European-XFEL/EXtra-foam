@@ -174,7 +174,7 @@ class _RoiCtrlWidgetBase(QtGui.QWidget):
     corresponding ROI.
     """
     # (rank, x, y, w, h) where rank starts from 1
-    roi_region_change_sgn = QtCore.Signal(object)
+    roi_geometry_change_sgn = QtCore.Signal(object)
     # (rank, visible)
     roi_visibility_change_sgn = QtCore.Signal(object)
 
@@ -201,7 +201,7 @@ class _RoiCtrlWidgetBase(QtGui.QWidget):
         self._line_edits = (self._width_le, self._height_le,
                             self._px_le, self._py_le)
 
-        roi.sigRegionChangeFinished.connect(self.onRoiRegionChangeFinished)
+        roi.sigRegionChangeFinished.connect(self.onRoiGeometryChangeFinished)
 
     @QtCore.pyqtSlot()
     def onRoiPositionEdited(self):
@@ -221,7 +221,7 @@ class _RoiCtrlWidgetBase(QtGui.QWidget):
         # otherwise triggers infinite recursion
         self._roi.stateChanged(finish=False)
 
-        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
+        self.roi_geometry_change_sgn.emit((self._roi.rank, x, y, w, h))
 
     @QtCore.pyqtSlot()
     def onRoiSizeEdited(self):
@@ -240,28 +240,28 @@ class _RoiCtrlWidgetBase(QtGui.QWidget):
         # otherwise triggers infinite recursion
         self._roi.stateChanged(finish=False)
 
-        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
+        self.roi_geometry_change_sgn.emit((self._roi.rank, x, y, w, h))
 
     @QtCore.pyqtSlot(object)
-    def onRoiRegionChangeFinished(self, roi):
+    def onRoiGeometryChangeFinished(self, roi):
         """Connect to the signal from an ROI object."""
         x, y = [int(v) for v in roi.pos()]
         w, h = [int(v) for v in roi.size()]
         self.updateParameters(x, y, w, h)
         # inform widgets outside this window
-        self.roi_region_change_sgn.emit((self._roi.rank, x, y, w, h))
+        self.roi_geometry_change_sgn.emit((self._roi.rank, x, y, w, h))
 
     def notifyRoiParams(self):
         # fill the QLineEdit(s)
         self._roi.sigRegionChangeFinished.emit(self._roi)
 
     def updateParameters(self, x, y, w, h):
-        self.roi_region_change_sgn.disconnect()
+        self.roi_geometry_change_sgn.disconnect()
         self._px_le.setText(str(x))
         self._py_le.setText(str(y))
         self._width_le.setText(str(w))
         self._height_le.setText(str(h))
-        self.roi_region_change_sgn.connect(Mediator().onRoiRegionChange)
+        self.roi_geometry_change_sgn.connect(Mediator().onRoiGeometryChange)
 
     def setEditable(self, editable):
         for w in self._line_edits:
@@ -360,7 +360,7 @@ class _RoiCtrlWidgetGroup(QtGui.QGroupBox):
         mediator = Mediator()
 
         for widget in self._roi_ctrls:
-            widget.roi_region_change_sgn.connect(mediator.onRoiRegionChange)
+            widget.roi_geometry_change_sgn.connect(mediator.onRoiGeometryChange)
             widget.roi_visibility_change_sgn.connect(
                 mediator.onRoiVisibilityChange)
 

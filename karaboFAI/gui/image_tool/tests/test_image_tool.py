@@ -130,11 +130,11 @@ class TestImageTool(unittest.TestCase):
         proc.update()
 
         for i, ctrl in enumerate(widget._roi_ctrls, 1):
-            roi_region = [int(ctrl._px_le.text()),
-                          int(ctrl._py_le.text()),
-                          int(ctrl._width_le.text()),
-                          int(ctrl._height_le.text())]
-            self.assertListEqual(roi_region, getattr(proc, f"_roi{i}").rect)
+            roi_geometry = [int(ctrl._px_le.text()),
+                            int(ctrl._py_le.text()),
+                            int(ctrl._width_le.text()),
+                            int(ctrl._height_le.text())]
+            self.assertListEqual(roi_geometry, getattr(proc, f"_roi{i}").rect)
 
     def testRoiCtrlWidget(self):
         widget = self.image_tool._roi_ctrl_widget
