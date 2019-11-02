@@ -526,6 +526,8 @@ class DataSourceWidget(QtWidgets.QWidget):
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(self._tree_view)
         splitter.addWidget(self._list_container)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
 
         self._tree_view.expandToDepth(1)
         self._tree_view.resizeColumnToContents(0)
