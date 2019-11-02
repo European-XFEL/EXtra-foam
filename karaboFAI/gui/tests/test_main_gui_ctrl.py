@@ -41,8 +41,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls.fai = FAI().init()
 
         cls.gui = cls.fai._gui
-        cls.scheduler = cls.fai.scheduler
-        cls.image_worker = cls.fai.image_worker
+        cls.train_worker = cls.fai.train_worker
+        cls.pulse_worker = cls.fai.pulse_worker
 
         ImageToolWindow.reset()
 
@@ -57,12 +57,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        scheduler = self.scheduler
-        image_worker = self.image_worker
+        train_worker = self.train_worker
+        pulse_worker = self.pulse_worker
 
-        xgm_proc = image_worker._xgm_proc
-        ai_proc = scheduler._ai_proc_train
-        roi_proc = scheduler._roi_proc_train
+        xgm_proc = pulse_worker._xgm_proc
+        ai_proc = train_worker._ai_proc
+        roi_proc = train_worker._roi_proc
 
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
@@ -101,8 +101,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
-        scheduler = self.scheduler
-        proc = scheduler._ai_proc_train
+        train_worker = self.train_worker
+        proc = train_worker._ai_proc
 
         proc.update()
 
@@ -143,7 +143,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testProjection1DCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
-        proc = self.scheduler._roi_proc_train
+        proc = self.train_worker._roi_proc
         proc.update()
 
         # test default reconfigurable values
@@ -165,7 +165,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.image_worker._pp_proc
+        pp_proc = self.pulse_worker._pp_proc
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}
@@ -234,9 +234,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             if isinstance(widget, ConnectionCtrlWidget):
                 break
 
-        scheduler = self.scheduler
-        image_worker = self.image_worker
-        assembler = image_worker._assembler
+        train_worker = self.train_worker
+        pulse_worker = self.pulse_worker
+        assembler = pulse_worker._assembler
 
         # test passing tcp hostname and port
 
@@ -269,19 +269,19 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             if isinstance(widget, GeometryCtrlWidget):
                 break
 
-        image_worker = self.image_worker
+        pulse_worker = self.pulse_worker
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
 
         self.assertTrue(self.gui.updateMetaData())
 
-        image_worker._assembler.update()
-        self.assertIsInstance(image_worker._assembler._geom, LPD_1MGeometry)
+        pulse_worker._assembler.update()
+        self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
 
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
-        image_worker = self.image_worker
-        post_pulse_filter = image_worker._post_pulse_filter
+        pulse_worker = self.pulse_worker
+        post_pulse_filter = pulse_worker._post_pulse_filter
 
         analysis_types = {value: key for key, value in
                           widget._analysis_types.items()}
@@ -307,8 +307,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             self.assertEqual(
                 list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
 
-        scheduler = self.scheduler
-        proc = scheduler._correlation_proc
+        train_worker = self.train_worker
+        proc = train_worker._correlation_proc
 
         proc.update()
 
@@ -359,8 +359,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             self.assertEqual(
                 list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
 
-        scheduler = self.scheduler
-        proc = scheduler._bin_proc
+        train_worker = self.train_worker
+        proc = train_worker._bin_proc
         proc.update()
 
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
@@ -444,8 +444,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testStatisticsCtrlWidget(self):
         widget = self.gui.statistics_ctrl_widget
-        scheduler = self.scheduler
-        proc = scheduler._statistics
+        train_worker = self.train_worker
+        proc = train_worker._statistics
         proc.update()
 
         analysis_types = {value: key for key, value in
@@ -497,8 +497,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
-    @patch('karaboFAI.pipeline.Scheduler.resume', Mock())
-    @patch('karaboFAI.pipeline.Scheduler.pause', Mock())
+    @patch('karaboFAI.pipeline.TrainWorker.resume', Mock())
+    @patch('karaboFAI.pipeline.TrainWorker.pause', Mock())
     def testStartStop(self):
         start_spy = QSignalSpy(self.gui.start_sgn)
         stop_spy = QSignalSpy(self.gui.stop_sgn)
@@ -546,7 +546,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # self.bridge.pause.assert_called_once()
 
     def testPoiWindowCtrl(self):
-        image_proc = self.image_worker._image_proc
+        image_proc = self.pulse_worker._image_proc
 
         # --------------------------
         # test setting POI pulse indices
@@ -597,7 +597,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         cls.fai = FAI().init()
 
         cls.gui = cls.fai._gui
-        cls.image_worker = cls.fai.image_worker
+        cls.pulse_worker = cls.fai.pulse_worker
 
     @classmethod
     def tearDownClass(cls):
@@ -610,7 +610,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.image_worker._pp_proc
+        pp_proc = self.pulse_worker._pp_proc
 
         self.assertFalse(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
@@ -654,7 +654,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         # TODO
 
     def testPoiWindowCtrl(self):
-        image_proc = self.image_worker._image_proc
+        image_proc = self.pulse_worker._image_proc
 
         # POI action is disabled
         poi_action = self.gui._tool_bar.actions()[3]

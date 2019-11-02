@@ -71,8 +71,8 @@ class TestImageTool(unittest.TestCase):
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
-        cls.scheduler = cls.fai.scheduler
-        cls.image_worker = cls.fai.image_worker
+        cls.train_worker = cls.fai.train_worker
+        cls.pulse_worker = cls.fai.pulse_worker
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[2]
@@ -124,7 +124,7 @@ class TestImageTool(unittest.TestCase):
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
         # default values are set correctly
-        proc = self.scheduler._roi_proc_train
+        proc = self.train_worker._roi_proc
         widget = self.image_tool._roi_ctrl_widget
 
         proc.update()
@@ -139,7 +139,7 @@ class TestImageTool(unittest.TestCase):
     def testRoiCtrlWidget(self):
         widget = self.image_tool._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
-        proc = self.scheduler._roi_proc_train
+        proc = self.train_worker._roi_proc
         self.assertEqual(4, len(roi_ctrls))
 
         for ctrl in roi_ctrls:
@@ -249,7 +249,7 @@ class TestImageTool(unittest.TestCase):
 
     def testSetAndRemoveReference(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.image_worker._image_proc
+        proc = self.pulse_worker._image_proc
 
         data = self._get_data()
 
@@ -283,7 +283,7 @@ class TestImageTool(unittest.TestCase):
         from karaboFAI.ipc import ImageMaskPub
 
         pub = ImageMaskPub()
-        proc = self.image_worker._image_proc
+        proc = self.pulse_worker._image_proc
         data = self._get_data()
 
         # trigger the lazily evaluated subscriber
@@ -337,7 +337,7 @@ class TestImageTool(unittest.TestCase):
             proc.process(data)
 
     def testDarkRun(self):
-        image_proc = self.image_worker._image_proc
+        image_proc = self.pulse_worker._image_proc
 
         image_proc.update()
         self.assertFalse(image_proc._recording)
@@ -401,7 +401,7 @@ class TestImageToolTs(unittest.TestCase):
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
-        cls.scheduler = cls.fai.scheduler
+        cls.train_worker = cls.fai.train_worker
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[2]
