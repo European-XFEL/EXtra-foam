@@ -30,7 +30,7 @@ class Projection1DCtrlWidget(AbstractCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("ROI 1D projection analysis setup", *args, **kwargs)
+        super().__init__("ROI 1D projection setup", *args, **kwargs)
 
         self._direct_cb = QtGui.QComboBox()
         for v in ['x', 'y']:
