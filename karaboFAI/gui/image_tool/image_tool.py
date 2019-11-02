@@ -449,6 +449,12 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
             lambda: self.update_image_btn.setEnabled(
                 not self.sender().isChecked()))
 
+    def updateMetaData(self):
+        self.threshold_mask_le.returnPressed.emit()
+        self.darksubtraction_cb.toggled.emit(
+            self.darksubtraction_cb.isChecked())
+        self.bkg_le.returnPressed.emit()
+
 
 class ImageToolWindow(AbstractWindow):
     """ImageToolWindow class.
@@ -637,11 +643,7 @@ class ImageToolWindow(AbstractWindow):
 
     def updateMetaData(self):
         """Override."""
-        widget = self._image_ctrl_widget
-        widget.threshold_mask_le.returnPressed.emit()
-        widget.darksubtraction_cb.toggled.emit(
-            widget.darksubtraction_cb.isChecked())
-        widget.bkg_le.returnPressed.emit()
+        self._image_ctrl_widget.updateMetaData()
 
         return True
 
