@@ -28,13 +28,13 @@ class PoiImageView(ImageViewF):
 
     def update(self, data):
         """Override."""
-        images = data.image.images
         try:
-            self.setImage(images[self._index],
-                          auto_levels=(not self._is_initialized))
-        except IndexError:
+            img = data.image.images[self._index]
+            self.setImage(img, auto_levels=(not self._is_initialized))
+        except (IndexError, TypeError):
             self.clear()
             return
+
         self.updateROI(data)
 
         if not self._is_initialized:

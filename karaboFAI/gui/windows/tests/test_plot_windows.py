@@ -138,7 +138,7 @@ class TestPlotWindows(unittest.TestCase):
 
     def testPulseOfInterestWindow(self):
         from karaboFAI.gui.windows.pulse_of_interest_w import (
-            SinglePulseImageView, PoiStatisticsWidget
+            PoiImageView, PoiStatisticsWidget
         )
 
         win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
@@ -148,7 +148,7 @@ class TestPlotWindows(unittest.TestCase):
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(2, counter[SinglePulseImageView])
+        self.assertEqual(2, counter[PoiImageView])
         self.assertEqual(2, counter[PoiStatisticsWidget])
 
     def testAzimuthalIntegrationWindow(self):

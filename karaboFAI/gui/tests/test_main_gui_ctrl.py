@@ -16,6 +16,7 @@ from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
+from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import PulseOfInterestWindow
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
@@ -43,16 +44,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls.scheduler = cls.fai.scheduler
         cls.image_worker = cls.fai.image_worker
 
-        cls._actions = cls.gui._tool_bar.actions()
-        cls._start_action = cls._actions[0]
-        cls._stop_action = cls._actions[1]
-        cls._poi_action = cls._actions[3]
-        cls._pp_action = cls._actions[4]
-        cls._statistics_action = cls._actions[5]
-        cls._correlation_action = cls._actions[6]
-        cls._bin1d_action = cls._actions[7]
-        cls._bin2d_action = cls._actions[8]
-        cls._ai_action = cls._actions[9]
+        ImageToolWindow.reset()
 
     @classmethod
     def tearDownClass(cls):
@@ -68,40 +60,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         scheduler = self.scheduler
         image_worker = self.image_worker
 
-        image_proc = image_worker._image_proc
         xgm_proc = image_worker._xgm_proc
         ai_proc = scheduler._ai_proc_train
         roi_proc = scheduler._roi_proc_train
-
-        # --------------------------
-        # test setting POI pulse indices
-        # --------------------------
-        self._poi_action.trigger()
-        window = [w for w in self.gui._windows
-                  if isinstance(w, PulseOfInterestWindow)][0]
-
-        # default values
-        poi_index1 = int(widget._poi_index1_le.text())
-        self.assertEqual(poi_index1, window._poi1_img.pulse_index)
-        poi_index2 = int(widget._poi_index2_le.text())
-        self.assertEqual(poi_index2, window._poi2_img.pulse_index)
-
-        image_proc.update()
-        self.assertEqual(poi_index1, image_proc._poi_indices[0])
-        self.assertEqual(poi_index2, image_proc._poi_indices[1])
-
-        # set new values
-        poi_index1 = 10
-        widget._poi_index1_le.setText(str(poi_index1))
-        self.assertEqual(poi_index1, window._poi1_img.pulse_index)
-
-        poi_index2 = 20
-        widget._poi_index2_le.setText(str(poi_index2))
-        self.assertEqual(poi_index2, window._poi2_img.pulse_index)
-
-        image_proc.update()
-        self.assertEqual(poi_index1, image_proc._poi_indices[0])
-        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
         # test params sent to AzimuthalIntegrationProcessor
         ai_proc.update()
@@ -348,8 +309,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         scheduler = self.scheduler
         proc = scheduler._correlation_proc
-        self._correlation_action.trigger()
-        window = list(self.gui._windows.keys())[-1]
 
         proc.update()
 
@@ -548,7 +507,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # test when the start action button is clicked
         # -------------------------------------------------------------
 
-        self._start_action.trigger()
+        start_action = self.gui._tool_bar.actions()[0]
+        stop_action = self.gui._tool_bar.actions()[1]
+
+        start_action.trigger()
 
         self.gui.pump_probe_ctrl_widget.updateMetaData. \
             assert_called_once()
@@ -560,8 +522,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.gui.azimuthal_integ_ctrl_widget.onStart.assert_called_once()
         self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
 
-        self.assertFalse(self._start_action.isEnabled())
-        self.assertTrue(self._stop_action.isEnabled())
+        self.assertFalse(start_action.isEnabled())
+        self.assertTrue(stop_action.isEnabled())
 
         # FIXME
         # self.bridge.activate.assert_called_once()
@@ -570,18 +532,58 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # test when the start action button is clicked
         # -------------------------------------------------------------
 
-        self._stop_action.trigger()
+        stop_action.trigger()
 
         self.gui.azimuthal_integ_ctrl_widget.onStop.assert_called_once()
         self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
 
         self.assertEqual(1, len(stop_spy))
 
-        self.assertTrue(self._start_action.isEnabled())
-        self.assertFalse(self._stop_action.isEnabled())
+        self.assertTrue(start_action.isEnabled())
+        self.assertFalse(stop_action.isEnabled())
 
         # FIXME
         # self.bridge.pause.assert_called_once()
+
+    def testPoiWindowCtrl(self):
+        image_proc = self.image_worker._image_proc
+
+        # --------------------------
+        # test setting POI pulse indices
+        # --------------------------
+        poi_action = self.gui._tool_bar.actions()[3]
+        poi_action.trigger()
+
+        window = [w for w in self.gui._windows
+                  if isinstance(w, PulseOfInterestWindow)][0]
+
+        # default values
+        default_index1 = int(window._poi_widget1._index_le.text())
+        self.assertEqual(default_index1, window._poi_widget1._poi_img._index)
+        self.assertEqual(default_index1, window._poi_widget1._poi_statistics._index)
+
+        default_index2 = int(window._poi_widget2._index_le.text())
+        self.assertEqual(default_index2, window._poi_widget2._poi_img._index)
+        self.assertEqual(default_index2, window._poi_widget2._poi_statistics._index)
+
+        image_proc.update()
+        self.assertEqual(default_index1, image_proc._poi_indices[0])
+        self.assertEqual(default_index2, image_proc._poi_indices[1])
+
+        # set new values
+        poi_index1 = 10
+        window._poi_widget1._index_le.setText(str(poi_index1))
+        self.assertEqual(poi_index1, window._poi_widget1._poi_img._index)
+        self.assertEqual(poi_index1, window._poi_widget1._poi_statistics._index)
+
+        poi_index2 = 20
+        window._poi_widget2._index_le.setText(str(poi_index2))
+        self.assertEqual(poi_index2, window._poi_widget2._poi_img._index)
+        self.assertEqual(poi_index2, window._poi_widget2._poi_statistics._index)
+
+        image_proc.update()
+        self.assertEqual(poi_index1, image_proc._poi_indices[0])
+        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
 
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
@@ -605,22 +607,6 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
-
-    def testAnalysisCtrlWidget(self):
-        widget = self.gui.analysis_ctrl_widget
-
-        self.assertFalse(widget._poi_index1_le.isEnabled())
-        self.assertFalse(widget._poi_index2_le.isEnabled())
-
-        image_proc = self.image_worker._image_proc
-
-        # Although the widgets are disabled, they still send values to
-        # the processor - test default values
-        self.assertEqual(0, int(widget._poi_index1_le.text()))
-        self.assertEqual(0, int(widget._poi_index2_le.text()))
-        image_proc.update()
-        self.assertEqual(0, image_proc._poi_indices[0])
-        self.assertEqual(0, image_proc._poi_indices[1])
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -666,3 +652,13 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
     def testStatisticsCtrlWidget(self):
         pass
         # TODO
+
+    def testPoiWindowCtrl(self):
+        image_proc = self.image_worker._image_proc
+
+        # POI action is disabled
+        poi_action = self.gui._tool_bar.actions()[3]
+        self.assertFalse(poi_action.isEnabled())
+
+        image_proc.update()
+        self.assertIsNone(image_proc._poi_indices)

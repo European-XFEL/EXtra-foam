@@ -17,7 +17,7 @@ app = mkQApp()
 logger.setLevel('CRITICAL')
 
 
-class TestMainGui(unittest.TestCase):
+class TestOpenCloseWindows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # do not use the config file in the current computer
