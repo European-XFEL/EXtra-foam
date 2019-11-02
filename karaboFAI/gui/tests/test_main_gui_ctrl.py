@@ -101,6 +101,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget
+        all_normalizers = {value: key for key, value in
+                           widget._available_normalizers.items()}
         train_worker = self.train_worker
         proc = train_worker._ai_proc
 
@@ -120,20 +122,17 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
         self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
 
-        integ_method = 'nosplit_csr'
-        widget._integ_method_cb.setCurrentText(integ_method)
-        ai_normalizer = Normalizer.ROI3_SUB_ROI4
-        widget._normalizers_cb.setCurrentIndex(ai_normalizer)
+        widget._integ_method_cb.setCurrentText('nosplit_csr')
+        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_ADD_ROI4])
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
         widget._auc_range_le.setText("0.2, 0.3")
         widget._fom_integ_range_le.setText("0.3, 0.4")
         widget._cx_le.setText("-1000")
         widget._cy_le.setText("1000")
-
         proc.update()
-        self.assertEqual(integ_method, proc._integ_method)
-        self.assertEqual(ai_normalizer, proc._normalizer)
+        self.assertEqual('nosplit_csr', proc._integ_method)
+        self.assertEqual(Normalizer.ROI3_ADD_ROI4, proc._normalizer)
         self.assertEqual(1024, proc._integ_points)
         self.assertTupleEqual((0.1, 0.2), proc._integ_range)
         self.assertTupleEqual((0.2, 0.3), proc._auc_range)
@@ -143,6 +142,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testProjection1DCtrlWidget(self):
         widget = self.gui.roi_ctrl_widget
+        all_normalizers = {value: key for key, value in
+                           widget._available_normalizers.items()}
+
         proc = self.train_worker._roi_proc
         proc.update()
 
@@ -154,7 +156,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         # test setting new values
         widget._direct_cb.setCurrentText('y')
-        widget._normalizers_cb.setCurrentText('ROI3 - ROI4')
+        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_SUB_ROI4])
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
