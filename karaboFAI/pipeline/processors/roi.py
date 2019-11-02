@@ -302,6 +302,18 @@ class RoiProcessorTrain(_RoiProcessBase):
     def process(self, data):
         processed = data['processed']
 
+        # update ROIs' information
+        # FIXME: test the new ROI geom interface
+        roi = processed.roi
+        roi[0].activated = self._roi1.activated
+        roi[0].set_geometry(self._roi1.rect)
+        roi[1].activated = self._roi2.activated
+        roi[1].set_geometry(self._roi2.rect)
+        roi[2].activated = self._roi3.activated
+        roi[2].set_geometry(self._roi3.rect)
+        roi[3].activated = self._roi4.activated
+        roi[3].set_geometry(self._roi4.rect)
+
         error_messages = []
 
         self._process_rois(processed)

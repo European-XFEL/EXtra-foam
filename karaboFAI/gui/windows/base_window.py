@@ -183,3 +183,80 @@ class _AbstractSatelliteWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
         if parent is not None:
             parent.unregisterSatelliteWindow(self)
         super().closeEvent(QCloseEvent)
+
+
+class _AbstractSpecialAnalysisWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
+    """Base class for special analysis windows."""
+    title = ""
+
+    _SPLITTER_HANDLE_WIDTH = 5
+
+    def __init__(self, data=None, *, pulse_resolved=True, parent=None):
+        """Initialization.
+
+        :param Data4Visualization data: the data shared by widgets
+            and windows.
+        :param bool pulse_resolved: whether the related data is
+            pulse-resolved or not.
+        """
+        super().__init__(parent=parent)
+        if parent is not None:
+            parent.registerSpecialWindow(self)
+
+        self._mediator = Mediator()
+
+        self._data = data
+        self._pulse_resolved = pulse_resolved
+
+        try:
+            if self.title:
+                title = parent.title + " - " + self.title
+            else:
+                title = parent.title
+
+            self.setWindowTitle(title)
+        except AttributeError:
+            # for unit test where parent is None
+            self.setWindowTitle(self.title)
+
+        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
+
+        self._cw = QtWidgets.QSplitter()
+        self.setCentralWidget(self._cw)
+
+        self.show()
+
+    def updateWidgetsF(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        if self._data is None:
+            return
+
+        data = self._data.get()
+        if data is None:
+            return
+
+        for widget in self._plot_widgets:
+            widget.updateF(data)
+
+    def reset(self):
+        """Reset data in widgets.
+
+        This method is called by the main GUI.
+        """
+        for widget in self._plot_widgets:
+            widget.reset()
+
+    def registerPlotWidget(self, instance):
+        self._plot_widgets[instance] = 1
+
+    def unregisterPlotWidget(self, instance):
+        del self._plot_widgets[instance]
+
+    def closeEvent(self, QCloseEvent):
+        parent = self.parent()
+        if parent is not None:
+            parent.unregisterSpecialWindow(self)
+        super().closeEvent(QCloseEvent)

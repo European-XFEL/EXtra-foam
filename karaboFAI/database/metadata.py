@@ -47,6 +47,7 @@ class Metadata(metaclass=MetaMetadata):
     STATISTICS_PROC = "meta:proc:statistics"
     PULSE_FILTER_PROC = "meta:proc:pulse_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
+    TR_XAS = "meta:proc:tr_xas"
 
     # This is different from all the previous ones, which are all hashes.
     # The real key depends on the category of the data source. For example,

@@ -457,7 +457,7 @@ class _RoiGeomBase(abc.ABC):
 
 
 class _RectRoiGeom(_RoiGeomBase):
-    """_RectRoiGeom class."""
+    """RectRoiGeom class."""
     def __init__(self):
         super().__init__()
 
@@ -468,10 +468,13 @@ class _RectRoiGeom(_RoiGeomBase):
 
     def rect(self, data, copy=False):
         """Overload."""
-        shape = data[-2:]
+        if not self._activated:
+            return None
+
+        shape = data.shape[-2:]
         x, y, w, h = intersection([self._x, self._y, self._w, self._h],
                                   [0, 0, shape[1], shape[0]])
-        if w < 0 or h < 0 or not self._activated:
+        if w < 0 or h < 0:
             return None
         return np.array(data[..., y:y + h, x:x + w], copy=copy)
 
@@ -481,7 +484,7 @@ class _RectRoiGeom(_RoiGeomBase):
 
 
 class _CircleRoiGeom(_RoiGeomBase):
-    """RectRoiItem class."""
+    """CircleRoiItem class."""
     def __init__(self):
         super().__init__()
 
@@ -521,7 +524,7 @@ class RoiData(_RoiAuxData):
         self.rect3 = [0, 0, -1, -1]
         self.rect4 = [0, 0, -1, -1]
 
-        self.__geoms = [_RectRoiGeom] * 4
+        self.__geoms = [_RectRoiGeom() for i in range(4)]
 
         # for normalization: calculated from ROI3 and ROI4
         self.on = _RoiAuxData()
@@ -911,6 +914,18 @@ class PulseIndexMask:
         return np.where(self._indices[:n])[0]
 
 
+class XasData:
+    def __init__(self):
+        self.delay_bin_centers = None
+        self.delay_bin_counts = None
+        self.a13_stats = None
+        self.a23_stats = None
+        self.a21_stats = None
+        self.energy_bin_centers = None
+        self.a21_heat = None
+        self.a21_heatcount = None
+
+
 class ProcessedData:
     """A class which stores the processed data.
 
@@ -957,6 +972,8 @@ class ProcessedData:
         self.st = StatisticsData()
         self.corr = CorrelationData()
         self.bin = BinData()
+
+        self.trxas = XasData()
 
         self.pulse = self.PulseData()
 

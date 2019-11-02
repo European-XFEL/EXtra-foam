@@ -588,6 +588,46 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(poi_index1, image_proc._poi_indices[0])
         self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
+    def testTrXasCtrl(self):
+        from karaboFAI.gui.ctrl_widgets.trxas_ctrl_widget import (
+            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE,
+        )
+        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
+
+        widget = self.gui._trxas_ctrl_widget
+        proc = self.train_worker._tr_xas
+
+        # test default values
+        proc.update()
+        self.assertTupleEqual(default_bin_range, proc._delay_range)
+        self.assertTupleEqual(default_bin_range, proc._energy_range)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_delay_bins)
+        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_energy_bins)
+
+        widget._energy_device_le.setText("new mono")
+        widget._energy_ppt_le.setText("new mono ppt")
+        widget._delay_device_le.setText("new phase shifter")
+        widget._delay_ppt_le.setText("new phase shifter ppt")
+        widget._delay_range_le.setText("-1, 1")
+        widget._energy_range_le.setText("-1.0, 1.0")
+        widget._n_delay_bins_le.setText("100")
+        widget._n_energy_bins_le.setText("1000")
+        proc.update()
+        self.assertEqual("new mono", proc._energy_device)
+        self.assertEqual("new mono ppt", proc._energy_ppt)
+        self.assertEqual("new phase shifter", proc._delay_device)
+        self.assertEqual("new phase shifter ppt", proc._delay_ppt)
+        self.assertTupleEqual((-1, 1), proc._delay_range)
+        self.assertTupleEqual((-1.0, 1.0), proc._energy_range)
+        self.assertEqual(100, proc._n_delay_bins)
+        self.assertEqual(1000, proc._n_energy_bins)
+
+        # test reset button
+        proc._reset = False
+        widget._reset_btn.clicked.emit()
+        proc.update()
+        self.assertTrue(proc._reset)
+
 
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
     @classmethod

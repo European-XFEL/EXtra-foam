@@ -28,6 +28,7 @@ from .processors import (
     RoiProcessorTrain,
     StatisticsProcessor,
     XgmProcessor,
+    TrXasProcessor,
 )
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
@@ -239,10 +240,13 @@ class TrainWorker(ProcessWorker):
         self._correlation_proc = CorrelationProcessor()
         self._bin_proc = BinProcessor()
 
+        self._tr_xas = TrXasProcessor()
+
         self._tasks = [
             self._roi_proc,
             self._ai_proc,
             self._statistics,
             self._correlation_proc,
             self._bin_proc,
+            self._tr_xas,
         ]

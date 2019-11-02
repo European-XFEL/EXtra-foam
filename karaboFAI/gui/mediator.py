@@ -211,3 +211,36 @@ class Mediator(QObject):
 
     def onRdRemoveDark(self):
         self._meta.set(mt.GLOBAL_PROC, "remove_dark", 1)
+
+    def onTrXasToggled(self, value: IntEnum, enabled: bool):
+        if enabled:
+            self._meta.set(mt.TR_XAS, "analysis_type", int(value))
+        else:
+            self._meta.delete(mt.TR_XAS, "analysis_type")
+
+    def onTrXasDelayDeviceChange(self, value: str):
+        self._meta.set(mt.TR_XAS, "delay_device", value)
+
+    def onTrXasDelayPropertyChange(self, value: str):
+        self._meta.set(mt.TR_XAS, "delay_property", value)
+
+    def onTrXasEnergyDeviceChange(self, value: str):
+        self._meta.set(mt.TR_XAS, "energy_device", value)
+
+    def onTrXasEnergyPropertyChange(self, value: str):
+        self._meta.set(mt.TR_XAS, "energy_property", value)
+
+    def onTrXasNoDelayBinsChange(self, value: int):
+        self._meta.set(mt.TR_XAS, "n_delay_bins", value)
+
+    def onTrXasDelayRangeChange(self, value: tuple):
+        self._meta.set(mt.TR_XAS, "delay_range", str(value))
+
+    def onTrXasNoEnergyBinsChange(self, value: int):
+        self._meta.set(mt.TR_XAS, "n_energy_bins", value)
+
+    def onTrXasEnergyRangeChange(self, value: tuple):
+        self._meta.set(mt.TR_XAS, "energy_range", str(value))
+
+    def onTrXasReset(self):
+        self._meta.set(mt.TR_XAS, "reset", 1)

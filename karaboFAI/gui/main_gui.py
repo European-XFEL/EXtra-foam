@@ -24,14 +24,16 @@ from .ctrl_widgets import (
     AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
     StatisticsCtrlWidget, GeometryCtrlWidget,
-    PumpProbeCtrlWidget, Projection1DCtrlWidget
+    PumpProbeCtrlWidget, Projection1DCtrlWidget,
+    TrXasCtrlWidget,
 )
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
     ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
-    PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow
+    PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow,
+    TrXasWindow
 )
 from .. import __version__
 from ..config import config
@@ -121,6 +123,7 @@ class MainGUI(QtWidgets.QMainWindow):
     _db = RedisConnection()
 
     _SPLITTER_HANDLE_WIDTH = 9
+    _SPECIAL_ANALYSIS_ICON_WIDTH = 100
 
     _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
 
@@ -164,6 +167,8 @@ class MainGUI(QtWidgets.QMainWindow):
         self._analysis_cw.setWidgetResizable(True)
         self._geometry_cw = QtWidgets.QScrollArea()
         self._geometry_cw.setWidgetResizable(True)
+        self._special_analysis_cw = QtWidgets.QScrollArea()
+        self._special_analysis_cw.setWidgetResizable(True)
 
         self._util_panel_cw = QtWidgets.QTabWidget()
 
@@ -235,6 +240,12 @@ class MainGUI(QtWidgets.QMainWindow):
         open_help_at.triggered.connect(self.openAboutWindow)
 
         # *************************************************************
+        # Special analysis
+        # *************************************************************
+
+        self._trxas_btn = self._addSpecial("tr_xas.png", TrXasWindow)
+
+        # *************************************************************
         # Miscellaneous
         # *************************************************************
 
@@ -243,6 +254,7 @@ class MainGUI(QtWidgets.QMainWindow):
         # book-keeping opened windows
         self._windows = WeakKeyDictionary()
         self._satellite_windows = WeakKeyDictionary()
+        self._special_windows = WeakKeyDictionary()
 
         # book-keeping control widgets
         self._ctrl_widgets = []
@@ -279,6 +291,8 @@ class MainGUI(QtWidgets.QMainWindow):
         # *************************************************************
         # control widgets
         # *************************************************************
+
+        self._trxas_ctrl_widget = self.createCtrlWidget(TrXasCtrlWidget)
 
         self.registerCtrlWidget(self._source_cw.connection_ctrl_widget)
 
@@ -347,9 +361,11 @@ class MainGUI(QtWidgets.QMainWindow):
             self._geometry_cw, "Geometry setup")
         if not config['REQUIRE_GEOMETRY']:
             self._ctrl_panel_cw.setTabEnabled(geom_tab, False)
+        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special Analysis")
 
         self.initAnalysisUI()
         self.initGeometryUI()
+        self.initSpecialAnalysisUI()
 
     def initAnalysisUI(self):
         left_ctrl_widget = QtWidgets.QWidget()
@@ -380,6 +396,20 @@ class MainGUI(QtWidgets.QMainWindow):
         layout.addWidget(self.geometry_ctrl_widget)
         layout.addStretch(1)
         self._geometry_cw.setLayout(layout)
+
+    def initSpecialAnalysisUI(self):
+        ctrl_widget = QtWidgets.QTabWidget()
+        ctrl_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+        ctrl_widget.addTab(self._trxas_ctrl_widget, "Tr-XAS")
+
+        icon_layout = QtGui.QVBoxLayout()
+        icon_layout.addWidget(self._trxas_btn)
+        icon_layout.addStretch(1)
+
+        layout = QtGui.QHBoxLayout()
+        layout.addWidget(ctrl_widget)
+        layout.addLayout(icon_layout)
+        self._special_analysis_cw.setLayout(layout)
 
     def initUtilUI(self):
         self._util_panel_cw.addTab(self._logger.widget, "Logger")
@@ -434,8 +464,12 @@ class MainGUI(QtWidgets.QMainWindow):
             logger.info(f"Bad train with ID: {tid}")
             return
 
+        for w in self._special_windows.keys():
+            w.updateWidgetsF()
+
         for w in self._windows.keys():
             w.updateWidgetsF()
+
         logger.debug(f"Plot train with ID: {tid}")
 
     def _update_process_monitoring(self):
@@ -464,6 +498,17 @@ class MainGUI(QtWidgets.QMainWindow):
         self._tool_bar.addAction(action)
         return action
 
+    def _addSpecial(self, filename, instance_type):
+        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
+        btn = QtWidgets.QPushButton()
+        btn.setIcon(icon)
+        btn.setIconSize(QtCore.QSize(self._SPECIAL_ANALYSIS_ICON_WIDTH,
+                                     self._SPECIAL_ANALYSIS_ICON_WIDTH))
+        btn.setFixedSize(btn.minimumSizeHint())
+        btn.clicked.connect(
+            lambda: self.openSpecialAnalysisWindow(instance_type))
+        return btn
+
     def onOpenPlotWindow(self, instance_type):
         """Open a plot window if it does not exist.
 
@@ -482,6 +527,12 @@ class MainGUI(QtWidgets.QMainWindow):
         w = ProcessMonitor(parent=self)
         self.process_info_sgn.connect(w.onProcessInfoUpdate)
         return w
+
+    def openSpecialAnalysisWindow(self, instance_type):
+        if self._checkSpecialWindowExistence(instance_type):
+            return
+
+        instance_type(self._data, parent=self)
 
     def openFileStreamControllerWindow(self):
         if self._checkSatelliteWindowExistence(FileStreamControllerWindow):
@@ -517,6 +568,19 @@ class MainGUI(QtWidgets.QMainWindow):
 
     def _checkSatelliteWindowExistence(self, instance_type):
         for key in self._satellite_windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return True
+        return False
+
+    def registerSpecialWindow(self, instance):
+        self._special_windows[instance] = 1
+
+    def unregisterSpecialWindow(self, instance):
+        del self._special_windows[instance]
+
+    def _checkSpecialWindowExistence(self, instance_type):
+        for key in self._special_windows:
             if isinstance(key, instance_type):
                 key.activateWindow()
                 return True

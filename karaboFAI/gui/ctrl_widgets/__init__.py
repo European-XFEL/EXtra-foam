@@ -9,6 +9,7 @@ from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .smart_widgets import SmartLineEdit
+from .trxas_ctrl_widget import TrXasCtrlWidget
 
 
 # add control widgets
@@ -23,5 +24,6 @@ __all__ = [
     "GeometryCtrlWidget",
     "PumpProbeCtrlWidget",
     "Projection1DCtrlWidget",
-    "SmartLineEdit"
+    "SmartLineEdit",
+    "TrXasCtrlWidget",
 ]
