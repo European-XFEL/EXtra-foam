@@ -22,6 +22,8 @@ class AbstractWindow(QtGui.QMainWindow):
     """
     title = ""
 
+    _SPLITTER_HANDLE_WIDTH = 5
+
     def __init__(self, data=None, *, pulse_resolved=True, parent=None):
         """Initialization.
 

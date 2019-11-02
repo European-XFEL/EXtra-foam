@@ -11,35 +11,37 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 
 from .base_window import PlotWindow
 from ..plot_widgets import ImageViewF, PlotWidgetF
+from ..ctrl_widgets import SmartLineEdit
 from ...config import config
 
 
-class SinglePulseImageView(ImageViewF):
-    """SinglePulseImageView class.
+class PoiImageView(ImageViewF):
+    """PoiImageView class.
 
-    Widget for displaying the assembled image of a single pulse.
+    Widget for displaying the assembled image of pulse-of-interest.
     """
     def __init__(self, idx, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_index = idx
+        self._index = idx
 
     def update(self, data):
         """Override."""
         images = data.image.images
-
         try:
-            self.setImage(images[self.pulse_index],
+            self.setImage(images[self._index],
                           auto_levels=(not self._is_initialized))
         except IndexError:
             self.clear()
             return
-
         self.updateROI(data)
 
         if not self._is_initialized:
             self._is_initialized = True
+
+    def setPulseIndex(self, value):
+        self._index = value
 
 
 class PoiStatisticsWidget(PlotWidgetF):
@@ -52,7 +54,7 @@ class PoiStatisticsWidget(PlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.pulse_index = idx
+        self._index = idx
         self._plot = self.plotBar()
 
         self.setTitle("FOM Histogram")
@@ -65,12 +67,60 @@ class PoiStatisticsWidget(PlotWidgetF):
         if bin_centers is None:
             return
 
-        center = bin_centers[self.pulse_index]
-        counts = data.st.poi_fom_count[self.pulse_index]
+        center = bin_centers[self._index]
+        counts = data.st.poi_fom_count[self._index]
         if center is None:
             self.reset()
             return
         self._plot.setData(center, counts)
+
+    def setPulseIndex(self, value):
+        self._index = value
+
+
+class PoiWidget(QtWidgets.QWidget):
+    """PoiWidget class."""
+    _index_validator = QtGui.QIntValidator(
+        0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
+
+    pulse_index_sgn = QtCore.pyqtSignal(int)
+
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+
+        index = 0
+        self._index_le = SmartLineEdit(str(index))
+        self._index_le.setValidator(self._index_validator)
+        # register in the parent PlotWindow
+        self._poi_img = PoiImageView(index, parent=parent)
+        self._poi_statistics = PoiStatisticsWidget(index, parent=parent)
+
+        self.initUI()
+        self.initConnections()
+
+    def initUI(self):
+        ctrl_layout = QtGui.QHBoxLayout()
+        ctrl_layout.addWidget(QtWidgets.QLabel("Pulse index: "))
+        ctrl_layout.addWidget(self._index_le)
+        ctrl_layout.addStretch(1)
+
+        layout = QtGui.QGridLayout()
+        layout.addLayout(ctrl_layout, 0, 0, 1, 2)
+        layout.addWidget(self._poi_img, 1, 0, 1, 1)
+        layout.addWidget(self._poi_statistics, 1, 1, 1, 1)
+        self.setLayout(layout)
+
+    def initConnections(self):
+        self._index_le.returnPressed.connect(
+            lambda: self._onPulseIndexUpdate(int(self._index_le.text())))
+
+    def _onPulseIndexUpdate(self, value):
+        self._poi_img.setPulseIndex(value)
+        self._poi_statistics.setPulseIndex(value)
+        self.pulse_index_sgn.emit(value)
+
+    def updatePulseIndex(self):
+        self._index_le.returnPressed.emit()
 
 
 class PulseOfInterestWindow(PlotWindow):
@@ -83,54 +133,32 @@ class PulseOfInterestWindow(PlotWindow):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._poi1_img = SinglePulseImageView(0, parent=self)
-        self._poi2_img = SinglePulseImageView(0, parent=self)
-
-        self._poi1_statistics = PoiStatisticsWidget(0, parent=self)
-        self._poi2_statistics = PoiStatisticsWidget(0, parent=self)
+        self._poi_widget1 = PoiWidget(parent=self)
+        self._poi_widget2 = PoiWidget(parent=self)
 
         self.initUI()
+        self.initConnections()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
 
-        self.initConnections()
         self.update()
 
     def initUI(self):
         """Override."""
         self._cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        left_panel = QtWidgets.QSplitter()
-        right_panel = QtWidgets.QSplitter()
-        self._cw.addWidget(left_panel)
-        self._cw.addWidget(right_panel)
+        self._cw.addWidget(self._poi_widget1)
+        self._cw.addWidget(self._poi_widget2)
         self.setCentralWidget(self._cw)
-
-        left_panel.addWidget(self._poi1_img)
-        left_panel.addWidget(self._poi1_statistics)
-        # A value smaller than the minimal size hint of the respective
-        # widget will be replaced by the value of the hint.
-        left_panel.setSizes([self._TOTAL_W, self._TOTAL_W])
-
-        right_panel.addWidget(self._poi2_img)
-        right_panel.addWidget(self._poi2_statistics)
-        right_panel.setSizes([self._TOTAL_W, self._TOTAL_W])
+        self._cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
 
     def initConnections(self):
         """Override."""
-        if self._pulse_resolved:
-            mediator = self._mediator
-            mediator.poi_index1_sgn.connect(self.onPulseID1Updated)
-            mediator.poi_index2_sgn.connect(self.onPulseID2Updated)
-            mediator.poi_indices_connected_sgn.emit()
+        self._poi_widget1.pulse_index_sgn.connect(
+            lambda x: self._mediator.onPoiIndexChange(1, x))
+        self._poi_widget1.updatePulseIndex()
 
-    @QtCore.pyqtSlot(int)
-    def onPulseID1Updated(self, value):
-        self._poi1_img.pulse_index = value
-        self._poi1_statistics.pulse_index = value
-
-    @QtCore.pyqtSlot(int)
-    def onPulseID2Updated(self, value):
-        self._poi2_img.pulse_index = value
-        self._poi2_statistics.pulse_index = value
+        self._poi_widget2.pulse_index_sgn.connect(
+            lambda x: self._mediator.onPoiIndexChange(2, x))
+        self._poi_widget2.updatePulseIndex()

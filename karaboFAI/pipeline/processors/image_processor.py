@@ -75,8 +75,12 @@ class ImageProcessor(_BaseProcessor):
         # global
         gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
 
-        self._poi_indices = [int(gp_cfg['poi1_index']),
-                             int(gp_cfg['poi2_index'])]
+        try:
+            self._poi_indices = [int(gp_cfg['poi1_index']),
+                                 int(gp_cfg['poi2_index'])]
+        except KeyError:
+            # PoiWindow has not been opened yet.
+            pass
 
         if 'remove_dark' in gp_cfg:
             self._meta.delete(mt.GLOBAL_PROC, 'remove_dark')
