@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
 import copy
 from threading import Lock
 
@@ -16,7 +17,8 @@ from ..algorithms import mask_image
 from ..config import config
 
 from karaboFAI.cpp import (
-    nanmeanImageArray, movingAverageImage, movingAverageImageArray
+    intersection, nanmeanImageArray, movingAverageImage,
+    movingAverageImageArray
 )
 
 
@@ -411,6 +413,91 @@ class _RoiAuxData:
         self.norm3_add_norm4 = None
 
 
+class _RoiGeomBase(abc.ABC):
+    """RoiGeom base class."""
+    def __init__(self):
+        self._activated = False
+
+    @property
+    def activated(self):
+        return self._activated
+
+    @activated.setter
+    def activated(self, v):
+        self._activated = bool(v)
+
+    @abc.abstractmethod
+    def set_geometry(self, v):
+        """Set the ROI geometry.
+
+        :param list/tuple v: a list of numbers which are used to describe
+            the geometry of the ROI. For instance, (x, y, w, h) for
+            a rectangular ROI and (x, y, r) for a circular ROI.
+        """
+        pass
+
+    @abc.abstractmethod
+    def rect(self, data, copy=False):
+        """Return a bounding box which includes the ROI.
+
+        For a non-rectangular ROI, the bounding box should be a minimum
+        rectangle to include the ROI with pixels not belong to the ROI
+        set to None.
+
+        :param numpy.ndarray data: a single image data or an array of image
+            data.
+        :param bool copy: True for copy the ROI data and False for not.
+            Default = False.
+
+        :return numpy.ndarray: a single ROI data or an array of ROI data.
+            If the ROI is not activated or there is no intersection area
+            between the ROI and the image, return None.
+        """
+        pass
+
+
+class _RectRoiGeom(_RoiGeomBase):
+    """_RectRoiGeom class."""
+    def __init__(self):
+        super().__init__()
+
+        self._x = 0
+        self._y = 0
+        self._w = -1
+        self._h = -1
+
+    def rect(self, data, copy=False):
+        """Overload."""
+        shape = data[-2:]
+        x, y, w, h = intersection([self._x, self._y, self._w, self._h],
+                                  [0, 0, shape[1], shape[0]])
+        if w < 0 or h < 0 or not self._activated:
+            return None
+        return np.array(data[..., y:y + h, x:x + w], copy=copy)
+
+    def set_geometry(self, v):
+        """Overload."""
+        self._x, self._y, self._w, self._h = v
+
+
+class _CircleRoiGeom(_RoiGeomBase):
+    """RectRoiItem class."""
+    def __init__(self):
+        super().__init__()
+
+        self._x = 0
+        self._y = 0
+        self._r = -1
+
+    def rect(self, data, copy=False):
+        """Overload."""
+        raise NotImplemented
+
+    def set_geometry(self, v):
+        """Overload."""
+        self._x, self._y, self._r = v
+
+
 class RoiData(_RoiAuxData):
     """ROIData class.
 
@@ -434,6 +521,8 @@ class RoiData(_RoiAuxData):
         self.rect3 = [0, 0, -1, -1]
         self.rect4 = [0, 0, -1, -1]
 
+        self.__geoms = [_RectRoiGeom] * 4
+
         # for normalization: calculated from ROI3 and ROI4
         self.on = _RoiAuxData()
         self.off = _RoiAuxData()
@@ -451,6 +540,12 @@ class RoiData(_RoiAuxData):
             x_label='pixel', vfom_label='ROI1 - ROI2 projection')
         self.proj1_add_proj2 = DataItem(
             x_label='pixel', vfom_label='ROI1 + ROI2 projection')
+
+    def __len__(self):
+        return len(self.__geoms)
+
+    def __getitem__(self, index):
+        return self.__geoms[index]
 
 
 class AzimuthalIntegrationData(DataItem):
