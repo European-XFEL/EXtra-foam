@@ -15,7 +15,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from ..mediator import Mediator
 
 
-class AbstractCtrlWidgetMixin:
+class _AbstractCtrlWidgetMixin:
     @abc.abstractmethod
     def initUI(self):
         """Initialization of UI."""
@@ -30,8 +30,8 @@ class AbstractCtrlWidgetMixin:
     def updateMetaData(self):
         """Update metadata belong to this control widget.
 
-        :return: None if any of the parameters is invalid. Otherwise, a
-            string of to be logged information.
+        :returns bool: True if all metadata successfully parsed
+            and emitted, otherwise False.
         """
         raise NotImplementedError
 
@@ -44,7 +44,7 @@ class AbstractCtrlWidgetMixin:
         raise NotImplementedError
 
 
-class AbstractCtrlWidget(QtWidgets.QWidget, AbstractCtrlWidgetMixin):
+class _AbstractCtrlWidget(QtWidgets.QWidget, _AbstractCtrlWidgetMixin):
     def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 
@@ -71,7 +71,7 @@ class AbstractCtrlWidget(QtWidgets.QWidget, AbstractCtrlWidgetMixin):
             widget.setEnabled(True)
 
 
-class GroupBoxCtrlWidgetBase(QtWidgets.QGroupBox, AbstractCtrlWidgetMixin):
+class _AbstractGroupBoxCtrlWidget(QtWidgets.QGroupBox, _AbstractCtrlWidgetMixin):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
                             'color: #8B008B;' \
                             'border: 1px;' \

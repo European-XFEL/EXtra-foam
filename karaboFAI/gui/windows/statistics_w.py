@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import PulsesInTrainFomWidget, FomHistogramWidget
 from ...config import config
 
 
-class StatisticsWindow(PlotWindow):
+class StatisticsWindow(_AbstractPlotWindow):
     """StatisticsWindow class.
 
     Visualize statistics.
@@ -44,3 +44,11 @@ class StatisticsWindow(PlotWindow):
         self._cw.addWidget(self._fom_historgram)
         self._cw.setSizes([1, 1])
         self.setCentralWidget(self._cw)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

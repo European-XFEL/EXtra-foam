@@ -9,7 +9,7 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import ImageViewF, PlotWidgetF
 from ..ctrl_widgets import SmartLineEdit
 from ...config import config
@@ -123,7 +123,7 @@ class PoiWidget(QtWidgets.QWidget):
         self._index_le.returnPressed.emit()
 
 
-class PulseOfInterestWindow(PlotWindow):
+class PulseOfInterestWindow(_AbstractPlotWindow):
     """PulseOfInterestWindow class."""
     title = "pulse-of-interest"
 
@@ -162,3 +162,7 @@ class PulseOfInterestWindow(PlotWindow):
         self._poi_widget2.pulse_index_sgn.connect(
             lambda x: self._mediator.onPoiIndexChange(2, x))
         self._poi_widget2.updatePulseIndex()
+
+    def updateMetaData(self):
+        """Override."""
+        return True

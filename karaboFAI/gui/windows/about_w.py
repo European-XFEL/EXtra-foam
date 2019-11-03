@@ -12,10 +12,10 @@ import os.path as osp
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget
 
-from .base_window import AbstractSatelliteWindow
+from .base_window import _AbstractSatelliteWindow
 
 
-class AboutWindow(AbstractSatelliteWindow):
+class AboutWindow(_AbstractSatelliteWindow):
     title = "About"
 
     _root_dir = osp.dirname(osp.abspath(__file__))
@@ -39,6 +39,7 @@ class AboutWindow(AbstractSatelliteWindow):
         self.show()
 
     def initUI(self):
+        """Override."""
         layout = QtGui.QVBoxLayout()
 
         name = QtGui.QLabel("karaboFAI")
@@ -65,3 +66,7 @@ class AboutWindow(AbstractSatelliteWindow):
         layout.addWidget(copyright_lb)
 
         self._cw.setLayout(layout)
+
+    def initConnections(self):
+        """Override."""
+        pass

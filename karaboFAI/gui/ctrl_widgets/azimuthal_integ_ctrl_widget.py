@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import Normalizer, config
 
 
-class AzimuthalIntegCtrlWidget(GroupBoxCtrlWidgetBase):
+class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({

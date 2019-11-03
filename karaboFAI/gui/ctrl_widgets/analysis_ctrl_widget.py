@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ...config import config
 
 
-class AnalysisCtrlWidget(GroupBoxCtrlWidgetBase):
+class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the general analysis parameters."""
 
     def __init__(self, *args, **kwargs):

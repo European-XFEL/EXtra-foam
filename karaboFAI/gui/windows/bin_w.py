@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import Bin1dHist, Bin1dHeatmap, Bin2dHeatmap
 from ...config import config
 
 
-class Bin1dWindow(PlotWindow):
+class Bin1dWindow(_AbstractPlotWindow):
     """Bin1dWindow class.
 
     Plot data in selected bins.
@@ -63,8 +63,14 @@ class Bin1dWindow(PlotWindow):
         right_panel.addWidget(self._count2)
         right_panel.setSizes([self._TOTAL_H, self._TOTAL_H/2, self._TOTAL_H/2])
 
+    def initConnections(self):
+        pass
 
-class Bin2dWindow(PlotWindow):
+    def updateMetaData(self):
+        pass
+
+
+class Bin2dWindow(_AbstractPlotWindow):
     """Bin2dWindow class.
 
     Plot data in selected bins.
@@ -94,3 +100,11 @@ class Bin2dWindow(PlotWindow):
         self._cw.addWidget(self._bin2d_count)
         self._cw.setSizes([1, 1])
         self.setCentralWidget(self._cw)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

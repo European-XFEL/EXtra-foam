@@ -10,10 +10,10 @@ All rights reserved.
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QPlainTextEdit
 
-from .base_window import AbstractSatelliteWindow
+from .base_window import _AbstractSatelliteWindow
 
 
-class ProcessMonitor(AbstractSatelliteWindow):
+class ProcessMonitor(_AbstractSatelliteWindow):
     title = "Process monitor"
 
     def __init__(self, *args, **kwargs):
@@ -31,6 +31,18 @@ class ProcessMonitor(AbstractSatelliteWindow):
 
         self.setMinimumSize(900, 150)
         self.show()
+
+    def initUI(self):
+        """Override."""
+        pass
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True
 
     @QtCore.pyqtSlot(object)
     def onProcessInfoUpdate(self, proc_info):

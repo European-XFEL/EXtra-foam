@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import CorrelationWidget
 from ...config import config
 
 
-class CorrelationWindow(PlotWindow):
+class CorrelationWindow(_AbstractPlotWindow):
     """CorrelationWindow class.
 
     Plot correlations between different parameters.
@@ -53,3 +53,11 @@ class CorrelationWindow(PlotWindow):
 
         right_panel.addWidget(self._corr2)
         right_panel.addWidget(self._corr4)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

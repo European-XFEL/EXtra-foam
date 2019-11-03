@@ -15,7 +15,44 @@ from PyQt5 import QtGui, QtWidgets
 from ..mediator import Mediator
 
 
-class AbstractWindow(QtGui.QMainWindow):
+class _AbstractWindowMixin:
+    @abc.abstractmethod
+    def initUI(self):
+        """Initialization of UI."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def updateMetaData(self):
+        """Update metadata affected by this window.
+
+        :returns bool: True if all metadata successfully parsed
+            and emitted, otherwise False.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def reset(self):
+        """Reset data in widgets.
+
+        This method is called by the main GUI.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def updateWidgetsF(self):
+        """Update widgets.
+
+        This method is called by the main GUI.
+        """
+        raise NotImplementedError
+
+
+class _AbstractWindow(QtGui.QMainWindow, _AbstractWindowMixin):
     """Base class for various stand-alone windows.
 
     All the stand-alone windows should follow the interface defined
@@ -58,33 +95,6 @@ class AbstractWindow(QtGui.QMainWindow):
 
         self.show()
 
-    def initUI(self):
-        """Initialization of UI."""
-        pass
-
-    def initConnections(self):
-        """Initialization of signal-slot connections."""
-        pass
-
-    def updateMetaData(self):
-        """Update metadata affected by this window."""
-        return True
-
-    def reset(self):
-        """Reset data in widgets.
-
-        This method is called by the main GUI.
-        """
-        pass
-
-    @abc.abstractmethod
-    def updateWidgetsF(self):
-        """Update widgets.
-
-        This method is called by the main GUI.
-        """
-        pass
-
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
         if parent is not None:
@@ -92,8 +102,8 @@ class AbstractWindow(QtGui.QMainWindow):
         super().closeEvent(QCloseEvent)
 
 
-class PlotWindow(AbstractWindow):
-    """AbstractWindow consist of plot widgets."""
+class _AbstractPlotWindow(_AbstractWindow):
+    """Abstract plot window consist of plot widgets."""
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
@@ -130,7 +140,7 @@ class PlotWindow(AbstractWindow):
         del self._plot_widgets[instance]
 
 
-class AbstractSatelliteWindow(QtGui.QMainWindow):
+class _AbstractSatelliteWindow(QtGui.QMainWindow, _AbstractWindowMixin):
     """Base class for Satellite windows.
 
     A satellite window does not need to access the processed data.
@@ -156,13 +166,17 @@ class AbstractSatelliteWindow(QtGui.QMainWindow):
             # for unit test where parent is None
             self.setWindowTitle(self.title)
 
-    def initUI(self):
-        """Initialization of UI."""
+    def updateWidgetsF(self):
+        """Override."""
         pass
 
-    def initConnections(self):
-        """Initialization of signal-slot connections."""
+    def reset(self):
+        """Override."""
         pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True
 
     def closeEvent(self, QCloseEvent):
         parent = self.parent()

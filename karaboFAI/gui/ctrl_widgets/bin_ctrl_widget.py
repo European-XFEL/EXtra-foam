@@ -12,7 +12,7 @@ import functools
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import AnalysisType, BinMode, config
 
@@ -23,7 +23,7 @@ _DEFAULT_N_BINS = "10"
 _MAX_N_BINS = 1e5
 
 
-class BinCtrlWidget(GroupBoxCtrlWidgetBase):
+class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Analysis parameters setup for ROI analysis."""
 
     _analysis_types = OrderedDict({

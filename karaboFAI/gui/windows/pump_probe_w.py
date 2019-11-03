@@ -9,14 +9,14 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import (
     PumpProbeImageView, PumpProbeOnOffWidget, PumpProbeFomWidget
 )
 from ...config import config
 
 
-class PumpProbeWindow(PlotWindow):
+class PumpProbeWindow(_AbstractPlotWindow):
     """PumpProbeWindow class."""
     title = "pump-probe"
 
@@ -56,3 +56,11 @@ class PumpProbeWindow(PlotWindow):
         right_panel.addWidget(self._pp_ai)
         right_panel.addWidget(self._pp_diff)
         right_panel.addWidget(self._pp_fom)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

@@ -11,13 +11,13 @@ import os.path as osp
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from ..gui_helpers import parse_table_widget
 from ...config import config
 from ...logger import logger
 
 
-class GeometryCtrlWidget(GroupBoxCtrlWidgetBase):
+class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the geometry parameters."""
 
     def __init__(self, *args, **kwargs):

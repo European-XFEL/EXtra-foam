@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import RoiImageView
 from ...config import config
 
 
-class RoiWindow(PlotWindow):
+class RoiWindow(_AbstractPlotWindow):
     """RoiWindow class."""
     title = "ROI"
 
@@ -40,3 +40,11 @@ class RoiWindow(PlotWindow):
         self._cw.addWidget(self._roi1_image)
         self._cw.addWidget(self._roi2_image)
         self.setCentralWidget(self._cw)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

@@ -9,12 +9,12 @@ All rights reserved.
 """
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from .base_window import PlotWindow
+from .base_window import _AbstractPlotWindow
 from ..plot_widgets import TrainAiWidget
 from ...config import config
 
 
-class AzimuthalIntegrationWindow(PlotWindow):
+class AzimuthalIntegrationWindow(_AbstractPlotWindow):
     """AzimuthalIntegrationWindow class."""
     title = "Azimuthal Integration"
 
@@ -38,3 +38,11 @@ class AzimuthalIntegrationWindow(PlotWindow):
         self._cw = QtWidgets.QSplitter()
         self._cw.addWidget(self._ai)
         self.setCentralWidget(self._cw)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True

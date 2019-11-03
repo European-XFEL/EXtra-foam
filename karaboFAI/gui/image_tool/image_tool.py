@@ -13,7 +13,7 @@ import functools
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ..misc_widgets import Colors
-from ..windows.base_window import AbstractWindow
+from ..windows.base_window import _AbstractWindow
 from ..mediator import Mediator
 from ..plot_widgets import ImageAnalysis, ImageViewF
 from ..ctrl_widgets.smart_widgets import (
@@ -456,7 +456,7 @@ class _ImageCtrlWidget(QtGui.QGroupBox):
         self.bkg_le.returnPressed.emit()
 
 
-class ImageToolWindow(AbstractWindow):
+class ImageToolWindow(_AbstractWindow):
     """ImageToolWindow class.
 
     This is the second Main GUI which focuses on manipulating the image

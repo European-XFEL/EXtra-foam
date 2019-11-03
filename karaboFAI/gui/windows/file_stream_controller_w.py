@@ -10,7 +10,7 @@ All rights reserved.
 from PyQt5 import QtCore, QtGui
 from zmq.error import ZMQError
 
-from .base_window import AbstractSatelliteWindow
+from .base_window import _AbstractSatelliteWindow
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
 from ...logger import logger
 from ...database import Metadata as mt
@@ -131,7 +131,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
         self._stream_files_once_cb.setEnabled(True)
 
 
-class FileStreamControllerWindow(AbstractSatelliteWindow):
+class FileStreamControllerWindow(_AbstractSatelliteWindow):
 
     title = "File Streamer"
 
@@ -183,6 +183,10 @@ class FileStreamControllerWindow(AbstractSatelliteWindow):
             self.onRepeatStreamChange)
 
         self._widget.initConnections()
+
+    def updateMetaData(self):
+        """Override."""
+        return True
 
     def onFileServerDataFolderChange(self, path):
         self._slow_devices.clear()
