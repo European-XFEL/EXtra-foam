@@ -378,7 +378,7 @@ class TestImageTool(unittest.TestCase):
         processed.image.dark_count = 99
         processed.pidx.mask([1, 3, 5, 6])
         self.image_tool._data.set(processed)
-        self.image_tool.update()
+        self.image_tool.updateWidgetsF()
 
         info_widget = self.image_tool._info_widget
         self.assertEqual(99, int(info_widget._dark_train_counter.intValue()))

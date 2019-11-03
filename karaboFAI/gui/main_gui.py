@@ -240,6 +240,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # book-keeping opened windows
         self._windows = WeakKeyDictionary()
+        self._satellite_windows = WeakKeyDictionary()
 
         # book-keeping control widgets
         self._ctrl_widgets = []
@@ -432,7 +433,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         for w in self._windows.keys():
-            w.update()
+            w.updateWidgetsF()
         logger.debug(f"Plot train with ID: {tid}")
 
     def _update_process_monitoring(self):
@@ -473,7 +474,7 @@ class MainGUI(QtGui.QMainWindow):
                       pulse_resolved=self._pulse_resolved, parent=self)
 
     def openProcessMonitor(self):
-        if self._checkWindowExistence(ProcessMonitor):
+        if self._checkSatelliteWindowExistence(ProcessMonitor):
             return
 
         w = ProcessMonitor(parent=self)
@@ -481,7 +482,7 @@ class MainGUI(QtGui.QMainWindow):
         return w
 
     def openFileStreamControllerWindow(self):
-        if self._checkWindowExistence(FileStreamControllerWindow):
+        if self._checkSatelliteWindowExistence(FileStreamControllerWindow):
             return
 
         w = FileStreamControllerWindow(parent=self)
@@ -493,6 +494,12 @@ class MainGUI(QtGui.QMainWindow):
 
         return AboutWindow(parent=self)
 
+    def registerWindow(self, instance):
+        self._windows[instance] = 1
+
+    def unregisterWindow(self, instance):
+        del self._windows[instance]
+
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:
             if isinstance(key, instance_type):
@@ -500,11 +507,18 @@ class MainGUI(QtGui.QMainWindow):
                 return True
         return False
 
-    def registerWindow(self, instance):
-        self._windows[instance] = 1
+    def registerSatelliteWindow(self, instance):
+        self._satellite_windows[instance] = 1
 
-    def unregisterWindow(self, instance):
-        del self._windows[instance]
+    def unregisterSatelliteWindow(self, instance):
+        del self._satellite_windows[instance]
+
+    def _checkSatelliteWindowExistence(self, instance_type):
+        for key in self._satellite_windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return True
+        return False
 
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)

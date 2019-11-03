@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
 from weakref import WeakKeyDictionary
 
 from PyQt5 import QtGui, QtWidgets
@@ -58,24 +59,7 @@ class AbstractWindow(QtGui.QMainWindow):
         self.show()
 
     def initUI(self):
-        """Initialization of UI.
-
-        This method should call 'initCtrlUI' and 'initPlotUI'.
-        """
-        pass
-
-    def initCtrlUI(self):
-        """Initialization of ctrl UI.
-
-        Initialization of the ctrl UI should take place in this method.
-        """
-        pass
-
-    def initPlotUI(self):
-        """Initialization of plot UI.
-
-        Initialization of the plot UI should take place in this method.
-        """
+        """Initialization of UI."""
         pass
 
     def initConnections(self):
@@ -93,7 +77,8 @@ class AbstractWindow(QtGui.QMainWindow):
         """
         pass
 
-    def update(self):
+    @abc.abstractmethod
+    def updateWidgetsF(self):
         """Update widgets.
 
         This method is called by the main GUI.
@@ -115,7 +100,7 @@ class PlotWindow(AbstractWindow):
 
         self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
 
-    def update(self):
+    def updateWidgetsF(self):
         """Update widgets.
 
         This method is called by the main GUI.
@@ -148,7 +133,7 @@ class PlotWindow(AbstractWindow):
 class AbstractSatelliteWindow(QtGui.QMainWindow):
     """Base class for Satellite windows.
 
-    A satellite window does not need to access the data.
+    A satellite window does not need to access the processed data.
     """
     title = ""
 
@@ -156,7 +141,7 @@ class AbstractSatelliteWindow(QtGui.QMainWindow):
         """Initialization."""
         super().__init__(parent=parent)
         if parent is not None:
-            parent.registerWindow(self)
+            parent.registerSatelliteWindow(self)
 
         self._mediator = Mediator()
 
@@ -172,22 +157,15 @@ class AbstractSatelliteWindow(QtGui.QMainWindow):
             self.setWindowTitle(self.title)
 
     def initUI(self):
-        """Initialization of UI.
-
-        This method should call 'initCtrlUI' and 'initPlotUI'.
-        """
+        """Initialization of UI."""
         pass
 
     def initConnections(self):
         """Initialization of signal-slot connections."""
         pass
 
-    def addToolBar(self):
-        """Toolbar is not allowed."""
-        raise NotImplementedError
-
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
         if parent is not None:
-            parent.unregisterWindow(self)
+            parent.unregisterSatelliteWindow(self)
         super().closeEvent(QCloseEvent)

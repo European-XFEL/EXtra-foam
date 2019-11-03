@@ -647,7 +647,7 @@ class ImageToolWindow(AbstractWindow):
 
         return True
 
-    def update(self):
+    def updateWidgetsF(self):
         """Update widgets.
 
         This method is called by the main GUI.
