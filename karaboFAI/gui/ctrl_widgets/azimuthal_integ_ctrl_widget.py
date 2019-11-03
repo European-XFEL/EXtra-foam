@@ -87,13 +87,10 @@ class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._cx_le.returnPressed.connect(
-            lambda: mediator.onAiIntegCenterXChange(
-                int(self._cx_le.text())))
-
-        self._cy_le.returnPressed.connect(
-            lambda: mediator.onAiIntegCenterYChange(
-                int(self._cy_le.text())))
+        self._cx_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegCenterXChange(int(x)))
+        self._cy_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegCenterYChange(int(x)))
 
         self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)
@@ -105,9 +102,8 @@ class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
 
-        self._integ_pts_le.returnPressed.connect(
-            lambda: mediator.onAiIntegPointsChange(
-                int(self._integ_pts_le.text())))
+        self._integ_pts_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegPointsChange(int(x)))
 
         self._auc_range_le.value_changed_sgn.connect(
             mediator.onAiAucChangeChange)

@@ -58,17 +58,14 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._photon_energy_le.returnPressed.connect(
-            lambda: mediator.onPhotonEnergyChange(
-                float(self._photon_energy_le.text())))
+        self._photon_energy_le.value_changed_sgn.connect(
+            lambda x: mediator.onPhotonEnergyChange(float(x)))
 
-        self._sample_dist_le.returnPressed.connect(
-            lambda: mediator.onSampleDistanceChange(
-                float(self._sample_dist_le.text())))
+        self._sample_dist_le.value_changed_sgn.connect(
+            lambda x: mediator.onSampleDistanceChange(float(x)))
 
-        self._ma_window_le.returnPressed.connect(
-            lambda: mediator.onMaWindowChange(
-                int(self._ma_window_le.text())))
+        self._ma_window_le.value_changed_sgn.connect(
+            lambda x: mediator.onMaWindowChange(int(x)))
 
         self._reset_ma_btn.clicked.connect(mediator.onResetMa)
 

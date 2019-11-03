@@ -623,6 +623,7 @@ class ImageToolWindow(_AbstractWindow):
         self._image_ctrl_widget.remove_ref_btn.clicked.connect(
             self._data_view.removeReferenceImage)
 
+        # use lambda here to facilitate unittest of slot call
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._data_view.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
