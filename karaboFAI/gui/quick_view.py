@@ -13,7 +13,7 @@ import argparse
 import os.path as osp
 from queue import Empty, Full
 
-from .pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from .ctrl_widgets import GeometryCtrlWidget
 from .. import __version__

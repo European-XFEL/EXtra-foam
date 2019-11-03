@@ -9,7 +9,7 @@ All rights reserved.
 """
 import os.path as osp
 
-from ..pyqtgraph import Qt, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from ..gui_helpers import parse_table_widget
@@ -73,11 +73,11 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         header = widget.horizontalHeader()
         for i in range(n_col):
-            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header = widget.verticalHeader()
         for i in range(n_row):
-            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header_height = widget.horizontalHeader().height()
         widget.setMinimumHeight(header_height * (n_row + 1.5))

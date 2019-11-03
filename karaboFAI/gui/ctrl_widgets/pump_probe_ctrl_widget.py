@@ -9,7 +9,7 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from ..pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
 from .base_ctrl_widgets import AbstractCtrlWidget
 from .smart_widgets import SmartLineEdit, SmartRangeLineEdit

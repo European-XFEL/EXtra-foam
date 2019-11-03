@@ -13,7 +13,6 @@ import numpy as np
 from PyQt5 import QtCore, QtGui
 
 from .. import pyqtgraph as pg
-from ..pyqtgraph import GraphicsObject
 
 from ..misc_widgets import make_brush, make_pen
 from ...config import config, MaskState
@@ -73,7 +72,7 @@ class ImageItem(pg.ImageItem):
             ev.ignore()
 
 
-class MaskItem(GraphicsObject):
+class MaskItem(pg.GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
 
     _mask = None  # QImage
