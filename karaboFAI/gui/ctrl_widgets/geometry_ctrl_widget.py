@@ -11,13 +11,13 @@ import os.path as osp
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
 from ..gui_helpers import parse_table_widget
 from ...config import config
 from ...logger import logger
 
 
-class GeometryCtrlWidget(AbstractCtrlWidget):
+class GeometryCtrlWidget(GroupBoxCtrlWidgetBase):
     """Widget for setting up the geometry parameters."""
 
     def __init__(self, *args, **kwargs):
@@ -52,6 +52,9 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         layout.addLayout(sub_layout1)
         layout.addLayout(sub_layout2)
         self.setLayout(layout)
+
+    def initConnections(self):
+        pass
 
     def initQuadTable(self):
         n_row = 2

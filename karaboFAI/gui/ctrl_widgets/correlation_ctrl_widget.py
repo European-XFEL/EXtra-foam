@@ -12,7 +12,7 @@ import functools
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
 from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType, config
 
@@ -20,7 +20,7 @@ _N_PARAMS = 4  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = "0.0"
 
 
-class CorrelationCtrlWidget(AbstractCtrlWidget):
+class CorrelationCtrlWidget(GroupBoxCtrlWidgetBase):
     """Widget for setting up the correlation analysis parameters."""
 
     _analysis_types = OrderedDict({

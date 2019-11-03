@@ -7,14 +7,71 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
 from collections import OrderedDict
 
-from PyQt5 import QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ..mediator import Mediator
 
 
-class AbstractCtrlWidget(QtGui.QGroupBox):
+class AbstractCtrlWidgetMixin:
+    @abc.abstractmethod
+    def initUI(self):
+        """Initialization of UI."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def initConnections(self):
+        """Initialization of signal-slot connections."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def updateMetaData(self):
+        """Update metadata belong to this control widget.
+
+        :return: None if any of the parameters is invalid. Otherwise, a
+            string of to be logged information.
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def onStart(self):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def onStop(self):
+        raise NotImplementedError
+
+
+class AbstractCtrlWidget(QtWidgets.QWidget, AbstractCtrlWidgetMixin):
+    def __init__(self, *, pulse_resolved=True, parent=None):
+        """Initialization.
+
+        :param bool pulse_resolved: whether the related data is
+            pulse-resolved or not.
+        """
+        super().__init__(parent=parent)
+
+        self._mediator = Mediator()
+
+        # widgets whose values are not allowed to change after the "run"
+        # button is clicked
+        self._non_reconfigurable_widgets = []
+
+        # whether the related detector is pulse resolved or not
+        self._pulse_resolved = pulse_resolved
+
+    def onStart(self):
+        for widget in self._non_reconfigurable_widgets:
+            widget.setEnabled(False)
+
+    def onStop(self):
+        for widget in self._non_reconfigurable_widgets:
+            widget.setEnabled(True)
+
+
+class GroupBoxCtrlWidgetBase(QtWidgets.QGroupBox, AbstractCtrlWidgetMixin):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
                             'color: #8B008B;' \
                             'border: 1px;' \
@@ -141,14 +198,6 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
 
-    def initUI(self):
-        """Initialization of UI."""
-        raise NotImplementedError
-
-    def initConnections(self):
-        """Initialization of signal-slot connections."""
-        pass
-
     def onStart(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
@@ -156,11 +205,3 @@ class AbstractCtrlWidget(QtGui.QGroupBox):
     def onStop(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
-
-    def updateMetaData(self):
-        """Update metadata belong to this control widget.
-
-        :return: None if any of the parameters is invalid. Otherwise, a
-            string of to be logged information.
-        """
-        return True

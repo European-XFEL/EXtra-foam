@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
 from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
 from ...config import PumpProbeMode, AnalysisType
 
 
-class PumpProbeCtrlWidget(AbstractCtrlWidget):
+class PumpProbeCtrlWidget(GroupBoxCtrlWidgetBase):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({

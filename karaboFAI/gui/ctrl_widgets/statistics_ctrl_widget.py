@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
 from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType
 
 
-class StatisticsCtrlWidget(AbstractCtrlWidget):
+class StatisticsCtrlWidget(GroupBoxCtrlWidgetBase):
     """Analysis parameters setup for monitoring statistics of V(FOM)."""
 
     _analysis_types = OrderedDict({

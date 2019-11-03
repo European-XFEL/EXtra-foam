@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import GroupBoxCtrlWidgetBase
 from .smart_widgets import SmartBoundaryLineEdit
 from ...config import Normalizer
 
 
-class Projection1DCtrlWidget(AbstractCtrlWidget):
+class Projection1DCtrlWidget(GroupBoxCtrlWidgetBase):
     """Analysis parameters setup for ROI analysis."""
 
     _available_normalizers = OrderedDict({

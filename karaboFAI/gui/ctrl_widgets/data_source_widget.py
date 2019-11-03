@@ -401,7 +401,7 @@ class ConnectionCtrlWidget(AbstractCtrlWidget):
     """Widget for setting up the TCP connection."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Connection", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._hostname_le = QtGui.QLineEdit()
         self._hostname_le.setMinimumWidth(150)
