@@ -75,7 +75,8 @@ class TestImageTool(unittest.TestCase):
         cls.pulse_worker = cls.fai.pulse_worker
 
         actions = cls.gui._tool_bar.actions()
-        cls._action = actions[2]
+        cls._action = actions[3]
+        assert("Image tool" == cls._action.text())
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]
@@ -94,7 +95,6 @@ class TestImageTool(unittest.TestCase):
         ImageToolWindow.reset()
         self._action.trigger()
         self.image_tool = list(self.gui._windows.keys())[-1]
-
         self.view = self.image_tool._data_view
         self.view.setImageData(None)
         self.view._image = None
@@ -404,7 +404,8 @@ class TestImageToolTs(unittest.TestCase):
         cls.train_worker = cls.fai.train_worker
 
         actions = cls.gui._tool_bar.actions()
-        cls._action = actions[2]
+        cls._action = actions[3]
+        assert("Image tool" == cls._action.text())
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]

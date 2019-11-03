@@ -32,7 +32,7 @@ class TrainAiWidget(PlotWidgetF):
 
         self._plot = self.plotCurve(pen=make_pen("p"))
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         momentum = data.ai.x
         intensity = data.ai.vfom
@@ -58,7 +58,7 @@ class PulsesInTrainFomWidget(PlotWidgetF):
         self.setLabel('bottom', "Pulse index")
         self.setTitle('Pulse resolved FOM in a train')
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         fom_hist = data.st.fom_hist
         if fom_hist is None:
@@ -80,7 +80,7 @@ class FomHistogramWidget(PlotWidgetF):
         self.setLabel('bottom', 'FOM')
         self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         center = data.st.fom_bin_center
         counts = data.st.fom_count
         if center is None:
@@ -116,7 +116,7 @@ class CorrelationWidget(PlotWidgetF):
         self._ppt = None
         self._resolution = 0.0
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         correlator_hist, fom_hist, info = getattr(
             data.corr, f'correlation{self._idx}').hist
@@ -180,7 +180,7 @@ class PumpProbeOnOffWidget(PlotWidgetF):
             self._on_pulse = self.plotCurve(name="On", pen=make_pen("r"))
             self._off_pulse = self.plotCurve(name="Off", pen=make_pen("b"))
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         x = data.pp.x
         on = data.pp.vfom_on
@@ -217,7 +217,7 @@ class PumpProbeFomWidget(PlotWidgetF):
 
         self._plot = self.plotScatter(brush=make_brush('g'))
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         tids, fom_hist, _ = data.pp.fom_hist
         self._plot.setData(tids, fom_hist)
@@ -248,7 +248,7 @@ class Bin1dHist(PlotWidgetF):
             self.setLabel('left', "FOM")
             self._plot = self.plotScatter(brush=make_brush('p'))
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         bin = getattr(data.bin, f"bin{self._idx}")
         if not bin.updated:

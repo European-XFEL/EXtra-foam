@@ -36,14 +36,20 @@ class TestOpenCloseWindows(unittest.TestCase):
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
-        imagetool_action = actions[2]
-        poi_action = actions[3]
-        pp_action = actions[4]
-        statistics_action = actions[5]
-        correlation_action = actions[6]
-        bin1d_action = actions[7]
-        bin2d_action = actions[8]
-        ai_action = actions[9]
+
+        imagetool_action = actions[3]
+        self.assertEqual("Image tool", imagetool_action.text())
+        poi_action = actions[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
+        pp_action = actions[5]
+        self.assertEqual("Pump-probe", pp_action.text())
+        statistics_action = actions[6]
+        self.assertEqual("Statistics", statistics_action.text())
+        correlation_action = actions[7]
+        self.assertEqual("Correlation", correlation_action.text())
+        bin1d_action = actions[8]
+        bin2d_action = actions[9]
+        ai_action = actions[10]
         # TODO: add ROI
 
         # ImageToolWindow is opened together with the MainGUI

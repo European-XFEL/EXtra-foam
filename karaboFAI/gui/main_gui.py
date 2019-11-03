@@ -180,6 +180,8 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.triggered.connect(self.onStop)
         self._stop_at.setEnabled(False)
 
+        self._tool_bar.addSeparator()
+
         image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
@@ -198,7 +200,7 @@ class MainGUI(QtGui.QMainWindow):
         open_statistics_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, StatisticsWindow))
 
-        open_corr_window_at = self._addAction("Correlations", "scatter.png")
+        open_corr_window_at = self._addAction("Correlation", "scatter.png")
         open_corr_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 

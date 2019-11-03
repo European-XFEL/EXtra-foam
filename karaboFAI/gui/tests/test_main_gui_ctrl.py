@@ -553,7 +553,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # --------------------------
         # test setting POI pulse indices
         # --------------------------
-        poi_action = self.gui._tool_bar.actions()[3]
+        poi_action = self.gui._tool_bar.actions()[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
         poi_action.trigger()
 
         window = [w for w in self.gui._windows
@@ -659,7 +660,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         image_proc = self.pulse_worker._image_proc
 
         # POI action is disabled
-        poi_action = self.gui._tool_bar.actions()[3]
+        poi_action = self.gui._tool_bar.actions()[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
         self.assertFalse(poi_action.isEnabled())
 
         image_proc.update()

@@ -211,7 +211,7 @@ class PumpProbeImageView(ImageViewF):
 
         self._on = on
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         if self._on:
             img = data.pp.image_on
@@ -239,7 +239,7 @@ class RoiImageView(ImageViewF):
 
         self._rank = rank
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         image = data.image.masked_mean
 
@@ -274,7 +274,7 @@ class Bin1dHeatmap(ImageViewF):
         self.setLabel('left', "VFOM")
         self.setTitle('')
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         bin = getattr(data.bin, f"bin{self._idx}")
 
@@ -327,7 +327,7 @@ class Bin2dHeatmap(ImageViewF):
         else:
             self.setTitle("FOM")
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         bin = data.bin.bin12
         if not bin.updated:

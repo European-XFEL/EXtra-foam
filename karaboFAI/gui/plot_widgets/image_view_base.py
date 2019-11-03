@@ -11,7 +11,6 @@ import numpy as np
 from PyQt5 import QtCore, QtGui
 
 from .. import pyqtgraph as pg
-from ..pyqtgraph import HistogramLUTWidget
 
 from .plot_widget_base import PlotWidgetF
 from .plot_items import RectROI
@@ -80,7 +79,7 @@ class ImageViewF(QtGui.QWidget):
         self.invertY(True)  # y-axis points from top to bottom
         self.setAspectLocked(True)
 
-        self._hist_widget = HistogramLUTWidget()
+        self._hist_widget = pg.HistogramLUTWidget()
         self._hist_widget.setLevelMode(level_mode)
         self._hist_widget.setImageItem(self._image_item)
 
@@ -108,8 +107,8 @@ class ImageViewF(QtGui.QWidget):
     def reset(self):
         self.clear()
 
-    def update(self, data):
-        """karaboFAI interface."""
+    def updateWidgetF(self, data):
+        """This method is called by the parent window."""
         pass
 
     def _initializeROIs(self):

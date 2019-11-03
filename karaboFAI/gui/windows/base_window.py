@@ -113,7 +113,7 @@ class PlotWindow(AbstractWindow):
             return
 
         for widget in self._plot_widgets:
-            widget.update(data)
+            widget.updateWidgetF(data)
 
     def reset(self):
         """Reset data in widgets.

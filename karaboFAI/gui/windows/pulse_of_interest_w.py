@@ -26,7 +26,7 @@ class PoiImageView(ImageViewF):
 
         self._index = idx
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         try:
             img = data.image.images[self._index]
@@ -61,7 +61,7 @@ class PoiStatisticsWidget(PlotWidgetF):
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'FOM')
 
-    def update(self, data):
+    def updateWidgetF(self, data):
         """Override."""
         bin_centers = data.st.poi_fom_bin_center
         if bin_centers is None:
