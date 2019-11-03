@@ -561,8 +561,6 @@ class ImageToolWindow(AbstractWindow):
 
         self.resize(self._WIDTH, self._HEIGHT)
 
-        self.update()
-
         self._is_initialized = True
 
     def initUI(self):
