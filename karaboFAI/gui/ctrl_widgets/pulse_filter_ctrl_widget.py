@@ -11,12 +11,12 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
 from ...config import AnalysisType
 
 
-class PulseFilterCtrlWidget(AbstractCtrlWidget):
+class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Parameters setup for pulse-resolved data filtering."""
 
     _analysis_types = OrderedDict({

@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-BinCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -14,7 +12,7 @@ import functools
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import AnalysisType, BinMode, config
 
@@ -25,7 +23,7 @@ _DEFAULT_N_BINS = "10"
 _MAX_N_BINS = 1e5
 
 
-class BinCtrlWidget(AbstractCtrlWidget):
+class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Analysis parameters setup for ROI analysis."""
 
     _analysis_types = OrderedDict({

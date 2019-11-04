@@ -3,22 +3,20 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-PumpProbeCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import OrderedDict
 
-from ..pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit, SmartRangeLineEdit
 from ...config import PumpProbeMode, AnalysisType
 
 
-class PumpProbeCtrlWidget(AbstractCtrlWidget):
+class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Analysis parameters setup for pump-probe experiments."""
 
     _available_modes = OrderedDict({

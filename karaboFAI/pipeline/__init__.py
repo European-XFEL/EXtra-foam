@@ -1,4 +1,4 @@
-from .worker import ImageWorker, Scheduler
+from .worker import PulseWorker, TrainWorker
 
 from .pipe import MpInQueue, MpOutQueue
 

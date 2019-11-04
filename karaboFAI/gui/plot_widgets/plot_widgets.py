@@ -32,7 +32,7 @@ class TrainAiWidget(PlotWidgetF):
 
         self._plot = self.plotCurve(pen=make_pen("p"))
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         momentum = data.ai.x
         intensity = data.ai.vfom
@@ -58,7 +58,7 @@ class PulsesInTrainFomWidget(PlotWidgetF):
         self.setLabel('bottom', "Pulse index")
         self.setTitle('Pulse resolved FOM in a train')
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         fom_hist = data.st.fom_hist
         if fom_hist is None:
@@ -80,40 +80,9 @@ class FomHistogramWidget(PlotWidgetF):
         self.setLabel('bottom', 'FOM')
         self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
 
-    def update(self, data):
+    def updateF(self, data):
         center = data.st.fom_bin_center
         counts = data.st.fom_count
-        if center is None:
-            self.reset()
-            return
-        self._plot.setData(center, counts)
-
-
-class PoiStatisticsWidget(PlotWidgetF):
-    """PoiStatisticsWidget class.
-
-    A widget which allows users to monitor the statistics of the FOM of
-    the POI pulse.
-    """
-    def __init__(self, idx, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.pulse_index = idx
-        self._plot = self.plotBar()
-
-        self.setTitle("FOM Histogram")
-        self.setLabel('left', 'Counts')
-        self.setLabel('bottom', 'FOM')
-
-    def update(self, data):
-        """Override."""
-        bin_centers = data.st.poi_fom_bin_center
-        if bin_centers is None:
-            return
-
-        center = bin_centers[self.pulse_index]
-        counts = data.st.poi_fom_count[self.pulse_index]
         if center is None:
             self.reset()
             return
@@ -147,7 +116,7 @@ class CorrelationWidget(PlotWidgetF):
         self._ppt = None
         self._resolution = 0.0
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         correlator_hist, fom_hist, info = getattr(
             data.corr, f'correlation{self._idx}').hist
@@ -211,7 +180,7 @@ class PumpProbeOnOffWidget(PlotWidgetF):
             self._on_pulse = self.plotCurve(name="On", pen=make_pen("r"))
             self._off_pulse = self.plotCurve(name="Off", pen=make_pen("b"))
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         x = data.pp.x
         on = data.pp.vfom_on
@@ -248,7 +217,7 @@ class PumpProbeFomWidget(PlotWidgetF):
 
         self._plot = self.plotScatter(brush=make_brush('g'))
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         tids, fom_hist, _ = data.pp.fom_hist
         self._plot.setData(tids, fom_hist)
@@ -279,7 +248,7 @@ class Bin1dHist(PlotWidgetF):
             self.setLabel('left', "FOM")
             self._plot = self.plotScatter(brush=make_brush('p'))
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         bin = getattr(data.bin, f"bin{self._idx}")
         if not bin.updated:

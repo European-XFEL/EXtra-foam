@@ -174,10 +174,9 @@ class TestImageProcessorPr(_BaseProcessorTest):
         proc.process(data)
         imgs = processed.image.images
         self.assertIsInstance(imgs, list)
-        self.assertListEqual([0, 0], proc._poi_indices)
-        np.testing.assert_array_equal(imgs[0], data['detector']['assembled'][0])
-        self.assertIsNone(imgs[1])
-        self.assertIsNone(imgs[3])
+        self.assertIsNone(proc._poi_indices)
+        for img in imgs:
+            self.assertIsNone(img)
 
         # change POI indices
         proc._poi_indices = [2, 3]

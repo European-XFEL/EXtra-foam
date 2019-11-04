@@ -3,23 +3,21 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-GeometryCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os.path as osp
 
-from ..pyqtgraph import Qt, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from ..gui_helpers import parse_table_widget
 from ...config import config
 from ...logger import logger
 
 
-class GeometryCtrlWidget(AbstractCtrlWidget):
+class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the geometry parameters."""
 
     def __init__(self, *args, **kwargs):
@@ -55,6 +53,9 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
         layout.addLayout(sub_layout2)
         self.setLayout(layout)
 
+    def initConnections(self):
+        pass
+
     def initQuadTable(self):
         n_row = 2
         n_col = 4
@@ -75,11 +76,11 @@ class GeometryCtrlWidget(AbstractCtrlWidget):
 
         header = widget.horizontalHeader()
         for i in range(n_col):
-            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header = widget.verticalHeader()
         for i in range(n_row):
-            header.setSectionResizeMode(i, Qt.QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header_height = widget.horizontalHeader().height()
         widget.setMinimumHeight(header_height * (n_row + 1.5))

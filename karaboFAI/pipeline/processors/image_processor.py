@@ -58,7 +58,7 @@ class ImageProcessor(_BaseProcessor):
         self._reference = None
 
         self._pulse_slicer = slice(None, None)
-        self._poi_indices = [0, 0]
+        self._poi_indices = None
 
         self._ref_sub = ReferenceSub()
         self._mask_sub = ImageMaskSub()
@@ -75,8 +75,12 @@ class ImageProcessor(_BaseProcessor):
         # global
         gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
 
-        self._poi_indices = [int(gp_cfg['poi1_index']),
-                             int(gp_cfg['poi2_index'])]
+        try:
+            self._poi_indices = [int(gp_cfg['poi1_index']),
+                                 int(gp_cfg['poi2_index'])]
+        except KeyError:
+            # Train-resolved detector or poiWindow has not been opened yet.
+            pass
 
         if 'remove_dark' in gp_cfg:
             self._meta.delete(mt.GLOBAL_PROC, 'remove_dark')
@@ -174,7 +178,7 @@ class ImageProcessor(_BaseProcessor):
         self._reference = ref
 
     def _update_pois(self, image_data, assembled):
-        if assembled.ndim == 2:
+        if assembled.ndim == 2 or image_data.poi_indices is None:
             return
 
         n_images = image_data.n_images

@@ -211,7 +211,7 @@ class PumpProbeImageView(ImageViewF):
 
         self._on = on
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         if self._on:
             img = data.pp.image_on
@@ -222,34 +222,6 @@ class PumpProbeImageView(ImageViewF):
             return
 
         self.setImage(img, auto_levels=(not self._is_initialized))
-        self.updateROI(data)
-
-        if not self._is_initialized:
-            self._is_initialized = True
-
-
-class SinglePulseImageView(ImageViewF):
-    """SinglePulseImageView class.
-
-    Widget for displaying the assembled image of a single pulse.
-    """
-    def __init__(self, idx, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.pulse_index = idx
-
-    def update(self, data):
-        """Override."""
-        images = data.image.images
-
-        try:
-            self.setImage(images[self.pulse_index],
-                          auto_levels=(not self._is_initialized))
-        except IndexError:
-            self.clear()
-            return
-
         self.updateROI(data)
 
         if not self._is_initialized:
@@ -267,7 +239,7 @@ class RoiImageView(ImageViewF):
 
         self._rank = rank
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         image = data.image.masked_mean
 
@@ -302,7 +274,7 @@ class Bin1dHeatmap(ImageViewF):
         self.setLabel('left', "VFOM")
         self.setTitle('')
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         bin = getattr(data.bin, f"bin{self._idx}")
 
@@ -355,7 +327,7 @@ class Bin2dHeatmap(ImageViewF):
         else:
             self.setTitle("FOM")
 
-    def update(self, data):
+    def updateF(self, data):
         """Override."""
         bin = data.bin.bin12
         if not bin.updated:

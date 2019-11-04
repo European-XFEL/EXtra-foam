@@ -535,7 +535,7 @@ class _Config(dict):
         self.ensure_file()
 
 
-class ConfigWrapper(collections.Mapping):
+class ConfigWrapper(collections.abc.Mapping):
     """Readonly config."""
     def __init__(self):
         self._data = _Config()

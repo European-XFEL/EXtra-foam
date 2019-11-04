@@ -71,11 +71,12 @@ class TestImageTool(unittest.TestCase):
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
-        cls.scheduler = cls.fai.scheduler
-        cls.image_worker = cls.fai.image_worker
+        cls.train_worker = cls.fai.train_worker
+        cls.pulse_worker = cls.fai.pulse_worker
 
         actions = cls.gui._tool_bar.actions()
-        cls._action = actions[2]
+        cls._action = actions[3]
+        assert("Image tool" == cls._action.text())
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]
@@ -94,7 +95,6 @@ class TestImageTool(unittest.TestCase):
         ImageToolWindow.reset()
         self._action.trigger()
         self.image_tool = list(self.gui._windows.keys())[-1]
-
         self.view = self.image_tool._data_view
         self.view.setImageData(None)
         self.view._image = None
@@ -124,22 +124,22 @@ class TestImageTool(unittest.TestCase):
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
         # default values are set correctly
-        proc = self.scheduler._roi_proc_train
+        proc = self.train_worker._roi_proc
         widget = self.image_tool._roi_ctrl_widget
 
         proc.update()
 
         for i, ctrl in enumerate(widget._roi_ctrls, 1):
-            roi_region = [int(ctrl._px_le.text()),
-                          int(ctrl._py_le.text()),
-                          int(ctrl._width_le.text()),
-                          int(ctrl._height_le.text())]
-            self.assertListEqual(roi_region, getattr(proc, f"_roi{i}").rect)
+            roi_geometry = [int(ctrl._px_le.text()),
+                            int(ctrl._py_le.text()),
+                            int(ctrl._width_le.text()),
+                            int(ctrl._height_le.text())]
+            self.assertListEqual(roi_geometry, getattr(proc, f"_roi{i}").rect)
 
     def testRoiCtrlWidget(self):
         widget = self.image_tool._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
-        proc = self.scheduler._roi_proc_train
+        proc = self.train_worker._roi_proc
         self.assertEqual(4, len(roi_ctrls))
 
         for ctrl in roi_ctrls:
@@ -249,7 +249,7 @@ class TestImageTool(unittest.TestCase):
 
     def testSetAndRemoveReference(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.image_worker._image_proc
+        proc = self.pulse_worker._image_proc
 
         data = self._get_data()
 
@@ -283,7 +283,7 @@ class TestImageTool(unittest.TestCase):
         from karaboFAI.ipc import ImageMaskPub
 
         pub = ImageMaskPub()
-        proc = self.image_worker._image_proc
+        proc = self.pulse_worker._image_proc
         data = self._get_data()
 
         # trigger the lazily evaluated subscriber
@@ -337,7 +337,7 @@ class TestImageTool(unittest.TestCase):
             proc.process(data)
 
     def testDarkRun(self):
-        image_proc = self.image_worker._image_proc
+        image_proc = self.pulse_worker._image_proc
 
         image_proc.update()
         self.assertFalse(image_proc._recording)
@@ -378,7 +378,7 @@ class TestImageTool(unittest.TestCase):
         processed.image.dark_count = 99
         processed.pidx.mask([1, 3, 5, 6])
         self.image_tool._data.set(processed)
-        self.image_tool.update()
+        self.image_tool.updateWidgetsF()
 
         info_widget = self.image_tool._info_widget
         self.assertEqual(99, int(info_widget._dark_train_counter.intValue()))
@@ -401,10 +401,11 @@ class TestImageToolTs(unittest.TestCase):
 
         cls.fai = FAI().init()
         cls.gui = cls.fai._gui
-        cls.scheduler = cls.fai.scheduler
+        cls.train_worker = cls.fai.train_worker
 
         actions = cls.gui._tool_bar.actions()
-        cls._action = actions[2]
+        cls._action = actions[3]
+        assert("Image tool" == cls._action.text())
 
         # close the ImageToolWindow opened together with the MainGUI
         window = list(cls.gui._windows.keys())[-1]

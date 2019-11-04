@@ -1,6 +1,6 @@
 from .image_views import (
     Bin1dHeatmap, Bin2dHeatmap, ImageAnalysis,
-    ImageViewF, PumpProbeImageView, RoiImageView, SinglePulseImageView
+    ImageViewF, PumpProbeImageView, RoiImageView
 )
 
 # add image views
@@ -11,14 +11,13 @@ __all__ = ([
     "ImageViewF",
     "PumpProbeImageView",
     "RoiImageView",
-    "SinglePulseImageView",
 ])
 
 from .plot_widgets import (
+    PlotWidgetF,
     Bin1dHist,
     CorrelationWidget,
     FomHistogramWidget,
-    PoiStatisticsWidget,
     PulsesInTrainFomWidget,
     PumpProbeOnOffWidget,
     PumpProbeFomWidget,
@@ -27,6 +26,7 @@ from .plot_widgets import (
 
 # add plot widgets
 __all__.extend([
+    "PlotWidgetF",
     "Bin1dHist",
     "CorrelationWidget",
     "FomHistogramWidget",

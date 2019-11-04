@@ -58,7 +58,7 @@ class TestBaseProcessor(unittest.TestCase):
         config.load('LPD')
 
         cls.fai = FAI().init()
-        cls.scheduler = cls.fai.scheduler
+        cls.train_worker = cls.fai.train_worker
 
     @classmethod
     def tearDownClass(cls):

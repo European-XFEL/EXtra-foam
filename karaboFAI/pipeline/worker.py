@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Abstract process worker class.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -197,36 +195,11 @@ class ProcessWorker(mp.Process):
         self._pause_ev.clear()
 
 
-class Scheduler(ProcessWorker):
-    """Pipeline scheduler."""
+class PulseWorker(ProcessWorker):
+    """Pipeline worker for pulse-resolved data."""
     def __init__(self):
         """Initialization."""
-        super().__init__('scheduler')
-
-        self._inputs = [MpInQueue(f"{self._name}:input")]
-        self._output = MpOutQueue(f"{self._name}:output", gui=True)
-
-        self._roi_proc_train = RoiProcessorTrain()
-        self._ai_proc_train = AzimuthalIntegrationProcessorTrain()
-
-        self._statistics = StatisticsProcessor()
-        self._correlation_proc = CorrelationProcessor()
-        self._bin_proc = BinProcessor()
-
-        self._tasks = [
-            self._roi_proc_train,
-            self._ai_proc_train,
-            self._statistics,
-            self._correlation_proc,
-            self._bin_proc,
-        ]
-
-
-class ImageWorker(ProcessWorker):
-    """Pipeline scheduler."""
-    def __init__(self):
-        """Initialization."""
-        super().__init__('image_worker')
+        super().__init__('pulse worker')
 
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
@@ -234,8 +207,8 @@ class ImageWorker(ProcessWorker):
         self._xgm_proc = XgmProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
-        self._roi_proc_pulse = RoiProcessorPulse()
-        self._ai_proc_pulse = AzimuthalIntegrationProcessorPulse()
+        self._roi_proc = RoiProcessorPulse()
+        self._ai_proc = AzimuthalIntegrationProcessorPulse()
         self._post_pulse_filter = PostPulseFilter()
         self._pp_proc = PumpProbeProcessor()
 
@@ -243,8 +216,33 @@ class ImageWorker(ProcessWorker):
             self._xgm_proc,
             self._assembler,
             self._image_proc,
-            self._roi_proc_pulse,
-            self._ai_proc_pulse,
+            self._roi_proc,
+            self._ai_proc,
             self._post_pulse_filter,
             self._pp_proc,
+        ]
+
+
+class TrainWorker(ProcessWorker):
+    """Pipeline worker for train-resolved data."""
+    def __init__(self):
+        """Initialization."""
+        super().__init__('train worker')
+
+        self._inputs = [MpInQueue(f"{self._name}:input")]
+        self._output = MpOutQueue(f"{self._name}:output", gui=True)
+
+        self._roi_proc = RoiProcessorTrain()
+        self._ai_proc = AzimuthalIntegrationProcessorTrain()
+
+        self._statistics = StatisticsProcessor()
+        self._correlation_proc = CorrelationProcessor()
+        self._bin_proc = BinProcessor()
+
+        self._tasks = [
+            self._roi_proc,
+            self._ai_proc,
+            self._statistics,
+            self._correlation_proc,
+            self._bin_proc,
         ]

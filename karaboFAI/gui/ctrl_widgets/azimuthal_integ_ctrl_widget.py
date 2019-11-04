@@ -9,37 +9,36 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from ..pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import Normalizer, config
 
 
-class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
+class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
         "": Normalizer.UNDEFINED,
         "AUC": Normalizer.AUC,
         "XGM": Normalizer.XGM,
-        "ROI3": Normalizer.ROI3,
-        "ROI4": Normalizer.ROI4,
-        "ROI3 - ROI4": Normalizer.ROI3_SUB_ROI4,
-        "ROI3 + ROI4": Normalizer.ROI3_ADD_ROI4,
+        "ROI3 (sum)": Normalizer.ROI3,
+        "ROI4 (sum)": Normalizer.ROI4,
+        "ROI3 (sum) - ROI4 (sum)": Normalizer.ROI3_SUB_ROI4,
+        "ROI3 (sum) + ROI4 (sum)": Normalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Azimuthal integration analysis setup",
-                         *args, **kwargs)
+        super().__init__("Azimuthal integration setup", *args, **kwargs)
 
         self._cx_le = SmartLineEdit(str(config["CENTER_X"]))
         self._cx_le.setValidator(QtGui.QIntValidator())
         self._cy_le = SmartLineEdit(str(config["CENTER_Y"]))
         self._cy_le.setValidator(QtGui.QIntValidator())
-        self._itgt_method_cb = QtGui.QComboBox()
+        self._integ_method_cb = QtGui.QComboBox()
         for method in config["AZIMUTHAL_INTEG_METHODS"]:
-            self._itgt_method_cb.addItem(method)
+            self._integ_method_cb.addItem(method)
         self._integ_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
         self._integ_pts_le = SmartLineEdit(
@@ -71,7 +70,7 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         layout.addWidget(QtGui.QLabel("Cy (pixel): "), 0, 2, AR)
         layout.addWidget(self._cy_le, 0, 3)
         layout.addWidget(QtGui.QLabel("Integ method: "), 1, 0, AR)
-        layout.addWidget(self._itgt_method_cb, 1, 1)
+        layout.addWidget(self._integ_method_cb, 1, 1)
         layout.addWidget(QtGui.QLabel("Integ points: "), 1, 2, AR)
         layout.addWidget(self._integ_pts_le, 1, 3)
         layout.addWidget(QtGui.QLabel("Integ range (1/A): "), 2, 0, AR)
@@ -88,15 +87,12 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._cx_le.returnPressed.connect(
-            lambda: mediator.onAiIntegCenterXChange(
-                int(self._cx_le.text())))
+        self._cx_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegCenterXChange(int(x)))
+        self._cy_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegCenterYChange(int(x)))
 
-        self._cy_le.returnPressed.connect(
-            lambda: mediator.onAiIntegCenterYChange(
-                int(self._cy_le.text())))
-
-        self._itgt_method_cb.currentTextChanged.connect(
+        self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)
 
         self._normalizers_cb.currentTextChanged.connect(
@@ -106,9 +102,8 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
 
-        self._integ_pts_le.returnPressed.connect(
-            lambda: mediator.onAiIntegPointsChange(
-                int(self._integ_pts_le.text())))
+        self._integ_pts_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiIntegPointsChange(int(x)))
 
         self._auc_range_le.value_changed_sgn.connect(
             mediator.onAiAucChangeChange)
@@ -121,8 +116,8 @@ class AzimuthalIntegCtrlWidget(AbstractCtrlWidget):
 
         self._cy_le.returnPressed.emit()
 
-        self._itgt_method_cb.currentTextChanged.emit(
-            self._itgt_method_cb.currentText())
+        self._integ_method_cb.currentTextChanged.emit(
+            self._integ_method_cb.currentText())
 
         self._normalizers_cb.currentTextChanged.emit(
             self._normalizers_cb.currentText())

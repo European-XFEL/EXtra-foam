@@ -3,22 +3,20 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Base PlotWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
 from PyQt5 import QtCore, QtGui
 
 from .. import pyqtgraph as pg
-from ..pyqtgraph import GraphicsView, PlotItem
 
 from .plot_items import BarPlotItem, ErrorBarItem
 from ..misc_widgets import make_pen
 
 
-class PlotWidgetF(GraphicsView):
+class PlotWidgetF(pg.GraphicsView):
     """PlotWidget base class.
 
     GraphicsView widget displaying a single PlotItem.
@@ -44,7 +42,7 @@ class PlotWidgetF(GraphicsView):
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)
         self.enableMouse(False)
-        self.plotItem = PlotItem(**kargs)
+        self.plotItem = pg.PlotItem(**kargs)
         self.setCentralItem(self.plotItem)
 
         self.plotItem.sigRangeChanged.connect(self.viewRangeChanged)
@@ -60,8 +58,10 @@ class PlotWidgetF(GraphicsView):
         for item in self.plotItem.items:
             item.setData([], [])
 
-    def update(self, data):
-        raise NotImplemented
+    @abc.abstractmethod
+    def updateF(self, data):
+        """This method is called by the parent window."""
+        raise NotImplementedError
 
     def close(self):
         self.plotItem.close()

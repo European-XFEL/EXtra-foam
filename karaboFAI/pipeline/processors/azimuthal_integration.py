@@ -140,19 +140,19 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
         assembled = data['detector']['assembled']
 
         integrator = self._update_integrator()
-        itgt1d = functools.partial(integrator.integrate1d,
-                                   method=self._integ_method,
-                                   radial_range=self._integ_range,
-                                   correctSolidAngle=True,
-                                   polarization_factor=1,
-                                   unit="q_A^-1")
+        integ1d = functools.partial(integrator.integrate1d,
+                                    method=self._integ_method,
+                                    radial_range=self._integ_range,
+                                    correctSolidAngle=True,
+                                    polarization_factor=1,
+                                    unit="q_A^-1")
         integ_points = self._integ_points
 
         threshold_mask = processed.image.threshold_mask
 
         def _integrate1d_imp(i):
             masked = mask_image(assembled[i], threshold_mask=threshold_mask)
-            return itgt1d(masked, integ_points)
+            return integ1d(masked, integ_points)
 
         intensities = []  # pulsed A.I.
         with ThreadPoolExecutor(max_workers=4) as executor:
@@ -219,16 +219,16 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
         processed = data['processed']
 
         integrator = self._update_integrator()
-        itgt1d = functools.partial(integrator.integrate1d,
-                                   method=self._integ_method,
-                                   radial_range=self._integ_range,
-                                   correctSolidAngle=True,
-                                   polarization_factor=1,
-                                   unit="q_A^-1")
+        integ1d = functools.partial(integrator.integrate1d,
+                                    method=self._integ_method,
+                                    radial_range=self._integ_range,
+                                    correctSolidAngle=True,
+                                    polarization_factor=1,
+                                    unit="q_A^-1")
         integ_points = self._integ_points
 
         if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
-            mean_ret = itgt1d(processed.image.masked_mean, integ_points)
+            mean_ret = integ1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial
             intensity = self._normalize_vfom(
@@ -257,8 +257,8 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             if on_image is not None and off_image is not None:
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     on_off_rets = executor.map(
-                        lambda x: itgt1d(*x), ((on_image, integ_points),
-                                               (off_image, integ_points)))
+                        lambda x: integ1d(*x), ((on_image, integ_points),
+                                                (off_image, integ_points)))
                 on_ret, off_ret = on_off_rets
 
                 momentum = on_ret.radial

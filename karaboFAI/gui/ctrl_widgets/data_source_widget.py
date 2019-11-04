@@ -12,7 +12,7 @@ import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit, SmartBoundaryLineEdit
 from ..gui_helpers import parse_boundary, parse_slice
 from ..mediator import Mediator
@@ -397,11 +397,11 @@ class DataSourceListModel(QtCore.QAbstractListModel):
             self.endResetModel()
 
 
-class ConnectionCtrlWidget(AbstractCtrlWidget):
+class ConnectionCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up the TCP connection."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Connection", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._hostname_le = QtGui.QLineEdit()
         self._hostname_le.setMinimumWidth(150)
@@ -526,6 +526,8 @@ class DataSourceWidget(QtWidgets.QWidget):
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(self._tree_view)
         splitter.addWidget(self._list_container)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 1)
 
         self._tree_view.expandToDepth(1)
         self._tree_view.resizeColumnToContents(0)

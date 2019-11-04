@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Main karaboFAI GUI.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -108,7 +106,7 @@ class ThreadLoggerBridge(QObject):
         self.log_error_sgn.connect(instance.onLogErrorReceived)
 
 
-class MainGUI(QtGui.QMainWindow):
+class MainGUI(QtWidgets.QMainWindow):
     """The main GUI for azimuthal integration."""
 
     _root_dir = osp.dirname(osp.abspath(__file__))
@@ -182,9 +180,17 @@ class MainGUI(QtGui.QMainWindow):
         self._stop_at.triggered.connect(self.onStop)
         self._stop_at.setEnabled(False)
 
+        self._tool_bar.addSeparator()
+
         image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
+
+        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
+        open_poi_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
+        if not self._pulse_resolved:
+            open_poi_window_at.setEnabled(False)
 
         pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(
@@ -194,7 +200,7 @@ class MainGUI(QtGui.QMainWindow):
         open_statistics_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, StatisticsWindow))
 
-        open_corr_window_at = self._addAction("Correlations", "scatter.png")
+        open_corr_window_at = self._addAction("Correlation", "scatter.png")
         open_corr_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
@@ -205,12 +211,6 @@ class MainGUI(QtGui.QMainWindow):
         open_bin2d_window_at = self._addAction("Bin 2D", "heatmap.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin2dWindow))
-
-        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
-        open_poi_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
-        if not self._pulse_resolved:
-            open_poi_window_at.setEnabled(False)
 
         open_ai_window_at = self._addAction(
             "Azimuthal Integration", "azimuthal_integration.png")
@@ -242,6 +242,7 @@ class MainGUI(QtGui.QMainWindow):
 
         # book-keeping opened windows
         self._windows = WeakKeyDictionary()
+        self._satellite_windows = WeakKeyDictionary()
 
         # book-keeping control widgets
         self._ctrl_widgets = []
@@ -434,7 +435,7 @@ class MainGUI(QtGui.QMainWindow):
             return
 
         for w in self._windows.keys():
-            w.update()
+            w.updateWidgetsF()
         logger.debug(f"Plot train with ID: {tid}")
 
     def _update_process_monitoring(self):
@@ -475,7 +476,7 @@ class MainGUI(QtGui.QMainWindow):
                       pulse_resolved=self._pulse_resolved, parent=self)
 
     def openProcessMonitor(self):
-        if self._checkWindowExistence(ProcessMonitor):
+        if self._checkSatelliteWindowExistence(ProcessMonitor):
             return
 
         w = ProcessMonitor(parent=self)
@@ -483,7 +484,7 @@ class MainGUI(QtGui.QMainWindow):
         return w
 
     def openFileStreamControllerWindow(self):
-        if self._checkWindowExistence(FileStreamControllerWindow):
+        if self._checkSatelliteWindowExistence(FileStreamControllerWindow):
             return
 
         w = FileStreamControllerWindow(parent=self)
@@ -495,6 +496,12 @@ class MainGUI(QtGui.QMainWindow):
 
         return AboutWindow(parent=self)
 
+    def registerWindow(self, instance):
+        self._windows[instance] = 1
+
+    def unregisterWindow(self, instance):
+        del self._windows[instance]
+
     def _checkWindowExistence(self, instance_type):
         for key in self._windows:
             if isinstance(key, instance_type):
@@ -502,11 +509,18 @@ class MainGUI(QtGui.QMainWindow):
                 return True
         return False
 
-    def registerWindow(self, instance):
-        self._windows[instance] = 1
+    def registerSatelliteWindow(self, instance):
+        self._satellite_windows[instance] = 1
 
-    def unregisterWindow(self, instance):
-        del self._windows[instance]
+    def unregisterSatelliteWindow(self, instance):
+        del self._satellite_windows[instance]
+
+    def _checkSatelliteWindowExistence(self, instance_type):
+        for key in self._satellite_windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return True
+        return False
 
     def registerCtrlWidget(self, instance):
         self._ctrl_widgets.append(instance)

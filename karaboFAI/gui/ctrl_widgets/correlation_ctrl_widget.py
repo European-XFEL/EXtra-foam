@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-CorrelationCtrlWidget.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -14,7 +12,7 @@ import functools
 
 from PyQt5 import QtWidgets, QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType, config
 
@@ -22,7 +20,7 @@ _N_PARAMS = 4  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = "0.0"
 
 
-class CorrelationCtrlWidget(AbstractCtrlWidget):
+class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the correlation analysis parameters."""
 
     _analysis_types = OrderedDict({

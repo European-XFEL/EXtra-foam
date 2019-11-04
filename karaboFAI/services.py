@@ -28,7 +28,7 @@ from .database import MetaProxy
 from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .pipeline import ImageWorker, Scheduler
+from .pipeline import PulseWorker, TrainWorker
 from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
@@ -197,11 +197,9 @@ class FAI:
                                 'topic': config['TOPIC']})
 
         try:
-            # process which runs the image assembler and processor
-            self.image_worker = ImageWorker()
-            # process which runs the scheduler
-            self.scheduler = Scheduler()
-            self.scheduler.connectInputToOutput(self.image_worker.output)
+            self.pulse_worker = PulseWorker()
+            self.train_worker = TrainWorker()
+            self.train_worker.connectInputToOutput(self.pulse_worker.output)
 
             ImageToolWindow.reset()
 
@@ -214,26 +212,26 @@ class FAI:
 
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
-        self.image_worker.start()
-        register_fai_process(ProcessInfo(name=self.image_worker.name,
-                                         process=self.image_worker))
-        self.scheduler.start()
-        register_fai_process(ProcessInfo(name=self.scheduler.name,
-                                         process=self.scheduler))
+        self.pulse_worker.start()
+        register_fai_process(ProcessInfo(name=self.pulse_worker.name,
+                                         process=self.pulse_worker))
+        self.train_worker.start()
+        register_fai_process(ProcessInfo(name=self.train_worker.name,
+                                         process=self.train_worker))
 
-        self._gui.connectInputToOutput(self.scheduler.output)
+        self._gui.connectInputToOutput(self.train_worker.output)
         self._gui.start_sgn.connect(self.start)
         self._gui.stop_sgn.connect(self.pause)
 
         return self
 
     def start(self):
-        self.scheduler.resume()
-        self.image_worker.resume()
+        self.train_worker.resume()
+        self.pulse_worker.resume()
 
     def pause(self):
-        self.scheduler.pause()
-        self.image_worker.pause()
+        self.train_worker.pause()
+        self.pulse_worker.pause()
 
     def terminate(self):
         if self._gui is not None:

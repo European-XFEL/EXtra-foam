@@ -13,7 +13,7 @@ import argparse
 import os.path as osp
 from queue import Empty, Full
 
-from .pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .ctrl_widgets import GeometryCtrlWidget
 from .. import __version__
@@ -35,7 +35,7 @@ class _QuickViewImageAssembler(QThreadWorker):
         self.empty_output()  # remove old data
 
         timeout = config['TIMEOUT']
-        self.info("Scheduler started!")
+        self.info("TrainWorker started!")
         while not self.isInterruptionRequested():
             try:
                 data = self._input.get(timeout=timeout)
@@ -59,12 +59,12 @@ class _QuickViewImageAssembler(QThreadWorker):
                 self._output.put(assembled, timeout=timeout)
             except Full:
                 self.pop_output()
-                self.debug("Data dropped by the scheduler")
+                self.debug("Data dropped by the train_worker")
 
-        self.info("Scheduler stopped!")
+        self.info("TrainWorker stopped!")
 
 
-class FaiQuickView(QtGui.QMainWindow):
+class FaiQuickView(QtWidgets.QMainWindow):
     """FaiQuickView class.
 
     A QMainWindow which only shows the image.

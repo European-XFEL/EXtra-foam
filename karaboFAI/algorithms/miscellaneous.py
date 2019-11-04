@@ -31,11 +31,11 @@ def normalize_auc(y, x, auc_range=None):
 
     # get the integration
     if auc_range is None:
-        itgt = np.trapz(*slice_curve(y, x))
+        integ = np.trapz(*slice_curve(y, x))
     else:
-        itgt = np.trapz(*slice_curve(y, x, *auc_range))
+        integ = np.trapz(*slice_curve(y, x, *auc_range))
 
-    if itgt == 0:
+    if integ == 0:
         raise ValueError("Normalized by 0!")
 
-    return y / itgt
+    return y / integ

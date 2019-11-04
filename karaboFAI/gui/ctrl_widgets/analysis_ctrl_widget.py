@@ -7,34 +7,18 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from ..pyqtgraph import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
-from .smart_widgets import SmartLineEdit, SmartSliceLineEdit
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .smart_widgets import SmartLineEdit
 from ...config import config
 
 
-class AnalysisCtrlWidget(AbstractCtrlWidget):
+class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up the general analysis parameters."""
-
-    _pulse_index_validator = QtGui.QIntValidator(
-        0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Global setup", *args, **kwargs)
-
-        poi_index1 = 0
-        poi_index2 = 0
-
-        self._poi_index1_le = SmartLineEdit(str(poi_index1))
-        self._poi_index1_le.setValidator(self._pulse_index_validator)
-
-        self._poi_index2_le = SmartLineEdit(str(poi_index2))
-        self._poi_index2_le.setValidator(self._pulse_index_validator)
-
-        if not self._pulse_resolved:
-            self._poi_index1_le.setEnabled(False)
-            self._poi_index2_le.setEnabled(False)
 
         self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
         self._photon_energy_le.setValidator(
@@ -59,12 +43,6 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
         AR = QtCore.Qt.AlignRight
 
         row = 0
-        layout.addWidget(QtGui.QLabel("POI index 1: "), row, 0, AR)
-        layout.addWidget(self._poi_index1_le, row, 1)
-        layout.addWidget(QtGui.QLabel("POI index 2: "), row, 2, AR)
-        layout.addWidget(self._poi_index2_le, row, 3)
-
-        row += 1
         layout.addWidget(QtGui.QLabel("Photon energy (keV): "), row, 0, AR)
         layout.addWidget(self._photon_energy_le, row, 1)
         layout.addWidget(QtGui.QLabel("Sample distance (m): "), row, 2, AR)
@@ -80,44 +58,21 @@ class AnalysisCtrlWidget(AbstractCtrlWidget):
     def initConnections(self):
         mediator = self._mediator
 
-        self._poi_index1_le.returnPressed.connect(
-            lambda: mediator.onPoiPulseIndexChange(
-                1, int(self._poi_index1_le.text())))
+        self._photon_energy_le.value_changed_sgn.connect(
+            lambda x: mediator.onPhotonEnergyChange(float(x)))
 
-        self._poi_index2_le.returnPressed.connect(
-            lambda: mediator.onPoiPulseIndexChange(
-                2, int(self._poi_index2_le.text())))
+        self._sample_dist_le.value_changed_sgn.connect(
+            lambda x: mediator.onSampleDistanceChange(float(x)))
 
-        mediator.poi_indices_connected_sgn.connect(
-            self.updateVipPulseIDs)
-
-        self._photon_energy_le.returnPressed.connect(
-            lambda: mediator.onPhotonEnergyChange(
-                float(self._photon_energy_le.text())))
-
-        self._sample_dist_le.returnPressed.connect(
-            lambda: mediator.onSampleDistanceChange(
-                float(self._sample_dist_le.text())))
-
-        self._ma_window_le.returnPressed.connect(
-            lambda: mediator.onMaWindowChange(
-                int(self._ma_window_le.text())))
+        self._ma_window_le.value_changed_sgn.connect(
+            lambda x: mediator.onMaWindowChange(int(x)))
 
         self._reset_ma_btn.clicked.connect(mediator.onResetMa)
 
     def updateMetaData(self):
         """Override"""
-        self._poi_index1_le.returnPressed.emit()
-        self._poi_index2_le.returnPressed.emit()
-
         self._photon_energy_le.returnPressed.emit()
-
         self._sample_dist_le.returnPressed.emit()
-
         self._ma_window_le.returnPressed.emit()
 
         return True
-
-    def updateVipPulseIDs(self):
-        self._poi_index1_le.returnPressed.emit()
-        self._poi_index2_le.returnPressed.emit()

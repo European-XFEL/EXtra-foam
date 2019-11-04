@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ProcessMonitor
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -12,10 +10,10 @@ All rights reserved.
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QPlainTextEdit
 
-from .base_window import AbstractSatelliteWindow
+from .base_window import _AbstractSatelliteWindow
 
 
-class ProcessMonitor(AbstractSatelliteWindow):
+class ProcessMonitor(_AbstractSatelliteWindow):
     title = "Process monitor"
 
     def __init__(self, *args, **kwargs):
@@ -41,6 +39,10 @@ class ProcessMonitor(AbstractSatelliteWindow):
     def initConnections(self):
         """Override."""
         pass
+
+    def updateMetaData(self):
+        """Override."""
+        return True
 
     @QtCore.pyqtSlot(object)
     def onProcessInfoUpdate(self, proc_info):

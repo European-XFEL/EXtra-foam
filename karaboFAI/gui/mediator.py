@@ -23,14 +23,6 @@ class Mediator(QObject):
     The behavior of the code should not be affected by when the
     Mediator() is instantiated.
     """
-
-    poi_index1_sgn = pyqtSignal(int)
-    poi_index2_sgn = pyqtSignal(int)
-    # When pulsed azimuthal integration window is opened, it first connect
-    # the above two signals to its two slots. Then it informs the
-    # AnalysisCtrlWidget to update the POI indices.
-    poi_indices_connected_sgn = pyqtSignal()
-
     reset_image_level_sgn = pyqtSignal()
 
     __instance = None
@@ -82,13 +74,8 @@ class Mediator(QObject):
     def onGeomQuadPositionsChange(self, value: str):
         self._meta.set(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
-    def onPoiPulseIndexChange(self, vip_id: int, value: int):
-        self._meta.set(mt.GLOBAL_PROC, f"poi{vip_id}_index", str(value))
-
-        if vip_id == 1:
-            self.poi_index1_sgn.emit(value)
-        else:  # vip_id == 2:
-            self.poi_index2_sgn.emit(value)
+    def onPoiIndexChange(self, idx: int, value: int):
+        self._meta.set(mt.GLOBAL_PROC, f"poi{idx}_index", str(value))
 
     def onSampleDistanceChange(self, value: float):
         self._meta.set(mt.GLOBAL_PROC, 'sample_distance', value)
@@ -148,7 +135,7 @@ class Mediator(QObject):
         # reset moving average at the same time
         self.onResetMa()
 
-    def onRoiRegionChange(self, value: tuple):
+    def onRoiGeometryChange(self, value: tuple):
         rank, x, y, w, h = value
         self._meta.set(mt.ROI_PROC, f'region{rank}', str((x, y, w, h)))
 

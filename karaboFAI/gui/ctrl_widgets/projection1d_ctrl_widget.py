@@ -11,26 +11,26 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
 
-from .base_ctrl_widgets import AbstractCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
 from ...config import Normalizer
 
 
-class Projection1DCtrlWidget(AbstractCtrlWidget):
+class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Analysis parameters setup for ROI analysis."""
 
     _available_normalizers = OrderedDict({
         "": Normalizer.UNDEFINED,
         "AUC": Normalizer.AUC,
         "XGM": Normalizer.XGM,
-        "ROI3": Normalizer.ROI3,
-        "ROI4": Normalizer.ROI4,
-        "ROI3 - ROI4": Normalizer.ROI3_SUB_ROI4,
-        "ROI3 + ROI4": Normalizer.ROI3_ADD_ROI4,
+        "ROI3 (sum)": Normalizer.ROI3,
+        "ROI4 (sum)": Normalizer.ROI4,
+        "ROI3 (sum) - ROI4 (sum)": Normalizer.ROI3_SUB_ROI4,
+        "ROI3 (sum) + ROI4 (sum)": Normalizer.ROI3_ADD_ROI4,
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("ROI 1D projection analysis setup", *args, **kwargs)
+        super().__init__("ROI 1D projection setup", *args, **kwargs)
 
         self._direct_cb = QtGui.QComboBox()
         for v in ['x', 'y']:
