@@ -481,3 +481,30 @@ class TestIndexMask(unittest.TestCase):
         for i in [0, 5, 7]:
             self.assertNotIn(i, mask.kept_indices(100))
             self.assertNotIn(i, mask.kept_indices(6))
+
+
+class TestRoiGeom(unittest.TestCase):
+    def setUp(self):
+        self._img = np.arange(100).reshape((10, 10))
+        self._img_array = np.arange(400).reshape((4, 10, 10))
+
+    def testRect(self):
+        from karaboFAI.pipeline.data_model import _RectRoiGeom
+
+        for img in [self._img, self._img_array]:
+            # w = h = -1
+            roi = _RectRoiGeom()
+            self.assertIsNone(roi.rect(img))
+
+            # not activated
+            roi.set_geometry([1, 2, 3, 2])
+            self.assertIsNone(roi.rect(img))
+
+            # activate but no intersection
+            roi.activated = True
+            roi.set_geometry([-3, -4, 2, 2])
+            self.assertIsNone(roi.rect(img))
+
+            # activated
+            roi.set_geometry([1, 2, 3, 2])
+            np.testing.assert_array_equal(img[..., 2:2+2, 1:1+3], roi.rect(img))
