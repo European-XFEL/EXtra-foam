@@ -624,7 +624,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         # test reset button
         proc._reset = False
-        widget._reset_btn.clicked.emit()
+        widget._scan_btn_set.reset_sgn.emit()
         proc.update()
         self.assertTrue(proc._reset)
 

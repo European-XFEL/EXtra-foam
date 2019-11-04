@@ -7,10 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from .scan_button_set import ScanButtonSet
+from ...config import AnalysisType
 
 
 _DEFAULT_N_BINS = "10"
@@ -42,14 +45,22 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         self._n_energy_bins_le.setValidator(
             QtGui.QIntValidator(1, _MAX_N_BINS))
 
-        self._reset_btn = QtWidgets.QPushButton("Reset")
+        self._scan_btn_set = ScanButtonSet()
+
+        self._non_reconfigurable_widgets = [
+            self._delay_device_le,
+            self._delay_ppt_le,
+            self._energy_device_le,
+            self._energy_ppt_le
+        ]
 
         self.initUI()
         self.initConnections()
+        # required for non-registered ctrl widgets
+        self.updateMetaData()
 
     def initUI(self):
         """Overload."""
-        QLabel = QtWidgets.QLabel
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
 
@@ -82,7 +93,7 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._n_energy_bins_le, i_row, 3)
 
         i_row += 1
-        layout.addWidget(self._reset_btn, i_row, 3)
+        layout.addWidget(self._scan_btn_set, i_row, 0, 1, 4)
 
         self.setLayout(layout)
 
@@ -110,7 +121,10 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         self._energy_range_le.value_changed_sgn.connect(
             mediator.onTrXasEnergyRangeChange)
 
-        self._reset_btn.clicked.connect(mediator.onTrXasReset)
+        self._scan_btn_set.scan_toggled_sgn.connect(
+            self._onScanStateToggled)
+
+        self._scan_btn_set.reset_sgn.connect(mediator.onTrXasReset)
 
     def updateMetaData(self):
         """Overload."""
@@ -127,3 +141,13 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         self._energy_range_le.returnPressed.emit()
 
         return True
+
+    def _onScanStateToggled(self, state):
+        if state:
+            if not self.updateMetaData():
+                return
+            self.onStart()
+        else:
+            self.onStop()
+
+        self._mediator.onTrXasScanStateToggled(AnalysisType.TR_XAS, state)

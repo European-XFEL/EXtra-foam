@@ -292,8 +292,6 @@ class MainGUI(QtWidgets.QMainWindow):
         # control widgets
         # *************************************************************
 
-        self._trxas_ctrl_widget = self.createCtrlWidget(TrXasCtrlWidget)
-
         self.registerCtrlWidget(self._source_cw.connection_ctrl_widget)
 
         # analysis control widgets
@@ -309,6 +307,9 @@ class MainGUI(QtWidgets.QMainWindow):
 
         # geometry control widgets
         self.geometry_ctrl_widget = self.createCtrlWidget(GeometryCtrlWidget)
+
+        # special analysis control widgets (do not register them!!!)
+        self._trxas_ctrl_widget = TrXasCtrlWidget()
 
         # *************************************************************
         # status bar

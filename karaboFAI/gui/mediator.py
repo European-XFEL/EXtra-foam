@@ -212,8 +212,8 @@ class Mediator(QObject):
     def onRdRemoveDark(self):
         self._meta.set(mt.GLOBAL_PROC, "remove_dark", 1)
 
-    def onTrXasToggled(self, value: IntEnum, enabled: bool):
-        if enabled:
+    def onTrXasScanStateToggled(self, value: IntEnum, state: bool):
+        if state:
             self._meta.set(mt.TR_XAS, "analysis_type", int(value))
         else:
             self._meta.delete(mt.TR_XAS, "analysis_type")

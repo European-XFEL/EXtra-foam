@@ -12,7 +12,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 from .base_window import _AbstractSpecialAnalysisWindow
 from ..plot_widgets import RoiImageView, ImageViewF, PlotWidgetF
 from ..misc_widgets import make_brush, make_pen
-from ...config import config, AnalysisType
+from ...config import config
 
 
 class _TrXasAbsorptionWidget(PlotWidgetF):
@@ -131,17 +131,8 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
 
     def initConnections(self):
         """Override."""
-        self._mediator.onTrXasToggled(AnalysisType.TR_XAS, True)
+        pass
 
     def updateMetaData(self):
         """Override."""
         return True
-
-    def closeEvent(self, QCloseEvent):
-        """Override."""
-        try:
-            self._mediator.onTrXasToggled(AnalysisType.TR_XAS, False)
-        except Exception:
-            # no-exception in destructor
-            pass
-        super().closeEvent(QCloseEvent)
