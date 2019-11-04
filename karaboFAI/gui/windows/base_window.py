@@ -52,7 +52,7 @@ class _AbstractWindowMixin:
         raise NotImplementedError
 
 
-class _AbstractWindow(QtGui.QMainWindow, _AbstractWindowMixin):
+class _AbstractWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
     """Base class for various stand-alone windows.
 
     All the stand-alone windows should follow the interface defined
@@ -140,7 +140,7 @@ class _AbstractPlotWindow(_AbstractWindow):
         del self._plot_widgets[instance]
 
 
-class _AbstractSatelliteWindow(QtGui.QMainWindow, _AbstractWindowMixin):
+class _AbstractSatelliteWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
     """Base class for Satellite windows.
 
     A satellite window does not need to access the processed data.

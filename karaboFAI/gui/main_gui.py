@@ -106,7 +106,7 @@ class ThreadLoggerBridge(QObject):
         self.log_error_sgn.connect(instance.onLogErrorReceived)
 
 
-class MainGUI(QtGui.QMainWindow):
+class MainGUI(QtWidgets.QMainWindow):
     """The main GUI for azimuthal integration."""
 
     _root_dir = osp.dirname(osp.abspath(__file__))

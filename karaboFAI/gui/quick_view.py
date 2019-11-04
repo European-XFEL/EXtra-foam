@@ -13,7 +13,7 @@ import argparse
 import os.path as osp
 from queue import Empty, Full
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .ctrl_widgets import GeometryCtrlWidget
 from .. import __version__
@@ -64,7 +64,7 @@ class _QuickViewImageAssembler(QThreadWorker):
         self.info("TrainWorker stopped!")
 
 
-class FaiQuickView(QtGui.QMainWindow):
+class FaiQuickView(QtWidgets.QMainWindow):
     """FaiQuickView class.
 
     A QMainWindow which only shows the image.
