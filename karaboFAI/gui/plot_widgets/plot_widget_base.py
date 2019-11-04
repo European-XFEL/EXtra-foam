@@ -59,7 +59,7 @@ class PlotWidgetF(pg.GraphicsView):
             item.setData([], [])
 
     @abc.abstractmethod
-    def updateWidgetF(self, data):
+    def updateF(self, data):
         """This method is called by the parent window."""
         raise NotImplementedError
 

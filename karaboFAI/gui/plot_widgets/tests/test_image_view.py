@@ -44,17 +44,17 @@ class TestImageView(unittest.TestCase):
 
         # invalid ROI rect
         self.assertListEqual([0, 0, -1, -1], processed.roi.rect1)
-        widget.updateWidgetF(processed)
+        widget.updateF(processed)
         widget.setImage.assert_not_called()
 
         # invalid ROI rect
         processed.roi.rect1 = [0, 0, -1, 0]
-        widget.updateWidgetF(processed)
+        widget.updateF(processed)
         widget.setImage.assert_not_called()
 
         # valid ROI rect
         processed.roi.rect1 = [0, 0, 2, 2]
-        widget.updateWidgetF(processed)
+        widget.updateF(processed)
         widget.setImage.assert_called_once()
 
 

@@ -107,7 +107,7 @@ class ImageViewF(QtGui.QWidget):
     def reset(self):
         self.clear()
 
-    def updateWidgetF(self, data):
+    def updateF(self, data):
         """This method is called by the parent window."""
         pass
 
