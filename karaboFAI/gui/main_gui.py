@@ -357,12 +357,12 @@ class MainGUI(QtWidgets.QMainWindow):
         self.initUtilUI()
 
     def initCtrlUI(self):
-        self._ctrl_panel_cw.addTab(self._analysis_cw, "Analysis setup")
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
         geom_tab = self._ctrl_panel_cw.addTab(
             self._geometry_cw, "Geometry setup")
         if not config['REQUIRE_GEOMETRY']:
             self._ctrl_panel_cw.setTabEnabled(geom_tab, False)
-        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special Analysis")
+        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special analysis")
 
         self.initAnalysisUI()
         self.initGeometryUI()
@@ -401,7 +401,7 @@ class MainGUI(QtWidgets.QMainWindow):
     def initSpecialAnalysisUI(self):
         ctrl_widget = QtWidgets.QTabWidget()
         ctrl_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
-        ctrl_widget.addTab(self._trxas_ctrl_widget, "Tr-XAS")
+        ctrl_widget.addTab(self._trxas_ctrl_widget, "tr-XAS")
 
         icon_layout = QtGui.QVBoxLayout()
         icon_layout.addWidget(self._trxas_btn)
