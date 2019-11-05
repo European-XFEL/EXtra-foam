@@ -69,9 +69,9 @@ class TestTrXasProcessor(_BaseProcessorTest):
         self.assertTrue(proc._bin1d)
         self.assertFalse(proc._bin2d)
 
-        self.assertTupleEqual((2, 4), proc._a21_heat.shape)
-        self.assertTupleEqual((2, 4), proc._a21_heatcount.shape)
-        self.assertListEqual([[2, 0, 0, 0], [0, 2, 1, 0]], proc._a21_heatcount.tolist())
+        self.assertTupleEqual((4, 2), proc._a21_heat.shape)
+        self.assertTupleEqual((4, 2), proc._a21_heatcount.shape)
+        self.assertListEqual([[2, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
         self.assertIsNone(proc._delay_bin_edges)  # calculated in _new_1d_binning
         self.assertListEqual([2, 4, 6], proc._energy_bin_edges.tolist())
 
@@ -81,11 +81,11 @@ class TestTrXasProcessor(_BaseProcessorTest):
         proc._new_1d_binning()
 
         # new outsider data point
-        proc._update_2d_binning(0.1, 7, 6)  # energy = 6 has index 2 instead of 1
-        self.assertListEqual([[2, 0, 0, 0], [0, 2, 1, 0]], proc._a21_heatcount.tolist())
+        proc._update_2d_binning(0.1, 6, 7)  # energy = 6 has index 2 instead of 1
+        self.assertListEqual([[2, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
 
         # new valid data point
-        proc._update_2d_binning(0.1, 1, 2)  # energy = 2 has index 0 instead of -1
-        self.assertListEqual([[3, 0, 0, 0], [0, 2, 1, 0]], proc._a21_heatcount.tolist())
+        proc._update_2d_binning(0.1, 2, 1)  # energy = 2 has index 0 instead of -1
+        self.assertListEqual([[3, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
 
         # TODO: test moving average calculation

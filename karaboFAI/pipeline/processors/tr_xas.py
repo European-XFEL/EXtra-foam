@@ -277,33 +277,34 @@ class TrXasProcessor(_BaseProcessor):
         return iloc_x
 
     def _new_2d_binning(self):
-        # We put energy in x and delay in y to get an "image array" with
-        # energy being the vertical axis and delay being the horizontal axis.
-        self._a21_heat, self._energy_bin_edges, _, _ = \
-            stats.binned_statistic_2d(self._energies,
-                                      self._delays,
+        # to have energy on x axis and delay on y axis
+        # Note: the return array from 'stats.binned_statistic_2d' has a swap x and y
+        # axis compared to conventional image data
+        self._a21_heat, _, self._energy_bin_edges, _ = \
+            stats.binned_statistic_2d(self._delays,
+                                      self._energies,
                                       self._a21,
                                       'mean',
-                                      [self._n_energy_bins, self._n_delay_bins],
-                                      [self._energy_range, self._delay_range])
+                                      [self._n_delay_bins, self._n_energy_bins],
+                                      [self._delay_range, self._energy_range])
         np.nan_to_num(self._a21_heat, copy=False)
 
         self._a21_heatcount, _, _, _ = \
-            stats.binned_statistic_2d(self._energies,
-                                      self._delays,
+            stats.binned_statistic_2d(self._delays,
+                                      self._energies,
                                       self._a21,
                                       'count',
-                                      [self._n_energy_bins, self._n_delay_bins],
-                                      [self._energy_range, self._delay_range])
+                                      [self._n_delay_bins, self._n_energy_bins],
+                                      [self._delay_range, self._energy_range])
         np.nan_to_num(self._a21_heatcount, copy=False)
 
         self._bin2d = False
 
-    def _update_2d_binning(self, a21, delay, energy):
-        iloc_x = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
-        iloc_y = np.searchsorted(self._energy_bin_edges, energy, side='right') - 1
-        if 0 <= iloc_x < self._n_delay_bins \
-                and 0 <= iloc_y < self._n_energy_bins:
+    def _update_2d_binning(self, a21, energy, delay):
+        iloc_x = np.searchsorted(self._energy_bin_edges, energy, side='right') - 1
+        iloc_y = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
+        if 0 <= iloc_x < self._n_energy_bins \
+                and 0 <= iloc_y < self._n_delay_bins:
             self._a21_heatcount[iloc_y, iloc_x] += 1
             self._a21_heat[iloc_y, iloc_x] += \
                 (a21 - self._a21_heat[iloc_y, iloc_x]) / \

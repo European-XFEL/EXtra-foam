@@ -62,8 +62,8 @@ class _TrXasHeatmap(ImageViewF):
         self.invertY(False)
         self.setAspectLocked(False)
 
-        self.setLabel('bottom', 'Delay')
-        self.setLabel('left', 'Energy')
+        self.setLabel('bottom', 'Energy (eV)')
+        self.setLabel('left', 'Delay (arb. u.)')
         self.setTitle("Absorption (ROI2/ROI1)")
 
     def updateF(self, data):
@@ -82,9 +82,9 @@ class _TrXasHeatmap(ImageViewF):
             self.setImage(heat,
                           auto_levels=True,
                           auto_range=True,
-                          pos=[delay[0], energy[0]],
-                          scale=[(delay[-1] - delay[0])/len(delay),
-                                 (energy[-1] - energy[0])/len(energy)])
+                          pos=[energy[0], delay[0]],
+                          scale=[(energy[-1] - energy[0])/len(energy),
+                                 (delay[-1] - delay[0])/len(delay)])
 
 
 class TrXasWindow(_AbstractSpecialAnalysisWindow):
