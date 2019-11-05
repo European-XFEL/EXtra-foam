@@ -121,15 +121,14 @@ class ImageProcessor(_BaseProcessor):
         assembled = data['detector']['assembled']
 
         if self._dark_subtraction and self._dark_run is not None:
+            sliced_dark = self._dark_run[pulse_slicer]
             # subtract the dark_run from assembled if any
-            dt_shape = assembled.shape
-            dk_shape = self._dark_run.shape
-
-            if dt_shape != dk_shape:
+            try:
+                assembled -= sliced_dark
+            except ValueError:
                 raise ImageProcessingError(
-                    f"[Image processor] Shape of the dark train {dk_shape} "
-                    f"is different from the data {dt_shape}")
-            assembled -= self._dark_run
+                    f"[Image processor] Shape of the dark train {sliced_dark.shape} "
+                    f"is different from the data {assembled.shape}")
 
         image_shape = assembled.shape[-2:]
         self._update_image_mask(image_shape)

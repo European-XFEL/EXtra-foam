@@ -151,21 +151,33 @@ class TestImageProcessorPr(_BaseProcessorTest):
             self._proc.process(data)
 
     def testPulseSlicing(self):
+        proc = self._proc
+
         data, processed = self.data_with_assembled(1, (4, 2, 2))
         assembled_gt = data['detector']['assembled'].copy()
 
-        self._proc.process(data)
+        proc.process(data)
         self.assertEqual(4, processed.image.n_images)
         self.assertListEqual([0, 1, 2, 3], processed.image.sliced_indices)
 
         # test slice to list of indices
         data['detector']['pulse_slicer'] = slice(0, 2)
-        self._proc.process(data)
+        proc.process(data)
         # Note: this test ensures that POI and on/off pulse indices are all
         # based on the assembled data after pulse slicing.
         np.testing.assert_array_equal(assembled_gt[0:2], data['detector']['assembled'])
         self.assertEqual(2, processed.image.n_images)
         self.assertListEqual([0, 1], processed.image.sliced_indices)
+
+        # test slice will also applied to the recorded dark run
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        data['detector']['pulse_slicer'] = slice(0, 4, 2)
+        proc._dark_run = np.random.randn(4, 2, 2).astype(np.float32)
+        proc.process(data)
+        # the assembled images have been sliced
+        self.assertTupleEqual((2, 2, 2), data['detector']['assembled'].shape)
+        # check the internal dark shape has not been affected
+        self.assertTupleEqual((4, 2, 2), proc._dark_run.shape)
 
     def testPOI(self):
         proc = self._proc
