@@ -8,7 +8,7 @@ from .projection1d_ctrl_widget import Projection1DCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
-from .smart_widgets import SmartLineEdit
+from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from .trxas_ctrl_widget import TrXasCtrlWidget
 
 
@@ -25,5 +25,6 @@ __all__ = [
     "PumpProbeCtrlWidget",
     "Projection1DCtrlWidget",
     "SmartLineEdit",
+    "SmartStringLineEdit",
     "TrXasCtrlWidget",
 ]

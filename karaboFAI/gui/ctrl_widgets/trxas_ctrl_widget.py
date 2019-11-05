@@ -11,7 +11,9 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
-from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from .smart_widgets import (
+    SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
+)
 from .scan_button_set import ScanButtonSet
 from ...config import AnalysisType
 
@@ -27,13 +29,13 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._delay_device_le = SmartLineEdit("Any")
-        self._delay_ppt_le = SmartLineEdit("timestamp.tid")
+        self._delay_device_le = SmartStringLineEdit("Any")
+        self._delay_ppt_le = SmartStringLineEdit("timestamp.tid")
 
         # self._energy_device_le = SmartLineEdit("SA3_XTD10_MONO/MDL/PHOTON_ENERGY")
         # self._energy_ppt_le = SmartLineEdit("actualEnergy")
-        self._energy_device_le = SmartLineEdit("Any")
-        self._energy_ppt_le = SmartLineEdit("timestamp.tid")
+        self._energy_device_le = SmartStringLineEdit("Any")
+        self._energy_ppt_le = SmartStringLineEdit("timestamp.tid")
 
         self._delay_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
         self._n_delay_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
