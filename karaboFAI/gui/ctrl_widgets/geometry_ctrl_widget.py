@@ -23,12 +23,16 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Geometry setup", *args, **kwargs)
 
+        self._with_geometry_cb = QtWidgets.QCheckBox("Assemble with geometry")
+        self._with_geometry_cb.setChecked(True)
+
         self._quad_positions_tb = QtGui.QTableWidget()
         self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QtGui.QPushButton("Load geometry file")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._non_reconfigurable_widgets = [
+            self._with_geometry_cb,
             self._quad_positions_tb,
             self._geom_file_le,
             self._geom_file_open_btn
@@ -49,6 +53,7 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
         sub_layout2 = QtGui.QHBoxLayout()
         sub_layout2.addWidget(QtGui.QLabel("Quadrant positions:"))
         sub_layout2.addWidget(self._quad_positions_tb)
+        layout.addWidget(self._with_geometry_cb)
         layout.addLayout(sub_layout1)
         layout.addLayout(sub_layout2)
         self.setLayout(layout)
@@ -95,6 +100,9 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Override"""
         if not config['REQUIRE_GEOMETRY']:
             return True
+
+        self._mediator.onGeomAssembleWithGeometryChange(
+            self._with_geometry_cb.isChecked())
 
         geom_file = self._geom_file_le.text()
         if not osp.isfile(geom_file):

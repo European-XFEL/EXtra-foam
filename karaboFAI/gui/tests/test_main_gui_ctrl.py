@@ -280,6 +280,11 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         pulse_worker._assembler.update()
         self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
 
+        widget._with_geometry_cb.setChecked(False)
+        self.assertTrue(self.gui.updateMetaData())
+        pulse_worker._assembler.update()
+        self.assertIsNone(pulse_worker._assembler._geom)
+
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
         pulse_worker = self.pulse_worker

@@ -57,15 +57,22 @@ class ImageAssemblerFactory(ABC):
 
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
-                geom_file = geom_cfg["geometry_file"]
-                quad_positions = json.loads(geom_cfg["quad_positions"],
-                                            encoding='utf8')
-                if geom_file != self._geom_file or \
-                        quad_positions != self._quad_position:
-                    self.load_geometry(geom_file, quad_positions)
-                    self._geom_file = geom_file
-                    self._quad_position = quad_positions
-                    print(f"Loaded geometry from {geom_file}")
+
+                with_geometry = geom_cfg["with_geometry"] == 'True'
+                if with_geometry:
+                    geom_file = geom_cfg["geometry_file"]
+                    quad_positions = json.loads(geom_cfg["quad_positions"],
+                                                encoding='utf8')
+                    if geom_file != self._geom_file or \
+                            quad_positions != self._quad_position:
+                        self.load_geometry(geom_file, quad_positions)
+                        self._geom_file = geom_file
+                        self._quad_position = quad_positions
+                        print(f"Loaded geometry from {geom_file}")
+                else:
+                    # when only a single module is required or we only want to
+                    # assemble modules seamlessly together.
+                    self._geom = None
 
         @abstractmethod
         def _get_modules_bridge(self, data, src_name):
@@ -123,6 +130,10 @@ class ImageAssemblerFactory(ABC):
             if config["DETECTOR"] == "JungFrauPR":
                 # Stacking modules vertically along y axis.
                 return modules.reshape(shape[0], -1, shape[-1])
+            elif modules.ndim == 4:
+                raise AssemblingError(
+                    "Assembling modules without geometry is not supported!")
+
             # For train-resolved detector, assembled is a reference
             # to the array data received from the pyzmq. This array data
             # is only readable since the data is owned by a pointer in
