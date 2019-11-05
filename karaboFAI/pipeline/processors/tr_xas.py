@@ -159,10 +159,13 @@ class TrXasProcessor(_BaseProcessor):
             sum1, sum2, sum3, delay, energy = self._get_data_point(
                 processed, data['raw'])
 
+            a13 = -np.log(sum1 / sum3)
+            a23 = -np.log(sum2 / sum3)
+            a21 = -np.log(sum2 / sum1)
             # update historic data
-            self._a13.append(-np.log(sum2 / sum1))
-            self._a23.append(-np.log(sum3 / sum1))
-            self._a21.append(-np.log(sum3 / sum2))
+            self._a13.append(a13)
+            self._a23.append(a23)
+            self._a21.append(a21)
             self._delays.append(delay)
             self._energies.append(energy)
         except ProcessingError as e:
@@ -171,73 +174,18 @@ class TrXasProcessor(_BaseProcessor):
         # update 1d binning
 
         if self._bin1d:
-            self._a13_stats, self._delay_bin_edges, _ = \
-                stats.binned_statistic(self._delays, self._a13, 'mean',
-                                       self._n_delay_bins, self._delay_range)
-            np.nan_to_num(self._a13_stats, copy=False)
-
-            self._delay_bin_counts, _, _ = \
-                stats.binned_statistic(self._delays, self._a13, 'count',
-                                       self._n_delay_bins, self._delay_range)
-            np.nan_to_num(self._delay_bin_counts, copy=False)
-
-            self._a23_stats, _, _ = \
-                stats.binned_statistic(self._delays, self._a23, 'mean',
-                                       self._n_delay_bins, self._delay_range)
-            np.nan_to_num(self._a23_stats, copy=False)
-
-            self._a21_stats, _, _ = \
-                stats.binned_statistic(self._delays, self._a21, 'mean',
-                                       self._n_delay_bins, self._delay_range)
-            np.nan_to_num(self._a21_stats, copy=False)
-
-            self._bin1d = False
+            self._new_1d_binning()
         else:
             if not err_msg:
-                iloc_x = np.searchsorted(self._delay_bin_edges, delay) - 1
-                if 0 <= iloc_x < self._n_delay_bins:
-                    self._delay_bin_counts[iloc_x] += 1
-                    count = self._delay_bin_counts[iloc_x]
-                    self._a13_stats[iloc_x] += \
-                        (self._a13[-1] - self._a13_stats[iloc_x]) / count
-                    self._a23_stats[iloc_x] += \
-                        (self._a23[-1] - self._a23_stats[iloc_x]) / count
-                    self._a21_stats[iloc_x] += \
-                        (self._a21[-1] - self._a21_stats[iloc_x]) / count
+                self._update_1d_binning(a13, a23, a21, delay)
 
         # update 2d binning
 
         if self._bin2d:
-            # We put energy in x and delay in y to get an "image array" with
-            # energy being the vertical axis and delay being the horizontal axis.
-            self._a21_heat, self._energy_bin_edges, _, _ = \
-                stats.binned_statistic_2d(self._energies,
-                                          self._delays,
-                                          self._a21,
-                                          'mean',
-                                          [self._n_energy_bins, self._n_delay_bins],
-                                          [self._energy_range, self._delay_range])
-            np.nan_to_num(self._a21_heat, copy=False)
-
-            self._a21_heatcount, _, _, _ = \
-                stats.binned_statistic_2d(self._energies,
-                                          self._delays,
-                                          self._a21,
-                                          'count',
-                                          [self._n_energy_bins, self._n_delay_bins],
-                                          [self._energy_range, self._delay_range])
-            np.nan_to_num(self._a21_heatcount, copy=False)
-
-            self._bin2d = False
+            self._new_2d_binning()
         else:
             if not err_msg:
-                iloc_y = np.searchsorted(self._energy_bin_edges, energy) - 1
-                if 0 <= iloc_x < self._n_delay_bins \
-                        and 0 <= iloc_y < self._n_energy_bins:
-                    self._a21_heatcount[iloc_y, iloc_x] += 1
-                    self._a21_heat[iloc_y, iloc_x] += \
-                        (self._a21[-1] - self._a21_heat[iloc_y, iloc_x]) / \
-                        self._a21_heatcount[iloc_y, iloc_x]
+                self._update_2d_binning(a21, delay, energy)
 
         # update processed
         xas = processed.trxas
@@ -292,6 +240,74 @@ class TrXasProcessor(_BaseProcessor):
             raise ProcessingError(err)
 
         return sum1, sum2, sum3, delay, energy
+
+    def _new_1d_binning(self):
+        self._a13_stats, self._delay_bin_edges, _ = \
+            stats.binned_statistic(self._delays, self._a13, 'mean',
+                                   self._n_delay_bins, self._delay_range)
+        np.nan_to_num(self._a13_stats, copy=False)
+
+        self._delay_bin_counts, _, _ = \
+            stats.binned_statistic(self._delays, self._a13, 'count',
+                                   self._n_delay_bins, self._delay_range)
+        np.nan_to_num(self._delay_bin_counts, copy=False)
+
+        self._a23_stats, _, _ = \
+            stats.binned_statistic(self._delays, self._a23, 'mean',
+                                   self._n_delay_bins, self._delay_range)
+        np.nan_to_num(self._a23_stats, copy=False)
+
+        self._a21_stats, _, _ = \
+            stats.binned_statistic(self._delays, self._a21, 'mean',
+                                   self._n_delay_bins, self._delay_range)
+        np.nan_to_num(self._a21_stats, copy=False)
+
+        self._bin1d = False
+
+    def _update_1d_binning(self, a13, a23, a21, delay):
+        # use side = 'right' to match the result from scipy
+        iloc_x = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
+        if 0 <= iloc_x < self._n_delay_bins:
+            self._delay_bin_counts[iloc_x] += 1
+            count = self._delay_bin_counts[iloc_x]
+            self._a13_stats[iloc_x] += (a13 - self._a13_stats[iloc_x]) / count
+            self._a23_stats[iloc_x] += (a23 - self._a23_stats[iloc_x]) / count
+            self._a21_stats[iloc_x] += (a21 - self._a21_stats[iloc_x]) / count
+
+        return iloc_x
+
+    def _new_2d_binning(self):
+        # We put energy in x and delay in y to get an "image array" with
+        # energy being the vertical axis and delay being the horizontal axis.
+        self._a21_heat, self._energy_bin_edges, _, _ = \
+            stats.binned_statistic_2d(self._energies,
+                                      self._delays,
+                                      self._a21,
+                                      'mean',
+                                      [self._n_energy_bins, self._n_delay_bins],
+                                      [self._energy_range, self._delay_range])
+        np.nan_to_num(self._a21_heat, copy=False)
+
+        self._a21_heatcount, _, _, _ = \
+            stats.binned_statistic_2d(self._energies,
+                                      self._delays,
+                                      self._a21,
+                                      'count',
+                                      [self._n_energy_bins, self._n_delay_bins],
+                                      [self._energy_range, self._delay_range])
+        np.nan_to_num(self._a21_heatcount, copy=False)
+
+        self._bin2d = False
+
+    def _update_2d_binning(self, a21, delay, energy):
+        iloc_x = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
+        iloc_y = np.searchsorted(self._energy_bin_edges, energy, side='right') - 1
+        if 0 <= iloc_x < self._n_delay_bins \
+                and 0 <= iloc_y < self._n_energy_bins:
+            self._a21_heatcount[iloc_y, iloc_x] += 1
+            self._a21_heat[iloc_y, iloc_x] += \
+                (a21 - self._a21_heat[iloc_y, iloc_x]) / \
+                self._a21_heatcount[iloc_y, iloc_x]
 
     @staticmethod
     def edges2centers(edges):
