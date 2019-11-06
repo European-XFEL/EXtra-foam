@@ -93,22 +93,15 @@ class ImageProcessor(_BaseProcessor):
     def process(self, data):
         image_data = data['processed'].image
         assembled = data['detector']['assembled']
-        pulse_slicer = data['detector']['pulse_slicer']
-        n_total = assembled.shape[0] if assembled.ndim == 3 else 1
-
-        data['detector']['assembled'] = assembled[pulse_slicer]
-        sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
-        n_images = len(sliced_indices)
 
         if self._recording:
             if self._dark_run is None:
                 # Dark_run should not share memory with
-                # data['detector']['assembled'].
-                # after pulse slicing
-                self._dark_run = data['detector']['assembled'].copy()
+                # data['detector']['assembled']?
+                self._dark_run = assembled.copy()
             else:
                 # moving average
-                self._dark_run = data['detector']['assembled']
+                self._dark_run = assembled
 
             # for visualizing the dark_mean
             # This is also a relatively expensive operation. But, in principle,
@@ -118,19 +111,25 @@ class ImageProcessor(_BaseProcessor):
             else:
                 self._dark_mean = self._dark_run.copy()
 
-        assembled = data['detector']['assembled']
+        n_total = assembled.shape[0] if assembled.ndim == 3 else 1
+        pulse_slicer = data['detector']['pulse_slicer']
+        sliced_assembled = assembled[pulse_slicer]
+        # Note: this will be needed by the pump_probe_processor
+        data['detector']['assembled'] = sliced_assembled
+        sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
+        n_sliced = len(sliced_indices)
 
         if self._dark_subtraction and self._dark_run is not None:
             sliced_dark = self._dark_run[pulse_slicer]
             # subtract the dark_run from assembled if any
             try:
-                assembled -= sliced_dark
+                sliced_assembled -= sliced_dark
             except ValueError:
                 raise ImageProcessingError(
                     f"[Image processor] Shape of the dark train {sliced_dark.shape} "
-                    f"is different from the data {assembled.shape}")
+                    f"is different from the data {sliced_assembled.shape}")
 
-        image_shape = assembled.shape[-2:]
+        image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
         self._update_reference(image_shape)
 
@@ -138,9 +137,9 @@ class ImageProcessor(_BaseProcessor):
         # TODO: consider to use the 'virtual stack' in karabo_data, then
         #       for train-resolved data, set image_data.images == assembled
         #       https://github.com/European-XFEL/karabo_data/pull/196
-        image_data.images = [None] * n_images
+        image_data.images = [None] * n_sliced
         image_data.poi_indices = self._poi_indices
-        self._update_pois(image_data, assembled)
+        self._update_pois(image_data, sliced_assembled)
         image_data.background = self._background
         image_data.dark_mean = self._dark_mean
         image_data.n_dark_pulses = 0 if self._dark_run is None \
