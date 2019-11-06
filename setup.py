@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Build and install.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -241,7 +239,8 @@ setup(
         'karabo-bridge>=0.3.0',
         'toolz>=0.9.0',
         'silx>=0.9.0',
-        'redis>=3.2.1',
+        'hiredis>=1.0.0',
+        'redis>=3.3.11',
         'psutil>=5.6.2',
         'imageio>=2.5.0',
     ],
