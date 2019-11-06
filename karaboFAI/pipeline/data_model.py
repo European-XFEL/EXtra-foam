@@ -636,7 +636,7 @@ class ImageData:
 
         self.background = None
         self.dark_mean = None
-        self.n_dark_pulses = None
+        self.n_dark_pulses = 0
         self.dark_count = 0
         self.image_mask = None
         self.threshold_mask = None

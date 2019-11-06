@@ -88,7 +88,7 @@ class TestImageProcessorPr(_BaseProcessorTest):
         self._proc._background = -10
         self._proc._threshold_mask = (-100, 100)
 
-    def testDarkRun(self):
+    def testDarkRecordingAndSubtraction(self):
         self._proc._recording = True
         self._proc._dark_subtraction = False
 
@@ -140,12 +140,12 @@ class TestImageProcessorPr(_BaseProcessorTest):
         # test 'assembled' is subtracted by dark
         np.testing.assert_array_almost_equal(
             data['detector']['assembled'], assembled_gt - self._proc._dark_run)
+        self._proc._recording = False
 
         # test image has different shape from the dark
         # (this test should use the env from the above test
 
         # when recording, the shape inconsistency will be covered
-        self._proc._recording = False
         data, processed = self.data_with_assembled(1, (4, 3, 2))
         with self.assertRaisesRegex(ImageProcessingError, "Shape of the dark"):
             self._proc.process(data)
@@ -160,7 +160,10 @@ class TestImageProcessorPr(_BaseProcessorTest):
         self.assertEqual(4, processed.image.n_images)
         self.assertListEqual([0, 1, 2, 3], processed.image.sliced_indices)
 
-        # test slice to list of indices
+        # ---------------------------------------------------------------------
+        # Test slice to list of indices.
+        # ---------------------------------------------------------------------
+
         data['detector']['pulse_slicer'] = slice(0, 2)
         proc.process(data)
         # Note: this test ensures that POI and on/off pulse indices are all
@@ -169,19 +172,35 @@ class TestImageProcessorPr(_BaseProcessorTest):
         self.assertEqual(2, processed.image.n_images)
         self.assertListEqual([0, 1], processed.image.sliced_indices)
 
-        # test slice will also applied to the recorded dark run
+        # ----------------------------------------------------------------------
+        # Test the whole train will be recorded even if pulse slicer is applied.
+        #
+        # Test if the pulse slicer is applied, it will apply to the dark run
+        # when performaing dark subtraction.
+        # ---------------------------------------------------------------------
+
+        proc._recording = True
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        data['detector']['pulse_slicer'] = slice(0, 4, 2)
-        proc._dark_run = np.random.randn(4, 2, 2).astype(np.float32)
-        proc.process(data)
-        # the assembled images have been sliced
-        self.assertTupleEqual((2, 2, 2), data['detector']['assembled'].shape)
-        # check the internal dark shape has not been affected
-        self.assertTupleEqual((4, 2, 2), proc._dark_run.shape)
+        slicer = slice(0, 2)
+        # ground truth of the dark run is unsliced
+        dark_run_gt = data['detector']['assembled'].copy()
+        data['detector']['pulse_slicer'] = slicer
+        # ground truth of assembled is sliced
+        assembled_gt = dark_run_gt[slicer]
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark_run)
+        np.testing.assert_array_almost_equal(
+            np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
+        # Important: Test 'assembled' is sliced and is also subtracted by the sliced dark.
+        #            This test ensures that the the pump-probe processor will use the sliced data
+        np.testing.assert_array_almost_equal(
+            data['detector']['assembled'], assembled_gt - self._proc._dark_run[slicer])
+        proc._recording = False
 
     def testPOI(self):
         proc = self._proc
         data, processed = self.data_with_assembled(1, (4, 2, 2))
+        imgs_gt_unsliced = data['detector']['assembled'].copy()
 
         proc.process(data)
         imgs = processed.image.images
@@ -190,19 +209,39 @@ class TestImageProcessorPr(_BaseProcessorTest):
         for img in imgs:
             self.assertIsNone(img)
 
-        # change POI indices
+        # ----------------------------
+        # Test non-default POI indices
+        # ----------------------------
+
         proc._poi_indices = [2, 3]
         proc.process(data)
         imgs = processed.image.images
         self.assertIsNone(imgs[0])
         self.assertIsNone(imgs[1])
-        np.testing.assert_array_equal(imgs[2], data['detector']['assembled'][2])
-        np.testing.assert_array_equal(imgs[3], data['detector']['assembled'][3])
+        np.testing.assert_array_equal(imgs_gt_unsliced[2], imgs[2])
+        np.testing.assert_array_equal(imgs_gt_unsliced[3], imgs[3])
 
-        # test invalid indices
+        # --------------------
+        # Test invalid indices
+        # --------------------
+
         proc._poi_indices = [3, 4]
         with self.assertRaises(ProcessingError):
             proc.process(data)
+
+        # ---------------------------------------------
+        # Test POI indices is based on the sliced data.
+        # ---------------------------------------------
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        imgs_gt_unsliced = data['detector']['assembled'].copy()
+        data['detector']['pulse_slicer'] = slice(0, 4, 2)
+        proc._poi_indices = [0, 1]  # POI indices should based on the sliced data
+        proc.process(data)
+        imgs = processed.image.images
+        self.assertEqual(2, len(imgs))
+        np.testing.assert_array_equal(imgs_gt_unsliced[0], imgs[0])
+        np.testing.assert_array_equal(imgs_gt_unsliced[2], imgs[1])
 
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
