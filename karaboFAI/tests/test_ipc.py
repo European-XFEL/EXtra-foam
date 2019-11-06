@@ -24,16 +24,26 @@ class TestRedisConnection(unittest.TestCase):
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
+    def setUp(self):
+        db = redis_connection()
+        for c in db.client_list():
+            db.client_kill_filter(c["id"])
+
+        reset_redis_connections()
+
     def testCreateConnection(self):
-        # TODO: clean the clients from other tests
-        n_clients = len(redis_connection().client_list())
+        client_list = redis_connection().client_list()
+        n_clients = len(client_list)
+        # why n_clients == 2 here?
+        self.assertEqual(2, n_clients)
 
         db1 = redis_connection()
         self.assertTrue(db1.ping())
         db2 = redis_connection()
         self.assertTrue(db2.ping())
         self.assertIs(db1, db2)
-        # no new client should be created
+        # expect new client being created
+        n_clients += 1
         self.assertEqual(n_clients, len(db1.client_list()))
 
         db1_bytes = redis_connection(decode_responses=False)
@@ -44,8 +54,6 @@ class TestRedisConnection(unittest.TestCase):
         # expect to have one more client without decode response
         n_clients += 1
         self.assertEqual(n_clients, len(db1_bytes.client_list()))
-
-        self.assertIsNot(db1, db1_bytes)
 
     def testCreateConnectionLazily(self):
         class Host:
