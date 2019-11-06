@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Network communication.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -72,6 +70,7 @@ _global_connections = dict()
 
 
 def reset_redis_connections():
+    """Reset all connections."""
     global _GLOBAL_REDIS_CONNECTION
     _GLOBAL_REDIS_CONNECTION = None
     global _GLOBAL_REDIS_CONNECTION_BYTES
@@ -88,23 +87,34 @@ def redis_connection(decode_responses=True):
     """Return a Redis connection."""
     if decode_responses:
         global _GLOBAL_REDIS_CONNECTION
+        connection = _GLOBAL_REDIS_CONNECTION
+        decode_responses = True
+    else:
+        global _GLOBAL_REDIS_CONNECTION_BYTES
+        connection = _GLOBAL_REDIS_CONNECTION_BYTES
+        decode_responses = False
 
-        if _GLOBAL_REDIS_CONNECTION is None:
-            connection = redis.Redis('localhost', config['REDIS_PORT'],
-                                     password=config['REDIS_PASSWORD'],
-                                     decode_responses=True)
+    if connection is None:
+        if config["UNIX_DOMAIN_SOCKET_PATH"]:
+            raise NotImplementedError(
+                "Unix domain socket connection is not supported!")
+            # connection = redis.Redis(
+            #     unix_socket_path=config["UNIX_DOMAIN_SOCKET_PATH"],
+            #     decode_responses=decode_responses
+            # )
+        else:
+            connection = redis.Redis(
+                'localhost', config['REDIS_PORT'],
+                password=config['REDIS_PASSWORD'],
+                decode_responses=decode_responses
+            )
+
+        if decode_responses:
             _GLOBAL_REDIS_CONNECTION = connection
+        else:
+            _GLOBAL_REDIS_CONNECTION_BYTES = connection
 
-        return _GLOBAL_REDIS_CONNECTION
-
-    global _GLOBAL_REDIS_CONNECTION_BYTES
-
-    if _GLOBAL_REDIS_CONNECTION_BYTES is None:
-        connection = redis.Redis('localhost', config['REDIS_PORT'],
-                                 password=config['REDIS_PASSWORD'])
-        _GLOBAL_REDIS_CONNECTION_BYTES = connection
-
-    return _GLOBAL_REDIS_CONNECTION_BYTES
+    return connection
 
 
 class MetaRedisConnection(type):
