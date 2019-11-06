@@ -615,6 +615,7 @@ class ImageData:
         background (float): a uniform background value.
         dark_mean (numpy.ndaray): average of all the dark images in
             the dark run. Shape = (y, x)
+        n_dark_pulses (int): number of dark pulses in a dark train.
         dark_count (int): count of collected dark trains.
         image_mask (numpy.ndarray): image mask with dtype=np.bool.
         threshold_mask (tuple): (lower, upper) boundaries of the
@@ -635,6 +636,7 @@ class ImageData:
 
         self.background = None
         self.dark_mean = None
+        self.n_dark_pulses = None
         self.dark_count = 0
         self.image_mask = None
         self.threshold_mask = None

@@ -143,6 +143,8 @@ class ImageProcessor(_BaseProcessor):
         self._update_pois(image_data, assembled)
         image_data.background = self._background
         image_data.dark_mean = self._dark_mean
+        image_data.n_dark_pulses = 0 if self._dark_run is None \
+            else len(self._dark_run)
         image_data.dark_count = self.__class__._dark_run.count
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask
