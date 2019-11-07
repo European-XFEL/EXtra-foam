@@ -185,7 +185,7 @@ class TrXasProcessor(_BaseProcessor):
             self._new_2d_binning()
         else:
             if not err_msg:
-                self._update_2d_binning(a21, delay, energy)
+                self._update_2d_binning(a21, energy, delay)
 
         # update processed
         xas = processed.trxas
