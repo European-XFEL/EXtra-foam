@@ -27,14 +27,15 @@ class _TrXasAbsorptionWidget(PlotWidgetF):
         self._diff = diff
 
         self.setLabel('left', "Absorption (arb. u.)")
-        self.setLabel('bottom', "Delay")
+        self.setLabel('bottom', "Delay (arb. u.)")
         self.addLegend(offset=(-40, 20))
 
         if diff:
             self._a21 = self.plotCurve(name="ROI2/ROI1", pen=make_pen("g"))
         else:
-            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen("r"))
-            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen("b"))
+            c = config['ROI_COLORS']
+            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen(c[0]))
+            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen(c[1]))
 
     def updateF(self, data):
         """Override."""
