@@ -151,7 +151,8 @@ class ImageProcessor(_BaseProcessor):
         image_data.dark_mean = self._dark_mean
         if dark_run is not None:
             # default is 0
-            image_data.n_dark_pulses = len(dark_run)
+            image_data.n_dark_pulses = 1 if dark_run.ndim == 2 \
+                                         else len(dark_run)
         image_data.dark_count = self.__class__._dark_run.count
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask

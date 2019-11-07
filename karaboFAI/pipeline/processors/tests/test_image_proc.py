@@ -74,6 +74,9 @@ class TestImageProcessorTr(_BaseProcessorTest):
         np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
         proc._reference = None
 
+    def testDarkRecordingAndSubtraction(self):
+        pass
+
 
 class TestImageProcessorPr(_BaseProcessorTest):
     """Test pulse-resolved ImageProcessor.
