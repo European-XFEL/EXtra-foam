@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
@@ -47,13 +47,16 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         self._n_energy_bins_le.setValidator(
             QtGui.QIntValidator(1, _MAX_N_BINS))
 
+        self._swap_btn = QtWidgets.QPushButton("Swap delay and energy")
+
         self._scan_btn_set = ScanButtonSet()
 
         self._non_reconfigurable_widgets = [
             self._delay_device_le,
             self._delay_ppt_le,
             self._energy_device_le,
-            self._energy_ppt_le
+            self._energy_ppt_le,
+            self._swap_btn
         ]
 
         self.initUI()
@@ -95,6 +98,9 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._n_energy_bins_le, i_row, 3)
 
         i_row += 1
+        layout.addWidget(self._swap_btn, i_row, 3)
+
+        i_row += 1
         layout.addWidget(self._scan_btn_set, i_row, 0, 1, 4)
 
         self.setLayout(layout)
@@ -128,6 +134,8 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
 
         self._scan_btn_set.reset_sgn.connect(mediator.onTrXasReset)
 
+        self._swap_btn.clicked.connect(self._swapEnergyDelay)
+
     def updateMetaData(self):
         """Overload."""
         self._delay_device_le.returnPressed.emit()
@@ -153,3 +161,16 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
             self.onStop()
 
         self._mediator.onTrXasScanStateToggled(AnalysisType.TR_XAS, state)
+
+    def _swapEnergyDelay(self):
+        self._swapLineEditContent(self._delay_device_le, self._energy_device_le)
+        self._swapLineEditContent(self._delay_ppt_le, self._energy_ppt_le)
+        self._swapLineEditContent(self._delay_range_le, self._energy_range_le)
+        self._swapLineEditContent(self._n_delay_bins_le, self._n_energy_bins_le)
+        self._scan_btn_set.reset_sgn.emit()
+
+    def _swapLineEditContent(self, edit1, edit2):
+        text1 = edit1.text()
+        text2 = edit2.text()
+        edit1.setText(text2)
+        edit2.setText(text1)
