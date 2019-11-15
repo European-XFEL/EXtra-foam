@@ -16,7 +16,6 @@ from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import PulseOfInterestWindow
 from karaboFAI.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode,
@@ -43,8 +42,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls.gui = cls.fai._gui
         cls.train_worker = cls.fai.train_worker
         cls.pulse_worker = cls.fai.pulse_worker
-
-        ImageToolWindow.reset()
 
     @classmethod
     def tearDownClass(cls):
@@ -641,6 +638,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()   # ensure file
         config.load('JungFrau')
+        config.set_topic("FXE")
 
         cls.fai = FAI().init()
 
@@ -698,8 +696,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget.isEnabled())
 
     def testStatisticsCtrlWidget(self):
-        pass
         # TODO
+        pass
 
     def testPoiWindowCtrl(self):
         image_proc = self.pulse_worker._image_proc

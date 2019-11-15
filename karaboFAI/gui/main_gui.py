@@ -76,8 +76,11 @@ class ThreadLoggerBridge(QObject):
     def __init__(self):
         super().__init__()
 
-    def recv_messages(self):
-        while True:
+        self._running = False
+
+    def recv(self):
+        self._running = True
+        while self._running:
             try:
                 msg = self.__sub.get_message()
 
@@ -107,6 +110,9 @@ class ThreadLoggerBridge(QObject):
         self.log_warning_sgn.connect(instance.onLogWarningReceived)
         self.log_error_sgn.connect(instance.onLogErrorReceived)
 
+    def stop(self):
+        self._running = False
+
 
 class MainGUI(QtWidgets.QMainWindow):
     """The main GUI for azimuthal integration."""
@@ -115,6 +121,7 @@ class MainGUI(QtWidgets.QMainWindow):
 
     start_sgn = pyqtSignal()
     stop_sgn = pyqtSignal()
+    quit_sgn = pyqtSignal()
 
     process_info_sgn = pyqtSignal(object)
 
@@ -187,6 +194,7 @@ class MainGUI(QtWidgets.QMainWindow):
 
         self._tool_bar.addSeparator()
 
+        ImageToolWindow.reset()  # for unittest
         image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
             self._data, parent=self))
@@ -265,10 +273,10 @@ class MainGUI(QtWidgets.QMainWindow):
         logging.getLogger().addHandler(self._logger)
 
         self._thread_logger = ThreadLoggerBridge()
+        self.quit_sgn.connect(self._thread_logger.stop)
         self._thread_logger_t = QtCore.QThread()
         self._thread_logger.moveToThread(self._thread_logger_t)
-        self._thread_logger_t.started.connect(
-            self._thread_logger.recv_messages)
+        self._thread_logger_t.started.connect(self._thread_logger.recv)
         self._thread_logger.connectToMainThread(self)
         if start_thread_logger:
             self._thread_logger_t.start()
@@ -320,6 +328,7 @@ class MainGUI(QtWidgets.QMainWindow):
         self.statusBar().setStyleSheet("QStatusBar{font-weight:bold;}")
 
         self.initUI()
+        self.initConnections()
         self.updateMetaData()
 
         image_tool_at.trigger()
@@ -417,6 +426,9 @@ class MainGUI(QtWidgets.QMainWindow):
 
         self._util_panel_cw.setTabPosition(
             QtWidgets.QTabWidget.TabPosition.South)
+
+    def initConnections(self):
+        pass
 
     def connectInputToOutput(self, output):
         self._input.connect(output)
@@ -650,11 +662,17 @@ class MainGUI(QtWidgets.QMainWindow):
         # prevent from logging in the GUI when it has been closed
         logging.getLogger().removeHandler(self._logger)
 
+        # clean up the input queue
         self._close_ev.set()
 
+        # clean up the logger thread
+        self.quit_sgn.emit()
         self._thread_logger_t.quit()
+        self._thread_logger_t.wait()
 
+        # shutdown pipeline workers and Redis server
         shutdown_all()
+
         for window in list(self._windows):
             # Close all open child windows to make sure their resources
             # (any running process etc.) are released gracefully

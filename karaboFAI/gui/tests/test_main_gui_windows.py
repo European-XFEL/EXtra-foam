@@ -27,7 +27,6 @@ class TestOpenCloseWindows(unittest.TestCase):
 
         config.load('LPD')
 
-        ImageToolWindow.reset()
         cls.gui = MainGUI()
 
     @classmethod

@@ -3,6 +3,7 @@ import time
 
 from redis.client import PubSub, Redis
 
+from karaboFAI.config import config
 from karaboFAI.logger import logger
 from karaboFAI.services import start_redis_server
 from karaboFAI.ipc import (
@@ -25,33 +26,31 @@ class TestRedisConnection(unittest.TestCase):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        db = redis_connection()
-        for c in db.client_list():
-            db.client_kill_filter(c["id"])
+        self._db = redis_connection()
+
+        for c in self._db.client_list():
+            self._db.execute_command("CLIENT KILL", "ID", c["id"])
 
         reset_redis_connections()
 
     def testCreateConnection(self):
-        client_list = redis_connection().client_list()
+        client_list = self._db.client_list()
         n_clients = len(client_list)
-        # why n_clients == 2 here?
-        self.assertEqual(2, n_clients)
+        self.assertEqual(1, n_clients)
 
-        db1 = redis_connection()
-        self.assertTrue(db1.ping())
-        db2 = redis_connection()
-        self.assertTrue(db2.ping())
-        self.assertIs(db1, db2)
-        # expect new client being created
+        db = redis_connection()
+        self.assertTrue(db.ping())
+        # _GLOBAL_REDIS_CONNECTION was set to None in "setUp", so new pool is created.
+        self.assertIsNot(db, self._db)
         n_clients += 1
-        self.assertEqual(n_clients, len(db1.client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
 
+        # _GLOBAL_REDIS_CONNECTION_BYTES was set to None in "setUp", so new pool is created
         db1_bytes = redis_connection(decode_responses=False)
         self.assertTrue(db1_bytes.ping())
         db2_bytes = redis_connection(decode_responses=False)
         self.assertTrue(db2_bytes.ping())
         self.assertIs(db1_bytes, db2_bytes)
-        # expect to have one more client without decode response
         n_clients += 1
         self.assertEqual(n_clients, len(db1_bytes.client_list()))
 
@@ -59,12 +58,15 @@ class TestRedisConnection(unittest.TestCase):
         class Host:
             db = RedisConnection()
 
-        n_clients = len(redis_connection().client_list())
-        host = Host()
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
-        host.db.ping()
+        n_clients = len(self._db.client_list())
+
+        host = Host()  # lazily created client
+        self.assertEqual(n_clients, len(self._db.client_list()))
+
+        host.db.ping()  # new pool is created
+        n_clients += 1
         # connection was already created when the server was started
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
 
     def testCreateConnectionInProcess(self):
         class DumpyProcess(ProcessWorker):
@@ -73,12 +75,12 @@ class TestRedisConnection(unittest.TestCase):
                 self._db.ping()
                 time.sleep(0.1)
 
-        n_clients = len(redis_connection().client_list())
+        n_clients = len(self._db.client_list())
 
         proc = DumpyProcess('dummy')
         proc.start()
         # child process share the same connection as that in the main process
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
 
         proc.join()
 
@@ -89,20 +91,20 @@ class TestRedisConnection(unittest.TestCase):
         class PSubHost:
             sub = RedisPSubscriber('abc')
 
-        n_clients = len(redis_connection().client_list())
+        n_clients = len(self._db.client_list())
         sub_host = SubHost()
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
         # add a connection when first called
         sub_host.sub.get_message()
         n_clients += 1
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
 
         psub_host = PSubHost()
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
         # add a connection when first called
         psub_host.sub.get_message()
         n_clients += 1
-        self.assertEqual(n_clients, len(redis_connection().client_list()))
+        self.assertEqual(n_clients, len(self._db.client_list()))
 
     def testTrackingConnections(self):
         self.assertTrue(bool(_global_connections))
@@ -113,7 +115,7 @@ class TestRedisConnection(unittest.TestCase):
         class Host:
             db = RedisConnection()
 
-        c1 = RedisConnection()
+        RedisConnection()
         self.assertListEqual(['RedisConnection'], list(_global_connections.keys()))
         self.assertIsInstance(_global_connections['RedisConnection'][0](), RedisConnection)
 

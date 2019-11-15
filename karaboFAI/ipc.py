@@ -65,7 +65,7 @@ _GLOBAL_REDIS_CONNECTION = None
 _GLOBAL_REDIS_CONNECTION_BYTES = None
 
 
-# keep track lazily created connections
+# keep tracking lazily created connections
 _global_connections = dict()
 
 
@@ -162,6 +162,8 @@ class RedisSubscriber(metaclass=MetaRedisConnection):
         return self._sub
 
     def reset(self):
+        if self._sub is not None:
+            self._sub.close()
         self._sub = None
 
 
@@ -184,6 +186,8 @@ class RedisPSubscriber(metaclass=MetaRedisConnection):
         return self._sub
 
     def reset(self):
+        if self._sub is not None:
+            self._sub.close()
         self._sub = None
 
 
