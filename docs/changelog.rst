@@ -1,6 +1,25 @@
 CHANGELOG
 =========
 
+karaboFAI 0.6.2 (15 November 2019)
+---------------------------------
+
+- **Improvement**
+
+    - Code clean up and improve base classes in GUI #164
+    - Improve image processing code in cpp (align with xfai) #159
+    - Enhance ImageTool interface (integrate functions in DarkRunWindow and OverviewWindow) #158
+
+- **New Feature**
+
+    - Introduce special analysis interface (implement tr-XAS) #165
+    - Add an option to not normalize VFOM #162
+
+- **Bug Fix**
+
+    - Pulse slicer will also slice the stored dark images #165
+
+
 karaboFAI 0.6.1 (28 October 2019)
 ---------------------------------
 
