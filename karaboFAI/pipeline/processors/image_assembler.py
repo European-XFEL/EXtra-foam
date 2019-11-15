@@ -292,8 +292,12 @@ class ImageAssemblerFactory(ABC):
     class FastCCDImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src_name):
             """Overload."""
-            # (y, x, 1) -> (y, x)
-            return data[src_name]["data.image"].squeeze(axis=-1)
+            try:
+                # calibrated data, (y, x, 1) -> (y, x)
+                return data[src_name]["data.image"].squeeze(axis=-1)
+            except KeyError:
+                # raw data, (y, x)
+                return data[src_name]["data.image.data"]
 
         def _get_modules_file(self, data, src_name):
             """Overload."""

@@ -465,18 +465,27 @@ class TestFastccdAssembler(unittest.TestCase):
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
                                "MODULE_SHAPE": [1934, 960]})
-    def testAssembleBridge(self):
+    def testAssembleBridgeCal(self):
         src_name = 'fastccd_module'
-        key_name = 'data.image'
         self._assembler._source_name = src_name
-        data = {'raw': {src_name: {key_name: np.ones((1934, 960, 1))}},
+        self._runAssembleBridgeTest(src_name, "data.image", (1934, 960, 1))
+
+    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
+                               "MODULE_SHAPE": [1934, 960]})
+    def testAssembleBridgeRaw(self):
+        src_name = 'fastccd_module'
+        self._assembler._source_name = src_name
+        self._runAssembleBridgeTest(src_name, "data.image.data", (1934, 960))
+
+    def _runAssembleBridgeTest(self, src, key, shape):
+        data = {'raw': {src: {key: np.ones(shape)}},
                 'meta': {'source_type': DataSource.BRIDGE}}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}},
+            data = {'raw': {src: {key: np.ones((100, 100, 1))}},
                     'meta': {'source_type': DataSource.BRIDGE}}
             self._assembler.process(data)
 
