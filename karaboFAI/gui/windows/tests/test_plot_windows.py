@@ -4,11 +4,11 @@ import os
 import tempfile
 
 from karaboFAI.logger import logger
-from karaboFAI.config import _Config, ConfigWrapper
+from karaboFAI.config import _Config, ConfigWrapper, config
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.windows import (
     Bin1dWindow, Bin2dWindow, AzimuthalIntegrationWindow, CorrelationWindow,
-    StatisticsWindow, PumpProbeWindow, RoiWindow, PulseOfInterestWindow,
+    StatisticsWindow, PumpProbeWindow, RoiWindow
 )
 from karaboFAI.gui.plot_widgets import (
     TrainAiWidget, FomHistogramWidget,
@@ -31,6 +31,11 @@ class TestPlotWindows(unittest.TestCase):
         # do not use the config file in the current computer
         _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
         ConfigWrapper()  # ensure file
+        # FIXME: 1. we must load a detector and set the topic since it is required
+        #        by the tree model.
+        #        2. if we set "DSSC" and "SCS" here, it affects other tests.
+        config.load("LPD")
+        config.set_topic("FXE")
 
         cls.gui = MainGUI()
 
@@ -138,7 +143,7 @@ class TestPlotWindows(unittest.TestCase):
 
     def testPulseOfInterestWindow(self):
         from karaboFAI.gui.windows.pulse_of_interest_w import (
-            PoiImageView, PoiStatisticsWidget
+            PulseOfInterestWindow, PoiImageView, PoiStatisticsWidget
         )
 
         win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
@@ -152,16 +157,27 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[PoiStatisticsWidget])
 
     def testAzimuthalIntegrationWindow(self):
-        gui = MainGUI()
+        win = AzimuthalIntegrationWindow(
+            pulse_resolved=True, parent=self.gui)
 
-        self._win = AzimuthalIntegrationWindow(
-            pulse_resolved=True, parent=gui)
-
-        self.assertEqual(1, len(self._win._plot_widgets))
+        self.assertEqual(1, len(win._plot_widgets))
         counter = Counter()
-        for key in self._win._plot_widgets:
+        for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[TrainAiWidget])
 
-        gui.close()
+    def testTrXasWindow(self):
+        from karaboFAI.gui.windows.tri_xas_w import (
+            TrXasWindow, _TrXasAbsorptionWidget, _TrXasHeatmap
+        )
+        win = TrXasWindow(pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(6, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(3, counter[RoiImageView])
+        self.assertEqual(2, counter[_TrXasAbsorptionWidget])
+        self.assertEqual(1, counter[_TrXasHeatmap])

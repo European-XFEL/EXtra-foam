@@ -238,6 +238,7 @@ class RoiImageView(ImageViewF):
         super().__init__(has_roi=False, **kwargs)
 
         self._rank = rank
+        self.setTitle(f"ROI{rank}")
 
     def updateF(self, data):
         """Override."""

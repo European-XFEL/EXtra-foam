@@ -5,6 +5,7 @@ from .roi_w import RoiWindow
 from .bin_w import Bin1dWindow, Bin2dWindow
 from .statistics_w import StatisticsWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
+from .tri_xas_w import TrXasWindow
 
 __all__ = [
     "Bin1dWindow",
@@ -14,6 +15,7 @@ __all__ = [
     "StatisticsWindow",
     "PumpProbeWindow",
     "RoiWindow",
+    "TrXasWindow"
 ]
 
 

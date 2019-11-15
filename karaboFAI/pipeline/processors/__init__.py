@@ -14,3 +14,4 @@ from .roi import RoiProcessorTrain, RoiProcessorPulse
 from .xgm import XgmProcessor
 from .statistics import StatisticsProcessor
 from .pulse_filter import PostPulseFilter
+from .tr_xas import TrXasProcessor

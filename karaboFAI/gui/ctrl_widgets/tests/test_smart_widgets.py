@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit, SmartRangeLineEdit,
-    SmartSliceLineEdit
+    SmartSliceLineEdit, SmartStringLineEdit
 )
 from karaboFAI.logger import logger
 
@@ -29,6 +29,39 @@ class TestSmartLineEdit(unittest.TestCase):
         self.assertEqual(1, len(spy))
         widget.setTextWithoutSignal('efg')
         self.assertEqual(1, len(spy))
+
+    def testSmartStringLineEdit(self):
+        widget = SmartStringLineEdit("abc")
+        spy = QSignalSpy(widget.value_changed_sgn)
+
+        # set an empty string
+        widget.clear()
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(0, len(spy))
+
+        # set a space
+        widget.clear()
+        QTest.keyClicks(widget, ' ')
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(0, len(spy))
+
+        # a string started with a space is allowed
+        widget.clear()
+        QTest.keyClicks(widget, ' Any')
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(1, len(spy))
+
+        # a Karabo device ID
+        widget.clear()
+        QTest.keyClicks(widget, 'SA3_XTD10_MONO/MDL/PHOTON_ENERGY')
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(2, len(spy))
+
+        # a string started with number and contains special characters and white spaces
+        widget.clear()
+        QTest.keyClicks(widget, '123 *$ Any')
+        QTest.keyPress(widget, Qt.Key_Enter)
+        self.assertEqual(3, len(spy))
 
     def testSmartBoundaryLineEdit(self):
         # require at least one argument for initialization

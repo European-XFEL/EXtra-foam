@@ -7,13 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ..misc_widgets import Colors
 from ..gui_helpers import parse_boundary, parse_ids, parse_slice
 
 
-class SmartLineEdit(QtGui.QLineEdit):
+class SmartLineEdit(QtWidgets.QLineEdit):
     """A smart QLineEdit.
 
     - It is highlighted when modified but not confirmed.
@@ -75,6 +75,28 @@ class SmartLineEdit(QtGui.QLineEdit):
             return self.Validator.parse(self.text())
         else:
             return self.text()
+
+
+class SmartStringLineEdit(SmartLineEdit):
+    """SmartStringLineEdit class.
+
+    Prevent from entering empty string.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # match any string that contains at least one non-space character.
+        #
+        # ^ anchors the search at the start of the string.
+        #
+        # (?!\s*$), a so-called negative lookahead, asserts that it's
+        # impossible to match only whitespace characters until the end
+        # of the string.
+        #
+        # .+ will then actually do the match. It will match anything
+        # (except newline) up to the end of the string.
+        self.setValidator(
+            QtGui.QRegExpValidator(QtCore.QRegExp('^(?!\s*$).+')))
 
 
 class SmartBoundaryLineEdit(SmartLineEdit):

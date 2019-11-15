@@ -125,6 +125,7 @@ class _InformationWidget(QtWidgets.QFrame):
         self._n_total_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
         self._n_kept_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
         self._dark_train_counter = QtWidgets.QLCDNumber(self._LCD_DIGITS)
+        self._n_dark_pulses = QtWidgets.QLCDNumber(self._LCD_DIGITS)
 
         self.updatePulsesInfo(0, 0)
 
@@ -135,6 +136,7 @@ class _InformationWidget(QtWidgets.QFrame):
         self._setLcdStyle(self._n_total_pulses)
         self._setLcdStyle(self._n_kept_pulses)
         self._setLcdStyle(self._dark_train_counter)
+        self._setLcdStyle(self._n_dark_pulses)
 
         layout = QtGui.QGridLayout()
         AR = QtCore.Qt.AlignRight
@@ -147,6 +149,8 @@ class _InformationWidget(QtWidgets.QFrame):
         layout.addWidget(self._n_kept_pulses, 2, 1)
         layout.addWidget(QtWidgets.QLabel("# of dark trains: "), 3, 0, AR)
         layout.addWidget(self._dark_train_counter, 3, 1)
+        layout.addWidget(QtWidgets.QLabel("# of dark pulses/train: "), 4, 0, AR)
+        layout.addWidget(self._n_dark_pulses, 4, 1)
         self.setLayout(layout)
 
     def _setLcdStyle(self, lcd):
@@ -163,8 +167,9 @@ class _InformationWidget(QtWidgets.QFrame):
         self._n_total_pulses.display(n_total)
         self._n_kept_pulses.display(n_kept)
 
-    def updateDarkTrainCount(self, count):
-        self._dark_train_counter.display(count)
+    def updateDarkInfo(self, n_trains, n_pulses):
+        self._dark_train_counter.display(n_trains)
+        self._n_dark_pulses.display(n_pulses)
 
 
 class _RoiCtrlWidgetBase(QtGui.QWidget):
@@ -669,7 +674,8 @@ class ImageToolWindow(_AbstractWindow):
         else:
             self._dark_view.setImage(data.image.dark_mean)
 
-        self._info_widget.updateDarkTrainCount(data.image.dark_count)
+        self._info_widget.updateDarkInfo(data.image.dark_count,
+                                         data.image.n_dark_pulses)
 
     def updateImage(self, **kwargs):
         """Update the current image.

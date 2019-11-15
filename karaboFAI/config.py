@@ -37,6 +37,7 @@ class PumpProbeMode(IntEnum):
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
+    TR_XAS = 2
     ROI1 = 11
     ROI2 = 12
     ROI1_SUB_ROI2 = 13

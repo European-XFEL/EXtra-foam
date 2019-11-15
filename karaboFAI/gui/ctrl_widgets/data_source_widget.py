@@ -367,7 +367,8 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                         [src, default_ppt, default_slicer, default_v_range],
                         exclusive,
                         parent=last_child))
-            except KeyError:
+            except KeyError as e:
+                # TODO: log the error information!
                 pass
 
 
