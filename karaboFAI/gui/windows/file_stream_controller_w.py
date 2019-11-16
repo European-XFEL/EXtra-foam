@@ -133,7 +133,7 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
 class FileStreamControllerWindow(_AbstractSatelliteWindow):
 
-    title = "File Streamer"
+    _title = "File Streamer"
 
     def __init__(self, *args, detector=None, port=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -183,10 +183,6 @@ class FileStreamControllerWindow(_AbstractSatelliteWindow):
             self.onRepeatStreamChange)
 
         self._widget.initConnections()
-
-    def updateMetaData(self):
-        """Override."""
-        return True
 
     def onFileServerDataFolderChange(self, path):
         self._slow_devices.clear()

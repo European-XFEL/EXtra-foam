@@ -36,8 +36,11 @@ class PlotWidgetF(pg.GraphicsView):
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
-        if parent is not None:
+        try:
             parent.registerPlotWidget(self)
+        except AttributeError:
+            # if parent is None or parent has no such a method
+            pass
 
         self.setSizePolicy(QtGui.QSizePolicy.Expanding,
                            QtGui.QSizePolicy.Expanding)

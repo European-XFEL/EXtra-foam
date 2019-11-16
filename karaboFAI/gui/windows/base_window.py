@@ -10,7 +10,7 @@ All rights reserved.
 import abc
 from weakref import WeakKeyDictionary
 
-from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QSplitter, QWidget
 
 from ..mediator import Mediator
 
@@ -52,21 +52,19 @@ class _AbstractWindowMixin:
         raise NotImplementedError
 
 
-class _AbstractWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
-    """Base class for various stand-alone windows.
+class _AbstractPlotWindow(QMainWindow, _AbstractWindowMixin):
+    """Base class for plot windows.
 
-    All the stand-alone windows should follow the interface defined
-    in this abstract class.
+    Abstract plot window consist of plot widgets.
     """
-    title = ""
+    _title = ""
 
     _SPLITTER_HANDLE_WIDTH = 5
 
-    def __init__(self, data=None, *, pulse_resolved=True, parent=None):
+    def __init__(self, queue, *, pulse_resolved=True, parent=None):
         """Initialization.
 
-        :param Data4Visualization data: the data shared by widgets
-            and windows.
+        :param deque queue: data queue.
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
         """
@@ -76,24 +74,41 @@ class _AbstractWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
 
         self._mediator = Mediator()
 
-        self._data = data
+        self._queue = queue
         self._pulse_resolved = pulse_resolved
 
+        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
+
         try:
-            if self.title:
-                title = parent.title + " - " + self.title
-            else:
-                title = parent.title
-
-            self.setWindowTitle(title)
+            title = parent.title + " - " + self._title
         except AttributeError:
-            # for unit test where parent is None
-            self.setWindowTitle(self.title)
+            title = self._title  # for unit test where parent is None
+        self.setWindowTitle(title)
 
-        self._cw = QtGui.QWidget()
+        self._cw = QWidget()
         self.setCentralWidget(self._cw)
 
         self.show()
+
+    def reset(self):
+        """Override."""
+        for widget in self._plot_widgets:
+            widget.reset()
+
+    def updateWidgetsF(self):
+        """Override."""
+        if len(self._queue) == 0:
+            return
+
+        data = self._queue[0]
+        for widget in self._plot_widgets:
+            widget.updateF(data)
+
+    def registerPlotWidget(self, instance):
+        self._plot_widgets[instance] = 1
+
+    def unregisterPlotWidget(self, instance):
+        del self._plot_widgets[instance]
 
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
@@ -102,46 +117,8 @@ class _AbstractWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
         super().closeEvent(QCloseEvent)
 
 
-class _AbstractPlotWindow(_AbstractWindow):
-    """Abstract plot window consist of plot widgets."""
-    def __init__(self, *args, **kwargs):
-        """Initialization."""
-        super().__init__(*args, **kwargs)
-
-        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
-
-    def updateWidgetsF(self):
-        """Update widgets.
-
-        This method is called by the main GUI.
-        """
-        if self._data is None:
-            return
-
-        data = self._data.get()
-        if data is None:
-            return
-
-        for widget in self._plot_widgets:
-            widget.updateF(data)
-
-    def reset(self):
-        """Reset data in widgets.
-
-        This method is called by the main GUI.
-        """
-        for widget in self._plot_widgets:
-            widget.reset()
-
-    def registerPlotWidget(self, instance):
-        self._plot_widgets[instance] = 1
-
-    def unregisterPlotWidget(self, instance):
-        del self._plot_widgets[instance]
-
-
-class _AbstractSatelliteWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
-    """Base class for Satellite windows.
+class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
+    """Base class for satellite windows.
 
     A satellite window does not need to access the processed data.
     """
@@ -156,27 +133,25 @@ class _AbstractSatelliteWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
         self._mediator = Mediator()
 
         try:
-            if self.title:
-                title = parent.title + " - " + self.title
-            else:
-                title = parent.title
-
-            self.setWindowTitle(title)
+            title = parent.title + " - " + self._title
         except AttributeError:
-            # for unit test where parent is None
-            self.setWindowTitle(self.title)
+            title = self._title  # for unit test where parent is None
+        self.setWindowTitle(title)
 
     def updateWidgetsF(self):
         """Override."""
-        pass
+        # SatelliteWindow should not need 'updateF' method
+        raise Exception()
 
     def reset(self):
         """Override."""
-        pass
+        # SatelliteWindow should not need 'reset' method
+        raise Exception()
 
     def updateMetaData(self):
         """Override."""
-        return True
+        # SatelliteWindow should not have metadata
+        raise Exception()
 
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
@@ -185,17 +160,16 @@ class _AbstractSatelliteWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
         super().closeEvent(QCloseEvent)
 
 
-class _AbstractSpecialAnalysisWindow(QtWidgets.QMainWindow, _AbstractWindowMixin):
+class _AbstractSpecialAnalysisWindow(QMainWindow, _AbstractWindowMixin):
     """Base class for special analysis windows."""
     title = ""
 
     _SPLITTER_HANDLE_WIDTH = 5
 
-    def __init__(self, data=None, *, pulse_resolved=True, parent=None):
+    def __init__(self, queue, *, pulse_resolved=True, parent=None):
         """Initialization.
 
-        :param Data4Visualization data: the data shared by widgets
-            and windows.
+        :param deque queue: data queue.
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
         """
@@ -205,49 +179,35 @@ class _AbstractSpecialAnalysisWindow(QtWidgets.QMainWindow, _AbstractWindowMixin
 
         self._mediator = Mediator()
 
-        self._data = data
+        self._queue = queue
         self._pulse_resolved = pulse_resolved
 
         try:
-            if self.title:
-                title = parent.title + " - " + self.title
-            else:
-                title = parent.title
-
-            self.setWindowTitle(title)
+            title = parent.title + " - " + self._title
         except AttributeError:
-            # for unit test where parent is None
-            self.setWindowTitle(self.title)
+            title = self._title  # for unit test where parent is None
+        self.setWindowTitle(title)
 
         self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
 
-        self._cw = QtWidgets.QSplitter()
+        self._cw = QSplitter()
         self.setCentralWidget(self._cw)
 
         self.show()
 
-    def updateWidgetsF(self):
-        """Update widgets.
-
-        This method is called by the main GUI.
-        """
-        if self._data is None:
-            return
-
-        data = self._data.get()
-        if data is None:
-            return
-
-        for widget in self._plot_widgets:
-            widget.updateF(data)
-
     def reset(self):
-        """Reset data in widgets.
-
-        This method is called by the main GUI.
-        """
+        """Override."""
         for widget in self._plot_widgets:
             widget.reset()
+
+    def updateWidgetsF(self):
+        """Override."""
+        if len(self._queue) == 0:
+            return
+
+        data = self._queue[0]
+        for widget in self._plot_widgets:
+            widget.updateF(data)
 
     def registerPlotWidget(self, instance):
         self._plot_widgets[instance] = 1

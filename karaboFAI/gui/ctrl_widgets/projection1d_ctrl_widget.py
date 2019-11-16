@@ -9,7 +9,8 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
@@ -32,11 +33,11 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("ROI 1D projection setup", *args, **kwargs)
 
-        self._direct_cb = QtGui.QComboBox()
+        self._direct_cb = QComboBox()
         for v in ['x', 'y']:
             self._direct_cb.addItem(v)
 
-        self._normalizers_cb = QtGui.QComboBox()
+        self._normalizers_cb = QComboBox()
         for v in self._available_normalizers:
             self._normalizers_cb.addItem(v)
 
@@ -51,17 +52,17 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Direction: "), 1, 0, AR)
-        layout.addWidget(self._direct_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("Normalizer: "), 1, 2, AR)
-        layout.addWidget(self._normalizers_cb, 1, 3)
-        layout.addWidget(QtGui.QLabel("AUC range: "), 2, 0, AR)
+        layout.addWidget(QLabel("Direction: "), 0, 0, AR)
+        layout.addWidget(self._direct_cb, 0, 1)
+        layout.addWidget(QLabel("Normalizer: "), 1, 0, AR)
+        layout.addWidget(self._normalizers_cb, 1, 1)
+        layout.addWidget(QLabel("AUC range: "), 2, 0, AR)
         layout.addWidget(self._auc_range_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("FOM range: "), 2, 2, AR)
-        layout.addWidget(self._fom_integ_range_le, 2, 3)
+        layout.addWidget(QLabel("FOM range: "), 3, 0, AR)
+        layout.addWidget(self._fom_integ_range_le, 3, 1)
 
         self.setLayout(layout)
 

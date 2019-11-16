@@ -504,10 +504,11 @@ class DataSourceWidget(QWidget):
 
     SPLITTER_HANDLE_WIDTH = 9
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
 
-        self.connection_ctrl_widget = ConnectionCtrlWidget()
+        self._connection_ctrl_widget = parent.createCtrlWidget(
+            ConnectionCtrlWidget)
 
         self._tree_view = QTreeView()
         self._tree_model = DataSourceTreeModel(self)
@@ -533,6 +534,7 @@ class DataSourceWidget(QWidget):
         self._timer.start(config["SOURCES_UPDATE_INTERVAL"])
 
     def initUI(self):
+        self._list_container.setTabPosition(QTabWidget.TabPosition.South)
         self._list_container.addTab(self._list_view, "Available sources")
 
         splitter = QSplitter(Qt.Vertical)
@@ -547,7 +549,7 @@ class DataSourceWidget(QWidget):
         self._tree_view.resizeColumnToContents(0)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.connection_ctrl_widget)
+        layout.addWidget(self._connection_ctrl_widget)
         layout.addWidget(splitter)
         self.setLayout(layout)
 

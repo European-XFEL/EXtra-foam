@@ -7,7 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import CorrelationWidget
@@ -19,9 +20,10 @@ class CorrelationWindow(_AbstractPlotWindow):
 
     Plot correlations between different parameters.
     """
-    title = "correlation"
+    _title = "Correlation"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -29,8 +31,6 @@ class CorrelationWindow(_AbstractPlotWindow):
 
         self._corr1 = CorrelationWidget(1, parent=self)
         self._corr2 = CorrelationWidget(2, parent=self)
-        self._corr3 = CorrelationWidget(3, parent=self)
-        self._corr4 = CorrelationWidget(4, parent=self)
 
         self.initUI()
 
@@ -41,18 +41,10 @@ class CorrelationWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter()
-        left_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        right_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self._cw.addWidget(left_panel)
-        self._cw.addWidget(right_panel)
+        self._cw = QSplitter(Qt.Vertical)
+        self._cw.addWidget(self._corr1)
+        self._cw.addWidget(self._corr2)
         self.setCentralWidget(self._cw)
-
-        left_panel.addWidget(self._corr1)
-        left_panel.addWidget(self._corr3)
-
-        right_panel.addWidget(self._corr2)
-        right_panel.addWidget(self._corr4)
 
     def initConnections(self):
         """Override."""

@@ -9,26 +9,29 @@ All rights reserved.
 """
 import os.path as osp
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import (
+    QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit,
+    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout
+)
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget
 from ..gui_helpers import parse_table_widget
 from ...config import config
 from ...logger import logger
 
 
-class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class GeometryCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up the geometry parameters."""
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Geometry setup", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
-        self._with_geometry_cb = QtWidgets.QCheckBox("Assemble with geometry")
+        self._with_geometry_cb = QCheckBox("Assemble with geometry")
         self._with_geometry_cb.setChecked(True)
 
-        self._quad_positions_tb = QtGui.QTableWidget()
-        self._geom_file_le = QtGui.QLineEdit(config["GEOMETRY_FILE"])
-        self._geom_file_open_btn = QtGui.QPushButton("Load geometry file")
+        self._quad_positions_tb = QTableWidget()
+        self._geom_file_le = QLineEdit(config["GEOMETRY_FILE"])
+        self._geom_file_open_btn = QPushButton("Load geometry file")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._non_reconfigurable_widgets = [
@@ -46,12 +49,12 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Override."""
         self.initQuadTable()
 
-        layout = QtGui.QVBoxLayout()
-        sub_layout1 = QtGui.QHBoxLayout()
+        layout = QVBoxLayout()
+        sub_layout1 = QHBoxLayout()
         sub_layout1.addWidget(self._geom_file_open_btn)
         sub_layout1.addWidget(self._geom_file_le)
-        sub_layout2 = QtGui.QHBoxLayout()
-        sub_layout2.addWidget(QtGui.QLabel("Quadrant positions:"))
+        sub_layout2 = QHBoxLayout()
+        sub_layout2.addWidget(QLabel("Quadrant positions:"))
         sub_layout2.addWidget(self._quad_positions_tb)
         layout.addWidget(self._with_geometry_cb)
         layout.addLayout(sub_layout1)
@@ -70,7 +73,7 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
         try:
             for i in range(n_row):
                 for j in range(n_col):
-                    widget.setItem(i, j, QtGui.QTableWidgetItem(
+                    widget.setItem(i, j, QTableWidgetItem(
                         str(config["QUAD_POSITIONS"][j][i])))
         except IndexError:
             pass
@@ -81,18 +84,18 @@ class GeometryCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         header = widget.horizontalHeader()
         for i in range(n_col):
-            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         header = widget.verticalHeader()
         for i in range(n_row):
-            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         header_height = widget.horizontalHeader().height()
         widget.setMinimumHeight(header_height * (n_row + 1.5))
         widget.setMaximumHeight(header_height * (n_row + 2.0))
 
     def loadGeometryFile(self):
-        filename = QtGui.QFileDialog.getOpenFileName()[0]
+        filename = QFileDialog.getOpenFileName()[0]
         if filename:
             self._geom_file_le.setText(filename)
 

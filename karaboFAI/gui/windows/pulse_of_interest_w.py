@@ -125,7 +125,7 @@ class PoiWidget(QtWidgets.QWidget):
 
 class PulseOfInterestWindow(_AbstractPlotWindow):
     """PulseOfInterestWindow class."""
-    title = "pulse-of-interest"
+    _title = "Pulse-of-interest"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 

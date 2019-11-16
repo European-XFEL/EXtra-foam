@@ -94,6 +94,12 @@ class Mediator(QObject):
                                          "reset_ma_roi": 1,
                                          "reset_ma_xgm": 1})
 
+    def onAiPixelSizeXChange(self, value: int):
+        self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_x', value)
+
+    def onAiPixelSizeYChange(self, value: int):
+        self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_y', value)
+
     def onAiIntegCenterXChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'integ_center_x', value)
 

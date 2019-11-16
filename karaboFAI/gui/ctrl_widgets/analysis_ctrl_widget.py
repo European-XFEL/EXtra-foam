@@ -7,11 +7,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
-from ...config import config
 
 
 class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -20,17 +21,10 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Global setup", *args, **kwargs)
 
-        self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
-        self._photon_energy_le.setValidator(
-            QtGui.QDoubleValidator(0.001, 100, 6))
-
-        self._sample_dist_le = SmartLineEdit(str(config["SAMPLE_DISTANCE"]))
-        self._sample_dist_le.setValidator(QtGui.QDoubleValidator(0.001, 100, 6))
-
         self._ma_window_le = SmartLineEdit("1")
-        self._ma_window_le.setValidator(QtGui.QIntValidator(1, 99999))
+        self._ma_window_le.setValidator(QIntValidator(1, 99999))
 
-        self._reset_ma_btn = QtGui.QPushButton("Reset moving average")
+        self._reset_ma_btn = QPushButton("Reset")
 
         self.initUI()
         self.initConnections()
@@ -39,30 +33,17 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
-        row = 0
-        layout.addWidget(QtGui.QLabel("Photon energy (keV): "), row, 0, AR)
-        layout.addWidget(self._photon_energy_le, row, 1)
-        layout.addWidget(QtGui.QLabel("Sample distance (m): "), row, 2, AR)
-        layout.addWidget(self._sample_dist_le, row, 3)
-
-        row += 1
-        layout.addWidget(QtGui.QLabel("Moving average window: "), row, 0, AR)
-        layout.addWidget(self._ma_window_le, row, 1)
-        layout.addWidget(self._reset_ma_btn, row, 3, AR)
+        layout.addWidget(QLabel("Moving average window: "), 0, 0, AR)
+        layout.addWidget(self._ma_window_le, 0, 1)
+        layout.addWidget(self._reset_ma_btn, 0, 2, AR)
 
         self.setLayout(layout)
 
     def initConnections(self):
         mediator = self._mediator
-
-        self._photon_energy_le.value_changed_sgn.connect(
-            lambda x: mediator.onPhotonEnergyChange(float(x)))
-
-        self._sample_dist_le.value_changed_sgn.connect(
-            lambda x: mediator.onSampleDistanceChange(float(x)))
 
         self._ma_window_le.value_changed_sgn.connect(
             lambda x: mediator.onMaWindowChange(int(x)))
@@ -71,8 +52,6 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
-        self._photon_energy_le.returnPressed.emit()
-        self._sample_dist_le.returnPressed.emit()
         self._ma_window_le.returnPressed.emit()
 
         return True

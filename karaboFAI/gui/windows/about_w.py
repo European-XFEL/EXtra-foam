@@ -16,7 +16,7 @@ from .base_window import _AbstractSatelliteWindow
 
 
 class AboutWindow(_AbstractSatelliteWindow):
-    title = "About"
+    _title = "About"
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 

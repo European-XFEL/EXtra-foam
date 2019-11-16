@@ -19,7 +19,7 @@ class Bin1dWindow(_AbstractPlotWindow):
 
     Plot data in selected bins.
     """
-    title = "binning 1D"
+    _title = "Binning 1D"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -75,9 +75,10 @@ class Bin2dWindow(_AbstractPlotWindow):
 
     Plot data in selected bins.
     """
-    title = "binning 2D"
+    _title = "Binning 2D"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

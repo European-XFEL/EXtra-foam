@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch
 import time
 
+from PyQt5.QtWidgets import QWidget
+
 from karaboFAI.logger import logger
 from karaboFAI.gui import mkQApp
 from karaboFAI.config import config
@@ -15,6 +17,10 @@ logger.setLevel("CRITICAL")
 
 
 class TestDataSourceWidget(unittest.TestCase):
+    class DummyParent(QWidget):
+        def createCtrlWidget(self, widget):
+            pass
+
     @classmethod
     def setUpClass(cls):
         start_redis_server()
@@ -25,7 +31,8 @@ class TestDataSourceWidget(unittest.TestCase):
 
     @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCES_EXPIRATION_TIME": 10})
     def testDataSourceList(self):
-        widget = DataSourceWidget()
+        parent = self.DummyParent()
+        widget = DataSourceWidget(parent)
         model = widget._list_model
         proxy = widget._mon
 

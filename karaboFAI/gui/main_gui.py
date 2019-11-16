@@ -7,30 +7,35 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import deque
 import time
 import logging
 import os.path as osp
 from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
+import itertools
 import multiprocessing as mp
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject
-
+from PyQt5.QtCore import (
+    pyqtSignal, pyqtSlot, QObject, QSize, Qt, QThread, QTimer
+)
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (
+    QAction, QHBoxLayout, QMainWindow, QPushButton, QScrollArea, QSplitter,
+    QTabWidget, QVBoxLayout, QWidget
+)
 from redis import ConnectionError
 
 from .ctrl_widgets import (
-    AzimuthalIntegCtrlWidget, AnalysisCtrlWidget, BinCtrlWidget,
+    AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
-    StatisticsCtrlWidget, GeometryCtrlWidget,
-    PumpProbeCtrlWidget, Projection1DCtrlWidget,
-    TrXasCtrlWidget,
+    StatisticsCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
 )
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
+    Bin1dWindow, Bin2dWindow, CorrelationWindow,
     ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
     PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow,
     TrXasWindow
@@ -43,21 +48,6 @@ from ..ipc import RedisConnection, RedisPSubscriber
 from ..pipeline import MpInQueue
 from ..processes import list_fai_processes, shutdown_all
 from ..database import MonProxy
-
-
-class Data4Visualization:
-    """Data shared between all the windows and widgets.
-
-    The internal data is only modified in MainGUI.updateAll()
-    """
-    def __init__(self):
-        self.__value = None
-
-    def get(self):
-        return self.__value
-
-    def set(self, value):
-        self.__value = value
 
 
 class ThreadLoggerBridge(QObject):
@@ -114,7 +104,7 @@ class ThreadLoggerBridge(QObject):
         self._running = False
 
 
-class MainGUI(QtWidgets.QMainWindow):
+class MainGUI(QMainWindow):
     """The main GUI for azimuthal integration."""
 
     _root_dir = osp.dirname(osp.abspath(__file__))
@@ -142,11 +132,13 @@ class MainGUI(QtWidgets.QMainWindow):
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
+        self._queue = deque(maxlen=1)
+
         self._input = MpInQueue("gui:input")
         self._close_ev = mp.Event()
         self._input.run_in_thread(self._close_ev)
 
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
         self.title = f"karaboFAI {__version__} ({config['DETECTOR']})"
         self.setWindowTitle(self.title + " - main GUI")
@@ -155,27 +147,28 @@ class MainGUI(QtWidgets.QMainWindow):
         # Central widget
         # *************************************************************
 
-        self._cw = QtWidgets.QSplitter()
+        self._ctrl_widgets = []  # book-keeping control widgets
+
+        self._cw = QSplitter()
         self._cw.setChildrenCollapsible(False)
         self._cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
         self.setCentralWidget(self._cw)
 
-        self._left_cw = QtWidgets.QTabWidget()
-        self._middle_cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        self._middle_cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
-        self._middle_cw.setChildrenCollapsible(False)
+        self._left_cw_container = QScrollArea()
+        self._left_cw = QTabWidget()
+        self._right_cw_container = QScrollArea()
+        self._right_cw = QSplitter(Qt.Vertical)
+        self._right_cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
+        self._right_cw.setChildrenCollapsible(False)
 
-        self._source_cw = DataSourceWidget()
+        self._source_cw = DataSourceWidget(self)
 
-        self._ctrl_panel_cw = QtWidgets.QTabWidget()
-        self._analysis_cw = QtWidgets.QScrollArea()
-        self._analysis_cw.setWidgetResizable(True)
-        self._geometry_cw = QtWidgets.QScrollArea()
-        self._geometry_cw.setWidgetResizable(True)
-        self._special_analysis_cw = QtWidgets.QScrollArea()
-        self._special_analysis_cw.setWidgetResizable(True)
+        self._ctrl_panel_cw = QTabWidget()
+        self._analysis_cw = QWidget()
+        self._special_analysis_cw = QWidget()
 
-        self._util_panel_cw = QtWidgets.QTabWidget()
+        self._util_panel_container = QWidget()
+        self._util_panel_cw = QTabWidget()
 
         # *************************************************************
         # Tool bar
@@ -195,7 +188,7 @@ class MainGUI(QtWidgets.QMainWindow):
         ImageToolWindow.reset()  # for unittest
         image_tool_at = self._addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: ImageToolWindow(
-            self._data, parent=self))
+            self._queue, pulse_resolved=self._pulse_resolved, parent=self))
 
         open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(
@@ -222,11 +215,6 @@ class MainGUI(QtWidgets.QMainWindow):
         open_bin2d_window_at = self._addAction("Bin 2D", "heatmap.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, Bin2dWindow))
-
-        open_ai_window_at = self._addAction(
-            "Azimuthal Integration", "azimuthal_integration.png")
-        open_ai_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, AzimuthalIntegrationWindow))
 
         open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
         open_roi_window_at.triggered.connect(
@@ -255,24 +243,17 @@ class MainGUI(QtWidgets.QMainWindow):
         # Miscellaneous
         # *************************************************************
 
-        self._data = Data4Visualization()
-
         # book-keeping opened windows
         self._windows = WeakKeyDictionary()
         self._satellite_windows = WeakKeyDictionary()
         self._special_windows = WeakKeyDictionary()
-
-        # book-keeping control widgets
-        self._ctrl_widgets = []
-
-        self._mask_image = None
 
         self._logger = GuiLogger(parent=self)
         logging.getLogger().addHandler(self._logger)
 
         self._thread_logger = ThreadLoggerBridge()
         self.quit_sgn.connect(self._thread_logger.stop)
-        self._thread_logger_t = QtCore.QThread()
+        self._thread_logger_t = QThread()
         self._thread_logger.moveToThread(self._thread_logger_t)
         self._thread_logger_t.started.connect(self._thread_logger.recv)
         self._thread_logger.connectToMainThread(self)
@@ -281,12 +262,12 @@ class MainGUI(QtWidgets.QMainWindow):
 
         # For real time plot
         self._running = False
-        self._plot_timer = QtCore.QTimer()
+        self._plot_timer = QTimer()
         self._plot_timer.timeout.connect(self.updateAll)
         self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
 
         # For process monitoring
-        self._proc_monitor_timer = QtCore.QTimer()
+        self._proc_monitor_timer = QTimer()
         self._proc_monitor_timer.timeout.connect(self._update_process_monitoring)
         self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
@@ -298,21 +279,13 @@ class MainGUI(QtWidgets.QMainWindow):
         # control widgets
         # *************************************************************
 
-        self.registerCtrlWidget(self._source_cw.connection_ctrl_widget)
-
         # analysis control widgets
-        self.azimuthal_integ_ctrl_widget = self.createCtrlWidget(
-            AzimuthalIntegCtrlWidget)
         self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
-        self.roi_ctrl_widget = self.createCtrlWidget(Projection1DCtrlWidget)
         self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
         self.pulse_filter_ctrl_widget = self.createCtrlWidget(PulseFilterCtrlWidget)
         self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
         self.statistics_ctrl_widget = self.createCtrlWidget(StatisticsCtrlWidget)
-
-        # geometry control widgets
-        self.geometry_ctrl_widget = self.createCtrlWidget(GeometryCtrlWidget)
 
         # special analysis control widgets (do not register them!!!)
         self._trxas_ctrl_widget = TrXasCtrlWidget()
@@ -329,7 +302,11 @@ class MainGUI(QtWidgets.QMainWindow):
         self.initConnections()
         self.updateMetaData()
 
-        image_tool_at.trigger()
+        # ImageToolWindow is treated differently since it is the second
+        # control window.
+        self._image_tool = ImageToolWindow(queue=self._queue,
+                                           pulse_resolved=self._pulse_resolved,
+                                           parent=self)
 
         self.setMinimumSize(640, 480)
         self.resize(self._WIDTH, self._HEIGHT)
@@ -338,90 +315,71 @@ class MainGUI(QtWidgets.QMainWindow):
 
     def createCtrlWidget(self, widget_class):
         widget = widget_class(pulse_resolved=self._pulse_resolved)
-        self.registerCtrlWidget(widget)
+        self._ctrl_widgets.append(widget)
         return widget
 
     def initUI(self):
-        self._cw.addWidget(self._left_cw)
-        self._cw.addWidget(self._middle_cw)
-
-        self._middle_cw.addWidget(self._ctrl_panel_cw)
-        self._middle_cw.addWidget(self._util_panel_cw)
-
         self.initLeftUI()
-        self.initMiddleUI()
+        self.initRightUI()
+
+        self._cw.addWidget(self._left_cw_container)
+        self._cw.addWidget(self._right_cw_container)
+        self._cw.setSizes([self._WIDTH * 0.5, self._WIDTH * 0.5])
 
     def initLeftUI(self):
-        self._left_cw.setTabPosition(
-            QtWidgets.QTabWidget.TabPosition.West)
+        self._left_cw.setTabPosition(QTabWidget.TabPosition.West)
 
         self._left_cw.addTab(self._source_cw, "Data source")
+        self._left_cw_container.setWidget(self._left_cw)
+        self._left_cw_container.setWidgetResizable(True)
 
-    def initMiddleUI(self):
+    def initRightUI(self):
         self.initCtrlUI()
         self.initUtilUI()
 
-    def initCtrlUI(self):
-        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
-        geom_tab = self._ctrl_panel_cw.addTab(
-            self._geometry_cw, "Geometry setup")
-        if not config['REQUIRE_GEOMETRY']:
-            self._ctrl_panel_cw.setTabEnabled(geom_tab, False)
-        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special analysis")
+        self._right_cw.addWidget(self._ctrl_panel_cw)
+        self._right_cw.addWidget(self._util_panel_container)
+        self._right_cw_container.setWidget(self._right_cw)
+        self._right_cw_container.setWidgetResizable(True)
 
+    def initCtrlUI(self):
         self.initAnalysisUI()
-        self.initGeometryUI()
         self.initSpecialAnalysisUI()
 
+        self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
+        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special analysis")
+
     def initAnalysisUI(self):
-        left_ctrl_widget = QtWidgets.QWidget()
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
         layout.addWidget(self.analysis_ctrl_widget)
         layout.addWidget(self.pump_probe_ctrl_widget)
-        layout.addWidget(self.azimuthal_integ_ctrl_widget)
-        layout.addWidget(self.roi_ctrl_widget)
-        left_ctrl_widget.setLayout(layout)
-
-        right_ctrl_widget = QtWidgets.QWidget()
-        layout = QtGui.QVBoxLayout()
         layout.addWidget(self.pulse_filter_ctrl_widget)
         layout.addWidget(self.statistics_ctrl_widget)
         layout.addWidget(self.bin_ctrl_widget)
         layout.addWidget(self.correlation_ctrl_widget)
-        right_ctrl_widget.setLayout(layout)
-
-        container = QtWidgets.QWidget()
-        layout = QtGui.QHBoxLayout()
-        layout.addWidget(left_ctrl_widget)
-        layout.addWidget(right_ctrl_widget)
-        container.setLayout(layout)
-        self._analysis_cw.setWidget(container)
-
-    def initGeometryUI(self):
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self.geometry_ctrl_widget)
-        layout.addStretch(1)
-        self._geometry_cw.setLayout(layout)
+        self._analysis_cw.setLayout(layout)
 
     def initSpecialAnalysisUI(self):
-        ctrl_widget = QtWidgets.QTabWidget()
-        ctrl_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+        ctrl_widget = QTabWidget()
+        ctrl_widget.setTabPosition(QTabWidget.TabPosition.East)
         ctrl_widget.addTab(self._trxas_ctrl_widget, "tr-XAS")
 
-        icon_layout = QtGui.QVBoxLayout()
+        icon_layout = QVBoxLayout()
         icon_layout.addWidget(self._trxas_btn)
         icon_layout.addStretch(1)
 
-        layout = QtGui.QHBoxLayout()
+        layout = QHBoxLayout()
         layout.addWidget(ctrl_widget)
         layout.addLayout(icon_layout)
         self._special_analysis_cw.setLayout(layout)
 
     def initUtilUI(self):
         self._util_panel_cw.addTab(self._logger.widget, "Logger")
+        self._util_panel_cw.setTabPosition(QTabWidget.TabPosition.South)
 
-        self._util_panel_cw.setTabPosition(
-            QtWidgets.QTabWidget.TabPosition.South)
+        layout = QVBoxLayout()
+        layout.addWidget(self._util_panel_cw)
+        self._util_panel_container.setLayout(layout)
 
     def initConnections(self):
         pass
@@ -438,25 +396,19 @@ class MainGUI(QtWidgets.QMainWindow):
         # Fetch all data in the queue and update history, then update plots.
         # This prevent costly GUI updating from blocking data acquisition and
         # processing.
-        tid = -1
-        plot_data = False
+        update_plots = False
         while True:
             try:
                 processed = self._input.get_nowait()
-                plot_data = True
                 processed.update()
-                tid = processed.tid
+                self._queue.append(processed)
+                # use this flag to prevent update the same train multiple times
+                update_plots = True
 
-                self._mon_proxy.add_tid_with_timestamp(tid)
-
-                self._data.set(processed)
-
-                logger.info(f"[{tid}] updated")
+                self._mon_proxy.add_tid_with_timestamp(processed.tid)
+                logger.info(f"[{processed.tid}] updated")
             except Empty:
-                if plot_data:
-                    break
-                # no data
-                return
+                break
             except Exception as e:
                 logger.error(f"Unexpected exception: {repr(e)}")
                 return
@@ -465,19 +417,19 @@ class MainGUI(QtWidgets.QMainWindow):
         # for w in self._windows.keys():
         #     w.reset()
 
-        if self._data.get().image is None:
-            # FIXME: will this happen? I guess this is some very
-            #        old code.
-            logger.info(f"Bad train with ID: {tid}")
+        if not update_plots:
             return
 
-        for w in self._special_windows.keys():
+        data = self._queue[0]
+        if data.image is None:
+            logger.info(f"Bad train with ID: {data.tid}")
+            return
+
+        self._image_tool.updateWidgetsF()
+        for w in itertools.chain(self._special_windows, self._windows):
             w.updateWidgetsF()
 
-        for w in self._windows.keys():
-            w.updateWidgetsF()
-
-        logger.debug(f"Plot train with ID: {tid}")
+        logger.debug(f"Plot train with ID: {data.tid}")
 
     def _update_process_monitoring(self):
         self.process_info_sgn.emit(list_fai_processes())
@@ -500,17 +452,17 @@ class MainGUI(QtWidgets.QMainWindow):
                 self.close()
 
     def _addAction(self, description, filename):
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
-        action = QtGui.QAction(icon, description, self)
+        icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
+        action = QAction(icon, description, self)
         self._tool_bar.addAction(action)
         return action
 
     def _addSpecial(self, filename, instance_type):
-        icon = QtGui.QIcon(osp.join(self._root_dir, "icons/" + filename))
-        btn = QtWidgets.QPushButton()
+        icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
+        btn = QPushButton()
         btn.setIcon(icon)
-        btn.setIconSize(QtCore.QSize(self._SPECIAL_ANALYSIS_ICON_WIDTH,
-                                     self._SPECIAL_ANALYSIS_ICON_WIDTH))
+        btn.setIconSize(QSize(self._SPECIAL_ANALYSIS_ICON_WIDTH,
+                              self._SPECIAL_ANALYSIS_ICON_WIDTH))
         btn.setFixedSize(btn.minimumSizeHint())
         btn.clicked.connect(
             lambda: self.openSpecialAnalysisWindow(instance_type))
@@ -521,38 +473,46 @@ class MainGUI(QtWidgets.QMainWindow):
 
         Otherwise bring the opened window to the table top.
         """
-        if self._checkWindowExistence(instance_type):
+        if self._checkWindowExistence(instance_type, self._windows):
             return
 
-        instance_type(self._data,
-                      pulse_resolved=self._pulse_resolved, parent=self)
+        instance_type(self._queue,
+                      pulse_resolved=self._pulse_resolved,
+                      parent=self)
+
+    def openSpecialAnalysisWindow(self, instance_type):
+        if self._checkWindowExistence(instance_type, self._special_windows):
+            return
+
+        instance_type(self._queue, parent=self)
 
     def openProcessMonitor(self):
-        if self._checkSatelliteWindowExistence(ProcessMonitor):
+        if self._checkWindowExistence(ProcessMonitor, self._satellite_windows):
             return
 
         w = ProcessMonitor(parent=self)
         self.process_info_sgn.connect(w.onProcessInfoUpdate)
         return w
 
-    def openSpecialAnalysisWindow(self, instance_type):
-        if self._checkSpecialWindowExistence(instance_type):
-            return
-
-        instance_type(self._data, parent=self)
-
     def openFileStreamControllerWindow(self):
-        if self._checkSatelliteWindowExistence(FileStreamControllerWindow):
+        if self._checkWindowExistence(FileStreamControllerWindow,
+                                      self._satellite_windows):
             return
 
-        w = FileStreamControllerWindow(parent=self)
-        return w
+        return FileStreamControllerWindow(parent=self)
 
     def openAboutWindow(self):
-        if self._checkWindowExistence(AboutWindow):
+        if self._checkWindowExistence(AboutWindow, self._satellite_windows):
             return
 
         return AboutWindow(parent=self)
+
+    def _checkWindowExistence(self, instance_type, windows):
+        for key in windows:
+            if isinstance(key, instance_type):
+                key.activateWindow()
+                return True
+        return False
 
     def registerWindow(self, instance):
         self._windows[instance] = 1
@@ -560,41 +520,17 @@ class MainGUI(QtWidgets.QMainWindow):
     def unregisterWindow(self, instance):
         del self._windows[instance]
 
-    def _checkWindowExistence(self, instance_type):
-        for key in self._windows:
-            if isinstance(key, instance_type):
-                key.activateWindow()
-                return True
-        return False
-
     def registerSatelliteWindow(self, instance):
         self._satellite_windows[instance] = 1
 
     def unregisterSatelliteWindow(self, instance):
         del self._satellite_windows[instance]
 
-    def _checkSatelliteWindowExistence(self, instance_type):
-        for key in self._satellite_windows:
-            if isinstance(key, instance_type):
-                key.activateWindow()
-                return True
-        return False
-
     def registerSpecialWindow(self, instance):
         self._special_windows[instance] = 1
 
     def unregisterSpecialWindow(self, instance):
         del self._special_windows[instance]
-
-    def _checkSpecialWindowExistence(self, instance_type):
-        for key in self._special_windows:
-            if isinstance(key, instance_type):
-                key.activateWindow()
-                return True
-        return False
-
-    def registerCtrlWidget(self, instance):
-        self._ctrl_widgets.append(instance)
 
     def onStart(self):
         if not self.updateMetaData():
@@ -633,7 +569,6 @@ class MainGUI(QtWidgets.QMainWindow):
             succeeded = widget.updateMetaData()
             if not succeeded:
                 return False
-
         return True
 
     @pyqtSlot(str)
@@ -667,7 +602,9 @@ class MainGUI(QtWidgets.QMainWindow):
         # shutdown pipeline workers and Redis server
         shutdown_all()
 
-        for window in list(self._windows):
+        for window in itertools.chain(self._windows,
+                                      self._satellite_windows,
+                                      self._special_windows):
             # Close all open child windows to make sure their resources
             # (any running process etc.) are released gracefully
             window.close()

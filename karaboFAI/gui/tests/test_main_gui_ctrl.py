@@ -1,6 +1,5 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
-import math
 import tempfile
 import os
 
@@ -10,19 +9,16 @@ from PyQt5 import QtCore
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt
 
-from karabo_data.geometry2 import LPD_1MGeometry
-
 from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
 from karaboFAI.services import FAI
 from karaboFAI.gui import mkQApp
 from karaboFAI.gui.windows import PulseOfInterestWindow
 from karaboFAI.config import (
-    _Config, ConfigWrapper, config, AnalysisType, BinMode,
-    DataSource, Normalizer, PumpProbeMode
+    _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode
 )
 from karaboFAI.processes import wait_until_redis_shutdown
-from karaboFAI.pipeline.processors.azimuthal_integration import energy2wavelength
+
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
@@ -61,20 +57,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         ai_proc = train_worker._ai_proc
         roi_proc = train_worker._roi_proc
 
-        # test params sent to AzimuthalIntegrationProcessor
-        ai_proc.update()
-        self.assertAlmostEqual(config['SAMPLE_DISTANCE'],
-                               ai_proc._sample_dist)
-        self.assertAlmostEqual(energy2wavelength(config['PHOTON_ENERGY']),
-                               ai_proc._wavelength)
-
-        widget._photon_energy_le.setText("12.4")
-        widget._sample_dist_le.setText("0.3")
-
-        ai_proc.update()
-        self.assertAlmostEqual(1e-10, ai_proc._wavelength)
-        self.assertAlmostEqual(0.3, ai_proc._sample_dist)
-
         # test "Moving average window"
         widget._ma_window_le.setText("5")
         xgm_proc.update()
@@ -95,72 +77,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertIsNone(ai_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
         roi_proc.update()
         self.assertIsNone(roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
-
-    def testAzimuthalIntegCtrlWidget(self):
-        widget = self.gui.azimuthal_integ_ctrl_widget
-        all_normalizers = {value: key for key, value in
-                           widget._available_normalizers.items()}
-        train_worker = self.train_worker
-        proc = train_worker._ai_proc
-
-        proc.update()
-
-        self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
-        default_integ_method = 'BBox'
-        self.assertEqual(default_integ_method, proc._integ_method)
-        default_normalizer = Normalizer.UNDEFINED
-        self.assertEqual(default_normalizer, proc._normalizer)
-        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
-        default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
-        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]), proc._integ_range)
-        self.assertTupleEqual(default_integ_range, proc._auc_range)
-        self.assertTupleEqual(default_integ_range, proc._fom_integ_range)
-        pixel_size = config["PIXEL_SIZE"]
-        self.assertEqual(config["CENTER_Y"] * pixel_size, proc._poni1)
-        self.assertEqual(config["CENTER_X"] * pixel_size, proc._poni2)
-
-        widget._integ_method_cb.setCurrentText('nosplit_csr')
-        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_ADD_ROI4])
-        widget._integ_pts_le.setText(str(1024))
-        widget._integ_range_le.setText("0.1, 0.2")
-        widget._auc_range_le.setText("0.2, 0.3")
-        widget._fom_integ_range_le.setText("0.3, 0.4")
-        widget._cx_le.setText("-1000")
-        widget._cy_le.setText("1000")
-        proc.update()
-        self.assertEqual('nosplit_csr', proc._integ_method)
-        self.assertEqual(Normalizer.ROI3_ADD_ROI4, proc._normalizer)
-        self.assertEqual(1024, proc._integ_points)
-        self.assertTupleEqual((0.1, 0.2), proc._integ_range)
-        self.assertTupleEqual((0.2, 0.3), proc._auc_range)
-        self.assertTupleEqual((0.3, 0.4), proc._fom_integ_range)
-        self.assertEqual(-1000*pixel_size, proc._poni2)
-        self.assertEqual(1000*pixel_size, proc._poni1)
-
-    def testProjection1DCtrlWidget(self):
-        widget = self.gui.roi_ctrl_widget
-        all_normalizers = {value: key for key, value in
-                           widget._available_normalizers.items()}
-
-        proc = self.train_worker._roi_proc
-        proc.update()
-
-        # test default reconfigurable values
-        self.assertEqual('x', proc._direction)
-        self.assertEqual(Normalizer.UNDEFINED, proc._normalizer)
-        self.assertEqual((0, math.inf), proc._fom_integ_range)
-        self.assertEqual((0, math.inf), proc._auc_range)
-
-        # test setting new values
-        widget._direct_cb.setCurrentText('y')
-        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_SUB_ROI4])
-        widget._fom_integ_range_le.setText("10, 20")
-        widget._auc_range_le.setText("30, 40")
-        proc.update()
-        self.assertEqual('y', proc._direction)
-        self.assertEqual(Normalizer.ROI3_SUB_ROI4, proc._normalizer)
-        self.assertEqual((10, 20), proc._fom_integ_range)
-        self.assertEqual((30, 40), proc._auc_range)
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -261,27 +177,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         #     items.append(widget._detector_src_cb.itemText(i))
         # self.assertListEqual(["E", "F", "G"], items)
 
-    def testGeometryCtrlWidget(self):
-        from karaboFAI.gui.ctrl_widgets import GeometryCtrlWidget
-
-        for widget in self.gui._ctrl_widgets:
-            if isinstance(widget, GeometryCtrlWidget):
-                break
-
-        pulse_worker = self.pulse_worker
-
-        widget._geom_file_le.setText(config["GEOMETRY_FILE"])
-
-        self.assertTrue(self.gui.updateMetaData())
-
-        pulse_worker._assembler.update()
-        self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
-
-        widget._with_geometry_cb.setChecked(False)
-        self.assertTrue(self.gui.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsNone(pulse_worker._assembler._geom)
-
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
         pulse_worker = self.pulse_worker
@@ -318,8 +213,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         # test default
         self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual([""] * 4, proc._device_ids)
-        self.assertEqual([""] * 4, proc._properties)
+        self.assertEqual([""] * _N_PARAMS, proc._device_ids)
+        self.assertEqual([""] * _N_PARAMS, proc._properties)
 
         # set new FOM
         widget._analysis_type_cb.setCurrentText('ROI1 + ROI2 (proj)')
@@ -495,12 +390,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
-    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
+    @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
-    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
-    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.onStop', Mock())
     @patch('karaboFAI.pipeline.TrainWorker.resume', Mock())
     @patch('karaboFAI.pipeline.TrainWorker.pause', Mock())
     def testStartStop(self):
@@ -518,13 +413,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.gui.pump_probe_ctrl_widget.updateMetaData. \
             assert_called_once()
-        self.gui.azimuthal_integ_ctrl_widget.updateMetaData. \
+        self.gui.statistics_ctrl_widget.updateMetaData. \
             assert_called_once()
 
         self.assertEqual(1, len(start_spy))
 
-        self.gui.azimuthal_integ_ctrl_widget.onStart.assert_called_once()
         self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
+        self.gui.statistics_ctrl_widget.onStart.assert_called_once()
 
         self.assertFalse(start_action.isEnabled())
         self.assertTrue(stop_action.isEnabled())
@@ -538,8 +433,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         stop_action.trigger()
 
-        self.gui.azimuthal_integ_ctrl_widget.onStop.assert_called_once()
         self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
+        self.gui.statistics_ctrl_widget.onStop.assert_called_once()
 
         self.assertEqual(1, len(stop_spy))
 
@@ -690,10 +585,6 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         # PumpProbeMode.SAME_TRAIN is not available
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         self.assertEqual(2, len(spy))
-
-    def testGeometryCtrlWidget(self):
-        widget = self.gui.geometry_ctrl_widget
-        self.assertFalse(widget.isEnabled())
 
     def testStatisticsCtrlWidget(self):
         # TODO
