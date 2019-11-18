@@ -87,8 +87,6 @@ class TestImageTool(unittest.TestCase):
     def tearDownClass(cls):
         cls.fai.terminate()
 
-        ImageToolWindow.reset()
-
         wait_until_redis_shutdown()
 
     def setUp(self):
@@ -415,8 +413,6 @@ class TestImageToolTs(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.fai.terminate()
-
-        ImageToolWindow.reset()
 
         wait_until_redis_shutdown()
 

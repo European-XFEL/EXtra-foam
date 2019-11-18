@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Services.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -200,8 +198,6 @@ class FAI:
             self.pulse_worker = PulseWorker()
             self.train_worker = TrainWorker()
             self.train_worker.connectInputToOutput(self.pulse_worker.output)
-
-            ImageToolWindow.reset()
 
             self._gui = MainGUI(start_thread_logger=True)
         except Exception as e:
