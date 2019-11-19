@@ -33,7 +33,7 @@ class PostPulseFilter(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.PULSE_FILTER_PROC)
+        cfg = self._meta.hget_all(mt.PULSE_FILTER_PROC)
 
         self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
         self._fom_range = self.str2tuple(cfg['fom_range'])

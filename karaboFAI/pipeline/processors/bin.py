@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-BinProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -105,7 +103,7 @@ class BinProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.BIN_PROC)
+        cfg = self._meta.hget_all(mt.BIN_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
             # reset when analysis type changes
@@ -154,7 +152,7 @@ class BinProcessor(_BaseProcessor):
             self._reset2 = True
 
         if 'reset' in cfg:
-            self._meta.delete(mt.BIN_PROC, 'reset')
+            self._meta.hdel(mt.BIN_PROC, 'reset')
             # reset when commanded by the GUI
             self._reset1 = True
             self._reset2 = True

@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-Data processor interface.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -159,7 +157,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         self.processing_handler = None
 
     def _has_analysis(self, analysis_type):
-        count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+        count = self._meta.hget(mt.ANALYSIS_TYPE, analysis_type)
         return bool(count) and int(count) > 0
 
     def _has_any_analysis(self, analysis_type_list):
@@ -167,7 +165,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_type_list:
-            count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+            count = self._meta.hget(mt.ANALYSIS_TYPE, analysis_type)
             if bool(count) and int(count) > 0:
                 return True
         return False
@@ -177,7 +175,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_type_list:
-            count = self._meta.get(mt.ANALYSIS_TYPE, analysis_type)
+            count = self._meta.hget(mt.ANALYSIS_TYPE, analysis_type)
             if not (bool(count) and int(count) > 0):
                 return False
         return True
@@ -198,15 +196,15 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             if register:
                 # unregister the old
                 if self.analysis_type is not None:
-                    self._meta.increase_by(
+                    self._meta.hincrease_by(
                         mt.ANALYSIS_TYPE, self.analysis_type, -1)
 
                 # register the new one
                 if analysis_type != AnalysisType.UNDEFINED:
-                    if self._meta.get(mt.ANALYSIS_TYPE, analysis_type) is None:
+                    if self._meta.hget(mt.ANALYSIS_TYPE, analysis_type) is None:
                         # set analysis type if it does not exist
-                        self._meta.set(mt.ANALYSIS_TYPE, analysis_type, 0)
-                    self._meta.increase_by(mt.ANALYSIS_TYPE, analysis_type, 1)
+                        self._meta.hset(mt.ANALYSIS_TYPE, analysis_type, 0)
+                    self._meta.hincrease_by(mt.ANALYSIS_TYPE, analysis_type, 1)
 
             self.analysis_type = analysis_type
             return True

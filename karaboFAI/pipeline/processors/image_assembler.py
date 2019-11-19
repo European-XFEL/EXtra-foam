@@ -56,7 +56,7 @@ class ImageAssemblerFactory(ABC):
                 self._pulse_slicer = None
 
             if config['REQUIRE_GEOMETRY']:
-                geom_cfg = self._meta.get_all(mt.GEOMETRY_PROC)
+                geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
 
                 with_geometry = geom_cfg["with_geometry"] == 'True'
                 if with_geometry:
@@ -151,7 +151,7 @@ class ImageAssemblerFactory(ABC):
             if src_name is None:
                 raise AssemblingError(f"Unspecified {config['DETECTOR']} "
                                       f"source name!")
-            src_type = data['meta']['source_type']
+            src_type = data['source_type']
             raw = data['raw']
 
             try:

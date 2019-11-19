@@ -191,8 +191,8 @@ class FAI:
             sys.exit(1)
 
         proxy = MetaProxy()
-        proxy.mset(mt.SESSION, {'detector': config['DETECTOR'],
-                                'topic': config['TOPIC']})
+        proxy.set_session({'detector': config['DETECTOR'],
+                           'topic': config['TOPIC']})
 
         try:
             self.pulse_worker = PulseWorker()

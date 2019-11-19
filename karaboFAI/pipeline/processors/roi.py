@@ -143,10 +143,10 @@ class _RoiProcessBase(_BaseProcessor):
 
     def update(self):
         """Override."""
-        g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.get_all(mt.ROI_PROC)
+        cfg = self._meta.hget_all(mt.ROI_PROC)
 
         self._roi1.activated = cfg[f'visibility1'] == 'True'
         self._roi1.rect = self.str2list(cfg[f'region1'], handler=int)
@@ -277,7 +277,7 @@ class RoiProcessorTrain(_RoiProcessBase):
             del self._img3_off
             del self._img4_off
 
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_roi')
+            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_roi')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

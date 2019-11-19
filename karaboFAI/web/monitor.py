@@ -111,7 +111,7 @@ def update_top_bar(n_intervals):
     else:
         _, tid = ret
 
-    sess = meta_proxy.get_all(mt.SESSION)
+    sess = meta_proxy.get_session()
 
     detector = "Unknown" if sess is None else sess['detector']
     topic = "Unknown" if sess is None else sess['topic']

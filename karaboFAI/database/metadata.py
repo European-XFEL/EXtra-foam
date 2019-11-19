@@ -9,8 +9,8 @@ All rights reserved.
 """
 import pickle
 
+from .base_proxy import _AbstractProxy
 from .db_utils import redis_except_handler
-from ..ipc import RedisConnection
 
 
 class MetaMetadata(type):
@@ -29,123 +29,39 @@ class MetaMetadata(type):
 
 class Metadata(metaclass=MetaMetadata):
 
-    SESSION = "meta:session"
-
     CONNECTION = "meta:connection"
-
     ANALYSIS_TYPE = "meta:analysis_type"
 
+    # The key of processors' metadata must end with '_PROC'
     GLOBAL_PROC = "meta:proc:global"
     IMAGE_PROC = "meta:proc:image"
     GEOMETRY_PROC = "meta:proc:geometry"
     AZIMUTHAL_INTEG_PROC = "meta:proc:azimuthal_integration"
     PUMP_PROBE_PROC = "meta:proc:pump_probe"
     ROI_PROC = "meta:proc:roi"
-    XAS_PROC = "meta:proc:xas"
     CORRELATION_PROC = "meta:proc:correlation"
     BIN_PROC = "meta:proc:bin"
     STATISTICS_PROC = "meta:proc:statistics"
     PULSE_FILTER_PROC = "meta:proc:pulse_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
-    TR_XAS = "meta:proc:tr_xas"
+    TR_XAS_PROC = "meta:proc:tr_xas"
 
-    # This is different from all the previous ones, which are all hashes.
+
+class MetaProxy(_AbstractProxy):
+    """Proxy for retrieving metadata."""
+    SESSION = "meta:session"
+
     # The real key depends on the category of the data source. For example,
     # 'XGM' has the key 'meta:sources:XGM' and 'DSSC' has the key
-    # 'meta:sources:DSSC'. Also, the value is an unordered set for
-    # each source.
-    DATA_SOURCES = "meta:sources"
+    # 'meta:sources:DSSC'.
+    # The value is an unordered set for each source.
+    DATA_SOURCE = "meta:data_source"
 
+    def set_session(self, mapping):
+        return self.hmset(self.SESSION, mapping)
 
-class MetaProxy:
-    """Proxy for retrieving metadata."""
-    _db = RedisConnection()
-    _db_decodeoff = RedisConnection(decode_responses=False)
-
-    def reset(self):
-        self.__class__.__dict__["_db"].reset()
-
-    @redis_except_handler
-    def set(self, name, key, value):
-        """Set a key-value pair of a hash.
-
-        :returns: None if the connection failed;
-                  1 if created a new field;
-                  0 if set on an old field.
-        """
-        return self._db.hset(name, key, value)
-
-    @redis_except_handler
-    def mset(self, name, mapping):
-        """Set a mapping of a hash.
-
-        :return: None if the connection failed;
-                 True if set.
-        """
-        return self._db.hmset(name, mapping)
-
-    @redis_except_handler
-    def get(self, name, key):
-        """Get the value for a given key of a hash.
-
-        :return: None if the connection failed or key was not found;
-                 otherwise, the value.
-        """
-        return self._db.hget(name, key)
-
-    @redis_except_handler
-    def mget(self, name, keys):
-        """Get values for a list of keys of a hash.
-
-        :return: None if the connection failed;
-                 otherwise, a list of values.
-        """
-        return self._db.hmget(name, keys)
-
-    @redis_except_handler
-    def delete(self, name, key):
-        """Delete a key of a hash.
-
-        :return: None if the connection failed;
-                 1 if key was found and deleted;
-                 0 if key was not found.
-        """
-        return self._db.hdel(name, key)
-
-    @redis_except_handler
-    def get_all(self, name):
-        """Get all key-value pairs of a hash.
-
-        :return: None if the connection failed;
-                 otherwise, a dictionary of key-value pairs. If the hash
-                 does not exist, an empty dictionary will be returned.
-        """
-        return self._db.hgetall(name)
-
-    @redis_except_handler
-    def increase_by(self, name, key, amount=1):
-        """Increase the value of a key in a hash by the given amount.
-
-        :return: None if the connection failed;
-                 value after the increment if the initial value is an integer;
-                 amount if key does not exist (set initial value to 0).
-
-        :raise: redis.exceptions.ResponseError if value is not an integer.
-        """
-        return self._db.hincrby(name, key, amount)
-
-    @redis_except_handler
-    def increase_by_float(self, name, key, amount=1.0):
-        """Increase the value of a key in a hash by the given amount.
-
-        :return: None if the connection failed;
-                 value after the increment if the initial value can be
-                 converted to a float;
-                 amount if key does not exist (set initial value to 0).
-
-        :raise: redis.exceptions.ResponseError if value is not a float.
-        """
-        return self._db.hincrbyfloat(name, key, amount)
+    def get_session(self):
+        return self.hget_all(self.SESSION)
 
     @redis_except_handler
     def add_data_source(self, src):
@@ -154,7 +70,7 @@ class MetaProxy:
         :return: the number of elements that were added to the set, not
                  including all the elements already present into the set.
         """
-        return self._db.sadd(f'{Metadata.DATA_SOURCES}:{src.category}',
+        return self._db.sadd(f'{self.DATA_SOURCE}:{src.category}',
                              pickle.dumps(src))
 
     @redis_except_handler
@@ -164,7 +80,7 @@ class MetaProxy:
         :return: the number of members that were removed from the set,
                  not including non existing members.
         """
-        return self._db.srem(f'{Metadata.DATA_SOURCES}:{src.category}',
+        return self._db.srem(f'{self.DATA_SOURCE}:{src.category}',
                              pickle.dumps(src))
 
     @redis_except_handler
@@ -174,5 +90,4 @@ class MetaProxy:
         :return: a list of SourceItem.
         """
         return [pickle.loads(src) for src in
-                self._db_decodeoff.smembers(
-                    f'{Metadata.DATA_SOURCES}:{category}')]
+                self._db_nodecode.smembers(f'{self.DATA_SOURCE}:{category}')]

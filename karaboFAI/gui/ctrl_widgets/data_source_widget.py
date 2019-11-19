@@ -9,8 +9,15 @@ All rights reserved.
 """
 import copy
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import QModelIndex, Qt, pyqtSignal
+from PyQt5.QtCore import (
+    QAbstractItemModel, QAbstractListModel, QModelIndex, Qt, QTimer,
+    pyqtSignal, pyqtSlot
+)
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import (
+    QComboBox, QGridLayout, QLabel, QLineEdit, QListView, QSplitter,
+    QStyledItemDelegate, QTabWidget, QTreeView, QVBoxLayout, QWidget
+)
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit, SmartBoundaryLineEdit
@@ -19,18 +26,18 @@ from ..mediator import Mediator
 from ...database import (
     DATA_SOURCE_CATEGORIES, EXCLUSIVE_SOURCE_CATEGORIES,
     DATA_SOURCE_PROPERTIES, DATA_SOURCE_SLICER, DATA_SOURCE_VRANGE,
-    SourceItem
+    MonProxy, SourceItem
 )
 from ...config import config, DataSource
 
 
-class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
+class DSPropertyDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Override."""
-        cb = QtWidgets.QComboBox(parent)
+        cb = QComboBox(parent)
         channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
         ctg = index.parent().data(Qt.DisplayRole)
         cb.addItems(DATA_SOURCE_PROPERTIES[ctg if len(channels) == 1
@@ -49,7 +56,7 @@ class DSPropertyDelegate(QtWidgets.QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
 
-class DSSlicerDelegate(QtWidgets.QStyledItemDelegate):
+class DSSlicerDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -74,7 +81,7 @@ class DSSlicerDelegate(QtWidgets.QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
 
-class DSVrangeDelegate(QtWidgets.QStyledItemDelegate):
+class DSVrangeDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -167,7 +174,7 @@ class DataSourceTreeItem:
         return self._exclusive
 
 
-class DataSourceTreeModel(QtCore.QAbstractItemModel):
+class DataSourceTreeModel(QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
     device_toggled_sgn = pyqtSignal(object, bool)
@@ -372,29 +379,29 @@ class DataSourceTreeModel(QtCore.QAbstractItemModel):
                 pass
 
 
-class DataSourceListModel(QtCore.QAbstractListModel):
+class DataSourceListModel(QAbstractListModel):
     """List model interface for monitoring available sources."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._devices = []
+        self._sources = []
 
     def data(self, index, role=None):
         """Override."""
-        if not index.isValid() or index.row() > len(self._devices):
+        if not index.isValid() or index.row() > len(self._sources):
             return None
 
         if role == Qt.DisplayRole:
-            return self._devices[index.row()]
+            return self._sources[index.row()]
 
     def rowCount(self, parent=None, *args, **kwargs):
         """Override."""
-        return len(self._devices)
+        return len(self._sources)
 
-    def setupModelData(self, device_list):
-        if self._devices != device_list:
+    def setupModelData(self, sources):
+        if self._sources != sources:
             self.beginResetModel()
-            self._devices = device_list
+            self._sources = sources
             self.endResetModel()
 
 
@@ -404,12 +411,12 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._hostname_le = QtGui.QLineEdit()
+        self._hostname_le = QLineEdit()
         self._hostname_le.setMinimumWidth(150)
-        self._port_le = QtGui.QLineEdit()
-        self._port_le.setValidator(QtGui.QIntValidator(0, 65535))
+        self._port_le = QLineEdit()
+        self._port_le.setValidator(QIntValidator(0, 65535))
 
-        self._source_type_cb = QtGui.QComboBox()
+        self._source_type_cb = QComboBox()
         self._source_type_cb.addItem("run directory", DataSource.FILE)
         self._source_type_cb.addItem("ZeroMQ bridge", DataSource.BRIDGE)
         self._source_type_cb.setCurrentIndex(config['DEFAULT_SOURCE_TYPE'])
@@ -425,15 +432,15 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
         self.initConnections()
 
     def initUI(self):
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
         AR = Qt.AlignRight
 
-        src_layout = QtGui.QGridLayout()
-        src_layout.addWidget(QtGui.QLabel("Data streamed from: "), 0, 0, AR)
+        src_layout = QGridLayout()
+        src_layout.addWidget(QLabel("Data streamed from: "), 0, 0, AR)
         src_layout.addWidget(self._source_type_cb, 0, 1)
-        src_layout.addWidget(QtGui.QLabel("Hostname: "), 1, 0, AR)
+        src_layout.addWidget(QLabel("Hostname: "), 1, 0, AR)
         src_layout.addWidget(self._hostname_le, 1, 1)
-        src_layout.addWidget(QtGui.QLabel("Port: "), 2, 0, AR)
+        src_layout.addWidget(QLabel("Port: "), 2, 0, AR)
         src_layout.addWidget(self._port_le, 2, 1)
 
         layout.addLayout(src_layout)
@@ -466,12 +473,12 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
 
         return True
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def onEndpointChange(self):
         endpoint = f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
         self._mediator.onBridgeEndpointChange(endpoint)
 
-    @QtCore.pyqtSlot(object)
+    @pyqtSlot(object)
     def onSourceTypeChange(self, source_type):
         if source_type == self._current_source_type:
             return
@@ -488,7 +495,7 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
         self._port_le.setText(str(port))
 
 
-class DataSourceWidget(QtWidgets.QWidget):
+class DataSourceWidget(QWidget):
     """DataSourceWidget class.
 
     A widget container which holds ConnectionCtrlWidget, DeviceListWidget
@@ -502,7 +509,7 @@ class DataSourceWidget(QtWidgets.QWidget):
 
         self.connection_ctrl_widget = ConnectionCtrlWidget()
 
-        self._tree_view = QtWidgets.QTreeView()
+        self._tree_view = QTreeView()
         self._tree_model = DataSourceTreeModel(self)
         self._tree_ppt_delegate = DSPropertyDelegate(self)
         self._tree_slicer_delegate = DSSlicerDelegate(self)
@@ -512,17 +519,23 @@ class DataSourceWidget(QtWidgets.QWidget):
         self._tree_view.setItemDelegateForColumn(2, self._tree_slicer_delegate)
         self._tree_view.setItemDelegateForColumn(3, self._tree_range_delegate)
 
-        self._list_container = QtWidgets.QTabWidget()
-        self._list_view = QtWidgets.QListView()
+        self._list_container = QTabWidget()
+        self._list_view = QListView()
         self._list_model = DataSourceListModel()
         self._list_view.setModel(self._list_model)
 
         self.initUI()
 
+        self._mon = MonProxy()
+
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.updateSourceList)
+        self._timer.start(config["SOURCES_UPDATE_INTERVAL"])
+
     def initUI(self):
         self._list_container.addTab(self._list_view, "Available sources")
 
-        splitter = QtWidgets.QSplitter(Qt.Vertical)
+        splitter = QSplitter(Qt.Vertical)
         splitter.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(self._tree_view)
@@ -533,10 +546,11 @@ class DataSourceWidget(QtWidgets.QWidget):
         self._tree_view.expandToDepth(1)
         self._tree_view.resizeColumnToContents(0)
 
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
         layout.addWidget(self.connection_ctrl_widget)
         layout.addWidget(splitter)
         self.setLayout(layout)
 
-    def updateDeviceList(self, devices):
-        self._list_model.setupModelData(devices)
+    def updateSourceList(self):
+        available_sources = self._mon.get_available_sources()
+        self._list_model.setupModelData(list(available_sources.keys()))

@@ -19,6 +19,7 @@ from .processors import (
     AzimuthalIntegrationProcessorPulse,
     AzimuthalIntegrationProcessorTrain,
     BinProcessor,
+    Broker,
     CorrelationProcessor,
     ImageAssemblerFactory,
     ImageProcessor,
@@ -101,7 +102,7 @@ class ProcessWorker(mp.Process):
                     try:
                         # get the data from pipe-in
                         data = inp.get(timeout=timeout)
-                        src_type = data['meta']['source_type']
+                        src_type = data['source_type']
                     except Empty:
                         continue
 
@@ -135,6 +136,9 @@ class ProcessWorker(mp.Process):
                             f"Unknown source type {src_type}!")
 
             except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                self.log.debug(repr(traceback.format_tb(exc_traceback)) +
+                               repr(e))
                 self.log.error(repr(e))
 
     def _run_tasks(self, data):
@@ -142,10 +146,7 @@ class ProcessWorker(mp.Process):
 
         :param dict data: a dictionary which is passed around processors.
         """
-        tid = data['processed'].tid
-
         for task in self._tasks:
-            # TODO: improve
             try:
                 task.run_once(data)
             except StopPipelineError as e:
@@ -161,7 +162,7 @@ class ProcessWorker(mp.Process):
                 self.log.error(repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(f"Unexpected Exception! Train ID: {tid}: " +
+                self.log.debug(f"Unexpected Exception!: " +
                                repr(traceback.format_tb(exc_traceback)) +
                                repr(e))
                 self.log.error(repr(e))
@@ -205,6 +206,7 @@ class PulseWorker(ProcessWorker):
         self._inputs = [KaraboBridge(f"{self._name}:input")]
         self._output = MpOutQueue(f"{self._name}:output")
 
+        self._broker = Broker()
         self._xgm_proc = XgmProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
@@ -214,6 +216,7 @@ class PulseWorker(ProcessWorker):
         self._pp_proc = PumpProbeProcessor()
 
         self._tasks = [
+            self._broker,
             self._xgm_proc,
             self._assembler,
             self._image_proc,

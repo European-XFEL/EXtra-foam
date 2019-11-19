@@ -65,7 +65,7 @@ class ImageProcessor(_BaseProcessor):
 
     def update(self):
         # image
-        cfg = self._meta.get_all(mt.IMAGE_PROC)
+        cfg = self._meta.hget_all(mt.IMAGE_PROC)
 
         self._dark_subtraction = cfg['dark_subtraction'] == 'True'
         self._background = float(cfg['background'])
@@ -73,7 +73,7 @@ class ImageProcessor(_BaseProcessor):
                                               handler=float)
 
         # global
-        gp_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        gp_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
 
         try:
             self._poi_indices = [int(gp_cfg['poi1_index']),
@@ -83,7 +83,7 @@ class ImageProcessor(_BaseProcessor):
             pass
 
         if 'remove_dark' in gp_cfg:
-            self._meta.delete(mt.GLOBAL_PROC, 'remove_dark')
+            self._meta.hdel(mt.GLOBAL_PROC, 'remove_dark')
             del self._dark_run
             self._dark_mean = None
 

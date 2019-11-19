@@ -52,7 +52,7 @@ class PumpProbeProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.PUMP_PROBE_PROC)
+        cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type'])),
                                  register=False):
@@ -69,7 +69,7 @@ class PumpProbeProcessor(_BaseProcessor):
             self._abs_difference = abs_difference
 
         if 'reset' in cfg:
-            self._meta.delete(mt.PUMP_PROBE_PROC, 'reset')
+            self._meta.hdel(mt.PUMP_PROBE_PROC, 'reset')
             # reset when commanded by the GUI
             self._reset = True
 

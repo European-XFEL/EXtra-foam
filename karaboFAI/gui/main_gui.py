@@ -125,8 +125,6 @@ class MainGUI(QtWidgets.QMainWindow):
 
     process_info_sgn = pyqtSignal(object)
 
-    available_sources_sgn = pyqtSignal(object)
-
     _db = RedisConnection()
 
     _SPLITTER_HANDLE_WIDTH = 9
@@ -359,8 +357,6 @@ class MainGUI(QtWidgets.QMainWindow):
 
         self._left_cw.addTab(self._source_cw, "Data source")
 
-        self.available_sources_sgn.connect(self._source_cw.updateDeviceList)
-
     def initMiddleUI(self):
         self.initCtrlUI()
         self.initUtilUI()
@@ -454,8 +450,6 @@ class MainGUI(QtWidgets.QMainWindow):
                 self._mon_proxy.add_tid_with_timestamp(tid)
 
                 self._data.set(processed)
-
-                self.available_sources_sgn.emit(processed.sources)
 
                 logger.info(f"[{tid}] updated")
             except Empty:
