@@ -392,10 +392,14 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
            'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
+           'updateMetaData', MagicMock(return_value=True))
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.onStart', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
     @patch('karaboFAI.gui.ctrl_widgets.StatisticsCtrlWidget.onStop', Mock())
+    @patch('karaboFAI.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
     @patch('karaboFAI.pipeline.TrainWorker.resume', Mock())
     @patch('karaboFAI.pipeline.TrainWorker.pause', Mock())
     def testStartStop(self):
@@ -411,21 +415,24 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         start_action.trigger()
 
+        # test a ctrl widget own by the ImageToolWindow
+        azimuthal_integ_ctrl_widget = self.gui._image_tool._azimuthal_integ_1d_view._ctrl_widget
+
         self.gui.pump_probe_ctrl_widget.updateMetaData. \
             assert_called_once()
         self.gui.statistics_ctrl_widget.updateMetaData. \
+            assert_called_once()
+        azimuthal_integ_ctrl_widget.updateMetaData. \
             assert_called_once()
 
         self.assertEqual(1, len(start_spy))
 
         self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
         self.gui.statistics_ctrl_widget.onStart.assert_called_once()
+        azimuthal_integ_ctrl_widget.onStart.assert_called_once()
 
         self.assertFalse(start_action.isEnabled())
         self.assertTrue(stop_action.isEnabled())
-
-        # FIXME
-        # self.bridge.activate.assert_called_once()
 
         # -------------------------------------------------------------
         # test when the start action button is clicked
@@ -435,14 +442,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
         self.gui.statistics_ctrl_widget.onStop.assert_called_once()
+        azimuthal_integ_ctrl_widget.onStop.assert_called_once()
 
         self.assertEqual(1, len(stop_spy))
 
         self.assertTrue(start_action.isEnabled())
         self.assertFalse(stop_action.isEnabled())
-
-        # FIXME
-        # self.bridge.pause.assert_called_once()
 
     def testPoiWindowCtrl(self):
         image_proc = self.pulse_worker._image_proc

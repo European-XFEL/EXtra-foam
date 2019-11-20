@@ -297,15 +297,15 @@ class MainGUI(QMainWindow):
         self.statusBar().showMessage(f"TOPIC: {config['TOPIC']}")
         self.statusBar().setStyleSheet("QStatusBar{font-weight:bold;}")
 
-        self.initUI()
-        self.initConnections()
-        self.updateMetaData()
-
         # ImageToolWindow is treated differently since it is the second
         # control window.
         self._image_tool = ImageToolWindow(queue=self._queue,
                                            pulse_resolved=self._pulse_resolved,
                                            parent=self)
+
+        self.initUI()
+        self.initConnections()
+        self.updateMetaData()
 
         self.setMinimumSize(640, 480)
         self.resize(self._WIDTH, self._HEIGHT)
@@ -541,6 +541,7 @@ class MainGUI(QMainWindow):
 
         for widget in self._ctrl_widgets:
             widget.onStart()
+        self._image_tool.onStart()
 
         self._running = True  # starting to update plots
 
@@ -557,6 +558,7 @@ class MainGUI(QMainWindow):
 
         for widget in self._ctrl_widgets:
             widget.onStop()
+        self._image_tool.onStop()
 
     def updateMetaData(self):
         """Update metadata from all the ctrl widgets.
@@ -568,7 +570,7 @@ class MainGUI(QMainWindow):
             succeeded = widget.updateMetaData()
             if not succeeded:
                 return False
-        return True
+        return self._image_tool.updateMetaData()
 
     @pyqtSlot(str)
     def onLogDebugReceived(self, msg):

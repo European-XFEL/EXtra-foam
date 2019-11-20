@@ -27,15 +27,6 @@ class _AbstractWindowMixin:
         raise NotImplementedError
 
     @abc.abstractmethod
-    def updateMetaData(self):
-        """Update metadata affected by this window.
-
-        :returns bool: True if all metadata successfully parsed
-            and emitted, otherwise False.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def reset(self):
         """Reset data in widgets.
 
@@ -146,11 +137,6 @@ class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
     def reset(self):
         """Override."""
         # SatelliteWindow should not need 'reset' method
-        raise Exception()
-
-    def updateMetaData(self):
-        """Override."""
-        # SatelliteWindow should not have metadata
         raise Exception()
 
     def closeEvent(self, QCloseEvent):

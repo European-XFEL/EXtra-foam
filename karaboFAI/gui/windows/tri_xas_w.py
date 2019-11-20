@@ -133,7 +133,3 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

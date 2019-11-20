@@ -162,7 +162,3 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
         self._poi_widget2.pulse_index_sgn.connect(
             lambda x: self._mediator.onPoiIndexChange(2, x))
         self._poi_widget2.updatePulseIndex()
-
-    def updateMetaData(self):
-        """Override."""
-        return True

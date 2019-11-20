@@ -106,6 +106,7 @@ class TestImageTool(unittest.TestCase):
                 'processed': ProcessedData(1001)}
 
     def testGeneral(self):
+        self.assertEqual(4, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 

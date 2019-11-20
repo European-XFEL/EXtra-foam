@@ -49,7 +49,3 @@ class CorrelationWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

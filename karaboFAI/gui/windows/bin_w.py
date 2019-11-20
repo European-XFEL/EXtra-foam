@@ -64,9 +64,7 @@ class Bin1dWindow(_AbstractPlotWindow):
         right_panel.setSizes([self._TOTAL_H, self._TOTAL_H/2, self._TOTAL_H/2])
 
     def initConnections(self):
-        pass
-
-    def updateMetaData(self):
+        """Override."""
         pass
 
 
@@ -105,7 +103,3 @@ class Bin2dWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True
