@@ -133,7 +133,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
 
     @profiler("Azimuthal Integration Processor (Pulse)")
     def process(self, data):
-        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
+        if not self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
             return
 
         processed = data['processed']
@@ -227,7 +227,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                                     unit="q_A^-1")
         integ_points = self._integ_points
 
-        if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+        if self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG):
             mean_ret = integ1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial

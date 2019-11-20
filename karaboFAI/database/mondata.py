@@ -56,15 +56,6 @@ class MonProxy(_AbstractProxy):
         if query:
             return query[0]
 
-    def get_all_analysis(self):
-        """Query all the registered analysis types.
-
-        :return: None if the connection failed;
-                 otherwise, a dictionary of key-value pairs (
-                 analysis type: number of registrations).
-        """
-        return self.hget_all(mt.ANALYSIS_TYPE)
-
     def get_processor_params(self, proc):
         """Query the metadata for a given processor.
 

@@ -78,7 +78,7 @@ def get_analysis_types():
     """Query and parse analysis types."""
     ret = []
 
-    query = mon_proxy.get_all_analysis()
+    query = meta_proxy.get_all_analysis()
     if query is not None:
         for k, v in query.items():
             if k != 'AnalysisType.UNDEFINED' and int(v) > 0:

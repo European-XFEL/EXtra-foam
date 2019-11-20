@@ -178,7 +178,7 @@ class RoiProcessorPulse(_RoiProcessBase):
 
     def _process_roi1(self, processed, assembled):
         """Process pulse-resolved ROI1 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI1_PULSE):
+        if not self._meta.has_analysis(AnalysisType.ROI1_PULSE):
             return
 
         threshold_mask = processed.image.threshold_mask
@@ -210,7 +210,7 @@ class RoiProcessorPulse(_RoiProcessBase):
 
     def _process_roi2(self, processed, assembled):
         """Process pulse-resolved ROI2 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI2_PULSE):
+        if not self._meta.has_analysis(AnalysisType.ROI2_PULSE):
             return
 
         threshold_mask = processed.image.threshold_mask
@@ -451,13 +451,13 @@ class RoiProcessorTrain(_RoiProcessBase):
 
         require_roi1 = False
         require_roi2 = False
-        if self._has_any_analysis([AnalysisType.PROJ_ROI1_SUB_ROI2,
-                                   AnalysisType.PROJ_ROI1_ADD_ROI2]):
+        if self._meta.has_any_analysis([AnalysisType.PROJ_ROI1_SUB_ROI2,
+                                        AnalysisType.PROJ_ROI1_ADD_ROI2]):
             require_roi1 = True
             require_roi2 = True
-        elif self._has_analysis(AnalysisType.PROJ_ROI1):
+        elif self._meta.has_analysis(AnalysisType.PROJ_ROI1):
             require_roi1 = True
-        elif self._has_analysis(AnalysisType.PROJ_ROI2):
+        elif self._meta.has_analysis(AnalysisType.PROJ_ROI2):
             require_roi2 = True
 
         if require_roi1 and self._has_img1:

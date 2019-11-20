@@ -141,7 +141,7 @@ class TrXasProcessor(_BaseProcessor):
     @profiler("tr-XAS Processor")
     def process(self, data):
         """Override."""
-        if not self._has_analysis(AnalysisType.TR_XAS):
+        if not self._meta.has_analysis(AnalysisType.TR_XAS):
             return
 
         processed = data['processed']

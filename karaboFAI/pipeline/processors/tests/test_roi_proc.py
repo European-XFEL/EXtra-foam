@@ -62,6 +62,9 @@ class TestRoiProcessorTrain(unittest.TestCase):
         self._proc._auc_range = (0, 1000)
         self._proc._fom_integ_range = (0, 1000)
 
+        self._proc._meta.has_analysis = MagicMock(return_value=False)
+        self._proc._meta.has_any_analysis = MagicMock(return_value=False)
+
     def _get_data(self):
         processed = ProcessedData(1001)
         processed.image = ImageData.from_array(np.ones((20, 20)))
@@ -119,7 +122,7 @@ class TestRoiProcessorTrain(unittest.TestCase):
         self.assertEqual(None, processed.roi.proj1_add_proj2.fom)
 
         # only 'register' PROJ_ROI1
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.PROJ_ROI1 else False)
         data, processed = self._get_data()
         proc.process(data)
@@ -127,7 +130,7 @@ class TestRoiProcessorTrain(unittest.TestCase):
         self.assertEqual(None, processed.roi.proj2.fom)
 
         # only 'register' PROJ_ROI2
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.PROJ_ROI2 else False)
         data, processed = self._get_data()
         proc.process(data)
@@ -135,8 +138,8 @@ class TestRoiProcessorTrain(unittest.TestCase):
         self.assertEqual(2.0, processed.roi.proj2.fom)
 
         # only 'register' ROI1_SUB_ROI2 / ROI1_ADD_ROI2
-        proc._has_analysis = MagicMock(return_value=False)
-        proc._has_any_analysis = MagicMock(return_value=True)
+        proc._meta.has_analysis = MagicMock(return_value=False)
+        proc._meta.has_any_analysis = MagicMock(return_value=True)
         data, processed = self._get_data()
         proc.process(data)
         self.assertEqual(2.0, processed.roi.proj1.fom)
@@ -179,8 +182,8 @@ class TestRoiProcessorTrain(unittest.TestCase):
         # normalized by Normalizer.ROI3_ADD_ROI4
         proc._normalizer = Normalizer.ROI3_ADD_ROI4
 
-        proc._has_analysis = MagicMock(return_value=True)
-        proc._has_any_analysis = MagicMock(return_value=True)
+        proc._meta.has_analysis = MagicMock(return_value=True)
+        proc._meta.has_any_analysis = MagicMock(return_value=True)
 
         data, processed = self._get_data()
         proc.process(data)
@@ -275,7 +278,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
 
         # only ROI1_PULSE is registered
 
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.ROI1_PULSE else False)
         proc.process(data)
 
@@ -287,7 +290,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         # only ROI2_PULSE is registered
 
         roi.roi1.fom = None  # clear previous result
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.ROI2_PULSE else False)
         proc.process(data)
 
@@ -301,7 +304,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         data, processed = self.data_with_assembled(1001, (4, 20, 20),
                                                    with_image_mask=True)
 
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.ROI1_PULSE else False)
         proc.process(data)
 
@@ -315,7 +318,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
         # only ROI2_PULSE is registered (with image mask)
 
         roi.roi1.fom = None  # clear previous result
-        proc._has_analysis = MagicMock(
+        proc._meta.has_analysis = MagicMock(
             side_effect=lambda x: True if x == AnalysisType.ROI2_PULSE else False)
         proc.process(data)
 
