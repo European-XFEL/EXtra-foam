@@ -47,6 +47,12 @@ class Mediator(QObject):
 
         self._is_initialized = True
 
+    def registerAnalysis(self, analysis_type):
+        self._meta.register_analysis(analysis_type)
+
+    def unregisterAnalysis(self, analysis_type):
+        self._meta.unregister_analysis(analysis_type)
+
     def onBridgeEndpointChange(self, value: str):
         self._meta.hset(mt.CONNECTION, "endpoint", value)
 

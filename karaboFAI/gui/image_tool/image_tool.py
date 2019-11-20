@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from enum import IntEnum
 import os.path as osp
 import functools
 
@@ -28,7 +29,7 @@ from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
-from ...config import config, MaskState
+from ...config import AnalysisType, config, MaskState
 
 
 class _ImageCtrlWidget(_AbstractCtrlWidget):
@@ -134,6 +135,12 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     __instance = None
 
+    class TabIndex(IntEnum):
+        CORRECTED = 0
+        DARK = 1
+        AZIMUTHAL_INTEG_1D = 2
+        GEOMETRY = 3
+
     @classmethod
     def reset(cls):
         cls.__instance = None
@@ -229,6 +236,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # -----------------------------
 
         self._views_tab = QTabWidget()
+        self._prev_tab_idx = 0
         self._corrected_view = self.createView(CorrectedView)
         self._dark_view = self.createView(DarkView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
@@ -250,13 +258,20 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     def initUI(self):
         """Override."""
-        self._views_tab.addTab(self._corrected_view, "Corrected")
-        self._views_tab.addTab(self._dark_view, "Dark")
-        self._views_tab.addTab(self._azimuthal_integ_1d_view,
-                               "Azimuthal integration 1D")
+        corrected_tab_idx = self._views_tab.addTab(
+            self._corrected_view, "Corrected")
+        dark_tab_idx = self._views_tab.addTab(self._dark_view, "Dark")
+        azimuthal_integ_tab_idx = self._views_tab.addTab(
+            self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
         geom_tab_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
         if not config['REQUIRE_GEOMETRY']:
             self._views_tab.setTabEnabled(geom_tab_idx, False)
+
+        assert(corrected_tab_idx == self.TabIndex.CORRECTED)
+        assert(dark_tab_idx == self.TabIndex.DARK)
+        assert(azimuthal_integ_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D)
+        assert(geom_tab_idx == self.TabIndex.GEOMETRY)
+        self._prev_tab_idx = self._views_tab.currentIndex()
 
         ctrl_panel = QWidget()
         ctrl_panel_layout = QVBoxLayout()
@@ -388,12 +403,24 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     @pyqtSlot(int)
     def onViewsTabChanged(self, idx):
-        if self._views_tab.tabText(idx) == 'Dark':
-            self._record_at.setEnabled(True)
-        else:
+        # clean-up for the old tab
+        if self._prev_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D:
+            self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG)
+
+        if self._prev_tab_idx == self.TabIndex.DARK:
             if self._record_at.isChecked():
                 self._record_at.trigger()
             self._record_at.setEnabled(False)
+
+        # update Tab index
+        self._prev_tab_idx = idx
+
+        # set-up for the new tab
+        if idx == self.TabIndex.DARK:
+            self._record_at.setEnabled(True)
+
+        if idx == self.TabIndex.AZIMUTHAL_INTEG_1D:
+            self._mediator.registerAnalysis(AnalysisType.AZIMUTHAL_INTEG)
 
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):
