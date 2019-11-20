@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import math
 import os
 import tempfile
@@ -20,6 +20,7 @@ from karaboFAI.pipeline.data_model import ImageData, ProcessedData
 from karaboFAI.pipeline.exceptions import ImageProcessingError
 from karaboFAI.processes import wait_until_redis_shutdown
 from karaboFAI.services import FAI
+from karaboFAI.database import MetaProxy
 
 app = mkQApp()
 
@@ -75,6 +76,8 @@ class TestImageTool(unittest.TestCase):
         cls.train_worker = cls.fai.train_worker
         cls.pulse_worker = cls.fai.pulse_worker
 
+        cls._meta = MetaProxy()
+
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[3]
         assert("Image tool" == cls._action.text())
@@ -86,9 +89,12 @@ class TestImageTool(unittest.TestCase):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        ImageToolWindow.reset()
-        self._action.trigger()
+        # construct a fresh ImageToolWindow for each test
+        self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
+                                               pulse_resolved=self.gui._pulse_resolved,
+                                               parent=self.gui)
         self.image_tool = self.gui._image_tool
+
         self.view = self.image_tool._corrected_view.imageView
         self.view.setImageData(None)
         self.view._image = None
@@ -118,6 +124,12 @@ class TestImageTool(unittest.TestCase):
         widget.auto_update_cb.setChecked(True)
         self.assertFalse(widget.update_image_btn.isEnabled())
         self.assertTrue(self.image_tool._auto_update)
+
+        # test update image manually
+        self.image_tool._updateOnce = MagicMock()
+        widget.auto_update_cb.setChecked(False)
+        widget.update_image_btn.clicked.emit()
+        self.image_tool._updateOnce.assert_called_once_with(True)
 
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
@@ -344,13 +356,10 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(self.image_tool._record_at.isEnabled())
         self.image_tool._views_tab.setCurrentWidget(self.image_tool._dark_view)
         self.assertTrue(self.image_tool._record_at.isEnabled())
-        self.image_tool._record_at.trigger()
+        self.image_tool._record_at.trigger()  # start recording
         image_proc.update()
         self.assertTrue(image_proc._recording)
-        self.image_tool._views_tab.setCurrentWidget(self.image_tool._corrected_view)
-        # disable "record AT" and stop recording when tab changes
-        self.assertFalse(self.image_tool._record_at.isEnabled())
-        self.assertFalse(self.image_tool._record_at.isChecked())
+        self.image_tool._record_at.trigger()  # stop recording
         image_proc.update()
         self.assertFalse(image_proc._recording)
 
@@ -486,6 +495,28 @@ class TestImageTool(unittest.TestCase):
         pulse_worker._assembler.update()
         self.assertIsNone(pulse_worker._assembler._geom)
 
+    def testViewTabSwitching(self):
+        tab = self.image_tool._views_tab
+        self.assertEqual(0, tab.currentIndex())
+        self.assertEqual(0, self.image_tool._prev_tab_idx)
+
+        # switch to "azimuthal integration 1D"
+        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        tab.setCurrentIndex(self.image_tool.TabIndex.AZIMUTHAL_INTEG_1D)
+        self.assertEqual('1', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+
+        # switch to "dark"
+        tab.setCurrentIndex(self.image_tool.TabIndex.DARK)
+        # analysis type AZIMUTHAL_INTEG should be unregistered
+        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.image_tool._record_at.trigger()  # start recording
+        self.assertTrue(self.image_tool._record_at.isChecked())
+
+        # switch to "geometry"
+        tab.setCurrentIndex(self.image_tool.TabIndex.GEOMETRY)
+        self.assertFalse(self.image_tool._record_at.isEnabled())
+        self.assertFalse(self.image_tool._record_at.isChecked())
+
 
 class TestImageToolTs(unittest.TestCase):
     @classmethod
@@ -511,8 +542,10 @@ class TestImageToolTs(unittest.TestCase):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        ImageToolWindow.reset()
-        self._action.trigger()
+        # construct a fresh ImageToolWindow for each test
+        self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
+                                               pulse_resolved=self.gui._pulse_resolved,
+                                               parent=self.gui)
         self.image_tool = self.gui._image_tool
 
     def testGeneral(self):

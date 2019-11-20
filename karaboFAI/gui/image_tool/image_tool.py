@@ -133,34 +133,11 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     _WIDTH, _HEIGHT = config['GUI']['IMAGE_TOOL_SIZE']
 
-    __instance = None
-
     class TabIndex(IntEnum):
         CORRECTED = 0
         DARK = 1
         AZIMUTHAL_INTEG_1D = 2
         GEOMETRY = 3
-
-    @classmethod
-    def reset(cls):
-        cls.__instance = None
-
-    def __new__(cls, *args, **kwargs):
-        """Create a singleton."""
-        if cls.__instance is None:
-            instance = super().__new__(cls, *args, **kwargs)
-            instance._is_initialized = False
-            cls.__instance = instance
-            return instance
-
-        instance = cls.__instance
-        parent = instance.parent()
-        if parent is not None:
-            parent.registerWindow(instance)
-
-        instance.show()
-        instance.activateWindow()
-        return instance
 
     def __init__(self, queue, *, pulse_resolved=True, parent=None):
         """Initialization.
@@ -169,8 +146,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
         """
-        if self._is_initialized:
-            return
         super().__init__(parent=parent)
 
         self._queue = queue
@@ -253,8 +228,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self.updateMetaData()
 
         self.resize(self._WIDTH, self._HEIGHT)
-
-        self._is_initialized = True
 
     def initUI(self):
         """Override."""
@@ -368,6 +341,10 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             if not succeeded:
                 return False
         return True
+
+    def reset(self):
+        """Override."""
+        pass
 
     @pyqtSlot()
     def updateImage(self):

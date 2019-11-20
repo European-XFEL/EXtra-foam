@@ -185,10 +185,9 @@ class MainGUI(QMainWindow):
 
         self._tool_bar.addSeparator()
 
-        ImageToolWindow.reset()  # for unittest
         image_tool_at = self._addAction("Image tool", "image_tool.png")
-        image_tool_at.triggered.connect(lambda: ImageToolWindow(
-            self._queue, pulse_resolved=self._pulse_resolved, parent=self))
+        image_tool_at.triggered.connect(lambda: (self._image_tool.show(),
+                                                 self._image_tool.activateWindow()))
 
         open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(
@@ -602,6 +601,7 @@ class MainGUI(QMainWindow):
         # shutdown pipeline workers and Redis server
         shutdown_all()
 
+        self._image_tool.close()
         for window in itertools.chain(self._windows,
                                       self._satellite_windows,
                                       self._special_windows):
