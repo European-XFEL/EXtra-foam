@@ -23,8 +23,12 @@ from distutils.version import LooseVersion
 from distutils.util import strtobool
 
 
+with open(osp.join(osp.abspath(osp.dirname(__file__)), 'README.md')) as f:
+    long_description = f.read()
+
+
 def find_version():
-    with open(os.path.join('karaboFAI', '__init__.py')) as fp:
+    with open(osp.join('karaboFAI', '__init__.py')) as fp:
         for line in fp:
             m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
             if m is not None:
@@ -196,11 +200,8 @@ setup(
     version=find_version(),
     author='Jun Zhu',
     author_email='da-support@xfel.eu',
-    description='Fast analysis integration for 2D detectors',
-    long_description='Real-time and off-line data analysis (azimuthal '
-                     'integration, ROI, correlation, etc.) and visualization '
-                     'tool for experiments using 2D detectors at '
-                     'European XFEL.',
+    description='Online analysis and monitoring tool at European XFEL',
+    long_description=long_description,
     url='',
     packages=find_packages(),
     entry_points={
