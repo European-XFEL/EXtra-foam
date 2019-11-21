@@ -195,7 +195,7 @@ setup(
     name='karaboFAI',
     version=find_version(),
     author='Jun Zhu',
-    author_email='cas-support@xfel.eu',
+    author_email='da-support@xfel.eu',
     description='Fast analysis integration for 2D detectors',
     long_description='Real-time and off-line data analysis (azimuthal '
                      'integration, ROI, correlation, etc.) and visualization '
