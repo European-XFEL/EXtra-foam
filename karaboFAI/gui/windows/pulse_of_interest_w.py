@@ -125,7 +125,7 @@ class PoiWidget(QtWidgets.QWidget):
 
 class PulseOfInterestWindow(_AbstractPlotWindow):
     """PulseOfInterestWindow class."""
-    title = "pulse-of-interest"
+    _title = "Pulse-of-interest"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -162,7 +162,3 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
         self._poi_widget2.pulse_index_sgn.connect(
             lambda x: self._mediator.onPoiIndexChange(2, x))
         self._poi_widget2.updatePulseIndex()
-
-    def updateMetaData(self):
-        """Override."""
-        return True

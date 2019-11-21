@@ -9,14 +9,16 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QDoubleValidator, QIntValidator
+from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import Normalizer, config
 
 
-class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up the azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
@@ -30,22 +32,41 @@ class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Azimuthal integration setup", *args, **kwargs)
+        super().__init__(*args, **kwargs)
+
+        self._photon_energy_le = SmartLineEdit(str(config["PHOTON_ENERGY"]))
+        self._photon_energy_le.setValidator(QDoubleValidator(0.001, 100, 6))
+
+        self._sample_dist_le = SmartLineEdit(str(config["SAMPLE_DISTANCE"]))
+        self._sample_dist_le.setValidator(QDoubleValidator(0.001, 100, 6))
 
         self._cx_le = SmartLineEdit(str(config["CENTER_X"]))
-        self._cx_le.setValidator(QtGui.QIntValidator())
+        self._cx_le.setValidator(QIntValidator())
         self._cy_le = SmartLineEdit(str(config["CENTER_Y"]))
-        self._cy_le.setValidator(QtGui.QIntValidator())
-        self._integ_method_cb = QtGui.QComboBox()
+        self._cy_le.setValidator(QIntValidator())
+
+        self._px_le = SmartLineEdit(str(config["PIXEL_SIZE"]))
+        self._py_le = SmartLineEdit(str(config["PIXEL_SIZE"]))
+        self._px_le.setEnabled(False)
+        self._py_le.setEnabled(False)
+
+        self._rx_le = SmartLineEdit("0.0")
+        self._ry_le = SmartLineEdit("0.0")
+        self._rz_le = SmartLineEdit("0.0")
+        self._rx_le.setEnabled(False)
+        self._ry_le.setEnabled(False)
+        self._rz_le.setEnabled(False)
+
+        self._integ_method_cb = QComboBox()
         for method in config["AZIMUTHAL_INTEG_METHODS"]:
             self._integ_method_cb.addItem(method)
         self._integ_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
         self._integ_pts_le = SmartLineEdit(
             str(config["AZIMUTHAL_INTEG_POINTS"]))
-        self._integ_pts_le.setValidator(QtGui.QIntValidator(1, 8192))
+        self._integ_pts_le.setValidator(QIntValidator(1, 8192))
 
-        self._normalizers_cb = QtGui.QComboBox()
+        self._normalizers_cb = QComboBox()
         for v in self._available_normalizers:
             self._normalizers_cb.addItem(v)
 
@@ -62,30 +83,63 @@ class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Override."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Cx (pixel): "), 0, 0, AR)
-        layout.addWidget(self._cx_le, 0, 1)
-        layout.addWidget(QtGui.QLabel("Cy (pixel): "), 0, 2, AR)
-        layout.addWidget(self._cy_le, 0, 3)
-        layout.addWidget(QtGui.QLabel("Integ method: "), 1, 0, AR)
-        layout.addWidget(self._integ_method_cb, 1, 1)
-        layout.addWidget(QtGui.QLabel("Integ points: "), 1, 2, AR)
-        layout.addWidget(self._integ_pts_le, 1, 3)
-        layout.addWidget(QtGui.QLabel("Integ range (1/A): "), 2, 0, AR)
-        layout.addWidget(self._integ_range_le, 2, 1)
-        layout.addWidget(QtGui.QLabel("Normalizer: "), 2, 2, AR)
-        layout.addWidget(self._normalizers_cb, 2, 3)
-        layout.addWidget(QtGui.QLabel("AUC range (1/A): "), 3, 0, AR)
-        layout.addWidget(self._auc_range_le, 3, 1)
-        layout.addWidget(QtGui.QLabel("FOM range (1/A): "), 3, 2, AR)
-        layout.addWidget(self._fom_integ_range_le, 3, 3)
+        row = 0
+        layout.addWidget(QLabel("Cx (pixel): "), row, 0, AR)
+        layout.addWidget(self._cx_le, row, 1)
+        layout.addWidget(QLabel("Cy (pixel): "), row, 2, AR)
+        layout.addWidget(self._cy_le, row, 3)
+        layout.addWidget(QLabel("Pixel x (m): "), row, 4, AR)
+        layout.addWidget(self._px_le, row, 5)
+        layout.addWidget(QLabel("Pixel y (m): "), row, 6, AR)
+        layout.addWidget(self._py_le, row, 7)
+
+        row += 1
+        layout.addWidget(QLabel("Sample distance (m): "), row, 0, AR)
+        layout.addWidget(self._sample_dist_le, row, 1)
+        layout.addWidget(QLabel("Rotation x (rad): "), row, 2, AR)
+        layout.addWidget(self._rx_le, row, 3)
+        layout.addWidget(QLabel("Rotation y (rad): "), row, 4, AR)
+        layout.addWidget(self._ry_le, row, 5)
+        layout.addWidget(QLabel("Rotation z (rad): "), row, 6, AR)
+        layout.addWidget(self._rz_le, row, 7)
+
+        row += 1
+        layout.addWidget(QLabel("Photon energy (keV): "), row, 0, AR)
+        layout.addWidget(self._photon_energy_le, row, 1)
+        layout.addWidget(QLabel("Integ method: "), row, 2, AR)
+        layout.addWidget(self._integ_method_cb, row, 3)
+        layout.addWidget(QLabel("Integ points: "), row, 4, AR)
+        layout.addWidget(self._integ_pts_le, row, 5)
+        layout.addWidget(QLabel("Integ range (1/A): "), row, 6, AR)
+        layout.addWidget(self._integ_range_le, row, 7)
+
+        row += 1
+        layout.addWidget(QLabel("Normalizer: "), row, 0, AR)
+        layout.addWidget(self._normalizers_cb, row, 1)
+        layout.addWidget(QLabel("AUC range (1/A): "), row, 2, AR)
+        layout.addWidget(self._auc_range_le, row, 3)
+        layout.addWidget(QLabel("FOM range (1/A): "), row, 4, AR)
+        layout.addWidget(self._fom_integ_range_le, row, 5)
 
         self.setLayout(layout)
 
     def initConnections(self):
+        """Override."""
         mediator = self._mediator
+
+        self._photon_energy_le.value_changed_sgn.connect(
+            lambda x: mediator.onPhotonEnergyChange(float(x)))
+
+        self._sample_dist_le.value_changed_sgn.connect(
+            lambda x: mediator.onSampleDistanceChange(float(x)))
+
+        self._px_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiPixelSizeXChange(float(x)))
+        self._py_le.value_changed_sgn.connect(
+            lambda x: mediator.onAiPixelSizeYChange(float(x)))
 
         self._cx_le.value_changed_sgn.connect(
             lambda x: mediator.onAiIntegCenterXChange(int(x)))
@@ -112,8 +166,14 @@ class AzimuthalIntegCtrlWidget(_AbstractGroupBoxCtrlWidget):
             mediator.onAiFomIntegRangeChange)
 
     def updateMetaData(self):
-        self._cx_le.returnPressed.emit()
+        """Override."""
+        self._photon_energy_le.returnPressed.emit()
+        self._sample_dist_le.returnPressed.emit()
 
+        self._px_le.returnPressed.emit()
+        self._py_le.returnPressed.emit()
+
+        self._cx_le.returnPressed.emit()
         self._cy_le.returnPressed.emit()
 
         self._integ_method_cb.currentTextChanged.emit(

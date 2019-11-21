@@ -18,7 +18,7 @@ from ...config import config
 
 class PumpProbeWindow(_AbstractPlotWindow):
     """PumpProbeWindow class."""
-    title = "pump-probe"
+    _title = "Pump-probe"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -60,7 +60,3 @@ class PumpProbeWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

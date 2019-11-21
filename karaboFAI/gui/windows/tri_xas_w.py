@@ -11,7 +11,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 
 from .base_window import _AbstractSpecialAnalysisWindow
 from ..plot_widgets import RoiImageView, ImageViewF, PlotWidgetF
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import make_pen
 from ...config import config
 
 
@@ -90,7 +90,7 @@ class _TrXasHeatmap(ImageViewF):
 
 class TrXasWindow(_AbstractSpecialAnalysisWindow):
     """TrXasWindow class."""
-    title = "tr-XAS"
+    _title = "Tr-XAS"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -133,7 +133,3 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

@@ -58,6 +58,7 @@ class ImageViewF(QtGui.QWidget):
         try:
             parent.registerPlotWidget(self)
         except AttributeError:
+            # if parent is None or parent has no such a method
             pass
 
         self._mediator = Mediator()

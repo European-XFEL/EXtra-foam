@@ -17,32 +17,6 @@ from ..misc_widgets import make_brush, make_pen
 from ...config import config
 
 
-class TrainAiWidget(PlotWidgetF):
-    """TrainAiWidget class.
-
-    Widget for displaying azimuthal integration result for the average of all
-    the pulse(s) in a train.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setLabel('left', "Scattering signal (arb. u.)")
-
-        self._plot = self.plotCurve(pen=make_pen("p"))
-
-    def updateF(self, data):
-        """Override."""
-        momentum = data.ai.x
-        intensity = data.ai.vfom
-
-        if intensity is None:
-            return
-
-        self._plot.setData(momentum, intensity)
-
-
 class PulsesInTrainFomWidget(PlotWidgetF):
     """PulsesInTrainFomWidget class.
 

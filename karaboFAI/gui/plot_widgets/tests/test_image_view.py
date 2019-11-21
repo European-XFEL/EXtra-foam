@@ -5,7 +5,7 @@ import tempfile
 import numpy as np
 
 from karaboFAI.gui import mkQApp, pyqtgraph
-from karaboFAI.gui.image_tool.image_tool import _SimpleImageData
+from karaboFAI.gui.image_tool.simple_image_data import _SimpleImageData
 from karaboFAI.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
 from karaboFAI.gui.plot_widgets.image_view_base import ImageViewF
 from karaboFAI.gui.plot_widgets.image_views import (

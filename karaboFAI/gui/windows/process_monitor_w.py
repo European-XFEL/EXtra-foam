@@ -14,7 +14,7 @@ from .base_window import _AbstractSatelliteWindow
 
 
 class ProcessMonitor(_AbstractSatelliteWindow):
-    title = "Process monitor"
+    _title = "Process monitor"
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -39,10 +39,6 @@ class ProcessMonitor(_AbstractSatelliteWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True
 
     @QtCore.pyqtSlot(object)
     def onProcessInfoUpdate(self, proc_info):

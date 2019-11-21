@@ -19,7 +19,7 @@ class Bin1dWindow(_AbstractPlotWindow):
 
     Plot data in selected bins.
     """
-    title = "binning 1D"
+    _title = "Binning 1D"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -64,9 +64,7 @@ class Bin1dWindow(_AbstractPlotWindow):
         right_panel.setSizes([self._TOTAL_H, self._TOTAL_H/2, self._TOTAL_H/2])
 
     def initConnections(self):
-        pass
-
-    def updateMetaData(self):
+        """Override."""
         pass
 
 
@@ -75,9 +73,10 @@ class Bin2dWindow(_AbstractPlotWindow):
 
     Plot data in selected bins.
     """
-    title = "binning 2D"
+    _title = "Binning 2D"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -104,7 +103,3 @@ class Bin2dWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

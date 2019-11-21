@@ -1,5 +1,5 @@
 import unittest
-from collections import Counter
+from collections import Counter, deque
 import os
 import tempfile
 
@@ -7,11 +7,11 @@ from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper, config
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.gui.windows import (
-    Bin1dWindow, Bin2dWindow, AzimuthalIntegrationWindow, CorrelationWindow,
+    Bin1dWindow, Bin2dWindow, CorrelationWindow,
     StatisticsWindow, PumpProbeWindow, RoiWindow
 )
 from karaboFAI.gui.plot_widgets import (
-    TrainAiWidget, FomHistogramWidget,
+    FomHistogramWidget,
     PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
     PulsesInTrainFomWidget,
     RoiImageView,
@@ -44,7 +44,7 @@ class TestPlotWindows(unittest.TestCase):
         cls.gui.close()
 
     def testPumpProbeWindow(self):
-        win = PumpProbeWindow(pulse_resolved=True, parent=self.gui)
+        win = PumpProbeWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(5, len(win._plot_widgets))
         counter = Counter()
@@ -56,7 +56,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(1, counter[PumpProbeFomWidget])
 
     def testRoiWindow(self):
-        win = RoiWindow(pulse_resolved=True, parent=self.gui)
+        win = RoiWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
@@ -66,7 +66,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[RoiImageView])
 
     def testBin1dWindow(self):
-        win = Bin1dWindow(pulse_resolved=True, parent=self.gui)
+        win = Bin1dWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(6, len(win._plot_widgets))
         counter = Counter()
@@ -77,7 +77,7 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(4, counter[Bin1dHist])
 
     def testBin2dWindow(self):
-        win = Bin2dWindow(pulse_resolved=True, parent=self.gui)
+        win = Bin2dWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
@@ -87,14 +87,16 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[Bin2dHeatmap])
 
     def testCorrelationWindow(self):
-        win = CorrelationWindow(pulse_resolved=True, parent=self.gui)
+        from karaboFAI.gui.ctrl_widgets.correlation_ctrl_widget import _N_PARAMS
 
-        self.assertEqual(4, len(win._plot_widgets))
+        win = CorrelationWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(_N_PARAMS, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(4, counter[CorrelationWidget])
+        self.assertEqual(_N_PARAMS, counter[CorrelationWidget])
 
         # -----------------------
         # test data visualization
@@ -107,8 +109,9 @@ class TestPlotWindows(unittest.TestCase):
             data.corr.correlation2.hist = (int(i/5), -100*i)
             data.corr.correlation3.hist = (i, i+1)
             data.corr.correlation4.hist = (i, -i)
-        self.gui._data.set(data)
-        win.update()
+
+        win._queue.append(data)
+        win.updateWidgetsF()
         app.processEvents()
 
         # change the resolutions
@@ -126,12 +129,12 @@ class TestPlotWindows(unittest.TestCase):
             data.corr.correlation3.hist = (int(i/5), 100*i)
             data.corr.correlation4.hist = (int(i/5), -100*i)
 
-        self.gui._data.set(data)
-        win.update()
+        win._queue.append(data)
+        win.updateWidgetsF()
         app.processEvents()
 
     def testStatisticsWindow(self):
-        win = StatisticsWindow(pulse_resolved=True, parent=self.gui)
+        win = StatisticsWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
@@ -146,7 +149,7 @@ class TestPlotWindows(unittest.TestCase):
             PulseOfInterestWindow, PoiImageView, PoiStatisticsWidget
         )
 
-        win = PulseOfInterestWindow(pulse_resolved=True, parent=self.gui)
+        win = PulseOfInterestWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(4, len(win._plot_widgets))
         counter = Counter()
@@ -156,22 +159,11 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[PoiImageView])
         self.assertEqual(2, counter[PoiStatisticsWidget])
 
-    def testAzimuthalIntegrationWindow(self):
-        win = AzimuthalIntegrationWindow(
-            pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(1, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
-        self.assertEqual(1, counter[TrainAiWidget])
-
     def testTrXasWindow(self):
         from karaboFAI.gui.windows.tri_xas_w import (
             TrXasWindow, _TrXasAbsorptionWidget, _TrXasHeatmap
         )
-        win = TrXasWindow(pulse_resolved=True, parent=self.gui)
+        win = TrXasWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(6, len(win._plot_widgets))
         counter = Counter()

@@ -10,7 +10,7 @@ All rights reserved.
 import abc
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QFrame, QGroupBox
 
 from ..mediator import Mediator
 
@@ -44,7 +44,7 @@ class _AbstractCtrlWidgetMixin:
         raise NotImplementedError
 
 
-class _AbstractCtrlWidget(QtWidgets.QWidget, _AbstractCtrlWidgetMixin):
+class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
     def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 
@@ -62,6 +62,8 @@ class _AbstractCtrlWidget(QtWidgets.QWidget, _AbstractCtrlWidgetMixin):
         # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
 
+        self.setFrameStyle(QFrame.StyledPanel)
+
     def onStart(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(False)
@@ -71,7 +73,7 @@ class _AbstractCtrlWidget(QtWidgets.QWidget, _AbstractCtrlWidgetMixin):
             widget.setEnabled(True)
 
 
-class _AbstractGroupBoxCtrlWidget(QtWidgets.QGroupBox, _AbstractCtrlWidgetMixin):
+class _AbstractGroupBoxCtrlWidget(QGroupBox, _AbstractCtrlWidgetMixin):
     GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
                             'color: #8B008B;' \
                             'border: 1px;' \

@@ -147,7 +147,7 @@ class _Config(dict):
             # initial (width, height) of the main GUI
             "MAIN_GUI_SIZE": [1680, 1080],
             # initial (width, height) of the image tool
-            "IMAGE_TOOL_SIZE": [1440, 1080],
+            "IMAGE_TOOL_SIZE": [1680, 1080],
             # initial (width, height) of a large plot window
             "PLOT_WINDOW_SIZE": [1440, 1080],
         }

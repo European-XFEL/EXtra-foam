@@ -21,7 +21,6 @@ from .plot_widgets import (
     PulsesInTrainFomWidget,
     PumpProbeOnOffWidget,
     PumpProbeFomWidget,
-    TrainAiWidget,
 )
 
 # add plot widgets

@@ -16,7 +16,7 @@ from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType, config
 
-_N_PARAMS = 4  # maximum number of correlated parameters
+_N_PARAMS = 2  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = "0.0"
 
 
@@ -114,8 +114,8 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
             header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
 
         header_height = self._table.horizontalHeader().height()
-        self._table.setMinimumHeight(header_height * (_N_PARAMS + 2))
-        self._table.setMaximumHeight(header_height * (_N_PARAMS + 3))
+        self._table.setMinimumHeight(header_height * (_N_PARAMS + 1.5))
+        self._table.setMaximumHeight(header_height * (_N_PARAMS + 2.5))
 
     @QtCore.pyqtSlot(str)
     def onCategoryChange(self, i_row, text):

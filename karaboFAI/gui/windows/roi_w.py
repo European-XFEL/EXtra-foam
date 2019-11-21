@@ -16,7 +16,7 @@ from ...config import config
 
 class RoiWindow(_AbstractPlotWindow):
     """RoiWindow class."""
-    title = "ROI"
+    _title = "ROI"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
 
@@ -44,7 +44,3 @@ class RoiWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

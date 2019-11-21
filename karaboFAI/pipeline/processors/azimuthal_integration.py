@@ -18,7 +18,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import mask_image, slice_curve
-from ...config import Normalizer, AnalysisType, config
+from ...config import Normalizer, AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler
 
@@ -36,6 +36,8 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         _sample_dist (float): distance from the sample to the
             detector plan (orthogonal distance, not along the beam),
             in meter.
+        _pixel1 (float): pixel size along axis 1 in meter.
+        _pixel2 (float): pixel size along axis 2 in meter.
         _poni1 (float): poni1 in meter.
         _poni2 (float): poni2 in meter.
         _wavelength (float): photon wavelength in meter.
@@ -61,6 +63,8 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         self.analysis_type = AnalysisType.UNDEFINED
 
         self._sample_dist = None
+        self._pixel1 = None
+        self._pixel2 = None
         self._poni1 = None
         self._poni2 = None
         self._wavelength = None
@@ -85,9 +89,10 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         self._update_moving_average(g_cfg)
 
         cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
-        pixel_size = config['PIXEL_SIZE']
-        self._poni1 = int(cfg['integ_center_y']) * pixel_size
-        self._poni2 = int(cfg['integ_center_x']) * pixel_size
+        self._pixel1 = float(cfg['pixel_size_y'])
+        self._pixel2 = float(cfg['pixel_size_x'])
+        self._poni1 = int(cfg['integ_center_y']) * self._pixel1
+        self._poni2 = int(cfg['integ_center_x']) * self._pixel2
 
         self._integ_method = cfg['integ_method']
         self._integ_range = self.str2tuple(cfg['integ_range'])
@@ -100,8 +105,8 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         if self._integrator is None:
             self._integrator = AzimuthalIntegrator(
                 dist=self._sample_dist,
-                pixel1=config['PIXEL_SIZE'],
-                pixel2=config['PIXEL_SIZE'],
+                pixel1=self._pixel1,
+                pixel2=self._pixel2,
                 poni1=self._poni1,
                 poni2=self._poni2,
                 rot1=0,

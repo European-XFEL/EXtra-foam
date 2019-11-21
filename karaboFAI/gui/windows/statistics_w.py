@@ -19,9 +19,10 @@ class StatisticsWindow(_AbstractPlotWindow):
 
     Visualize statistics.
     """
-    title = "statistics"
+    _title = "Statistics"
 
     _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -48,7 +49,3 @@ class StatisticsWindow(_AbstractPlotWindow):
     def initConnections(self):
         """Override."""
         pass
-
-    def updateMetaData(self):
-        """Override."""
-        return True

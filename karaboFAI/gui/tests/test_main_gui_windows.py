@@ -6,9 +6,8 @@ from karaboFAI.logger import logger
 from karaboFAI.config import _Config, ConfigWrapper
 from karaboFAI.gui.main_gui import MainGUI
 from karaboFAI.gui import mkQApp
-from karaboFAI.gui.image_tool import ImageToolWindow
 from karaboFAI.gui.windows import (
-    AzimuthalIntegrationWindow, Bin1dWindow, Bin2dWindow, CorrelationWindow,
+    Bin1dWindow, Bin2dWindow, CorrelationWindow,
     StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow,
     ProcessMonitor, FileStreamControllerWindow, AboutWindow,
 )
@@ -36,8 +35,6 @@ class TestOpenCloseWindows(unittest.TestCase):
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
 
-        imagetool_action = actions[3]
-        self.assertEqual("Image tool", imagetool_action.text())
         poi_action = actions[4]
         self.assertEqual("Pulse-of-interest", poi_action.text())
         pp_action = actions[5]
@@ -48,12 +45,7 @@ class TestOpenCloseWindows(unittest.TestCase):
         self.assertEqual("Correlation", correlation_action.text())
         bin1d_action = actions[8]
         bin2d_action = actions[9]
-        ai_action = actions[10]
         # TODO: add ROI
-
-        # ImageToolWindow is opened together with the MainGUI
-        imagetool_window = list(self.gui._windows.keys())[-1]
-        self.assertIsInstance(imagetool_window, ImageToolWindow)
 
         pp_window = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window, PumpProbeWindow)
@@ -75,29 +67,18 @@ class TestOpenCloseWindows(unittest.TestCase):
         # open one window twice
         self._check_open_window(poi_action, registered=False)
 
-        ai_window = self._check_open_window(ai_action)
-        self.assertIsInstance(ai_window, AzimuthalIntegrationWindow)
-        self._check_open_window(ai_action, registered=False)
-
-        self._check_close_window(imagetool_window)
         self._check_close_window(pp_window)
         self._check_close_window(statistics_window)
         self._check_close_window(correlation_window)
         self._check_close_window(bin1d_window)
         self._check_close_window(bin2d_window)
         self._check_close_window(poi_window)
-        self._check_close_window(ai_window)
 
         # if a plot window is closed, it can be re-openned and a new instance
         # will be created
         pp_window_new = self._check_open_window(pp_action)
         self.assertIsInstance(pp_window_new, PumpProbeWindow)
         self.assertIsNot(pp_window_new, pp_window)
-
-        # imagetool_window is a singleton, therefore, the re-opened window
-        # is the same instance
-        imagetool_window_new = self._check_open_window(imagetool_action)
-        self.assertIs(imagetool_window_new, imagetool_window)
 
     def testOpenCloseSatelliteWindows(self):
         actions = self.gui._tool_bar.actions()

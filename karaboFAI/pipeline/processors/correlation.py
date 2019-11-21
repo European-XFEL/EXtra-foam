@@ -28,7 +28,7 @@ class CorrelationProcessor(_BaseProcessor):
 
         self.analysis_type = AnalysisType.UNDEFINED
 
-        n_params = 4
+        n_params = 2
         self._device_ids = [""] * n_params
         self._properties = [""] * n_params
         self._resolutions = [0.0] * n_params
