@@ -1,7 +1,7 @@
 INSTALLATION
 ============
 
-If you are using karaboFAI on the online or `Maxwell` cluster, please check **GETTING STARTED**.
+If you want to use **karaboFAI** on the online or `Maxwell` cluster, please check **GETTING STARTED**.
 
 .. _Anaconda: https://www.anaconda.com/
 

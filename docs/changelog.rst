@@ -1,8 +1,28 @@
 CHANGELOG
 =========
 
-karaboFAI 0.6.2 (15 November 2019)
----------------------------------
+0.7.0 (25 November 2019)
+------------------------
+
+- **Improvement**
+
+    - Change supporting email, (long) description and header content in each file #174
+    - Regularize Qt imports #173
+    - Re-arange the GUI interface and move image related control into ImageTool #171
+    - Add hiredis-py as dependency and improve redis connection infrastructure #170
+    - Remove (canvas, dockarea, flowchart, multiprocess) from pyqtgraph code base #155
+
+- **New Feature**
+
+    - Support online FCCD raw data analysis #169
+    - Publish available data sources in Redis and improve infrastructure in client proxy #166
+
+- **Bug Fix**
+
+    - Clean-up thread logger gracefully #170
+
+0.6.2 (15 November 2019)
+------------------------
 
 - **Improvement**
 
@@ -19,9 +39,8 @@ karaboFAI 0.6.2 (15 November 2019)
 
     - Pulse slicer will also slice the stored dark images #165
 
-
-karaboFAI 0.6.1 (28 October 2019)
----------------------------------
+0.6.1 (28 October 2019)
+-----------------------
 
 - **Improvement**
 
@@ -35,9 +54,8 @@ karaboFAI 0.6.1 (28 October 2019)
     - New data source management interface !157
     - Implemented web monitor in Dash !152
 
-
-karaboFAI 0.6.0 (31 August 2019)
----------------------------------
+0.6.0 (31 August 2019)
+----------------------
 
 - **Bug Fix**
 
@@ -56,8 +74,8 @@ karaboFAI 0.6.0 (31 August 2019)
 
 - **Test**
 
-karaboFAI 0.5.5 (26 August 2019)
----------------------------------
+0.5.5 (26 August 2019)
+----------------------
 
 - **Bug Fix**
 
@@ -78,8 +96,8 @@ karaboFAI 0.5.5 (26 August 2019)
 
 - **Test**
 
-karaboFAI 0.5.4 (20 August 2019)
----------------------------------
+0.5.4 (20 August 2019)
+----------------------
 
 - **Bug Fix**
 
@@ -93,8 +111,8 @@ karaboFAI 0.5.4 (20 August 2019)
 
 - **Test**
 
-karaboFAI 0.5.3 (16 August 2019)
----------------------------------
+0.5.3 (16 August 2019)
+----------------------
 
 - **Bug Fix**
 
@@ -114,8 +132,8 @@ karaboFAI 0.5.3 (16 August 2019)
 
     - Integrate cpp unittest into setuptools and CI (both parallel and series) !110
 
-karaboFAI 0.5.2 (9 August 2019)
--------------------------------
+0.5.2 (9 August 2019)
+---------------------
 
 - **Bug Fix**
 
@@ -134,9 +152,8 @@ karaboFAI 0.5.2 (9 August 2019)
 
 - **Test**
 
-
-karaboFAI 0.5.1 (5 August 2019)
--------------------------------
+0.5.1 (5 August 2019)
+---------------------
 
 - **Bug Fix**
 

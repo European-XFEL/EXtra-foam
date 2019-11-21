@@ -18,7 +18,6 @@ import plotly.graph_objs as go
 
 from ..config import config
 from ..database import Metadata, MetaProxy, MonProxy
-from ..database import Metadata as mt
 from ..ipc import reset_redis_connections
 
 
