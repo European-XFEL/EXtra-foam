@@ -7,8 +7,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QLabel
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import (
@@ -39,15 +40,13 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
 
         self._delay_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
         self._n_delay_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
-        self._n_delay_bins_le.setValidator(
-            QtGui.QIntValidator(1, _MAX_N_BINS))
+        self._n_delay_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
 
         self._energy_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
         self._n_energy_bins_le = SmartLineEdit(_DEFAULT_N_BINS)
-        self._n_energy_bins_le.setValidator(
-            QtGui.QIntValidator(1, _MAX_N_BINS))
+        self._n_energy_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
 
-        self._swap_btn = QtWidgets.QPushButton("Swap delay and energy")
+        self._swap_btn = QPushButton("Swap delay and energy")
 
         self._scan_btn_set = ScanButtonSet()
 
@@ -66,8 +65,8 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
         i_row = 0
         layout.addWidget(QLabel("Delay device ID: "), i_row, 0, AR)

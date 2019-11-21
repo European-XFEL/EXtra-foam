@@ -10,7 +10,9 @@ All rights reserved.
 import os.path as osp
 
 import numpy as np
-from PyQt5 import QtCore, QtGui
+
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
 from .plot_items import ImageItem, MaskItem
@@ -80,7 +82,7 @@ class ImageAnalysis(ImageViewF):
             logger.error(f"[Image tool] Detector image is not available!")
             return
 
-        filepath = QtGui.QFileDialog.getSaveFileName(
+        filepath = QFileDialog.getSaveFileName(
             caption="Save image",
             directory=osp.expanduser("~"),
             filter=self.IMAGE_FILE_FILTER)[0]
@@ -109,7 +111,7 @@ class ImageAnalysis(ImageViewF):
                          "detector image!")
             return
 
-        filepath = QtGui.QFileDialog.getOpenFileName(
+        filepath = QFileDialog.getOpenFileName(
             caption="Load reference image",
             directory=osp.expanduser("~"),
             filter=self.IMAGE_FILE_FILTER)[0]
@@ -121,14 +123,14 @@ class ImageAnalysis(ImageViewF):
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 
-    @QtCore.pyqtSlot(int, int, float)
+    @pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
         if x < 0 or y < 0:
             self._plot_widget.setTitle('')
         else:
             self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
-    @QtCore.pyqtSlot(float)
+    @pyqtSlot(float)
     def onBkgChange(self, bkg):
         if self._image_data is None:
             return
@@ -136,7 +138,7 @@ class ImageAnalysis(ImageViewF):
         self._image_data.background = bkg
         self.setImage(self._image_data.masked)
 
-    @QtCore.pyqtSlot(object)
+    @pyqtSlot(object)
     def onThresholdMaskChange(self, mask_range):
         if self._image_data is None:
             return
@@ -144,17 +146,17 @@ class ImageAnalysis(ImageViewF):
         self._image_data.threshold_mask = mask_range
         self.setImage(self._image_data.masked)
 
-    @QtCore.pyqtSlot(bool)
+    @pyqtSlot(bool)
     def onDrawToggled(self, state, checked):
         self._mask_item.state = state
         self._image_item.drawing = checked
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def onClearImageMask(self):
         self._mask_item.removeMask()
 
     def saveImageMask(self):
-        filepath = QtGui.QFileDialog.getSaveFileName()[0]
+        filepath = QFileDialog.getSaveFileName()[0]
         if not filepath:
             logger.error("Please specify the image mask file!")
             return
@@ -170,7 +172,7 @@ class ImageAnalysis(ImageViewF):
         logger.info(f"Image mask saved in {filepath}.npy")
 
     def loadImageMask(self):
-        filepath = QtGui.QFileDialog.getOpenFileName()[0]
+        filepath = QFileDialog.getOpenFileName()[0]
         if not filepath:
             logger.error("Please specify the image mask file!")
             return

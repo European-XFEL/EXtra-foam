@@ -7,7 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import Bin1dHist, Bin1dHeatmap, Bin2dHeatmap
@@ -44,9 +45,9 @@ class Bin1dWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter()
-        left_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        right_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._cw = QSplitter()
+        left_panel = QSplitter(Qt.Vertical)
+        right_panel = QSplitter(Qt.Vertical)
         self._cw.addWidget(left_panel)
         self._cw.addWidget(right_panel)
         self.setCentralWidget(self._cw)
@@ -94,7 +95,7 @@ class Bin2dWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._cw = QSplitter(Qt.Vertical)
         self._cw.addWidget(self._bin2d_value)
         self._cw.addWidget(self._bin2d_count)
         self._cw.setSizes([1, 1])

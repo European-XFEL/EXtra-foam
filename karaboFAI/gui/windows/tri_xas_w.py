@@ -7,7 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractSpecialAnalysisWindow
 from ..plot_widgets import RoiImageView, ImageViewF, PlotWidgetF
@@ -115,12 +116,12 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
 
     def initUI(self):
         """Override."""
-        left_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        left_panel = QSplitter(Qt.Vertical)
         left_panel.addWidget(self._roi1_image)
         left_panel.addWidget(self._roi2_image)
         left_panel.addWidget(self._roi3_image)
 
-        right_panel = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        right_panel = QSplitter(Qt.Vertical)
         right_panel.addWidget(self._a13_a23)
         right_panel.addWidget(self._a21)
         right_panel.addWidget(self._a21_heatmap)

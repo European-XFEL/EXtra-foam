@@ -8,7 +8,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
 from .. import pyqtgraph as pg
 
@@ -20,7 +21,7 @@ from ...algorithms import quick_min_max
 from ...config import config
 
 
-class ImageViewF(QtGui.QWidget):
+class ImageViewF(QWidget):
     """ImageView base class.
 
     A widget used for displaying 2D image data.
@@ -98,7 +99,7 @@ class ImageViewF(QtGui.QWidget):
         self._mediator.reset_image_level_sgn.connect(self._updateImage)
 
     def initUI(self):
-        layout = QtGui.QHBoxLayout()
+        layout = QHBoxLayout()
         layout.addWidget(self._plot_widget)
         layout.addWidget(self._hist_widget)
         self.setLayout(layout)
@@ -117,7 +118,7 @@ class ImageViewF(QtGui.QWidget):
             roi = RectROI(i,
                           pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
                           size=self.ROI_SIZE0,
-                          pen=make_pen(color, width=2, style=QtCore.Qt.SolidLine))
+                          pen=make_pen(color, width=2, style=Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)
 

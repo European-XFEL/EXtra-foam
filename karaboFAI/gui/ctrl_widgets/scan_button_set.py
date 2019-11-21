@@ -7,27 +7,28 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QPushButton
 
 
-class ScanButtonSet(QtWidgets.QFrame):
+class ScanButtonSet(QFrame):
 
-    scan_toggled_sgn = QtCore.pyqtSignal(bool)
-    reset_sgn = QtCore.pyqtSignal()
+    scan_toggled_sgn = pyqtSignal(bool)
+    reset_sgn = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self._scan_btn = QtWidgets.QPushButton("Scan")
-        self._pause_btn = QtWidgets.QPushButton("Pause")
+        self._scan_btn = QPushButton("Scan")
+        self._pause_btn = QPushButton("Pause")
         self._pause_btn.setEnabled(False)
-        self._reset_btn = QtWidgets.QPushButton("Reset")
+        self._reset_btn = QPushButton("Reset")
 
         self.initUI()
         self.initConnections()
 
     def initUI(self):
-        layout = QtWidgets.QHBoxLayout()
+        layout = QHBoxLayout()
         layout.addWidget(self._scan_btn)
         layout.addWidget(self._pause_btn)
         layout.addWidget(self._reset_btn)
