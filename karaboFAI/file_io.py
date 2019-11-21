@@ -1,9 +1,7 @@
 """
-Offline and online data analysis and visualization tool for azimuthal
-integration of different data acquired with various detectors at
-European XFEL.
+Distributed under the terms of the BSD 3-Clause License.
 
-Input and output from files.
+The full license is in the file LICENSE, distributed with this software.
 
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
