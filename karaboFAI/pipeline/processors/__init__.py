@@ -5,6 +5,7 @@ from .azimuthal_integration import (
     AzimuthalIntegrationProcessorTrain,
     AzimuthalIntegrationProcessorPulse,
 )
+from .broker import Broker
 from .bin import BinProcessor
 from .correlation import CorrelationProcessor
 from .image_processor import ImageProcessor

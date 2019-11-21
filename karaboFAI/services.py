@@ -21,7 +21,6 @@ import redis
 
 from . import __version__
 from .config import config
-from .database import Metadata as mt
 from .database import MetaProxy
 from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
@@ -30,7 +29,6 @@ from .pipeline import PulseWorker, TrainWorker
 from .processes import ProcessInfo, register_fai_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
-from .gui.image_tool import ImageToolWindow
 
 _CPU_INFO, _GPU_INFO, _MEMORY_INFO = check_system_resource()
 
@@ -191,8 +189,9 @@ class FAI:
             sys.exit(1)
 
         proxy = MetaProxy()
-        proxy.mset(mt.SESSION, {'detector': config['DETECTOR'],
-                                'topic': config['TOPIC']})
+        proxy.set_session({'detector': config['DETECTOR'],
+                           'topic': config['TOPIC']})
+        proxy.initialize_analysis_types()
 
         try:
             self.pulse_worker = PulseWorker()

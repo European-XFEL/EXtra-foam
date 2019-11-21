@@ -951,15 +951,9 @@ class ProcessedData:
             self.roi = RoiData()
             self.xgm = XgmData()
 
-    def __init__(self, tid, sources=None):
+    def __init__(self, tid):
         """Initialization."""
         self._tid = tid  # train ID
-
-        # all sources (device IDs) received
-        if sources is None:
-            self._sources = []
-        else:
-            self._sources = sources
 
         self.pidx = PulseIndexMask()
 
@@ -982,10 +976,6 @@ class ProcessedData:
     @property
     def tid(self):
         return self._tid
-
-    @property
-    def sources(self):
-        return self._sources
 
     @property
     def n_pulses(self):

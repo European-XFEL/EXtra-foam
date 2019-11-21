@@ -99,7 +99,7 @@ class TrXasProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.TR_XAS)
+        cfg = self._meta.hget_all(mt.TR_XAS_PROC)
 
         try:
             self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
@@ -135,13 +135,13 @@ class TrXasProcessor(_BaseProcessor):
             self._bin2d = True
 
         if 'reset' in cfg:
-            self._meta.delete(mt.TR_XAS, 'reset')
+            self._meta.hdel(mt.TR_XAS_PROC, 'reset')
             self._reset = True
 
     @profiler("tr-XAS Processor")
     def process(self, data):
         """Override."""
-        if not self._has_analysis(AnalysisType.TR_XAS):
+        if not self._meta.has_analysis(AnalysisType.TR_XAS):
             return
 
         processed = data['processed']

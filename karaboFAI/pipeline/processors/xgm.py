@@ -43,7 +43,7 @@ class XgmProcessor(_BaseProcessor):
     def update(self):
         self._sources = self._meta.get_all_data_sources("XGM")
 
-        cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(cfg)
 
     def _update_moving_average(self, cfg):
@@ -54,7 +54,7 @@ class XgmProcessor(_BaseProcessor):
             del self._x_ma
             del self._y_ma
             del self._pulse_intensity_ma
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_xgm')
+            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_xgm')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:

@@ -1,20 +1,13 @@
-import os
 import unittest
-from unittest.mock import MagicMock
-from threading import Thread
-import tempfile
-import time
 
-from karaboFAI.config import _Config, config, ConfigWrapper, AnalysisType
-from karaboFAI.gui import mkQApp
+from karaboFAI.config import AnalysisType
+from karaboFAI.database import MetaProxy
 from karaboFAI.logger import logger
 from karaboFAI.pipeline.processors.base_processor import (
-    _BaseProcessor, ProcessingError, SharedProperty,
+    _BaseProcessor, ProcessingError
 )
 from karaboFAI.processes import wait_until_redis_shutdown
-from karaboFAI.services import FAI
-
-app = mkQApp()
+from karaboFAI.services import start_redis_server
 
 logger.setLevel("CRITICAL")
 
@@ -52,21 +45,16 @@ class TestRedisParserMixin(unittest.TestCase):
 class TestBaseProcessor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('LPD')
+        start_redis_server()
 
-        cls.fai = FAI().init()
-        cls.train_worker = cls.fai.train_worker
+        cls._meta = MetaProxy()
+        cls._meta.initialize_analysis_types()
 
     @classmethod
     def tearDownClass(cls):
-        cls.fai.terminate()
-
         wait_until_redis_shutdown()
 
-    def testAnalysisType(self):
+    def testUpdateAnalysisType(self):
         self._proc1 = _DummyProcessor()
         self._proc2 = _DummyProcessor()
         self._proc3 = _DummyProcessor()
@@ -113,12 +101,12 @@ class TestBaseProcessor(unittest.TestCase):
         self._check_has_no_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
 
     def _check_has_analysis(self, analysis_type):
-        self.assertTrue(self._proc1._has_analysis(analysis_type))
-        self.assertTrue(self._proc2._has_analysis(analysis_type))
+        self.assertTrue(self._meta.has_analysis(analysis_type))
+        self.assertTrue(self._meta.has_analysis(analysis_type))
         # check with another processor
-        self.assertTrue(self._proc3._has_analysis(analysis_type))
+        self.assertTrue(self._meta.has_analysis(analysis_type))
 
     def _check_has_no_analysis(self, analysis_type):
-        self.assertFalse(self._proc1._has_analysis(analysis_type))
-        self.assertFalse(self._proc2._has_analysis(analysis_type))
-        self.assertFalse(self._proc3._has_analysis(analysis_type))
+        self.assertFalse(self._meta.has_analysis(analysis_type))
+        self.assertFalse(self._meta.has_analysis(analysis_type))
+        self.assertFalse(self._meta.has_analysis(analysis_type))

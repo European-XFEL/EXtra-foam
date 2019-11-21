@@ -143,10 +143,10 @@ class _RoiProcessBase(_BaseProcessor):
 
     def update(self):
         """Override."""
-        g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.get_all(mt.ROI_PROC)
+        cfg = self._meta.hget_all(mt.ROI_PROC)
 
         self._roi1.activated = cfg[f'visibility1'] == 'True'
         self._roi1.rect = self.str2list(cfg[f'region1'], handler=int)
@@ -178,7 +178,7 @@ class RoiProcessorPulse(_RoiProcessBase):
 
     def _process_roi1(self, processed, assembled):
         """Process pulse-resolved ROI1 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI1_PULSE):
+        if not self._meta.has_analysis(AnalysisType.ROI1_PULSE):
             return
 
         threshold_mask = processed.image.threshold_mask
@@ -210,7 +210,7 @@ class RoiProcessorPulse(_RoiProcessBase):
 
     def _process_roi2(self, processed, assembled):
         """Process pulse-resolved ROI2 FOM a train."""
-        if not self._has_analysis(AnalysisType.ROI2_PULSE):
+        if not self._meta.has_analysis(AnalysisType.ROI2_PULSE):
             return
 
         threshold_mask = processed.image.threshold_mask
@@ -277,7 +277,7 @@ class RoiProcessorTrain(_RoiProcessBase):
             del self._img3_off
             del self._img4_off
 
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_roi')
+            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_roi')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
@@ -451,13 +451,13 @@ class RoiProcessorTrain(_RoiProcessBase):
 
         require_roi1 = False
         require_roi2 = False
-        if self._has_any_analysis([AnalysisType.PROJ_ROI1_SUB_ROI2,
-                                   AnalysisType.PROJ_ROI1_ADD_ROI2]):
+        if self._meta.has_any_analysis([AnalysisType.PROJ_ROI1_SUB_ROI2,
+                                        AnalysisType.PROJ_ROI1_ADD_ROI2]):
             require_roi1 = True
             require_roi2 = True
-        elif self._has_analysis(AnalysisType.PROJ_ROI1):
+        elif self._meta.has_analysis(AnalysisType.PROJ_ROI1):
             require_roi1 = True
-        elif self._has_analysis(AnalysisType.PROJ_ROI2):
+        elif self._meta.has_analysis(AnalysisType.PROJ_ROI2):
             require_roi2 = True
 
         if require_roi1 and self._has_img1:

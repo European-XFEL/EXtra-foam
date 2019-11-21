@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-CorrelationProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -42,7 +40,7 @@ class CorrelationProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.CORRELATION_PROC)
+        cfg = self._meta.hget_all(mt.CORRELATION_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
             self._reset = True
@@ -53,7 +51,7 @@ class CorrelationProcessor(_BaseProcessor):
             self._resolutions[i] = float(cfg[f'resolution{i+1}'])
 
         if 'reset' in cfg:
-            self._meta.delete(mt.CORRELATION_PROC, 'reset')
+            self._meta.hdel(mt.CORRELATION_PROC, 'reset')
             self._reset = True
 
     @profiler("Correlation Processor")

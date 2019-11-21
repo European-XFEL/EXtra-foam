@@ -3,8 +3,6 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-StatisticsProcessor.
-
 Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
@@ -48,7 +46,7 @@ class StatisticsProcessor(_BaseProcessor):
 
     def update(self):
         """Override."""
-        cfg = self._meta.get_all(mt.STATISTICS_PROC)
+        cfg = self._meta.hget_all(mt.STATISTICS_PROC)
         self._pulse_resolved = cfg['pulse_resolved'] == 'True'
 
         self._num_bins = int(cfg['n_bins'])
@@ -61,7 +59,7 @@ class StatisticsProcessor(_BaseProcessor):
             self._reset = True
 
         if 'reset' in cfg:
-            self._meta.delete(mt.STATISTICS_PROC, 'reset')
+            self._meta.hdel(mt.STATISTICS_PROC, 'reset')
             self._reset = True
 
     @profiler("Statistics processor")

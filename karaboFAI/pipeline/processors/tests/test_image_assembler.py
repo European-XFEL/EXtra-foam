@@ -56,7 +56,7 @@ class TestAgipdAssembler(unittest.TestCase):
                 # To test stack_detector_data
                 'XGM': {"data.intensitySa1TD": np.ones(60)}
                 },
-            'meta': {'source_type': DataSource.FILE},
+            'source_type': DataSource.FILE,
         }
         with self.assertRaises(AssemblingError):
             # no source name
@@ -102,7 +102,7 @@ class TestAgipdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((4, 16, 100, 100), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -111,7 +111,7 @@ class TestAgipdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((4, 12, 512, 128), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -120,7 +120,7 @@ class TestAgipdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((0, 16, 512, 128), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -130,7 +130,7 @@ class TestAgipdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 128, 512, 4), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         self._check_result(data)
@@ -140,7 +140,7 @@ class TestAgipdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((4, 16, 512, 128), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         self._check_result(data)
@@ -177,7 +177,7 @@ class TestLpdAssembler(unittest.TestCase):
                 # To test stack_detector_data
                 'XGM': {"data.intensitySa1TD": np.ones(60)}
             },
-            'meta': {'source_type': DataSource.FILE}
+            'source_type': DataSource.FILE
         }
 
         with self.assertRaises(AssemblingError):
@@ -215,7 +215,7 @@ class TestLpdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -224,7 +224,7 @@ class TestLpdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((15, 256, 256, 4), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -233,7 +233,7 @@ class TestLpdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((16, 256, 256, 0), dtype=np.float32)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -242,7 +242,7 @@ class TestLpdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -263,7 +263,7 @@ class TestLpdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         assembled_shape = data['detector']['assembled'].shape
@@ -277,7 +277,7 @@ class TestLpdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         assembled_shape = data['detector']['assembled'].shape
@@ -293,7 +293,7 @@ class TestLpdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
@@ -314,7 +314,7 @@ class TestLpdAssembler(unittest.TestCase):
                 'raw': {
                     src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float64)}
                 },
-                'meta': {'source_type': DataSource.BRIDGE}
+                'source_type': DataSource.BRIDGE
             }
             self._assembler.process(data)
 
@@ -322,7 +322,7 @@ class TestLpdAssembler(unittest.TestCase):
             'raw': {
                 src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.int16)}
             },
-            'meta': {'source_type': DataSource.BRIDGE}
+            'source_type': DataSource.BRIDGE
         }
         self._assembler.process(data)
         assembled_dtype = data['detector']['assembled'].dtype
@@ -341,19 +341,19 @@ class TestJungfrauAssembler(unittest.TestCase):
         self._assembler._source_name = src_name
 
         data = {'raw': {src_name: {key_name: np.ones((1, 512, 1024))}},
-                'meta': {'source_type': DataSource.FILE}}
+                'source_type': DataSource.FILE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((1, 100, 100))}},
-                    'meta': {'source_type': DataSource.FILE}}
+                    'source_type': DataSource.FILE}
             self._assembler.process(data)
 
         with self.assertRaises(NotImplementedError):
             data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024))}},
-                    'meta': {'source_type': DataSource.FILE}}
+                    'source_type': DataSource.FILE}
             self._assembler.process(data)
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
@@ -363,19 +363,19 @@ class TestJungfrauAssembler(unittest.TestCase):
         key_name = 'data.adc'
         self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}},
-                    'meta': {'source_type': DataSource.BRIDGE}}
+                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
         with self.assertRaises(NotImplementedError):
             data = {'raw': {src_name: {key_name: np.ones((512, 1024, 2))}},
-                    'meta': {'source_type': DataSource.BRIDGE}}
+                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
 
@@ -392,7 +392,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         key_name = 'data.adc'
         self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
@@ -403,7 +403,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         # test multi-frame (16 here), single module JungFrau received
         # in the old array shape.
         data = {'raw': {src_name: {key_name: np.ones((512, 1024, 16))}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
 
         temp = self._assembler._get_modules_bridge(data['raw'], src_name)
         self.assertTupleEqual(temp.shape, (16, 1, 512, 1024))
@@ -414,7 +414,7 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
 
         # test multi-frame (16 here), two-modules JungFrau in new array shape
         data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024, 16))}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
 
         temp = self._assembler._get_modules_bridge(data['raw'], src_name)
         self.assertTupleEqual(temp.shape, (16, 2, 512, 1024))
@@ -426,12 +426,12 @@ class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
         # test multi-frame, three-modules JungFrau
         with self.assertRaisesRegex(AssemblingError, 'Expected 1 or 2 module'):
             data = {'raw': {src_name: {key_name: np.ones((3, 512, 1024, 16))}},
-                    'meta': {'source_type': DataSource.BRIDGE}}
+                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}},
-                    'meta': {'source_type': DataSource.BRIDGE}}
+                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
     @patch.dict(config._data, {"DETECTOR":"JungFrauPR",
@@ -453,14 +453,14 @@ class TestFastccdAssembler(unittest.TestCase):
         self._assembler._source_name = src_name
 
         data = {'raw': {src_name: {key_name: np.ones((1934, 960))}},
-                'meta': {'source_type': DataSource.FILE}}
+                'source_type': DataSource.FILE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src_name: {key_name: np.ones((100, 100))}},
-                    'meta': {'source_type': DataSource.FILE}}
+                    'source_type': DataSource.FILE}
             self._assembler.process(data)
 
     @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
@@ -479,14 +479,14 @@ class TestFastccdAssembler(unittest.TestCase):
 
     def _runAssembleBridgeTest(self, src, key, shape):
         data = {'raw': {src: {key: np.ones(shape)}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {'raw': {src: {key: np.ones((100, 100, 1))}},
-                    'meta': {'source_type': DataSource.BRIDGE}}
+                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
 
@@ -501,7 +501,7 @@ class TestBaslerCameraAssembler(unittest.TestCase):
         key_name = 'data.image.data'
         self._assembler._source_name = src_name
         data = {'raw': {src_name: {key_name: np.ones((1024, 1024))}},
-                'meta': {'source_type': DataSource.BRIDGE}}
+                'source_type': DataSource.BRIDGE}
         self._assembler.process(data)
         # test the module keys have been deleted
         self.assertFalse(bool(data['raw']))
@@ -539,7 +539,7 @@ class TestDSSCAssembler(unittest.TestCase):
                 # To test stack_detector_data
                 'XGM': {"data.intensitySa3TD": np.ones(60)}
             },
-            'meta': {'source_type': DataSource.FILE}
+            'source_type': DataSource.FILE
         }
 
         self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
@@ -564,7 +564,7 @@ class TestDSSCAssembler(unittest.TestCase):
                 'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
                     {key_name: np.ones((4, 1, 128, 512), dtype=np.uint16)},
             },
-            'meta': {'source_type': DataSource.FILE}
+            'source_type': DataSource.FILE
         }
 
         with self.assertRaises(AssemblingError):
@@ -593,7 +593,7 @@ class TestDSSCAssembler(unittest.TestCase):
                 'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
                     {key_name: np.ones((4, 1, 128, 512), dtype=np.float64)},
             },
-            'meta': {'source_type': DataSource.FILE},
+            'source_type': DataSource.FILE,
         }
         with self.assertRaises(AssemblingError):
             self._assembler.process(data)
@@ -603,7 +603,7 @@ class TestDSSCAssembler(unittest.TestCase):
                 'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
                     {key_name: np.ones((4, 1, 128, 512), dtype=np.int64)},
             },
-            'meta': {'source_type': DataSource.FILE},
+            'source_type': DataSource.FILE,
         }
         with self.assertRaises(AssemblingError):
             self._assembler.process(data)
@@ -619,7 +619,7 @@ class TestDSSCAssembler(unittest.TestCase):
             data = {
                 'raw': {
                     src_name: {key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}},
-                'meta': {'source_type': DataSource.BRIDGE},
+                'source_type': DataSource.BRIDGE,
             }
             self._assembler.process(data)
 
@@ -627,7 +627,7 @@ class TestDSSCAssembler(unittest.TestCase):
             data = {
                 'raw': {
                     src_name: {key_name: np.ones((15, 512, 128, 4), dtype=np.float32)}},
-                'meta': {'source_type': DataSource.BRIDGE},
+                'source_type': DataSource.BRIDGE,
             }
             self._assembler.process(data)
 
@@ -635,7 +635,7 @@ class TestDSSCAssembler(unittest.TestCase):
             data = {
                 'raw': {
                     src_name: {key_name: np.ones((16, 512, 128, 0), dtype=np.float32)}},
-                'meta': {'source_type': DataSource.BRIDGE},
+                'source_type': DataSource.BRIDGE,
             }
             self._assembler.process(data)
 
@@ -643,7 +643,7 @@ class TestDSSCAssembler(unittest.TestCase):
         data = {
             'raw': {
                 src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}},
-            'meta': {'source_type': DataSource.BRIDGE},
+            'source_type': DataSource.BRIDGE,
         }
         self._assembler.process(data)
         # test the module keys have been deleted
@@ -663,7 +663,7 @@ class TestDSSCAssembler(unittest.TestCase):
         data = {
             'raw': {
                 src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}},
-            'meta': {'source_type': DataSource.BRIDGE},
+            'source_type': DataSource.BRIDGE,
         }
         self._assembler.process(data)
         assembled_shape = data['detector']['assembled'].shape
@@ -676,7 +676,7 @@ class TestDSSCAssembler(unittest.TestCase):
         data = {
             'raw': {
                 src_name: {key_name: np.ones((16, 512, 128, 10), dtype=np.float32)}},
-            'meta': {'source_type': DataSource.BRIDGE},
+            'source_type': DataSource.BRIDGE,
         }
         self._assembler.process(data)
         assembled_shape = data['detector']['assembled'].shape
@@ -693,14 +693,14 @@ class TestDSSCAssembler(unittest.TestCase):
             data = {
                 'raw': {
                     src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float64)}},
-                'meta': {'source_type': DataSource.BRIDGE},
+                'source_type': DataSource.BRIDGE,
             }
             self._assembler.process(data)
 
         data = {
             'raw': {
                 src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.int16)}},
-            'meta': {'source_type': DataSource.BRIDGE},
+            'source_type': DataSource.BRIDGE,
         }
         self._assembler.process(data)
         assembled_dtype = data['detector']['assembled'].dtype

@@ -85,16 +85,16 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         # test "Reset moving average" button
         widget._reset_ma_btn.clicked.emit()
-        self.assertEqual('1', xgm_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_xgm'))
-        self.assertEqual('1', ai_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_ai'))
-        self.assertEqual('1', roi_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        self.assertEqual('1', xgm_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        self.assertEqual('1', ai_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertEqual('1', roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
 
         xgm_proc.update()
-        self.assertIsNone(xgm_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        self.assertIsNone(xgm_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
         ai_proc.update()
-        self.assertIsNone(ai_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertIsNone(ai_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
         roi_proc.update()
-        self.assertIsNone(roi_proc._meta.get(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        self.assertIsNone(roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
 
     def testAzimuthalIntegCtrlWidget(self):
         widget = self.gui.azimuthal_integ_ctrl_widget

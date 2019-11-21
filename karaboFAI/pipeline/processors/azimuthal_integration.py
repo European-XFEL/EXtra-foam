@@ -79,12 +79,12 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
 
     def update(self):
         """Override."""
-        g_cfg = self._meta.get_all(mt.GLOBAL_PROC)
+        g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._sample_dist = float(g_cfg['sample_distance'])
         self._wavelength = energy2wavelength(float(g_cfg['photon_energy']))
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.get_all(mt.AZIMUTHAL_INTEG_PROC)
+        cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
         pixel_size = config['PIXEL_SIZE']
         self._poni1 = int(cfg['integ_center_y']) * pixel_size
         self._poni2 = int(cfg['integ_center_x']) * pixel_size
@@ -133,7 +133,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
 
     @profiler("Azimuthal Integration Processor (Pulse)")
     def process(self, data):
-        if not self._has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
+        if not self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG_PULSE):
             return
 
         processed = data['processed']
@@ -204,7 +204,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             del self._intensity_ma
             del self._intensity_on_ma
             del self._intensity_off_ma
-            self._meta.delete(mt.GLOBAL_PROC, 'reset_ma_ai')
+            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_ai')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
@@ -227,7 +227,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                                     unit="q_A^-1")
         integ_points = self._integ_points
 
-        if self._has_analysis(AnalysisType.AZIMUTHAL_INTEG):
+        if self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG):
             mean_ret = integ1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial

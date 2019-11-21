@@ -14,7 +14,6 @@ import time
 
 from karabo_bridge import Client
 
-from .data_model import ProcessedData
 from ..config import config, DataSource
 from ..utils import profiler
 from ..ipc import ProcessWorkerLogger
@@ -139,7 +138,7 @@ class KaraboBridge(PipeIn):
         client = None
         while not close_ev.is_set():
             if update_ev.is_set():
-                cfg = self._meta.get_all(mt.CONNECTION)
+                cfg = self._meta.hget_all(mt.CONNECTION)
                 endpoint = cfg['endpoint']
                 src_type = DataSource(int(cfg['source_type']))
 
@@ -164,14 +163,17 @@ class KaraboBridge(PipeIn):
                     self.log.debug(f"Bridge recv FPS: {fps:>4.1f} Hz")
                 prev_data_arrival_time = time.time()
 
-                data = self._preprocess(data, src_type)
-
                 # wait until data in the queue has been processed
-                # Note: if the queue is full, whether the data should be dropped
-                #       is determined by the main thread of its owner process.
+                # Note: if the queue is full, whether the data should be
+                #       dropped is determined by the main thread of its
+                #       owner process.
                 while not close_ev.is_set():
                     try:
-                        self._data.put(data, timeout=timeout)
+                        self._data.put({"raw": data[0],
+                                        "meta": data[1],
+                                        "source_type": src_type,
+                                        "processed": None},
+                                       timeout=timeout)
                         break
                     except Full:
                         continue
@@ -182,28 +184,6 @@ class KaraboBridge(PipeIn):
     @profiler("Receive Data from Bridge")
     def _recv_imp(self, client):
         return client.next()
-
-    def _preprocess(self, data, src_type):
-        raw, meta = data
-
-        # get the train ID of the first metadata
-        # Note: this is better than meta[src_name] because:
-        #       1. For streaming AGIPD/LPD data from files, 'src_name' does
-        #          not work;
-        #       2. Prepare for the scenario where a 2D detector is not
-        #          mandatory.
-        tid = next(iter(meta.values()))["timestamp.tid"]
-
-        sources = sorted(meta.keys())
-        processed = ProcessedData(tid, sources)
-
-        return {
-            "processed": processed,
-            "raw": raw,
-            "meta": {
-                "source_type": src_type,
-            },
-        }
 
 
 class MpInQueue(PipeIn):
@@ -262,7 +242,7 @@ class MpOutQueue(PipeOut):
                 data_out = data['processed']
             else:
                 data_out = {key: data[key] for key
-                            in ['processed', 'raw', 'meta']}
+                            in ['processed', 'source_type', 'meta', 'raw']}
 
             while not close_ev.is_set():
                 # push the stored data into client
