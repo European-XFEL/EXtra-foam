@@ -9,7 +9,8 @@ All rights reserved.
 """
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
@@ -28,7 +29,7 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Pulse filter setup", *args, **kwargs)
 
-        self._analysis_type_cb = QtGui.QComboBox()
+        self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(self._analysis_types.keys())
         self._fom_range_le = SmartBoundaryLineEdit("-Inf, Inf")
 
@@ -40,12 +41,12 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
+        layout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(QtGui.QLabel("Fom range: "), 0, 2, AR)
+        layout.addWidget(QLabel("Fom range: "), 0, 2, AR)
         layout.addWidget(self._fom_range_le, 0, 3)
 
         self.setLayout(layout)

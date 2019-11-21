@@ -7,13 +7,15 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSignal, QRegExp, Qt
+from PyQt5.QtGui import QRegExpValidator, QValidator
+from PyQt5.QtWidgets import QLineEdit
 
 from ..misc_widgets import Colors
 from ..gui_helpers import parse_boundary, parse_ids, parse_slice
 
 
-class SmartLineEdit(QtWidgets.QLineEdit):
+class SmartLineEdit(QLineEdit):
     """A smart QLineEdit.
 
     - It is highlighted when modified but not confirmed.
@@ -21,7 +23,7 @@ class SmartLineEdit(QtWidgets.QLineEdit):
       one must press enter to confirm the value.
     """
 
-    value_changed_sgn = QtCore.pyqtSignal(object)
+    value_changed_sgn = pyqtSignal(object)
 
     def __init__(self, *args, **kwargs):
         """Initialization"""
@@ -55,7 +57,7 @@ class SmartLineEdit(QtWidgets.QLineEdit):
     def keyPressEvent(self, event):
         """Press ESC to return to the previous valid value."""
         key = event.key()
-        if key == QtCore.Qt.Key_Escape:
+        if key == Qt.Key_Escape:
             self.setTextWithoutSignal(self._cached)
         else:
             return super().keyPressEvent(event)
@@ -95,22 +97,21 @@ class SmartStringLineEdit(SmartLineEdit):
         #
         # .+ will then actually do the match. It will match anything
         # (except newline) up to the end of the string.
-        self.setValidator(
-            QtGui.QRegExpValidator(QtCore.QRegExp('^(?!\s*$).+')))
+        self.setValidator(QRegExpValidator(QRegExp('^(?!\s*$).+')))
 
 
 class SmartBoundaryLineEdit(SmartLineEdit):
 
-    class Validator(QtGui.QValidator):
+    class Validator(QValidator):
         def __init__(self, parent=None):
             super().__init__(parent)
 
         def validate(self, s, pos):
             try:
                 self.parse(s)
-                return QtGui.QValidator.Acceptable, s, pos
+                return QValidator.Acceptable, s, pos
             except ValueError:
-                return QtGui.QValidator.Intermediate, s, pos
+                return QValidator.Intermediate, s, pos
 
         @staticmethod
         def parse(s):
@@ -131,18 +132,18 @@ class SmartBoundaryLineEdit(SmartLineEdit):
 
 class SmartRangeLineEdit(SmartLineEdit):
 
-    value_changed_sgn = QtCore.pyqtSignal(object)
+    value_changed_sgn = pyqtSignal(object)
 
-    class Validator(QtGui.QValidator):
+    class Validator(QValidator):
         def __init__(self, parent=None):
             super().__init__(parent)
 
         def validate(self, s, pos):
             try:
                 self.parse(s)
-                return QtGui.QValidator.Acceptable, s, pos
+                return QValidator.Acceptable, s, pos
             except ValueError:
-                return QtGui.QValidator.Intermediate, s, pos
+                return QValidator.Intermediate, s, pos
 
         @staticmethod
         def parse(s):
@@ -163,19 +164,19 @@ class SmartRangeLineEdit(SmartLineEdit):
 
 class SmartSliceLineEdit(SmartLineEdit):
 
-    value_changed_sgn = QtCore.pyqtSignal(object)
+    value_changed_sgn = pyqtSignal(object)
 
     # TODO: make a base class for this
-    class Validator(QtGui.QValidator):
+    class Validator(QValidator):
         def __init__(self, parent=None):
             super().__init__(parent)
 
         def validate(self, s, pos):
             try:
                 self.parse(s)
-                return QtGui.QValidator.Acceptable, s, pos
+                return QValidator.Acceptable, s, pos
             except ValueError:
-                return QtGui.QValidator.Intermediate, s, pos
+                return QValidator.Intermediate, s, pos
 
         @staticmethod
         def parse(s):

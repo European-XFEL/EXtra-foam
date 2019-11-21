@@ -3,14 +3,14 @@ Offline and online data analysis and visualization tool for azimuthal
 integration of different data acquired with various detectors at
 European XFEL.
 
-ImageItem, MaskItem, RectROI, ErrorBarItem, BarPlotItem
-
 Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import numpy as np
-from PyQt5 import QtCore, QtGui
+
+from PyQt5.QtGui import QColor, QImage, QPainter, QPainterPath, QPicture
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, QPoint, QRectF, Qt
 
 from .. import pyqtgraph as pg
 
@@ -21,10 +21,10 @@ from ...ipc import ImageMaskPub
 
 class ImageItem(pg.ImageItem):
     """ImageItem with mouseHover event."""
-    mouse_moved_sgn = QtCore.pyqtSignal(int, int, float)  # (x, y, value)
-    draw_started_sgn = QtCore.pyqtSignal(int, int)  # (x, y)
-    draw_region_changed_sgn = QtCore.pyqtSignal(int, int)  # (x, y)
-    draw_finished_sgn = QtCore.pyqtSignal()
+    mouse_moved_sgn = pyqtSignal(int, int, float)  # (x, y, value)
+    draw_started_sgn = pyqtSignal(int, int)  # (x, y)
+    draw_region_changed_sgn = pyqtSignal(int, int)  # (x, y)
+    draw_finished_sgn = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -47,7 +47,7 @@ class ImageItem(pg.ImageItem):
 
     def mousePressEvent(self, ev):
         """Override."""
-        if self.drawing and ev.button() == QtCore.Qt.LeftButton:
+        if self.drawing and ev.button() == Qt.LeftButton:
             ev.accept()
             pos = ev.pos()
             self.draw_started_sgn.emit(int(pos.x()), int(pos.y()))
@@ -65,7 +65,7 @@ class ImageItem(pg.ImageItem):
 
     def mouseReleaseEvent(self, ev):
         """Override."""
-        if self.drawing and ev.button() == QtCore.Qt.LeftButton:
+        if self.drawing and ev.button() == Qt.LeftButton:
             ev.accept()
             self.draw_finished_sgn.emit()
         else:
@@ -76,10 +76,10 @@ class MaskItem(pg.GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
 
     _mask = None  # QImage
-    _mask_rect = QtCore.QRectF(0, 0, 0, 0)
+    _mask_rect = QRectF(0, 0, 0, 0)
 
-    _TRANSPARENT = QtGui.QColor(0, 0, 0, 0)
-    _OPAQUE = QtGui.QColor(0, 0, 0, 255)
+    _TRANSPARENT = QColor(0, 0, 0, 0)
+    _OPAQUE = QColor(0, 0, 0, 255)
 
     def __init__(self, item):
         """Initialization.
@@ -107,29 +107,29 @@ class MaskItem(pg.GraphicsObject):
     @classmethod
     def resetMask(cls):
         cls._mask = None
-        cls._mask_rect = QtCore.QRectF(0, 0, 0, 0)
+        cls._mask_rect = QRectF(0, 0, 0, 0)
 
     def boundingRect(self):
         """Override."""
         return self._mask_rect
 
-    @QtCore.pyqtSlot(int, int)
+    @pyqtSlot(int, int)
     def onDrawStarted(self, x, y):
         self._p1 = (x, y)
 
-    @QtCore.pyqtSlot(int, int)
+    @pyqtSlot(int, int)
     def onDrawRegionChanged(self, x, y):
         self.prepareGeometryChange()
         self._p2 = (x, y)
 
     def _selectedRect(self):
         if self._p1 is None or self._p2 is None:
-            return QtCore.QRectF(0, 0, 0, 0)
+            return QRectF(0, 0, 0, 0)
 
-        rect = QtCore.QRectF(QtCore.QPoint(*self._p1), QtCore.QPoint(*self._p2))
+        rect = QRectF(QPoint(*self._p1), QPoint(*self._p2))
         return rect.intersected(self._mask_rect)
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def onDrawFinished(self):
         rect = self._selectedRect()
         x = int(rect.x())
@@ -170,16 +170,15 @@ class MaskItem(pg.GraphicsObject):
     def onSetImage(self):
         h, w = self._image_item.image.shape
         if self._mask is None:
-            self.__class__._mask = QtGui.QImage(
-                w, h, QtGui.QImage.Format_Alpha8)
+            self.__class__._mask = QImage(w, h, QImage.Format_Alpha8)
             self._mask.fill(self._TRANSPARENT)
-            self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
+            self.__class__._mask_rect = QRectF(0, 0, w, h)
 
     def paint(self, p, *args):
         if self._mask is None:
             return
 
-        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        p.setRenderHint(QPainter.Antialiasing)
         p.setPen(self._pen)
 
         p.drawImage(self.boundingRect(), self._mask)
@@ -204,7 +203,7 @@ class MaskItem(pg.GraphicsObject):
         self._mask_pub.set(mask)
 
         h, w = mask.shape
-        self.__class__._mask = QtGui.QImage(w, h, QtGui.QImage.Format_Alpha8)
+        self.__class__._mask = QImage(w, h, QImage.Format_Alpha8)
 
         for i in range(w):
             for j in range(h):
@@ -212,7 +211,7 @@ class MaskItem(pg.GraphicsObject):
                     self._mask.setPixelColor(i, j, self._OPAQUE)
                 else:
                     self._mask.setPixelColor(i, j, self._TRANSPARENT)
-        self.__class__._mask_rect = QtCore.QRectF(0, 0, w, h)
+        self.__class__._mask_rect = QRectF(0, 0, w, h)
         self._image_item.update()
 
 
@@ -301,8 +300,8 @@ class BarPlotItem(pg.GraphicsObject):
         self._width = value
 
     def drawPicture(self):
-        self._picture = QtGui.QPicture()
-        p = QtGui.QPainter(self._picture)
+        self._picture = QPicture()
+        p = QPainter(self._picture)
 
         p.setPen(self._pen)
         p.setBrush(self._brush)
@@ -315,7 +314,7 @@ class BarPlotItem(pg.GraphicsObject):
             width = self._width
 
         for x, y in zip(self._x, self._y):
-            rect = QtCore.QRectF(x - width/2, 0, width, y)
+            rect = QRectF(x - width/2, 0, width, y)
             p.drawRect(rect)
 
         p.end()
@@ -329,7 +328,7 @@ class BarPlotItem(pg.GraphicsObject):
     def boundingRect(self):
         if self._picture is None:
             self.drawPicture()
-        return QtCore.QRectF(self._picture.boundingRect())
+        return QRectF(self._picture.boundingRect())
 
 
 class ErrorBarItem(pg.GraphicsObject):
@@ -385,7 +384,7 @@ class ErrorBarItem(pg.GraphicsObject):
         self.informViewBoundsChanged()
 
     def drawPath(self):
-        p = QtGui.QPainterPath()
+        p = QPainterPath()
 
         x = self._x
 

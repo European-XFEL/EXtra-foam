@@ -7,7 +7,12 @@ Author: Ebad Kamil <ebad.kamil@xfel.eu> and Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QCheckBox, QFileDialog, QGridLayout, QHBoxLayout, QGroupBox, QListWidget,
+    QListWidgetItem, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+)
+
 from zmq.error import ZMQError
 
 from .base_window import _AbstractSatelliteWindow
@@ -18,23 +23,23 @@ from ...database import MetaProxy
 from ...offline import gather_sources, FileServer
 
 
-class _FileStreamCtrlWidget(QtGui.QWidget):
+class _FileStreamCtrlWidget(QWidget):
 
     def __init__(self, *, parent=None):
         super().__init__(parent=parent)
 
-        self._load_run_btn = QtGui.QPushButton("Load Run Folder")
+        self._load_run_btn = QPushButton("Load Run Folder")
 
         self._data_folder_le = SmartLineEdit()
 
-        self._serve_start_btn = QtGui.QPushButton("Stream files")
-        self._serve_terminate_btn = QtGui.QPushButton("Terminate")
+        self._serve_start_btn = QPushButton("Stream files")
+        self._serve_terminate_btn = QPushButton("Terminate")
         self._serve_terminate_btn.setEnabled(False)
 
-        self._stream_files_once_cb = QtGui.QCheckBox("Repeat Stream")
+        self._stream_files_once_cb = QCheckBox("Repeat Stream")
         self._stream_files_once_cb.setChecked(False)
-        self._slow_source_list_widget = QtGui.QListWidget()
-        self._run_info_te = QtGui.QPlainTextEdit()
+        self._slow_source_list_widget = QListWidget()
+        self._run_info_te = QPlainTextEdit()
         self._run_info_te.setReadOnly(True)
 
         self._slow_source_list_widget.setMinimumHeight(60)
@@ -50,10 +55,10 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
                             'padding-left: 10px;' \
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
 
-        load_stream_layout = QtGui.QGridLayout()
-        load_stream_gb = QtGui.QGroupBox("Load and Stream")
+        load_stream_layout = QGridLayout()
+        load_stream_gb = QGroupBox("Load and Stream")
         load_stream_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
         load_stream_layout.addWidget(self._load_run_btn, 0, 0)
@@ -65,10 +70,10 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
 
         load_stream_gb.setLayout(load_stream_layout)
 
-        run_info_gb = QtGui.QGroupBox("Data Sources and Run Info")
+        run_info_gb = QGroupBox("Data Sources and Run Info")
         run_info_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
 
-        run_info_layout = QtGui.QHBoxLayout()
+        run_info_layout = QHBoxLayout()
         run_info_layout.addWidget(self._slow_source_list_widget)
         run_info_layout.addWidget(self._run_info_te)
 
@@ -93,8 +98,8 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
         self._load_run_btn.clicked.connect(self.onRunFolderLoad)
 
     def onRunFolderLoad(self):
-        folder_name = QtGui.QFileDialog.getExistingDirectory(
-                        options=QtGui.QFileDialog.ShowDirsOnly)
+        folder_name = QFileDialog.getExistingDirectory(
+            options=QFileDialog.ShowDirsOnly)
         if folder_name:
             self._slow_source_list_widget.clear()
             self._data_folder_le.setText(folder_name)
@@ -105,8 +110,8 @@ class _FileStreamCtrlWidget(QtGui.QWidget):
         if path:
             sources, info = gather_sources(path)
             for src in sources:
-                item = QtGui.QListWidgetItem()
-                item.setCheckState(QtCore.Qt.Unchecked)
+                item = QListWidgetItem()
+                item.setCheckState(Qt.Unchecked)
                 item.setText(src)
                 self._slow_source_list_widget.addItem(item)
 
@@ -147,7 +152,7 @@ class FileStreamControllerWindow(_AbstractSatelliteWindow):
 
         self._meta = MetaProxy()
 
-        self._cw = QtGui.QWidget()
+        self._cw = QWidget()
         self._file_stream_ctrl_widget = _FileStreamCtrlWidget(parent=self)
         self._widget = self._file_stream_ctrl_widget
 
@@ -160,7 +165,7 @@ class FileStreamControllerWindow(_AbstractSatelliteWindow):
         self.show()
 
     def initUI(self):
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
         layout.addWidget(self._widget)
         self._cw.setLayout(layout)
 

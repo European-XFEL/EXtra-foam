@@ -7,7 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import PulsesInTrainFomWidget, FomHistogramWidget
@@ -40,7 +41,7 @@ class StatisticsWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._cw = QSplitter(Qt.Vertical)
         self._cw.addWidget(self._pulse_fom)
         self._cw.addWidget(self._fom_historgram)
         self._cw.setSizes([1, 1])

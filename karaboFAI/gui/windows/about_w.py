@@ -9,8 +9,8 @@ All rights reserved.
 """
 import os.path as osp
 
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from .base_window import _AbstractSatelliteWindow
 
@@ -25,8 +25,8 @@ class AboutWindow(_AbstractSatelliteWindow):
         super().__init__(*args, **kwargs)
 
         self._cw = QWidget()
-        logger_font = QtGui.QFont("monospace")
-        logger_font.setStyleHint(QtGui.QFont.TypeWriter)
+        logger_font = QFont("monospace")
+        logger_font.setStyleHint(QFont.TypeWriter)
         logger_font.setPointSize(11)
         self._cw.setFont(logger_font)
         bkg_img_path = osp.join(self._root_dir, '../icons/help_background')
@@ -40,23 +40,23 @@ class AboutWindow(_AbstractSatelliteWindow):
 
     def initUI(self):
         """Override."""
-        layout = QtGui.QVBoxLayout()
+        layout = QVBoxLayout()
 
-        name = QtGui.QLabel("karaboFAI")
-        name_ft = QtGui.QFont("Helvetica")
-        name_ft.setStyleHint(QtGui.QFont.TypeWriter)
+        name = QLabel("karaboFAI")
+        name_ft = QFont("Helvetica")
+        name_ft.setStyleHint(QFont.TypeWriter)
         name_ft.setPointSize(32)
         name_ft.setBold(True)
         name.setFont(name_ft)
 
-        doc_lb = QtGui.QLabel("<a href = 'https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/'>Documentation</a>")
-        doc_ft = QtGui.QFont("monospace")
-        doc_ft.setStyleHint(QtGui.QFont.TypeWriter)
+        doc_lb = QLabel("<a href = 'https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/'>Documentation</a>")
+        doc_ft = QFont("monospace")
+        doc_ft.setStyleHint(QFont.TypeWriter)
         doc_ft.setPointSize(14)
         doc_lb.setFont(doc_ft)
         doc_lb.setOpenExternalLinks(True)
 
-        copyright_lb = QtGui.QLabel(
+        copyright_lb = QLabel(
             "Copyright (C) European X-Ray Free-Electron Laser Facility GmbH. "
             "All rights reserved.")
 

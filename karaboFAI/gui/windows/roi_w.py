@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import RoiImageView
@@ -36,7 +36,7 @@ class RoiWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter()
+        self._cw = QSplitter()
         self._cw.addWidget(self._roi1_image)
         self._cw.addWidget(self._roi2_image)
         self.setCentralWidget(self._cw)

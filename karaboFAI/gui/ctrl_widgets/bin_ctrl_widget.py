@@ -10,7 +10,11 @@ All rights reserved.
 from collections import OrderedDict
 import functools
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSlot, Qt
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import (
+    QComboBox, QGridLayout, QHeaderView, QLabel, QPushButton, QTableWidget
+)
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
@@ -48,14 +52,14 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__("Binning setup", *args, **kwargs)
 
-        self._reset_btn = QtGui.QPushButton("Reset")
+        self._reset_btn = QPushButton("Reset")
 
-        self._table = QtGui.QTableWidget()
+        self._table = QTableWidget()
 
-        self._analysis_type_cb = QtGui.QComboBox()
+        self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
 
-        self._mode_cb = QtGui.QComboBox()
+        self._mode_cb = QComboBox()
         self._mode_cb.addItems(list(self._bin_modes.keys()))
 
         self.initUI()
@@ -66,12 +70,12 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def initUI(self):
         """Overload."""
-        layout = QtGui.QGridLayout()
-        AR = QtCore.Qt.AlignRight
+        layout = QGridLayout()
+        AR = Qt.AlignRight
 
-        layout.addWidget(QtGui.QLabel("Analysis type: "), 0, 0, AR)
+        layout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
         layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(QtGui.QLabel("Mode: "), 0, 2, AR)
+        layout.addWidget(QLabel("Mode: "), 0, 2, AR)
         layout.addWidget(self._mode_cb, 0, 3)
         layout.addWidget(self._reset_btn, 0, 4, 1, 2, AR)
         layout.addWidget(self._table, 2, 0, 1, 6)
@@ -110,7 +114,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         ])
         table.setVerticalHeaderLabels(['1', '2'])
         for i_row in range(n_row):
-            combo = QtGui.QComboBox()
+            combo = QComboBox()
             for t in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]].keys():
                 combo.addItem(t)
             table.setCellWidget(i_row, 0, combo)
@@ -129,19 +133,19 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
             table.setCellWidget(i_row, 4, widget)
 
         header = table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.Stretch)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
 
         header = table.verticalHeader()
         for i in range(n_row):
-            header.setSectionResizeMode(i, QtWidgets.QHeaderView.Stretch)
+            header.setSectionResizeMode(i, QHeaderView.Stretch)
 
         header_height = self._table.horizontalHeader().height()
         self._table.setMinimumHeight(header_height * 3.5)
         self._table.setMaximumHeight(header_height * 4.5)
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onCategoryChange(self, i_row, text):
         range_le = self._get_default_bin_range_widget()
         n_bins_le = self._get_default_n_bins_widget()
@@ -172,14 +176,14 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
             self.onBinGroupChangeLe(i_row)
         else:
-            combo_device_ids = QtGui.QComboBox()
+            combo_device_ids = QComboBox()
             for device_id in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].device_ids:
                 combo_device_ids.addItem(device_id)
             combo_device_ids.currentTextChanged.connect(functools.partial(
                 self.onBinGroupChangeCb, i_row))
             self._table.setCellWidget(i_row, 1, combo_device_ids)
 
-            combo_properties = QtGui.QComboBox()
+            combo_properties = QComboBox()
             for ppt in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].properties:
                 combo_properties.addItem(ppt)
             combo_properties.currentTextChanged.connect(functools.partial(
@@ -196,7 +200,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
             self.onBinGroupChangeCb(i_row)
 
-    @QtCore.pyqtSlot()
+    @pyqtSlot()
     def onBinGroupChangeLe(self, i_row):
         device_id = self._table.cellWidget(i_row, 1).text()
         ppt = self._table.cellWidget(i_row, 2).text()
@@ -206,7 +210,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._mediator.onBinGroupChange(
             (i_row+1, device_id, ppt, bin_range, n_bins))
 
-    @QtCore.pyqtSlot(str)
+    @pyqtSlot(str)
     def onBinGroupChangeCb(self, i_row):
         device_id = self._table.cellWidget(i_row, 1).currentText()
         ppt = self._table.cellWidget(i_row, 2).currentText()
@@ -235,5 +239,5 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def _get_default_n_bins_widget(self):
         widget = SmartLineEdit(_DEFAULT_N_BINS)
-        widget.setValidator(QtGui.QIntValidator(1, _MAX_N_BINS))
+        widget.setValidator(QIntValidator(1, _MAX_N_BINS))
         return widget

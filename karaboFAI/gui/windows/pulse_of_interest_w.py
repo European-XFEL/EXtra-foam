@@ -7,7 +7,11 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import (
+    QGridLayout, QHBoxLayout, QLabel, QSplitter, QWidget
+)
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import ImageViewF, PlotWidgetF
@@ -78,12 +82,12 @@ class PoiStatisticsWidget(PlotWidgetF):
         self._index = value
 
 
-class PoiWidget(QtWidgets.QWidget):
+class PoiWidget(QWidget):
     """PoiWidget class."""
-    _index_validator = QtGui.QIntValidator(
+    _index_validator = QIntValidator(
         0, config["MAX_N_PULSES_PER_TRAIN"] - 1)
 
-    pulse_index_sgn = QtCore.pyqtSignal(int)
+    pulse_index_sgn = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -99,12 +103,12 @@ class PoiWidget(QtWidgets.QWidget):
         self.initConnections()
 
     def initUI(self):
-        ctrl_layout = QtGui.QHBoxLayout()
-        ctrl_layout.addWidget(QtWidgets.QLabel("Pulse index: "))
+        ctrl_layout = QHBoxLayout()
+        ctrl_layout.addWidget(QLabel("Pulse index: "))
         ctrl_layout.addWidget(self._index_le)
         ctrl_layout.addStretch(1)
 
-        layout = QtGui.QGridLayout()
+        layout = QGridLayout()
         layout.addLayout(ctrl_layout, 0, 0, 1, 2)
         layout.addWidget(self._poi_img, 1, 0, 1, 1)
         layout.addWidget(self._poi_statistics, 1, 1, 1, 1)
@@ -147,7 +151,7 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
 
     def initUI(self):
         """Override."""
-        self._cw = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        self._cw = QSplitter(Qt.Vertical)
         self._cw.addWidget(self._poi_widget1)
         self._cw.addWidget(self._poi_widget2)
         self.setCentralWidget(self._cw)

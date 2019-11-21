@@ -8,7 +8,9 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import abc
-from PyQt5 import QtCore, QtGui
+
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QSizePolicy
 
 from .. import pyqtgraph as pg
 
@@ -27,8 +29,8 @@ class PlotWidgetF(pg.GraphicsView):
     karaboFAI. For image, please refer to ImageViewF class.
     """
     # signals wrapped from PlotItem / ViewBox
-    sigRangeChanged = QtCore.Signal(object, object)
-    sigTransformChanged = QtCore.Signal(object)
+    sigRangeChanged = pyqtSignal(object, object)
+    sigTransformChanged = pyqtSignal(object)
 
     _pen = make_pen(None)
     _brush_size = 8
@@ -42,8 +44,7 @@ class PlotWidgetF(pg.GraphicsView):
             # if parent is None or parent has no such a method
             pass
 
-        self.setSizePolicy(QtGui.QSizePolicy.Expanding,
-                           QtGui.QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
         self.plotItem = pg.PlotItem(**kargs)
         self.setCentralItem(self.plotItem)

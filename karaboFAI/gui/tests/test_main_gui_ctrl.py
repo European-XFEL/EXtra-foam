@@ -5,9 +5,8 @@ import os
 
 import numpy as np
 
-from PyQt5 import QtCore
+from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtTest import QTest, QSignalSpy
-from PyQt5.QtCore import Qt
 
 from karaboFAI.database import Metadata as mt
 from karaboFAI.logger import logger
@@ -121,7 +120,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # change abs_difference
         pp_proc._reset = False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
-                         pos=QtCore.QPoint(2, widget._abs_difference_cb.height()/2))
+                         pos=QPoint(2, widget._abs_difference_cb.height()/2))
         pp_proc.update()
         self.assertFalse(pp_proc._abs_difference)
         self.assertTrue(pp_proc._reset)
