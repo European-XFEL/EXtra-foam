@@ -600,12 +600,4 @@ class MainGUI(QMainWindow):
         # shutdown pipeline workers and Redis server
         shutdown_all()
 
-        self._image_tool.close()
-        for window in itertools.chain(self._windows,
-                                      self._satellite_windows,
-                                      self._special_windows):
-            # Close all open child windows to make sure their resources
-            # (any running process etc.) are released gracefully
-            window.close()
-
         super().closeEvent(QCloseEvent)
