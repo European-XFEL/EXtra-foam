@@ -46,7 +46,7 @@ from ..logger import logger
 from ..utils import profiler
 from ..ipc import RedisConnection, RedisPSubscriber
 from ..pipeline import MpInQueue
-from ..processes import list_fai_processes, shutdown_all
+from ..processes import shutdown_all
 from ..database import MonProxy
 
 
@@ -112,8 +112,6 @@ class MainGUI(QMainWindow):
     start_sgn = pyqtSignal()
     stop_sgn = pyqtSignal()
     quit_sgn = pyqtSignal()
-
-    process_info_sgn = pyqtSignal(object)
 
     _db = RedisConnection()
 
@@ -267,10 +265,10 @@ class MainGUI(QMainWindow):
         self._plot_timer.timeout.connect(self.updateAll)
         self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
 
-        # For process monitoring
-        self._proc_monitor_timer = QTimer()
-        self._proc_monitor_timer.timeout.connect(self._update_process_monitoring)
-        self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        # For checking the connection to the Redis server
+        self._redis_timer = QTimer()
+        self._redis_timer.timeout.connect(self._pingRedisServer)
+        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
         self.__redis_connection_fails = 0
 
@@ -432,9 +430,7 @@ class MainGUI(QMainWindow):
 
         logger.debug(f"Plot train with ID: {data.tid}")
 
-    def _update_process_monitoring(self):
-        self.process_info_sgn.emit(list_fai_processes())
-
+    def _pingRedisServer(self):
         try:
             self._db.ping()
             self.__redis_connection_fails = 0
@@ -445,11 +441,10 @@ class MainGUI(QMainWindow):
 
             if rest_attempts > 0:
                 logger.warning(f"No response from the Redis server! Shutting "
-                               f"down karaboFAI after {rest_attempts} "
-                               f"attempts ...")
+                               f"down after {rest_attempts} attempts ...")
             else:
                 logger.warning(f"No response from the Redis server! "
-                               f"Shutting down karaboFAI!")
+                               f"Shutting down!")
                 self.close()
 
     def _addAction(self, description, filename):
@@ -488,11 +483,7 @@ class MainGUI(QMainWindow):
         """
         if self._checkWindowExistence(instance_type, self._satellite_windows):
             return
-
-        instance = instance_type(parent=self)
-        if isinstance(instance, ProcessMonitor):
-            self.process_info_sgn.connect(instance.onProcessInfoUpdate)
-        return instance
+        return instance_type(parent=self)
 
     def openSpecialAnalysisWindow(self, instance_type):
         """Open a special analysis window if it does not exist.
