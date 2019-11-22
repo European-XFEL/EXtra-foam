@@ -28,7 +28,7 @@ _MAX_N_BINS = 1e5
 
 
 class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Analysis parameters setup for ROI analysis."""
+    """Widget for setting up binning analysis parameters."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -63,10 +63,9 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._mode_cb.addItems(list(self._bin_modes.keys()))
 
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
-
-        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -85,6 +84,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.initParamTable()
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._reset_btn.clicked.connect(mediator.onBinReset)
@@ -221,6 +221,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
             (i_row+1, device_id, ppt, bin_range, n_bins))
 
     def updateMetaData(self):
+        """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())

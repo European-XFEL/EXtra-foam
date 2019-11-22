@@ -25,7 +25,7 @@ _DEFAULT_RESOLUTION = "0.0"
 
 
 class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Widget for setting up the correlation analysis parameters."""
+    """Widget for setting up correlation analysis parameters."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -70,6 +70,7 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.initParamTable()
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
@@ -188,6 +189,7 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
             (i_row+1, device_id, ppt, res))
 
     def updateMetaData(self):
+        """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
 

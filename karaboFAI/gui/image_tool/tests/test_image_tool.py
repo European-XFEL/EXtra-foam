@@ -106,7 +106,7 @@ class TestImageTool(unittest.TestCase):
                 'processed': ProcessedData(1001)}
 
     def testGeneral(self):
-        self.assertEqual(4, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(5, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 
@@ -136,7 +136,7 @@ class TestImageTool(unittest.TestCase):
         # This must be the first test method in order to check that the
         # default values are set correctly
         proc = self.train_worker._roi_proc
-        widget = self.image_tool._corrected_view
+        widget = self.image_tool._corrected_view._roi_ctrl_widget
 
         proc.update()
 
@@ -148,7 +148,7 @@ class TestImageTool(unittest.TestCase):
             self.assertListEqual(roi_geometry, getattr(proc, f"_roi{i}").rect)
 
     def testRoiCtrlWidget(self):
-        widget = self.image_tool._corrected_view
+        widget = self.image_tool._corrected_view._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
         proc = self.train_worker._roi_proc
         self.assertEqual(4, len(roi_ctrls))

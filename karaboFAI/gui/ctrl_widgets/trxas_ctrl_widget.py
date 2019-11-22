@@ -25,7 +25,10 @@ _MAX_N_BINS = 9999
 
 
 class TrXasCtrlWidget(_AbstractCtrlWidget):
-    """Analysis parameters setup for ROI analysis."""
+    """Widget for setting up tr-XAS analysis parameters.
+
+    tr-XAS stands for Time-resolved X-ray Absorption Spectroscopy.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -60,6 +63,7 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
 
         self.initUI()
         self.initConnections()
+
         # required for non-registered ctrl widgets
         self.updateMetaData()
 
