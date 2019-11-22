@@ -1,5 +1,5 @@
-GRAPHICAL USER INTERFACE (GUI)
-==============================
+MAIN GUI
+========
 
 .. _pyFAI: https://github.com/silx-kit/pyFAI
 .. _karabo_data: https://github.com/European-XFEL/karabo_data
@@ -82,19 +82,52 @@ the x or y direction, and the FOM the sum of the absolute VFOM.
      - Azimuthal integration scattering curve.
      - Sum of the (absolute) scattering curve.
 
+Data source
+___________
 
-General setup
-"""""""""""""
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| *Data streamed from*       | Receiving the data from                                            |
+|                            |                                                                    |
+|                            | - *ZeroMQ bridge*: mainly used for real-time analysis. The data    |
+|                            |   will be sent from a *PipeToZeroMQ* Karabo device;                |
+|                            |                                                                    |
+|                            | - *run directory*: used for replaying the experiment.              |
++----------------------------+--------------------------------------------------------------------+
+| *Hostname*                 | Hostname of the data source.                                       |
++----------------------------+--------------------------------------------------------------------+
+| *Port*                     | Port number of the data source.                                    |
++----------------------------+--------------------------------------------------------------------+
 
-Define the general analysis setup.
+In the data source tree, one can select which sources (*Source name* and *Property*) are required
+in the analysis. The available sources are monitored and displayed in the *Available sources*
+window below.
+
+Further filtering operations are provided for each data source if applicable.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
 | *Pulse slicer*             | The input will be used to construct a *slice* object in Python     |
 |                            | which is used to select the specified pulse pattern in a train.    |
-|                            | *Pulse-resolved detector only*.                                    |
 +----------------------------+--------------------------------------------------------------------+
+| *Value range*              | Value range filter of the corresponding source.                    |
++----------------------------+--------------------------------------------------------------------+
+
+
+General analysis
+________________
+
+
+Global setup
+""""""""""""
+
+Define analysis parameters used globally.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
 | *POI index 1*              | Index of the first pulse of interest (POI). It is used for         |
 |                            | visualizing a single image in the *Pulse-of-interest* window. **If |
 |                            | 'Pulse slicer' is used to slice a portion of the pulses in the     |
@@ -102,10 +135,6 @@ Define the general analysis setup.
 |                            | train**. *Pulse-resolved detector only.*                           |
 +----------------------------+--------------------------------------------------------------------+
 | *POI index 2*              | Index of the 2nd POI pulse. *Pulse-resolved detector only.*        |
-+----------------------------+--------------------------------------------------------------------+
-| *Photon energy*            | Photon energy in keV. Only used in azimuthal integration for now.  |
-+----------------------------+--------------------------------------------------------------------+
-| *Sample distance*          | Sample-detector distance in m. Only used in azimuthal integration. |
 +----------------------------+--------------------------------------------------------------------+
 | *M.A. window*              | Moving average window size. If the moving average window size is   |
 |                            | larger than 1, moving average will be applied to all the           |
@@ -171,87 +200,6 @@ analysis is given by VFOM (on) - VFOM (off).
 +----------------------------+--------------------------------------------------------------------+
 | Reset                      | Reset the FOM plot in the *Pump-probe window* and the global       |
 |                            | moving average count.                                              |
-+----------------------------+--------------------------------------------------------------------+
-
-
-Azimuthal integration analysis setup
-""""""""""""""""""""""""""""""""""""
-
-**karaboFAI** uses pyFAI_ to do azimuthal integration. As illustrated in the sketch below,
-the **origin** is located at the sample position, more precisely, where the X-ray beam crosses
-the main axis of the diffractometer. The detector is treated as a rigid body, and its position
-in space is described by six parameters: 3 translations and 3 rotations. The orthogonal
-projection of **origin** on the detector surface is called **PONI** (Point Of Normal Incidence).
-For non-planar detectors, **PONI** is defined in the plan with z=0 in the detector’s coordinate
-system. It is worth noting that usually **PONI** is not the beam center on the detector surface.
-
-The input parameters *Cx* and *Cy* correspond to *Poni2* and *Poni1* in the
-aforementioned coordinate system, respectively.
-
-.. image:: images/pyFAI_PONI.png
-   :width: 800
-
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| *Cx (pixel)*               | Coordinate of the point of normal incidence along the detector's   |
-|                            | 2nd dimension, in pixels.                                          |
-+----------------------------+--------------------------------------------------------------------+
-| *Cy (pixel)*               | Coordinate of the point of normal incidence along the detector's   |
-|                            | 1st dimension, in pixels.                                          |
-+----------------------------+--------------------------------------------------------------------+
-| *Integ method*             | Azimuthal integration methods provided by pyFAI_.                  |
-+----------------------------+--------------------------------------------------------------------+
-| *Integ points*             | Number of points in the output pattern of azimuthal integration.   |
-+----------------------------+--------------------------------------------------------------------+
-| *Integ range*              | Azimuthal integration range, in 1/A.                               |
-+----------------------------+--------------------------------------------------------------------+
-| *Normalizer*               | Normalizer of the azimuthal integration result.                    |
-+----------------------------+--------------------------------------------------------------------+
-| *AUC range*                | AUC (area under a curve) integration range, in 1/A.                |
-+----------------------------+--------------------------------------------------------------------+
-| *FOM range*                | Integration range when calculating the figure-of-merit of the      |
-|                            | azimuthal integration result, in 1/A.                              |
-+----------------------------+--------------------------------------------------------------------+
-
-
-ROI 1D projection analysis setup
-""""""""""""""""""""""""""""""""
-
-Define the 1D projection of ROI (region of interest) analysis setup.
-
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| *Direction*                | Direction of 1D projection (x or y).                               |
-+----------------------------+--------------------------------------------------------------------+
-| *Normalizer*               | Normalizer of the 1D-projection VFOM.                              |
-+----------------------------+--------------------------------------------------------------------+
-| *AUC range*                | AUC (area under a curve) integration range.                        |
-+----------------------------+--------------------------------------------------------------------+
-| *FOM range*                | Integration range when calculating the figure-of-merit of 1D       |
-|                            | projection.                                                        |
-+----------------------------+--------------------------------------------------------------------+
-
-Data source
-"""""""""""
-
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| *Data streamed from*       | Receiving the data from                                            |
-|                            |                                                                    |
-|                            | - *ZeroMQ bridge*: mainly used for real-time analysis. The data    |
-|                            |   will be sent from a *PipeToZeroMQ* Karabo device;                |
-|                            |                                                                    |
-|                            | - *run directory*: used for replaying the experiment.              |
-+----------------------------+--------------------------------------------------------------------+
-| *Hostname*                 | Hostname of the data source.                                       |
-+----------------------------+--------------------------------------------------------------------+
-| *Port*                     | Port number of the data source.                                    |
-+----------------------------+--------------------------------------------------------------------+
-| *Detector source name*     | *KaraboDeviceID* for multi-module detectors and                    |
-|                            | *KaraboDeviceID:outputChannel* for single-module detectors         |
 +----------------------------+--------------------------------------------------------------------+
 
 
@@ -338,25 +286,9 @@ Setup the visualization of correlations of a given FOM with various slow data.
 | *Reset*                    | Reset the correlation history.                                     |
 +----------------------------+--------------------------------------------------------------------+
 
-Geometry setup
-""""""""""""""
 
-Geometry setup panel is only available for the multi-module detector which requires a
-geometry file to assemble the images from different modules, for example, AGIPD, LPD and
-DSSC. **karaboFAI** uses karabo_data_ for image assembling. For detailed information
-about geometries of those detectors, please refer to
-https://karabo-data.readthedocs.io/en/latest/geometry.html
+Special analysis
+________________
 
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| *Quadrant positions*       | The first pixel of the first module in each quadrant,              |
-|                            | corresponding to data channels 0, 4, 8 and 12.                     |
-+----------------------------+--------------------------------------------------------------------+
-| *Load geometry file*       | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system. For LPD and DSSC, **karaboFAI** provides a      |
-|                            | default geometry file.                                             |
-+----------------------------+--------------------------------------------------------------------+
-
-
-The quadrant positions are given in pixel units,
+For analysis which is either difficult to be generalized or is used by the instrument scientists on the
+daily-basis, **KaraboFAI** provides special analysis control and plot widgets.

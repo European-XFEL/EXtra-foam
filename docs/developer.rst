@@ -1,6 +1,13 @@
 DEVELOPER
 =========
 
+Design
+""""""
+
+.. image:: images/design_overview_developer.png
+   :width: 800
+
+
 Build and Test
 """"""""""""""
 
