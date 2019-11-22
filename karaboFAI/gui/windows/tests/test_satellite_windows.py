@@ -3,6 +3,7 @@ import unittest
 from karaboFAI.gui import mkQApp, MainGUI
 from karaboFAI.logger import logger
 from karaboFAI.processes import ProcessInfoList
+from karaboFAI.gui.windows import ProcessMonitor
 
 app = mkQApp()
 
@@ -19,7 +20,8 @@ class TestProcessMonitor(unittest.TestCase):
         cls.gui.close()
 
     def testProcessMonitor(self):
-        win = self.gui.openProcessMonitor()
+        win = self.gui.onOpenSatelliteWindow(ProcessMonitor)
+        self.assertIsInstance(win, ProcessMonitor)
 
         self.gui.process_info_sgn.emit([ProcessInfoList(
             name='ZeroMQ',

@@ -223,14 +223,16 @@ class MainGUI(QMainWindow):
 
         open_process_monitor_at = self._addAction(
             "Process monitor", "process_monitor.png")
-        open_process_monitor_at.triggered.connect(self.openProcessMonitor)
+        open_process_monitor_at.triggered.connect(
+            lambda: self.onOpenSatelliteWindow(ProcessMonitor))
 
         open_file_stream_window_at = self._addAction("Offline", "offline.png")
         open_file_stream_window_at.triggered.connect(
-            self.openFileStreamControllerWindow)
+            lambda: self.onOpenSatelliteWindow(FileStreamControllerWindow))
 
-        open_help_at = self._addAction("About karaboFAI", "about.png")
-        open_help_at.triggered.connect(self.openAboutWindow)
+        open_about_at = self._addAction("About karaboFAI", "about.png")
+        open_about_at.triggered.connect(
+            lambda: self.onOpenSatelliteWindow(AboutWindow))
 
         # *************************************************************
         # Special analysis
@@ -475,36 +477,31 @@ class MainGUI(QMainWindow):
         if self._checkWindowExistence(instance_type, self._windows):
             return
 
-        instance_type(self._queue,
-                      pulse_resolved=self._pulse_resolved,
-                      parent=self)
+        return instance_type(self._queue,
+                             pulse_resolved=self._pulse_resolved,
+                             parent=self)
+
+    def onOpenSatelliteWindow(self, instance_type):
+        """Open a satellite window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
+        if self._checkWindowExistence(instance_type, self._satellite_windows):
+            return
+
+        instance = instance_type(parent=self)
+        if isinstance(instance, ProcessMonitor):
+            self.process_info_sgn.connect(instance.onProcessInfoUpdate)
+        return instance
 
     def openSpecialAnalysisWindow(self, instance_type):
+        """Open a special analysis window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
         if self._checkWindowExistence(instance_type, self._special_windows):
             return
-
-        instance_type(self._queue, parent=self)
-
-    def openProcessMonitor(self):
-        if self._checkWindowExistence(ProcessMonitor, self._satellite_windows):
-            return
-
-        w = ProcessMonitor(parent=self)
-        self.process_info_sgn.connect(w.onProcessInfoUpdate)
-        return w
-
-    def openFileStreamControllerWindow(self):
-        if self._checkWindowExistence(FileStreamControllerWindow,
-                                      self._satellite_windows):
-            return
-
-        return FileStreamControllerWindow(parent=self)
-
-    def openAboutWindow(self):
-        if self._checkWindowExistence(AboutWindow, self._satellite_windows):
-            return
-
-        return AboutWindow(parent=self)
+        return instance_type(self._queue, parent=self)
 
     def _checkWindowExistence(self, instance_type, windows):
         for key in windows:
