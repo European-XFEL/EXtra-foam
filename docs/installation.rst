@@ -1,12 +1,12 @@
 INSTALLATION
 ============
 
-If you want to use **karaboFAI** on the online or `Maxwell` cluster, please check **GETTING STARTED**.
+If you want to use **EXtra-foam** on the online or `Maxwell` cluster, please check **GETTING STARTED**.
 
 .. _Anaconda: https://www.anaconda.com/
 
-To install **karaboFAI** in your own environment, you are encouraged to use Anaconda_ to run
-and build **karaboFAI**.
+To install **EXtra-foam** in your own environment, you are encouraged to use Anaconda_ to run
+and build **EXtra-foam**.
 
 Dependencies
 ------------
@@ -23,8 +23,8 @@ In your Anaconda_ environment, run the following commands:
     $ conda install -c omgarcia gcc-6
 
 
-Install karaboFAI
------------------
+Install **EXtra-foam**
+----------------------
 
 .. code-block:: bash
 
@@ -33,12 +33,12 @@ Install karaboFAI
     # If you have cloned the repository without one or more of its submodules, run
     $ git submodule update --init
 
-    $ cd karaboFAI
+    $ cd EXtra-foam
 
     # optional
-    $ export FAI_WITH_TBB=0  # turn off intel TBB in karaboFAI
+    $ export FOAM_WITH_TBB=0  # turn off intel TBB in extra-foam
     $ export XTENSOR_WITH_TBB=0  # turn off intel TBB in xtensor
-    $ export FAI_WITH_XSIMD=0  # turn off XSIMD in karaboFAI
+    $ export FOAM_WITH_XSIMD=0  # turn off XSIMD in extra-foam
     $ export XTENSOR_WITH_XSIMD=0  # turn off XSIMD in xtensor
 
     # Note: This step is also required if one wants to change the above

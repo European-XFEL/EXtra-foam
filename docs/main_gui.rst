@@ -7,7 +7,7 @@ MAIN GUI
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
 
-The main GUI of **karaboFAI** is divided into several control panels grouped
+The main GUI of **EXtra-foam** is divided into several control panels grouped
 by functionality and a log window.
 
 .. image:: images/MainGUI.png

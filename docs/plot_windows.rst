@@ -76,7 +76,7 @@ Pulse-of-interest window
 Process monitor
 ---------------
 
-Monitoring the status of processes running by **karaboFAI**.
+Monitoring the status of processes running by **EXtra-foam**.
 
 
 File streamer

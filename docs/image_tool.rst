@@ -125,7 +125,7 @@ which will then be used to apply dark subtraction to image data pulse-by-pulse.
 Azimuthal integration
 _____________________
 
-**karaboFAI** uses pyFAI_ to do azimuthal integration. As illustrated in the sketch below,
+**EXtra-foam** uses pyFAI_ to do azimuthal integration. As illustrated in the sketch below,
 the **origin** is located at the sample position, more precisely, where the X-ray beam crosses
 the main axis of the diffractometer. The detector is treated as a rigid body, and its position
 in space is described by six parameters: 3 translations and 3 rotations. The orthogonal
@@ -178,7 +178,7 @@ Geometry
 ________
 
 Geometry is only available for the multi-module detector which requires a geometry file to
-assemble the images from different modules, for example, AGIPD, LPD and DSSC. **karaboFAI**
+assemble the images from different modules, for example, AGIPD, LPD and DSSC. **EXtra-foam**
 uses karabo_data_ for image assembling. For detailed information about geometries of those
 detectors, please refer to
 https://karabo-data.readthedocs.io/en/latest/geometry.html

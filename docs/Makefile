@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = karaboFAI
+SPHINXPROJ    = EXtra-foam
 SOURCEDIR     = .
 BUILDDIR      = _build
 

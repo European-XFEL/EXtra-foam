@@ -8,7 +8,7 @@ DATA FLOW
 ..
 
 
-At European XFEL, **karaboFAI** receives data from the distributed control framework Karabo_.
+At European XFEL, **EXtra-foam** receives data from the distributed control framework Karabo_.
 
 Data received from different sensors/detectors located at different locations need to to be
 "aligned" for further analysis. At European XFEL, the accelerator produces 10 bunch trains per
@@ -22,7 +22,7 @@ difficult in real-time. Fortunately, the aforementioned alignment is taken care 
 
 After the data from different sources are aligned, they will be serialized and streamed using
 ZeroMQ_. This process is performed inside the *PipeToZeroMQ* device, which is also known as
-"Karabo bridge". **karaboFAI** makes use of the karabo-bridge-py_, which is the client of the
+"Karabo bridge". **EXtra-foam** makes use of the karabo-bridge-py_, which is the client of the
 "Karabo bridge", to receive and deserialize the data.
 
 .. image:: images/data_flow.png

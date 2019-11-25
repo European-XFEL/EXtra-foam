@@ -12,7 +12,7 @@ else()
     cmake_policy(VERSION 3.13)
 endif()
 
-project(karaboFAI LANGUAGES CXX)
+project(extra-foam LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -25,14 +25,14 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-OPTION(FAI_WITH_TBB "Build karaboFAI (xtensor is not included) with intel TBB" ON)
+OPTION(FOAM_WITH_TBB "Build extra-foam (xtensor is not included) with intel TBB" ON)
 
-OPTION(FAI_WITH_XSIMD "Build karaboFAI (xtensor is not included) with XSIMD" ON)
+OPTION(FOAM_WITH_XSIMD "Build extra-foam (xtensor is not included) with XSIMD" ON)
 
-OPTION(BUILD_FAI_TESTS "Build c++ unit test" OFF)
+OPTION(BUILD_FOAM_TESTS "Build c++ unit test" OFF)
 
 # tbb
-if(FAI_WITH_TBB OR XTENSOR_USE_TBB)
+if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
     set(tbb_root_dir ${PROJECT_SOURCE_DIR}/thirdparty/tbb)
 
     include(${tbb_root_dir}/cmake/TBBBuild.cmake)
@@ -48,29 +48,29 @@ if(FAI_WITH_TBB OR XTENSOR_USE_TBB)
 
     message(STATUS "Found TBB: ${TBB_VERSION}, ${TBB_LIBRARIES}")
 
-    if(FAI_WITH_TBB)
-        message(STATUS "Build karaboFAI with intel TBB")
+    if(FOAM_WITH_TBB)
+        message(STATUS "Build extra-foam with intel TBB")
 
         if(${CMAKE_VERSION} VERSION_LESS 3.13)
-            add_definitions(-DFAI_WITH_TBB)
+            add_definitions(-DFOAM_WITH_TBB)
         else()
-            add_compile_definitions(FAI_WITH_TBB)
+            add_compile_definitions(FOAM_WITH_TBB)
         endif()
     endif()
 endif()
 
 # xsimd
-if(FAI_WITH_XSIMD OR XTENSOR_USE_XSIMD)
+if(FOAM_WITH_XSIMD OR XTENSOR_USE_XSIMD)
     add_subdirectory(thirdparty/xsimd)
     set(xsimd_DIR ${PROJECT_BINARY_DIR}/thirdparty/xsimd)
 
-    if(FAI_WITH_XSIMD)
-        message(STATUS "Build karaboFAI with XSIMD")
+    if(FOAM_WITH_XSIMD)
+        message(STATUS "Build extra-foam with XSIMD")
 
         if(${CMAKE_VERSION} VERSION_LESS 3.13)
-            add_definitions(-DFAI_WITH_XSIMD)
+            add_definitions(-DFOAM_WITH_XSIMD)
         else()
-            add_compile_definitions(FAI_WITH_XSIMD)
+            add_compile_definitions(FOAM_WITH_XSIMD)
         endif()
     endif()
 
@@ -91,11 +91,11 @@ set(xtensor_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor)
 # xtensor-python
 add_subdirectory(thirdparty/xtensor-python)
 
-# karaboFAI
-set(FAI_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/karaboFAI/include)
+# extra-foam
+set(FOAM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/extra_foam/include)
 
-add_subdirectory(src/karaboFAI)
+add_subdirectory(src/extra_foam)
 
-if(BUILD_FAI_TESTS)
+if(BUILD_FOAM_TESTS)
     add_subdirectory(test)
 endif()

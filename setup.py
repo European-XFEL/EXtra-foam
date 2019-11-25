@@ -28,7 +28,7 @@ with open(osp.join(osp.abspath(osp.dirname(__file__)), 'README.md')) as f:
 
 
 def find_version():
-    with open(osp.join('karaboFAI', '__init__.py')) as fp:
+    with open(osp.join('extra_foam', '__init__.py')) as fp:
         for line in fp:
             m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
             if m is not None:
@@ -53,18 +53,18 @@ class CMakeExtension(Extension):
 
 
 ext_modules = [
-    CMakeExtension("karaboFAI"),
+    CMakeExtension("extra_foam"),
 ]
 
 
 class BuildExt(build_ext):
 
     _thirdparty_files = [
-        "karaboFAI/thirdparty/bin/redis-server",
-        "karaboFAI/thirdparty/bin/redis-cli"
+        "extra_foam/thirdparty/bin/redis-server",
+        "extra_foam/thirdparty/bin/redis-cli"
     ]
 
-    description = "Build the C++ extensions for karaboFAI"
+    description = "Build the C++ extensions for EXtra-foam"
     user_options = [
         ('with-tbb', None, 'build with intel TBB'),
         ('xtensor-with-tbb', None, 'build xtensor with intel TBB'),
@@ -77,9 +77,9 @@ class BuildExt(build_ext):
     def initialize_options(self):
         super().initialize_options()
 
-        self.with_tbb = strtobool(os.environ.get('FAI_WITH_TBB', '1'))
+        self.with_tbb = strtobool(os.environ.get('FOAM_WITH_TBB', '1'))
         self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
-        self.with_xsimd = strtobool(os.environ.get('FAI_WITH_XSIMD', '1'))
+        self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
         self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
         self.with_tests = strtobool(os.environ.get('FAI_WITH_TESTS', '0'))
 
@@ -110,16 +110,16 @@ class BuildExt(build_ext):
         build_type = 'debug' if self.debug else 'release'
 
         cmake_options = [
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'karaboFAI/cpp')}",
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/cpp')}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
         ]
 
         if self.with_tbb:
-            cmake_options.append('-DFAI_WITH_TBB=ON')
+            cmake_options.append('-DFOAM_WITH_TBB=ON')
         else:
             # necessary to switch from ON to OFF
-            cmake_options.append('-DFAI_WITH_TBB=OFF')
+            cmake_options.append('-DFOAM_WITH_TBB=OFF')
 
         if self.xtensor_with_tbb:
             # cmake option in thirdparty/xtensor
@@ -128,9 +128,9 @@ class BuildExt(build_ext):
             cmake_options.append('-DXTENSOR_USE_TBB=OFF')
 
         if self.with_xsimd:
-            cmake_options.append('-DFAI_WITH_XSIMD=ON')
+            cmake_options.append('-DFOAM_WITH_XSIMD=ON')
         else:
-            cmake_options.append('-DFAI_WITH_XSIMD=OFF')
+            cmake_options.append('-DFOAM_WITH_XSIMD=OFF')
 
         if self.xtensor_with_xsimd:
             # cmake option in thirdparty/xtensor
@@ -139,9 +139,9 @@ class BuildExt(build_ext):
             cmake_options.append('-DXTENSOR_USE_XSIMD=OFF')
 
         if self.with_tests:
-            cmake_options.append('-DBUILD_FAI_TESTS=ON')
+            cmake_options.append('-DBUILD_FOAM_TESTS=ON')
         else:
-            cmake_options.append('-DBUILD_FAI_TESTS=OFF')
+            cmake_options.append('-DBUILD_FOAM_TESTS=OFF')
 
         build_options = ['--', '-j4']
 
@@ -150,14 +150,14 @@ class BuildExt(build_ext):
 
         with changed_cwd(self.build_temp):
             # generate build files
-            print("-- Running cmake for karaboFAI")
+            print("-- Running cmake for extra-foam")
             self.spawn(['cmake', ext.source_dir] + cmake_options)
-            print("-- Finished cmake for karaboFAI")
+            print("-- Finished cmake for extra-foam")
 
             # build
-            print("-- Running cmake --build for karaboFAI")
+            print("-- Running cmake --build for extra-foam")
             self.spawn(['cmake', '--build', '.'] + build_options)
-            print("-- Finished cmake --build for karaboFAI")
+            print("-- Finished cmake --build for extra-foam")
 
     def _move_file(self, filename):
         """Move file to the system folder."""
@@ -186,7 +186,7 @@ class TestCommand(_TestCommand):
 
         # run Python test
         import pytest
-        errno = pytest.main(['karaboFAI'])
+        errno = pytest.main(['extra_foam'])
         sys.exit(errno)  # why do we need this?
 
 
@@ -196,7 +196,7 @@ class BinaryDistribution(Distribution):
 
 
 setup(
-    name='karaboFAI',
+    name='EXtra-foam',
     version=find_version(),
     author='Jun Zhu',
     author_email='da-support@xfel.eu',
@@ -206,11 +206,11 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'karaboFAI=karaboFAI.services:application',
-            'karaboFAI-kill=karaboFAI.services:kill_application',
-            'karaboFAI-stream=karaboFAI.services:stream_file',
-            'karaboFAI-redis-cli=karaboFAI.services:start_redis_client',
-            'karaboFAI-monitor=karaboFAI.web.monitor:web_monitor'
+            'extra-foam=extra_foam.services:application',
+            'extra-foam-kill=extra_foam.services:kill_application',
+            'extra-foam-stream=extra_foam.services:stream_file',
+            'extra-foam-redis-cli=extra_foam.services:start_redis_client',
+            'extra-foam-monitor=extra_foam.web.monitor:web_monitor'
         ],
     },
     ext_modules=ext_modules,
@@ -222,7 +222,7 @@ setup(
     },
     distclass=BinaryDistribution,
     package_data={
-        'karaboFAI': [
+        'extra_foam': [
             'gui/icons/*.png',
             'gui/icons/*.jpg',
             'geometries/*.h5'

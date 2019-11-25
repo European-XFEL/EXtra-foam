@@ -16,7 +16,7 @@
 
 #include "image_proc.hpp"
 
-namespace fai
+namespace foam
 {
 namespace testing
 {
@@ -250,4 +250,4 @@ TEST(TestMovingAverageImageArray, TestWithNaN)
 }
 
 } // testing
-} // fai
+} // foam

@@ -1,5 +1,5 @@
-Welcome to karaboFAI's documentation!
-=====================================
+Welcome to EXtra-foam's documentation!
+======================================
 
 .. _welcome:
 

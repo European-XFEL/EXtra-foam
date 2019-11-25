@@ -15,7 +15,7 @@
 #include <vector>
 #include <algorithm>
 
-#if defined(FAI_WITH_TBB)
+#if defined(FOAM_WITH_TBB)
 
 #include "tbb/parallel_for.h"
 #include "tbb/blocked_range.h"
@@ -110,4 +110,4 @@ TEST(TestTBB, GeneralSubStringFinder) {
   }
 }
 
-#endif // FAI_WITH_TBB
+#endif // FOAM_WITH_TBB

@@ -1,14 +1,14 @@
 INTRODUCTION
 ============
 
-**karaboFAI** is a tool that provides real-time and off-line data analysis
+**EXtra-foam** is a tool that provides real-time and off-line data analysis
 (**azimuthal integration**, **ROI**, **correlation**, **binning**, etc.) and visualization for
 experiments using **2D detectors** (*AGIPD*, *LPD*, *DSSC* , *JungFrau*, *FastCCD*, etc.)
 at European XFEL.
 
 
-Why use **karaboFAI**
----------------------
+Why use **EXtra-foam**
+----------------------
 
 1. It allows users to perform EDA (exploratory data analysis) in real time by 'probing'
 the data with a combination of different analysis tools, for instance, monitoring individual
@@ -33,7 +33,7 @@ result since the offline calibration algorithms are more complicated than the re
 Performance
 -----------
 
-For train-resolved detectors like JungFrau and FastCCD, **karaboFAI** can process and visualize the data
+For train-resolved detectors like JungFrau and FastCCD, **EXtra-foam** can process and visualize the data
 at **10 Hz**. For large detectors like AGIPD, LPD and DSSC, the processing and visualization rate is
 **2 ~ 3 Hz** with 64 pulses/train. It can even process the DSSC data with **400 pulses/train** at a rate of
 about 0.3 ~ 0.4 Hz.

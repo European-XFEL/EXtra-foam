@@ -49,14 +49,14 @@ set(FAI_TESTS
 foreach(filename IN LISTS FAI_TESTS)
     string(REPLACE ".cpp" "" targetname ${filename})
     add_executable(${targetname} main.cpp ${filename})
-    if(FAI_WITH_TBB)
-        target_compile_definitions(${targetname} PRIVATE FAI_WITH_TBB)
+    if(FOAM_WITH_TBB)
+        target_compile_definitions(${targetname} PRIVATE FOAM_WITH_TBB)
         target_include_directories(${targetname} PRIVATE ${TBB_INCLUDE_DIRS})
         target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARIES})
     endif()
     target_include_directories(${targetname}
         PRIVATE
-            ${FAI_INCLUDE_DIRS}
+            ${FOAM_INCLUDE_DIRS}
             ${GTEST_INCLUDE_DIRS}
             ${GMOCK_INCLUDE_DIRS}
     )
@@ -72,15 +72,15 @@ add_executable(test_fai_cpp main.cpp ${FAI_TESTS})
 
 target_include_directories(test_fai_cpp
     PRIVATE
-        ${FAI_INCLUDE_DIRS}
+        ${FOAM_INCLUDE_DIRS}
         ${GTEST_INCLUDE_DIRS}
         ${GMOCK_INCLUDE_DIRS}
 )
 
 target_link_libraries(test_fai_cpp PRIVATE gtest pthread xtensor)
 
-if(FAI_WITH_TBB)
-    target_compile_definitions(test_fai_cpp PRIVATE FAI_WITH_TBB)
+if(FOAM_WITH_TBB)
+    target_compile_definitions(test_fai_cpp PRIVATE FOAM_WITH_TBB)
     target_include_directories(test_fai_cpp PRIVATE ${TBB_INCLUDE_DIRS})
     target_link_libraries(test_fai_cpp PRIVATE ${TBB_LIBRARIES})
 endif()

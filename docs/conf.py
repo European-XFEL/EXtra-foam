@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# karaboFAI documentation build configuration file, created by
+# EXtra-foam documentation build configuration file, created by
 # sphinx-quickstart on Tue Dec  4 10:57:15 2018.
 #
 # This file is execfile()d with the current directory set to its
@@ -50,7 +50,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'karaboFAI'
+project = 'EXtra-foam'
 copyright = '2018 (C), European X-Ray Free-Electron Laser Facility GmbH'
 author = 'Jun Zhu'
 

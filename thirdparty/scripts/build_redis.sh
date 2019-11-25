@@ -24,6 +24,6 @@ if [[ ! -f ${REDIS_BUILD_DIR}/src/redis-server ]]; then
     popd
 fi
 
-mkdir -p ${ROOT_DIR}/karaboFAI/thirdparty/bin
-cp ${REDIS_BUILD_DIR}/src/redis-server ${ROOT_DIR}/karaboFAI/thirdparty/bin/redis-server
-cp ${REDIS_BUILD_DIR}/src/redis-cli ${ROOT_DIR}/karaboFAI/thirdparty/bin/redis-cli
+mkdir -p ${ROOT_DIR}/extra_foam/thirdparty/bin
+cp ${REDIS_BUILD_DIR}/src/redis-server ${ROOT_DIR}/extra_foam/thirdparty/bin/redis-server
+cp ${REDIS_BUILD_DIR}/src/redis-cli ${ROOT_DIR}/extra_foam/thirdparty/bin/redis-cli
