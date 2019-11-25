@@ -79,9 +79,7 @@ Data analysis in real time
 --------------------------
 
 For real-time data analysis, the (calibrated) data is streamed via a `ZMQ bridge`, which is
-a `Karabo` device (`PipeToZeroMQ`) running inside the control network. Normally, the user
-should not need to modify ``Hostname``, ``Port`` and ``Detector source name`` in the
-``Data source`` panel.
+a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
 
 .. image:: images/data_source_from_bridge.png
    :width: 500

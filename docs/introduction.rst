@@ -3,7 +3,7 @@ INTRODUCTION
 
 **karaboFAI** is a tool that provides real-time and off-line data analysis
 (**azimuthal integration**, **ROI**, **correlation**, **binning**, etc.) and visualization for
-experiments using **2D detectors** (*AGIPD*, *LPD*, *JungFrau*, *FastCCD*, *DSSC* and *BaslerCamera*)
+experiments using **2D detectors** (*AGIPD*, *LPD*, *DSSC* , *JungFrau*, *FastCCD*, etc.)
 at European XFEL.
 
 

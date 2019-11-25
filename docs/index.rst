@@ -11,8 +11,9 @@ Contents:
    introduction
    installation
    start
-   gui
-   windows
+   main_gui
+   image_tool
+   plot_windows
 
 .. toctree::
    :caption: Tutorials

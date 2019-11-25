@@ -1,6 +1,13 @@
 DEVELOPER
 =========
 
+Design
+""""""
+
+.. image:: images/design_overview_developer.png
+   :width: 800
+
+
 Build and Test
 """"""""""""""
 
@@ -34,8 +41,8 @@ To build and run the c++ unittest (we use GoogleTest_):
 
 
 
-Release karaboFAI
-"""""""""""""""""
+Release **karaboFAI**
+"""""""""""""""""""""
 
 - Update the **ChangeLog** in the `documentation` branch;
 - Update the version number in `docs/conf.py` and `karaboFAI/__init__.py`;

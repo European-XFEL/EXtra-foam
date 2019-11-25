@@ -25,5 +25,5 @@ ZeroMQ_. This process is performed inside the *PipeToZeroMQ* device, which is al
 "Karabo bridge". **karaboFAI** makes use of the karabo-bridge-py_, which is the client of the
 "Karabo bridge", to receive and deserialize the data.
 
-.. image:: images/karaboFAI_data_flow.png
+.. image:: images/data_flow.png
    :width: 800
