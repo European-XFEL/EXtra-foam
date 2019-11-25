@@ -21,7 +21,7 @@ from ...config import AnalysisType
 
 
 class StatisticsCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Analysis parameters setup for monitoring statistics of V(FOM)."""
+    """Widget for setting up statistics analysis parameters."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -43,11 +43,11 @@ class StatisticsCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._num_bins_le.setValidator(QIntValidator(1, 10000))
 
         self._reset_btn = QPushButton("Reset")
+
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
-
-        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -67,6 +67,7 @@ class StatisticsCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
@@ -81,6 +82,7 @@ class StatisticsCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._reset_btn.clicked.connect(mediator.onStReset)
 
     def updateMetaData(self):
+        """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._num_bins_le.returnPressed.emit()

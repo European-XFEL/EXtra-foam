@@ -236,13 +236,13 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         view = view_class(pulse_resolved=self._pulse_resolved, parent=self)
         return view
 
-    def createCtrlWidget(self, widget_class):
+    def createCtrlWidget(self, widget_class, *args, **kwargs):
         """Register a ctrl widget.
 
         Ctrl widgets reside in (views of) ImageToolWindow should explicitly
         call this method to be registered.
         """
-        widget = widget_class(pulse_resolved=self._pulse_resolved)
+        widget = widget_class(*args, pulse_resolved=self._pulse_resolved, **kwargs)
         self._ctrl_widgets.append(widget)
         return widget
 

@@ -18,7 +18,7 @@ from ...config import AnalysisType
 
 
 class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Parameters setup for pulse-resolved data filtering."""
+    """Widget for setting up pulse-resolved filter parameters."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -34,10 +34,9 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._fom_range_le = SmartBoundaryLineEdit("-Inf, Inf")
 
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
-
-        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -55,6 +54,7 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
             self.setEnabled(False)
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
@@ -64,6 +64,7 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
             mediator.onPfFomRangeChange)
 
     def updateMetaData(self):
+        """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._fom_range_le.returnPressed.emit()

@@ -46,7 +46,7 @@ from ..logger import logger
 from ..utils import profiler
 from ..ipc import RedisConnection, RedisPSubscriber
 from ..pipeline import MpInQueue
-from ..processes import list_fai_processes, shutdown_all
+from ..processes import shutdown_all
 from ..database import MonProxy
 
 
@@ -112,8 +112,6 @@ class MainGUI(QMainWindow):
     start_sgn = pyqtSignal()
     stop_sgn = pyqtSignal()
     quit_sgn = pyqtSignal()
-
-    process_info_sgn = pyqtSignal(object)
 
     _db = RedisConnection()
 
@@ -223,14 +221,16 @@ class MainGUI(QMainWindow):
 
         open_process_monitor_at = self._addAction(
             "Process monitor", "process_monitor.png")
-        open_process_monitor_at.triggered.connect(self.openProcessMonitor)
+        open_process_monitor_at.triggered.connect(
+            lambda: self.onOpenSatelliteWindow(ProcessMonitor))
 
         open_file_stream_window_at = self._addAction("Offline", "offline.png")
         open_file_stream_window_at.triggered.connect(
-            self.openFileStreamControllerWindow)
+            lambda: self.onOpenSatelliteWindow(FileStreamControllerWindow))
 
-        open_help_at = self._addAction("About karaboFAI", "about.png")
-        open_help_at.triggered.connect(self.openAboutWindow)
+        open_about_at = self._addAction("About karaboFAI", "about.png")
+        open_about_at.triggered.connect(
+            lambda: self.onOpenSatelliteWindow(AboutWindow))
 
         # *************************************************************
         # Special analysis
@@ -265,10 +265,10 @@ class MainGUI(QMainWindow):
         self._plot_timer.timeout.connect(self.updateAll)
         self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
 
-        # For process monitoring
-        self._proc_monitor_timer = QTimer()
-        self._proc_monitor_timer.timeout.connect(self._update_process_monitoring)
-        self._proc_monitor_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        # For checking the connection to the Redis server
+        self._redis_timer = QTimer()
+        self._redis_timer.timeout.connect(self._pingRedisServer)
+        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
         self.__redis_connection_fails = 0
 
@@ -430,9 +430,7 @@ class MainGUI(QMainWindow):
 
         logger.debug(f"Plot train with ID: {data.tid}")
 
-    def _update_process_monitoring(self):
-        self.process_info_sgn.emit(list_fai_processes())
-
+    def _pingRedisServer(self):
         try:
             self._db.ping()
             self.__redis_connection_fails = 0
@@ -443,11 +441,10 @@ class MainGUI(QMainWindow):
 
             if rest_attempts > 0:
                 logger.warning(f"No response from the Redis server! Shutting "
-                               f"down karaboFAI after {rest_attempts} "
-                               f"attempts ...")
+                               f"down after {rest_attempts} attempts ...")
             else:
                 logger.warning(f"No response from the Redis server! "
-                               f"Shutting down karaboFAI!")
+                               f"Shutting down!")
                 self.close()
 
     def _addAction(self, description, filename):
@@ -475,36 +472,27 @@ class MainGUI(QMainWindow):
         if self._checkWindowExistence(instance_type, self._windows):
             return
 
-        instance_type(self._queue,
-                      pulse_resolved=self._pulse_resolved,
-                      parent=self)
+        return instance_type(self._queue,
+                             pulse_resolved=self._pulse_resolved,
+                             parent=self)
+
+    def onOpenSatelliteWindow(self, instance_type):
+        """Open a satellite window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
+        if self._checkWindowExistence(instance_type, self._satellite_windows):
+            return
+        return instance_type(parent=self)
 
     def openSpecialAnalysisWindow(self, instance_type):
+        """Open a special analysis window if it does not exist.
+
+        Otherwise bring the opened window to the table top.
+        """
         if self._checkWindowExistence(instance_type, self._special_windows):
             return
-
-        instance_type(self._queue, parent=self)
-
-    def openProcessMonitor(self):
-        if self._checkWindowExistence(ProcessMonitor, self._satellite_windows):
-            return
-
-        w = ProcessMonitor(parent=self)
-        self.process_info_sgn.connect(w.onProcessInfoUpdate)
-        return w
-
-    def openFileStreamControllerWindow(self):
-        if self._checkWindowExistence(FileStreamControllerWindow,
-                                      self._satellite_windows):
-            return
-
-        return FileStreamControllerWindow(parent=self)
-
-    def openAboutWindow(self):
-        if self._checkWindowExistence(AboutWindow, self._satellite_windows):
-            return
-
-        return AboutWindow(parent=self)
+        return instance_type(self._queue, parent=self)
 
     def _checkWindowExistence(self, instance_type, windows):
         for key in windows:
@@ -602,13 +590,5 @@ class MainGUI(QMainWindow):
 
         # shutdown pipeline workers and Redis server
         shutdown_all()
-
-        self._image_tool.close()
-        for window in itertools.chain(self._windows,
-                                      self._satellite_windows,
-                                      self._special_windows):
-            # Close all open child windows to make sure their resources
-            # (any running process etc.) are released gracefully
-            window.close()
 
         super().closeEvent(QCloseEvent)

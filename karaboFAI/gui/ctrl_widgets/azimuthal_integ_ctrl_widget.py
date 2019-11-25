@@ -19,7 +19,7 @@ from ...config import Normalizer, config
 
 
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
-    """Widget for setting up the azimuthal integration parameters."""
+    """Widget for setting up azimuthal integration parameters."""
 
     _available_normalizers = OrderedDict({
         "": Normalizer.UNDEFINED,

@@ -21,7 +21,7 @@ from ...logger import logger
 
 
 class GeometryCtrlWidget(_AbstractCtrlWidget):
-    """Widget for setting up the geometry parameters."""
+    """Widget for setting up detector geometry parameters."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -42,7 +42,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         ]
 
         self.initUI()
-
+        self.initConnections()
         self.setFixedHeight(self.minimumSizeHint().height())
 
     def initUI(self):
@@ -62,6 +62,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        """Overload."""
         pass
 
     def initQuadTable(self):

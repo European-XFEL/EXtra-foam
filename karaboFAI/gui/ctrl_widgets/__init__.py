@@ -12,6 +12,7 @@ from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from .trxas_ctrl_widget import TrXasCtrlWidget
+from .roi_ctrl_widget import RoiCtrlWidget
 
 
 # add control widgets
@@ -24,9 +25,10 @@ __all__ = [
     "DataSourceWidget",
     "GeometryCtrlWidget",
     "ImageCtrlWidget",
+    "Projection1DCtrlWidget",
     "PulseFilterCtrlWidget",
     "PumpProbeCtrlWidget",
-    "Projection1DCtrlWidget",
+    "RoiCtrlWidget",
     "SmartLineEdit",
     "SmartStringLineEdit",
     "StatisticsCtrlWidget",

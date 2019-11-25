@@ -18,7 +18,7 @@ from ...config import Normalizer
 
 
 class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Analysis parameters setup for ROI analysis."""
+    """Widget for setting up ROI 1D projection analysis parameters."""
 
     _available_normalizers = OrderedDict({
         "": Normalizer.UNDEFINED,
@@ -45,10 +45,9 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
 
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
-
-        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -67,6 +66,7 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._direct_cb.currentTextChanged.connect(
@@ -83,6 +83,7 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
             mediator.onRoiProjFomIntegRangeChange)
 
     def updateMetaData(self):
+        """Overload."""
         self._direct_cb.currentTextChanged.emit(
             self._direct_cb.currentText())
 

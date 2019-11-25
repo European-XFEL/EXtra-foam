@@ -16,7 +16,7 @@ from .smart_widgets import SmartLineEdit
 
 
 class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Widget for setting up the general analysis parameters."""
+    """Widget for setting up general analysis parameters."""
 
     def __init__(self, *args, **kwargs):
         super().__init__("Global setup", *args, **kwargs)
@@ -43,6 +43,7 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._ma_window_le.value_changed_sgn.connect(

@@ -555,4 +555,5 @@ class DataSourceWidget(QWidget):
 
     def updateSourceList(self):
         available_sources = self._mon.get_available_sources()
-        self._list_model.setupModelData(list(available_sources.keys()))
+        if available_sources is not None:  # for unittest
+            self._list_model.setupModelData(list(available_sources.keys()))

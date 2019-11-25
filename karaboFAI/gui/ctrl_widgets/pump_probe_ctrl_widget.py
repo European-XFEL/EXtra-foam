@@ -20,7 +20,7 @@ from ...config import PumpProbeMode, AnalysisType
 
 
 class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
-    """Analysis parameters setup for pump-probe experiments."""
+    """Widget for setting up pump-probe analysis parameters."""
 
     _available_modes = OrderedDict({
         "": PumpProbeMode.UNDEFINED,
@@ -65,10 +65,9 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._reset_btn = QPushButton("Reset")
 
         self.initUI()
+        self.initConnections()
 
         self.setFixedHeight(self.minimumSizeHint().height())
-
-        self.initConnections()
 
     def initUI(self):
         """Overload."""
@@ -90,6 +89,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self.setLayout(layout)
 
     def initConnections(self):
+        """Overload."""
         mediator = self._mediator
 
         self._reset_btn.clicked.connect(mediator.onPpReset)

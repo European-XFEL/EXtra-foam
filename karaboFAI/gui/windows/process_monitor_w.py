@@ -7,11 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QPlainTextEdit
 
 from .base_window import _AbstractSatelliteWindow
+from ...config import config
+from ...processes import list_fai_processes
 
 
 class ProcessMonitor(_AbstractSatelliteWindow):
@@ -30,6 +32,10 @@ class ProcessMonitor(_AbstractSatelliteWindow):
 
         self.setCentralWidget(self._cw)
 
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.updateProcessInfo)
+        self._timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+
         self.setMinimumSize(900, 150)
         self.show()
 
@@ -41,13 +47,12 @@ class ProcessMonitor(_AbstractSatelliteWindow):
         """Override."""
         pass
 
-    @pyqtSlot(object)
-    def onProcessInfoUpdate(self, proc_info):
+    def updateProcessInfo(self):
         self._cw.clear()
         info = "{:<20s}{:<16s}{:<16s}{:<12s}{:<16s}\n".format(
             "Process name", "FAI name", "FAI type", "pid", "status")
         info += "-" * 80 + "\n"
-        for p in proc_info:
+        for p in list_fai_processes():
             info += f"{p.name:<20s}" \
                 f"{p.fai_name:<16s}" \
                 f"{p.fai_type:<16s}" \
