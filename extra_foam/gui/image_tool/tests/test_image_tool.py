@@ -19,7 +19,7 @@ from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData
 from extra_foam.pipeline.exceptions import ImageProcessingError
 from extra_foam.processes import wait_until_redis_shutdown
-from extra_foam.services import FAI
+from extra_foam.services import Foam
 from extra_foam.database import MetaProxy
 
 app = mkQApp()
