@@ -26,8 +26,8 @@ ProcessInfo = namedtuple("ProcessInfo", [
 
 ProcessInfoList = namedtuple("ProcessInfoList", [
     "name",
-    "fai_name",
-    "fai_type",
+    "foam_name",
+    "foam_type",
     "pid",
     "status"
 ])
@@ -51,15 +51,15 @@ def register_fai_process(process_info):
         _fai_processes.pipeline[name] = proc
 
 
-def list_fai_processes():
-    """List the current FAI processes."""
+def list_foam_processes():
+    """List the current Foam processes."""
 
-    def get_proc_info(fai_name, fai_type, proc):
+    def get_proc_info(foam_name, foam_type, proc):
         with proc.oneshot():
             return ProcessInfoList(
                 proc.name(),
-                fai_name,
-                fai_type,
+                foam_name,
+                foam_type,
                 proc.pid,
                 proc.status(),
             )

@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QPlainTextEdit
 
 from .base_window import _AbstractSatelliteWindow
 from ...config import config
-from ...processes import list_fai_processes
+from ...processes import list_foam_processes
 
 
 class ProcessMonitor(_AbstractSatelliteWindow):
@@ -50,12 +50,12 @@ class ProcessMonitor(_AbstractSatelliteWindow):
     def updateProcessInfo(self):
         self._cw.clear()
         info = "{:<20s}{:<16s}{:<16s}{:<12s}{:<16s}\n".format(
-            "Process name", "FAI name", "FAI type", "pid", "status")
+            "Process name", "Foam name", "Foam type", "pid", "status")
         info += "-" * 80 + "\n"
-        for p in list_fai_processes():
+        for p in list_foam_processes():
             info += f"{p.name:<20s}" \
-                f"{p.fai_name:<16s}" \
-                f"{p.fai_type:<16s}" \
+                f"{p.foam_name:<16s}" \
+                f"{p.foam_type:<16s}" \
                 f"{p.pid:<12d}" \
                 f"{p.status:<16s}" \
                 f"\n"
