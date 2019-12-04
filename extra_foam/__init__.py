@@ -40,6 +40,6 @@ import os
 __version__ = "0.7.0"
 
 # root path for storing config and log files
-ROOT_PATH = os.path.join(os.path.expanduser("~"), ".extra_foam")
+ROOT_PATH = os.path.join(os.path.expanduser("~"), ".EXtra-foam")
 if not os.path.isdir(ROOT_PATH):
     os.makedirs(ROOT_PATH)

@@ -33,7 +33,7 @@ class TestProcessMonitor(unittest.TestCase):
         func.return_value = [ProcessInfoList(
             name='kafka',
             foam_name='foam name',
-            foam_type='fai type',
+            foam_type='foam type',
             pid=1234,
             status='sleeping'
         )]

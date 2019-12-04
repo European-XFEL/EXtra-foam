@@ -51,8 +51,8 @@ Release **EXtra-foam**
 - Tag the `master` branch.
 
 
-Deployment on Exfel Anaconda Environment
-""""""""""""""""""""""""""""""""""""""""
+Deployment on EuXFEL Anaconda Environment
+"""""""""""""""""""""""""""""""""""""""""
 
 **EXtra-foam** deployment on exfel anaconda environments should be done using
 **xsoft** account. Use the following anaconda environments to deploy particular
@@ -78,7 +78,7 @@ versions of **EXtra-foam**
 
    $ ssh xsoft@max-display.desy.de
    $ cd workspace
-   $ git clone --recursive --branch <tag_name> ssh://git@git.xfel.eu:10022/dataAnalysis/karaboFAI.git karaboFAI-<tag_name>
+   $ git clone --recursive --branch <tag_name> https://github.com/European-XFEL/EXtra-foam.git EXtra-foam-<tag_name>
    $ cd EXtra-foam-<tag_name>
    $ module load exfel <environment_name>
    $ which pip

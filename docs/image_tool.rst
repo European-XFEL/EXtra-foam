@@ -190,6 +190,6 @@ https://karabo-data.readthedocs.io/en/latest/geometry.html
 |                            | corresponding to data channels 0, 4, 8 and 12.                     |
 +----------------------------+--------------------------------------------------------------------+
 | *Load geometry file*       | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system. For LPD and DSSC, **karaboFAI** provides a      |
+|                            | local file system. For LPD and DSSC, **Extra-foam** provides a     |
 |                            | default geometry file.                                             |
 +----------------------------+--------------------------------------------------------------------+
