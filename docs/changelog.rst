@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+0.7.1 (4 December 2019)
+-----------------------
+
+This is the first release after migrating from EuXFEL gitlab to github!!!
+
+- **Improvement**
+
+    - Rename omissive fai to foam and change config folder from karaboFAI to EXtra-foam #6
+
+- **Test**
+    - Migrate CI from EuXFEL gitlab to public github #1
+
 0.7.0 (25 November 2019)
 ------------------------
 
