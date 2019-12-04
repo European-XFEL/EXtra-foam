@@ -81,7 +81,7 @@ class BuildExt(build_ext):
         self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
         self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
         self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
-        self.with_tests = strtobool(os.environ.get('FAI_WITH_TESTS', '0'))
+        self.with_tests = strtobool(os.environ.get('BUILD_FOAM_TESTS', '0'))
 
     def run(self):
         try:

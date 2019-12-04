@@ -34,21 +34,21 @@ ProcessInfoList = namedtuple("ProcessInfoList", [
 
 
 # key: process_type
-# value: a dictionary, process name in karaboFAI:Process instance
-FaiProcesses = namedtuple("FaiProcesses", ['redis', 'pipeline'])
+# value: a dictionary, process name in extra-foam:Process instance
+FoamProcesses = namedtuple("FoamProcesses", ['redis', 'pipeline'])
 
-_fai_processes = FaiProcesses({}, {})
+_foam_processes = FoamProcesses({}, {})
 
 
-def register_fai_process(process_info):
+def register_foam_process(process_info):
     """Register a new process."""
     proc = process_info.process
     name = process_info.name
     if name.lower() == 'redis':
-        _fai_processes.redis[name] = proc
+        _foam_processes.redis[name] = proc
     else:
         assert isinstance(proc, ProcessWorker)
-        _fai_processes.pipeline[name] = proc
+        _foam_processes.pipeline[name] = proc
 
 
 def list_foam_processes():
@@ -67,11 +67,11 @@ def list_foam_processes():
     info_list = []
     children = psutil.Process().children()
 
-    for name, p in _fai_processes.redis.items():
+    for name, p in _foam_processes.redis.items():
         info_list.append(get_proc_info(name, 'redis', p))
         children.remove(p)
 
-    for name, p in _fai_processes.pipeline.items():
+    for name, p in _foam_processes.pipeline.items():
         p_psutil = psutil.Process(p.pid)
         info_list.append(get_proc_info(name, 'pipeline', p_psutil))
         children.remove(p_psutil)
@@ -83,8 +83,8 @@ def list_foam_processes():
 
 
 def _find_process_type_by_pid(pid):
-    """Find the name of a process in _fai_processes by pid."""
-    for procs in _fai_processes:
+    """Find the name of a process in _foam_processes by pid."""
+    for procs in _foam_processes:
         for name, p in procs.items():
             if p.pid == pid:
                 return name
@@ -148,21 +148,21 @@ def wait_until_redis_shutdown(timeout=5):
 
 def shutdown_redis():
     logger.info(f"Shutting down Redis server ...")
-    if not _fai_processes.redis:
+    if not _foam_processes.redis:
         return
 
-    for _, proc in _fai_processes.redis.items():
+    for _, proc in _foam_processes.redis.items():
         try:
             proc.terminate()
             proc.wait(timeout=0.5)
         except NoSuchProcess:
             continue
 
-    for _, proc in _fai_processes.redis.items():
+    for _, proc in _foam_processes.redis.items():
         if proc.poll() is None:
             proc.kill()
 
-    for _, proc in _fai_processes.redis.items():
+    for _, proc in _foam_processes.redis.items():
         if proc.poll() is None:
             proc.wait(timeout=0.5)
 
@@ -170,12 +170,12 @@ def shutdown_redis():
 def shutdown_pipeline():
     logger.info(f"Shutting down pipeline processors ...")
 
-    for _, proc in _fai_processes.pipeline.items():
+    for _, proc in _foam_processes.pipeline.items():
         if proc.is_alive():
             proc.close()
             proc.join(timeout=0.5)
 
-    for _, proc in _fai_processes.pipeline.items():
+    for _, proc in _foam_processes.pipeline.items():
         if proc.is_alive():
             proc.terminate()
             proc.join(timeout=0.5)
