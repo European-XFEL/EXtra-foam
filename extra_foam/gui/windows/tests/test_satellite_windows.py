@@ -13,15 +13,15 @@ logger.setLevel('CRITICAL')
 
 class TestProcessMonitor(unittest.TestCase):
 
-    @patch("extra_foam.gui.windows.process_monitor_w.list_fai_processes")
+    @patch("extra_foam.gui.windows.process_monitor_w.list_foam_processes")
     def testProcessMonitor(self, func):
         win = ProcessMonitor()
         win._timer.stop()
 
         func.return_value = [ProcessInfoList(
             name='ZeroMQ',
-            fai_name='fai name',
-            fai_type='fai type',
+            foam_name='foam name',
+            foam_type='foam type',
             pid=1234,
             status='zombie'
         )]
@@ -32,8 +32,8 @@ class TestProcessMonitor(unittest.TestCase):
         # test old text will be removed
         func.return_value = [ProcessInfoList(
             name='kafka',
-            fai_name='fai name',
-            fai_type='fai type',
+            foam_name='foam name',
+            foam_type='foam type',
             pid=1234,
             status='sleeping'
         )]

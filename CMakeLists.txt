@@ -41,8 +41,7 @@ if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
         MAKE_ARGS tbb_build_dir=${CMAKE_CURRENT_BINARY_DIR}/thirdparty/tbb
                   tbb_build_prefix=tbb_cmake_build)
 
-    find_package(TBB REQUIRED tbb tbbmalloc)
-    # TBB_FOUND will silence xtensor/cmake/FindTBB.cmake, which does not work here
+    find_package(TBB CONFIG REQUIRED tbb tbbmalloc)
     get_target_property(TBB_INCLUDE_DIRS TBB::tbb INTERFACE_INCLUDE_DIRECTORIES)
     get_target_property(TBB_LIBRARIES TBB::tbb IMPORTED_LOCATION_RELEASE)
 

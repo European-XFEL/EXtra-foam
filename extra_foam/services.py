@@ -26,7 +26,7 @@ from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import PulseWorker, TrainWorker
-from .processes import ProcessInfo, register_fai_process
+from .processes import ProcessInfo, register_foam_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
 
@@ -123,7 +123,7 @@ def start_redis_server():
 
         logger.info(f"Redis server started at {host}:{port}")
 
-        register_fai_process(ProcessInfo(name="redis", process=process))
+        register_foam_process(ProcessInfo(name="redis", process=process))
 
         try:
             frac = config["REDIS_MAX_MEMORY_FRAC"]
@@ -208,10 +208,10 @@ class Foam:
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
         self.pulse_worker.start()
-        register_fai_process(ProcessInfo(name=self.pulse_worker.name,
+        register_foam_process(ProcessInfo(name=self.pulse_worker.name,
                                          process=self.pulse_worker))
         self.train_worker.start()
-        register_fai_process(ProcessInfo(name=self.train_worker.name,
+        register_foam_process(ProcessInfo(name=self.train_worker.name,
                                          process=self.train_worker))
 
         self._gui.connectInputToOutput(self.train_worker.output)

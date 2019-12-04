@@ -10,7 +10,7 @@ from PyQt5.QtTest import QTest, QSignalSpy
 
 from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
-from extra_foam.services import FAI
+from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import PulseOfInterestWindow
 from extra_foam.config import (

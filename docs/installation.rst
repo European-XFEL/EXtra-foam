@@ -28,7 +28,7 @@ Install **EXtra-foam**
 
 .. code-block:: bash
 
-    $ git clone --recursive https://git.xfel.eu/gitlab/dataAnalysis/karaboFAI.git
+    $ git clone --recursive --branch <tag_name> https://github.com/European-XFEL/EXtra-foam.git
 
     # If you have cloned the repository without one or more of its submodules, run
     $ git submodule update --init
