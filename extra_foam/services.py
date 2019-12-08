@@ -209,10 +209,10 @@ class Foam:
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
         self.pulse_worker.start()
         register_foam_process(ProcessInfo(name=self.pulse_worker.name,
-                                         process=self.pulse_worker))
+                                          process=self.pulse_worker))
         self.train_worker.start()
         register_foam_process(ProcessInfo(name=self.train_worker.name,
-                                         process=self.train_worker))
+                                          process=self.train_worker))
 
         self._gui.connectInputToOutput(self.train_worker.output)
         self._gui.start_sgn.connect(self.start)

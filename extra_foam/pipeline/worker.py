@@ -14,7 +14,7 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from .pipe import KaraboBridge, MpInQueue, MpOutQueue
+from .pipe import KaraboBridgePipeIn, MpQueuePipeIn, MpQueuePipeOut
 from .processors import (
     AzimuthalIntegrationProcessorPulse,
     AzimuthalIntegrationProcessorTrain,
@@ -203,8 +203,8 @@ class PulseWorker(ProcessWorker):
         """Initialization."""
         super().__init__('pulse worker')
 
-        self._inputs = [KaraboBridge(f"{self._name}:input")]
-        self._output = MpOutQueue(f"{self._name}:output")
+        self._inputs = [KaraboBridgePipeIn()]
+        self._output = MpQueuePipeOut()
 
         self._broker = Broker()
         self._xgm_proc = XgmProcessor()
@@ -233,8 +233,8 @@ class TrainWorker(ProcessWorker):
         """Initialization."""
         super().__init__('train worker')
 
-        self._inputs = [MpInQueue(f"{self._name}:input")]
-        self._output = MpOutQueue(f"{self._name}:output", gui=True)
+        self._inputs = [MpQueuePipeIn()]
+        self._output = MpQueuePipeOut(gui=True)
 
         self._roi_proc = RoiProcessorTrain()
         self._ai_proc = AzimuthalIntegrationProcessorTrain()

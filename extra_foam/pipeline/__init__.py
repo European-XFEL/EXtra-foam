@@ -1,9 +1,9 @@
 from .worker import PulseWorker, TrainWorker
-from .pipe import MpInQueue, MpOutQueue
+from .pipe import MpQueuePipeIn, MpQueuePipeOut
 
 __all__ = [
-    "MpInQueue",
-    "MpOutQueue",
+    "MpQueuePipeIn",
+    "MpQueuePipeOut",
     "PulseWorker",
     "TrainWorker",
 ]

@@ -7,12 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from abc import ABC, abstractmethod
 import multiprocessing as mp
 import threading
 from queue import Empty, Full, Queue
 import time
 
-from karabo_bridge import Client
+import karabo_bridge as kb
 
 from ..config import config, DataSource
 from ..utils import profiler
@@ -21,7 +22,7 @@ from ..database import MetaProxy
 from ..database import Metadata as mt
 
 
-class Pipe:
+class Pipe(ABC):
     """Abstract Pipe class.
 
     Pipe is used to transfer data between different processes via socket,
@@ -30,19 +31,14 @@ class Pipe:
     this Queue.
     """
 
-    def __init__(self, name, *, daemon=True, gui=False):
+    def __init__(self, *, gui=False):
         """Initialization.
 
-        :param str name: name of the pipe
-        :param bool daemon: daemonness of the pipe thread.
         :param bool gui: True for connecting to GUI and False for not.
         """
-        self._name = name
-
-        self._daemon = daemon
         self._gui = gui
 
-        self._data = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._queue = Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
         self.log = ProcessWorkerLogger()
 
@@ -66,10 +62,11 @@ class Pipe:
 
         thread = threading.Thread(target=self.work,
                                   args=(close_ev, self._update_ev),
-                                  daemon=self._daemon)
+                                  daemon=True)
         thread.start()
         return thread
 
+    @abstractmethod
     def work(self, close_ev, update_ev):
         """Target function for running in a thread.
 
@@ -78,13 +75,13 @@ class Pipe:
         :param multithreading.Event update_ev: if this event is set, the
             pipe will update its status.
         """
-        raise NotImplementedError
+        pass
 
     def clean(self):
         """Empty the data queue."""
-        while not self._data.empty():
+        while not self._queue.empty():
             try:
-                self._data.get_nowait()
+                self._queue.get_nowait()
             except Empty:
                 break
 
@@ -93,20 +90,25 @@ class PipeIn(Pipe):
     """A pipe that receives incoming data."""
     def get(self, timeout=None):
         """Remove and return the first data item in the queue."""
-        return self._data.get(timeout=timeout)
+        return self._queue.get(timeout=timeout)
 
     def get_nowait(self):
-        return self._data.get_nowait()
+        return self._queue.get_nowait()
+
+    @abstractmethod
+    def connect(self, pipe_out):
+        """Connect to an output Pipe."""
+        pass
 
 
 class PipeOut(Pipe):
     """A pipe that dispatches data outwards."""
     def put(self, item, timeout=None):
         """Add a new data item into the queue."""
-        return self._data.put(item, timeout=timeout)
+        return self._queue.put(item, timeout=timeout)
 
     def put_nowait(self, item):
-        return self._data.put_nowait(item)
+        return self._queue.put_nowait(item)
 
     def put_pop(self, item, timeout=None):
         """Add a new data item into the queue aggressively.
@@ -115,18 +117,20 @@ class PipeOut(Pipe):
         new data item will be added again without blocking.
         """
         try:
-            self._data.put(item, timeout=timeout)
+            self._queue.put(item, timeout=timeout)
         except Full:
-            self._data.get_nowait()
-            self.log.warning(f"Data dropped by {self._name} due to "
+            self._queue.get_nowait()
+            self.log.warning(f"Data dropped in {self} due to "
                              f"slowness of the pipeline")
-            self._data.put_nowait(item)
+            self._queue.put_nowait(item)
 
 
-class KaraboBridge(PipeIn):
-    """Karabo bridge client which is an input pipe."""
-    def __init__(self, name, **kwargs):
-        super().__init__(name, **kwargs)
+class KaraboBridgePipeIn(PipeIn):
+    """Input pipe which uses a Karabo bridge client to receive data."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self._client = None  # Karabo bridge client instance
 
     def work(self, close_ev, update_ev):
         """Override."""
@@ -134,23 +138,20 @@ class KaraboBridge(PipeIn):
 
         # the time when the previous data was received
         prev_data_arrival_time = None
-        # Karabo bridge client instance
-        client = None
+
         while not close_ev.is_set():
             if update_ev.is_set():
                 cfg = self._meta.hget_all(mt.CONNECTION)
                 endpoint = cfg['endpoint']
                 src_type = DataSource(int(cfg['source_type']))
 
-                if client is None:
-                    # destroy the zmq socket
-                    del client
-                # instantiate a new client
-                client = Client(endpoint, timeout=timeout)
+                self.connect(kb.Client(endpoint, timeout=timeout))
                 self.log.debug(f"Instantiate a bridge client connected to "
                                f"{endpoint}")
+
                 update_ev.clear()
 
+            client = self._client
             if client is None:
                 time.sleep(0.001)
                 continue
@@ -169,11 +170,11 @@ class KaraboBridge(PipeIn):
                 #       owner process.
                 while not close_ev.is_set():
                     try:
-                        self._data.put({"raw": data[0],
-                                        "meta": data[1],
-                                        "source_type": src_type,
-                                        "processed": None},
-                                       timeout=timeout)
+                        self._queue.put({"raw": data[0],
+                                         "meta": data[1],
+                                         "source_type": src_type,
+                                         "processed": None},
+                                        timeout=timeout)
                         break
                     except Full:
                         continue
@@ -185,11 +186,20 @@ class KaraboBridge(PipeIn):
     def _recv_imp(self, client):
         return client.next()
 
+    def connect(self, pipe_out):
+        if isinstance(pipe_out, kb.Client):
+            if self._client is not None:
+                del self._client  # destroy the zmq socket
+            self._client = pipe_out
+        else:
+            raise TypeError(f"{self.__class__} can only connect to "
+                            f"{kb.Client}!")
 
-class MpInQueue(PipeIn):
-    """A pipe which uses a multi-processing queue to receive data."""
-    def __init__(self, name, **kwargs):
-        super().__init__(name, daemon=True, **kwargs)
+
+class MpQueuePipeIn(PipeIn):
+    """Input pipe which uses a multi-processing queue to receive data."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self._client = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
 
@@ -197,16 +207,14 @@ class MpInQueue(PipeIn):
         timeout = config['TIMEOUT']
 
         while not close_ev.is_set():
-            # receive data from the client
             try:
                 data = self._client.get(timeout=timeout)
             except Empty:
                 continue
 
             while not close_ev.is_set():
-                # store the newly received data
                 try:
-                    self._data.put(data, timeout=timeout)
+                    self._queue.put(data, timeout=timeout)
                     break
                 except Full:
                     continue
@@ -214,27 +222,30 @@ class MpInQueue(PipeIn):
         self._client.cancel_join_thread()
 
     def connect(self, pipe_out):
-        if isinstance(pipe_out, MpOutQueue):
-            self._client = pipe_out._client
+        if isinstance(pipe_out, MpQueuePipeOut):
+            self._client = pipe_out.client
         else:
-            raise NotImplementedError(f"Cannot connect {self.__class__} "
-                                      f"(input) to {type(pipe_out)} (output)")
+            raise TypeError(f"{self.__class__} can only connect to "
+                            f"{MpQueuePipeOut}!")
 
 
-class MpOutQueue(PipeOut):
-    """A pipe which uses a multi-processing queue to dispatch data."""
-    def __init__(self, name, **kwargs):
-        super().__init__(name, daemon=True, **kwargs)
+class MpQueuePipeOut(PipeOut):
+    """Output pipe which uses a multi-processing queue to dispatch data."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self._client = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
+
+    @property
+    def client(self):
+        return self._client
 
     def work(self, close_ev, update_ev):
         timeout = config['TIMEOUT']
 
         while not close_ev.is_set():
-            # pop the stored data
             try:
-                data = self._data.get(timeout=timeout)
+                data = self._queue.get(timeout=timeout)
             except Empty:
                 continue
 
@@ -245,7 +256,6 @@ class MpOutQueue(PipeOut):
                             in ['processed', 'source_type', 'meta', 'raw']}
 
             while not close_ev.is_set():
-                # push the stored data into client
                 try:
                     self._client.put(data_out, timeout=timeout)
                     break

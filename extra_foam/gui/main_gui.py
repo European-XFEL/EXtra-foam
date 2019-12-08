@@ -45,7 +45,7 @@ from ..config import config
 from ..logger import logger
 from ..utils import profiler
 from ..ipc import RedisConnection, RedisPSubscriber
-from ..pipeline import MpInQueue
+from ..pipeline import MpQueuePipeIn
 from ..processes import shutdown_all
 from ..database import MonProxy
 
@@ -132,7 +132,7 @@ class MainGUI(QMainWindow):
         self._pulse_resolved = config["PULSE_RESOLVED"]
         self._queue = deque(maxlen=1)
 
-        self._input = MpInQueue("gui:input")
+        self._input = MpQueuePipeIn()
         self._close_ev = mp.Event()
         self._input.run_in_thread(self._close_ev)
 
