@@ -21,10 +21,17 @@ from extra_foam.pipeline.exceptions import ImageProcessingError
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
 from extra_foam.database import MetaProxy
+from extra_foam.pipeline.processors import *
 
 app = mkQApp()
 
 logger.setLevel('CRITICAL')
+
+
+def _get_proc(worker, proc_type):
+    for p in worker._tasks:
+        if isinstance(p, proc_type):
+            return p
 
 
 class TestSimpleImageData(unittest.TestCase):
@@ -73,8 +80,10 @@ class TestImageTool(unittest.TestCase):
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
-        cls.train_worker = cls.foam.train_worker
-        cls.pulse_worker = cls.foam.pulse_worker
+        cls.train_worker = cls.foam._train_worker
+        cls.pulse_worker = cls.foam._pulse_worker
+
+        cls._img_proc = _get_proc(cls.pulse_worker, ImageProcessor)
 
         cls._meta = MetaProxy()
 
@@ -135,7 +144,7 @@ class TestImageTool(unittest.TestCase):
     def testDefaultValues(self):
         # This must be the first test method in order to check that the
         # default values are set correctly
-        proc = self.train_worker._roi_proc
+        proc = _get_proc(self.train_worker, RoiProcessorTrain)
         widget = self.image_tool._corrected_view._roi_ctrl_widget
 
         proc.update()
@@ -150,7 +159,7 @@ class TestImageTool(unittest.TestCase):
     def testRoiCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_ctrl_widget
         roi_ctrls = widget._roi_ctrls
-        proc = self.train_worker._roi_proc
+        proc = _get_proc(self.train_worker, RoiProcessorTrain)
         self.assertEqual(4, len(roi_ctrls))
 
         for ctrl in roi_ctrls:
@@ -260,7 +269,7 @@ class TestImageTool(unittest.TestCase):
 
     def testSetAndRemoveReference(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.pulse_worker._image_proc
+        proc = _get_proc(self.pulse_worker, ImageProcessor)
 
         data = self._get_data()
 
@@ -294,8 +303,8 @@ class TestImageTool(unittest.TestCase):
         from extra_foam.ipc import ImageMaskPub
 
         pub = ImageMaskPub()
-        proc = self.pulse_worker._image_proc
         data = self._get_data()
+        proc = self._img_proc
 
         # trigger the lazily evaluated subscriber
         proc.process(data)
@@ -348,36 +357,36 @@ class TestImageTool(unittest.TestCase):
             proc.process(data)
 
     def testDarkRun(self):
-        image_proc = self.pulse_worker._image_proc
+        proc = self._img_proc
 
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
+        proc.update()
+        self.assertFalse(proc._recording)
 
         # test "Recording dark" action
         self.assertFalse(self.image_tool._record_at.isEnabled())
         self.image_tool._views_tab.setCurrentWidget(self.image_tool._dark_view)
         self.assertTrue(self.image_tool._record_at.isEnabled())
         self.image_tool._record_at.trigger()  # start recording
-        image_proc.update()
-        self.assertTrue(image_proc._recording)
+        proc.update()
+        self.assertTrue(proc._recording)
         self.image_tool._record_at.trigger()  # stop recording
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
+        proc.update()
+        self.assertFalse(proc._recording)
 
         # test "Remove dark" action
         data = np.ones((10, 10), dtype=np.float32)
-        image_proc._dark_run = data
-        image_proc._dark_mean = data
+        proc._dark_run = data
+        proc._dark_mean = data
         self.image_tool._remove_at.trigger()
-        image_proc.update()
-        self.assertIsNone(image_proc._dark_run)
-        self.assertIsNone(image_proc._dark_mean)
+        proc.update()
+        self.assertIsNone(proc._dark_run)
+        self.assertIsNone(proc._dark_mean)
 
         # test "subtract dark" checkbox
-        self.assertTrue(image_proc._dark_subtraction)
+        self.assertTrue(proc._dark_subtraction)
         self.image_tool._image_ctrl_widget.darksubtraction_cb.setChecked(False)
-        image_proc.update()
-        self.assertFalse(image_proc._dark_subtraction)
+        proc.update()
+        self.assertFalse(proc._dark_subtraction)
 
     def testBulletinView(self):
         processed = ProcessedData(1357)
@@ -402,9 +411,8 @@ class TestImageTool(unittest.TestCase):
         widget = self.image_tool._azimuthal_integ_1d_view._ctrl_widget
         all_normalizers = {value: key for key, value in
                            widget._available_normalizers.items()}
-        train_worker = self.train_worker
-        proc = train_worker._ai_proc
 
+        proc = _get_proc(self.train_worker, AzimuthalIntegrationProcessorTrain)
         proc.update()
 
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'], proc._sample_dist)
@@ -452,11 +460,13 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual(1000 * 0.000002, proc._poni1)
 
     def testProjection1DCtrlWidget(self):
+        from extra_foam.pipeline.processors import RoiProcessorTrain
+
         widget = self.image_tool._corrected_view._proj1d_ctrl_widget
         all_normalizers = {value: key for key, value in
                            widget._available_normalizers.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = _get_proc(self.train_worker, RoiProcessorTrain)
         proc.update()
 
         # test default reconfigurable values
@@ -484,17 +494,17 @@ class TestImageTool(unittest.TestCase):
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
 
-        pulse_worker = self.pulse_worker
+        assembler = _get_proc(self.pulse_worker, ImageAssemblerFactory.LpdImageAssembler)
 
         widget._geom_file_le.setText(config["GEOMETRY_FILE"])
         self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
+        assembler.update()
+        self.assertIsInstance(assembler._geom, LPD_1MGeometry)
 
         widget._with_geometry_cb.setChecked(False)
         self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsNone(pulse_worker._assembler._geom)
+        assembler.update()
+        self.assertIsNone(assembler._geom)
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
@@ -530,7 +540,7 @@ class TestImageToolTs(unittest.TestCase):
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
-        cls.train_worker = cls.foam.train_worker
+        cls.train_worker = cls.foam._train_worker
 
         actions = cls.gui._tool_bar.actions()
         cls._action = actions[3]

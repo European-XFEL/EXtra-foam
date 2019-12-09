@@ -31,6 +31,7 @@ from .processors import (
     XgmProcessor,
     TrXasProcessor,
 )
+from ..processes import ProcessInfo, register_foam_process
 from ..config import config, DataSource
 from ..ipc import ProcessWorkerLogger, RedisConnection
 
@@ -44,6 +45,7 @@ class ProcessWorker(mp.Process):
         super().__init__()
 
         self._name = name
+        register_foam_process(ProcessInfo(name=name, process=self))
 
         self.log = ProcessWorkerLogger()
 
@@ -197,33 +199,40 @@ class ProcessWorker(mp.Process):
         self._pause_ev.clear()
 
 
+class BrokerWorker(ProcessWorker):
+    """Pipeline worker as a broker.
+
+    The broker receives data from one or more sources (PipeToZeroMQ device
+    in European XFEL) and create observables.
+    """
+    def __init__(self):
+        super().__init__('Data broker')
+
+        self._inputs = [KaraboBridgePipeIn()]
+        self._output = MpQueuePipeOut()
+
+        self._tasks = [
+            Broker()
+        ]
+
+
 class PulseWorker(ProcessWorker):
     """Pipeline worker for pulse-resolved data."""
     def __init__(self):
         """Initialization."""
         super().__init__('pulse worker')
 
-        self._inputs = [KaraboBridgePipeIn()]
+        self._inputs = [MpQueuePipeIn()]
         self._output = MpQueuePipeOut()
 
-        self._broker = Broker()
-        self._xgm_proc = XgmProcessor()
-        self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
-        self._image_proc = ImageProcessor()
-        self._roi_proc = RoiProcessorPulse()
-        self._ai_proc = AzimuthalIntegrationProcessorPulse()
-        self._post_pulse_filter = PostPulseFilter()
-        self._pp_proc = PumpProbeProcessor()
-
         self._tasks = [
-            self._broker,
-            self._xgm_proc,
-            self._assembler,
-            self._image_proc,
-            self._roi_proc,
-            self._ai_proc,
-            self._post_pulse_filter,
-            self._pp_proc,
+            XgmProcessor(),
+            ImageAssemblerFactory.create(config['DETECTOR']),
+            ImageProcessor(),
+            RoiProcessorPulse(),
+            AzimuthalIntegrationProcessorPulse(),
+            PostPulseFilter(),
+            PumpProbeProcessor(),
         ]
 
 
@@ -236,20 +245,11 @@ class TrainWorker(ProcessWorker):
         self._inputs = [MpQueuePipeIn()]
         self._output = MpQueuePipeOut(gui=True)
 
-        self._roi_proc = RoiProcessorTrain()
-        self._ai_proc = AzimuthalIntegrationProcessorTrain()
-
-        self._statistics = StatisticsProcessor()
-        self._correlation_proc = CorrelationProcessor()
-        self._bin_proc = BinProcessor()
-
-        self._tr_xas = TrXasProcessor()
-
         self._tasks = [
-            self._roi_proc,
-            self._ai_proc,
-            self._statistics,
-            self._correlation_proc,
-            self._bin_proc,
-            self._tr_xas,
+            RoiProcessorTrain(),
+            AzimuthalIntegrationProcessorTrain(),
+            StatisticsProcessor(),
+            CorrelationProcessor(),
+            BinProcessor(),
+            TrXasProcessor(),
         ]

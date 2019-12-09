@@ -17,10 +17,17 @@ from extra_foam.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode
 )
 from extra_foam.processes import wait_until_redis_shutdown
+from extra_foam.pipeline.processors import *
 
 app = mkQApp()
 
 logger.setLevel("CRITICAL")
+
+
+def _get_proc(worker, proc_type):
+    for p in worker._tasks:
+        if isinstance(p, proc_type):
+            return p
 
 
 class TestLpdMainGuiCtrl(unittest.TestCase):
@@ -35,8 +42,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls.foam = Foam().init()
 
         cls.gui = cls.foam._gui
-        cls.train_worker = cls.foam.train_worker
-        cls.pulse_worker = cls.foam.pulse_worker
+        cls.train_worker = cls.foam._train_worker
+        cls.pulse_worker = cls.foam._pulse_worker
 
     @classmethod
     def tearDownClass(cls):
@@ -49,12 +56,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testAnalysisCtrlWidget(self):
         widget = self.gui.analysis_ctrl_widget
-        train_worker = self.train_worker
-        pulse_worker = self.pulse_worker
 
-        xgm_proc = pulse_worker._xgm_proc
-        ai_proc = train_worker._ai_proc
-        roi_proc = train_worker._roi_proc
+        xgm_proc = _get_proc(self.pulse_worker, XgmProcessor)
+        ai_proc = _get_proc(self.train_worker, AzimuthalIntegrationProcessorTrain)
+        roi_proc = _get_proc(self.train_worker, RoiProcessorTrain)
 
         # test "Moving average window"
         widget._ma_window_le.setText("5")
@@ -79,35 +84,35 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.pulse_worker._pp_proc
+        proc = _get_proc(self.pulse_worker, PumpProbeProcessor)
 
         all_modes = {value: key for key, value in
                      widget._available_modes.items()}
 
         # check default reconfigurable params
-        pp_proc.update()
-        self.assertTrue(pp_proc._abs_difference)
-        self.assertEqual(AnalysisType(0), pp_proc.analysis_type)
+        proc.update()
+        self.assertTrue(proc._abs_difference)
+        self.assertEqual(AnalysisType(0), proc.analysis_type)
 
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertIsInstance(pp_proc._on_indices[0], int)
-        self.assertListEqual([-1], pp_proc._off_indices)
-        self.assertIsInstance(pp_proc._off_indices[0], int)
+        proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, proc._mode)
+        self.assertListEqual([-1], proc._on_indices)
+        self.assertIsInstance(proc._on_indices[0], int)
+        self.assertListEqual([-1], proc._off_indices)
+        self.assertIsInstance(proc._off_indices[0], int)
 
         # change analysis type
-        pp_proc._reset = False
+        proc._reset = False
         widget._analysis_type_cb.setCurrentText('ROI1 - ROI2 (proj)')
-        pp_proc.update()
-        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, pp_proc.analysis_type)
-        self.assertTrue(pp_proc._reset)
+        proc.update()
+        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, proc.analysis_type)
+        self.assertTrue(proc._reset)
 
         # change pump-probe mode
-        pp_proc._reset = False
+        proc._reset = False
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
-        pp_proc.update()
-        self.assertTrue(pp_proc._reset)
+        proc.update()
+        self.assertTrue(proc._reset)
 
         # off_pulse_le will be disabled when the mode is PRE_DEFINED_OFF
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
@@ -118,26 +123,26 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(widget._off_pulse_le.isEnabled())
 
         # change abs_difference
-        pp_proc._reset = False
+        proc._reset = False
         QTest.mouseClick(widget._abs_difference_cb, Qt.LeftButton,
                          pos=QPoint(2, widget._abs_difference_cb.height()/2))
-        pp_proc.update()
-        self.assertFalse(pp_proc._abs_difference)
-        self.assertTrue(pp_proc._reset)
+        proc.update()
+        self.assertFalse(proc._abs_difference)
+        self.assertTrue(proc._reset)
 
         # change on/off pulse indices
         widget._on_pulse_le.setText('0:10:2')
         widget._off_pulse_le.setText('1:10:2')
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
-        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._off_indices)
+        proc.update()
+        self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, proc._mode)
+        self.assertListEqual([0, 2, 4, 6, 8], proc._on_indices)
+        self.assertListEqual([1, 3, 5, 7, 9], proc._off_indices)
 
         # test reset button
-        pp_proc._reset = False
+        proc._reset = False
         widget._reset_btn.clicked.emit()
-        pp_proc.update()
-        self.assertTrue(pp_proc._reset)
+        proc.update()
+        self.assertTrue(proc._reset)
 
     @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
                                "SOURCE_NAME_FILE": ["A", "B"]})
@@ -147,10 +152,6 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         for widget in self.gui._ctrl_widgets:
             if isinstance(widget, ConnectionCtrlWidget):
                 break
-
-        train_worker = self.train_worker
-        pulse_worker = self.pulse_worker
-        assembler = pulse_worker._assembler
 
         # test passing tcp hostname and port
 
@@ -178,8 +179,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
-        pulse_worker = self.pulse_worker
-        post_pulse_filter = pulse_worker._post_pulse_filter
+        post_pulse_filter = _get_proc(self.pulse_worker, PostPulseFilter)
 
         analysis_types = {value: key for key, value in
                           widget._analysis_types.items()}
@@ -205,8 +205,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             self.assertEqual(
                 list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
 
-        train_worker = self.train_worker
-        proc = train_worker._correlation_proc
+        proc = _get_proc(self.train_worker, CorrelationProcessor)
 
         proc.update()
 
@@ -257,8 +256,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
             self.assertEqual(
                 list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
 
-        train_worker = self.train_worker
-        proc = train_worker._bin_proc
+        proc = _get_proc(self.train_worker, BinProcessor)
         proc.update()
 
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
@@ -342,8 +340,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     def testStatisticsCtrlWidget(self):
         widget = self.gui.statistics_ctrl_widget
-        train_worker = self.train_worker
-        proc = train_worker._statistics
+        proc = _get_proc(self.train_worker, StatisticsProcessor)
         proc.update()
 
         analysis_types = {value: key for key, value in
@@ -449,7 +446,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertFalse(stop_action.isEnabled())
 
     def testPoiWindowCtrl(self):
-        image_proc = self.pulse_worker._image_proc
+        proc = _get_proc(self.pulse_worker, ImageProcessor)
 
         # --------------------------
         # test setting POI pulse indices
@@ -470,9 +467,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(default_index2, window._poi_widget2._poi_img._index)
         self.assertEqual(default_index2, window._poi_widget2._poi_statistics._index)
 
-        image_proc.update()
-        self.assertEqual(default_index1, image_proc._poi_indices[0])
-        self.assertEqual(default_index2, image_proc._poi_indices[1])
+        proc.update()
+        self.assertEqual(default_index1, proc._poi_indices[0])
+        self.assertEqual(default_index2, proc._poi_indices[1])
 
         # set new values
         poi_index1 = 10
@@ -485,9 +482,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(poi_index2, window._poi_widget2._poi_img._index)
         self.assertEqual(poi_index2, window._poi_widget2._poi_statistics._index)
 
-        image_proc.update()
-        self.assertEqual(poi_index1, image_proc._poi_indices[0])
-        self.assertEqual(poi_index2, image_proc._poi_indices[1])
+        proc.update()
+        self.assertEqual(poi_index1, proc._poi_indices[0])
+        self.assertEqual(poi_index2, proc._poi_indices[1])
 
     def testTrXasCtrl(self):
         from extra_foam.gui.ctrl_widgets.trxas_ctrl_widget import (
@@ -496,7 +493,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
 
         widget = self.gui._trxas_ctrl_widget
-        proc = self.train_worker._tr_xas
+        proc = _get_proc(self.train_worker, TrXasProcessor)
 
         # test default values
         proc.update()
@@ -542,7 +539,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         cls.foam = Foam().init()
 
         cls.gui = cls.foam._gui
-        cls.pulse_worker = cls.foam.pulse_worker
+        cls.pulse_worker = cls.foam._pulse_worker
 
     @classmethod
     def tearDownClass(cls):
@@ -555,7 +552,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
-        pp_proc = self.pulse_worker._pp_proc
+        proc = _get_proc(self.pulse_worker, PumpProbeProcessor)
 
         self.assertFalse(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
@@ -565,20 +562,20 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         # we only test train-resolved detector specific configuration
 
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertListEqual([-1], pp_proc._off_indices)
+        proc.update()
+        self.assertEqual(PumpProbeMode.UNDEFINED, proc._mode)
+        self.assertListEqual([-1], proc._on_indices)
+        self.assertListEqual([-1], proc._off_indices)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
         self.assertEqual(1, len(spy))
 
-        pp_proc.update()
-        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertListEqual([-1], pp_proc._off_indices)
+        proc.update()
+        self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), proc._mode)
+        self.assertListEqual([-1], proc._on_indices)
+        self.assertListEqual([-1], proc._off_indices)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
         self.assertEqual(2, len(spy))
@@ -595,12 +592,12 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         pass
 
     def testPoiWindowCtrl(self):
-        image_proc = self.pulse_worker._image_proc
+        proc = _get_proc(self.pulse_worker, ImageProcessor)
 
         # POI action is disabled
         poi_action = self.gui._tool_bar.actions()[4]
         self.assertEqual("Pulse-of-interest", poi_action.text())
         self.assertFalse(poi_action.isEnabled())
 
-        image_proc.update()
-        self.assertIsNone(image_proc._poi_indices)
+        proc.update()
+        self.assertIsNone(proc._poi_indices)

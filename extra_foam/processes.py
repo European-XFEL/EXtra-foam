@@ -15,7 +15,6 @@ from psutil import NoSuchProcess
 
 from .config import config
 from .logger import logger
-from .pipeline.worker import ProcessWorker
 
 
 ProcessInfo = namedtuple("ProcessInfo", [
@@ -47,7 +46,6 @@ def register_foam_process(process_info):
     if name.lower() == 'redis':
         _foam_processes.redis[name] = proc
     else:
-        assert isinstance(proc, ProcessWorker)
         _foam_processes.pipeline[name] = proc
 
 

@@ -25,7 +25,7 @@ from .database import MetaProxy
 from .ipc import redis_connection, reset_redis_connections
 from .logger import logger
 from .gui import MainGUI, mkQApp
-from .pipeline import PulseWorker, TrainWorker
+from .pipeline import BrokerWorker, PulseWorker, TrainWorker
 from .processes import ProcessInfo, register_foam_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
@@ -194,9 +194,17 @@ class Foam:
         proxy.initialize_analysis_types()
 
         try:
-            self.pulse_worker = PulseWorker()
-            self.train_worker = TrainWorker()
-            self.train_worker.connectInputToOutput(self.pulse_worker.output)
+            self._broker_worker = BrokerWorker()
+            self._pulse_worker = PulseWorker()
+            self._train_worker = TrainWorker()
+            self._workers = [
+                self._broker_worker,
+                self._pulse_worker,
+                self._train_worker
+            ]
+
+            self._pulse_worker.connectInputToOutput(self._broker_worker.output)
+            self._train_worker.connectInputToOutput(self._pulse_worker.output)
 
             self._gui = MainGUI(start_thread_logger=True)
         except Exception as e:
@@ -207,26 +215,23 @@ class Foam:
 
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
-        self.pulse_worker.start()
-        register_foam_process(ProcessInfo(name=self.pulse_worker.name,
-                                          process=self.pulse_worker))
-        self.train_worker.start()
-        register_foam_process(ProcessInfo(name=self.train_worker.name,
-                                          process=self.train_worker))
 
-        self._gui.connectInputToOutput(self.train_worker.output)
+        for w in self._workers:
+            w.start()
+
+        self._gui.connectInputToOutput(self._train_worker.output)
         self._gui.start_sgn.connect(self.start)
         self._gui.stop_sgn.connect(self.pause)
 
         return self
 
     def start(self):
-        self.train_worker.resume()
-        self.pulse_worker.resume()
+        for w in self._workers:
+            w.resume()
 
     def pause(self):
-        self.train_worker.pause()
-        self.pulse_worker.pause()
+        for w in self._workers:
+            w.pause()
 
     def terminate(self):
         if self._gui is not None:
