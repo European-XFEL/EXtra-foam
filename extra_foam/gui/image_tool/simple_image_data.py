@@ -9,7 +9,8 @@ All rights reserved.
 """
 from ...pipeline.data_model import ImageData
 from ...utils import cached_property
-from ...algorithms import mask_image
+
+from extra_foam.cpp import mask_image
 
 
 class _SimpleImageData:
@@ -88,9 +89,9 @@ class _SimpleImageData:
 
     @cached_property
     def masked(self):
-        return mask_image(self._image,
-                          threshold_mask=self._threshold_mask,
-                          inplace=False)
+        img = self._image.copy()
+        mask_image(img, threshold_mask=self._threshold_mask)
+        return img
 
     @classmethod
     def from_array(cls, arr):

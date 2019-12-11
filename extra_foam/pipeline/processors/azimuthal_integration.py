@@ -17,10 +17,12 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
-from ...algorithms import mask_image, slice_curve
+from ...algorithms import slice_curve
 from ...config import Normalizer, AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler
+
+from extra_foam.cpp import mask_image
 
 
 def energy2wavelength(energy):
@@ -156,7 +158,8 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
         threshold_mask = processed.image.threshold_mask
 
         def _integrate1d_imp(i):
-            masked = mask_image(assembled[i], threshold_mask=threshold_mask)
+            masked = assembled[i].copy()
+            mask_image(masked, threshold_mask=threshold_mask)
             return integ1d(masked, integ_points)
 
         intensities = []  # pulsed A.I.
@@ -168,7 +171,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
                     momentum = ret.radial
                 intensities.append(ret.intensity)
 
-        # intensities = self._normalize_vfom(
+        # intensities = self._normalize_fom(
         #     processed, np.array(intensities), self._normalizer,
         #     x=momentum, auc_range=self._auc_range)
 
@@ -236,7 +239,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             mean_ret = integ1d(processed.image.masked_mean, integ_points)
 
             momentum = mean_ret.radial
-            intensity = self._normalize_vfom(
+            intensity = self._normalize_fom(
                 processed, mean_ret.intensity, self._normalizer,
                 x=momentum, auc_range=self._auc_range)
 
@@ -271,11 +274,11 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                 self._intensity_on_ma = on_ret.intensity
                 self._intensity_off_ma = off_ret.intensity
 
-                vfom_on, vfom_off = self._normalize_vfom_pp(
+                y_on, y_off = self._normalize_fom_pp(
                     processed, self._intensity_on_ma, self._intensity_off_ma,
                     self._normalizer, x=on_ret.radial, auc_range=self._auc_range)
 
-                vfom = vfom_on - vfom_off
+                vfom = y_on - y_off
                 sliced = slice_curve(vfom, momentum, *self._fom_integ_range)[0]
 
                 if pp.abs_difference:
@@ -283,8 +286,8 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
                 else:
                     fom = np.sum(sliced)
 
-                pp.vfom_on = vfom_on
-                pp.vfom_off = vfom_off
+                pp.y_on = y_on
+                pp.y_off = y_off
                 pp.vfom = vfom
                 pp.x = momentum
                 pp.fom = fom

@@ -154,11 +154,29 @@ class Mediator(QObject):
         idx, x, y, w, h = value
         self._meta.hset(mt.ROI_PROC, f'geom{idx}', str((x, y, w, h)))
 
-    def onRoiProjDirectChange(self, value: str):
-        self._meta.hset(mt.ROI_PROC, 'proj:direction', value)
+    def onRoiFomTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'fom:type', int(value))
 
-    def onRoiProjNormalizerChange(self, value: IntEnum):
-        self._meta.hset(mt.ROI_PROC, "proj:normalizer", int(value))
+    def onRoiFomComboChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'fom:combo', int(value))
+
+    def onRoiFomNormChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, "fom:norm", int(value))
+
+    def onRoiNormTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'norm:type', int(value))
+
+    def onRoiNormComboChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'norm:combo', int(value))
+
+    def onRoiProjComboChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'proj:combo', int(value))
+
+    def onRoiProjDirectChange(self, value: str):
+        self._meta.hset(mt.ROI_PROC, 'proj:direct', value)
+
+    def onRoiProjNormChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, "proj:norm", int(value))
 
     def onRoiProjAucRangeChange(self, value: tuple):
         self._meta.hset(mt.ROI_PROC, "proj:auc_range", str(value))

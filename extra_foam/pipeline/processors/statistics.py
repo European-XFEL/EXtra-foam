@@ -74,37 +74,17 @@ class StatisticsProcessor(_BaseProcessor):
 
         fom = None
         if self._pulse_resolved:
-            if self.analysis_type == AnalysisType.ROI1_PULSE:
-                fom = processed.pulse.roi.roi1.fom
+            if self.analysis_type == AnalysisType.ROI_FOM_PULSE:
+                fom = processed.pulse.roi.fom
                 if fom is None:
-                    raise ProcessingError("[Statistics] Pulse resolved ROI1 "
-                                          "sum result is not available")
-            elif self.analysis_type == AnalysisType.ROI2_PULSE:
-                fom = processed.pulse.roi.roi2.fom
-                if fom is None:
-                    raise ProcessingError("[Statistics] Pulse resolved ROI2 "
-                                          "sum result is not available")
-            elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG_PULSE:
-                fom = processed.pulse.ai.fom
-                if fom is None:
-                    raise ProcessingError("[Statistics] Pulse resolved azimuthal "
-                                          "int. result is not available")
+                    raise ProcessingError("[Statistics] Pulse resolved ROI "
+                                          "FOM is not available")
+
         else:
-            if self.analysis_type == AnalysisType.ROI1:
-                fom = processed.roi.roi1.fom
+            if self.analysis_type == AnalysisType.ROI_FOM:
+                fom = processed.roi.fom
                 if fom is None:
-                    raise ProcessingError("[Statistics] ROI1 sum result is "
-                                          "not available")
-            elif self.analysis_type == AnalysisType.ROI2:
-                fom = processed.roi.roi2.fom
-                if fom is None:
-                    raise ProcessingError("[Statistics] ROI2 sum result is "
-                                          "not available")
-            elif self.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-                fom = processed.ai.fom
-                if fom is None:
-                    raise ProcessingError("[Statistics] Azimuthal int. result "
-                                          "is not available")
+                    raise ProcessingError("[Statistics] ROI FOM is not available")
 
         if fom is not None:
             processed.st.fom_hist = fom if self._pulse_resolved else None

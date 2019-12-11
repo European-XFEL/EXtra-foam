@@ -208,8 +208,7 @@ inline void maskImage(E& src, T lb, T ub)
     for (size_t k = 0; k < shape[1]; ++k)
     {
       auto v = src(j, k);
-      if (std::isnan(v)) continue;
-      if (v < lb || v > ub) src(j, k) = value_type(0);
+      if (std::isnan(v) || v < lb || v > ub) src(j, k) = value_type(0);
     }
   }
 }
@@ -235,6 +234,11 @@ inline void maskImage(E& src, const M& mask)
     for (size_t k = 0; k < shape[1]; ++k)
     {
       if (mask(j, k)) src(j, k) = value_type(0);
+      else
+      {
+        auto v = src(j, k);
+        if (std::isnan(v)) src(j, k) = value_type(0);
+      }
     }
   }
 }
@@ -261,14 +265,11 @@ inline void maskImage(E& src, const M& mask, T lb, T ub)
   {
     for (size_t k = 0; k < shape[1]; ++k)
     {
-      if (mask(j, k))
-      {
-        src(j, k) = value_type(0);
-      } else
+      if (mask(j, k)) src(j, k) = value_type(0);
+      else
       {
         auto v = src(j, k);
-        if (std::isnan(v)) continue;
-        if (v < lb || v > ub) src(j, k) = value_type(0);
+        if (std::isnan(v) || v < lb || v > ub) src(j, k) = value_type(0);
       }
     }
   }
@@ -285,8 +286,8 @@ template <typename E, typename T, template <typename> class C = is_image_array,
   check_container<E, C> = false>
 inline void maskImageArray(E& src, T lb, T ub)
 {
-#if defined(FOAM_WITH_TBB)
   using value_type = typename E::value_type;
+#if defined(FOAM_WITH_TBB)
   auto shape = src.shape();
 
   auto nan = std::numeric_limits<value_type>::quiet_NaN();
@@ -300,16 +301,14 @@ inline void maskImageArray(E& src, T lb, T ub)
           for(int k=block.cols().begin(); k != block.cols().end(); ++k)
           {
             auto v = src(i, j, k);
-            if (std::isnan(v)) continue;
-            if (v < lb || v > ub) src(i, j, k) = value_type(0);
+            if (std::isnan(v) || v < lb || v > ub) src(i, j, k) = value_type(0);
           }
         }
       }
     }
   );
 #else
-  using value_type = typename E::value_type;
-  xt::filter(src, src < lb | src > ub) = value_type(0);
+  xt::filter(src, xt::isnan(src) | src < lb | src > ub) = value_type(0);
 #endif
 }
 
@@ -352,6 +351,11 @@ inline void maskImageArray(E& src, const M& mask)
           {
 #endif
             if (mask(j, k)) src(i, j, k) = value_type(0);
+            else
+            {
+              auto v = src(i, j, k);
+              if (std::isnan(v)) src(i, j, k) = value_type(0);
+            }
           }
         }
       }
@@ -405,8 +409,7 @@ inline void maskImageArray(E& src, const M& mask, T lb, T ub)
             } else
             {
               auto v = src(i, j, k);
-              if (std::isnan(v)) continue;
-              if (v < lb || v > ub) src(i, j, k) = value_type(0);
+              if (std::isnan(v) || v < lb || v > ub) src(i, j, k) = value_type(0);
             }
           }
         }
@@ -458,21 +461,14 @@ inline void nanToZeroImageArray(E& src)
         {
           for(int k=block.cols().begin(); k != block.cols().end(); ++k)
           {
-#else
-      for (size_t i = 0; i < shape[0]; ++i)
-      {
-        for (size_t j = 0; j < shape[1]; ++j)
-        {
-          for (size_t k = 0; k < shape[2]; ++k)
-          {
-#endif
             if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
           }
         }
       }
-#if defined(FOAM_WITH_TBB)
     }
   );
+#else
+  xt::filter(src, xt::isnan(src)) = value_type(0);
 #endif
 }
 

@@ -106,9 +106,7 @@ class TestPlotWindows(unittest.TestCase):
         data = ProcessedData(1)
         for i in range(1000):
             data.corr.correlation1.hist = (int(i/5), 100*i)
-            data.corr.correlation2.hist = (int(i/5), -100*i)
-            data.corr.correlation3.hist = (i, i+1)
-            data.corr.correlation4.hist = (i, -i)
+            data.corr.correlation2.hist = (i, i+1)
 
         win._queue.append(data)
         win.updateWidgetsF()
@@ -116,18 +114,14 @@ class TestPlotWindows(unittest.TestCase):
 
         # change the resolutions
         data.corr.correlation1.reset = True
-        data.corr.correlation2.reset = True
-        data.corr.correlation3.resolution = 15
-        data.corr.correlation4.resolution = 20
+        data.corr.correlation2.resolution = 15
         data.corr.update_hist()
 
         # the data is cleared after the resolutions were changed
         # now the lower two plots have error bars but the upper ones do not
         for i in range(1000):
             data.corr.correlation1.hist = (i, i+1)
-            data.corr.correlation2.hist = (i, -i)
-            data.corr.correlation3.hist = (int(i/5), 100*i)
-            data.corr.correlation4.hist = (int(i/5), -100*i)
+            data.corr.correlation2.hist = (int(i/5), 100*i)
 
         win._queue.append(data)
         win.updateWidgetsF()

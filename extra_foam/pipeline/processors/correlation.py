@@ -61,11 +61,9 @@ class CorrelationProcessor(_BaseProcessor):
 
         processed.corr.correlation1.reset = self._reset
         processed.corr.correlation2.reset = self._reset
-        processed.corr.correlation3.reset = self._reset
-        processed.corr.correlation4.reset = self._reset
         self._reset = False
 
-        err_msgs = []
+        err_msg = ""
 
         analysis_type = self.analysis_type
         if analysis_type == AnalysisType.PUMP_PROBE:
@@ -75,49 +73,22 @@ class CorrelationProcessor(_BaseProcessor):
                 # if on/off pulses are in different trains, pump-probe FOM is
                 # only calculated every other train.
                 if self._pp_fail_flag == 2:
-                    err_msgs.append("Pump-probe result is not available")
+                    err_msg = "Pump-probe FOM is not available"
                     self._pp_fail_flag = 0
             else:
                 self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI1:
-            fom = processed.roi.roi1.fom
+        elif analysis_type == AnalysisType.ROI_FOM:
+            fom = processed.roi.fom
             if fom is None:
-                err_msgs.append("ROI1 FOM result is not available")
-        elif analysis_type == AnalysisType.ROI2:
-            fom = processed.roi.roi2.fom
+                err_msg = "ROI FOM is not available"
+        elif analysis_type == AnalysisType.ROI_PROJ:
+            fom = processed.roi.proj.fom
             if fom is None:
-                err_msgs.append("ROI2 FOM result is not available")
-        elif analysis_type == AnalysisType.ROI1_SUB_ROI2:
-            fom = processed.roi.roi1_sub_roi2.fom
-            if fom is None:
-                err_msgs.append("ROI1 - ROI2 FOM result is not available")
-        elif analysis_type == AnalysisType.ROI1_ADD_ROI2:
-            fom = processed.roi.roi1_add_roi2.fom
-            if fom is None:
-                err_msgs.append("ROI1 + ROI2 FOM result is not available")
-        elif analysis_type == AnalysisType.PROJ_ROI1:
-            fom = processed.roi.proj1.fom
-            if fom is None:
-                err_msgs.append("ROI1 projection result is not available")
-        elif analysis_type == AnalysisType.PROJ_ROI2:
-            fom = processed.roi.proj2.fom
-            if fom is None:
-                err_msgs.append("ROI2 projection result is not available")
-        elif analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
-            fom = processed.roi.proj1_sub_proj2.fom
-            if fom is None:
-                err_msgs.append(
-                    "ROI1 - ROI2 projection result is not available")
-        elif analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
-            fom = processed.roi.proj1_add_proj2.fom
-            if fom is None:
-                err_msgs.append(
-                    "ROI1 + ROI2 projection result is not available")
+                err_msg = "ROI projection FOM is not available"
         elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             fom = processed.ai.fom
             if fom is None:
-                err_msgs.append(
-                    "Azimuthal integration result is not available")
+                err_msg = "Azimuthal integration FOM is not available"
         else:  # self.analysis_type == AnalysisType.UNDEFINED
             return
 
@@ -129,8 +100,6 @@ class CorrelationProcessor(_BaseProcessor):
         correlations = [
             processed.corr.correlation1,
             processed.corr.correlation2,
-            processed.corr.correlation3,
-            processed.corr.correlation4
         ]
 
         for corr, dev_id, ppt, res in zip(correlations,
@@ -139,8 +108,8 @@ class CorrelationProcessor(_BaseProcessor):
                                           self._resolutions):
             v, err = self._fetch_property_data(processed.tid, data['raw'], dev_id, ppt)
             if err:
-                err_msgs.append(err)
+                err_msg = err
             corr.update_params(v, fom, dev_id, ppt, res)
 
-        for msg in err_msgs:
-            raise ProcessingError(f'[Correlation] {msg}')
+        if err_msg:
+            raise ProcessingError(f'[Correlation] {err_msg}')

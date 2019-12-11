@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import unittest
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -16,7 +17,7 @@ from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 
 
-class TestImageProcessorTr(_BaseProcessorTest):
+class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
     """Test pulse-resolved ImageProcessor.
 
     For train-resolved data.
@@ -78,7 +79,7 @@ class TestImageProcessorTr(_BaseProcessorTest):
         pass
 
 
-class TestImageProcessorPr(_BaseProcessorTest):
+class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
     """Test pulse-resolved ImageProcessor.
 
     For pulse-resolved data.

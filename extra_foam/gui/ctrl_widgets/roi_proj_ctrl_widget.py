@@ -14,32 +14,40 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import Normalizer
+from ...config import Normalizer, RoiCombo
 
 
-class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up ROI 1D projection analysis parameters."""
 
-    _available_normalizers = OrderedDict({
+    _available_norms = OrderedDict({
         "": Normalizer.UNDEFINED,
         "AUC": Normalizer.AUC,
         "XGM": Normalizer.XGM,
-        "ROI3 (sum)": Normalizer.ROI3,
-        "ROI4 (sum)": Normalizer.ROI4,
-        "ROI3 (sum) - ROI4 (sum)": Normalizer.ROI3_SUB_ROI4,
-        "ROI3 (sum) + ROI4 (sum)": Normalizer.ROI3_ADD_ROI4,
+        "ROI": Normalizer.ROI,
+    })
+
+    _available_combos = OrderedDict({
+        "ROI1": RoiCombo.ROI1,
+        "ROI2": RoiCombo.ROI2,
+        "ROI1 - ROI2": RoiCombo.ROI1_SUB_ROI2,
+        "ROI1 + ROI2": RoiCombo.ROI1_ADD_ROI2,
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("ROI 1D projection setup", *args, **kwargs)
+        super().__init__("ROI projection setup", *args, **kwargs)
+
+        self._combo_cb = QComboBox()
+        for v in self._available_combos:
+            self._combo_cb.addItem(v)
 
         self._direct_cb = QComboBox()
         for v in ['x', 'y']:
             self._direct_cb.addItem(v)
 
-        self._normalizers_cb = QComboBox()
-        for v in self._available_normalizers:
-            self._normalizers_cb.addItem(v)
+        self._norm_cb = QComboBox()
+        for v in self._available_norms:
+            self._norm_cb.addItem(v)
 
         self._auc_range_le = SmartBoundaryLineEdit("0, Inf")
         self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
@@ -54,14 +62,23 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout = QGridLayout()
         AR = Qt.AlignRight
 
-        layout.addWidget(QLabel("Direction: "), 0, 0, AR)
-        layout.addWidget(self._direct_cb, 0, 1)
-        layout.addWidget(QLabel("Normalizer: "), 1, 0, AR)
-        layout.addWidget(self._normalizers_cb, 1, 1)
-        layout.addWidget(QLabel("AUC range: "), 2, 0, AR)
-        layout.addWidget(self._auc_range_le, 2, 1)
-        layout.addWidget(QLabel("FOM range: "), 3, 0, AR)
-        layout.addWidget(self._fom_integ_range_le, 3, 1)
+        row = 0
+        layout.addWidget(QLabel("Combo: "), row, 0, AR)
+        layout.addWidget(self._combo_cb, row, 1)
+        layout.addWidget(QLabel("Direction: "), row, 2, AR)
+        layout.addWidget(self._direct_cb, row, 3)
+
+        row += 1
+        layout.addWidget(QLabel("Norm: "), row, 0, AR)
+        layout.addWidget(self._norm_cb, row, 1, 1, 3)
+
+        row += 1
+        layout.addWidget(QLabel("AUC range: "), row, 0, AR)
+        layout.addWidget(self._auc_range_le, row, 1, 1, 3)
+
+        row += 1
+        layout.addWidget(QLabel("FOM range: "), row, 0, AR)
+        layout.addWidget(self._fom_integ_range_le, row, 1, 1, 3)
 
         self.setLayout(layout)
 
@@ -69,12 +86,14 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Overload."""
         mediator = self._mediator
 
+        self._combo_cb.currentTextChanged.connect(
+            lambda x: mediator.onRoiProjComboChange(self._available_combos[x]))
+
         self._direct_cb.currentTextChanged.connect(
             mediator.onRoiProjDirectChange)
 
-        self._normalizers_cb.currentTextChanged.connect(
-            lambda x: mediator.onRoiProjNormalizerChange(
-                self._available_normalizers[x]))
+        self._norm_cb.currentTextChanged.connect(
+            lambda x: mediator.onRoiProjNormChange(self._available_norms[x]))
 
         self._auc_range_le.value_changed_sgn.connect(
             mediator.onRoiProjAucRangeChange)
@@ -84,14 +103,9 @@ class Projection1DCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def updateMetaData(self):
         """Overload."""
-        self._direct_cb.currentTextChanged.emit(
-            self._direct_cb.currentText())
-
-        self._normalizers_cb.currentTextChanged.emit(
-            self._normalizers_cb.currentText())
-
+        self._combo_cb.currentTextChanged.emit(self._combo_cb.currentText())
+        self._direct_cb.currentTextChanged.emit(self._direct_cb.currentText())
+        self._norm_cb.currentTextChanged.emit(self._norm_cb.currentText())
         self._auc_range_le.returnPressed.emit()
-
         self._fom_integ_range_le.returnPressed.emit()
-
         return True

@@ -66,39 +66,39 @@ class TestBaseProcessor(unittest.TestCase):
         self._check_has_no_analysis(AnalysisType.UNDEFINED)
 
         # set new analysis type for proc2
-        self._proc2._update_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self._proc2._update_analysis(AnalysisType.ROI_PROJ)
         self.assertEqual(AnalysisType.UNDEFINED, self._proc1.analysis_type)
-        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, self._proc2.analysis_type)
-        self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self.assertEqual(AnalysisType.ROI_PROJ, self._proc2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI_PROJ)
 
         # set new analysis type for proc1
         self._proc1._update_analysis(AnalysisType.AZIMUTHAL_INTEG)
         self._check_has_analysis(AnalysisType.AZIMUTHAL_INTEG)
-        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, self._proc2.analysis_type)
+        self.assertEqual(AnalysisType.ROI_PROJ, self._proc2.analysis_type)
         self.assertEqual(AnalysisType.AZIMUTHAL_INTEG, self._proc1.analysis_type)
 
         # unset analysis type for proc1
         self._proc1._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._proc1.analysis_type)
-        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, self._proc2.analysis_type)
-        self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self.assertEqual(AnalysisType.ROI_PROJ, self._proc2.analysis_type)
+        self._check_has_analysis(AnalysisType.ROI_PROJ)
         self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
 
         # unset analysis type for proc2
         self._proc2._update_analysis(AnalysisType.UNDEFINED)
         self.assertEqual(AnalysisType.UNDEFINED, self._proc1.analysis_type)
         self.assertEqual(AnalysisType.UNDEFINED, self._proc2.analysis_type)
-        self._check_has_no_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self._check_has_no_analysis(AnalysisType.ROI_PROJ)
         self._check_has_no_analysis(AnalysisType.AZIMUTHAL_INTEG)
 
         # set same analysis type for proc1 and proc2
-        self._proc1._update_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
-        self._proc2._update_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
-        self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self._proc1._update_analysis(AnalysisType.ROI_PROJ)
+        self._proc2._update_analysis(AnalysisType.ROI_PROJ)
+        self._check_has_analysis(AnalysisType.ROI_PROJ)
         self._proc2._update_analysis(AnalysisType.UNDEFINED)
-        self._check_has_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self._check_has_analysis(AnalysisType.ROI_PROJ)
         self._proc1._update_analysis(AnalysisType.UNDEFINED)
-        self._check_has_no_analysis(AnalysisType.PROJ_ROI1_SUB_ROI2)
+        self._check_has_no_analysis(AnalysisType.ROI_PROJ)
 
     def _check_has_analysis(self, analysis_type):
         self.assertTrue(self._meta.has_analysis(analysis_type))

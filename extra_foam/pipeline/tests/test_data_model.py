@@ -418,15 +418,11 @@ class TestCorrelationData(unittest.TestCase):
         self.assertIsInstance(data.correlation1.__class__.hist, PairData)
         self.assertIsNot(data.correlation1.__class__.hist,
                          data.correlation2.__class__.hist)
-        self.assertIsNot(data.correlation1.__class__.hist,
-                         data.correlation3.__class__.hist)
 
         # test update_params and clear
 
         data.correlation1.update_params(1, 11, 'dev1', 'ppt1', 0.0)
         data.correlation2.update_params(2, 22, 'dev2', 'ppt2', 0.0)
-        data.correlation3.update_params(3, 22, 'dev3', 'ppt3', 0.0)
-        data.correlation4.update_params(4, 44, 'dev4', 'ppt4', 0.0)
         data.update_hist()
 
         x, y, info = data.correlation1.hist
@@ -439,8 +435,6 @@ class TestCorrelationData(unittest.TestCase):
         data.correlation1.x = None
         data.correlation1.reset = True
         data.correlation2.reset = True
-        data.correlation3.reset = True
-        data.correlation4.reset = True
         data.update_hist()
 
         x, y, info = data.correlation1.hist
@@ -456,8 +450,6 @@ class TestCorrelationData(unittest.TestCase):
         data.update_hist()
         self.assertIsInstance(data.correlation1.__class__.hist, AccumulatedPairData)
         self.assertIsInstance(data.correlation2.__class__.hist, PairData)
-        self.assertIsInstance(data.correlation3.__class__.hist, PairData)
-        self.assertIsInstance(data.correlation4.__class__.hist, PairData)
 
         data.correlation1.update_params(1, 11, 'dev1', 'ppt1', 0.0)
         data.update_hist()
@@ -492,19 +484,14 @@ class TestRoiGeom(unittest.TestCase):
         from extra_foam.pipeline.data_model import RectRoiGeom
 
         for img in [self._img, self._img_array]:
-            # w = h = -1
+            # roi.geometry == [0, 0, -1, -1]
             roi = RectRoiGeom()
             self.assertIsNone(roi.rect(img))
 
-            # not activated
-            roi.set_geometry([1, 2, 3, 2])
+            # no intersection
+            roi.geometry = [-3, -4, 2, 2]
             self.assertIsNone(roi.rect(img))
 
-            # activate but no intersection
-            roi.activated = True
-            roi.set_geometry([-3, -4, 2, 2])
-            self.assertIsNone(roi.rect(img))
-
-            # activated
-            roi.set_geometry([1, 2, 3, 2])
+            # has intersection
+            roi.geometry = [1, 2, 3, 2]
             np.testing.assert_array_equal(img[..., 2:2+2, 1:1+3], roi.rect(img))

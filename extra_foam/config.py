@@ -34,28 +34,35 @@ class PumpProbeMode(IntEnum):
     ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
 
 
+class RoiCombo(IntEnum):
+    ROI1 = 1
+    ROI2 = 2
+    ROI1_SUB_ROI2 = 3
+    ROI1_ADD_ROI2 = 4
+    ROI3 = 11
+    ROI4 = 12
+    ROI3_SUB_ROI4 = 13
+    ROI3_ADD_ROI4 = 14
+
+
+class RoiFom(IntEnum):
+    SUM = 1
+    MEAN = 2
+    MEDIAN = 3
+    MAX = 4
+    MIN = 5
+
+
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
     TR_XAS = 2
-    ROI1 = 11
-    ROI2 = 12
-    ROI1_SUB_ROI2 = 13
-    ROI1_ADD_ROI2 = 14
-    PROJ_ROI1 = 21
-    PROJ_ROI2 = 22
-    PROJ_ROI1_SUB_ROI2 = 23
-    PROJ_ROI1_ADD_ROI2 = 24
+    ROI_FOM = 11
+    ROI_PROJ = 21
     AZIMUTHAL_INTEG = 41
     PULSE = 2700
-    ROI1_PULSE = 2711
-    ROI2_PULSE = 2712
-    ROI1_SUB_ROI2_PULSE = 2713
-    ROI1_ADD_ROI2_PULSE = 2714
-    PROJ_ROI1_PULSE = 2721
-    PROJ_ROI2_PULSE = 2722
-    PROJ_ROI1_SUB_ROI2_PULSE = 2723
-    PROJ_ROI1_ADD_ROI2_PULSE = 2724
+    ROI_FOM_PULSE = 2711
+    ROI_PROJ_PULSE = 2721
     AZIMUTHAL_INTEG_PULSE = 2741
 
 
@@ -68,10 +75,7 @@ class Normalizer(IntEnum):
     UNDEFINED = 0
     AUC = 1  # area under curve
     XGM = 2
-    ROI3 = 3
-    ROI4 = 4
-    ROI3_SUB_ROI4 = 5
-    ROI3_ADD_ROI4 = 6
+    ROI = 3
 
 
 # a simple class saves the trouble when the attribute needs to be read/write

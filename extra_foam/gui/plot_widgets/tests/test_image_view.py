@@ -11,7 +11,7 @@ from extra_foam.gui.plot_widgets.image_view_base import ImageViewF
 from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
 )
-from extra_foam.pipeline.data_model import ProcessedData
+from extra_foam.pipeline.data_model import ProcessedData, RectRoiGeom
 from extra_foam.logger import logger
 
 app = mkQApp()
@@ -43,17 +43,17 @@ class TestImageView(unittest.TestCase):
         processed.image.masked_mean = np.ones((3, 3))
 
         # invalid ROI rect
-        self.assertListEqual([0, 0, -1, -1], processed.roi.rect1)
+        self.assertListEqual(RectRoiGeom.INVALID, list(processed.roi.geom1.geometry))
         widget.updateF(processed)
         widget.setImage.assert_not_called()
 
         # invalid ROI rect
-        processed.roi.rect1 = [0, 0, -1, 0]
+        processed.roi.geom1.geometry = [0, 0, -1, 0]
         widget.updateF(processed)
         widget.setImage.assert_not_called()
 
         # valid ROI rect
-        processed.roi.rect1 = [0, 0, 2, 2]
+        processed.roi.geom1.geometry = [0, 0, 2, 2]
         widget.updateF(processed)
         widget.setImage.assert_called_once()
 
