@@ -33,14 +33,8 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
         "pump-probe": AnalysisType.PUMP_PROBE,
-        "ROI1 (sum)": AnalysisType.ROI1,
-        "ROI2 (sum)": AnalysisType.ROI2,
-        "ROI1 - ROI2 (sum)": AnalysisType.ROI1_SUB_ROI2,
-        "ROI1 + ROI2 (sum)": AnalysisType.ROI1_ADD_ROI2,
-        "ROI1 (proj)": AnalysisType.PROJ_ROI1,
-        "ROI2 (proj)": AnalysisType.PROJ_ROI2,
-        "ROI1 - ROI2 (proj)": AnalysisType.PROJ_ROI1_SUB_ROI2,
-        "ROI1 + ROI2 (proj)": AnalysisType.PROJ_ROI1_ADD_ROI2,
+        "ROI FOM": AnalysisType.ROI_FOM,
+        "ROI proj": AnalysisType.ROI_PROJ,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 

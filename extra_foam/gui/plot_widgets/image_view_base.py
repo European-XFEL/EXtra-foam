@@ -129,7 +129,7 @@ class ImageViewF(QWidget):
         visualization of ROIs and calculation of ROI data are synchronized.
         """
         for i, roi in enumerate(self._rois, 1):
-            x, y, w, h = getattr(data.roi, f"rect{i}")
+            x, y, w, h = getattr(getattr(data.roi, f"geom{i}"), "geometry")
             if w > 0 and h > 0:
                 roi.show()
                 roi.setSize((w, h), update=False)

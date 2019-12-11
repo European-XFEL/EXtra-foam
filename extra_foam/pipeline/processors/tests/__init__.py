@@ -1,19 +1,25 @@
-import unittest
-
 import numpy as np
 
 from extra_foam.pipeline.data_model import ImageData, ProcessedData
 
 
-class _BaseProcessorTest(unittest.TestCase):
+class _BaseProcessorTest:
+    def _gen_images(self, gen, shape, dtype):
+        if gen == 'random':
+            imgs = np.random.randn(*shape).astype(dtype)
+        elif gen == 'ones':
+            imgs = np.ones(shape, dtype=dtype)
+        else:
+            raise ValueError
+
+        return imgs
+
     def simple_data(self, tid, shape, *,
-                    dtype=np.float32, fill=None, **kwargs):
+                    dtype=np.float32, gen='random', **kwargs):
         """Return a 'data' used in pipeline."""
         processed = ProcessedData(tid)
-        if fill is None:
-            imgs = np.random.randn(*shape).astype(dtype)
-        else:
-            imgs = np.ones(shape, dtype=dtype)
+        imgs = self._gen_images(gen, shape, dtype)
+
         processed.image = ImageData.from_array(imgs, **kwargs)
 
         data = {'processed': processed,
@@ -22,13 +28,11 @@ class _BaseProcessorTest(unittest.TestCase):
 
     def data_with_assembled(self, tid, shape, *,
                             dtype=np.float32,
-                            fill=None,
+                            gen='random',
                             with_image_mask=False, **kwargs):
         processed = ProcessedData(tid)
-        if fill is None:
-            imgs = np.random.randn(*shape).astype(dtype)
-        else:
-            imgs = np.ones(shape, dtype=dtype)
+        imgs = self._gen_images(gen, shape, dtype)
+
         processed.image = ImageData.from_array(imgs, **kwargs)
 
         if with_image_mask:

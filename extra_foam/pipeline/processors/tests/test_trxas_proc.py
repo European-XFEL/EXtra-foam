@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import unittest
+
 import numpy as np
 
 from extra_foam.pipeline.exceptions import ProcessingError
@@ -14,7 +16,7 @@ from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 from extra_foam.pipeline.processors.tr_xas import TrXasProcessor
 
 
-class TestTrXasProcessor(_BaseProcessorTest):
+class TestTrXasProcessor(unittest.TestCase, _BaseProcessorTest):
     def setUp(self):
         self._proc = TrXasProcessor()
 

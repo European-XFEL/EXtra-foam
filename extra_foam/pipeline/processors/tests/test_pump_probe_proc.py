@@ -7,25 +7,25 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from unittest.mock import MagicMock, patch
+import unittest
 
 import numpy as np
 
-from extra_foam.pipeline.processors.pump_probe_processor import PumpProbeProcessor
+from extra_foam.pipeline.processors.pump_probe import PumpProbeProcessor
 from extra_foam.config import PumpProbeMode
 from extra_foam.pipeline.exceptions import DropAllPulsesError,PumpProbeIndexError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 
 
-class TestPumpProbeProcessorTr(_BaseProcessorTest):
+class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
     """Test train-resolved ImageProcessor.
 
     For train-resolved data.
     """
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc._on_indices = [0]
-        self._proc._off_indices = [0]
+        self._proc._indices_on = [0]
+        self._proc._indices_off = [0]
 
     def _gen_data(self, tid):
         return self.data_with_assembled(tid, (2, 2),
@@ -122,19 +122,19 @@ class TestPumpProbeProcessorTr(_BaseProcessorTest):
 
     def _check_pp_params_in_data_model(self, data):
         self.assertEqual(self._proc._mode, data.pp.mode)
-        self.assertListEqual(self._proc._on_indices, data.pp.on_indices)
-        self.assertListEqual(self._proc._off_indices, data.pp.off_indices)
+        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
+        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)
 
 
-class TestPumpProbeProcessorPr(_BaseProcessorTest):
+class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
     """Test train-resolved PumpProbeProcessor.
 
     For pulse-resolved data.
     """
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc._on_indices = [0]
-        self._proc._off_indices = [0]
+        self._proc._indices_on = [0]
+        self._proc._indices_off = [0]
 
     def _gen_data(self, tid):
         return self.data_with_assembled(tid, (4, 2, 2),
@@ -157,8 +157,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
 
     def testInvalidPulseIndices(self):
         proc = self._proc
-        proc._on_indices = [0, 1, 5]
-        proc._off_indices = [1]
+        proc._indices_on = [0, 1, 5]
+        proc._indices_off = [1]
 
         proc._mode = PumpProbeMode.PRE_DEFINED_OFF
         with self.assertRaises(PumpProbeIndexError):
@@ -166,8 +166,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
             data, _ = self._gen_data(1001)
             proc.process(data)
 
-        proc._on_indices = [0, 1, 5]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 1, 5]
+        proc._indices_off = [1, 3]
         proc._mode = PumpProbeMode.EVEN_TRAIN_ON
         with self.assertRaises(PumpProbeIndexError):
             data, _ = self._gen_data(1001)
@@ -175,24 +175,24 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
 
         # raises when the same pulse index was found in both
         # on- and off- indices
-        proc._on_indices = [0, 1]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 1]
+        proc._indices_off = [1, 3]
         proc._mode = PumpProbeMode.SAME_TRAIN
         with self.assertRaises(PumpProbeIndexError):
             data, _ = self._gen_data(1001)
             proc.process(data)
 
         # off-indices check is not trigger in PRE_DEFINED_OFF mode
-        proc._on_indices = [0, 1]
-        proc._off_indices = [5]
+        proc._indices_on = [0, 1]
+        proc._indices_off = [5]
         proc._mode = PumpProbeMode.PRE_DEFINED_OFF
         data, _ = self._gen_data(1001)
         proc.process(data)
 
     def testUndefined(self):
         proc = self._proc
-        proc._on_indices = [0, 2]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 2]
+        proc._indices_off = [1, 3]
         proc._threshold_mask = (-np.inf, np.inf)
 
         proc._mode = PumpProbeMode.UNDEFINED
@@ -207,8 +207,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
     def testPredefinedOff(self):
         proc = self._proc
         proc._mode = PumpProbeMode.PRE_DEFINED_OFF
-        proc._on_indices = [0, 2]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 2]
+        proc._indices_off = [1, 3]
 
         data, processed = self._gen_data(1001)
         proc.process(data)
@@ -240,8 +240,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
     def testSameTrain(self):
         proc = self._proc
         proc._mode = PumpProbeMode.SAME_TRAIN
-        proc._on_indices = [0, 2]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 2]
+        proc._indices_off = [1, 3]
 
         data, processed = self._gen_data(1001)
         proc.process(data)
@@ -276,8 +276,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
     def testEvenOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.EVEN_TRAIN_ON
-        proc._on_indices = [0, 2]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 2]
+        proc._indices_off = [1, 3]
 
         # test off will not be acknowledged without on
         data, processed = self._gen_data(1001)  # off
@@ -341,8 +341,8 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
     def testOddOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.ODD_TRAIN_ON
-        proc._on_indices = [0, 2]
-        proc._off_indices = [1, 3]
+        proc._indices_on = [0, 2]
+        proc._indices_off = [1, 3]
 
         # test off will not be acknowledged without on
         data, processed = self._gen_data(1002)  # off
@@ -374,5 +374,5 @@ class TestPumpProbeProcessorPr(_BaseProcessorTest):
 
     def _check_pp_params_in_data_model(self, data):
         self.assertEqual(self._proc._mode, data.pp.mode)
-        self.assertListEqual(self._proc._on_indices, data.pp.on_indices)
-        self.assertListEqual(self._proc._off_indices, data.pp.off_indices)
+        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
+        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)

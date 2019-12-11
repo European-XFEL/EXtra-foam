@@ -14,7 +14,8 @@ from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import PulseOfInterestWindow
 from extra_foam.config import (
-    _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode
+    _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode,
+    RoiCombo
 )
 from extra_foam.processes import wait_until_redis_shutdown
 
@@ -91,16 +92,16 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertIsInstance(pp_proc._on_indices[0], int)
-        self.assertListEqual([-1], pp_proc._off_indices)
-        self.assertIsInstance(pp_proc._off_indices[0], int)
+        self.assertListEqual([-1], pp_proc._indices_on)
+        self.assertIsInstance(pp_proc._indices_on[0], int)
+        self.assertListEqual([-1], pp_proc._indices_off)
+        self.assertIsInstance(pp_proc._indices_off[0], int)
 
         # change analysis type
         pp_proc._reset = False
-        widget._analysis_type_cb.setCurrentText('ROI1 - ROI2 (proj)')
+        widget._analysis_type_cb.setCurrentText('ROI proj')
         pp_proc.update()
-        self.assertEqual(AnalysisType.PROJ_ROI1_SUB_ROI2, pp_proc.analysis_type)
+        self.assertEqual(AnalysisType.ROI_PROJ, pp_proc.analysis_type)
         self.assertTrue(pp_proc._reset)
 
         # change pump-probe mode
@@ -130,8 +131,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._off_pulse_le.setText('1:10:2')
         pp_proc.update()
         self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
-        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._on_indices)
-        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._off_indices)
+        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._indices_on)
+        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._indices_off)
 
         # test reset button
         pp_proc._reset = False
@@ -187,10 +188,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, post_pulse_filter.analysis_type)
         self.assertTupleEqual((-np.inf, np.inf), post_pulse_filter._fom_range)
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1_PULSE])
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM_PULSE])
         widget._fom_range_le.setText("-1, 1")
         post_pulse_filter.update()
-        self.assertEqual(AnalysisType.ROI1_PULSE, post_pulse_filter.analysis_type)
+        self.assertEqual(AnalysisType.ROI_FOM_PULSE, post_pulse_filter.analysis_type)
         self.assertEqual((-1, 1), post_pulse_filter._fom_range)
 
     def testCorrelationCtrlWidget(self):
@@ -216,9 +217,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual([""] * _N_PARAMS, proc._properties)
 
         # set new FOM
-        widget._analysis_type_cb.setCurrentText('ROI1 + ROI2 (proj)')
+        widget._analysis_type_cb.setCurrentText('ROI proj')
         proc.update()
-        self.assertEqual(AnalysisType.PROJ_ROI1_ADD_ROI2, proc.analysis_type)
+        self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
 
         # test the correlation param table
         for i in range(_N_PARAMS):
@@ -353,30 +354,17 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._pulse_resolved)
         self.assertEqual(10, proc._num_bins)
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI1])
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
         proc.update()
         self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.ROI1_PULSE, proc.analysis_type)
+        self.assertEqual(AnalysisType.ROI_FOM_PULSE, proc.analysis_type)
 
         proc._reset = False
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.AZIMUTHAL_INTEG])
+        widget._pulse_resolved_cb.setChecked(False)  # switch to train-resolved
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
         proc.update()
         self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG_PULSE,
-                         proc.analysis_type)
-
-        proc._reset = False
-        widget._pulse_resolved_cb.setChecked(False)
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.AZIMUTHAL_INTEG,
-                         proc.analysis_type)
-
-        proc._reset = False
-        widget._analysis_type_cb.setCurrentIndex(1)
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertEqual(AnalysisType.ROI1, proc.analysis_type)
+        self.assertEqual(AnalysisType.ROI_FOM, proc.analysis_type)
 
         widget._num_bins_le.setText("100")
         proc.update()
@@ -567,8 +555,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertListEqual([-1], pp_proc._off_indices)
+        self.assertListEqual([-1], pp_proc._indices_on)
+        self.assertListEqual([-1], pp_proc._indices_off)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -577,8 +565,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._on_indices)
-        self.assertListEqual([-1], pp_proc._off_indices)
+        self.assertListEqual([-1], pp_proc._indices_on)
+        self.assertListEqual([-1], pp_proc._indices_off)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
         self.assertEqual(2, len(spy))

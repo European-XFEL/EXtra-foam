@@ -22,8 +22,7 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "ROI1 (sum)": AnalysisType.ROI1_PULSE,
-        "ROI2 (sum)": AnalysisType.ROI2_PULSE,
+        "ROI FOM": AnalysisType.ROI_FOM_PULSE,
     })
 
     def __init__(self, *args, **kwargs):

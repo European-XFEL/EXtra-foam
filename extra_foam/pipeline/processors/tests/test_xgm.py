@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import unittest
+
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
@@ -15,7 +17,7 @@ from extra_foam.pipeline.processors.xgm import (
 )
 
 
-class TestXgmProcessor(_BaseProcessorTest):
+class TestXgmProcessor(unittest.TestCase, _BaseProcessorTest):
     def testGeneral(self):
         data, processed = self.simple_data(1234, (2, 2))
 

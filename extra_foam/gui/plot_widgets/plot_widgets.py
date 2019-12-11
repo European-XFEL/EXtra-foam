@@ -139,8 +139,6 @@ class PumpProbeOnOffWidget(PlotWidgetF):
         """
         super().__init__(parent=parent)
 
-        # self.setLabel('left', "Scattering signal (arb. u.)")
-        # self.setLabel('bottom', "Momentum transfer (1/A)")
         self.setLabel('left', "y (arb. u.)")
         self.setLabel('bottom', "x (arb. u.)")
         self.addLegend(offset=(-40, 20))
@@ -155,23 +153,23 @@ class PumpProbeOnOffWidget(PlotWidgetF):
     def updateF(self, data):
         """Override."""
         x = data.pp.x
-        on = data.pp.vfom_on
-        off = data.pp.vfom_off
-        vfom = data.pp.vfom
+        y_on = data.pp.y_on
+        y_off = data.pp.y_off
+        y = data.pp.y
 
-        if on is None or off is None:
+        if y_on is None or y_off is None:
             return
 
-        if isinstance(on, np.ndarray) and on.ndim > 1:
+        if isinstance(y_on, np.ndarray) and y_off.ndim > 1:
             # call reset() to reset() plots from other analysis types
             self.reset()
             return
 
         if self._is_diff:
-            self._on_off_pulse.setData(x, vfom)
+            self._on_off_pulse.setData(x, y)
         else:
-            self._on_pulse.setData(x, on)
-            self._off_pulse.setData(x, off)
+            self._on_pulse.setData(x, y_on)
+            self._off_pulse.setData(x, y_off)
 
 
 class PumpProbeFomWidget(PlotWidgetF):

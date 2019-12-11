@@ -46,14 +46,11 @@ class PostPulseFilter(_BaseProcessor):
 
         err_msgs = []
 
-        if self.analysis_type == AnalysisType.ROI1_PULSE:
-            foms = processed.pulse.roi.roi1.fom
+        if self.analysis_type == AnalysisType.ROI_FOM_PULSE:
+            foms = processed.pulse.roi.fom
             if foms is None:
-                err_msgs.append("Pulse resolved ROI1 sum result is not available")
-        elif self.analysis_type == AnalysisType.ROI2_PULSE:
-            foms = processed.pulse.roi.roi2.fom
-            if foms is None:
-                err_msgs.append("Pulse resolved ROI2 sum result is not available")
+                err_msgs.append("[Post pulse filter] "
+                                "Pulse resolved ROI FOM is not available")
         else:
             err_msgs.append("NotImplemented {repr(self.analysis_type)}")
 

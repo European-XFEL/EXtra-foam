@@ -305,45 +305,21 @@ class BinProcessor(_BaseProcessor):
                 # only calculated every other train.
                 if self._pp_fail_flag == 2:
                     self._pp_fail_flag = 0
-                    err = "Pump-probe result is not available"
+                    err = "Pump-probe FOM is not available"
             else:
                 self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI1:
-            ret = processed.roi.roi1
+        elif analysis_type == AnalysisType.ROI_FOM:
+            ret = processed.roi.fom
             if ret.fom is None:
-                err = "ROI1 sum result is not available"
-        elif analysis_type == AnalysisType.ROI2:
-            ret = processed.roi.roi2
+                err = "ROI FOM is not available"
+        elif analysis_type == AnalysisType.ROI_PROJ:
+            ret = processed.roi.proj.fom
             if ret.fom is None:
-                err = "ROI2 sum result is not available"
-        elif analysis_type == AnalysisType.ROI1_SUB_ROI2:
-            ret = processed.roi.roi1_sub_roi2
-            if ret.fom is None:
-                err = "ROI1 - ROI2 sum result is not available"
-        elif analysis_type == AnalysisType.ROI1_ADD_ROI2:
-            ret = processed.roi.roi1_add_roi2
-            if ret.fom is None:
-                err = "ROI1 + ROI2 sum result is not available"
-        elif analysis_type == AnalysisType.PROJ_ROI1:
-            ret = processed.roi.proj1
-            if ret.fom is None:
-                err = "ROI1 projection result is not available"
-        elif analysis_type == AnalysisType.PROJ_ROI2:
-            ret = processed.roi.proj2
-            if ret.fom is None:
-                err = "ROI2 projection result is not available"
-        elif analysis_type == AnalysisType.PROJ_ROI1_SUB_ROI2:
-            ret = processed.roi.proj1_sub_proj2
-            if ret.fom is None:
-                err = "ROI1 - ROI2 projection result is not available"
-        elif analysis_type == AnalysisType.PROJ_ROI1_ADD_ROI2:
-            ret = processed.roi.proj1_add_proj2
-            if ret.fom is None:
-                err = "ROI1 + ROI2 projection result is not available"
+                err = "ROI projection FOM is not available"
         elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             ret = processed.ai
             if ret.fom is None:
-                err = "Azimuthal integration result is not available"
+                err = "Azimuthal integration FOM is not available"
         else:  # self.analysis_type == AnalysisType.UNDEFINED
             ret = None
 

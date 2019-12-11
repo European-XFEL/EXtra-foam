@@ -20,7 +20,7 @@ from .logger import logger
 
 # profiler will only print out information if the execution of the given
 # function takes more than the threshold value.
-PROFILER_THREASHOLD = 10.0  # in ms
+PROFILER_THREASHOLD = 1.0  # in ms
 
 
 def profiler(info, *, process_time=False):

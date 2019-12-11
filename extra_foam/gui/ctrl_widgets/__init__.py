@@ -6,13 +6,15 @@ from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .image_ctrl_widget import ImageCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
-from .projection1d_ctrl_widget import Projection1DCtrlWidget
 from .statistics_ctrl_widget import StatisticsCtrlWidget
 from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from .trxas_ctrl_widget import TrXasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
+from .roi_fom_ctrl_widget import RoiFomCtrlWidget
+from .roi_norm_ctrl_widget import RoiNormCtrlWidget
+from .roi_proj_ctrl_widget import RoiProjCtrlWidget
 
 
 # add control widgets
@@ -25,10 +27,12 @@ __all__ = [
     "DataSourceWidget",
     "GeometryCtrlWidget",
     "ImageCtrlWidget",
-    "Projection1DCtrlWidget",
     "PulseFilterCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",
+    "RoiFomCtrlWidget",
+    "RoiNormCtrlWidget",
+    "RoiProjCtrlWidget",
     "SmartLineEdit",
     "SmartStringLineEdit",
     "StatisticsCtrlWidget",
