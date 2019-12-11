@@ -153,7 +153,8 @@ class RedisSubscriber(metaclass=MetaRedisConnection):
     def __get__(self, instance, instance_type):
         if self._sub is None:
             self._sub = redis_connection(
-                decode_responses=self._decode_responses).pubsub()
+                decode_responses=self._decode_responses).pubsub(
+                ignore_subscribe_messages=True)
             try:
                 self._sub.subscribe(self._channel)
             except redis.ConnectionError:
@@ -177,7 +178,8 @@ class RedisPSubscriber(metaclass=MetaRedisConnection):
     def __get__(self, instance, instance_type):
         if self._sub is None:
             self._sub = redis_connection(
-                decode_responses=self._decode_responses).pubsub()
+                decode_responses=self._decode_responses).pubsub(
+                ignore_subscribe_messages=True)
             try:
                 self._sub.psubscribe(self._pattern)
             except redis.ConnectionError:
