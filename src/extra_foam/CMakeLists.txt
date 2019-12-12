@@ -4,39 +4,32 @@
 # All rights reserved.                                            #
 ###################################################################
 
-# TODO: separate xtensor-python binding with others in the fugure
-set(xtensor-python_DIR ${CMAKE_BINARY_DIR}/thirdparty/xtensor-python)
-find_package(xtensor-python)
+set(extra-foam_MODULE_FILES
+    algo.cpp
+    image_proc.cpp
+    data_model.cpp
+)
 
+if(UNIX)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
 
-# algo
+if(APPLE)
+  set(target_install_rpath "@loader_path/")
+else()
+  set(target_install_rpath "\$ORIGIN")
+endif()
 
-pybind11_add_module(algo algo.cpp)
+foreach(filename IN LISTS extra-foam_MODULE_FILES)
+    string(REPLACE ".cpp" "" modulename ${filename})
+    # set(modulename _${modulename})
+    pybind11_add_module(${modulename} ${filename})
+    target_include_directories(${modulename} PRIVATE include)
+    target_link_libraries(${modulename} PRIVATE xtensor-python)
+    set_target_properties(${modulename} PROPERTIES INSTALL_RPATH ${target_install_rpath})
 
-# image_proc
-
-pybind11_add_module(image_proc image_proc.cpp)
-
-target_include_directories(image_proc
-    PRIVATE
-        ${FOAM_INCLUDE_DIRS}
-        ${TBB_INCLUDE_DIRS})
-
-target_link_libraries(image_proc
-    PRIVATE
-        xtensor-python
-        ${TBB_LIBRARIES})
-
-# image data
-
-pybind11_add_Module(data_model data_model.cpp)
-
-target_include_directories(data_model
-    PRIVATE
-        ${xtensor-python_INCLUDE_DIRS})
-
-target_link_libraries(data_model PRIVATE xtensor-python)
-
-target_compile_options(data_model
-    PRIVATE
-        -fPIC)
+    if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
+        target_include_directories(${modulename} PRIVATE ${TBB_INCLUDE_DIRS})
+        target_link_libraries(${modulename} PRIVATE ${TBB_LIBRARIES})
+    endif()
+endforeach()

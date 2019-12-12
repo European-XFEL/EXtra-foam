@@ -87,14 +87,14 @@ class TestImageProc(unittest.TestCase):
     def testNanmeanImages(self):
         # test invalid shapes
         data = np.ones([2, 2])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             nanmeanImageArray(data)
 
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             nanmeanImageArray(data, data)
 
         data = np.ones([2, 2, 2, 2])
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             nanmeanImageArray(data)
 
         # test passing empty keep list
@@ -189,9 +189,9 @@ class TestImageProc(unittest.TestCase):
         with self.assertRaises(TypeError):
             movingAverageImage()
         # test incorrect shape
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             movingAverageImage(arr1d, arr1d, 2)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             movingAverageImage(arr3d, arr3d, 2)
         with self.assertRaises(ValueError):
             # 0 count
@@ -203,9 +203,9 @@ class TestImageProc(unittest.TestCase):
         # test invalid input
         with self.assertRaises(TypeError):
             movingAverageImageArray()
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             movingAverageImageArray(arr1d, arr1d, 2)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             movingAverageImageArray(arr2d, arr2d, 2)
         with self.assertRaises(ValueError):
             # 0 count
@@ -289,17 +289,17 @@ class TestImageProc(unittest.TestCase):
         with self.assertRaises(TypeError):
             maskImage()
         # test incorrect shape
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             maskImage(np.ones((2, 2, 2)), 1, 2)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             maskImage(np.ones(2), 1, 2)
 
         # test invalid input
         with self.assertRaises(TypeError):
             maskImageArray()
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             maskImageArray(np.ones((2, 2)), 1, 2)
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             maskImageArray(np.ones(2), 1, 2)
 
         # ------------
