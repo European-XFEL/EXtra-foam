@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.1)
+
+include(ExternalProject)
+
+ExternalProject_Add(tbb
+    GIT_REPOSITORY    https://github.com/intel/tbb.git
+    GIT_TAG           ${tbb_REQUIRED_VERSION}
+    SOURCE_DIR        ${thirdparty_BINARY_DIR}/tbb-src
+    BINARY_DIR        ${thirdparty_BINARY_DIR}/tbb-build
+
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   ""
+    TEST_COMMAND      ""
+)
