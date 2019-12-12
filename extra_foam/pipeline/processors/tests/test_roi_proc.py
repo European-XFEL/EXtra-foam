@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import MagicMock
 import numpy as np
 
-from extra_foam.pipeline.data_model import ImageData, ProcessedData
+from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.roi import (
     _RectROI, RoiProcessorTrain, RoiProcessorPulse
@@ -82,8 +82,8 @@ class TestRoiProcessorTrain(unittest.TestCase):
         # ROI rects
         self.assertEqual([0, 0, 2, 3], processed.roi.rect1)
         self.assertEqual([0, 0, 1, 3], processed.roi.rect2)
-        self.assertEqual([0, 0, -1, -1], processed.roi.rect3)
-        self.assertEqual([0, 0, -1, -1], processed.roi.rect4)
+        self.assertEqual(RectRoiGeom.INVALID, processed.roi.rect3)
+        self.assertEqual(RectRoiGeom.INVALID, processed.roi.rect4)
 
         self.assertEqual(6.0, processed.roi.roi1.fom)
         self.assertEqual(3.0, processed.roi.roi2.fom)

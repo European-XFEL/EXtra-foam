@@ -10,7 +10,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import _BaseProcessor
-from ..data_model import MovingAverageArray
+from ..data_model import MovingAverageArray, RectRoiGeom
 from ..exceptions import ProcessingError
 from ...algorithms import slice_curve, mask_image
 from ...database import Metadata as mt
@@ -26,12 +26,7 @@ class _RectROI:
     Note: there is a class RectROI on the GUI part.
     """
     def __init__(self):
-        self._x = 0
-        self._y = 0
-        self._w = -1
-        self._h = -1
-
-        self._activated = False
+        self._x, self._y, self._w, self._h = RectRoiGeom.INVALID
 
     def get_image(self, img, copy=False):
         """Get the ROI from a given image.
@@ -68,11 +63,8 @@ class _RectROI:
     def intersect(self, img):
         """Get the intersection region between the ROI and an image.
 
-        :return: it returns [0, 0, -1, -1] if the ROI is not activated.
-            Otherwise [x, y, w, h] of the intersection region.
+        :return: [x, y, w, h] of the intersection region.
         """
-        if not self._activated:
-            return [0, 0, -1, -1]
         return intersection([self._x, self._y, self._w, self._h],
                             [0, 0, *img.shape[::-1]])
 
@@ -83,14 +75,6 @@ class _RectROI:
     @rect.setter
     def rect(self, v):
         self._x, self._y, self._w, self._h = v
-
-    @property
-    def activated(self):
-        return self._activated
-
-    @activated.setter
-    def activated(self, v):
-        self._activated = bool(v)
 
 
 def project_x(img):
@@ -148,14 +132,10 @@ class _RoiProcessBase(_BaseProcessor):
 
         cfg = self._meta.hget_all(mt.ROI_PROC)
 
-        self._roi1.activated = cfg[f'visibility1'] == 'True'
-        self._roi1.rect = self.str2list(cfg[f'region1'], handler=int)
-        self._roi2.activated = cfg[f'visibility2'] == 'True'
-        self._roi2.rect = self.str2list(cfg[f'region2'], handler=int)
-        self._roi3.activated = cfg[f'visibility3'] == 'True'
-        self._roi3.rect = self.str2list(cfg[f'region3'], handler=int)
-        self._roi4.activated = cfg[f'visibility4'] == 'True'
-        self._roi4.rect = self.str2list(cfg[f'region4'], handler=int)
+        self._roi1.rect = self.str2list(cfg[f'geom1'], handler=int)
+        self._roi2.rect = self.str2list(cfg[f'geom2'], handler=int)
+        self._roi3.rect = self.str2list(cfg[f'geom3'], handler=int)
+        self._roi4.rect = self.str2list(cfg[f'geom4'], handler=int)
 
         self._direction = cfg['proj:direction']
         self._normalizer = Normalizer(int(cfg['proj:normalizer']))
@@ -305,13 +285,9 @@ class RoiProcessorTrain(_RoiProcessBase):
         # update ROIs' information
         # FIXME: test the new ROI geom interface
         roi = processed.roi
-        roi[0].activated = self._roi1.activated
         roi[0].set_geometry(self._roi1.rect)
-        roi[1].activated = self._roi2.activated
         roi[1].set_geometry(self._roi2.rect)
-        roi[2].activated = self._roi3.activated
         roi[2].set_geometry(self._roi3.rect)
-        roi[3].activated = self._roi4.activated
         roi[3].set_geometry(self._roi4.rect)
 
         error_messages = []
