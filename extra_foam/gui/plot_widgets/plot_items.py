@@ -220,10 +220,10 @@ class RectROI(pg.ROI):
 
     Note: the widget is slightly different from pyqtgraph.RectROI
     """
-    def __init__(self, rank, *, pos=(0, 0), size=(1, 1), **kwargs):
+    def __init__(self, idx, *, pos=(0, 0), size=(1, 1), **kwargs):
         """Initialization.
 
-        :param int rank: rank of the ROI.
+        :param int idx: index of the ROI.
         :param tuple pos: (x, y) of the left-upper corner.
         :param tuple size: (w, h) of the ROI.
         """
@@ -231,7 +231,11 @@ class RectROI(pg.ROI):
                          translateSnap=True,
                          scaleSnap=True, **kwargs)
 
-        self.rank = rank
+        self._index = idx
+
+    @property
+    def index(self):
+        return self._index
 
     def setLocked(self, locked):
         if locked:

@@ -489,11 +489,11 @@ class TestRoiGeom(unittest.TestCase):
         self._img_array = np.arange(400).reshape((4, 10, 10))
 
     def testRect(self):
-        from extra_foam.pipeline.data_model import _RectRoiGeom
+        from extra_foam.pipeline.data_model import RectRoiGeom
 
         for img in [self._img, self._img_array]:
             # w = h = -1
-            roi = _RectRoiGeom()
+            roi = RectRoiGeom()
             self.assertIsNone(roi.rect(img))
 
             # not activated

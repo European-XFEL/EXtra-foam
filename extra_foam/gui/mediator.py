@@ -151,12 +151,8 @@ class Mediator(QObject):
         self.onResetMa()
 
     def onRoiGeometryChange(self, value: tuple):
-        rank, x, y, w, h = value
-        self._meta.hset(mt.ROI_PROC, f'region{rank}', str((x, y, w, h)))
-
-    def onRoiVisibilityChange(self, value: tuple):
-        rank, is_visible = value
-        self._meta.hset(mt.ROI_PROC, f'visibility{rank}', str(is_visible))
+        idx, x, y, w, h = value
+        self._meta.hset(mt.ROI_PROC, f'geom{idx}', str((x, y, w, h)))
 
     def onRoiProjDirectChange(self, value: str):
         self._meta.hset(mt.ROI_PROC, 'proj:direction', value)

@@ -16,7 +16,7 @@ from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 from extra_foam.logger import logger
-from extra_foam.pipeline.data_model import ImageData, ProcessedData
+from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
@@ -132,30 +132,25 @@ class TestImageTool(unittest.TestCase):
         widget.update_image_btn.clicked.emit()
         self.image_tool._updateOnce.assert_called_once_with(True)
 
-    def testDefaultValues(self):
-        # This must be the first test method in order to check that the
-        # default values are set correctly
-        proc = self.train_worker._roi_proc
-        widget = self.image_tool._corrected_view._roi_ctrl_widget
-
-        proc.update()
-
-        for i, ctrl in enumerate(widget._roi_ctrls, 1):
-            roi_geometry = [int(ctrl._px_le.text()),
-                            int(ctrl._py_le.text()),
-                            int(ctrl._width_le.text()),
-                            int(ctrl._height_le.text())]
-            self.assertListEqual(roi_geometry, getattr(proc, f"_roi{i}").rect)
-
     def testRoiCtrlWidget(self):
-        widget = self.image_tool._corrected_view._roi_ctrl_widget
-        roi_ctrls = widget._roi_ctrls
+        roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
         proc = self.train_worker._roi_proc
         self.assertEqual(4, len(roi_ctrls))
 
+        proc.update()
+
+        for i, ctrl in enumerate(roi_ctrls, 1):
+            # test real ROI position and size matches the numbers in the GUI
+            self.assertListEqual([int(ctrl._px_le.text()), int(ctrl._py_le.text())],
+                                 list(ctrl._roi.pos()))
+            self.assertListEqual([int(ctrl._width_le.text()), int(ctrl._height_le.text())],
+                                 list(ctrl._roi.size()))
+            # test default values
+            self.assertListEqual(RectRoiGeom.INVALID, getattr(proc, f"_roi{i}").rect)
+
         for ctrl in roi_ctrls:
-            self.assertFalse(ctrl.activate_cb.isChecked())
-            self.assertFalse(ctrl.lock_cb.isChecked())
+            self.assertFalse(ctrl._activate_cb.isChecked())
+            self.assertFalse(ctrl._lock_cb.isChecked())
             self.assertFalse(ctrl._width_le.isEnabled())
             self.assertFalse(ctrl._height_le.isEnabled())
             self.assertFalse(ctrl._px_le.isEnabled())
@@ -166,18 +161,14 @@ class TestImageTool(unittest.TestCase):
         self.assertIs(roi1_ctrl._roi, roi1)
 
         # activate ROI1 ctrl
-        QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
-        self.assertTrue(roi1_ctrl.activate_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
+        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
         proc.update()
-        self.assertTrue(proc._roi1._activated)
 
-        # test default values
-        self.assertTupleEqual((float(roi1_ctrl._width_le.text()),
-                               float(roi1_ctrl._height_le.text())),
+        self.assertTupleEqual((int(roi1_ctrl._width_le.text()), int(roi1_ctrl._height_le.text())),
                               tuple(roi1.size()))
-        self.assertTupleEqual((float(roi1_ctrl._px_le.text()),
-                               float(roi1_ctrl._py_le.text())),
+        self.assertTupleEqual((int(roi1_ctrl._px_le.text()), int(roi1_ctrl._py_le.text())),
                               tuple(roi1.pos()))
 
         # use keyClicks to test that the QLineEdit is enabled
@@ -202,20 +193,20 @@ class TestImageTool(unittest.TestCase):
         self.assertListEqual([-1, -3, 10, 30], proc._roi1.rect)
 
         # lock ROI ctrl
-        QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.lock_cb.height()/2))
-        self.assertTrue(roi1_ctrl.activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl.lock_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._lock_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._lock_cb.height()/2))
+        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
+        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
         self.assertFalse(roi1_ctrl._height_le.isEnabled())
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
         # deactivate ROI ctrl
-        QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
-        self.assertFalse(roi1_ctrl.activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl.lock_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
+        self.assertFalse(roi1_ctrl._activate_cb.isChecked())
+        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
         self.assertFalse(roi1_ctrl._height_le.isEnabled())
         self.assertFalse(roi1_ctrl._px_le.isEnabled())

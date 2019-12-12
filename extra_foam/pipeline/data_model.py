@@ -456,15 +456,15 @@ class _RoiGeomBase(abc.ABC):
         pass
 
 
-class _RectRoiGeom(_RoiGeomBase):
+class RectRoiGeom(_RoiGeomBase):
     """RectRoiGeom class."""
+
+    INVALID = [0, 0, -1, -1]
+
     def __init__(self):
         super().__init__()
 
-        self._x = 0
-        self._y = 0
-        self._w = -1
-        self._h = -1
+        self._x, self._y, self._w, self._h = self.INVALID
 
     def rect(self, data, copy=False):
         """Overload."""
@@ -483,14 +483,15 @@ class _RectRoiGeom(_RoiGeomBase):
         self._x, self._y, self._w, self._h = v
 
 
-class _CircleRoiGeom(_RoiGeomBase):
+class CircleRoiGeom(_RoiGeomBase):
     """CircleRoiItem class."""
+
+    INVALID = (0, 0, -1)
+
     def __init__(self):
         super().__init__()
 
-        self._x = 0
-        self._y = 0
-        self._r = -1
+        self._x, self._y, self._r = self.NONE
 
     def rect(self, data, copy=False):
         """Overload."""
@@ -519,12 +520,12 @@ class RoiData(_RoiAuxData):
     def __init__(self):
         super().__init__()
 
-        self.rect1 = [0, 0, -1, -1]
-        self.rect2 = [0, 0, -1, -1]
-        self.rect3 = [0, 0, -1, -1]
-        self.rect4 = [0, 0, -1, -1]
+        self.rect1 = RectRoiGeom.INVALID
+        self.rect2 = RectRoiGeom.INVALID
+        self.rect3 = RectRoiGeom.INVALID
+        self.rect4 = RectRoiGeom.INVALID
 
-        self.__geoms = [_RectRoiGeom() for i in range(4)]
+        self.__geoms = [RectRoiGeom() for i in range(4)]
 
         # for normalization: calculated from ROI3 and ROI4
         self.on = _RoiAuxData()
