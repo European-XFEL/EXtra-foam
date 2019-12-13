@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import contextlib
+import glob
 import os
 import os.path as osp
 import re
@@ -59,10 +60,12 @@ ext_modules = [
 
 class BuildExt(build_ext):
 
-    _thirdparty_files = [
+    _thirdparty_exec_files = [
         "extra_foam/thirdparty/bin/redis-server",
         "extra_foam/thirdparty/bin/redis-cli"
     ]
+
+    _foam_lib_path = 'extra_foam/cpp'
 
     description = "Build the C++ extensions for EXtra-foam"
     user_options = [
@@ -93,14 +96,15 @@ class BuildExt(build_ext):
 
         cmake_version = LooseVersion(
             re.search(r'version\s*([\d.]+)', out.decode()).group(1))
-        if cmake_version < '3.8.0':
-            raise RuntimeError("CMake >= 3.8.0 is required!")
+        cmake_minimum_version_required = '3.12.0'
+        if cmake_version < cmake_minimum_version_required:
+            raise RuntimeError(f"CMake >= {cmake_minimum_version_required} "
+                               f"is required!")
 
         # build third-party libraries, for example, Redis
         command = ["./build.sh", "-p", sys.executable]
         subprocess.check_call(command)
-        for filename in self._thirdparty_files:
-            self._move_file(filename)
+        self._move_thirdparty_exec_files()
 
         for ext in self.extensions:
             self.build_cmake(ext)
@@ -108,6 +112,9 @@ class BuildExt(build_ext):
     def build_cmake(self, ext):
         ext_dir = osp.abspath(osp.dirname(self.get_ext_fullpath(ext.name)))
         build_type = 'debug' if self.debug else 'release'
+        build_temp = osp.join(os.getcwd(), self.build_temp)
+        build_lib = osp.join(os.getcwd(), self.build_lib)
+        saved_cwd = os.getcwd()
 
         cmake_options = [
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/cpp')}",
@@ -143,6 +150,7 @@ class BuildExt(build_ext):
         else:
             cmake_options.append('-DBUILD_FOAM_TESTS=OFF')
 
+        # FIXME
         build_options = ['--', '-j4']
 
         if not os.path.exists(self.build_temp):
@@ -159,18 +167,48 @@ class BuildExt(build_ext):
             self.spawn(['cmake', '--build', '.'] + build_options)
             print("-- Finished cmake --build for extra-foam")
 
-    def _move_file(self, filename):
-        """Move file to the system folder."""
-        src = filename
-        dst = os.path.join(self.build_lib, filename)
+            if self.inplace:
+                build_lib = saved_cwd
 
-        parent_directory = os.path.dirname(dst)
-        if not os.path.exists(parent_directory):
-            os.makedirs(parent_directory)
+            try:
+                os.makedirs(osp.join(build_lib, self._foam_lib_path))
+            except OSError:
+                pass
 
-        if not os.path.exists(dst):
-            self.announce(f"copy {src} to {dst}", level=1)
-            shutil.copy(src, dst)
+            if self.with_tbb or self.xtensor_with_tbb:
+                self._move_shared_libs('tbb', build_temp, build_lib)
+
+    def _move_thirdparty_exec_files(self):
+        for filename in self._thirdparty_exec_files:
+            src = filename
+            dst = os.path.join(self.build_lib, filename)
+
+            parent_directory = os.path.dirname(dst)
+            if not os.path.exists(parent_directory):
+                os.makedirs(parent_directory)
+
+            if not os.path.exists(dst):
+                self.announce(f"copy {src} to {dst}", level=1)
+                shutil.copy(src, dst)
+
+    def _move_shared_libs(self, lib_name, build_temp, build_lib):
+        self._move_shared_libs_unix(lib_name, build_temp, build_lib)
+
+    def _move_shared_libs_unix(self, lib_name, build_temp, build_lib):
+        if sys.platform == 'darwin':
+            lib_pattern = f"lib{lib_name}*.dylib"
+        else:
+            lib_pattern = f"lib{lib_name}.so*"
+
+        libs = glob.glob(lib_pattern)
+
+        if not libs:
+            raise Exception(f"Could not find shared library with pattern: "
+                            f"{lib_pattern}")
+        # TODO: deal with libraries with symlinks
+        for lib in libs:
+            shutil.move(osp.join(build_temp, lib),
+                        osp.join(build_lib, self._foam_lib_path, lib))
 
 
 class TestCommand(_TestCommand):

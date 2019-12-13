@@ -10,6 +10,7 @@ dist/
 
 dump.rdb
 *.so
+*.so.?
 
 .ipynb_checkpoints
 *.pyc
