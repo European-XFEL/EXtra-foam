@@ -56,10 +56,7 @@ class ThreadLoggerBridge(QObject):
     This QThread forward the message from the Redis server and send
     it to the MainGUI via signal-slot connection.
     """
-    log_debug_sgn = pyqtSignal(str)
-    log_info_sgn = pyqtSignal(str)
-    log_warning_sgn = pyqtSignal(str)
-    log_error_sgn = pyqtSignal(str)
+    log_msg_sgn = pyqtSignal(str, str)
 
     __sub = RedisPSubscriber("log:*")
 
@@ -73,32 +70,16 @@ class ThreadLoggerBridge(QObject):
         while self._running:
             try:
                 msg = self.__sub.get_message()
-
-                if msg and isinstance(msg['data'], str):
-                    channel = msg['channel']
-                    log_msg = msg['data']
-
-                    if channel == 'log:debug':
-                        self.log_debug_sgn.emit(log_msg)
-                    elif channel == 'log:info':
-                        self.log_info_sgn.emit(log_msg)
-                    elif channel == 'log:warning':
-                        self.log_warning_sgn.emit(log_msg)
-                    elif channel == 'log:error':
-                        self.log_error_sgn.emit(log_msg)
+                if msg:
+                    self.log_msg_sgn.emit(msg['channel'], msg['data'])
 
             except (ConnectionError, RuntimeError, AttributeError, IndexError):
                 pass
 
-            # TODO: find a magic number
             time.sleep(0.001)
 
     def connectToMainThread(self, instance):
-        """Connect all log signals to slots in the Main Thread."""
-        self.log_debug_sgn.connect(instance.onLogDebugReceived)
-        self.log_info_sgn.connect(instance.onLogInfoReceived)
-        self.log_warning_sgn.connect(instance.onLogWarningReceived)
-        self.log_error_sgn.connect(instance.onLogErrorReceived)
+        self.log_msg_sgn.connect(instance.onLogMsgReceived)
 
     def stop(self):
         self._running = False
@@ -560,21 +541,16 @@ class MainGUI(QMainWindow):
                 return False
         return self._image_tool.updateMetaData()
 
-    @pyqtSlot(str)
-    def onLogDebugReceived(self, msg):
-        logger.debug(msg)
-
-    @pyqtSlot(str)
-    def onLogInfoReceived(self, msg):
-        logger.info(msg)
-
-    @pyqtSlot(str)
-    def onLogWarningReceived(self, msg):
-        logger.warning(msg)
-
-    @pyqtSlot(str)
-    def onLogErrorReceived(self, msg):
-        logger.error(msg)
+    @pyqtSlot(str, str)
+    def onLogMsgReceived(self, ch, msg):
+        if ch == 'log:debug':
+            logger.debug(msg)
+        elif ch == 'log:info':
+            logger.info.emit(msg)
+        elif ch == 'log:warning':
+            logger.warning(msg)
+        elif ch == 'log:error':
+            logger.error(msg)
 
     def closeEvent(self, QCloseEvent):
         # prevent from logging in the GUI when it has been closed
