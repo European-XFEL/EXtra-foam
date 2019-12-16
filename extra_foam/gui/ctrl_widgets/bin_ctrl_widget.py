@@ -22,9 +22,9 @@ from ...config import AnalysisType, BinMode, config
 
 
 _N_PARAMS = 2
-_DEFAULT_BIN_RANGE = "-1, 1"
+_DEFAULT_BIN_RANGE = "0, 1e9"
 _DEFAULT_N_BINS = "10"
-_MAX_N_BINS = 1e5
+_MAX_N_BINS = 9999
 
 
 class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):

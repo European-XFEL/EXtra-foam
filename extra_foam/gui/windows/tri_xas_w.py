@@ -16,8 +16,8 @@ from ..misc_widgets import make_pen
 from ...config import config
 
 
-class _TrXasAbsorptionWidget(PlotWidgetF):
-    """_TrXasAbsorptionWidget class.
+class TrXasAbsorptionPlot(PlotWidgetF):
+    """TrXasAbsorptionPlot class.
 
     Display absorption(s) binned by time delay.
     """
@@ -53,8 +53,8 @@ class _TrXasAbsorptionWidget(PlotWidgetF):
             self._a23.setData(delay, xas.a23_stats)
 
 
-class _TrXasHeatmap(ImageViewF):
-    """_TrXasHeatmap class.
+class TrXasHeatmap(ImageViewF):
+    """TrXasHeatmap class.
 
     Display absorption binned by delay and energy.
     """
@@ -103,9 +103,9 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
         self._roi2_image = RoiImageView(2, parent=self)
         self._roi3_image = RoiImageView(3, parent=self)
 
-        self._a13_a23 = _TrXasAbsorptionWidget(False, parent=self)
-        self._a21 = _TrXasAbsorptionWidget(True, parent=self)
-        self._a21_heatmap = _TrXasHeatmap(parent=self)
+        self._a13_a23 = TrXasAbsorptionPlot(False, parent=self)
+        self._a21 = TrXasAbsorptionPlot(True, parent=self)
+        self._a21_heatmap = TrXasHeatmap(parent=self)
 
         self.initUI()
         self.initConnections()

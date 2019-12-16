@@ -12,9 +12,7 @@ import unittest
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
-from extra_foam.pipeline.processors.xgm import (
-    XgmProcessor
-)
+from extra_foam.pipeline.processors.xgm import XgmProcessor
 
 
 class TestXgmProcessor(unittest.TestCase, _BaseProcessorTest):

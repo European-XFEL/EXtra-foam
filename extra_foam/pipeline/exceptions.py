@@ -27,6 +27,11 @@ class StopPipelineError(Exception):
     pass
 
 
+class UnknownParameterError(StopPipelineError):
+    """Raised when an unknown/unexpected parameter is met."""
+    pass
+
+
 class ImageProcessingError(StopPipelineError):
     """Raised when ImageProcessor.process fails."""
     pass

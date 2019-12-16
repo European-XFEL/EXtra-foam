@@ -7,50 +7,74 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import unittest
+from unittest.mock import MagicMock, patch
 
+import pytest
 import numpy as np
 
-from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 from extra_foam.pipeline.processors.tr_xas import TrXasProcessor
 
 
-class TestTrXasProcessor(unittest.TestCase, _BaseProcessorTest):
+class TestTrXasProcessor(_BaseProcessorTest):
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = TrXasProcessor()
-
-    def tearDown(self):
+        yield
         self._proc._clear_history()
+
+    def testNotTriggered(self):
+        proc = self._proc
+        data, processed = self.simple_data(1001, (4, 2, 2))
+
+        # nothing should happen
+        proc._meta.has_analysis = MagicMock(return_value=False)
+        proc._get_data_point = MagicMock()
+        proc.process(data)
+        proc._get_data_point.assert_not_called()
+
+    @patch('extra_foam.ipc.ProcessLogger.error')
+    def testProcess(self, error):
+        proc = self._proc
+        data, processed = self.simple_data(1001, (4, 2, 2))
+
+        proc._meta.has_analysis = MagicMock(return_value=True)
+        proc._n_delay_bins = 10
+        proc._delay_range = [-1, 1]
+        proc._n_energy_bins = 10
+        proc._energy_range = [-1, 1]
+        proc.process(data)
+
+        # TODO: add more
 
     def test1dBinning(self):
         proc = self._proc
 
         n = 10
-        proc._a13 = np.random.randn(n).tolist()
-        proc._a23 = np.random.randn(n).tolist()
-        proc._a21 = np.random.randn(n).tolist()
+        proc._a13.extend(np.random.randn(n))
+        proc._a23.extend(np.random.randn(n))
+        proc._a21.extend(np.random.randn(n))
 
-        proc._delays = np.arange(10).tolist()
+        proc._delays.extend(np.arange(10))
         proc._n_delay_bins = 4
         proc._delay_range = [1, 3]
 
         proc._new_1d_binning()
-        self.assertFalse(proc._bin1d)
-        self.assertTrue(proc._bin2d)
-        self.assertEqual(4, len(proc._a13_stats))
-        self.assertEqual(4, len(proc._a23_stats))
-        self.assertEqual(4, len(proc._a21_stats))
-        self.assertListEqual([1, 0, 1, 1], proc._delay_bin_counts.tolist())
-        self.assertListEqual([1., 1.5, 2., 2.5, 3.], proc._delay_bin_edges.tolist())
+        assert not proc._bin1d
+        assert proc._bin2d
+        assert 4 == len(proc._a13_stats)
+        assert 4 == len(proc._a23_stats)
+        assert 4 == len(proc._a21_stats)
+        assert [1, 0, 1, 1] == proc._delay_bin_counts.tolist()
+        assert [1., 1.5, 2., 2.5, 3.] == proc._delay_bin_edges.tolist()
 
         # new outsider data point
-        proc._update_1d_binning(0.1, 0.2, 0.3, 3)  # delay = 3 has index 3 instead of 2
-        self.assertListEqual([1, 0, 1, 1], proc._delay_bin_counts.tolist())
+        proc._update_1d_binning(0.1, 0.2, 0.3, 3.5)  # index 3
+        assert [1, 0, 1, 1] == proc._delay_bin_counts.tolist()
 
         # new valid data point
-        proc._update_1d_binning(0.1, 0.2, 0.3, 2)  # delay = 2 has index 2 instead of 1
-        self.assertListEqual([1, 0, 2, 1], proc._delay_bin_counts.tolist())
+        proc._update_1d_binning(0.1, 0.2, 0.3, 2)  # index 2
+        assert [1, 0, 2, 1] == proc._delay_bin_counts.tolist()
 
         # TODO: test moving average calculation
 
@@ -58,36 +82,35 @@ class TestTrXasProcessor(unittest.TestCase, _BaseProcessorTest):
         proc = self._proc
 
         n = 10
-        proc._a21 = np.random.randn(n).tolist()
+        proc._a21.extend(np.random.randn(n))
+        proc._a13.extend(np.random.randn(n))
+        proc._a23.extend(np.random.randn(n))
 
-        proc._delays = np.arange(10).tolist()
-        proc._energies = (np.arange(10) + 1).tolist()
+        proc._delays.extend(np.arange(10))
+        proc._energies.extend(np.arange(10) + 1)
         proc._n_delay_bins = 4
         proc._delay_range = [1, 8]
         proc._n_energy_bins = 2
         proc._energy_range = [2, 6]
 
         proc._new_2d_binning()
-        self.assertTrue(proc._bin1d)
-        self.assertFalse(proc._bin2d)
+        assert proc._bin1d
+        assert not proc._bin2d
 
-        self.assertTupleEqual((4, 2), proc._a21_heat.shape)
-        self.assertTupleEqual((4, 2), proc._a21_heatcount.shape)
-        self.assertListEqual([[2, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
-        self.assertIsNone(proc._delay_bin_edges)  # calculated in _new_1d_binning
-        self.assertListEqual([2, 4, 6], proc._energy_bin_edges.tolist())
-
-        # we need the delay bin edges
-        proc._a13 = np.random.randn(n).tolist()
-        proc._a23 = np.random.randn(n).tolist()
+        assert (4, 2) == proc._a21_heat.shape
+        assert (4, 2) == proc._a21_heatcount.shape
+        assert [[2, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist()
+        assert [2, 4, 6] == proc._energy_bin_edges.tolist()
+        assert proc._delay_bin_edges is None  # calculated in _new_1d_binning
         proc._new_1d_binning()
+        assert [1.0, 2.75, 4.5, 6.25, 8.0] == proc._delay_bin_edges.tolist()
 
         # new outsider data point
-        proc._update_2d_binning(0.1, 6, 7)  # energy = 6 has index 2 instead of 1
-        self.assertListEqual([[2, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
+        proc._update_2d_binning(0.1, 6.5, 7)  # index (2, 3)
+        assert [[2, 0], [0, 2], [0, 1], [0, 0]] == proc._a21_heatcount.tolist()
 
         # new valid data point
-        proc._update_2d_binning(0.1, 2, 1)  # energy = 2 has index 0 instead of -1
-        self.assertListEqual([[3, 0], [0, 2], [0, 1], [0, 0]], proc._a21_heatcount.tolist())
+        proc._update_2d_binning(0.1, 2, 1)  # index (0, 0)
+        assert [[3, 0], [0, 2], [0, 1], [0, 0]] == proc._a21_heatcount.tolist()
 
         # TODO: test moving average calculation

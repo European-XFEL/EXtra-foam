@@ -20,6 +20,7 @@ from ..ctrl_widgets import (
     RoiNormCtrlWidget,
 )
 from ..misc_widgets import make_brush, make_pen
+from ...config import AnalysisType, plot_labels
 
 
 class RoiProjPlot(PlotWidgetF):
@@ -31,8 +32,9 @@ class RoiProjPlot(PlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setLabel('bottom', "x")
-        self.setLabel('left', "Projection")
+        x_label, y_label = plot_labels[AnalysisType.ROI_PROJ]
+        self.setLabel('bottom', x_label)
+        self.setLabel('left', y_label)
         self.setTitle('ROI projection (average over train)')
 
         self._plot = self.plotCurve(pen=make_pen("p"))

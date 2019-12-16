@@ -187,7 +187,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
             foms.append(np.sum(np.abs(fom)))
 
         processed.pulse.ai.x = momentum
-        processed.pulse.ai.vfom = intensities
+        processed.pulse.ai.y = intensities
         processed.pulse.ai.fom = foms
         # Note: It is not correct to calculate the mean of intensities
         #       since the result is equivalent to setting all nan to zero
@@ -249,7 +249,7 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             fom = np.sum(np.abs(fom))
 
             processed.ai.x = momentum
-            processed.ai.vfom = self._intensity_ma
+            processed.ai.y = self._intensity_ma
             processed.ai.fom = fom
 
         # ------------------------------------
@@ -288,8 +288,6 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
 
                 pp.y_on = y_on
                 pp.y_off = y_off
-                pp.vfom = vfom
                 pp.x = momentum
+                pp.y = vfom
                 pp.fom = fom
-                pp.x_label = processed.ai.x_label
-                pp.vfom_label = f"[pump-probe] {processed.ai.vfom_label}"
