@@ -76,13 +76,8 @@ class ImageProcessor(_BaseProcessor):
 
         # global
         gp_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
-
-        try:
-            self._poi_indices = [int(gp_cfg['poi1_index']),
-                                 int(gp_cfg['poi2_index'])]
-        except KeyError:
-            # Train-resolved detector or poiWindow has not been opened yet.
-            pass
+        self._poi_indices = [
+            int(gp_cfg['poi1_index']), int(gp_cfg['poi2_index'])]
 
         if 'remove_dark' in gp_cfg:
             self._meta.hdel(mt.GLOBAL_PROC, 'remove_dark')

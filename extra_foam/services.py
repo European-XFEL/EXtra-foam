@@ -196,9 +196,11 @@ class Foam:
         try:
             self.pulse_worker = PulseWorker()
             self.train_worker = TrainWorker()
-            self.train_worker.connectInputToOutput(self.pulse_worker.output)
+            self.train_worker.input.connect(self.pulse_worker.output)
 
-            self._gui = MainGUI(start_thread_logger=True)
+            self._gui = MainGUI()
+            self._gui.input.connect(self.train_worker.output)
+
         except Exception as e:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             logger.error(repr(e))
@@ -207,24 +209,26 @@ class Foam:
 
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
+
+        self._gui.start()
+        self._gui.start_sgn.connect(self._resume)
+        self._gui.stop_sgn.connect(self._pause)
+
         self.pulse_worker.start()
         register_foam_process(ProcessInfo(name=self.pulse_worker.name,
-                                         process=self.pulse_worker))
+                                          process=self.pulse_worker))
+
         self.train_worker.start()
         register_foam_process(ProcessInfo(name=self.train_worker.name,
-                                         process=self.train_worker))
-
-        self._gui.connectInputToOutput(self.train_worker.output)
-        self._gui.start_sgn.connect(self.start)
-        self._gui.stop_sgn.connect(self.pause)
+                                          process=self.train_worker))
 
         return self
 
-    def start(self):
+    def _resume(self):
         self.train_worker.resume()
         self.pulse_worker.resume()
 
-    def pause(self):
+    def _pause(self):
         self.train_worker.pause()
         self.pulse_worker.pause()
 

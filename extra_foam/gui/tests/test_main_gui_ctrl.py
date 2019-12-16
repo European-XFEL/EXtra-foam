@@ -78,6 +78,34 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         roi_proc.update()
         self.assertIsNone(roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
 
+        # ----------------
+        # Test POI indices
+        # ----------------
+
+        image_proc = self.pulse_worker._image_proc
+
+        # default values
+        image_proc.update()
+        for idx in image_proc._poi_indices:
+            self.assertEqual(0, idx)
+
+        new_indices = [10, 20]
+        for i in range(len(new_indices)):
+            widget._poi_index_les[i].setText(str(new_indices[i]))
+        image_proc.update()
+        for i in range(len(new_indices)):
+            self.assertEqual(new_indices[i], image_proc._poi_indices[i])
+
+        # the PoiWindow will be informed when opened
+        self.assertEqual(0, len(self.gui._plot_windows))
+        poi_action = self.gui._tool_bar.actions()[4]
+        poi_action.trigger()
+        win = list(self.gui._plot_windows.keys())[-1]
+        self.assertIsInstance(win, PulseOfInterestWindow)
+        for i, index in enumerate(new_indices):
+            self.assertEqual(index, win._poi_imgs[i]._index)
+            self.assertEqual(index, win._poi_hists[i]._index)
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -197,8 +225,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
     def testCorrelationCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
             _N_PARAMS, _DEFAULT_RESOLUTION)
+        from extra_foam.pipeline.processors.base_processor import (
+            SimplePairSequence, OneWayAccuPairSequence
+        )
 
         widget = self.gui.correlation_ctrl_widget
+        analysis_types = {value: key for key, value in
+                          widget._analysis_types.items()}
 
         for i in range(_N_PARAMS):
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
@@ -215,36 +248,43 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType(0), proc.analysis_type)
         self.assertEqual([""] * _N_PARAMS, proc._device_ids)
         self.assertEqual([""] * _N_PARAMS, proc._properties)
+        self.assertEqual([0.0] * _N_PARAMS, proc._resolutions)
 
         # set new FOM
-        widget._analysis_type_cb.setCurrentText('ROI proj')
+        proc._resets = [False] * _N_PARAMS
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
         proc.update()
         self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
+        self.assertTrue(all(proc._resets))
 
-        # test the correlation param table
+        # change device_id
+        proc._resets = [False] * _N_PARAMS
         for i in range(_N_PARAMS):
-            # change category
             widget._table.cellWidget(i, 0).setCurrentIndex(1)
-
-            # change device id
             widget._table.cellWidget(i, 1).setCurrentIndex(1)
-
-            resolution = (i+1)*5 if i < 2 else 0.0
-            resolution_le = widget._table.cellWidget(i, 3)
-            resolution_le.setText(str(resolution))
-
         proc.update()
         for i in range(_N_PARAMS):
             device_id = widget._table.cellWidget(i, 1).currentText()
             self.assertEqual(device_id, proc._device_ids[i])
             ppt = widget._table.cellWidget(i, 1).currentText()
             self.assertEqual(ppt, proc._device_ids[i])
+        self.assertTrue(all(proc._resets))
+
+        # change resolution
+        proc._resets = [False] * _N_PARAMS
+        for i in range(_N_PARAMS):
+            self.assertIsInstance(proc._correlations[i], SimplePairSequence)
+            widget._table.cellWidget(i, 3).setText(str(1.0))
+        proc.update()
+        for i in range(_N_PARAMS):
+            self.assertEqual(1.0, proc._resolutions[i])
+            self.assertIsInstance(proc._correlations[i], OneWayAccuPairSequence)
 
         # test reset button
-        proc._reset = False
+        proc._resets = [False] * _N_PARAMS
         widget._reset_btn.clicked.emit()
         proc.update()
-        self.assertTrue(proc._reset)
+        self.assertTrue(all(proc._resets))
 
     def testBinCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
@@ -252,6 +292,10 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         )
 
         widget = self.gui.bin_ctrl_widget
+
+        analysis_types = {value: key for key, value in widget._analysis_types.items()}
+        bin_modes = {value: key for key, value in widget._bin_modes.items()}
+
         for i in range(_N_PARAMS):
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
                          for j in range(widget._table.cellWidget(i, 0).count())]
@@ -275,20 +319,35 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual("", proc._property2)
         self.assertEqual(default_bin_range, proc._range2)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
+        self.assertFalse(proc._has_param1)
+        self.assertFalse(proc._has_param2)
 
         # test analysis type change
-        proc._reset1 = False
-        proc._reset2 = False
-        widget._analysis_type_cb.setCurrentIndex(1)
+        proc._reset = False
+        proc._bin1d = False
+        proc._bin2d = False
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.PUMP_PROBE])
         proc.update()
-        self.assertEqual(AnalysisType(AnalysisType.PUMP_PROBE),
-                         proc.analysis_type)
-        self.assertTrue(proc._reset1)
-        self.assertTrue(proc._reset2)
+        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
+        self.assertTrue(proc._reset)
+        self.assertFalse(proc._bin1d)
+        self.assertFalse(proc._bin2d)
+
+        # test mode change
+        proc._reset = False
+        proc._bin1d = False
+        proc._bin2d = False
+        widget._mode_cb.setCurrentText(bin_modes[BinMode.ACCUMULATE])
+        proc.update()
+        self.assertEqual(BinMode.ACCUMULATE, proc._mode)
+        self.assertFalse(proc._reset)
+        self.assertTrue(proc._bin1d)
+        self.assertTrue(proc._bin2d)
 
         # test device id and property change
-        proc._reset1 = False
-        proc._reset2 = False
+        proc._reset = False
+        proc._bin1d = False
+        proc._bin2d = False
         # bin parameter 1
         widget._table.cellWidget(0, 0).setCurrentText('Train ID')
         self.assertEqual("Train ID", widget._table.cellWidget(0, 0).currentText())
@@ -296,8 +355,12 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual("Any", widget._table.cellWidget(0, 1).currentText())
         self.assertEqual("timestamp.tid", widget._table.cellWidget(0, 2).currentText())
         proc.update()
-        self.assertTrue(proc._reset1)
-        self.assertFalse(proc._reset2)
+        self.assertTrue(proc._reset)
+        self.assertFalse(proc._bin1d)
+        self.assertFalse(proc._bin2d)
+        self.assertTrue(proc._has_param1)
+        self.assertFalse(proc._has_param2)
+        proc._reset = False
         # bin parameter 2
         widget._table.cellWidget(1, 0).setCurrentText('User defined')
         self.assertEqual("User defined", widget._table.cellWidget(1, 0).currentText())
@@ -306,45 +369,47 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         widget._table.cellWidget(1, 2).setText('timestamp.tid')
         self.assertEqual("timestamp.tid", widget._table.cellWidget(1, 2).text())
         proc.update()
-        self.assertTrue(proc._reset1)
-        self.assertTrue(proc._reset2)
+        self.assertTrue(proc._reset)
+        self.assertFalse(proc._bin1d)
+        self.assertFalse(proc._bin2d)
+        self.assertTrue(proc._has_param2)
 
         # test bin range and number of bins change
-        proc._reset1 = False
-        proc._reset2 = False
+        proc._bin1d = False
+        proc._bin2d = False
         # bin parameter 1
         widget._table.cellWidget(0, 3).setText("0, 10")  # range
         widget._table.cellWidget(0, 4).setText("5")  # n_bins
         proc.update()
         self.assertEqual(5, proc._n_bins1)
         self.assertTupleEqual((0, 10), proc._range1)
-        np.testing.assert_array_equal(np.array([0, 2, 4, 6, 8, 10]), proc._edge1)
-        np.testing.assert_array_equal(np.array([1, 3, 5, 7, 9]), proc._center1)
-        self.assertTrue(proc._reset1)
-        self.assertFalse(proc._reset2)
+        self.assertTrue(proc._bin1d)
+        self.assertTrue(proc._bin2d)
+        proc._bin1d = False
+        proc._bin2d = False
         # bin parameter 2
         widget._table.cellWidget(1, 3).setText("-4, 4")  # range
         widget._table.cellWidget(1, 4).setText("2")  # n_bins
         proc.update()
         self.assertEqual(2, proc._n_bins2)
         self.assertTupleEqual((-4, 4), proc._range2)
-        np.testing.assert_array_equal(np.array([-4, 0, 4]), proc._edge2)
-        np.testing.assert_array_equal(np.array([-2, 2]), proc._center2)
-        self.assertTrue(proc._reset1)
-        self.assertTrue(proc._reset2)
+        self.assertFalse(proc._bin1d)
+        self.assertTrue(proc._bin2d)
 
         # test reset button
-        proc._reset1 = False
-        proc._reset2 = False
+        proc._reset = False
+        proc._bin1d = False
+        proc._bin2d = False
         widget._reset_btn.clicked.emit()
         proc.update()
-        self.assertTrue(proc._reset1)
-        self.assertTrue(proc._reset2)
+        self.assertTrue(proc._reset)
+        self.assertFalse(proc._bin1d)
+        self.assertFalse(proc._bin2d)
 
-    def testStatisticsCtrlWidget(self):
-        widget = self.gui.statistics_ctrl_widget
+    def testHistogramCtrlWidget(self):
+        widget = self.gui.histogram_ctrl_widget
         train_worker = self.train_worker
-        proc = train_worker._statistics
+        proc = train_worker._histogram
         proc.update()
 
         analysis_types = {value: key for key, value in
@@ -352,7 +417,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertTrue(proc._pulse_resolved)
-        self.assertEqual(10, proc._num_bins)
+        self.assertEqual(10, proc._n_bins)
 
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
         proc.update()
@@ -366,9 +431,9 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._reset)
         self.assertEqual(AnalysisType.ROI_FOM, proc.analysis_type)
 
-        widget._num_bins_le.setText("100")
+        widget._n_bins_le.setText("100")
         proc.update()
-        self.assertEqual(100, proc._num_bins)
+        self.assertEqual(100, proc._n_bins)
 
         proc._reset = False
         widget._reset_btn.clicked.emit()
@@ -377,15 +442,15 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
-    @patch('extra_foam.gui.ctrl_widgets.StatisticsCtrlWidget.'
+    @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
-    @patch('extra_foam.gui.ctrl_widgets.StatisticsCtrlWidget.onStart', Mock())
+    @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.onStart', Mock())
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
-    @patch('extra_foam.gui.ctrl_widgets.StatisticsCtrlWidget.onStop', Mock())
+    @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.onStop', Mock())
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
     @patch('extra_foam.pipeline.TrainWorker.resume', Mock())
     @patch('extra_foam.pipeline.TrainWorker.pause', Mock())
@@ -407,7 +472,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         self.gui.pump_probe_ctrl_widget.updateMetaData. \
             assert_called_once()
-        self.gui.statistics_ctrl_widget.updateMetaData. \
+        self.gui.histogram_ctrl_widget.updateMetaData. \
             assert_called_once()
         azimuthal_integ_ctrl_widget.updateMetaData. \
             assert_called_once()
@@ -415,7 +480,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(1, len(start_spy))
 
         self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
-        self.gui.statistics_ctrl_widget.onStart.assert_called_once()
+        self.gui.histogram_ctrl_widget.onStart.assert_called_once()
         azimuthal_integ_ctrl_widget.onStart.assert_called_once()
 
         self.assertFalse(start_action.isEnabled())
@@ -428,54 +493,13 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         stop_action.trigger()
 
         self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
-        self.gui.statistics_ctrl_widget.onStop.assert_called_once()
+        self.gui.histogram_ctrl_widget.onStop.assert_called_once()
         azimuthal_integ_ctrl_widget.onStop.assert_called_once()
 
         self.assertEqual(1, len(stop_spy))
 
         self.assertTrue(start_action.isEnabled())
         self.assertFalse(stop_action.isEnabled())
-
-    def testPoiWindowCtrl(self):
-        image_proc = self.pulse_worker._image_proc
-
-        # --------------------------
-        # test setting POI pulse indices
-        # --------------------------
-        poi_action = self.gui._tool_bar.actions()[4]
-        self.assertEqual("Pulse-of-interest", poi_action.text())
-        poi_action.trigger()
-
-        window = [w for w in self.gui._windows
-                  if isinstance(w, PulseOfInterestWindow)][0]
-
-        # default values
-        default_index1 = int(window._poi_widget1._index_le.text())
-        self.assertEqual(default_index1, window._poi_widget1._poi_img._index)
-        self.assertEqual(default_index1, window._poi_widget1._poi_statistics._index)
-
-        default_index2 = int(window._poi_widget2._index_le.text())
-        self.assertEqual(default_index2, window._poi_widget2._poi_img._index)
-        self.assertEqual(default_index2, window._poi_widget2._poi_statistics._index)
-
-        image_proc.update()
-        self.assertEqual(default_index1, image_proc._poi_indices[0])
-        self.assertEqual(default_index2, image_proc._poi_indices[1])
-
-        # set new values
-        poi_index1 = 10
-        window._poi_widget1._index_le.setText(str(poi_index1))
-        self.assertEqual(poi_index1, window._poi_widget1._poi_img._index)
-        self.assertEqual(poi_index1, window._poi_widget1._poi_statistics._index)
-
-        poi_index2 = 20
-        window._poi_widget2._index_le.setText(str(poi_index2))
-        self.assertEqual(poi_index2, window._poi_widget2._poi_img._index)
-        self.assertEqual(poi_index2, window._poi_widget2._poi_statistics._index)
-
-        image_proc.update()
-        self.assertEqual(poi_index1, image_proc._poi_indices[0])
-        self.assertEqual(poi_index2, image_proc._poi_indices[1])
 
     def testTrXasCtrl(self):
         from extra_foam.gui.ctrl_widgets.trxas_ctrl_widget import (
@@ -541,6 +565,15 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
 
+    def testAnalysisCtrlWidget(self):
+        widget = self.gui.analysis_ctrl_widget
+        image_proc = self.pulse_worker._image_proc
+
+        image_proc.update()
+        for i, idx in enumerate(image_proc._poi_indices):
+            self.assertFalse(widget._poi_index_les[i].isEnabled())
+            self.assertEqual(0, idx)  # test default values
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -578,17 +611,6 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         self.assertEqual(2, len(spy))
 
-    def testStatisticsCtrlWidget(self):
+    def testHistogramCtrlWidget(self):
         # TODO
         pass
-
-    def testPoiWindowCtrl(self):
-        image_proc = self.pulse_worker._image_proc
-
-        # POI action is disabled
-        poi_action = self.gui._tool_bar.actions()[4]
-        self.assertEqual("Pulse-of-interest", poi_action.text())
-        self.assertFalse(poi_action.isEnabled())
-
-        image_proc.update()
-        self.assertIsNone(image_proc._poi_indices)

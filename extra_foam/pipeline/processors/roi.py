@@ -14,7 +14,8 @@ import numpy as np
 from ...algorithms import slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
-from ..exceptions import ProcessingError
+from ..exceptions import UnknownParameterError
+from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
@@ -99,7 +100,8 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
         try:
             handler = self._fom_handlers[fom_type]
         except KeyError:
-            raise ProcessingError(f"[ROI][FOM] Unknown FOM type: {fom_type}")
+            raise UnknownParameterError(
+                f"[ROI][FOM] Unknown FOM type: {fom_type}")
 
         if roi.ndim == 3:
             mask_image_array(
@@ -141,8 +143,9 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
                 elif self._norm_combo == RoiCombo.ROI3_ADD_ROI4:
                     processed.pulse.roi.norm = norm3 + norm4
                 else:
-                    raise ProcessingError(
-                        f"[ROI][normalizer] Unknown ROI combo: {self._norm_combo}")
+                    raise UnknownParameterError(
+                        f"[ROI][normalizer] Unknown ROI combo: "
+                        f"{self._norm_combo}")
 
         # Note: Exception will not be raised if norm is None due to ROI3
         #       or/and ROI4 are not available. Users are responsible to
@@ -181,7 +184,7 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
                 elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                     processed.pulse.roi.fom = fom1 + fom2
                 else:
-                    raise ProcessingError(
+                    raise UnknownParameterError(
                         f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
         # TODO: normalize
@@ -350,10 +353,10 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
 
         try:
             handler = self._fom_handlers[fom_type]
+            return handler(roi)
         except KeyError:
-            raise ProcessingError(f"[ROI][FOM] Unknown FOM type: {fom_type}")
-
-        return handler(roi)
+            raise UnknownParameterError(
+                f"[ROI][FOM] Unknown FOM type: {fom_type}")
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""
@@ -375,7 +378,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
             elif self._norm_combo == RoiCombo.ROI3_ADD_ROI4:
                 roi.norm = norm3 + norm4
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][normalizer] Unknown ROI combo: {self._norm_combo}")
 
     def _process_fom(self, processed):
@@ -398,7 +401,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                 roi.fom = fom1 + fom2
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
         # TODO: normalize
@@ -430,7 +433,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
                 pp.roi_norm_on = norm3_on + norm4_on
                 pp.roi_norm_off = norm3_off + norm4_off
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][normalizer] Unknown ROI combo: {self._norm_combo}")
 
     def _process_fom_pump_probe(self, processed):
@@ -460,7 +463,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
                 fom_on = fom1_on + fom2_on
                 fom_off = fom1_off + fom2_off
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
         if fom_on is None:
@@ -479,7 +482,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
         elif self._proj_direct == "y":
             return np.sum(roi, axis=-1)
         else:
-            raise ProcessingError(
+            raise UnknownParameterError(
                 f"[ROI][projection] Unknown projection direction: "
                 f"{self._proj_direct}")
 
@@ -499,15 +502,16 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
                 return
 
             if self._roi1.shape != self._roi2.shape:
-                raise ProcessingError(
+                logger.error(
                     f"[ROI][projection] ROI1 and ROI2 must have the same shape")
+                return
 
             if self._proj_combo == RoiCombo.ROI1_SUB_ROI2:
                 proj = proj1 - proj2
             elif self._proj_combo == RoiCombo.ROI1_ADD_ROI2:
                 proj = proj1 + proj2
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][projection] Unknown ROI projection combo: "
                     f"{self._proj_combo}")
 
@@ -545,8 +549,8 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
                 return
 
             if self._roi1.shape != self._roi2.shape:
-                raise ProcessingError(
-                    f"[ROI][projection] ROI1 and ROI2 must have the same shape")
+                # The error log is already published in '_process_proj'
+                return
 
             if self._proj_combo == RoiCombo.ROI1_SUB_ROI2:
                 y_on = proj1_on - proj2_on
@@ -555,7 +559,7 @@ class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
                 y_on = proj1_on + proj2_on
                 y_off = proj1_off + proj2_off
             else:
-                raise ProcessingError(
+                raise UnknownParameterError(
                     f"[ROI][projection] Unknown ROI projection combo: "
                     f"{self._proj_combo}")
 

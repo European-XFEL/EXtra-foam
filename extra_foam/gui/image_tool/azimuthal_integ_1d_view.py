@@ -14,10 +14,11 @@ from .base_view import _AbstractImageToolView
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import make_pen
 from ..plot_widgets import ImageAnalysis, PlotWidgetF
+from ...config import AnalysisType, plot_labels
 
 
-class AzimuthalInteg1dPlotWidget(PlotWidgetF):
-    """AzimuthalInteg1dPlotWidget class.
+class AzimuthalInteg1dPlot(PlotWidgetF):
+    """AzimuthalInteg1dPlot class.
 
     Widget for visualizing the line plot of 1D azimuthal integration result.
     """
@@ -25,16 +26,16 @@ class AzimuthalInteg1dPlotWidget(PlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setLabel('bottom', "Momentum transfer (1/A)")
-        self.setLabel('left', "Scattering signal (arb. u.)")
+        x_label, y_label = plot_labels[AnalysisType.AZIMUTHAL_INTEG]
+        self.setLabel('bottom', x_label)
+        self.setLabel('left', y_label)
         self.setTitle(' ')
 
         self._plot = self.plotCurve(pen=make_pen("p"))
 
     def updateF(self, data):
         """Override."""
-        momentum = data.ai.x
-        intensity = data.ai.vfom
+        momentum, intensity = data.ai.x, data.ai.y
 
         if intensity is None:
             return
@@ -53,7 +54,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._image_view = ImageAnalysis(hide_axis=False)
-        self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlotWidget()
+        self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
         self._ctrl_widget = self.parent().createCtrlWidget(
             AzimuthalIntegCtrlWidget)
 

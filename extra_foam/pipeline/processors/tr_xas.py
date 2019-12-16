@@ -10,23 +10,29 @@ All rights reserved.
 import numpy as np
 from scipy import stats
 
-from .base_processor import _BaseProcessor
+from .base_processor import _BaseProcessor, SimpleSequence
+from .bin import _BinMixin
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...utils import profiler
 from ...database import Metadata as mt
+from ...ipc import process_logger as logger
 
 
-class TrXasProcessor(_BaseProcessor):
+class TrXasProcessor(_BaseProcessor, _BinMixin):
     """Tr-XAS processor.
+
+    The implementation of tr-XAS processor is easier than bin processor
+    since it cannot have empty device ID or property. Moreover, it does
+    not include VFOM heatmap.
 
     Attributes:
         analysis_type (AnalysisType): TrXAS analysis type.
-        _delays (list): train-resolved time delays.
-        _energies (list): train-resolved photon energies.
-        _a13 (list): train-resolved -log(sum(ROI1)/sum(ROI3)).
-        _a23 (list): train-resolved -log(sum(ROI2)/sum(ROI3)).
-        _a21 (list): train-resolved -log(sum(ROI2)/sum(ROI1)).
+        _delays (SimpleSequence): train-resolved time delays.
+        _energies (SimpleSequence): train-resolved photon energies.
+        _a13 (SimpleSequence): train-resolved -log(sum(ROI1)/sum(ROI3)).
+        _a23 (SimpleSequence): train-resolved -log(sum(ROI2)/sum(ROI3)).
+        _a21 (SimpleSequence): train-resolved -log(sum(ROI2)/sum(ROI1)).
         _delay_bin_edges (numpy.array): edges of delay bins.
         _delay_bin_counts (numpy.array): count of data points in each
             delay bin.
@@ -60,6 +66,7 @@ class TrXasProcessor(_BaseProcessor):
         _reset (bool): True for clearing all the existing data.
     """
 
+    # 10 pulses/train * 60 seconds * 30 minutes = 18,000
     _MAX_POINTS = 100 * 60 * 60
 
     def __init__(self):
@@ -67,11 +74,11 @@ class TrXasProcessor(_BaseProcessor):
 
         self.analysis_type = AnalysisType.UNDEFINED
 
-        self._delays = []
-        self._energies = []
-        self._a13 = []
-        self._a23 = []
-        self._a21 = []
+        self._delays = SimpleSequence(max_len=self._MAX_POINTS)
+        self._energies = SimpleSequence(max_len=self._MAX_POINTS)
+        self._a13 = SimpleSequence(max_len=self._MAX_POINTS)
+        self._a23 = SimpleSequence(max_len=self._MAX_POINTS)
+        self._a21 = SimpleSequence(max_len=self._MAX_POINTS)
 
         self._delay_bin_edges = None
         self._delay_bin_counts = None
@@ -105,6 +112,8 @@ class TrXasProcessor(_BaseProcessor):
             self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
         except KeyError:
             self._update_analysis(AnalysisType.UNDEFINED)
+
+        # TODO: should we reset when device ID or property change
 
         self._delay_device = cfg["delay_device"]
         self._delay_ppt = cfg["delay_property"]
@@ -150,11 +159,12 @@ class TrXasProcessor(_BaseProcessor):
             self._clear_history()
             self._reset = False
 
-        if len(self._delays) > self._MAX_POINTS:
-            raise ProcessingError(f"[tr-XAS] Maximum number of points "
-                                  f"({self._MAX_POINTS}) reached!")
+        if self._bin1d:
+            self._new_1d_binning()
 
-        err_msg = ""
+        if self._bin2d:
+            self._new_2d_binning()
+
         try:
             sum1, sum2, sum3, delay, energy = self._get_data_point(
                 processed, data['raw'])
@@ -168,24 +178,12 @@ class TrXasProcessor(_BaseProcessor):
             self._a21.append(a21)
             self._delays.append(delay)
             self._energies.append(energy)
+
+            self._update_1d_binning(a13, a23, a21, delay)
+            self._update_2d_binning(a21, energy, delay)
+
         except ProcessingError as e:
-            err_msg = str(e)
-
-        # update 1d binning
-
-        if self._bin1d:
-            self._new_1d_binning()
-        else:
-            if not err_msg:
-                self._update_1d_binning(a13, a23, a21, delay)
-
-        # update 2d binning
-
-        if self._bin2d:
-            self._new_2d_binning()
-        else:
-            if not err_msg:
-                self._update_2d_binning(a21, energy, delay)
+            logger.error(f"[tr-XAS] {str(e)}!")
 
         # update processed
         xas = processed.trxas
@@ -198,22 +196,19 @@ class TrXasProcessor(_BaseProcessor):
         xas.a21_heat = self._a21_heat
         xas.a21_heatcount = self._a21_heatcount
 
-        if err_msg:
-            raise ProcessingError(err_msg)
-
     def _get_data_point(self, processed, raw):
         tid = processed.tid
         roi = processed.roi
         masked = processed.image.masked_mean
 
         # get three ROIs
-        roi1 = roi[0].rect(masked)
+        roi1 = roi.geom1.rect(masked)
         if roi1 is None:
             raise ProcessingError("ROI1 is not available!")
-        roi2 = roi[1].rect(masked)
+        roi2 = roi.geom2.rect(masked)
         if roi2 is None:
             raise ProcessingError("ROI2 is not available!")
-        roi3 = roi[2].rect(masked)
+        roi3 = roi.geom3.rect(masked)
         if roi3 is None:
             raise ProcessingError("ROI3 is not available!")
 
@@ -243,30 +238,41 @@ class TrXasProcessor(_BaseProcessor):
 
     def _new_1d_binning(self):
         self._a13_stats, self._delay_bin_edges, _ = \
-            stats.binned_statistic(self._delays, self._a13, 'mean',
-                                   self._n_delay_bins, self._delay_range)
+            stats.binned_statistic(self._delays.data(),
+                                   self._a13.data(),
+                                   'mean',
+                                   self._n_delay_bins,
+                                   self._delay_range)
         np.nan_to_num(self._a13_stats, copy=False)
 
         self._delay_bin_counts, _, _ = \
-            stats.binned_statistic(self._delays, self._a13, 'count',
-                                   self._n_delay_bins, self._delay_range)
+            stats.binned_statistic(self._delays.data(),
+                                   self._a13.data(),
+                                   'count',
+                                   self._n_delay_bins,
+                                   self._delay_range)
         np.nan_to_num(self._delay_bin_counts, copy=False)
 
         self._a23_stats, _, _ = \
-            stats.binned_statistic(self._delays, self._a23, 'mean',
-                                   self._n_delay_bins, self._delay_range)
+            stats.binned_statistic(self._delays.data(),
+                                   self._a23.data(),
+                                   'mean',
+                                   self._n_delay_bins,
+                                   self._delay_range)
         np.nan_to_num(self._a23_stats, copy=False)
 
         self._a21_stats, _, _ = \
-            stats.binned_statistic(self._delays, self._a21, 'mean',
-                                   self._n_delay_bins, self._delay_range)
+            stats.binned_statistic(self._delays.data(),
+                                   self._a21.data(),
+                                   'mean',
+                                   self._n_delay_bins,
+                                   self._delay_range)
         np.nan_to_num(self._a21_stats, copy=False)
 
         self._bin1d = False
 
     def _update_1d_binning(self, a13, a23, a21, delay):
-        # use side = 'right' to match the result from scipy
-        iloc_x = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
+        iloc_x = self.searchsorted(self._delay_bin_edges, delay)
         if 0 <= iloc_x < self._n_delay_bins:
             self._delay_bin_counts[iloc_x] += 1
             count = self._delay_bin_counts[iloc_x]
@@ -274,25 +280,23 @@ class TrXasProcessor(_BaseProcessor):
             self._a23_stats[iloc_x] += (a23 - self._a23_stats[iloc_x]) / count
             self._a21_stats[iloc_x] += (a21 - self._a21_stats[iloc_x]) / count
 
-        return iloc_x
-
     def _new_2d_binning(self):
         # to have energy on x axis and delay on y axis
         # Note: the return array from 'stats.binned_statistic_2d' has a swap x and y
         # axis compared to conventional image data
         self._a21_heat, _, self._energy_bin_edges, _ = \
-            stats.binned_statistic_2d(self._delays,
-                                      self._energies,
-                                      self._a21,
+            stats.binned_statistic_2d(self._delays.data(),
+                                      self._energies.data(),
+                                      self._a21.data(),
                                       'mean',
                                       [self._n_delay_bins, self._n_energy_bins],
                                       [self._delay_range, self._energy_range])
         np.nan_to_num(self._a21_heat, copy=False)
 
         self._a21_heatcount, _, _, _ = \
-            stats.binned_statistic_2d(self._delays,
-                                      self._energies,
-                                      self._a21,
+            stats.binned_statistic_2d(self._delays.data(),
+                                      self._energies.data(),
+                                      self._a21.data(),
                                       'count',
                                       [self._n_delay_bins, self._n_energy_bins],
                                       [self._delay_range, self._energy_range])
@@ -301,8 +305,8 @@ class TrXasProcessor(_BaseProcessor):
         self._bin2d = False
 
     def _update_2d_binning(self, a21, energy, delay):
-        iloc_x = np.searchsorted(self._energy_bin_edges, energy, side='right') - 1
-        iloc_y = np.searchsorted(self._delay_bin_edges, delay, side='right') - 1
+        iloc_x = self.searchsorted(self._energy_bin_edges, energy)
+        iloc_y = self.searchsorted(self._delay_bin_edges, delay)
         if 0 <= iloc_x < self._n_energy_bins \
                 and 0 <= iloc_y < self._n_delay_bins:
             self._a21_heatcount[iloc_y, iloc_x] += 1
@@ -310,18 +314,12 @@ class TrXasProcessor(_BaseProcessor):
                 (a21 - self._a21_heat[iloc_y, iloc_x]) / \
                 self._a21_heatcount[iloc_y, iloc_x]
 
-    @staticmethod
-    def edges2centers(edges):
-        if edges is None:
-            return None
-        return (edges[1:] + edges[:-1]) / 2.0
-
     def _clear_history(self):
-        self._delays.clear()
-        self._energies.clear()
-        self._a13.clear()
-        self._a23.clear()
-        self._a21.clear()
+        self._delays.reset()
+        self._energies.reset()
+        self._a13.reset()
+        self._a23.reset()
+        self._a21.reset()
 
         self._delay_bin_edges = None
         self._delay_bin_counts = None

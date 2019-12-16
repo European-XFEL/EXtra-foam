@@ -21,6 +21,10 @@ class TestDataProxy(unittest.TestCase):
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
+        # test 'reset' method
+        cls._meta.reset()
+        cls._mon.reset()
+
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
         type2 = AnalysisType.PUMP_PROBE

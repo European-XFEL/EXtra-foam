@@ -20,8 +20,8 @@ class _AbstractProxy:
     _db_nodecode = RedisConnection(decode_responses=False)
 
     def reset(self):
-        self.__class__.__dict__["_db"].reset()
-        self.__class__.__dict__["_db_nodecode"].reset()
+        _AbstractProxy.__dict__["_db"].reset()
+        _AbstractProxy.__dict__["_db_nodecode"].reset()
 
     @redis_except_handler
     def hset(self, name, key, value):
