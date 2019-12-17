@@ -1,7 +1,4 @@
 import unittest
-import os
-import time
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
@@ -11,76 +8,6 @@ from extra_foam.algorithms import (
     mask_image, mask_image_array,
     subDarkImage, subDarkImageArray,
 )
-
-
-def nanmean_images_para(data, *, chunk_size=10, max_workers=4):
-    """Calculate nanmean of an array of images.
-
-    This function is only used for benchmark.
-
-    :param numpy.ndarray data: an array of images. (index, y, x).
-    :param int chunk_size: the slice size of along the second dimension
-        of the input data.
-    :param int max_workers: The maximum number of threads that can be
-        used to execute the given calls.
-
-    :return numpy.ndarray: averaged input data along the first axis if
-        the dimension of input data is larger than 3, otherwise the
-        original data.
-    """
-    def nanmean_imp(out, start, end):
-        """Implementation of parallelized nanmean.
-
-        :param numpy.ndarray out: result 2D array. (y, x)
-        :param int start: start index
-        :param int end: end index (not included)
-        """
-        with np.warnings.catch_warnings():
-            np.warnings.filterwarnings('ignore', category=RuntimeWarning)
-
-            out[start:end, :] = np.nanmean(data[:, start:end, :], axis=0)
-
-    if data.ndim != 3:
-        raise ValueError("Input must be a three dimensional numpy.array!")
-
-    ret = np.zeros_like(data[0, ...])
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        start = 0
-        max_idx = data.shape[1]
-        while start < max_idx:
-            executor.submit(nanmean_imp, ret, start,
-                            min(start + chunk_size, max_idx))
-            start += chunk_size
-
-    return ret
-
-
-class TestPynumpy(unittest.TestCase):
-    def test_nanmeanparaimp(self):
-        # test invalid shapes
-        data = np.ones([2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images_para(data)
-
-        data = np.ones([2, 2, 2, 2])
-        with self.assertRaises(ValueError):
-            nanmean_images_para(data)
-
-        # test 3D array
-        data = np.ones([2, 4, 2])
-        data[0, 0, 1] = np.nan
-        data[1, 0, 1] = np.nan
-        data[1, 2, 0] = np.nan
-        data[0, 3, 1] = np.inf
-
-        ret = nanmean_images_para(data, chunk_size=2, max_workers=2)
-        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
-        np.testing.assert_array_almost_equal(expected, ret)
-
-        ret = nanmean_images_para(data, chunk_size=1, max_workers=1)
-        expected = np.array([[1., np.nan], [1., 1.], [1., 1.], [1., np.inf]])
-        np.testing.assert_array_almost_equal(expected, ret)
 
 
 class TestImageProc(unittest.TestCase):
@@ -122,31 +49,6 @@ class TestImageProc(unittest.TestCase):
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
                                                  nanmeanImageArray(data, [0, 2]))
 
-    def _nanmean_image_array_performance(self, data_type):
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        data[::2, ::2, ::2] = np.nan
-
-        t0 = time.perf_counter()
-        nanmeanImageArray(data)
-        dt_cpp = time.perf_counter() - t0
-
-        t0 = time.perf_counter()
-        nanmeanImageArray(data, list(range(len(data))))
-        dt_cpp_sliced = time.perf_counter() - t0
-
-        t0 = time.perf_counter()
-        nanmean_images_para(data)
-        dt_py = time.perf_counter() - t0
-
-        print(f"\nnanmeanImageArray with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para sliced): {dt_cpp_sliced:.4f}, "
-              f"dt (numpy para): {dt_py:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testNanmeanImageArrayPerformance(self):
-        self._nanmean_image_array_performance(np.float32)
-        self._nanmean_image_array_performance(np.float64)
-
     def testNanmeanWithTwoImages(self):
         with self.assertRaises(ValueError):
             nanmeanTwoImages(np.ones((2, 2)), np.ones((2, 3)))
@@ -156,29 +58,6 @@ class TestImageProc(unittest.TestCase):
 
         expected = np.array([[1., 0.5, 3], [np.inf, np.nan, -np.inf]])
         np.testing.assert_array_almost_equal(expected, nanmeanTwoImages(img1, img2))
-
-    def _nanmean_two_images_performance(self, data_type):
-        img = np.ones((1024, 512), dtype=data_type)
-        img[::2, ::2] = np.nan
-
-        t0 = time.perf_counter()
-        nanmeanTwoImages(img, img)
-        dt_cpp = time.perf_counter() - t0
-
-        imgs = np.ones((2, 1024, 512), dtype=data_type)
-        imgs[:, ::2, ::2] = np.nan
-
-        t0 = time.perf_counter()
-        nanmeanImageArray(imgs)
-        dt_cpp_2 = time.perf_counter() - t0
-
-        print(f"\nnanmeanTwoImages with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testNanmeanWithTwoImagesPerformance(self):
-        self._nanmean_two_images_performance(np.float32)
-        self._nanmean_two_images_performance(np.float64)
 
     def testMovingAverage(self):
         arr1d = np.ones(2, dtype=np.float32)
@@ -265,25 +144,6 @@ class TestImageProc(unittest.TestCase):
 
         np.testing.assert_array_equal(ma_gt, imgs1)
 
-    def _moving_average_performance(self, data_type):
-        imgs = np.ones((64, 1024, 512), dtype=data_type)
-
-        t0 = time.perf_counter()
-        movingAverageImageArray(imgs, imgs, 5)
-        dt_cpp = time.perf_counter() - t0
-
-        t0 = time.perf_counter()
-        imgs + (imgs - imgs) / 5
-        dt_py = time.perf_counter() - t0
-
-        print(f"\nmoving average with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testMovingAveragePerformance(self):
-        self._moving_average_performance(np.float32)
-        self._moving_average_performance(np.float64)
-
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
@@ -340,90 +200,6 @@ class TestImageProc(unittest.TestCase):
         np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 0, 0]],
                                                 [[0, 0, 3], [0, 0, 0]]],
                                                dtype=np.float32), img)
-
-    def _mask_image_performance(self, data_type):
-        # mask by threshold
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        t0 = time.perf_counter()
-        mask_image_array(data, threshold_mask=(2., 3.))  # every elements are masked
-        dt_cpp_th = time.perf_counter() - t0
-
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        t0 = time.perf_counter()
-        data[(data > 3) | (data < 2)] = 0
-        dt_py_th = time.perf_counter() - t0
-
-        # mask by image
-        mask = np.ones((1024, 512), dtype=np.bool)
-
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        t0 = time.perf_counter()
-        mask_image_array(data, image_mask=mask)
-        dt_cpp = time.perf_counter() - t0
-
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        t0 = time.perf_counter()
-        data[:, mask] = 0
-        dt_py = time.perf_counter() - t0
-
-        print(f"\nmaskImageArray with {data_type} - \n"
-              f"dt (cpp para) threshold: {dt_cpp_th:.4f}, "
-              f"dt (numpy) threshold: {dt_py_th:.4f}, \n"
-              f"dt (cpp para) image: {dt_cpp:.4f}, dt (numpy) image: {dt_py:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testMaskImagePerformance(self):
-        self._mask_image_performance(np.float32)
-        self._mask_image_performance(np.float64)
-
-    def _nan2zero_performance(self, data_type):
-        # mask by threshold
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        data[::2, ::2, ::2] = np.nan
-
-        t0 = time.perf_counter()
-        mask_image_array(data)
-        dt_cpp = time.perf_counter() - t0
-
-        # need a fresh data since number of nans determines the performance
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        data[::2, ::2, ::2] = np.nan
-
-        t0 = time.perf_counter()
-        data[np.isnan(data)] = 0
-        dt_py = time.perf_counter() - t0
-
-        print(f"\nnanToZeroImageArray with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testNanToZeroPerformance(self):
-        self._nan2zero_performance(np.float32)
-        self._nan2zero_performance(np.float64)
-
-    def _sub_dark_performance(self, data_type):
-        # mask by threshold
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
-        t0 = time.perf_counter()
-        subDarkImageArray(data, dark)
-        dt_cpp = time.perf_counter() - t0
-
-        # need a fresh data since number of nans determines the performance
-        data = np.ones((64, 1024, 512), dtype=data_type)
-        dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
-
-        t0 = time.perf_counter()
-        data -= dark
-        dt_py = time.perf_counter() - t0
-
-        print(f"\nsubDarkImageArray with {data_type} - "
-              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
-
-    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testSubtractDarkPerformance(self):
-        self._sub_dark_performance(np.float32)
-        self._sub_dark_performance(np.float64)
 
     def testSubtractDark(self):
         # test invalid input

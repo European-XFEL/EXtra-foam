@@ -16,7 +16,7 @@ import shutil
 import sys
 import sysconfig
 import subprocess
-from setuptools import setup, find_packages, Distribution, Extension
+from setuptools import setup, Command, find_packages, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.test import test as _TestCommand
 from distutils.command.clean import clean
@@ -225,7 +225,27 @@ class TestCommand(_TestCommand):
         # run Python test
         import pytest
         errno = pytest.main(['extra_foam'])
-        sys.exit(errno)  # why do we need this?
+        sys.exit(errno)
+
+
+class BenchmarkCommand(Command):
+
+    description = "run benchmark after in-place build"
+
+    user_options = []
+
+    # TODO: improve
+
+    def initialize_options(self):
+        """Override."""
+        pass
+
+    def finalize_options(self):
+        """Override."""
+        pass
+
+    def run(self):
+        self.spawn(['python', 'benchmarks/benchmark_image_proc.py'])
 
 
 class BinaryDistribution(Distribution):
@@ -257,6 +277,7 @@ setup(
         'clean': clean,
         'build_ext': BuildExt,
         'test': TestCommand,
+        'benchmark': BenchmarkCommand,
     },
     distclass=BinaryDistribution,
     package_data={
