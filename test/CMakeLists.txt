@@ -49,7 +49,7 @@ set(FOAM_TESTS
 foreach(filename IN LISTS FOAM_TESTS)
     string(REPLACE ".cpp" "" targetname ${filename})
     add_executable(${targetname} main.cpp ${filename})
-    if(FOAM_WITH_TBB)
+    if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
         target_compile_definitions(${targetname} PRIVATE FOAM_WITH_TBB)
         target_include_directories(${targetname} PRIVATE ${TBB_INCLUDE_DIRS})
         target_link_libraries(${targetname} PRIVATE ${TBB_LIBRARIES})
@@ -79,7 +79,7 @@ target_include_directories(test_foam_cpp
 
 target_link_libraries(test_foam_cpp PRIVATE gtest pthread xtensor)
 
-if(FOAM_WITH_TBB)
+if(FOAM_WITH_TBB OR XTENSOR_USE_TBB)
     target_compile_definitions(test_foam_cpp PRIVATE FOAM_WITH_TBB)
     target_include_directories(test_foam_cpp PRIVATE ${TBB_INCLUDE_DIRS})
     target_link_libraries(test_foam_cpp PRIVATE ${TBB_LIBRARIES})
