@@ -125,13 +125,23 @@ PYBIND11_MODULE(image_proc, m)
                           &maskImageArray<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
                           py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<double, 2>>,
-                          py::arg("src").noconvert());
-  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<float, 2>>,
-                          py::arg("src").noconvert());
+  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<double, 2>>, py::arg("src").noconvert());
+  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<float, 2>>, py::arg("src").noconvert());
 
-  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<double, 3>>,
-                               py::arg("src").noconvert());
-  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<float, 3>>,
-                               py::arg("src").noconvert());
+  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<double, 3>>, py::arg("src").noconvert());
+  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<float, 3>>, py::arg("src").noconvert());
+
+  m.def("subDarkImageArray", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                             &subDarkImageArray<xt::pytensor<double, 3>>,
+                             py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("subDarkImageArray", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                             &subDarkImageArray<xt::pytensor<float, 3>>,
+                             py::arg("src").noconvert(), py::arg("dark").noconvert());
+
+  m.def("subDarkImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                        &subDarkImage<xt::pytensor<double, 2>>,
+                        py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("subDarkImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                        &subDarkImage<xt::pytensor<float, 2>>,
+                        py::arg("src").noconvert(), py::arg("dark").noconvert());
 }

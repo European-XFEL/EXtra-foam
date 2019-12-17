@@ -8,7 +8,8 @@ import numpy as np
 from extra_foam.cpp import (
     nanmeanImageArray, nanmeanTwoImages,
     movingAverageImage, movingAverageImageArray,
-    mask_image, mask_image_array
+    mask_image, mask_image_array,
+    subDarkImage, subDarkImageArray,
 )
 
 
@@ -83,7 +84,7 @@ class TestPynumpy(unittest.TestCase):
 
 
 class TestImageProc(unittest.TestCase):
-    def testNanmeanImages(self):
+    def testNanmeanImageArray(self):
         # test invalid shapes
         data = np.ones([2, 2])
         with self.assertRaises(TypeError):
@@ -121,7 +122,7 @@ class TestImageProc(unittest.TestCase):
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
                                                  nanmeanImageArray(data, [0, 2]))
 
-    def _nanmean_images_performance(self, data_type):
+    def _nanmean_image_array_performance(self, data_type):
         data = np.ones((64, 1024, 512), dtype=data_type)
         data[::2, ::2, ::2] = np.nan
 
@@ -142,9 +143,9 @@ class TestImageProc(unittest.TestCase):
               f"dt (numpy para): {dt_py:.4f}")
 
     @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
-    def testNanmeanImagesPerformance(self):
-        self._nanmean_images_performance(np.float32)
-        self._nanmean_images_performance(np.float64)
+    def testNanmeanImageArrayPerformance(self):
+        self._nanmean_image_array_performance(np.float32)
+        self._nanmean_image_array_performance(np.float64)
 
     def testNanmeanWithTwoImages(self):
         with self.assertRaises(ValueError):
@@ -399,3 +400,67 @@ class TestImageProc(unittest.TestCase):
     def testNanToZeroPerformance(self):
         self._nan2zero_performance(np.float32)
         self._nan2zero_performance(np.float64)
+
+    def _sub_dark_performance(self, data_type):
+        # mask by threshold
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
+        t0 = time.perf_counter()
+        subDarkImageArray(data, dark)
+        dt_cpp = time.perf_counter() - t0
+
+        # need a fresh data since number of nans determines the performance
+        data = np.ones((64, 1024, 512), dtype=data_type)
+        dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
+
+        t0 = time.perf_counter()
+        data -= dark
+        dt_py = time.perf_counter() - t0
+
+        print(f"\nsubDarkImageArray with {data_type} - "
+              f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
+
+    @unittest.skipIf(os.environ.get("FOAM_WITH_TBB", '1') == '0', "TBB only")
+    def testSubtractDarkPerformance(self):
+        self._sub_dark_performance(np.float32)
+        self._sub_dark_performance(np.float64)
+
+    def testSubtractDark(self):
+        # test invalid input
+        with self.assertRaises(TypeError):
+            subDarkImageArray()
+        with self.assertRaises(TypeError):
+            subDarkImageArray(np.ones((2, 2, 2)))
+        # test incorrect shape
+        with self.assertRaises(TypeError):
+            subDarkImageArray(np.ones((2, 2, 2)), np.ones(2, 2))
+        with self.assertRaises(TypeError):
+            subDarkImageArray(np.ones((2, 2)), np.ones((2, 2, 2)))
+        # test incorrect dtype
+        with self.assertRaises(TypeError):
+            subDarkImageArray(np.ones((2, 2, 2), dtype=np.float64),
+                                  np.ones((2, 2, 2), dtype=np.float32))
+
+        # ------------
+        # single image
+        # ------------
+
+        img = np.array([[1, 2, 3], [3, np.nan, np.nan]], dtype=np.float32)
+        dark = np.array([[1, 2, 1], [3, np.nan, np.nan]], dtype=np.float32)
+        subDarkImage(img, dark)
+        np.testing.assert_array_equal(
+            np.array([[0, 0, 2], [0, np.nan, np.nan]], dtype=np.float32), img)
+
+        # ------------
+        # train images
+        # ------------
+
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
+        dark = np.array([[[1, 2, 1], [3, np.nan, np.nan]],
+                        [[2, 1, 2], [3, np.nan, np.nan]]], dtype=np.float32)
+        subDarkImageArray(img, dark)
+        np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
+                                                [[-1, 1, 1], [0, np.nan, np.nan]]],
+                                               dtype=np.float32),
+                                      img)

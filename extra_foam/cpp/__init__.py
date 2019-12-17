@@ -4,7 +4,8 @@ from .image_proc import (
     nanmeanImageArray, nanmeanTwoImages,
     movingAverageImage, movingAverageImageArray,
     nanToZeroImage, nanToZeroImageArray,
-    maskImage, maskImageArray
+    maskImage, maskImageArray,
+    subDarkImage, subDarkImageArray
 )
 
 from .data_model import (

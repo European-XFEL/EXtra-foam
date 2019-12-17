@@ -543,6 +543,57 @@ inline void movingAverageImageArray(E& src, const E& data, size_t count)
 #endif
 }
 
+template <typename E, template <typename> class C = is_image_array, check_container<E, C> = false>
+inline void subDarkImageArray(E& src, const E& dark)
+{
+  auto shape = src.shape();
+  if (shape != dark.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, &dark] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+            src(i, j, k) -= dark(i, j, k);
+          }
+        }
+      }
+#if defined(FOAM_WITH_TBB)
+    }
+  );
+#endif
+}
+
+template <typename E, template <typename> class C = is_image, check_container<E, C> = false>
+inline void subDarkImage(E& src, const E& dark)
+{
+  auto shape = src.shape();
+  if (shape != dark.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      src(j, k) -= dark(j, k);
+    }
+  }
+}
+
 } // foam
 
 #endif //EXTRA_FOAM_IMAGE_PROC_H
