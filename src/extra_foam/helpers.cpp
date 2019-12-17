@@ -40,8 +40,8 @@ intersection(const std::array<int, 4>& rect1, const std::array<int, 4>& rect2) {
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(algo, m) {
-  m.doc() = "General algorithms in cpp";
+PYBIND11_MODULE(helpers, m) {
+  m.doc() = "Miscellaneous helper functions in cpp";
 
   m.def("intersection", &intersection);
 }

@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
-from extra_foam.cpp import (
+from extra_foam.algorithms import (
     nanmeanImageArray, nanmeanTwoImages,
     movingAverageImage, movingAverageImageArray,
     mask_image, mask_image_array,

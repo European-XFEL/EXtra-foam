@@ -5,7 +5,7 @@
 ###################################################################
 
 set(extra-foam_MODULE_FILES
-    algo.cpp
+        helpers.cpp
     image_proc.cpp
     data_model.cpp
 )

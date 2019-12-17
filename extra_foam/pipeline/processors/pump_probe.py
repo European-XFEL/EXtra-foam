@@ -17,7 +17,7 @@ from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.cpp import mask_image, nanmeanImageArray, nanmeanTwoImages
+from extra_foam.algorithms import mask_image, nanmeanImageArray, nanmeanTwoImages
 
 
 class PumpProbeProcessor(_BaseProcessor):
