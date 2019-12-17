@@ -10,7 +10,7 @@ All rights reserved.
 from ...pipeline.data_model import ImageData
 from ...utils import cached_property
 
-from extra_foam.cpp import mask_image
+from extra_foam.algorithms import mask_image
 
 
 class _SimpleImageData:

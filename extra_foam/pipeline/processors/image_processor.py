@@ -15,7 +15,7 @@ from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config
 
-from extra_foam.cpp import (
+from extra_foam.algorithms import (
     mask_image, nanmeanImageArray, nanmeanTwoImages,
     subDarkImage, subDarkImageArray
 )

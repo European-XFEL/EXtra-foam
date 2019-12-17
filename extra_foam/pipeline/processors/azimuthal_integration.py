@@ -22,7 +22,7 @@ from ...config import Normalizer, AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.cpp import mask_image
+from extra_foam.algorithms import mask_image
 
 
 def energy2wavelength(energy):

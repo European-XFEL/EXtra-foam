@@ -15,7 +15,7 @@ import numpy as np
 
 from ..config import config, AnalysisType, PumpProbeMode
 
-from extra_foam.cpp import (
+from extra_foam.algorithms import (
     intersection, nanmeanImageArray, movingAverageImage,
     movingAverageImageArray, mask_image
 )
