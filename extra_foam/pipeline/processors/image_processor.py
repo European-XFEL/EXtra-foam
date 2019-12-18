@@ -15,7 +15,10 @@ from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config
 
-from extra_foam.cpp import mask_image, nanmeanImageArray, nanmeanTwoImages
+from extra_foam.algorithms import (
+    mask_image, nanmeanImageArray, nanmeanImageArray,
+    subDarkImage, subDarkImageArray
+)
 
 
 class ImageProcessor(_BaseProcessor):
@@ -124,7 +127,13 @@ class ImageProcessor(_BaseProcessor):
             sliced_dark = dark_run[pulse_slicer]
             try:
                 # subtract the dark_run from assembled if any
-                sliced_assembled -= sliced_dark
+                if sliced_assembled.ndim == 3:
+                    subDarkImageArray(sliced_assembled, sliced_dark)
+                else:
+                    # TODO: numpy with SIMD is faster for pure C++ code
+                    #       without XSIMD and/or multithreading
+                    # subDarkImage(sliced_assembled, sliced_dark)
+                    sliced_assembled -= sliced_dark
             except ValueError:
                 raise ImageProcessingError(
                     f"[Image processor] Shape of the dark train {sliced_dark.shape} "

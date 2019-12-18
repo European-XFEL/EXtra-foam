@@ -1,6 +1,6 @@
 import unittest
 
-from extra_foam.cpp import intersection
+from extra_foam.algorithms import intersection
 
 
 class TestGeometry(unittest.TestCase):

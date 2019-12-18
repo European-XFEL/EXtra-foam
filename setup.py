@@ -16,7 +16,7 @@ import shutil
 import sys
 import sysconfig
 import subprocess
-from setuptools import setup, find_packages, Distribution, Extension
+from setuptools import setup, Command, find_packages, Distribution, Extension
 from setuptools.command.build_ext import build_ext
 from setuptools.command.test import test as _TestCommand
 from distutils.command.clean import clean
@@ -65,7 +65,7 @@ class BuildExt(build_ext):
         "extra_foam/thirdparty/bin/redis-cli"
     ]
 
-    _foam_lib_path = 'extra_foam/cpp'
+    _foam_algo_lib_path = 'extra_foam/algorithms'
 
     description = "Build the C++ extensions for EXtra-foam"
     user_options = [
@@ -117,7 +117,7 @@ class BuildExt(build_ext):
         saved_cwd = os.getcwd()
 
         cmake_options = [
-            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/cpp')}",
+            f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={osp.join(ext_dir, 'extra_foam/algorithms')}",
             f"-DPYTHON_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={build_type}",
         ]
@@ -171,7 +171,7 @@ class BuildExt(build_ext):
                 build_lib = saved_cwd
 
             try:
-                os.makedirs(osp.join(build_lib, self._foam_lib_path))
+                os.makedirs(osp.join(build_lib, self._foam_algo_lib_path))
             except OSError:
                 pass
 
@@ -208,7 +208,7 @@ class BuildExt(build_ext):
         # TODO: deal with libraries with symlinks
         for lib in libs:
             shutil.move(osp.join(build_temp, lib),
-                        osp.join(build_lib, self._foam_lib_path, lib))
+                        osp.join(build_lib, self._foam_algo_lib_path, lib))
 
 
 class TestCommand(_TestCommand):
@@ -225,7 +225,27 @@ class TestCommand(_TestCommand):
         # run Python test
         import pytest
         errno = pytest.main(['extra_foam'])
-        sys.exit(errno)  # why do we need this?
+        sys.exit(errno)
+
+
+class BenchmarkCommand(Command):
+
+    description = "run benchmark after in-place build"
+
+    user_options = []
+
+    # TODO: improve
+
+    def initialize_options(self):
+        """Override."""
+        pass
+
+    def finalize_options(self):
+        """Override."""
+        pass
+
+    def run(self):
+        self.spawn(['python', 'benchmarks/benchmark_image_proc.py'])
 
 
 class BinaryDistribution(Distribution):
@@ -257,6 +277,7 @@ setup(
         'clean': clean,
         'build_ext': BuildExt,
         'test': TestCommand,
+        'benchmark': BenchmarkCommand,
     },
     distclass=BinaryDistribution,
     package_data={

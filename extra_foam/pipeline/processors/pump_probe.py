@@ -17,7 +17,7 @@ from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.cpp import mask_image, nanmeanImageArray, nanmeanTwoImages
+from extra_foam.algorithms import mask_image, nanmeanImageArray, nanmeanImageArray
 
 
 class PumpProbeProcessor(_BaseProcessor):
@@ -116,7 +116,7 @@ class PumpProbeProcessor(_BaseProcessor):
             if len(curr_means) == 1:
                 images_mean = curr_means[0].copy()
             else:
-                images_mean = nanmeanTwoImages(image_on, image_off)
+                images_mean = nanmeanImageArray(image_on, image_off)
         else:
             if assembled.ndim == 3:
                 if dropped_indices:

@@ -46,7 +46,7 @@ TEST(TestNanmeanImageArray, TestGeneral)
   EXPECT_THAT(nanmeanImageArray(std::move(imgs)), ElementsAre(1.f, -inf, 2.5f, inf, nan_mt, 6.f));
 }
 
-TEST(TestNanmeanTwoImages, TestGeneral)
+TEST(TestNanmeanImageArray, TestTwoImages)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
   auto nan_mt = NanSensitiveFloatEq(nan);
@@ -56,13 +56,13 @@ TEST(TestNanmeanTwoImages, TestGeneral)
   xt::xtensor<float, 2> img1 {{1.f, -inf, 2.f}, {4.f, 5.f, nan}};
   xt::xtensor<float, 2> img2 {{1.f, 2.f, 3.f}, {inf, nan, 6.f}};
   xt::xtensor<float, 2> ret_gt {{1.f, -inf, 2.5}, {inf, 5.f, 6.f}};
-  EXPECT_THAT(nanmeanTwoImages(img1, img2), ElementsAreArray(ret_gt));
+  EXPECT_THAT(nanmeanImageArray(img1, img2), ElementsAreArray(ret_gt));
 
   xt::xtensor<float, 2> img3 {{1.f, 2.f, 3.f}, {inf, nan, nan}};
-  EXPECT_THAT(nanmeanTwoImages(img1, img3), ElementsAre(1.f, -inf, 2.5, inf, 5.f, nan_mt));
+  EXPECT_THAT(nanmeanImageArray(img1, img3), ElementsAre(1.f, -inf, 2.5, inf, 5.f, nan_mt));
 
   // rvalue
-  EXPECT_THAT(nanmeanTwoImages(std::move(img1), std::move(img2)), ElementsAreArray(ret_gt));
+  EXPECT_THAT(nanmeanImageArray(std::move(img1), std::move(img2)), ElementsAreArray(ret_gt));
 }
 
 TEST(TestMaskImage, TestThresholdMask)
@@ -247,6 +247,35 @@ TEST(TestMovingAverageImageArray, TestWithNaN)
               ElementsAre(nan_mt, 2.5f, nan_mt, 3.5f, 4.5f, 5.5f));
   EXPECT_THAT(xt::view(imgs1, 1, xt::all(), xt::all()),
               ElementsAre(1.5f, nan_mt, 3.5f, 3.5f, nan_mt, 5.5f));
+}
+
+TEST(TestSubtractDarkFromImageArray, TestGeneral)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
+                               {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
+  xt::xtensor<float, 3> darks {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
+                               {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
+  subDarkImageArray(imgs, darks);
+
+  EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
+              ElementsAre(nan_mt, -2.f, nan_mt, -1.f, -1.f, -1.f));
+  EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
+              ElementsAre(0.f, nan_mt, 1.f, -1.f, nan_mt, -1.f));
+}
+
+TEST(TestSubtractDarkFromImage, TestGeneral)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
+  xt::xtensor<float, 2> dark {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
+  subDarkImage(img, dark);
+
+  EXPECT_THAT(img, ElementsAre(nan_mt, -2.f, nan_mt, -1.f, 0.f, -1.f));
 }
 
 } // testing

@@ -19,7 +19,7 @@ from ...database import Metadata as mt
 from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
 
-from extra_foam.cpp import intersection, mask_image, mask_image_array
+from extra_foam.algorithms import intersection, mask_image, mask_image_array
 
 
 class _RoiProcessorBase:

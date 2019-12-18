@@ -10,7 +10,7 @@ import numpy as np
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
-from extra_foam.cpp import mask_image
+from extra_foam.algorithms import mask_image
 from extra_foam.config import (
     AnalysisType, config, _Config, ConfigWrapper, Normalizer, RoiCombo, RoiFom
 )

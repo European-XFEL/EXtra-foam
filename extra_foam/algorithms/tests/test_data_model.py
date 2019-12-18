@@ -5,7 +5,7 @@ import numpy as np
 
 from extra_foam.pipeline.data_model import RawImageData as RawImageDataPy
 
-from extra_foam.cpp import (
+from extra_foam.algorithms import (
     RawImageDataFloat, RawImageDataDouble,
     MovingAverageArrayFloat, MovingAverageArrayDouble,
     MovingAverageFloat, MovingAverageDouble
