@@ -235,20 +235,19 @@ class RoiImageView(ImageViewF):
 
     Widget for displaying the ROI for the assembled image.
     """
-    def __init__(self, rank, **kwargs):
+    def __init__(self, idx, **kwargs):
         """Initialization."""
         super().__init__(has_roi=False, **kwargs)
 
-        self._rank = rank
-        self.setTitle(f"ROI{rank}")
+        self._index = idx
+        self.setTitle(f"ROI{idx}")
 
     def updateF(self, data):
         """Override."""
         image = data.image.masked_mean
 
-        roi = getattr(data.roi, f"rect{self._rank}")
-
-        x, y, w, h = roi
+        x, y, w, h = getattr(getattr(
+            data.roi, f"geom{self._index}"), "geometry")
         if w < 0 or h < 0:
             return
         self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)

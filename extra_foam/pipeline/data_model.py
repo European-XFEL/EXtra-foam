@@ -7,18 +7,17 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import abc
+from abc import ABC, abstractmethod
 import copy
 from threading import Lock
 
 import numpy as np
 
-from ..algorithms import mask_image
-from ..config import config
+from ..config import config, AnalysisType, PumpProbeMode
 
 from extra_foam.cpp import (
     intersection, nanmeanImageArray, movingAverageImage,
-    movingAverageImageArray
+    movingAverageImageArray, mask_image
 )
 
 
@@ -360,83 +359,47 @@ class DataItem:
 
     Attributes:
         x (numpy.array): x coordinate of VFOM.
-        vfom (numpy.array): Vector figure-of-merit.
+        y (numpy.array): Vector figure-of-merit.
         fom (float): Figure-of-merit.
-        x_label (str): label for x of VFOM.
-        vfom_label (str): label for VFOM.
-        has_vfom (bool): whether VFOM exists.
-    """
-    def __init__(self, *, x_label="", vfom_label="", has_vfom=True):
-        self.x = None
-        self.vfom = None
-        self.fom = None
-
-        self.x_label = x_label
-        self.vfom_label = vfom_label
-
-        self.has_vfom = has_vfom
-
-
-class _XgmDataItem:
-    """_XgmDataItem class.
-
-    Store XGM pipeline data.
+        _x_label (str): label of x.
+        _y_label (str): label of VFOM.
     """
     def __init__(self):
-        self.intensity = None  # FEL intensity
-        self.x = None  # x position
-        self.y = None  # y position
+        self.x = None
+        self.y = None
+        self.fom = None
+
+        self._x_label = ""
+        self._y_label = ""
+
+    @property
+    def x_label(self):
+        return self._x_label
+
+    @property
+    def y_label(self):
+        return self._y_label
 
 
-class XgmData(_XgmDataItem):
-    """XgmData class.
+class AzimuthalIntegrationData(DataItem):
+    """Azimuthal integration data item."""
 
-    Store XGM pipeline data.
-    """
     def __init__(self):
         super().__init__()
 
-        self.on = _XgmDataItem()
-        self.off = _XgmDataItem()
+        self._x_label = "Momentum transfer (1/A)",
+        self._y_label = "Scattering signal (arb.u.)"
 
 
-class _RoiAuxData:
-    """_RoiAuxTrain class.
+class _RoiGeomBase(ABC):
 
-    Store ROI related auxiliary data, e.g. normalization.
-    """
+    INVALID = None
 
-    def __init__(self):
-        self.norm3 = None
-        self.norm4 = None
-        self.norm3_sub_norm4 = None
-        self.norm3_add_norm4 = None
-
-
-class _RoiGeomBase(abc.ABC):
     """RoiGeom base class."""
     def __init__(self):
-        self._activated = False
-
-    @property
-    def activated(self):
-        return self._activated
-
-    @activated.setter
-    def activated(self, v):
-        self._activated = bool(v)
-
-    @abc.abstractmethod
-    def set_geometry(self, v):
-        """Set the ROI geometry.
-
-        :param list/tuple v: a list of numbers which are used to describe
-            the geometry of the ROI. For instance, (x, y, w, h) for
-            a rectangular ROI and (x, y, r) for a circular ROI.
-        """
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def rect(self, data, copy=False):
         """Return a bounding box which includes the ROI.
 
@@ -455,138 +418,152 @@ class _RoiGeomBase(abc.ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def geometry(self):
+        """Get the ROI geometry."""
+        pass
 
-class _RectRoiGeom(_RoiGeomBase):
+    @geometry.setter
+    @abstractmethod
+    def geometry(self, v):
+        """Set the ROI geometry.
+
+        :param list/tuple v: a list of numbers which are used to describe
+            the geometry of the ROI. For instance, (x, y, w, h) for
+            a rectangular ROI and (x, y, r) for a circular ROI.
+        """
+        pass
+
+    @abstractmethod
+    def __repr__(self):
+        pass
+
+
+class RectRoiGeom(_RoiGeomBase):
     """RectRoiGeom class."""
+
+    INVALID = [0, 0, -1, -1]
+
     def __init__(self):
         super().__init__()
 
-        self._x = 0
-        self._y = 0
-        self._w = -1
-        self._h = -1
+        self._x, self._y, self._w, self._h = self.INVALID
 
     def rect(self, data, copy=False):
         """Overload."""
-        if not self._activated:
-            return None
-
-        shape = data.shape[-2:]
-        x, y, w, h = intersection([self._x, self._y, self._w, self._h],
-                                  [0, 0, shape[1], shape[0]])
-        if w < 0 or h < 0:
+        x, y, w, h = self._x, self._y, self._w, self._h
+        if x < 0 or y < 0 or w < 0 or h < 0:
             return None
         return np.array(data[..., y:y + h, x:x + w], copy=copy)
 
-    def set_geometry(self, v):
+    @property
+    def geometry(self):
+        """Overload."""
+        return self._x, self._y, self._w, self._h
+
+    @geometry.setter
+    def geometry(self, v):
         """Overload."""
         self._x, self._y, self._w, self._h = v
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(" \
+               f"{self._x}, {self._y}, {self._w}, {self._h})"
 
-class _CircleRoiGeom(_RoiGeomBase):
+
+class CircleRoiGeom(_RoiGeomBase):
     """CircleRoiItem class."""
+
+    INVALID = (0, 0, -1)
+
     def __init__(self):
         super().__init__()
 
-        self._x = 0
-        self._y = 0
-        self._r = -1
+        self._x, self._y, self._r = self.INVALID
 
     def rect(self, data, copy=False):
         """Overload."""
         raise NotImplemented
 
-    def set_geometry(self, v):
+    @property
+    def geometry(self):
+        """Overload."""
+        return self._x, self._y, self._r
+
+    @geometry.setter
+    def geometry(self, v):
         """Overload."""
         self._x, self._y, self._r = v
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self._x}, {self._y}, {self._r})"
 
-class RoiData(_RoiAuxData):
-    """ROIData class.
+
+class RoiData(DataItem):
+    """RoiData class.
 
     Attributes:
-        rect1, rect2, rect3, rect4 (list): ROI coordinates in [x, y, w, h].
-
-        on (_RoiAuxTrain): ROI related auxiliary pump data.
-        off (_RoiAuxTrain):ROI related auxiliary probe data.
-
-        roi1, roi2, roi1_sub_roi2, roi1_add_roi2 (DataItem):
-            sum of ROI pixel values calculated from ROI1 and ROI2.
-        proj1, proj2, proj1_sub_proj2, proj1_add_proj2 (DataItem):
-            1D projection data calculated from ROI1 and ROI2.
+        geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
+        norm (float): ROI normalizer.
+        proj (RoiProjData): ROI projection data item
     """
+
+    N_ROIS = len(config['ROI_COLORS'])
+
+    class RoiProjData(DataItem):
+        """ROI projection data item."""
+
+        def __init__(self):
+            super().__init__()
+
+            self._x_label = "Pixel",
+            self._y_label = "Projection"
 
     def __init__(self):
         super().__init__()
 
-        self.rect1 = [0, 0, -1, -1]
-        self.rect2 = [0, 0, -1, -1]
-        self.rect3 = [0, 0, -1, -1]
-        self.rect4 = [0, 0, -1, -1]
+        self.geom1 = RectRoiGeom()
+        self.geom2 = RectRoiGeom()
+        self.geom3 = RectRoiGeom()
+        self.geom4 = RectRoiGeom()
 
-        self.__geoms = [_RectRoiGeom() for i in range(4)]
+        self.norm = None
 
-        # for normalization: calculated from ROI3 and ROI4
-        self.on = _RoiAuxData()
-        self.off = _RoiAuxData()
-
-        self.roi1 = DataItem(has_vfom=False)
-        self.roi2 = DataItem(has_vfom=False)
-        self.roi1_sub_roi2 = DataItem(has_vfom=False)
-        self.roi1_add_roi2 = DataItem(has_vfom=False)
-
-        # 1. pump-probe 'proj' will directly go to ProcessedData.pp;
-        # 2. we may need two projection types at the same time;
-        self.proj1 = DataItem(x_label='pixel', vfom_label='ROI1 projection')
-        self.proj2 = DataItem(x_label='pixel', vfom_label='ROI2 projection')
-        self.proj1_sub_proj2 = DataItem(
-            x_label='pixel', vfom_label='ROI1 - ROI2 projection')
-        self.proj1_add_proj2 = DataItem(
-            x_label='pixel', vfom_label='ROI1 + ROI2 projection')
-
-    def __len__(self):
-        return len(self.__geoms)
-
-    def __getitem__(self, index):
-        return self.__geoms[index]
-
-
-class AzimuthalIntegrationData(DataItem):
-    """Train-resolved azimuthal integration data."""
-
-    def __init__(self,
-                 x_label="Momentum transfer (1/A)",
-                 vfom_label="Scattering signal (arb.u.)"):
-        super().__init__(x_label=x_label, vfom_label=vfom_label)
+        # ROI projection
+        self.proj = self.RoiProjData()
 
 
 class PumpProbeData(DataItem):
-    """Pump-probe data.
-
-    VFOM is the difference between normalized on-VFOM and off-VFOM.
-    """
+    """Pump-probe data."""
 
     fom_hist = PairData()
 
     def __init__(self):
         super().__init__()
 
-        self.analysis_type = None
+        self.analysis_type = AnalysisType.UNDEFINED
 
-        self.mode = None
-        self.on_indices = None
-        self.off_indices = None
+        self.mode = PumpProbeMode.UNDEFINED
 
-        self.abs_difference = None
+        # on/off pulse indices
+        self.indices_on = None
+        self.indices_off = None
 
-        # TODO: image on/off should not be here
-        # on/off images for the current train
+        # on/off images averaged over a train
         self.image_on = None
         self.image_off = None
 
-        # normalized VFOM on/off
-        self.vfom_on = None
-        self.vfom_off = None
+        # on/off ROI normalizer averaged over a train
+        self.roi_norm_on = None
+        self.roi_norm_off = None
+
+        # on/off normalized VFOM
+        # Note: VFOM = normalized on-VFOM - normalized off-VFOM
+        self.y_on = None
+        self.y_off = None
+
+        self.abs_difference = True
 
         self.reset = False
 
@@ -709,10 +686,10 @@ class ImageData:
 
         instance.poi_indices = poi_indices
 
-        instance.masked_mean = mask_image(instance.mean,
-                                          threshold_mask=threshold_mask,
-                                          image_mask=image_mask,
-                                          inplace=False)
+        instance.masked_mean = instance.mean.copy()
+        mask_image(instance.masked_mean,
+                   image_mask=image_mask,
+                   threshold_mask=threshold_mask)
         instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
         instance.background = background
@@ -836,23 +813,13 @@ class CorrelationData:
     class Correlation2(CorrelationDataItem):
         pass
 
-    class Correlation3(CorrelationDataItem):
-        pass
-
-    class Correlation4(CorrelationDataItem):
-        pass
-
     def __init__(self):
         self.correlation1 = self.Correlation1()
         self.correlation2 = self.Correlation2()
-        self.correlation3 = self.Correlation3()
-        self.correlation4 = self.Correlation4()
 
     def update_hist(self):
         self.correlation1.update_hist()
         self.correlation2.update_hist()
-        self.correlation3.update_hist()
-        self.correlation4.update_hist()
 
 
 class StatisticsData:
@@ -926,6 +893,29 @@ class XasData:
         self.energy_bin_centers = None
         self.a21_heat = None
         self.a21_heatcount = None
+
+
+class _XgmDataItem:
+    """_XgmDataItem class.
+
+    Store XGM pipeline data.
+    """
+    def __init__(self):
+        self.intensity = None  # FEL intensity
+        self.x = None  # x position
+        self.y = None  # y position
+
+
+class XgmData(_XgmDataItem):
+    """XgmData class.
+
+    Store XGM pipeline data.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.on = _XgmDataItem()
+        self.off = _XgmDataItem()
 
 
 class ProcessedData:

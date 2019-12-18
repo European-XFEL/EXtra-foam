@@ -202,8 +202,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         raise NotImplementedError
 
     @staticmethod
-    def _normalize_vfom(processed, y, normalizer, *, x=None, auc_range=None):
-        """Normalize VFOM.
+    def _normalize_fom(processed, y, normalizer, *, x=None, auc_range=None):
+        """Normalize FOM/VFOM.
 
         :param ProcessedData processed: processed data.
         :param numpy.ndarray y: y values.
@@ -228,18 +228,9 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 raise ProcessingError("XGM normalizer is zero!")
 
             normalized = y / denominator
-        else:
+        elif normalizer == Normalizer.ROI:
             # normalized by ROI
-            if normalizer == Normalizer.ROI3:
-                denominator = processed.roi.norm3
-            elif normalizer == Normalizer.ROI4:
-                denominator = processed.roi.norm4
-            elif normalizer == Normalizer.ROI3_SUB_ROI4:
-                denominator = processed.roi.norm3_sub_norm4
-            elif normalizer == Normalizer.ROI3_ADD_ROI4:
-                denominator = processed.roi.norm3_add_norm4
-            else:
-                raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            denominator = processed.roi.norm
 
             if denominator is None:
                 raise ProcessingError("ROI normalizer is not available!")
@@ -249,12 +240,15 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
             normalized = y / denominator
 
+        else:
+            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+
         return normalized
 
     @staticmethod
-    def _normalize_vfom_pp(processed, y_on, y_off, normalizer, *,
-                           x=None, auc_range=None):
-        """Normalize the azimuthal integration result.
+    def _normalize_fom_pp(processed, y_on, y_off, normalizer, *,
+                          x=None, auc_range=None):
+        """Normalize pump-probe FOM/VFOM.
 
         :param ProcessedData processed: processed data.
         :param numpy.ndarray y_on: pump y values.
@@ -287,25 +281,10 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized_on = y_on / denominator_on
             normalized_off = y_off / denominator_off
 
-        else:
+        elif normalizer == Normalizer.ROI:
             # normalized by ROI
-            on = processed.roi.on
-            off = processed.roi.off
-
-            if normalizer == Normalizer.ROI3:
-                denominator_on = on.norm3
-                denominator_off = off.norm3
-            elif normalizer == Normalizer.ROI4:
-                denominator_on = on.norm4
-                denominator_off = off.norm4
-            elif normalizer == Normalizer.ROI3_SUB_ROI4:
-                denominator_on = on.norm3_sub_norm4
-                denominator_off = off.norm3_sub_norm4
-            elif normalizer == Normalizer.ROI3_ADD_ROI4:
-                denominator_on = on.norm3_add_norm4
-                denominator_off = off.norm3_add_norm4
-            else:
-                raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            denominator_on = processed.pp.roi_norm_on
+            denominator_off = processed.pp.roi_norm_off
 
             if denominator_on is None:
                 raise ProcessingError("ROI normalizer (on) is not available!")
@@ -321,6 +300,9 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
 
             normalized_on = y_on / denominator_on
             normalized_off = y_off / denominator_off
+
+        else:
+            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
 
         return normalized_on, normalized_off
 

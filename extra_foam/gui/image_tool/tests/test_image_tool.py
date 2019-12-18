@@ -10,13 +10,15 @@ import numpy as np
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
-from extra_foam.algorithms import mask_image
-from extra_foam.config import AnalysisType, config, _Config, ConfigWrapper, Normalizer
+from extra_foam.cpp import mask_image
+from extra_foam.config import (
+    AnalysisType, config, _Config, ConfigWrapper, Normalizer, RoiCombo, RoiFom
+)
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 from extra_foam.logger import logger
-from extra_foam.pipeline.data_model import ImageData, ProcessedData
+from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
@@ -42,11 +44,13 @@ class TestSimpleImageData(unittest.TestCase):
         np.testing.assert_array_almost_equal(gt_data, img_data.masked)
 
         img_data.threshold_mask = (3, 6)
-        np.testing.assert_array_almost_equal(
-            mask_image(gt_data, threshold_mask=(3, 6)), img_data.masked)
+        masked_gt = gt_data.copy()
+        mask_image(masked_gt, threshold_mask=(3, 6))
+        np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
         img_data.background = 3
-        np.testing.assert_array_almost_equal(
-            mask_image(gt_data-3, threshold_mask=(3, 6)), img_data.masked)
+        masked_gt = gt_data.copy() - 3
+        mask_image(masked_gt, threshold_mask=(3, 6))
+        np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
 
         self.assertEqual(1.0e-3, img_data.pixel_size)
 
@@ -106,7 +110,7 @@ class TestImageTool(unittest.TestCase):
                 'processed': ProcessedData(1001)}
 
     def testGeneral(self):
-        self.assertEqual(5, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(7, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 
@@ -132,30 +136,25 @@ class TestImageTool(unittest.TestCase):
         widget.update_image_btn.clicked.emit()
         self.image_tool._updateOnce.assert_called_once_with(True)
 
-    def testDefaultValues(self):
-        # This must be the first test method in order to check that the
-        # default values are set correctly
-        proc = self.train_worker._roi_proc
-        widget = self.image_tool._corrected_view._roi_ctrl_widget
+    def testRoiCtrlWidget(self):
+        roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
+        proc = self.pulse_worker._roi_proc
+        self.assertEqual(4, len(roi_ctrls))
 
         proc.update()
 
-        for i, ctrl in enumerate(widget._roi_ctrls, 1):
-            roi_geometry = [int(ctrl._px_le.text()),
-                            int(ctrl._py_le.text()),
-                            int(ctrl._width_le.text()),
-                            int(ctrl._height_le.text())]
-            self.assertListEqual(roi_geometry, getattr(proc, f"_roi{i}").rect)
-
-    def testRoiCtrlWidget(self):
-        widget = self.image_tool._corrected_view._roi_ctrl_widget
-        roi_ctrls = widget._roi_ctrls
-        proc = self.train_worker._roi_proc
-        self.assertEqual(4, len(roi_ctrls))
+        for i, ctrl in enumerate(roi_ctrls, 1):
+            # test real ROI position and size matches the numbers in the GUI
+            self.assertListEqual([int(ctrl._px_le.text()), int(ctrl._py_le.text())],
+                                 list(ctrl._roi.pos()))
+            self.assertListEqual([int(ctrl._width_le.text()), int(ctrl._height_le.text())],
+                                 list(ctrl._roi.size()))
+            # test default values
+            self.assertListEqual(RectRoiGeom.INVALID, getattr(proc, f"_geom{i}"))
 
         for ctrl in roi_ctrls:
-            self.assertFalse(ctrl.activate_cb.isChecked())
-            self.assertFalse(ctrl.lock_cb.isChecked())
+            self.assertFalse(ctrl._activate_cb.isChecked())
+            self.assertFalse(ctrl._lock_cb.isChecked())
             self.assertFalse(ctrl._width_le.isEnabled())
             self.assertFalse(ctrl._height_le.isEnabled())
             self.assertFalse(ctrl._px_le.isEnabled())
@@ -166,18 +165,14 @@ class TestImageTool(unittest.TestCase):
         self.assertIs(roi1_ctrl._roi, roi1)
 
         # activate ROI1 ctrl
-        QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
-        self.assertTrue(roi1_ctrl.activate_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
+        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
         proc.update()
-        self.assertTrue(proc._roi1._activated)
 
-        # test default values
-        self.assertTupleEqual((float(roi1_ctrl._width_le.text()),
-                               float(roi1_ctrl._height_le.text())),
+        self.assertTupleEqual((int(roi1_ctrl._width_le.text()), int(roi1_ctrl._height_le.text())),
                               tuple(roi1.size()))
-        self.assertTupleEqual((float(roi1_ctrl._px_le.text()),
-                               float(roi1_ctrl._py_le.text())),
+        self.assertTupleEqual((int(roi1_ctrl._px_le.text()), int(roi1_ctrl._py_le.text())),
                               tuple(roi1.pos()))
 
         # use keyClicks to test that the QLineEdit is enabled
@@ -199,23 +194,23 @@ class TestImageTool(unittest.TestCase):
         self.assertTupleEqual((-1, -3), tuple(roi1.pos()))
 
         proc.update()
-        self.assertListEqual([-1, -3, 10, 30], proc._roi1.rect)
+        self.assertListEqual([-1, -3, 10, 30], proc._geom1)
 
         # lock ROI ctrl
-        QTest.mouseClick(roi1_ctrl.lock_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.lock_cb.height()/2))
-        self.assertTrue(roi1_ctrl.activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl.lock_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._lock_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._lock_cb.height()/2))
+        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
+        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
         self.assertFalse(roi1_ctrl._height_le.isEnabled())
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
         self.assertFalse(roi1_ctrl._py_le.isEnabled())
 
         # deactivate ROI ctrl
-        QTest.mouseClick(roi1_ctrl.activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl.activate_cb.height()/2))
-        self.assertFalse(roi1_ctrl.activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl.lock_cb.isChecked())
+        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
+                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
+        self.assertFalse(roi1_ctrl._activate_cb.isChecked())
+        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
         self.assertFalse(roi1_ctrl._width_le.isEnabled())
         self.assertFalse(roi1_ctrl._height_le.isEnabled())
         self.assertFalse(roi1_ctrl._px_le.isEnabled())
@@ -400,8 +395,7 @@ class TestImageTool(unittest.TestCase):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
 
         widget = self.image_tool._azimuthal_integ_1d_view._ctrl_widget
-        all_normalizers = {value: key for key, value in
-                           widget._available_normalizers.items()}
+        avail_norms = {value: key for key, value in widget._available_norms.items()}
         train_worker = self.train_worker
         proc = train_worker._ai_proc
 
@@ -428,7 +422,7 @@ class TestImageTool(unittest.TestCase):
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
         widget._integ_method_cb.setCurrentText('nosplit_csr')
-        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_ADD_ROI4])
+        widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
         widget._integ_pts_le.setText(str(1024))
         widget._integ_range_le.setText("0.1, 0.2")
         widget._auc_range_le.setText("0.2, 0.3")
@@ -441,7 +435,7 @@ class TestImageTool(unittest.TestCase):
         self.assertAlmostEqual(1e-10, proc._wavelength)
         self.assertAlmostEqual(0.3, proc._sample_dist)
         self.assertEqual('nosplit_csr', proc._integ_method)
-        self.assertEqual(Normalizer.ROI3_ADD_ROI4, proc._normalizer)
+        self.assertEqual(Normalizer.ROI, proc._normalizer)
         self.assertEqual(1024, proc._integ_points)
         self.assertTupleEqual((0.1, 0.2), proc._integ_range)
         self.assertTupleEqual((0.2, 0.3), proc._auc_range)
@@ -451,30 +445,79 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual(-1000 * 0.000001, proc._poni2)
         self.assertEqual(1000 * 0.000002, proc._poni1)
 
-    def testProjection1DCtrlWidget(self):
-        widget = self.image_tool._corrected_view._proj1d_ctrl_widget
-        all_normalizers = {value: key for key, value in
-                           widget._available_normalizers.items()}
+    def testRoiFomCtrlWidget(self):
+        widget = self.image_tool._corrected_view._roi_fom_ctrl_widget
+        avail_norms = {value: key for key, value in widget._available_norms.items()}
+        avail_combos = {value: key for key, value in widget._available_combos.items()}
+        avail_types = {value: key for key, value in widget._available_types.items()}
 
         proc = self.train_worker._roi_proc
         proc.update()
 
         # test default reconfigurable values
-        self.assertEqual('x', proc._direction)
-        self.assertEqual(Normalizer.UNDEFINED, proc._normalizer)
-        self.assertEqual((0, math.inf), proc._fom_integ_range)
-        self.assertEqual((0, math.inf), proc._auc_range)
+        self.assertEqual(RoiCombo.ROI1, proc._fom_combo)
+        self.assertEqual(RoiFom.SUM, proc._fom_type)
+        self.assertEqual(Normalizer.UNDEFINED, proc._fom_norm)
 
         # test setting new values
+        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
+        widget._type_cb.setCurrentText(avail_types[RoiFom.MEDIAN])
+        widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
+
+        proc.update()
+
+        self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._fom_combo)
+        self.assertEqual(RoiFom.MEDIAN, proc._fom_type)
+        self.assertEqual(Normalizer.ROI, proc._fom_norm)
+
+    def testRoiNormCtrlWidget(self):
+        widget = self.image_tool._corrected_view._roi_norm_ctrl_widget
+        avail_combos = {value: key for key, value in widget._available_combos.items()}
+        avail_types = {value: key for key, value in widget._available_types.items()}
+
+        proc = self.train_worker._roi_proc
+        proc.update()
+
+        # test default reconfigurable values
+        self.assertEqual(RoiCombo.ROI3, proc._norm_combo)
+        self.assertEqual(RoiFom.SUM, proc._norm_type)
+
+        # test setting new values
+        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI3_ADD_ROI4])
+        widget._type_cb.setCurrentText(avail_types[RoiFom.MEDIAN])
+
+        proc.update()
+
+        self.assertEqual(RoiCombo.ROI3_ADD_ROI4, proc._norm_combo)
+        self.assertEqual(RoiFom.MEDIAN, proc._norm_type)
+
+    def testRoiProjCtrlWidget(self):
+        widget = self.image_tool._corrected_view._roi_proj_ctrl_widget
+        avail_norms = {value: key for key, value in widget._available_norms.items()}
+        avail_combos = {value: key for key, value in widget._available_combos.items()}
+
+        proc = self.train_worker._roi_proc
+        proc.update()
+
+        # test default reconfigurable values
+        self.assertEqual(RoiCombo.ROI1, proc._proj_combo)
+        self.assertEqual('x', proc._proj_direct)
+        self.assertEqual(Normalizer.UNDEFINED, proc._proj_norm)
+        self.assertEqual((0, math.inf), proc._proj_fom_integ_range)
+        self.assertEqual((0, math.inf), proc._proj_auc_range)
+
+        # test setting new values
+        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
         widget._direct_cb.setCurrentText('y')
-        widget._normalizers_cb.setCurrentText(all_normalizers[Normalizer.ROI3_SUB_ROI4])
+        widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
-        self.assertEqual('y', proc._direction)
-        self.assertEqual(Normalizer.ROI3_SUB_ROI4, proc._normalizer)
-        self.assertEqual((10, 20), proc._fom_integ_range)
-        self.assertEqual((30, 40), proc._auc_range)
+        self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._proj_combo)
+        self.assertEqual('y', proc._proj_direct)
+        self.assertEqual(Normalizer.ROI, proc._proj_norm)
+        self.assertEqual((10, 20), proc._proj_fom_integ_range)
+        self.assertEqual((30, 40), proc._proj_auc_range)
 
     def testGeometryCtrlWidget(self):
         from karabo_data.geometry2 import LPD_1MGeometry

@@ -10,13 +10,12 @@ All rights reserved.
 from .base_processor import _BaseProcessor
 from ..data_model import RawImageData
 from ..exceptions import ImageProcessingError, ProcessingError
-from ...algorithms import mask_image
 from ...database import Metadata as mt
 from ...ipc import ImageMaskSub, ReferenceSub
 from ...utils import profiler
 from ...config import config
 
-from extra_foam.cpp import nanmeanImageArray, nanmeanTwoImages
+from extra_foam.cpp import mask_image, nanmeanImageArray, nanmeanTwoImages
 
 
 class ImageProcessor(_BaseProcessor):
@@ -195,10 +194,11 @@ class ImageProcessor(_BaseProcessor):
         # only keep POI in 'images'
         for i in image_data.poi_indices:
             if i < n_images:
-                image_data.images[i] = mask_image(
-                    assembled[i],
+                image_data.images[i] = assembled[i].copy()
+                mask_image(
+                    image_data.images[i],
+                    image_mask=self._image_mask,
                     threshold_mask=self._threshold_mask,
-                    image_mask=self._image_mask
                 )
             else:
                 out_of_bound_poi_indices.append(i)

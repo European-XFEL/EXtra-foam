@@ -16,8 +16,7 @@ import time
 from .exceptions import StopPipelineError, ProcessingError
 from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessorPulse,
-    AzimuthalIntegrationProcessorTrain,
+    AzimuthalIntegrationProcessorPulse, AzimuthalIntegrationProcessorTrain,
     BinProcessor,
     Broker,
     CorrelationProcessor,
@@ -25,8 +24,7 @@ from .processors import (
     ImageProcessor,
     PostPulseFilter,
     PumpProbeProcessor,
-    RoiProcessorPulse,
-    RoiProcessorTrain,
+    RoiProcessorPulse, RoiProcessorTrain,
     StatisticsProcessor,
     XgmProcessor,
     TrXasProcessor,

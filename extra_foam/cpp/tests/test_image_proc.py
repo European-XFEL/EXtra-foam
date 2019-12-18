@@ -8,8 +8,7 @@ import numpy as np
 from extra_foam.cpp import (
     nanmeanImageArray, nanmeanTwoImages,
     movingAverageImage, movingAverageImageArray,
-    nanToZeroImage, nanToZeroImageArray,
-    maskImage, maskImageArray
+    mask_image, mask_image_array
 )
 
 
@@ -287,20 +286,20 @@ class TestImageProc(unittest.TestCase):
     def testMaskImage(self):
         # test invalid input
         with self.assertRaises(TypeError):
-            maskImage()
+            mask_image()
         # test incorrect shape
         with self.assertRaises(TypeError):
-            maskImage(np.ones((2, 2, 2)), 1, 2)
+            mask_image(np.ones((2, 2, 2)), 1, 2)
         with self.assertRaises(TypeError):
-            maskImage(np.ones(2), 1, 2)
+            mask_image(np.ones(2), 1, 2)
 
         # test invalid input
         with self.assertRaises(TypeError):
-            maskImageArray()
+            mask_image_array()
         with self.assertRaises(TypeError):
-            maskImageArray(np.ones((2, 2)), 1, 2)
+            mask_image_array(np.ones((2, 2)), 1, 2)
         with self.assertRaises(TypeError):
-            maskImageArray(np.ones(2), 1, 2)
+            mask_image_array(np.ones(2), 1, 2)
 
         # ------------
         # single image
@@ -308,16 +307,16 @@ class TestImageProc(unittest.TestCase):
 
         # threshold mask
         img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
-        maskImage(img, 2, 3)
+        mask_image(img, threshold_mask=(2, 3))
         np.testing.assert_array_equal(
-            np.array([[0, 2, np.nan], [3, 0, 0]], dtype=np.float32), img)
+            np.array([[0, 2, 0], [3, 0, 0]], dtype=np.float32), img)
 
         # image mask
         img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskImage(img, img_mask)
+        mask_image(img, image_mask=img_mask)
         np.testing.assert_array_equal(
-            np.array([[0, 0, np.nan], [0, 4, 0]], dtype=np.float32), img)
+            np.array([[0, 0, 0], [0, 4, 0]], dtype=np.float32), img)
 
         # ------------
         # train images
@@ -326,9 +325,9 @@ class TestImageProc(unittest.TestCase):
         # threshold mask
         img = np.array([[[1, 2, 3], [3, np.nan, 5]],
                         [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
-        maskImageArray(img, 2, 3)
-        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, np.nan, 0]],
-                                                [[0, 2, 3], [3, np.nan, 0]]],
+        mask_image_array(img, threshold_mask=(2, 3))
+        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, 0, 0]],
+                                                [[0, 2, 3], [3, 0, 0]]],
                                                dtype=np.float32), img)
 
         # image mask
@@ -336,16 +335,16 @@ class TestImageProc(unittest.TestCase):
                         [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
         img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
         np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        maskImageArray(img, img_mask)
-        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, np.nan, 0]],
-                                                [[0, 0, 3], [0, np.nan, 0]]],
+        mask_image_array(img, image_mask=img_mask)
+        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 0, 0]],
+                                                [[0, 0, 3], [0, 0, 0]]],
                                                dtype=np.float32), img)
 
     def _mask_image_performance(self, data_type):
         # mask by threshold
         data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        maskImageArray(data, 2., 3.)  # every elements are masked
+        mask_image_array(data, threshold_mask=(2., 3.))  # every elements are masked
         dt_cpp_th = time.perf_counter() - t0
 
         data = np.ones((64, 1024, 512), dtype=data_type)
@@ -358,7 +357,7 @@ class TestImageProc(unittest.TestCase):
 
         data = np.ones((64, 1024, 512), dtype=data_type)
         t0 = time.perf_counter()
-        maskImageArray(data, mask)
+        mask_image_array(data, image_mask=mask)
         dt_cpp = time.perf_counter() - t0
 
         data = np.ones((64, 1024, 512), dtype=data_type)
@@ -382,7 +381,7 @@ class TestImageProc(unittest.TestCase):
         data[::2, ::2, ::2] = np.nan
 
         t0 = time.perf_counter()
-        nanToZeroImageArray(data)
+        mask_image_array(data)
         dt_cpp = time.perf_counter() - t0
 
         # need a fresh data since number of nans determines the performance

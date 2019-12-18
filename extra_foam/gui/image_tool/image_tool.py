@@ -300,7 +300,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         if self._prev_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D:
             self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG)
 
-        if self._prev_tab_idx == self.TabIndex.DARK:
+        elif self._prev_tab_idx == self.TabIndex.DARK:
             if self._record_at.isChecked():
                 self._record_at.trigger()
             self._record_at.setEnabled(False)

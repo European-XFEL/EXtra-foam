@@ -21,14 +21,11 @@ from ...config import Normalizer, config
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up azimuthal integration parameters."""
 
-    _available_normalizers = OrderedDict({
+    _available_norms = OrderedDict({
         "": Normalizer.UNDEFINED,
         "AUC": Normalizer.AUC,
         "XGM": Normalizer.XGM,
-        "ROI3 (sum)": Normalizer.ROI3,
-        "ROI4 (sum)": Normalizer.ROI4,
-        "ROI3 (sum) - ROI4 (sum)": Normalizer.ROI3_SUB_ROI4,
-        "ROI3 (sum) + ROI4 (sum)": Normalizer.ROI3_ADD_ROI4,
+        "ROI": Normalizer.ROI,
     })
 
     def __init__(self, *args, **kwargs):
@@ -66,9 +63,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             str(config["AZIMUTHAL_INTEG_POINTS"]))
         self._integ_pts_le.setValidator(QIntValidator(1, 8192))
 
-        self._normalizers_cb = QComboBox()
-        for v in self._available_normalizers:
-            self._normalizers_cb.addItem(v)
+        self._norm_cb = QComboBox()
+        for v in self._available_norms:
+            self._norm_cb.addItem(v)
 
         self._auc_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
@@ -117,8 +114,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._integ_range_le, row, 7)
 
         row += 1
-        layout.addWidget(QLabel("Normalizer: "), row, 0, AR)
-        layout.addWidget(self._normalizers_cb, row, 1)
+        layout.addWidget(QLabel("Norm: "), row, 0, AR)
+        layout.addWidget(self._norm_cb, row, 1)
         layout.addWidget(QLabel("AUC range (1/A): "), row, 2, AR)
         layout.addWidget(self._auc_range_le, row, 3)
         layout.addWidget(QLabel("FOM range (1/A): "), row, 4, AR)
@@ -149,9 +146,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._integ_method_cb.currentTextChanged.connect(
             mediator.onAiIntegMethodChange)
 
-        self._normalizers_cb.currentTextChanged.connect(
+        self._norm_cb.currentTextChanged.connect(
             lambda x: mediator.onCurveNormalizerChange(
-                self._available_normalizers[x]))
+                self._available_norms[x]))
 
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
@@ -179,8 +176,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._integ_method_cb.currentTextChanged.emit(
             self._integ_method_cb.currentText())
 
-        self._normalizers_cb.currentTextChanged.emit(
-            self._normalizers_cb.currentText())
+        self._norm_cb.currentTextChanged.emit(
+            self._norm_cb.currentText())
 
         self._integ_range_le.returnPressed.emit()
 
