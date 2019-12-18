@@ -5,7 +5,7 @@ from .data_structures import Stack
 from .helpers import intersection
 
 from .image_proc import (
-    nanmeanImageArray, nanmeanTwoImages,
+    nanmeanImageArray,
     movingAverageImage, movingAverageImageArray,
     nanToZeroImage, nanToZeroImageArray,
     maskImage, maskImageArray,

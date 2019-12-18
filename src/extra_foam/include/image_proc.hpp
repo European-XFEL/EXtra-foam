@@ -147,7 +147,7 @@ inline auto nanmeanImageArray(E&& src)
  * @return: the nanmean image. shape = (y, x)
  */
 template<typename E>
-inline auto nanmeanTwoImages(E&& src1, E&& src2)
+inline auto nanmeanImageArray(E&& src1, E&& src2)
 {
   using value_type = typename std::decay_t<E>::value_type;
   auto shape = src1.shape();

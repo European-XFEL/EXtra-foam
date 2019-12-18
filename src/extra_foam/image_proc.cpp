@@ -62,13 +62,11 @@ PYBIND11_MODULE(image_proc, m)
     { return nanmeanImageArray(src, keep); },
     py::arg("src").noconvert(), py::arg("keep"));
 
-  // FIXME: nanmeanTwoImages -> nanmeanImageArray when the following bug gets fixed
-  // https://github.com/QuantStack/xtensor-python/issues/178
-  m.def("nanmeanTwoImages", [] (const xt::pytensor<double, 2>& src1, const xt::pytensor<double, 2>& src2)
-    { return nanmeanTwoImages(src1, src2); },
+  m.def("nanmeanImageArray", [] (const xt::pytensor<double, 2>& src1, const xt::pytensor<double, 2>& src2)
+    { return nanmeanImageArray(src1, src2); },
     py::arg("src1").noconvert(), py::arg("src2").noconvert());
-  m.def("nanmeanTwoImages", [] (const xt::pytensor<float, 2>& src1, const xt::pytensor<float, 2>& src2)
-    { return nanmeanTwoImages(src1, src2); },
+  m.def("nanmeanImageArray", [] (const xt::pytensor<float, 2>& src1, const xt::pytensor<float, 2>& src2)
+    { return nanmeanImageArray(src1, src2); },
     py::arg("src1").noconvert(), py::arg("src2").noconvert());
 
   m.def("movingAverageImage", &movingAverageImage<xt::pytensor<double, 2>>,
