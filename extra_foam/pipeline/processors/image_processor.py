@@ -16,7 +16,7 @@ from ...utils import profiler
 from ...config import config
 
 from extra_foam.algorithms import (
-    mask_image, nanmeanImageArray, nanmeanTwoImages,
+    mask_image, nanmeanImageArray, nanmeanImageArray,
     subDarkImage, subDarkImageArray
 )
 

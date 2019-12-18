@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from extra_foam.algorithms import (
-    nanmeanImageArray, nanmeanTwoImages,
+    nanmeanImageArray,
     movingAverageImage, movingAverageImageArray,
     mask_image, mask_image_array,
     subDarkImage, subDarkImageArray,
@@ -17,14 +17,14 @@ class TestImageProc(unittest.TestCase):
         with self.assertRaises(TypeError):
             nanmeanImageArray(data)
 
-        with self.assertRaises(TypeError):
-            nanmeanImageArray(data, data)
-
         data = np.ones([2, 2, 2, 2])
         with self.assertRaises(TypeError):
             nanmeanImageArray(data)
 
-        # test passing empty keep list
+        with self.assertRaises(ValueError):
+            nanmeanImageArray(np.ones((2, 2)), np.ones((2, 3)))
+
+        # passing empty keep list
         data = np.ones([2, 2, 2])
         with self.assertRaises(ValueError):
             nanmeanImageArray(data, [])
@@ -49,15 +49,11 @@ class TestImageProc(unittest.TestCase):
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
                                                  nanmeanImageArray(data, [0, 2]))
 
-    def testNanmeanWithTwoImages(self):
-        with self.assertRaises(ValueError):
-            nanmeanTwoImages(np.ones((2, 2)), np.ones((2, 3)))
-
+        # test passing two images as arguments
         img1 = np.array([[1, 1, 2], [np.inf, np.nan, 0]], dtype=np.float32)
         img2 = np.array([[np.nan, 0, 4], [2, np.nan, -np.inf]], dtype=np.float32)
-
         expected = np.array([[1., 0.5, 3], [np.inf, np.nan, -np.inf]])
-        np.testing.assert_array_almost_equal(expected, nanmeanTwoImages(img1, img2))
+        np.testing.assert_array_almost_equal(expected, nanmeanImageArray(img1, img2))
 
     def testMovingAverage(self):
         arr1d = np.ones(2, dtype=np.float32)

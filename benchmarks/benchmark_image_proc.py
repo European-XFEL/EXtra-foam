@@ -12,7 +12,7 @@ import time
 import numpy as np
 
 from extra_foam.algorithms import (
-    nanmeanImageArray, nanmeanTwoImages, movingAverageImageArray,
+    nanmeanImageArray, nanmeanImageArray, movingAverageImageArray,
     mask_image_array, subDarkImageArray,
 )
 
@@ -54,7 +54,7 @@ def _run_nanmean_two_images(data_type):
     img[::2, ::2] = np.nan
 
     t0 = time.perf_counter()
-    nanmeanTwoImages(img, img)
+    nanmeanImageArray(img, img)
     dt_cpp = time.perf_counter() - t0
 
     imgs = np.ones((2, 1024, 512), dtype=data_type)
@@ -64,7 +64,7 @@ def _run_nanmean_two_images(data_type):
     nanmeanImageArray(imgs)
     dt_cpp_2 = time.perf_counter() - t0
 
-    print(f"\nnanmeanTwoImages with {data_type} - "
+    print(f"\nnanmeanImageArray with {data_type} - "
           f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
 
 
