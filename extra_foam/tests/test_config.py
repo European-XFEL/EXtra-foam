@@ -181,3 +181,20 @@ class TestLaserOnOffWindow(unittest.TestCase):
                 cfg = json.load(fp)
                 # test the detector config is in the new config file
                 self.assertTrue(det in cfg)
+
+
+class TestPlotLabel(unittest.TestCase):
+    def testGeneral(self):
+        from extra_foam.config import AnalysisType, plot_labels
+
+        self.assertTupleEqual(("", ""), plot_labels[AnalysisType.UNDEFINED])
+        self.assertTupleEqual(("", ""), plot_labels[AnalysisType.ROI_FOM])
+        self.assertTrue(bool(plot_labels[AnalysisType.ROI_PROJ].x))
+        self.assertTrue(bool(plot_labels[AnalysisType.ROI_PROJ].y))
+
+        with self.assertRaises(KeyError):
+            plot_labels['abc']
+
+        with self.assertRaises(TypeError):
+            # test not assignable
+            plot_labels[AnalysisType.ROI_PROJ] = 'abc'

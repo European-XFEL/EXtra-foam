@@ -8,6 +8,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import deque
+import sys
+import traceback
 import time
 import logging
 import os.path as osp
@@ -30,15 +32,14 @@ from redis import ConnectionError
 from .ctrl_widgets import (
     AnalysisCtrlWidget, BinCtrlWidget,
     CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
-    StatisticsCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
+    HistogramCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
 )
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
-    PumpProbeWindow, RoiWindow, FileStreamControllerWindow, AboutWindow,
-    TrXasWindow
+    BinningWindow, ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
+    PumpProbeWindow,
+    FileStreamControllerWindow, AboutWindow, TrXasWindow
 )
 from .. import __version__
 from ..config import config
@@ -101,21 +102,15 @@ class MainGUI(QMainWindow):
 
     _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
 
-    def __init__(self, *, start_thread_logger=False):
-        """Initialization.
-
-        :param bool start_thread_logger: True for starting ThreadLogger
-            thread which allows processes to log in the MainGUI. For the
-            convenience of testing, it is False by default.
-        """
+    def __init__(self):
+        """Initialization."""
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
         self._queue = deque(maxlen=1)
 
-        self._input = MpInQueue("gui:input")
+        self._input = MpInQueue()
         self._close_ev = mp.Event()
-        self._input.run_in_thread(self._close_ev)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -144,6 +139,7 @@ class MainGUI(QMainWindow):
 
         self._ctrl_panel_cw = QTabWidget()
         self._analysis_cw = QWidget()
+        self._statistics_cw = QWidget()
         self._special_analysis_cw = QWidget()
 
         self._util_panel_container = QWidget()
@@ -154,62 +150,53 @@ class MainGUI(QMainWindow):
         # Note: the order of 'addAction` affect the unittest!!!
         # *************************************************************
         self._tool_bar = self.addToolBar("Control")
+        # make icon a bit larger
+        self._tool_bar.setIconSize(1.25 * self._tool_bar.iconSize())
 
-        self._start_at = self._addAction("Start bridge", "start.png")
+        self._start_at = self.addAction("Start bridge", "start.png")
         self._start_at.triggered.connect(self.onStart)
 
-        self._stop_at = self._addAction("Stop bridge", "stop.png")
+        self._stop_at = self.addAction("Stop bridge", "stop.png")
         self._stop_at.triggered.connect(self.onStop)
         self._stop_at.setEnabled(False)
 
         self._tool_bar.addSeparator()
 
-        image_tool_at = self._addAction("Image tool", "image_tool.png")
+        image_tool_at = self.addAction("Image tool", "image_tool.png")
         image_tool_at.triggered.connect(lambda: (self._image_tool.show(),
                                                  self._image_tool.activateWindow()))
 
-        open_poi_window_at = self._addAction("Pulse-of-interest", "poi.png")
+        open_poi_window_at = self.addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PulseOfInterestWindow))
         if not self._pulse_resolved:
             open_poi_window_at.setEnabled(False)
 
-        pump_probe_window_at = self._addAction("Pump-probe", "pump-probe.png")
+        pump_probe_window_at = self.addAction("Pump-probe", "pump-probe.png")
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
-        open_statistics_window_at = self._addAction("Statistics", "statistics.png")
+        open_statistics_window_at = self.addAction("Statistics", "statistics.png")
         open_statistics_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, StatisticsWindow))
 
-        open_corr_window_at = self._addAction("Correlation", "scatter.png")
-        open_corr_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, CorrelationWindow))
-
-        open_bin1d_window_at = self._addAction("Bin 1D", "binning1d.png")
-        open_bin1d_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, Bin1dWindow))
-
-        open_bin2d_window_at = self._addAction("Bin 2D", "heatmap.png")
+        open_bin2d_window_at = self.addAction("Binning", "heatmap.png")
         open_bin2d_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, Bin2dWindow))
-
-        open_roi_window_at = self._addAction("ROI", "roi_monitor.png")
-        open_roi_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, RoiWindow))
+            functools.partial(self.onOpenPlotWindow, BinningWindow))
 
         self._tool_bar.addSeparator()
 
-        open_process_monitor_at = self._addAction(
+        open_process_monitor_at = self.addAction(
             "Process monitor", "process_monitor.png")
         open_process_monitor_at.triggered.connect(
             lambda: self.onOpenSatelliteWindow(ProcessMonitor))
 
-        open_file_stream_window_at = self._addAction("Offline", "offline.png")
+        open_file_stream_window_at = self.addAction(
+            "File streamer", "file_streamer.png")
         open_file_stream_window_at.triggered.connect(
             lambda: self.onOpenSatelliteWindow(FileStreamControllerWindow))
 
-        open_about_at = self._addAction("About EXtra-foam", "about.png")
+        open_about_at = self.addAction("About EXtra-foam", "about.png")
         open_about_at.triggered.connect(
             lambda: self.onOpenSatelliteWindow(AboutWindow))
 
@@ -217,14 +204,14 @@ class MainGUI(QMainWindow):
         # Special analysis
         # *************************************************************
 
-        self._trxas_btn = self._addSpecial("tr_xas.png", TrXasWindow)
+        self._trxas_btn = self.addSpecial("tr_xas.png", TrXasWindow)
 
         # *************************************************************
         # Miscellaneous
         # *************************************************************
 
         # book-keeping opened windows
-        self._windows = WeakKeyDictionary()
+        self._plot_windows = WeakKeyDictionary()
         self._satellite_windows = WeakKeyDictionary()
         self._special_windows = WeakKeyDictionary()
 
@@ -237,19 +224,15 @@ class MainGUI(QMainWindow):
         self._thread_logger.moveToThread(self._thread_logger_t)
         self._thread_logger_t.started.connect(self._thread_logger.recv)
         self._thread_logger.connectToMainThread(self)
-        if start_thread_logger:
-            self._thread_logger_t.start()
 
         # For real time plot
         self._running = False
         self._plot_timer = QTimer()
         self._plot_timer.timeout.connect(self.updateAll)
-        self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
 
         # For checking the connection to the Redis server
         self._redis_timer = QTimer()
-        self._redis_timer.timeout.connect(self._pingRedisServer)
-        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        self._redis_timer.timeout.connect(self.pingRedisServer)
 
         self.__redis_connection_fails = 0
 
@@ -261,11 +244,13 @@ class MainGUI(QMainWindow):
 
         # analysis control widgets
         self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
-        self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
         self.pulse_filter_ctrl_widget = self.createCtrlWidget(PulseFilterCtrlWidget)
+
+        # statistics control widgets
         self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
-        self.statistics_ctrl_widget = self.createCtrlWidget(StatisticsCtrlWidget)
+        self.histogram_ctrl_widget = self.createCtrlWidget(HistogramCtrlWidget)
+        self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
 
         # special analysis control widgets (do not register them!!!)
         self._trxas_ctrl_widget = TrXasCtrlWidget()
@@ -319,25 +304,35 @@ class MainGUI(QMainWindow):
 
         self._right_cw.addWidget(self._ctrl_panel_cw)
         self._right_cw.addWidget(self._util_panel_container)
+
+        self._ctrl_panel_cw.setFixedHeight(
+            self._ctrl_panel_cw.minimumSizeHint().height())
+
         self._right_cw_container.setWidget(self._right_cw)
         self._right_cw_container.setWidgetResizable(True)
 
     def initCtrlUI(self):
-        self.initAnalysisUI()
+        self.initGeneralAnalysisUI()
+        self.initStatisticsAnalysisUI()
         self.initSpecialAnalysisUI()
 
         self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
+        self._ctrl_panel_cw.addTab(self._statistics_cw, "Statistics analysis")
         self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special analysis")
 
-    def initAnalysisUI(self):
+    def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()
         layout.addWidget(self.analysis_ctrl_widget)
         layout.addWidget(self.pump_probe_ctrl_widget)
         layout.addWidget(self.pulse_filter_ctrl_widget)
-        layout.addWidget(self.statistics_ctrl_widget)
-        layout.addWidget(self.bin_ctrl_widget)
-        layout.addWidget(self.correlation_ctrl_widget)
         self._analysis_cw.setLayout(layout)
+
+    def initStatisticsAnalysisUI(self):
+        layout = QVBoxLayout()
+        layout.addWidget(self.bin_ctrl_widget)
+        layout.addWidget(self.histogram_ctrl_widget)
+        layout.addWidget(self.correlation_ctrl_widget)
+        self._statistics_cw.setLayout(layout)
 
     def initSpecialAnalysisUI(self):
         ctrl_widget = QTabWidget()
@@ -364,7 +359,7 @@ class MainGUI(QMainWindow):
     def initConnections(self):
         pass
 
-    def connectInputToOutput(self, output):
+    def connect_input_to_output(self, output):
         self._input.connect(output)
 
     @profiler("Update Plots", process_time=True)
@@ -373,45 +368,33 @@ class MainGUI(QMainWindow):
         if not self._running:
             return
 
-        # Fetch all data in the queue and update history, then update plots.
-        # This prevent costly GUI updating from blocking data acquisition and
-        # processing.
-        update_plots = False
-        while True:
-            try:
-                processed = self._input.get_nowait()
-                processed.update()
-                self._queue.append(processed)
-                # use this flag to prevent update the same train multiple times
-                update_plots = True
+        try:
+            processed = self._input.get_nowait()
+            self._queue.append(processed)
 
-                self._mon_proxy.add_tid_with_timestamp(processed.tid)
-                logger.info(f"[{processed.tid}] updated")
-            except Empty:
-                break
-            except Exception as e:
-                logger.error(f"Unexpected exception: {repr(e)}")
-                return
+            logger.info(f"[{processed.tid}] update plots")
+        except Empty:
+            return
 
         # clear the previous plots no matter what comes next
-        # for w in self._windows.keys():
+        # for w in self._plot_windows.keys():
         #     w.reset()
 
-        if not update_plots:
-            return
-
         data = self._queue[0]
-        if data.image is None:
-            logger.info(f"Bad train with ID: {data.tid}")
-            return
 
         self._image_tool.updateWidgetsF()
-        for w in itertools.chain(self._special_windows, self._windows):
-            w.updateWidgetsF()
+        for w in itertools.chain(self._special_windows, self._plot_windows):
+            try:
+                w.updateWidgetsF()
+            except Exception as e:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                logger.debug(repr(traceback.format_tb(exc_traceback))
+                             + repr(e))
+                logger.error(f"[Update plots] {repr(e)}")
 
         logger.debug(f"Plot train with ID: {data.tid}")
 
-    def _pingRedisServer(self):
+    def pingRedisServer(self):
         try:
             self._db.ping()
             self.__redis_connection_fails = 0
@@ -428,13 +411,13 @@ class MainGUI(QMainWindow):
                                f"Shutting down!")
                 self.close()
 
-    def _addAction(self, description, filename):
+    def addAction(self, description, filename):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
         action = QAction(icon, description, self)
         self._tool_bar.addAction(action)
         return action
 
-    def _addSpecial(self, filename, instance_type):
+    def addSpecial(self, filename, instance_type):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
         btn = QPushButton()
         btn.setIcon(icon)
@@ -450,7 +433,7 @@ class MainGUI(QMainWindow):
 
         Otherwise bring the opened window to the table top.
         """
-        if self._checkWindowExistence(instance_type, self._windows):
+        if self.checkWindowExistence(instance_type, self._plot_windows):
             return
 
         return instance_type(self._queue,
@@ -462,7 +445,7 @@ class MainGUI(QMainWindow):
 
         Otherwise bring the opened window to the table top.
         """
-        if self._checkWindowExistence(instance_type, self._satellite_windows):
+        if self.checkWindowExistence(instance_type, self._satellite_windows):
             return
         return instance_type(parent=self)
 
@@ -471,11 +454,11 @@ class MainGUI(QMainWindow):
 
         Otherwise bring the opened window to the table top.
         """
-        if self._checkWindowExistence(instance_type, self._special_windows):
+        if self.checkWindowExistence(instance_type, self._special_windows):
             return
         return instance_type(self._queue, parent=self)
 
-    def _checkWindowExistence(self, instance_type, windows):
+    def checkWindowExistence(self, instance_type, windows):
         for key in windows:
             if isinstance(key, instance_type):
                 key.activateWindow()
@@ -483,10 +466,10 @@ class MainGUI(QMainWindow):
         return False
 
     def registerWindow(self, instance):
-        self._windows[instance] = 1
+        self._plot_windows[instance] = 1
 
     def unregisterWindow(self, instance):
-        del self._windows[instance]
+        del self._plot_windows[instance]
 
     def registerSatelliteWindow(self, instance):
         self._satellite_windows[instance] = 1
@@ -499,6 +482,20 @@ class MainGUI(QMainWindow):
 
     def unregisterSpecialWindow(self, instance):
         del self._special_windows[instance]
+
+    @property
+    def input(self):
+        return self._input
+
+    def start(self):
+        """Start running.
+
+        ProcessWorker interface.
+        """
+        self._thread_logger_t.start()
+        self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
+        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        self._input.start(self._close_ev)
 
     def onStart(self):
         if not self.updateMetaData():

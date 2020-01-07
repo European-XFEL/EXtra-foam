@@ -8,8 +8,8 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
-import copy
-from threading import Lock
+import collections
+from collections import namedtuple
 
 import numpy as np
 
@@ -19,190 +19,6 @@ from extra_foam.algorithms import (
     intersection, nanmeanImageArray, movingAverageImage,
     movingAverageImageArray, mask_image
 )
-
-
-class PairData:
-    """Store the history a data pair.
-
-    Each data point is pair of data: (x, y).
-
-    For correlation plots: x can be a train ID or a motor position,
-    and y is the figure of merit (FOM).
-    """
-    MAX_LENGTH = 3000  # scatter plot is expensive
-
-    def __init__(self, **kwargs):
-        # We need to have a 'x' for each sub-dataset due to the
-        # concurrency of data processing.
-        self._x = []
-        self._y = []
-        # for now it is used in CorrelationData to store device ID and
-        # property information
-        self._info = kwargs
-
-        self._lock = Lock()
-
-    def __get__(self, instance, instance_type):
-        if instance is None:
-            return self
-        # Note: here we must ensure that the data is not copied
-        with self._lock:
-            x = np.array(self._x)
-            y = np.array(self._y)
-            info = copy.copy(self._info)
-        return x, y, info
-
-    def __set__(self, instance, pair):
-        this_x, this_y = pair
-        if this_x is None or this_y is None:
-            return
-
-        with self._lock:
-            self._x.append(this_x)
-            self._y.append(this_y)
-
-        # This is a reasonable choice since we always wants to return a
-        # reference in __get__!
-        if len(self._x) > self.MAX_LENGTH:
-            with self._lock:
-                del self._x[0]
-                del self._y[0]
-
-    def __delete__(self, instance):
-        with self._lock:
-            self._x.clear()
-            self._y.clear()
-            # do not clear _info here!
-
-
-class AccumulatedPairData(PairData):
-    """Store the history accumulated pair data.
-
-    Each data point is pair of data: (x, DataStat).
-
-    The data is collected in a stop-and-collected way. A motor,
-    for example, will stop in a location and collect data for a
-    period of time. Then,  each data point in the accumulated
-    pair data is the average of the data during this period.
-    """
-    class DataStat:
-        """Statistic of data."""
-
-        def __init__(self):
-            self.count = None
-            self.avg = None
-            self.min = None
-            self.max = None
-
-    MAX_LENGTH = 600
-
-    _min_count = 2
-    _epsilon = 1e-9
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if 'resolution' not in kwargs:
-            raise ValueError("'resolution' is required!")
-        resolution = kwargs['resolution']
-        if resolution <= 0:
-            raise ValueError("'resolution must be positive!")
-        self._resolution = resolution
-
-        self._y_count = []
-        self._y_avg = []
-        self._y_min = []
-        self._y_max = []
-        self._y_std = []
-
-    def __set__(self, instance, pair):
-        this_x, this_y = pair
-        if this_x is None or this_y is None:
-            return
-
-        with self._lock:
-            if self._x:
-                if abs(this_x - self._x[-1]) - self._resolution < self._epsilon:
-                    self._y_count[-1] += 1
-                    avg_prev = self._y_avg[-1]
-                    self._y_avg[-1] += \
-                        (this_y - self._y_avg[-1]) / self._y_count[-1]
-                    self._y_std[-1] += \
-                        (this_y - avg_prev)*(this_y - self._y_avg[-1])
-                    # self._y_min and self._y_max does not store min and max
-                    # Only Standard deviation will be plotted. Min Max functionality
-                    # does not exist as of now.
-                    # self._y_min stores y_avg - 0.5*std_dev
-                    # self._y_max stores y_avg + 0.5*std_dev
-                    self._y_min[-1] = self._y_avg[-1] - 0.5*np.sqrt(
-                        self._y_std[-1]/self._y_count[-1])
-                    self._y_max[-1] = self._y_avg[-1] + 0.5*np.sqrt(
-                        self._y_std[-1]/self._y_count[-1])
-                    self._x[-1] += (this_x - self._x[-1]) / self._y_count[-1]
-                else:
-                    # If the number of data at a location is less than
-                    # min_count, the data at this location will be discarded.
-                    if self._y_count[-1] < self._min_count:
-                        del self._x[-1]
-                        del self._y_count[-1]
-                        del self._y_avg[-1]
-                        del self._y_min[-1]
-                        del self._y_max[-1]
-                        del self._y_std[-1]
-                    self._x.append(this_x)
-                    self._y_count.append(1)
-                    self._y_avg.append(this_y)
-                    self._y_min.append(this_y)
-                    self._y_max.append(this_y)
-                    self._y_std.append(0.0)
-            else:
-                self._x.append(this_x)
-                self._y_count.append(1)
-                self._y_avg.append(this_y)
-                self._y_min.append(this_y)
-                self._y_max.append(this_y)
-                self._y_std.append(0.0)
-
-        if len(self._x) > self.MAX_LENGTH:
-            with self._lock:
-                del self._x[0]
-                del self._y_count[0]
-                del self._y_avg[0]
-                del self._y_min[0]
-                del self._y_max[0]
-                del self._y_std[0]
-
-    def __get__(self, instance, instance_type):
-        if instance is None:
-            return self
-
-        y = self.DataStat()
-        with self._lock:
-            if self._y_count and self._y_count[-1] < self._min_count:
-                x = np.array(self._x[:-1])
-                y.count = np.array(self._y_count[:-1])
-                y.avg = np.array(self._y_avg[:-1])
-                y.min = np.array(self._y_min[:-1])
-                y.max = np.array(self._y_max[:-1])
-            else:
-                x = np.array(self._x)
-                y.count = np.array(self._y_count)
-                y.avg = np.array(self._y_avg)
-                y.min = np.array(self._y_min)
-                y.max = np.array(self._y_max)
-
-            info = copy.copy(self._info)
-
-        return x, y, info
-
-    def __delete__(self, instance):
-        with self._lock:
-            self._x.clear()
-            self._y_count.clear()
-            self._y_avg.clear()
-            self._y_min.clear()
-            self._y_max.clear()
-            self._y_std.clear()
-            # do not clear _info here!
 
 
 class MovingAverageScalar:
@@ -229,6 +45,8 @@ class MovingAverageScalar:
 
     def __set__(self, instance, data):
         if data is None:
+            self._data = None
+            self._count = 0
             return
 
         if self._data is not None and self._window > 1 and \
@@ -287,6 +105,8 @@ class MovingAverageArray:
 
     def __set__(self, instance, data):
         if data is None:
+            self._data = None
+            self._count = 0
             return
 
         if self._data is not None and self._window > 1 and \
@@ -354,41 +174,24 @@ class RawImageData(MovingAverageArray):
 class DataItem:
     """Train-resolved data item.
 
-    Note: Do not keep history of FOM for each DataItem since it is
-          very expensive.
-
     Attributes:
         x (numpy.array): x coordinate of VFOM.
         y (numpy.array): Vector figure-of-merit.
         fom (float): Figure-of-merit.
-        _x_label (str): label of x.
-        _y_label (str): label of VFOM.
     """
+
+    __slots__ = ['x', 'y', 'fom']
+
     def __init__(self):
         self.x = None
         self.y = None
         self.fom = None
 
-        self._x_label = ""
-        self._y_label = ""
-
-    @property
-    def x_label(self):
-        return self._x_label
-
-    @property
-    def y_label(self):
-        return self._y_label
-
 
 class AzimuthalIntegrationData(DataItem):
     """Azimuthal integration data item."""
-
-    def __init__(self):
-        super().__init__()
-
-        self._x_label = "Momentum transfer (1/A)",
-        self._y_label = "Scattering signal (arb.u.)"
+    __slots__ = ['x', 'y', 'fom']
+    pass
 
 
 class _RoiGeomBase(ABC):
@@ -511,14 +314,7 @@ class RoiData(DataItem):
 
     N_ROIS = len(config['ROI_COLORS'])
 
-    class RoiProjData(DataItem):
-        """ROI projection data item."""
-
-        def __init__(self):
-            super().__init__()
-
-            self._x_label = "Pixel",
-            self._y_label = "Projection"
+    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj']
 
     def __init__(self):
         super().__init__()
@@ -531,13 +327,11 @@ class RoiData(DataItem):
         self.norm = None
 
         # ROI projection
-        self.proj = self.RoiProjData()
+        self.proj = DataItem()
 
 
 class PumpProbeData(DataItem):
     """Pump-probe data."""
-
-    fom_hist = PairData()
 
     def __init__(self):
         super().__init__()
@@ -566,12 +360,6 @@ class PumpProbeData(DataItem):
         self.abs_difference = True
 
         self.reset = False
-
-    def update_hist(self, tid):
-        if self.reset:
-            del self.fom_hist
-
-        self.fom_hist = (tid, self.fom)
 
 
 class ImageData:
@@ -697,76 +485,60 @@ class ImageData:
         return instance
 
 
-class BinData:
+_BinDataItem = namedtuple('_BinDataItem', ['device_id', 'property',
+                                           'centers', 'counts',
+                                           'stats', 'x', 'heat'])
+
+
+class BinData(collections.abc.Mapping):
     """Binning data model."""
 
-    class Bin1dDataItem:
+    class BinDataItem:
+
+        __slots__ = ['device_id', 'property',
+                     'centers', 'counts', 'stats', 'x', 'heat']
+
         def __init__(self):
-            # bin center
-            self.center = None
-            # bin label
-            self.label = None
-
-            # FOM histogram
-            self.fom_hist = None
-            # FOM count histogram
-            self.count_hist = None
-            # VFOM heatmap
-            self.vfom_heat = None
-
-            # whether the analysis type has VFOM
-            self.has_vfom = True
-            # x coordinate of VFOM
+            self.device_id = ""
+            self.property = ""
+            self.centers = None
+            self.counts = None
+            self.stats = None
             self.x = None
-            # label for x
-            self.x_label = ""
-            # label for VFOM
-            self.vfom_label = ""
+            self.heat = None
 
-            self.reset = False
-            self.updated = False
-
-    class Bin2dDataItem:
-        def __init__(self):
-            # bin center x
-            self.center_x = None
-            # bin center y
-            self.center_y = None
-            # bin label x
-            self.x_label = ""
-            # bin label y
-            self.y_label = ""
-
-            # FOM 2D heatmap
-            self.fom_heat = None
-            # FOM 2D count
-            self.count_heat = None
-
-            self.reset = False
-            self.updated = False
+    __slots__ = ['mode', '_common', 'heat', 'heat_count']
 
     def __init__(self):
-        super().__init__()
-
         self.mode = None
 
-        self.bin1 = self.Bin1dDataItem()
-        self.bin2 = self.Bin1dDataItem()
+        self._common = []
+        for i in range(2):
+            self._common.append(self.BinDataItem())
 
-        # bin1 -> x, bin2 -> y
-        self.bin12 = self.Bin2dDataItem()
+        self.heat = None
+        self.heat_count = None
+
+    def __getitem__(self, idx):
+        """Overload."""
+        return self._common[idx]
+
+    def __iter__(self):
+        """Overload."""
+        return iter(self._common)
+
+    def __len__(self):
+        """overload."""
+        return len(self._common)
 
 
-class CorrelationData:
+class CorrelationData(collections.abc.Mapping):
     """Correlation data model."""
 
-    class CorrelationDataMeta(type):
-        def __init__(cls, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            setattr(cls, 'hist', PairData(
-                device_id="", property="", resolution=0.0))
+    class CorrelationDataItem:
 
-    class CorrelationDataItem(metaclass=CorrelationDataMeta):
+        __slots__ = ['x', 'y', 'device_id', 'property', 'resolution']
+
         def __init__(self):
             self.x = None
             self.y = None  # FOM
@@ -774,74 +546,83 @@ class CorrelationData:
             self.property = ""
             self.resolution = 0.0
 
-            self.reset = False
-
-        def update_params(self, x, y, device_id, property, resolution):
-            self.x = x
-            self.y = y
-            self.device_id = device_id
-            self.property = property
-            self.resolution = resolution
-
-        def update_hist(self):
-            if self.reset:
-                del self.hist
-
-            _, _, info = self.hist
-
-            if self.device_id != info['device_id'] \
-                    or self.property != info['property'] \
-                    or self.resolution != info['resolution']:
-                if self.resolution > 0:
-                    self.__class__.hist = AccumulatedPairData(
-                        device_id=self.device_id,
-                        property=self.property,
-                        resolution=self.resolution)
-                else:
-                    self.__class__.hist = PairData(
-                        device_id=self.device_id,
-                        property=self.property,
-                        resolution=0.0)
-
-            # if self.y is not None:
-            # self.x must not be None
-            self.hist = (self.x, self.y)
-
-    class Correlation1(CorrelationDataItem):
-        pass
-
-    class Correlation2(CorrelationDataItem):
-        pass
+    __slots__ = ['_common', '_pp']
 
     def __init__(self):
-        self.correlation1 = self.Correlation1()
-        self.correlation2 = self.Correlation2()
+        self._common = []
+        for i in range(2):
+            self._common.append(self.CorrelationDataItem())
 
-    def update_hist(self):
-        self.correlation1.update_hist()
-        self.correlation2.update_hist()
+        # pump-probe data
+        self._pp = self.CorrelationDataItem()
+
+    def __getitem__(self, idx):
+        """Overload."""
+        return self._common[idx]
+
+    def __iter__(self):
+        """Overload."""
+        return iter(self._common)
+
+    def __len__(self):
+        """overload."""
+        return len(self._common)
+
+    @property
+    def pp(self):
+        return self._pp
 
 
-class StatisticsData:
-    """Statistics data model.
+_HistogramDataItem = namedtuple('_HistogramDataItem', ['hist', 'bin_centers'])
+
+
+class HistogramData(collections.abc.MutableMapping):
+    """Histogram data model.
 
     Attributes:
-        fom_hist (np.array): 1D array for pulse resolved FOMs in a train
-        fom_bin_center (np.array): 1D array for bins centers
-        fom_count (np.array): 1D array for counts in each bin.
-        poi_fom_bin_center (list): a list of histogram bin centers for
-            individual pulses in a train.
-        poi_fom_count (list): a list of histogram bin counts for individual
-            pulses in a train.
+        pulse_foms (np.array): 1D array for pulse-resolved FOMs in a train.
+        hist (np.array): 1D array for counts of bins.
+        bin_centers (np.array): 1D array for centers of bins.
     """
 
-    def __init__(self):
-        self.fom_hist = None
-        self.fom_bin_center = None
-        self.fom_count = None
+    __slots__ = ['pulse_foms', 'hist', 'bin_centers', '_data']
 
-        self.poi_fom_bin_center = None
-        self.poi_fom_count = None
+    def __init__(self):
+        self.pulse_foms = None
+
+        self.hist = None
+        self.bin_centers = None
+
+        self._data = dict()
+
+    def __getitem__(self, key):
+        """Overload."""
+        return self._data[key]
+
+    def __setitem__(self, key, v):
+        """Overload."""
+        max_k = config["MAX_N_PULSES_PER_TRAIN"]
+        if not isinstance(key, int) or key < 0 or key >= max_k:
+            raise KeyError("key must be an integer within [0, {max_k})!")
+
+        try:
+            hist, bin_centers = v
+        except (TypeError, ValueError) as e:
+            raise e
+
+        self._data[key] = _HistogramDataItem(hist, bin_centers)
+
+    def __delitem__(self, key):
+        """Overload."""
+        del self._data[key]
+
+    def __iter__(self):
+        """Overload."""
+        return iter(self._data)
+
+    def __len__(self):
+        """overload."""
+        return len(self._data)
 
 
 class PulseIndexMask:
@@ -884,6 +665,11 @@ class PulseIndexMask:
 
 
 class XasData:
+
+    __slots__ = ['delay_bin_centers', 'delay_bin_counts',
+                 'a13_stats', 'a23_stats', 'a21_stats',
+                 'energy_bin_centers', 'a21_heat', 'a21_heatcount']
+
     def __init__(self):
         self.delay_bin_centers = None
         self.delay_bin_counts = None
@@ -900,6 +686,7 @@ class _XgmDataItem:
 
     Store XGM pipeline data.
     """
+
     def __init__(self):
         self.intensity = None  # FEL intensity
         self.x = None  # x position
@@ -929,17 +716,25 @@ class ProcessedData:
         pp (PumpProbeData): pump-probe train-resolved data.
         roi (RoiData): ROI train-resolved data.
 
-        st (StatisticsData): statistics data.
+        hist (HistgramData): statistics data.
         correlation (CorrelationData): correlation data.
         bin (BinData): binning data.
     """
     class PulseData:
         """Container for pulse-resolved data."""
 
+        __slots__ = ['ai', 'roi', 'xgm']
+
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
             self.xgm = XgmData()
+
+    __slots__ = ['_tid', 'pidx', 'image',
+                 'xgm', 'roi', 'ai', 'pp',
+                 'hist', 'corr', 'bin',
+                 'trxas',
+                 'pulse']
 
     def __init__(self, tid):
         """Initialization."""
@@ -955,7 +750,7 @@ class ProcessedData:
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
 
-        self.st = StatisticsData()
+        self.hist = HistogramData()
         self.corr = CorrelationData()
         self.bin = BinData()
 
@@ -974,8 +769,3 @@ class ProcessedData:
     @property
     def pulse_resolved(self):
         return config['PULSE_RESOLVED']
-
-    def update(self):
-        self.pp.update_hist(self._tid)
-
-        self.corr.update_hist()

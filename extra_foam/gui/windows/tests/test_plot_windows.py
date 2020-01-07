@@ -7,17 +7,9 @@ from extra_foam.logger import logger
 from extra_foam.config import _Config, ConfigWrapper, config
 from extra_foam.gui import mkQApp, MainGUI
 from extra_foam.gui.windows import (
-    Bin1dWindow, Bin2dWindow, CorrelationWindow,
-    StatisticsWindow, PumpProbeWindow, RoiWindow
+    BinningWindow, StatisticsWindow, PumpProbeWindow, RoiWindow
 )
-from extra_foam.gui.plot_widgets import (
-    FomHistogramWidget,
-    PumpProbeOnOffWidget, PumpProbeFomWidget, PumpProbeImageView,
-    PulsesInTrainFomWidget,
-    RoiImageView,
-    Bin1dHist, Bin1dHeatmap, Bin2dHeatmap,
-    CorrelationWidget,
-)
+from extra_foam.gui.plot_widgets import RoiImageView
 from extra_foam.pipeline.data_model import ProcessedData
 
 app = mkQApp()
@@ -44,6 +36,9 @@ class TestPlotWindows(unittest.TestCase):
         cls.gui.close()
 
     def testPumpProbeWindow(self):
+        from extra_foam.gui.windows.pump_probe_w import (
+            PumpProbeImageView, PumpProbeVFomPlot, PumpProbeFomPlot
+        )
         win = PumpProbeWindow(deque(), pulse_resolved=True, parent=self.gui)
 
         self.assertEqual(5, len(win._plot_widgets))
@@ -52,8 +47,8 @@ class TestPlotWindows(unittest.TestCase):
             counter[key.__class__] += 1
 
         self.assertEqual(2, counter[PumpProbeImageView])
-        self.assertEqual(2, counter[PumpProbeOnOffWidget])
-        self.assertEqual(1, counter[PumpProbeFomWidget])
+        self.assertEqual(2, counter[PumpProbeVFomPlot])
+        self.assertEqual(1, counter[PumpProbeFomPlot])
 
     def testRoiWindow(self):
         win = RoiWindow(deque(), pulse_resolved=True, parent=self.gui)
@@ -65,82 +60,39 @@ class TestPlotWindows(unittest.TestCase):
 
         self.assertEqual(2, counter[RoiImageView])
 
-    def testBin1dWindow(self):
-        win = Bin1dWindow(deque(), pulse_resolved=True, parent=self.gui)
+    def testBinningWindow(self):
+        from extra_foam.gui.windows.bin_w import Bin1dHeatmap, Bin1dHist, Bin2dHeatmap
 
-        self.assertEqual(6, len(win._plot_widgets))
+        win = BinningWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(5, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(2, counter[Bin1dHeatmap])
-        self.assertEqual(4, counter[Bin1dHist])
-
-    def testBin2dWindow(self):
-        win = Bin2dWindow(deque(), pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(2, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
+        self.assertEqual(1, counter[Bin1dHeatmap])
+        self.assertEqual(2, counter[Bin1dHist])
         self.assertEqual(2, counter[Bin2dHeatmap])
 
-    def testCorrelationWindow(self):
-        from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import _N_PARAMS
-
-        win = CorrelationWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(_N_PARAMS, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
-        self.assertEqual(_N_PARAMS, counter[CorrelationWidget])
-
-        # -----------------------
-        # test data visualization
-        # -----------------------
-
-        # the upper two plots have error bars
-        data = ProcessedData(1)
-        for i in range(1000):
-            data.corr.correlation1.hist = (int(i/5), 100*i)
-            data.corr.correlation2.hist = (i, i+1)
-
-        win._queue.append(data)
-        win.updateWidgetsF()
-        app.processEvents()
-
-        # change the resolutions
-        data.corr.correlation1.reset = True
-        data.corr.correlation2.resolution = 15
-        data.corr.update_hist()
-
-        # the data is cleared after the resolutions were changed
-        # now the lower two plots have error bars but the upper ones do not
-        for i in range(1000):
-            data.corr.correlation1.hist = (i, i+1)
-            data.corr.correlation2.hist = (int(i/5), 100*i)
-
-        win._queue.append(data)
-        win.updateWidgetsF()
-        app.processEvents()
-
     def testStatisticsWindow(self):
-        win = StatisticsWindow(deque(), pulse_resolved=True, parent=self.gui)
+        from extra_foam.gui.windows.statistics_w import (
+            CorrelationPlot, FomHist, InTrainFomPlot
+        )
 
-        self.assertEqual(2, len(win._plot_widgets))
+        win = StatisticsWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(4, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
-        self.assertEqual(1, counter[PulsesInTrainFomWidget])
-        self.assertEqual(1, counter[FomHistogramWidget])
+        self.assertEqual(1, counter[InTrainFomPlot])
+        self.assertEqual(1, counter[FomHist])
+        self.assertEqual(2, counter[CorrelationPlot])
 
     def testPulseOfInterestWindow(self):
         from extra_foam.gui.windows.pulse_of_interest_w import (
-            PulseOfInterestWindow, PoiImageView, PoiStatisticsWidget
+            PulseOfInterestWindow, PoiImageView, PoiHist
         )
 
         win = PulseOfInterestWindow(deque(), pulse_resolved=True, parent=self.gui)
@@ -151,11 +103,11 @@ class TestPlotWindows(unittest.TestCase):
             counter[key.__class__] += 1
 
         self.assertEqual(2, counter[PoiImageView])
-        self.assertEqual(2, counter[PoiStatisticsWidget])
+        self.assertEqual(2, counter[PoiHist])
 
     def testTrXasWindow(self):
         from extra_foam.gui.windows.tri_xas_w import (
-            TrXasWindow, _TrXasAbsorptionWidget, _TrXasHeatmap
+            TrXasWindow, TrXasAbsorptionPlot, TrXasHeatmap
         )
         win = TrXasWindow(deque(), pulse_resolved=True, parent=self.gui)
 
@@ -165,5 +117,5 @@ class TestPlotWindows(unittest.TestCase):
             counter[key.__class__] += 1
 
         self.assertEqual(3, counter[RoiImageView])
-        self.assertEqual(2, counter[_TrXasAbsorptionWidget])
-        self.assertEqual(1, counter[_TrXasHeatmap])
+        self.assertEqual(2, counter[TrXasAbsorptionPlot])
+        self.assertEqual(1, counter[TrXasHeatmap])

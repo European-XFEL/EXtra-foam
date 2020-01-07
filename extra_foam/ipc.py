@@ -15,7 +15,6 @@ import numpy as np
 import redis
 
 from .config import config
-from .utils import _MetaSingleton
 from .serialization import deserialize_image, serialize_image
 
 
@@ -193,7 +192,7 @@ class RedisPSubscriber(metaclass=MetaRedisConnection):
         self._sub = None
 
 
-class ProcessWorkerLogger(metaclass=_MetaSingleton):
+class ProcessLogger:
     """Worker which publishes log message in another Process."""
 
     _db = RedisConnection()
@@ -209,6 +208,9 @@ class ProcessWorkerLogger(metaclass=_MetaSingleton):
 
     def error(self, msg):
         self._db.publish("log:error", msg)
+
+
+process_logger = ProcessLogger()
 
 
 class ReferencePub:

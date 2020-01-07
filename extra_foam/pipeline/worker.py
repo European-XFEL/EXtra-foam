@@ -25,12 +25,13 @@ from .processors import (
     PostPulseFilter,
     PumpProbeProcessor,
     RoiProcessorPulse, RoiProcessorTrain,
-    StatisticsProcessor,
+    HistogramProcessor,
     XgmProcessor,
     TrXasProcessor,
 )
 from ..config import config, DataSource
-from ..ipc import ProcessWorkerLogger, RedisConnection
+from ..ipc import RedisConnection
+from ..ipc import process_logger as logger
 
 
 class ProcessWorker(mp.Process):
@@ -43,9 +44,7 @@ class ProcessWorker(mp.Process):
 
         self._name = name
 
-        self.log = ProcessWorkerLogger()
-
-        self._inputs = []  # pipe-ins
+        self._input = None  # pipe-in
         self._output = None  # pipe-out
 
         self._tasks = []
@@ -63,81 +62,72 @@ class ProcessWorker(mp.Process):
         return self._name
 
     @property
+    def input(self):
+        return self._input
+
+    @property
     def output(self):
         return self._output
 
-    def connectInputToOutput(self, output):
-        if isinstance(output, list):
-            if len(self._inputs) != len(output):
-                raise ValueError
-
-            for inp, oup in zip(self._inputs, output):
-                inp.connect(oup)
-
-        for inp in self._inputs:
-            inp.connect(output)
-
     def run(self):
         """Override."""
-        timeout = self._timeout
-
         # start input and output pipes
-        for inp in self._inputs:
-            inp.run_in_thread(self._close_ev)
-        self._output.run_in_thread(self._close_ev)
+        self._input.start(self._close_ev)
+        self._output.start(self._close_ev)
 
         while not self.closing:
             try:
-                if not self.running:
-                    self._pause_ev.wait()
-
-                    # tell input and output channels to update
-                    for inp in self._inputs:
-                        inp.update()
-                    self._output.update()
-
-                for inp in self._inputs:
-                    try:
-                        # get the data from pipe-in
-                        data = inp.get(timeout=timeout)
-                        src_type = data['source_type']
-                    except Empty:
-                        continue
-
-                    try:
-                        self._run_tasks(data)
-                    except StopPipelineError:
-                        self._prev_processed_time = time.time()
-                        break
-
-                    if self._prev_processed_time is not None:
-                        fps = 1.0 / (time.time() - self._prev_processed_time)
-                        self.log.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
-                    self._prev_processed_time = time.time()
-
-                    if src_type == DataSource.BRIDGE:
-                        # always keep the latest data in the queue
-                        try:
-                            self._output.put_pop(data, timeout=timeout)
-                        except Empty:
-                            continue
-                    elif src_type == DataSource.FILE:
-                        # wait until data in the queue has been processed
-                        while not self.closing:
-                            try:
-                                self._output.put(data, timeout=timeout)
-                                break
-                            except Full:
-                                continue
-                    else:
-                        raise ProcessingError(
-                            f"Unknown source type {src_type}!")
-
+                self._process_input_output()
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(repr(traceback.format_tb(exc_traceback)) +
-                               repr(e))
-                self.log.error(repr(e))
+                logger.debug(repr(traceback.format_tb(exc_traceback)) +
+                             repr(e))
+                logger.error(repr(e))
+
+    def _process_input_output(self):
+        timeout = self._timeout
+
+        if not self.running:
+            self._pause_ev.wait()
+
+            # tell input and output channels to update
+            self._input.update()
+            self._output.update()
+
+        try:
+            # get the data from pipe-in
+            data = self._input.get(timeout=timeout)
+            src_type = data['source_type']
+        except Empty:
+            return
+
+        try:
+            self._run_tasks(data)
+        except StopPipelineError:
+            self._prev_processed_time = time.time()
+            return
+
+        if self._prev_processed_time is not None:
+            fps = 1.0 / (time.time() - self._prev_processed_time)
+            logger.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
+        self._prev_processed_time = time.time()
+
+        if src_type == DataSource.BRIDGE:
+            # always keep the latest data in the queue
+            try:
+                self._output.put_pop(data, timeout=timeout)
+            except Empty:
+                return
+        elif src_type == DataSource.FILE:
+            # wait until data in the queue has been processed
+            while not self.closing:
+                try:
+                    self._output.put(data, timeout=timeout)
+                    break
+                except Full:
+                    return
+        else:
+            raise ProcessingError(f"Unknown source type {src_type}!")
 
     def _run_tasks(self, data):
         """Run all tasks for once:
@@ -149,21 +139,21 @@ class ProcessWorker(mp.Process):
                 task.run_once(data)
             except StopPipelineError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(repr(traceback.format_tb(exc_traceback))
-                               + repr(e))
-                self.log.error(repr(e))
+                logger.debug(repr(traceback.format_tb(exc_traceback))
+                             + repr(e))
+                logger.error(repr(e))
                 raise
             except ProcessingError as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(repr(traceback.format_tb(exc_traceback))
-                               + repr(e))
-                self.log.error(repr(e))
+                logger.debug(repr(traceback.format_tb(exc_traceback))
+                             + repr(e))
+                logger.error(repr(e))
             except Exception as e:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                self.log.debug(f"Unexpected Exception!: " +
-                               repr(traceback.format_tb(exc_traceback)) +
-                               repr(e))
-                self.log.error(repr(e))
+                logger.debug(f"Unexpected Exception!: " +
+                             repr(traceback.format_tb(exc_traceback)) +
+                             repr(e))
+                logger.error(repr(e))
 
     def close(self):
         self._close_ev.set()
@@ -201,8 +191,8 @@ class PulseWorker(ProcessWorker):
         """Initialization."""
         super().__init__('pulse worker')
 
-        self._inputs = [KaraboBridge(f"{self._name}:input")]
-        self._output = MpOutQueue(f"{self._name}:output")
+        self._input = KaraboBridge()
+        self._output = MpOutQueue()
 
         self._broker = Broker()
         self._xgm_proc = XgmProcessor()
@@ -231,13 +221,13 @@ class TrainWorker(ProcessWorker):
         """Initialization."""
         super().__init__('train worker')
 
-        self._inputs = [MpInQueue(f"{self._name}:input")]
-        self._output = MpOutQueue(f"{self._name}:output", gui=True)
+        self._input = MpInQueue()
+        self._output = MpOutQueue(drop=True, final=True)
 
         self._roi_proc = RoiProcessorTrain()
         self._ai_proc = AzimuthalIntegrationProcessorTrain()
 
-        self._statistics = StatisticsProcessor()
+        self._histogram = HistogramProcessor()
         self._correlation_proc = CorrelationProcessor()
         self._bin_proc = BinProcessor()
 
@@ -246,7 +236,7 @@ class TrainWorker(ProcessWorker):
         self._tasks = [
             self._roi_proc,
             self._ai_proc,
-            self._statistics,
+            self._histogram,
             self._correlation_proc,
             self._bin_proc,
             self._tr_xas,

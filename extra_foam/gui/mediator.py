@@ -14,7 +14,6 @@ from PyQt5.QtCore import pyqtSignal,  QObject
 
 from ..database import Metadata as mt
 from ..database import MetaProxy
-from ..ipc import RedisConnection
 
 
 class Mediator(QObject):
@@ -24,11 +23,11 @@ class Mediator(QObject):
     Mediator() is instantiated.
     """
     reset_image_level_sgn = pyqtSignal()
+    # POI index, pulse index
+    poi_index_change_sgn = pyqtSignal(int, int)
+    poi_window_initialized_sgn = pyqtSignal()
 
     __instance = None
-
-    # TODO: make a command interface
-    _db = RedisConnection()
 
     _meta = MetaProxy()
 
@@ -84,7 +83,8 @@ class Mediator(QObject):
         self._meta.hset(mt.GEOMETRY_PROC, "quad_positions", json.dumps(value))
 
     def onPoiIndexChange(self, idx: int, value: int):
-        self._meta.hset(mt.GLOBAL_PROC, f"poi{idx}_index", str(value))
+        self._meta.hset(mt.GLOBAL_PROC, f"poi{idx+1}_index", str(value))
+        self.poi_index_change_sgn.emit(idx, value)
 
     def onSampleDistanceChange(self, value: float):
         self._meta.hset(mt.GLOBAL_PROC, 'sample_distance', value)
@@ -96,9 +96,10 @@ class Mediator(QObject):
         self._meta.hset(mt.GLOBAL_PROC, "ma_window", value)
 
     def onResetMa(self):
-        self._meta.hmset(mt.GLOBAL_PROC, {"reset_ma_ai": 1,
-                                         "reset_ma_roi": 1,
-                                         "reset_ma_xgm": 1})
+        self._meta.hmset(mt.GLOBAL_PROC,
+                         {"reset_ma_ai": 1,
+                          "reset_ma_roi": 1,
+                          "reset_ma_xgm": 1})
 
     def onAiPixelSizeXChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_x', value)
@@ -217,17 +218,17 @@ class Mediator(QObject):
     def onBinReset(self):
         self._meta.hset(mt.BIN_PROC, "reset", 1)
 
-    def onStAnalysisTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.STATISTICS_PROC, "analysis_type", int(value))
+    def onHistAnalysisTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.HISTOGRAM_PROC, "analysis_type", int(value))
 
-    def onStNumBinsChange(self, value: int):
-        self._meta.hset(mt.STATISTICS_PROC, "n_bins", int(value))
+    def onHistNumBinsChange(self, value: int):
+        self._meta.hset(mt.HISTOGRAM_PROC, "n_bins", int(value))
 
-    def onStPulseOrTrainResolutionChange(self, value: bool):
-        self._meta.hset(mt.STATISTICS_PROC, "pulse_resolved", str(value))
+    def onHistPulseResolvedChange(self, value: bool):
+        self._meta.hset(mt.HISTOGRAM_PROC, "pulse_resolved", str(value))
 
-    def onStReset(self):
-        self._meta.hset(mt.STATISTICS_PROC, "reset", 1)
+    def onHistReset(self):
+        self._meta.hset(mt.HISTOGRAM_PROC, "reset", 1)
 
     def onPfAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.PULSE_FILTER_PROC, "analysis_type", int(value))

@@ -11,8 +11,8 @@ import copy
 from enum import IntEnum
 import json
 import os.path as osp
-import collections
 import shutil
+from collections import abc, namedtuple
 
 import numpy as np
 
@@ -66,6 +66,37 @@ class AnalysisType(IntEnum):
     AZIMUTHAL_INTEG_PULSE = 2741
 
 
+_PlotLabelItem = namedtuple("_PlotLabel", ['x', 'y'])
+
+
+class PlotLabel(abc.Mapping):
+    """Labels used in data visualization."""
+    _labels = {
+        AnalysisType.ROI_PROJ: _PlotLabelItem("x", "Projection"),
+        AnalysisType.AZIMUTHAL_INTEG: _PlotLabelItem(
+            "Momentum transfer (1/A)", "Scattering signal (arb. u.)")
+    }
+
+    def __init__(self):
+        super().__init__()
+
+        for item in AnalysisType:
+            if item not in self._labels:
+                self._labels[item] = _PlotLabelItem("", "")
+
+    def __getitem__(self, item):
+        return self._labels[item]
+
+    def __iter__(self):
+        return iter(self._labels)
+
+    def __len__(self):
+        return len(self._labels)
+
+
+plot_labels = PlotLabel()
+
+
 class BinMode(IntEnum):
     ACCUMULATE = 0
     AVERAGE = 1
@@ -108,8 +139,9 @@ class _Config(dict):
         "PROCESS_CLEANUP_TIMEOUT": 1,
         # max number of pulses per pulse train
         "MAX_N_PULSES_PER_TRAIN": 2700,
-        # maximum length of a queue in data pipeline
-        "MAX_QUEUE_SIZE": 5,
+        # maximum length of a queue in data pipeline (the smaller the queue size,
+        # the smaller the latency)
+        "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
         # maximum number of trains in a dark run
@@ -547,7 +579,7 @@ class _Config(dict):
         self.ensure_file()
 
 
-class ConfigWrapper(collections.abc.Mapping):
+class ConfigWrapper(abc.Mapping):
     """Readonly config."""
     def __init__(self):
         self._data = _Config()

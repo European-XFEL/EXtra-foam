@@ -8,13 +8,12 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors import RoiProcessorTrain, RoiProcessorPulse
 from extra_foam.config import AnalysisType, Normalizer, RoiCombo, RoiFom
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
@@ -203,8 +202,9 @@ class TestRoiProcessorTrain(_BaseProcessorTest):
             else:
                 assert fom1_gt + fom2_gt == processed.roi.fom
 
+    @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
-    def testProjFom(self, direct, axis):
+    def testProjFom(self, error, direct, axis):
         proc = self._proc
 
         for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
@@ -239,8 +239,9 @@ class TestRoiProcessorTrain(_BaseProcessorTest):
 
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
-            with pytest.raises(ProcessingError, match=r'.ROI.*?same shape'):
-                proc.process(data)
+            proc.process(data)
+            error.assert_called_once()
+            error.reset_mock()
 
     def testGeneralPumpProbe(self):
         proc = self._proc
@@ -347,8 +348,9 @@ class TestRoiProcessorTrain(_BaseProcessorTest):
                 fom_off_gt = fom1_off_gt + fom2_off_gt
             assert fom_on_gt - fom_off_gt == processed.pp.fom
 
+    @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
-    def testRoiProjPumpProbe(self, direct, axis):
+    def testRoiProjPumpProbe(self, error, direct, axis):
         proc = self._proc
 
         for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
@@ -401,5 +403,6 @@ class TestRoiProcessorTrain(_BaseProcessorTest):
             assert (y_on_gt - y_off_gt).sum() == processed.pp.fom
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
-            with pytest.raises(ProcessingError, match=r'.ROI.*?same shape'):
-                proc.process(data)
+            proc.process(data)
+            error.assert_called_once()
+            error.reset_mock()

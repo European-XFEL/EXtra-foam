@@ -6,7 +6,7 @@ from .correlation_ctrl_widget import CorrelationCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .image_ctrl_widget import ImageCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
-from .statistics_ctrl_widget import StatisticsCtrlWidget
+from .histogram_ctrl_widget import HistogramCtrlWidget
 from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
@@ -35,6 +35,6 @@ __all__ = [
     "RoiProjCtrlWidget",
     "SmartLineEdit",
     "SmartStringLineEdit",
-    "StatisticsCtrlWidget",
+    "HistogramCtrlWidget",
     "TrXasCtrlWidget",
 ]
