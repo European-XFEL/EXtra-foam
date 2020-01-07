@@ -543,7 +543,7 @@ class MainGUI(QMainWindow):
         if ch == 'log:debug':
             logger.debug(msg)
         elif ch == 'log:info':
-            logger.info.emit(msg)
+            logger.info(msg)
         elif ch == 'log:warning':
             logger.warning(msg)
         elif ch == 'log:error':
