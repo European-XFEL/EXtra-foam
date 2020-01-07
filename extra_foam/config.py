@@ -257,7 +257,6 @@ class _Config(dict):
             # module shapes and pixel sizes. Therefore, we do not apply the
             # module shape check.
             "MODULE_SHAPE": [-1, -1],
-            # TODO: how to deal with the pixel size?
             "PIXEL_SIZE": 0.0022e-3,
         },
         "DSSC": {
@@ -290,12 +289,6 @@ class _Config(dict):
             # distance from sample to detector plan (orthogonal distance,
             # not along the beam), in meter
             "SAMPLE_DISTANCE": 1.0,
-            # coordinate of the point of normal incidence along the detector's
-            # first dimension, in pixels, PONI1 in pyFAI
-            "CENTER_Y": 0,
-            # coordinate of the point of normal incidence along the detector's
-            # second dimension, in pixels, PONI2 in pyFAI
-            "CENTER_X": 0,
             # azimuthal integration methods supported in pyFAI
             "AZIMUTHAL_INTEG_METHODS": [
                 'nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel', 'lut',
@@ -303,8 +296,6 @@ class _Config(dict):
             ],
             # range (lower, upper) of the radial unit of azimuthal integration
             "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
-            # number of points of azimuthal integration
-            "AZIMUTHAL_INTEG_POINTS": 512,
             # pixels with values outside the (lower, upper) range will be masked
             "MASK_RANGE": [-1e5, 1e5],
             # photon energy, in keV
@@ -332,8 +323,6 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
             "SAMPLE_DISTANCE": 5.5,
-            "CENTER_Y": 490,
-            "CENTER_X": 590,
             "PHOTON_ENERGY": 9.3,
         },
         "LPD": {
@@ -361,8 +350,6 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.2, 5],
             "SAMPLE_DISTANCE": 0.4,
-            "CENTER_Y": 620,
-            "CENTER_X": 570,
             "PHOTON_ENERGY": 9.3,
         },
         "JungFrauPR": {
@@ -382,8 +369,6 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "SAMPLE_DISTANCE": 2.0,
-            "CENTER_Y": 512,
-            "CENTER_X": 1400,
             "PHOTON_ENERGY": 9.3,
         },
         "JungFrau": {
@@ -401,8 +386,6 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "SAMPLE_DISTANCE": 2.0,
-            "CENTER_Y": 512,
-            "CENTER_X": 1400,
             "PHOTON_ENERGY": 9.3,
         },
         "FastCCD": {
@@ -416,16 +399,12 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.02],
             "SAMPLE_DISTANCE": 0.6,
-            "CENTER_Y": 967,
-            "CENTER_X": 480,
             "PHOTON_ENERGY": 0.780,
         },
         "BaslerCamera": {
             "SERVER_ADDR": "localhost",
             "SERVER_PORT": 45454,
             "SAMPLE_DISTANCE": 1.0,
-            "CENTER_Y": 512,
-            "CENTER_X": 512,
         },
         "DSSC": {
             "SERVER_ADDR": '10.253.0.140',
@@ -451,8 +430,6 @@ class _Config(dict):
             ],
             "AZIMUTHAL_INTEG_RANGE": [0, 0.18],
             "SAMPLE_DISTANCE": 0.6,
-            "CENTER_Y": 686,
-            "CENTER_X": 550,
             "PHOTON_ENERGY": 0.780,
         },
     }

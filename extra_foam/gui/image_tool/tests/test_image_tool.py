@@ -393,6 +393,8 @@ class TestImageTool(unittest.TestCase):
 
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
+        from extra_foam.gui.ctrl_widgets.azimuthal_integ_ctrl_widget import \
+            _DEFAULT_AZIMUTHAL_INTEG_POINTS
 
         widget = self.image_tool._azimuthal_integ_1d_view._ctrl_widget
         avail_norms = {value: key for key, value in widget._available_norms.items()}
@@ -408,7 +410,7 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual(default_integ_method, proc._integ_method)
         default_normalizer = Normalizer.UNDEFINED
         self.assertEqual(default_normalizer, proc._normalizer)
-        self.assertEqual(config["AZIMUTHAL_INTEG_POINTS"], proc._integ_points)
+        self.assertEqual(_DEFAULT_AZIMUTHAL_INTEG_POINTS, proc._integ_points)
         default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
         self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]), proc._integ_range)
         self.assertTupleEqual(default_integ_range, proc._auc_range)
@@ -416,8 +418,8 @@ class TestImageTool(unittest.TestCase):
         default_pixel_size = config["PIXEL_SIZE"]
         self.assertEqual(default_pixel_size, proc._pixel1)
         self.assertEqual(default_pixel_size, proc._pixel2)
-        self.assertEqual(config["CENTER_Y"] * default_pixel_size, proc._poni1)
-        self.assertEqual(config["CENTER_X"] * default_pixel_size, proc._poni2)
+        self.assertEqual(0, proc._poni1)
+        self.assertEqual(0, proc._poni2)
 
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")

@@ -18,6 +18,9 @@ from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import Normalizer, config
 
 
+_DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
+
+
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up azimuthal integration parameters."""
 
@@ -37,9 +40,13 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._sample_dist_le = SmartLineEdit(str(config["SAMPLE_DISTANCE"]))
         self._sample_dist_le.setValidator(QDoubleValidator(0.001, 100, 6))
 
-        self._cx_le = SmartLineEdit(str(config["CENTER_X"]))
+        # coordinate of the point of normal incidence along the detector's
+        # second dimension, in pixels, PONI2 in pyFAI
+        self._cx_le = SmartLineEdit(str(0))
         self._cx_le.setValidator(QIntValidator())
-        self._cy_le = SmartLineEdit(str(config["CENTER_Y"]))
+        # coordinate of the point of normal incidence along the detector's
+        # first dimension, in pixels, PONI1 in pyFAI
+        self._cy_le = SmartLineEdit(str(0))
         self._cy_le.setValidator(QIntValidator())
 
         self._px_le = SmartLineEdit(str(config["PIXEL_SIZE"]))
@@ -60,7 +67,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._integ_range_le = SmartBoundaryLineEdit(
             ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
         self._integ_pts_le = SmartLineEdit(
-            str(config["AZIMUTHAL_INTEG_POINTS"]))
+            str(_DEFAULT_AZIMUTHAL_INTEG_POINTS))
         self._integ_pts_le.setValidator(QIntValidator(1, 8192))
 
         self._norm_cb = QComboBox()
