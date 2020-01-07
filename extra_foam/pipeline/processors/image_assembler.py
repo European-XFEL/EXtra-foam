@@ -21,6 +21,7 @@ from .base_processor import _BaseProcessor, _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, DataSource
 from ...database import Metadata as mt
+from ...ipc import process_logger as logger
 from ...utils import profiler
 
 
@@ -68,7 +69,8 @@ class ImageAssemblerFactory(ABC):
                         self.load_geometry(geom_file, quad_positions)
                         self._geom_file = geom_file
                         self._quad_position = quad_positions
-                        print(f"Loaded geometry from {geom_file}")
+                        logger.info(f"Loaded geometry from {geom_file} with "
+                                    f"quadrant positions {quad_positions}")
                 else:
                     # when only a single module is required or we only want to
                     # assemble modules seamlessly together.
