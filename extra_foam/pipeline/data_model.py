@@ -377,7 +377,8 @@ class ImageData:
             to reconstruct the indices of the selected images in the original
             data providing the number of pulses and the slicer are both known.
         poi_indices (list): indices of pulses of interest.
-        background (float): a uniform background value.
+        gain (float): a constant gain value.
+        offset (float): a constant offset value.
         dark_mean (numpy.ndaray): average of all the dark images in
             the dark run. Shape = (y, x)
         n_dark_pulses (int): number of dark pulses in a dark train.
@@ -399,7 +400,9 @@ class ImageData:
         self.sliced_indices = None
         self.poi_indices = None
 
-        self.background = None
+        self.gain = 1.0
+        self.offset = 0.0
+
         self.dark_mean = None
         self.n_dark_pulses = 0
         self.dark_count = 0
@@ -424,7 +427,8 @@ class ImageData:
 
     @classmethod
     def from_array(cls, arr, *,
-                   background=0.0,
+                   gain=1.0,
+                   offset=0.0,
                    image_mask=None,
                    threshold_mask=None,
                    sliced_indices=None,
@@ -480,7 +484,8 @@ class ImageData:
                    threshold_mask=threshold_mask)
         instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
-        instance.background = background
+        instance.gain = gain
+        instance.offset = offset
 
         return instance
 

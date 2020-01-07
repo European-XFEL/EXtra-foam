@@ -30,7 +30,6 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
     def _gen_data(self, tid):
         return self.data_with_assembled(tid, (2, 2),
                                         threshold_mask=(-100, 100),
-                                        background=0,
                                         poi_indices=[0, 0])
 
     def testPpUndefined(self):
@@ -139,7 +138,6 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
     def _gen_data(self, tid):
         return self.data_with_assembled(tid, (4, 2, 2),
                                         threshold_mask=(-100, 100),
-                                        background=0,
                                         poi_indices=[0, 0])
 
     def testPulseFilter(self):

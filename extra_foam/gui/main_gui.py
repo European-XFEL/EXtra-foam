@@ -34,6 +34,7 @@ from .ctrl_widgets import (
     CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
     HistogramCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
 )
+from .gui_helpers import create_icon_button
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
@@ -418,12 +419,7 @@ class MainGUI(QMainWindow):
         return action
 
     def addSpecial(self, filename, instance_type):
-        icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
-        btn = QPushButton()
-        btn.setIcon(icon)
-        btn.setIconSize(QSize(self._SPECIAL_ANALYSIS_ICON_WIDTH,
-                              self._SPECIAL_ANALYSIS_ICON_WIDTH))
-        btn.setFixedSize(btn.minimumSizeHint())
+        btn = create_icon_button(filename, self._SPECIAL_ANALYSIS_ICON_WIDTH)
         btn.clicked.connect(
             lambda: self.openSpecialAnalysisWindow(instance_type))
         return btn

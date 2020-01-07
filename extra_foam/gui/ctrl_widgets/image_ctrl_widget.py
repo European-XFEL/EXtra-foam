@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QDoubleValidator, QIntValidator
+from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QGridLayout, QLabel, QPushButton
 )
@@ -45,9 +45,6 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         self.darksubtraction_cb = QCheckBox("Subtract dark")
         self.darksubtraction_cb.setChecked(True)
 
-        self.bkg_le = SmartLineEdit(str(0.0))
-        self.bkg_le.setValidator(QDoubleValidator())
-
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
         self.load_ref_btn = QPushButton("Load reference")
@@ -81,10 +78,6 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.darksubtraction_cb, row, 0, AR)
 
         row += 1
-        layout.addWidget(QLabel("Subtract background: "), row, 0, AR)
-        layout.addWidget(self.bkg_le, row, 1)
-
-        row += 1
         layout.addWidget(self.save_image_btn, row, 0)
         layout.addWidget(self.load_ref_btn, row, 1)
 
@@ -106,5 +99,4 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.returnPressed.emit()
         self.darksubtraction_cb.toggled.emit(
             self.darksubtraction_cb.isChecked())
-        self.bkg_le.returnPressed.emit()
         return True
