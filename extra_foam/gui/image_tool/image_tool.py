@@ -19,13 +19,14 @@ from PyQt5.QtWidgets import (
 
 from .azimuthal_integ_1d_view import AzimuthalInteg1dView
 from .corrected_view import CorrectedView
+from .calibration_view import CalibrationView
 from .bulletin_view import BulletinView
 from .dark_view import DarkView
 from .geometry_view import GeometryView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
 from ..ctrl_widgets import ImageCtrlWidget
-from ...config import AnalysisType, config, MaskState
+from ...config import config, MaskState
 
 
 class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
@@ -43,9 +44,10 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     class TabIndex(IntEnum):
         CORRECTED = 0
-        DARK = 1
-        AZIMUTHAL_INTEG_1D = 2
-        GEOMETRY = 3
+        GAIN_OFFSET = 1
+        DARK = 2
+        AZIMUTHAL_INTEG_1D = 3
+        GEOMETRY = 4
 
     def __init__(self, queue, *, pulse_resolved=True, parent=None):
         """Initialization.
@@ -91,19 +93,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._exclusive_actions = {self._mask_at, self._unmask_at}
 
-        # ****************
-        # dark run actions
-        # ****************
-
-        self._tool_bar.addSeparator()
-
-        self._record_at = self._addAction(
-            self._tool_bar, "Record dark", "record.png")
-        self._record_at.setCheckable(True)
-        self._record_at.setEnabled(False)
-        self._remove_at = self._addAction(
-            self._tool_bar, "Remove dark", "remove_dark.png")
-
         self._tool_bar.addSeparator()
 
         # -----------------------------
@@ -119,8 +108,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # -----------------------------
 
         self._views_tab = QTabWidget()
-        self._prev_tab_idx = 0
         self._corrected_view = self.createView(CorrectedView)
+        self._gain_offset_view = self.createView(CalibrationView)
         self._dark_view = self.createView(DarkView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
@@ -141,6 +130,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         """Override."""
         corrected_tab_idx = self._views_tab.addTab(
             self._corrected_view, "Corrected")
+        cali_idx = self._views_tab.addTab(
+            self._gain_offset_view, "Gain / offset")
         dark_tab_idx = self._views_tab.addTab(self._dark_view, "Dark")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
@@ -149,10 +140,10 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             self._views_tab.setTabEnabled(geom_tab_idx, False)
 
         assert(corrected_tab_idx == self.TabIndex.CORRECTED)
+        assert(cali_idx == self.TabIndex.GAIN_OFFSET)
         assert(dark_tab_idx == self.TabIndex.DARK)
         assert(azimuthal_integ_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D)
         assert(geom_tab_idx == self.TabIndex.GEOMETRY)
-        self._prev_tab_idx = self._views_tab.currentIndex()
 
         ctrl_panel = QWidget()
         ctrl_panel_layout = QVBoxLayout()
@@ -191,12 +182,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._load_img_mask_at.triggered.connect(
             self._corrected_view.imageView.loadImageMask)
 
-        self._record_at.toggled.connect(self._mediator.onRdStateChange)
-        self._record_at.toggled.emit(self._record_at.isChecked())
-        self._remove_at.triggered.connect(self._mediator.onRdRemoveDark)
-
         self._image_ctrl_widget.update_image_btn.clicked.connect(
-            self.updateImage)
+            self.onUpdateWidgets)
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)
         self._image_ctrl_widget.save_image_btn.clicked.connect(
@@ -217,11 +204,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._image_ctrl_widget.darksubtraction_cb.toggled.connect(
             self._mediator.onDarkSubtractionStateChange)
 
-        self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
-            lambda x: self._corrected_view.imageView.onBkgChange(float(x)))
-        self._image_ctrl_widget.bkg_le.value_changed_sgn.connect(
-            lambda x: mediator.onImageBackgroundChange(float(x)))
-
+        self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
 
     def onStart(self):
@@ -263,15 +246,15 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         pass
 
     @pyqtSlot()
-    def updateImage(self):
+    def onUpdateWidgets(self):
         """Used for updating manually."""
-        self._updateOnce(True)
+        self.updateWidgets(True)
 
     def updateWidgetsF(self):
         """Override."""
-        self._updateOnce(self._auto_update)
+        self.updateWidgets(self._auto_update)
 
-    def _updateOnce(self, auto_update):
+    def updateWidgets(self, auto_update):
         if len(self._queue) == 0:
             return
         data = self._queue[0]
@@ -295,25 +278,15 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         return action
 
     @pyqtSlot(int)
+    def onViewsTabClicked(self, idx):
+        if self._views_tab.currentIndex() == idx:
+            return
+        self._views_tab.currentWidget().onDeactivated()
+
+    @pyqtSlot(int)
     def onViewsTabChanged(self, idx):
-        # clean-up for the old tab
-        if self._prev_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D:
-            self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG)
-
-        elif self._prev_tab_idx == self.TabIndex.DARK:
-            if self._record_at.isChecked():
-                self._record_at.trigger()
-            self._record_at.setEnabled(False)
-
-        # update Tab index
-        self._prev_tab_idx = idx
-
-        # set-up for the new tab
-        if idx == self.TabIndex.DARK:
-            self._record_at.setEnabled(True)
-
-        if idx == self.TabIndex.AZIMUTHAL_INTEG_1D:
-            self._mediator.registerAnalysis(AnalysisType.AZIMUTHAL_INTEG)
+        self._views_tab.currentWidget().onActivated()
+        self.updateWidgets(True)  # force update
 
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):

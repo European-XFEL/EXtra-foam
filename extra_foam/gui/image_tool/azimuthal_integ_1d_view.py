@@ -82,3 +82,11 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         if auto_update or self._image_view.image is None:
             self._image_view.setImageData(_SimpleImageData(data.image))
             self._azimuthal_integ_1d_curve.updateF(data)
+
+    def onActivated(self):
+        """Override."""
+        self._mediator.registerAnalysis(AnalysisType.AZIMUTHAL_INTEG)
+
+    def onDeactivated(self):
+        """Override."""
+        self._mediator.unregisterAnalysis(AnalysisType.AZIMUTHAL_INTEG)

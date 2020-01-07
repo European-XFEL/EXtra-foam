@@ -64,11 +64,14 @@ class Mediator(QObject):
         else:
             self._meta.remove_data_source(item)
 
+    def onCaliGainChange(self, value: float):
+        self._meta.hset(mt.IMAGE_PROC, "gain", value)
+
+    def onCaliOffsetChange(self, value: float):
+        self._meta.hset(mt.IMAGE_PROC, "offset", value)
+
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
-
-    def onImageBackgroundChange(self, value: float):
-        self._meta.hset(mt.IMAGE_PROC, "background", value)
 
     def onDarkSubtractionStateChange(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "dark_subtraction", str(value))

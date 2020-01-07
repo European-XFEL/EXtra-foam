@@ -10,6 +10,7 @@ All rights reserved.
 from PyQt5.QtWidgets import QVBoxLayout
 
 from .base_view import _AbstractImageToolView
+from ..ctrl_widgets import DarkRunCtrlWidget
 from ..plot_widgets import ImageViewF
 
 
@@ -23,6 +24,9 @@ class DarkView(_AbstractImageToolView):
 
         self._dark_view = ImageViewF()
 
+        self._ctrl_widget = self.parent().createCtrlWidget(
+            DarkRunCtrlWidget)
+
         self.initUI()
         self.initConnections()
 
@@ -30,6 +34,7 @@ class DarkView(_AbstractImageToolView):
         """Override."""
         layout = QVBoxLayout()
         layout.addWidget(self._dark_view)
+        layout.addWidget(self._ctrl_widget)
         self.setLayout(layout)
 
     def initConnections(self):
@@ -43,3 +48,7 @@ class DarkView(_AbstractImageToolView):
             self._dark_view.clear()
         else:
             self._dark_view.setImage(data.image.dark_mean)
+
+    def onDeactivated(self):
+        """Override."""
+        self._ctrl_widget.onDeactivated()

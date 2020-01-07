@@ -7,6 +7,11 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import os.path as osp
+
+from PyQt5.QtCore import QSize
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QPushButton
 
 
 def parse_boundary(text):
@@ -188,3 +193,18 @@ def parse_slice(text):
         return ret
     except Exception:
         raise ValueError(err_msg)
+
+
+def create_icon_button(filename, size):
+    """Create a QPushButton with icon.
+
+    :param str filename: name of the icon file.
+    :param int size: size of the icon (button).
+    """
+    root_dir = osp.dirname(osp.abspath(__file__))
+    btn = QPushButton()
+    icon = QIcon(osp.join(root_dir, "icons/" + filename))
+    btn.setIcon(icon)
+    btn.setIconSize(QSize(size, size))
+    btn.setFixedSize(btn.minimumSizeHint())
+    return btn

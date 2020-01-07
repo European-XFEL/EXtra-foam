@@ -25,7 +25,8 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
     def setUp(self):
         self._proc = ImageProcessor()
 
-        self._proc._background = -10
+        self._proc._offset = 0.0
+        self._proc._gain = 1.0
         self._proc._threshold_mask = (-100, 100)
 
         del self._proc._dark_run
@@ -47,6 +48,10 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
         # FIXME
         # np.testing.assert_array_equal(data['detector']['assembled'], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
+
+    def testDarkRecordingAndSubtraction(self):
+        # TODO: add tests
+        pass
 
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
@@ -75,9 +80,6 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
         np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
         proc._reference = None
 
-    def testDarkRecordingAndSubtraction(self):
-        pass
-
 
 class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
     """Test pulse-resolved ImageProcessor.
@@ -89,11 +91,17 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
 
         del self._proc._dark_run
 
-        self._proc._background = -10
+        self._proc._offset = 0.0
+        self._proc._gain = 1.0
         self._proc._threshold_mask = (-100, 100)
 
     def testDarkRecordingAndSubtraction(self):
         self._proc._recording = True
+
+        # -----------------------------
+        # test without dark subtraction
+        # -----------------------------
+
         self._proc._dark_subtraction = False
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
@@ -147,12 +155,32 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self._proc._recording = False
 
         # test image has different shape from the dark
-        # (this test should use the env from the above test
+        # (this test should use the env from the above test)
 
         # when recording, the shape inconsistency will be covered
         data, processed = self.data_with_assembled(1, (4, 3, 2))
         with self.assertRaisesRegex(ImageProcessingError, "Shape of the dark"):
             self._proc.process(data)
+
+    def testGainOffsetCorrection(self):
+        proc = self._proc
+
+        proc._gain = 1.2
+        proc._offset = 100.
+        proc._dark_subtraction = False
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled_gt = data['detector']['assembled'].copy()
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(
+            data['detector']['assembled'], 1.2 * (assembled_gt - 100))
+
+        # test 'offset' is ignored when 'dark_subtraction' is activated
+        proc._dark_subtraction = True
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+        assembled_gt = data['detector']['assembled'].copy()
+        proc._dark_run = data['detector']['assembled'] / 2.0
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(data['detector']['assembled'], 0.6 * assembled_gt)
 
     def testPulseSlicing(self):
         proc = self._proc

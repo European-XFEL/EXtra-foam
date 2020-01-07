@@ -2,7 +2,9 @@ from .base_ctrl_widgets import _AbstractCtrlWidget
 from .azimuthal_integ_ctrl_widget import AzimuthalIntegCtrlWidget
 from .analysis_ctrl_widget import AnalysisCtrlWidget
 from .bin_ctrl_widget import BinCtrlWidget
+from .calibration_ctrl_widget import CalibrationCtrlWidget
 from .correlation_ctrl_widget import CorrelationCtrlWidget
+from .darkrun_ctrl_widget import DarkRunCtrlWidget
 from .geometry_ctrl_widget import GeometryCtrlWidget
 from .image_ctrl_widget import ImageCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
@@ -23,7 +25,9 @@ __all__ = [
     "AzimuthalIntegCtrlWidget",
     "AnalysisCtrlWidget",
     "BinCtrlWidget",
+    "CalibrationCtrlWidget",
     "CorrelationCtrlWidget",
+    "DarkRunCtrlWidget",
     "DataSourceWidget",
     "GeometryCtrlWidget",
     "ImageCtrlWidget",
