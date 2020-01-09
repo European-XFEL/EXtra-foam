@@ -17,13 +17,14 @@ class _SimpleImageData:
     """SimpleImageData which is used by ImageToolWindow.
 
     In ImageToolWindow, some properties of the image can be changed, for
-    instance, background, threshold mask, etc.
+    instance, gain, offset, threshold mask, etc.
 
     Attributes:
         pixel_size (float): pixel size of the detector.
         threshold_mask (tuple): (lower, upper) boundaries of the
             threshold mask.
-        background (float): a uniform background value.
+        _gain (float): a constant gain value.
+        _offset (float): a constant offset value.
         masked (numpy.ndarray): image with threshold mask.
     """
 
@@ -49,7 +50,8 @@ class _SimpleImageData:
 
         # image mask is plotted on top of the image in ImageTool
 
-        self._bkg = image_data.background
+        self._gain = image_data.gain
+        self._offset = image_data.offset
         self._threshold_mask = image_data.threshold_mask
 
     @property
@@ -57,15 +59,32 @@ class _SimpleImageData:
         return self._pixel_size
 
     @property
-    def background(self):
-        return self._bkg
+    def gain(self):
+        return self._gain
 
-    @background.setter
-    def background(self, v):
-        if v == self._bkg:
+    @gain.setter
+    def gain(self, v):
+        if v == self._gain:
             return
-        self._image -= v - self._bkg  # in-place operation
-        self._bkg = v
+        self._image *= v / self._gain  # in-place operation
+        self._gain = v
+
+        # invalidate cache
+        try:
+            del self.__dict__['masked']
+        except KeyError:
+            pass
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, v):
+        if v == self._offset:
+            return
+        self._image -= v - self._offset  # in-place operation
+        self._offset = v
 
         # invalidate cache
         try:

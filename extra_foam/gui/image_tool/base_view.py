@@ -11,6 +11,8 @@ import abc
 
 from PyQt5.QtWidgets import QFrame
 
+from ..mediator import Mediator
+
 
 class _AbstractImageToolView(QFrame):
     """_AbstractImageToolView class.
@@ -27,6 +29,8 @@ class _AbstractImageToolView(QFrame):
 
         self._image_view = None
         self._pulse_resolved = pulse_resolved
+
+        self._mediator = Mediator()
 
     @abc.abstractmethod
     def initUI(self):
@@ -46,3 +50,11 @@ class _AbstractImageToolView(QFrame):
     @property
     def imageView(self):
         return self._image_view
+
+    def onActivated(self):
+        """Handler when the view is activated."""
+        pass
+
+    def onDeactivated(self):
+        """Handler when the view is deactivated."""
+        pass

@@ -25,7 +25,9 @@ class ImageProcessor(_BaseProcessor):
     """ImageProcessor class.
 
     Attributes:
-        _background (float): a uniform background value.
+        _dark_subtraction (bool): whether to subtract dark.
+        _gain (float): a constant gain value.
+        _offset (float): a constant offset value.
         _recording (bool): whether a dark run is being recorded.
         _dark_run (RawImageData): store the moving average of dark
             images in a train. Shape = (indices, y, x) for pulse-resolved
@@ -50,7 +52,9 @@ class ImageProcessor(_BaseProcessor):
         super().__init__()
 
         self._dark_subtraction = True
-        self._background = 0.0
+
+        self._gain = None
+        self._offset = None
 
         self._recording = False
         self._dark_mean = None
@@ -70,7 +74,10 @@ class ImageProcessor(_BaseProcessor):
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
 
         self._dark_subtraction = cfg['dark_subtraction'] == 'True'
-        self._background = float(cfg['background'])
+
+        self._gain = float(cfg['gain'])
+        self._offset = float(cfg['offset'])
+
         self._threshold_mask = self.str2tuple(cfg['threshold_mask'],
                                               handler=float)
 
@@ -118,6 +125,7 @@ class ImageProcessor(_BaseProcessor):
         n_sliced = len(sliced_indices)
 
         dark_run = self._dark_run
+        # Note: If dark_subtraction is applied, offset correction is ignored.
         if self._dark_subtraction and dark_run is not None:
             sliced_dark = dark_run[pulse_slicer]
             try:
@@ -131,8 +139,15 @@ class ImageProcessor(_BaseProcessor):
                     sliced_assembled -= sliced_dark
             except ValueError:
                 raise ImageProcessingError(
-                    f"[Image processor] Shape of the dark train {sliced_dark.shape} "
-                    f"is different from the data {sliced_assembled.shape}")
+                    f"[Image processor] Shape of the dark train "
+                    f"{sliced_dark.shape} is different from the data "
+                    f"{sliced_assembled.shape}")
+
+        elif self._offset != 0:
+            sliced_assembled -= self._offset
+
+        if self._gain != 1:
+            sliced_assembled *= self._gain
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
@@ -150,7 +165,8 @@ class ImageProcessor(_BaseProcessor):
         image_data.images = [None] * n_sliced
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, sliced_assembled)
-        image_data.background = self._background
+        image_data.gain = self._gain
+        image_data.offset = self._offset
         image_data.dark_mean = self._dark_mean
         if dark_run is not None:
             # default is 0

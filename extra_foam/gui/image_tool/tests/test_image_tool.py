@@ -38,16 +38,16 @@ class TestSimpleImageData(unittest.TestCase):
         gt_data = np.random.randn(3, 3).astype(np.float32)
         img_data = _SimpleImageData.from_array(gt_data)
 
-        img_data.background = 1
+        img_data.offset = 1
         np.testing.assert_array_almost_equal(gt_data - 1, img_data.masked)
-        img_data.background = 0
+        img_data.offset = 0
         np.testing.assert_array_almost_equal(gt_data, img_data.masked)
 
         img_data.threshold_mask = (3, 6)
         masked_gt = gt_data.copy()
         mask_image(masked_gt, threshold_mask=(3, 6))
         np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
-        img_data.background = 3
+        img_data.offset = 3
         masked_gt = gt_data.copy() - 3
         mask_image(masked_gt, threshold_mask=(3, 6))
         np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
@@ -62,7 +62,7 @@ class TestSimpleImageData(unittest.TestCase):
 
         np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked)
         self.assertEqual(1e-3, image_data.pixel_size)
-        self.assertEqual(0, image_data.background)
+        self.assertEqual(0, image_data.offset)
         self.assertEqual(None, image_data.threshold_mask)
 
 
@@ -110,7 +110,7 @@ class TestImageTool(unittest.TestCase):
                 'processed': ProcessedData(1001)}
 
     def testGeneral(self):
-        self.assertEqual(7, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(9, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 
@@ -131,10 +131,10 @@ class TestImageTool(unittest.TestCase):
         self.assertTrue(self.image_tool._auto_update)
 
         # test update image manually
-        self.image_tool._updateOnce = MagicMock()
+        self.image_tool.updateWidgets = MagicMock()
         widget.auto_update_cb.setChecked(False)
         widget.update_image_btn.clicked.emit()
-        self.image_tool._updateOnce.assert_called_once_with(True)
+        self.image_tool.updateWidgets.assert_called_once_with(True)
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
@@ -233,18 +233,6 @@ class TestImageTool(unittest.TestCase):
         QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
         on_mask.assert_called_once_with((1, 10))
         on_mask_mediator.assert_called_once_with((1, 10))
-
-    @patch("extra_foam.gui.plot_widgets.image_views.ImageAnalysis."
-           "onBkgChange")
-    @patch("extra_foam.gui.mediator.Mediator.onImageBackgroundChange")
-    def testBackground(self, on_bkg_mediator, on_bkg):
-        widget = self.image_tool._image_ctrl_widget
-
-        widget.bkg_le.clear()
-        QTest.keyClicks(widget.bkg_le, "1.1")
-        QTest.keyPress(widget.bkg_le, Qt.Key_Enter)
-        on_bkg.assert_called_once_with(1.1)
-        on_bkg_mediator.assert_called_once_with(1.1)
 
     def testAutoLevel(self):
         widget = self.image_tool._image_ctrl_widget
@@ -349,21 +337,26 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(image_proc._recording)
 
         # test "Recording dark" action
-        self.assertFalse(self.image_tool._record_at.isEnabled())
         self.image_tool._views_tab.setCurrentWidget(self.image_tool._dark_view)
-        self.assertTrue(self.image_tool._record_at.isEnabled())
-        self.image_tool._record_at.trigger()  # start recording
+
+        collect_btn = self.image_tool._dark_view._ctrl_widget._collect_btn
+
+        # start recording
+        QTest.mouseClick(collect_btn, Qt.LeftButton)
         image_proc.update()
         self.assertTrue(image_proc._recording)
-        self.image_tool._record_at.trigger()  # stop recording
+        # stop recording
+        QTest.mouseClick(collect_btn, Qt.LeftButton)
         image_proc.update()
         self.assertFalse(image_proc._recording)
 
         # test "Remove dark" action
+        remove_btn = self.image_tool._dark_view._ctrl_widget._remove_btn
+
         data = np.ones((10, 10), dtype=np.float32)
         image_proc._dark_run = data
         image_proc._dark_mean = data
-        self.image_tool._remove_at.trigger()
+        QTest.mouseClick(remove_btn, Qt.LeftButton)
         image_proc.update()
         self.assertIsNone(image_proc._dark_run)
         self.assertIsNone(image_proc._dark_mean)
@@ -390,6 +383,21 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual(6, int(view._n_kept_pulses.intValue()))
         self.assertEqual(99, int(view._dark_train_counter.intValue()))
         self.assertEqual(10, int(view._n_dark_pulses.intValue()))
+
+    def testCalibrationCtrlWidget(self):
+        widget = self.image_tool._gain_offset_view._ctrl_widget
+
+        proc = self.pulse_worker._image_proc
+
+        proc.update()
+        self.assertEqual(1.0, proc._gain)
+        self.assertEqual(0.0, proc._offset)
+
+        widget._gain_le.setText("2.0")
+        widget._offset_le.setText("-100")
+        proc.update()
+        self.assertEqual(2.0, proc._gain)
+        self.assertEqual(-100.0, proc._offset)
 
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
@@ -544,24 +552,29 @@ class TestImageTool(unittest.TestCase):
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
         self.assertEqual(0, tab.currentIndex())
-        self.assertEqual(0, self.image_tool._prev_tab_idx)
+
+        # switch to "gain / offset"
+        tab.tabBarClicked.emit(self.image_tool.TabIndex.GAIN_OFFSET)
+        tab.setCurrentIndex(self.image_tool.TabIndex.GAIN_OFFSET)
+
+        # switch to "dark"
+        collect_btn = self.image_tool._dark_view._ctrl_widget._collect_btn
+        tab.tabBarClicked.emit(self.image_tool.TabIndex.DARK)
+        tab.setCurrentIndex(self.image_tool.TabIndex.DARK)
+        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        QTest.mouseClick(collect_btn, Qt.LeftButton)  # start recording
+        self.assertTrue(collect_btn.isChecked())
 
         # switch to "azimuthal integration 1D"
         self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        tab.tabBarClicked.emit(self.image_tool.TabIndex.AZIMUTHAL_INTEG_1D)
         tab.setCurrentIndex(self.image_tool.TabIndex.AZIMUTHAL_INTEG_1D)
         self.assertEqual('1', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
-
-        # switch to "dark"
-        tab.setCurrentIndex(self.image_tool.TabIndex.DARK)
-        # analysis type AZIMUTHAL_INTEG should be unregistered
-        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
-        self.image_tool._record_at.trigger()  # start recording
-        self.assertTrue(self.image_tool._record_at.isChecked())
+        self.assertFalse(collect_btn.isChecked())
 
         # switch to "geometry"
+        tab.tabBarClicked.emit(self.image_tool.TabIndex.GEOMETRY)
         tab.setCurrentIndex(self.image_tool.TabIndex.GEOMETRY)
-        self.assertFalse(self.image_tool._record_at.isEnabled())
-        self.assertFalse(self.image_tool._record_at.isChecked())
 
 
 class TestImageToolTs(unittest.TestCase):
