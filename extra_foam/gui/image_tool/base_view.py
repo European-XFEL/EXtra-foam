@@ -27,7 +27,6 @@ class _AbstractImageToolView(QFrame):
         """
         super().__init__(parent=parent)
 
-        self._image_view = None
         self._pulse_resolved = pulse_resolved
 
         self._mediator = Mediator()
@@ -46,10 +45,6 @@ class _AbstractImageToolView(QFrame):
         """This method is called by ImageTool."""
         # Views in ImageTool are not registered and updated blindly.
         raise NotImplementedError
-
-    @property
-    def imageView(self):
-        return self._image_view
 
     def onActivated(self):
         """Handler when the view is activated."""

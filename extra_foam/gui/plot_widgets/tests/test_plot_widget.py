@@ -2,9 +2,12 @@ import unittest
 
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF
+from extra_foam.logger import logger
 
 
 app = mkQApp()
+
+logger.setLevel("CRITICAL")
 
 
 class TestPlotWidget(unittest.TestCase):
@@ -33,9 +36,6 @@ class TestPlotWidget(unittest.TestCase):
         # test if x and y have different lengths
         with self.assertRaises(ValueError):
             plot.setData([1, 2, 3], [])
-
-    def testBarPlotPerformance(self):
-        pass
 
     def testErrorBarPlot(self):
         # set any valid number

@@ -249,16 +249,16 @@ TEST(TestMovingAverageImageArray, TestWithNaN)
               ElementsAre(1.5f, nan_mt, 3.5f, 3.5f, nan_mt, 5.5f));
 }
 
-TEST(TestSubtractDarkFromImageArray, TestGeneral)
+TEST(correctImageData, TestOffset3D)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
   auto nan_mt = NanSensitiveFloatEq(nan);
 
   xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
-                               {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
-  xt::xtensor<float, 3> darks {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
-                               {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
-  subDarkImageArray(imgs, darks);
+                              {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
+  xt::xtensor<float, 3> offset {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
+                                {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
+  correctImageData<OffsetPolicy>(imgs, offset);
 
   EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
               ElementsAre(nan_mt, -2.f, nan_mt, -1.f, -1.f, -1.f));
@@ -266,16 +266,77 @@ TEST(TestSubtractDarkFromImageArray, TestGeneral)
               ElementsAre(0.f, nan_mt, 1.f, -1.f, nan_mt, -1.f));
 }
 
-TEST(TestSubtractDarkFromImage, TestGeneral)
+TEST(correctImageData, TestOffset2D)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
   auto nan_mt = NanSensitiveFloatEq(nan);
 
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
-  xt::xtensor<float, 2> dark {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
-  subDarkImage(img, dark);
+  xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
+  correctImageData<OffsetPolicy>(img, offset);
 
   EXPECT_THAT(img, ElementsAre(nan_mt, -2.f, nan_mt, -1.f, 0.f, -1.f));
+}
+
+TEST(correctImageData, TestGain3D)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
+                              {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
+  xt::xtensor<float, 3> gain {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
+                              {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
+  correctImageData<GainPolicy>(imgs, gain);
+
+  EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
+              ElementsAre(nan_mt, 8.f, nan_mt, 12.f, 20.f, 30.f));
+  EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
+              ElementsAre(1.f, nan_mt, 6.f, 12.f, nan_mt, 30.f));
+}
+
+TEST(correctImageData, TestGain2D)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
+  xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
+  correctImageData<GainPolicy>(img, offset);
+
+  EXPECT_THAT(img, ElementsAre(nan_mt, 8.f, nan_mt, 12.f, 16.f, 30.f));
+}
+
+TEST(correctImageData, TestGainOffset3D)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
+                              {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
+  xt::xtensor<float, 3> offset {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
+                                {{1.f, nan, 2.f}, {4.f, nan, 6.f}}};
+  xt::xtensor<float, 3> gain {{{1.f, 2.f, 1.f}, {2.f, 1.f, 2.f}},
+                              {{1.f, 1.f, 2.f}, {1.f, 2, 2.f}}};
+  correctImageData(imgs, gain, offset);
+
+  EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
+              ElementsAre(nan_mt, -4.f, nan_mt, -2.f, -1.f, -2.f));
+  EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
+              ElementsAre(0.f, nan_mt, 2.f, -1.f, nan_mt, -2.f));
+}
+
+TEST(correctImageData, TestGainOffset2D)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
+  xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
+  xt::xtensor<float, 2> gain {{2.f, 1.f, 2.f}, {1.f, 2.f, 2.f}};
+  correctImageData(img, gain, offset);
+
+  EXPECT_THAT(img, ElementsAre(nan_mt, -2.f, nan_mt, -1.f, 0.f, -2.f));
 }
 
 } // testing

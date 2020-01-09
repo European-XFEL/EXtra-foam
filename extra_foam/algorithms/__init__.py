@@ -9,7 +9,7 @@ from .image_proc import (
     movingAverageImage, movingAverageImageArray,
     nanToZeroImage, nanToZeroImageArray,
     maskImage, maskImageArray,
-    subDarkImage, subDarkImageArray
+    correctGain, correctOffset, correctGainOffset
 )
 
 from .data_model import (
@@ -17,6 +17,44 @@ from .data_model import (
     MovingAverageArrayFloat, MovingAverageArrayDouble,
     MovingAverageFloat, MovingAverageDouble
 )
+
+
+def nanmean_image_data(data, kept=None):
+    """Helper function for calculating nanmean.
+
+    :param tuple/list/numpy.array data: a tuple/list of two 2D arrays, or
+        a 2D or 3D numpy array.
+    :param None/list kept: indices of the kept images.
+    """
+    if isinstance(data, (tuple, list)):
+        return nanmeanImageArray(*data)
+
+    if data.ndim == 2:
+        return data.copy()
+
+    if kept is None:
+        return nanmeanImageArray(data)
+
+    return nanmeanImageArray(data, kept)
+
+
+def correct_image_data(data, *,
+                       gain=None,
+                       offset=None,
+                       slicer=slice(None, None)):
+    """Helper function for applying gain and/or offset correct.
+
+    :param numpy.array data: image data, 2D or 3D.
+    :param None/numpy.array gain: gain constants, same shape as data.
+    :param None/numpy.array offset: offset constants, same shape as data.
+    :param slice slicer: gain and offset slicer.
+    """
+    if gain is not None and offset is not None:
+        correctGainOffset(data, gain[slicer], offset[slicer])
+    elif offset is not None:
+        correctOffset(data, offset[slicer])
+    elif gain is not None:
+        correctGain(data, gain[slicer])
 
 
 def mask_image(image, *,

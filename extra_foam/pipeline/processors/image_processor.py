@@ -7,17 +7,19 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .base_processor import _BaseProcessor
 from ..data_model import RawImageData
 from ..exceptions import ImageProcessingError, ProcessingError
 from ...database import Metadata as mt
-from ...ipc import ImageMaskSub, ReferenceSub
+from ...ipc import (
+    CalConstantsSub, ImageMaskSub, ReferenceSub
+)
 from ...utils import profiler
-from ...config import config
 
 from extra_foam.algorithms import (
-    mask_image, nanmeanImageArray, nanmeanImageArray,
-    subDarkImage, subDarkImageArray
+    mask_image, nanmean_image_data, correct_image_data
 )
 
 
@@ -25,129 +27,117 @@ class ImageProcessor(_BaseProcessor):
     """ImageProcessor class.
 
     Attributes:
-        _dark_subtraction (bool): whether to subtract dark.
-        _gain (float): a constant gain value.
-        _offset (float): a constant offset value.
-        _recording (bool): whether a dark run is being recorded.
-        _dark_run (RawImageData): store the moving average of dark
+        _dark (RawImageData): store the moving average of dark
             images in a train. Shape = (indices, y, x) for pulse-resolved
             and shape = (y, x) for train-resolved
-        _dark_mean (numpy.ndarray): average of all the dark images in
-            the dark run. Shape = (y, x)
+        _correct_gain (bool): whether to apply gain correction.
+        _correct_offset (bool): whether to apply offset correction.
+        _gain (numpy.ndarray): gain constants. Shape = (memory cell, y, x)
+        _offset (numpy.ndarray): offset constants. Shape = (memory cell, y, x)
+        _gain_slicer (slice): a slice object used to slice the right memory
+            cells from the gain constants.
+        _offset_slicer (slice): a slice object used to slice the right memory
+            cells from the offset constants.
+        _gain_mean (numpy.ndarray): average of gain constants over memory
+            cell. Shape = (y, x)
+        _offset_mean (numpy.ndarray): average of offset constants over memory
+            cell. Shape = (y, x)
+        _dark_as_offset (bool): True for using recorded dark trains as offset.
+        _recording_dark (bool): whether a dark run is being recorded.
+        _dark_mean (bool): average of recorded dark trains over memory
+            cell. Shape = (y, x)
         _image_mask (numpy.ndarray): image mask array. Shape = (y, x),
             dtype=np.bool
         _threshold_mask (tuple): threshold mask.
         _reference (numpy.ndarray): reference image.
-        _pulse_slicer (slice): a slice object which will be used to slice
-            images for pulse-resolved analysis. The slicing is applied
-            before applying any pulse filters to select less pulses.
         _poi_indices (list): indices of POI pulses.
     """
 
     # give it a huge window for now since I don't want to touch the
     # implementation of the base class for now.
-    _dark_run = RawImageData(config['MAX_DARK_TRAIN_COUNT'])
+    _dark = RawImageData(999999)
 
     def __init__(self):
         super().__init__()
 
-        self._dark_subtraction = True
-
+        self._correct_gain = True
+        self._correct_offset = True
         self._gain = None
         self._offset = None
+        self._gain_slicer = None
+        self._offset_slicer = None
+        self._compute_gain_mean = False
+        self._compute_offset_mean = False
+        self._gain_mean = None
+        self._offset_mean = None
 
-        self._recording = False
+        self._dark_as_offset = True
+        self._recording_dark = False
         self._dark_mean = None
 
         self._image_mask = None
         self._threshold_mask = None
         self._reference = None
 
-        self._pulse_slicer = slice(None, None)
         self._poi_indices = None
 
         self._ref_sub = ReferenceSub()
         self._mask_sub = ImageMaskSub()
+        self._cal_sub = CalConstantsSub()
 
     def update(self):
         # image
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
 
-        self._dark_subtraction = cfg['dark_subtraction'] == 'True'
+        self._correct_gain = cfg['correct gain'] == 'True'
+        self._correct_offset = cfg['correct offset'] == 'True'
 
-        self._gain = float(cfg['gain'])
-        self._offset = float(cfg['offset'])
+        gain_slicer = self.str2slice(cfg['gain slicer'])
+        if gain_slicer != self._gain_slicer:
+            self._compute_gain_mean = True
+            self._gain_slicer = gain_slicer
+        offset_slicer = self.str2slice(cfg['offset slicer'])
+        if offset_slicer != self._offset_slicer:
+            self._compute_offset_mean = True
+            self._offset_slicer = offset_slicer
 
-        self._threshold_mask = self.str2tuple(cfg['threshold_mask'],
-                                              handler=float)
+        dark_as_offset = cfg['dark as offset'] == 'True'
+        if dark_as_offset != self._dark_as_offset:
+            self._compute_offset_mean = True
+            self._dark_as_offset = dark_as_offset
+
+        self._recording_dark = cfg['recording dark'] == 'True'
+        if 'remove dark' in cfg:
+            self._meta.hdel(mt.IMAGE_PROC, 'remove dark')
+            del self._dark
+            self._dark_mean = None
+
+        self._threshold_mask = self.str2tuple(
+            cfg['threshold_mask'], handler=float)
 
         # global
         gp_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._poi_indices = [
             int(gp_cfg['poi1_index']), int(gp_cfg['poi2_index'])]
 
-        if 'remove_dark' in gp_cfg:
-            self._meta.hdel(mt.GLOBAL_PROC, 'remove_dark')
-            del self._dark_run
-            self._dark_mean = None
-
-        self._recording = gp_cfg['recording_dark'] == 'True'
-
     @profiler("Image Processor (pulse)")
     def process(self, data):
         image_data = data['processed'].image
         assembled = data['detector']['assembled']
-
-        if self._recording:
-            if self._dark_run is None:
-                # _dark_run should not share the memory with
-                # data['detector']['assembled'] since the latter will
-                # be dark subtracted.
-                self._dark_run = assembled.copy()
-            else:
-                # moving average (it reset the current moving average if the
-                # new dark has a different shape)
-                self._dark_run = assembled
-
-            # For visualization of the dark_mean:
-            #
-            # This is also a relatively expensive operation. But, in principle,
-            # users should not trigger many other analysis when recording dark.
-            if self._dark_run.ndim == 3:
-                self._dark_mean = nanmeanImageArray(self._dark_run)
-            else:
-                self._dark_mean = self._dark_run.copy()
-
         n_total = assembled.shape[0] if assembled.ndim == 3 else 1
         pulse_slicer = data['detector']['pulse_slicer']
         sliced_assembled = assembled[pulse_slicer]
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
         n_sliced = len(sliced_indices)
 
-        dark_run = self._dark_run
-        # Note: If dark_subtraction is applied, offset correction is ignored.
-        if self._dark_subtraction and dark_run is not None:
-            sliced_dark = dark_run[pulse_slicer]
-            try:
-                # subtract the dark_run from assembled if any
-                if sliced_assembled.ndim == 3:
-                    subDarkImageArray(sliced_assembled, sliced_dark)
-                else:
-                    # TODO: numpy with SIMD is faster for pure C++ code
-                    #       without XSIMD and/or multithreading
-                    # subDarkImage(sliced_assembled, sliced_dark)
-                    sliced_assembled -= sliced_dark
-            except ValueError:
-                raise ImageProcessingError(
-                    f"[Image processor] Shape of the dark train "
-                    f"{sliced_dark.shape} is different from the data "
-                    f"{sliced_assembled.shape}")
+        if self._recording_dark:
+            self._record_dark(assembled)
 
-        elif self._offset != 0:
-            sliced_assembled -= self._offset
-
-        if self._gain != 1:
-            sliced_assembled *= self._gain
+        sliced_gain, sliced_offset = self._update_gain_offset(assembled.shape)
+        correct_image_data(sliced_assembled,
+                           gain=sliced_gain,
+                           offset=sliced_offset,
+                           slicer=pulse_slicer)
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
@@ -159,24 +149,35 @@ class ImageProcessor(_BaseProcessor):
         self._update_reference(image_shape)
 
         # Avoid sending all images around
-        # TODO: consider to use the 'virtual stack' in karabo_data, then
-        #       for train-resolved data, set image_data.images == assembled
-        #       https://github.com/European-XFEL/karabo_data/pull/196
         image_data.images = [None] * n_sliced
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, sliced_assembled)
-        image_data.gain = self._gain
-        image_data.offset = self._offset
-        image_data.dark_mean = self._dark_mean
-        if dark_run is not None:
+        image_data.gain_mean = self._gain_mean
+        image_data.offset_mean = self._offset_mean
+        if self._dark is not None:
             # default is 0
-            image_data.n_dark_pulses = 1 if dark_run.ndim == 2 \
-                                         else len(dark_run)
-        image_data.dark_count = self.__class__._dark_run.count
+            image_data.n_dark_pulses = 1 if self._dark.ndim == 2 \
+                                         else len(self._dark)
+        image_data.dark_count = self.__class__._dark.count
         image_data.image_mask = self._image_mask
         image_data.threshold_mask = self._threshold_mask
         image_data.reference = self._reference
         image_data.sliced_indices = sliced_indices
+
+    def _record_dark(self, assembled):
+        if self._dark is None:
+            # _dark should not share the memory with
+            # data['detector']['assembled'] since the latter will
+            # be dark subtracted.
+            self._dark = assembled.copy()
+        else:
+            # moving average (it reset the current moving average if the
+            # new dark has a different shape)
+            self._dark = assembled
+
+        # For visualization of the dark:
+        # FIXME: it would be better to calculate sliced dark mean.
+        self._dark_mean = nanmean_image_data(self._dark)
 
     def _update_image_mask(self, image_shape):
         image_mask = self._mask_sub.update(self._image_mask, image_shape)
@@ -193,7 +194,13 @@ class ImageProcessor(_BaseProcessor):
         self._image_mask = image_mask
 
     def _update_reference(self, image_shape):
-        ref = self._ref_sub.update(self._reference)
+        try:
+            ref = self._ref_sub.update(self._reference)
+        except Exception as e:
+            raise ImageProcessingError(str(e))
+
+        # Caveat: set new value before checking shape.
+        self._reference = ref
 
         if ref is not None and ref.shape != image_shape:
             # The original reference remains the same. It ensures the error
@@ -203,7 +210,63 @@ class ImageProcessor(_BaseProcessor):
                 f"[Image processor] The shape of the reference {ref.shape} is "
                 f"different from the shape of the image {image_shape}!")
 
-        self._reference = ref
+    def _update_gain_offset(self, expected_shape):
+        try:
+            new_gain, gain, new_offset, offset = self._cal_sub.update(
+                self._gain, self._offset)
+        except Exception as e:
+            raise ImageProcessingError(str(e))
+
+        self._compute_gain_mean |= new_gain
+        self._compute_offset_mean |= new_offset
+
+        # Set new value before checking shape. It avoids loading data once
+        # again due to the wrong slicer.
+        self._gain = gain
+        self._offset = offset
+
+        sliced_gain = None
+        if self._correct_gain:
+            if gain is not None:
+                sliced_gain = gain[self._gain_slicer]
+                if sliced_gain.shape != expected_shape:
+                    raise ImageProcessingError(
+                        f"[Image processor] Shape of the gain constant "
+                        f"{sliced_gain.shape} is different from the data "
+                        f"{expected_shape}")
+                if self._compute_gain_mean:
+                    # For visualization of the gain
+                    self._gain_mean = nanmean_image_data(sliced_gain)
+                    self._compute_gain_mean = False
+            else:
+                if self._compute_gain_mean:
+                    self._gain_mean = None
+                    self._compute_gain_mean = False
+
+        sliced_offset = None
+        if self._correct_offset:
+            if self._dark_as_offset:
+                sliced_offset = self._dark
+                self._offset_mean = self._dark_mean
+            elif offset is not None:
+                sliced_offset = offset[self._offset_slicer]
+                if self._compute_offset_mean:
+                    # For visualization of the offset
+                    self._offset_mean = nanmean_image_data(sliced_offset)
+                    self._compute_offset_mean = False
+            else:
+                if self._compute_offset_mean:
+                    self._offset_mean = None
+                    self._compute_offset_mean = False
+
+            if sliced_offset is not None and \
+                    sliced_offset.shape != expected_shape:
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the offset constant "
+                    f"{sliced_offset.shape} is different from the data "
+                    f"{expected_shape}")
+
+        return sliced_gain, sliced_offset
 
     def _update_pois(self, image_data, assembled):
         if assembled.ndim == 2 or image_data.poi_indices is None:

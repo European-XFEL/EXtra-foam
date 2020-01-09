@@ -152,7 +152,6 @@ def start_redis_server():
         ]
         client.config_set("client-output-buffer-limit",
                           " ".join(cli_buffer_cfg))
-
     else:
         logger.info(f"Found existing Redis server at {host}:{port}")
 

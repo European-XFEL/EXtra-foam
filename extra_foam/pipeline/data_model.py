@@ -16,7 +16,7 @@ import numpy as np
 from ..config import config, AnalysisType, PumpProbeMode
 
 from extra_foam.algorithms import (
-    intersection, nanmeanImageArray, movingAverageImage,
+    intersection, nanmean_image_data, movingAverageImage,
     movingAverageImageArray, mask_image
 )
 
@@ -377,9 +377,8 @@ class ImageData:
             to reconstruct the indices of the selected images in the original
             data providing the number of pulses and the slicer are both known.
         poi_indices (list): indices of pulses of interest.
-        gain (float): a constant gain value.
-        offset (float): a constant offset value.
-        dark_mean (numpy.ndaray): average of all the dark images in
+        gain_mean (numpy.ndarray):
+        offset_mean (numpy.ndarray): average of all the offset data in
             the dark run. Shape = (y, x)
         n_dark_pulses (int): number of dark pulses in a dark train.
         dark_count (int): count of collected dark trains.
@@ -400,12 +399,12 @@ class ImageData:
         self.sliced_indices = None
         self.poi_indices = None
 
-        self.gain = 1.0
-        self.offset = 0.0
+        self.gain_mean = None
+        self.offset_mean = None
 
-        self.dark_mean = None
         self.n_dark_pulses = 0
         self.dark_count = 0
+
         self.image_mask = None
         self.threshold_mask = None
 
@@ -427,8 +426,6 @@ class ImageData:
 
     @classmethod
     def from_array(cls, arr, *,
-                   gain=1.0,
-                   offset=0.0,
                    image_mask=None,
                    threshold_mask=None,
                    sliced_indices=None,
@@ -455,7 +452,7 @@ class ImageData:
             for i in poi_indices:
                 instance.images[i] = arr[i]
 
-            instance.mean = nanmeanImageArray(arr)
+            instance.mean = nanmean_image_data(arr)
 
             if sliced_indices is None:
                 instance.sliced_indices = list(range(n_images))
@@ -484,8 +481,6 @@ class ImageData:
                    threshold_mask=threshold_mask)
         instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
-        instance.gain = gain
-        instance.offset = offset
 
         return instance
 

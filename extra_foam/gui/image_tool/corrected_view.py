@@ -82,12 +82,12 @@ class CorrectedView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageAnalysis(hide_axis=False)
         self._roi_proj_plot = RoiProjPlot()
         self._roi_fom_plot = InTrainRoiFomPlot()
 
         self._roi_ctrl_widget = self.parent().createCtrlWidget(
-            RoiCtrlWidget, self._image_view.rois)
+            RoiCtrlWidget, self._corrected.rois)
         self._roi_fom_ctrl_widget = self.parent().createCtrlWidget(
             RoiFomCtrlWidget)
         self._roi_norm_ctrl_widget = self.parent().createCtrlWidget(
@@ -115,7 +115,7 @@ class CorrectedView(_AbstractImageToolView):
         view_splitter = QSplitter(Qt.Horizontal)
         view_splitter.setHandleWidth(9)
         view_splitter.setChildrenCollapsible(False)
-        view_splitter.addWidget(self._image_view)
+        view_splitter.addWidget(self._corrected)
         view_splitter.addWidget(subview_splitter)
 
         layout = QVBoxLayout()
@@ -130,6 +130,10 @@ class CorrectedView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._image_view.image is None:
-            self._image_view.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImageData(_SimpleImageData(data.image))
             self._roi_proj_plot.updateF(data)
             self._roi_fom_plot.updateF(data)
+
+    @property
+    def imageView(self):
+        return self._corrected

@@ -3,32 +3,36 @@ import unittest
 import numpy as np
 
 from extra_foam.algorithms import (
-    nanmeanImageArray,
     movingAverageImage, movingAverageImageArray,
     mask_image, mask_image_array,
-    subDarkImage, subDarkImageArray,
+    correct_image_data, nanmean_image_data
 )
 
 
 class TestImageProc(unittest.TestCase):
-    def testNanmeanImageArray(self):
+    def testNanmeanImageData(self):
         # test invalid shapes
-        data = np.ones([2, 2])
         with self.assertRaises(TypeError):
-            nanmeanImageArray(data)
-
-        data = np.ones([2, 2, 2, 2])
+            nanmean_image_data(np.ones([2, 2, 2, 2]))
         with self.assertRaises(TypeError):
-            nanmeanImageArray(data)
+            nanmean_image_data(np.ones([2]))
 
+        # test two images have different shapes
         with self.assertRaises(ValueError):
-            nanmeanImageArray(np.ones((2, 2)), np.ones((2, 3)))
+            nanmean_image_data([np.ones((2, 2)), np.ones((2, 3))])
 
-        # passing empty keep list
+        # kept is an empty list
         data = np.ones([2, 2, 2])
         with self.assertRaises(ValueError):
-            nanmeanImageArray(data, [])
+            nanmean_image_data((data, []))
 
+        # input is a 2D array
+        data = np.random.randn(2, 2)
+        ret = nanmean_image_data(data)
+        np.testing.assert_array_equal(data, ret)
+        self.assertIsNot(ret, data)
+
+        # input is a 3D array
         data = np.array([[[np.nan,       2, np.nan], [     1, 2, -np.inf]],
                          [[     1, -np.inf, np.nan], [np.nan, 3,  np.inf]],
                          [[np.inf,       4, np.nan], [     1, 4,      1]]], dtype=np.float32)
@@ -39,21 +43,22 @@ class TestImageProc(unittest.TestCase):
             # Note that mean of -np.inf, np.inf and 1 are np.nan!!!
             expected = np.array([[np.inf, -np.inf, np.nan], [  1, 3,  np.nan]], dtype=np.float32)
             np.testing.assert_array_almost_equal(expected, np.nanmean(data, axis=0))
-            np.testing.assert_array_almost_equal(expected, nanmeanImageArray(data))
+            np.testing.assert_array_almost_equal(expected, nanmean_image_data(data))
 
             # test nanmean on the sliced array
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3, ...], axis=0),
-                                                 nanmeanImageArray(data, [0, 1, 2]))
+                                                 nanmean_image_data(data, [0, 1, 2]))
             np.testing.assert_array_almost_equal(np.nanmean(data[1:2, ...], axis=0),
-                                                 nanmeanImageArray(data, [1]))
+                                                 nanmean_image_data(data, [1]))
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
-                                                 nanmeanImageArray(data, [0, 2]))
+                                                 nanmean_image_data(data, [0, 2]))
 
-        # test passing two images as arguments
+        # input are a list/tuple of two images
         img1 = np.array([[1, 1, 2], [np.inf, np.nan, 0]], dtype=np.float32)
         img2 = np.array([[np.nan, 0, 4], [2, np.nan, -np.inf]], dtype=np.float32)
         expected = np.array([[1., 0.5, 3], [np.inf, np.nan, -np.inf]])
-        np.testing.assert_array_almost_equal(expected, nanmeanImageArray(img1, img2))
+        np.testing.assert_array_almost_equal(expected, nanmean_image_data((img1, img2)))
+        np.testing.assert_array_almost_equal(expected, nanmean_image_data([img1, img2]))
 
     def testMovingAverage(self):
         arr1d = np.ones(2, dtype=np.float32)
@@ -197,31 +202,62 @@ class TestImageProc(unittest.TestCase):
                                                 [[0, 0, 3], [0, 0, 0]]],
                                                dtype=np.float32), img)
 
-    def testSubtractDark(self):
+    def testCorrectImageData(self):
         # test invalid input
         with self.assertRaises(TypeError):
-            subDarkImageArray()
+            correct_image_data()
         with self.assertRaises(TypeError):
-            subDarkImageArray(np.ones((2, 2, 2)))
+            correct_image_data(np.ones(2), offset=np.ones(2))
+        with self.assertRaises(TypeError):
+            correct_image_data(np.ones((2, 2, 2, 2)), gain=np.ones((2, 2, 2, 2)))
+
         # test incorrect shape
         with self.assertRaises(TypeError):
-            subDarkImageArray(np.ones((2, 2, 2)), np.ones(2, 2))
+            correct_image_data(np.ones((2, 2, 2)), offset=np.ones([2, 2]))
         with self.assertRaises(TypeError):
-            subDarkImageArray(np.ones((2, 2)), np.ones((2, 2, 2)))
+            correct_image_data(np.ones((2, 2, 2)), gain=np.ones([2, 2]))
+        with self.assertRaises(TypeError):
+            correct_image_data(np.ones((2, 2)), offset=np.ones([2, 2, 2]))
+        with self.assertRaises(TypeError):
+            correct_image_data(np.ones((2, 2)), gain=np.ones([2, 2, 2]))
+        with self.assertRaises(TypeError):
+            correct_image_data(np.ones((2, 2)), gain=np.ones(2, 2), offset=np.ones([2, 2, 2]))
+
         # test incorrect dtype
         with self.assertRaises(TypeError):
-            subDarkImageArray(np.ones((2, 2, 2), dtype=np.float64),
-                                  np.ones((2, 2, 2), dtype=np.float32))
+            correct_image_data(np.ones((2, 2, 2), dtype=np.float64),
+                               offset=np.ones((2, 2, 2), dtype=np.float32))
+            correct_image_data(np.ones((2, 2, 2), dtype=np.float32),
+                               gain=np.ones((2, 2, 2), dtype=np.float64))
+            correct_image_data(np.ones((2, 2, 2), dtype=np.float32),
+                               gain=np.ones((2, 2, 2), dtype=np.float32),
+                               offset=np.ones((2, 2, 2), dtype=np.float64))
+
+        # test without gain and offset
+        for img in [np.ones([2, 2]), np.ones([2, 2, 2])]:
+            img_gt = img.copy()
+            correct_image_data(img)
+            np.testing.assert_array_equal(img_gt, img)
 
         # ------------
         # single image
         # ------------
 
         img = np.array([[1, 2, 3], [3, np.nan, np.nan]], dtype=np.float32)
-        dark = np.array([[1, 2, 1], [3, np.nan, np.nan]], dtype=np.float32)
-        subDarkImage(img, dark)
+        offset = np.array([[1, 2, 1], [2, np.nan, np.nan]], dtype=np.float32)
+        correct_image_data(img, offset=offset)
         np.testing.assert_array_equal(
-            np.array([[0, 0, 2], [0, np.nan, np.nan]], dtype=np.float32), img)
+            np.array([[0, 0, 2], [1, np.nan, np.nan]], dtype=np.float32), img)
+        gain = np.array([[1, 2, 1], [2, 2, 1]], dtype=np.float32)
+        correct_image_data(img, gain=gain)
+        np.testing.assert_array_equal(
+            np.array([[0, 0, 2], [2, np.nan, np.nan]], dtype=np.float32), img)
+
+        # both gain and offset
+        img = np.array([[1, 2, 3], [3, np.nan, np.nan]], dtype=np.float32)
+        correct_image_data(img, gain=gain, offset=offset)
+        np.testing.assert_array_equal(
+            np.array([[0, 0, 2], [2, np.nan, np.nan]], dtype=np.float32), img)
 
         # ------------
         # train images
@@ -229,10 +265,23 @@ class TestImageProc(unittest.TestCase):
 
         img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
                         [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
-        dark = np.array([[[1, 2, 1], [3, np.nan, np.nan]],
-                        [[2, 1, 2], [3, np.nan, np.nan]]], dtype=np.float32)
-        subDarkImageArray(img, dark)
+        offset = np.array([[[1, 2, 1], [3, np.nan, np.nan]],
+                           [[2, 1, 2], [2, np.nan, np.nan]]], dtype=np.float32)
+        correct_image_data(img, offset=offset)
         np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
-                                                [[-1, 1, 1], [0, np.nan, np.nan]]],
-                                               dtype=np.float32),
-                                      img)
+                                                [[-1, 1, 1], [1, np.nan, np.nan]]],
+                                               dtype=np.float32), img)
+        gain = np.array([[[1, 2, 1], [2, 2, 1]],
+                         [[2, 1, 2], [2, 1, 2]]], dtype=np.float32)
+        correct_image_data(img, gain=gain)
+        np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
+                                                [[-2, 1, 2], [2, np.nan, np.nan]]],
+                                               dtype=np.float32), img)
+
+        # both gain and offset
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
+        correct_image_data(img, gain=gain, offset=offset)
+        np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
+                                                [[-2, 1, 2], [2, np.nan, np.nan]]],
+                                               dtype=np.float32), img)

@@ -16,7 +16,7 @@ import numpy as np
 
 from extra_foam.config import config
 from extra_foam.logger import logger
-from extra_foam.file_io import read_image, write_image
+from extra_foam.file_io import read_cal_constants, read_image, write_image
 
 logger.setLevel("CRITICAL")
 
@@ -33,8 +33,13 @@ class TestFileIO(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Shape of'):
                 read_image('abc', expected_shape=(3, 2))
 
+        # test wrong dimension
+        with patch('imageio.imread', return_value=np.ones((2, 2, 2))):
+            with self.assertRaisesRegex(ValueError, '2 dimensions'):
+                read_image('abc')
+
         # test dtype
-        with patch('imageio.imread', return_value=np.ones((3, 2))):
+        with patch('imageio.imread', return_value=np.ones((3, 2), dtype=bool)):
             img = read_image('abc')
             self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
             self.assertEqual((3, 2), img.shape)
@@ -67,3 +72,35 @@ class TestFileIO(unittest.TestCase):
             write_image(img, fp.name)
             ref = read_image(fp.name)
             np.testing.assert_array_equal(scale * img, ref)
+
+    def testReadCalConstants(self):
+        # test read empty input
+        with self.assertRaisesRegex(ValueError, 'Please specify'):
+            read_image('')
+
+        # test wrong dimension
+        with patch('numpy.load', return_value=np.ones((2, 2, 2, 2))):
+            with self.assertRaisesRegex(ValueError, 'dimensions'):
+                read_cal_constants('abc')
+        with patch('numpy.load', return_value=np.ones(2)):
+            with self.assertRaisesRegex(ValueError, 'dimensions'):
+                read_cal_constants('abc')
+
+        # test dtype
+        with patch('numpy.load', return_value=np.ones([3, 2], dtype=bool)):
+            img = read_cal_constants('abc')
+            self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
+            self.assertEqual((3, 2), img.shape)
+
+        for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
+            fp = tempfile.NamedTemporaryFile(suffix='.npy')
+            np.save(fp.name, const_gt)
+            ret = read_cal_constants(fp)
+            np.testing.assert_array_equal(const_gt, ret)
+
+        # file does not have suffix '.npy'
+        with self.assertRaises(ValueError):
+            for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
+                fp = tempfile.NamedTemporaryFile()
+                np.save(fp.name, const_gt)
+                read_cal_constants(fp)
