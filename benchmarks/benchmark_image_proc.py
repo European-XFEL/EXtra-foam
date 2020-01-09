@@ -12,8 +12,8 @@ import time
 import numpy as np
 
 from extra_foam.algorithms import (
-    nanmeanImageArray, nanmeanImageArray, movingAverageImageArray,
-    mask_image_array, subDarkImageArray,
+    movingAverageImageArray, mask_image_array,
+    correct_image_data, nanmean_image_data
 )
 
 
@@ -22,7 +22,7 @@ def _run_nanmean_image_array(data_type):
     data[::2, ::2, ::2] = np.nan
 
     t0 = time.perf_counter()
-    nanmeanImageArray(data)
+    nanmean_image_data(data)
     dt_cpp = time.perf_counter() - t0
 
     t0 = time.perf_counter()
@@ -32,14 +32,14 @@ def _run_nanmean_image_array(data_type):
     selected = [v for v in range(len(data)) if v not in [1, 11, 22]]
 
     t0 = time.perf_counter()
-    nanmeanImageArray(data, selected)
+    nanmean_image_data(data, selected)
     dt_cpp_sliced = time.perf_counter() - t0
 
     t0 = time.perf_counter()
     np.nanmean(data[selected], axis=0)
     dt_py_sliced = time.perf_counter() - t0
 
-    print(f"\nnanmeanImageArray with {data_type} - "
+    print(f"\nnanmean_image_data with {data_type} - "
           f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}, "
           f"dt (cpp para sliced): {dt_cpp_sliced:.4f}, dt (numpy sliced): {dt_py_sliced:.4f}")
 
@@ -54,17 +54,17 @@ def _run_nanmean_two_images(data_type):
     img[::2, ::2] = np.nan
 
     t0 = time.perf_counter()
-    nanmeanImageArray(img, img)
+    nanmean_image_data((img, img))
     dt_cpp = time.perf_counter() - t0
 
     imgs = np.ones((2, 1024, 512), dtype=data_type)
     imgs[:, ::2, ::2] = np.nan
 
     t0 = time.perf_counter()
-    nanmeanImageArray(imgs)
+    nanmean_image_data(imgs)
     dt_cpp_2 = time.perf_counter() - t0
 
-    print(f"\nnanmeanImageArray with {data_type} - "
+    print(f"\nnanmean_image_data (two images) with {data_type} - "
           f"dt (cpp para): {dt_cpp:.4f}, dt (cpp para2): {dt_cpp_2:.4f}")
 
 
@@ -155,29 +155,72 @@ def bench_nan2zero_image_array():
     _run_nan2zero_image_array(np.float64)
 
 
-def _run_sub_dark_image_array(data_type):
+def _run_correct_offset_image_array(data_type, offset):
+    offset = offset.astype(data_type)
+
     # mask by threshold
-    data = np.ones((64, 1024, 512), dtype=data_type)
-    dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
     t0 = time.perf_counter()
-    subDarkImageArray(data, dark)
+    correct_image_data(data, offset=offset)
     dt_cpp = time.perf_counter() - t0
 
-    # need a fresh data since number of nans determines the performance
-    data = np.ones((64, 1024, 512), dtype=data_type)
-    dark = 0.5 * np.ones((64, 1024, 512), dtype=data_type)
-
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
     t0 = time.perf_counter()
-    data -= dark
+    data -= offset
     dt_py = time.perf_counter() - t0
 
-    print(f"\nsubDarkImageArray with {data_type} - "
+    print(f"\ncorrect_image_data (offset) with {data_type} - "
           f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
 
 
-def bench_sub_dark_image_array():
-    _run_sub_dark_image_array(np.float32)
-    _run_sub_dark_image_array(np.float64)
+def _run_correct_gain_image_array(data_type, gain):
+    gain = gain.astype(data_type)
+
+    # mask by threshold
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    t0 = time.perf_counter()
+    correct_image_data(data, gain=gain)
+    dt_cpp = time.perf_counter() - t0
+
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    t0 = time.perf_counter()
+    data *= gain
+    dt_py = time.perf_counter() - t0
+
+    print(f"\ncorrect_image_data (gain) with {data_type} - "
+          f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
+
+
+def _run_correct_gain_offset_image_array(data_type, gain, offset):
+    gain = gain.astype(data_type)
+    offset = offset.astype(data_type)
+
+    # mask by threshold
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    t0 = time.perf_counter()
+    correct_image_data(data, gain=gain, offset=offset)
+    dt_cpp = time.perf_counter() - t0
+
+    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    t0 = time.perf_counter()
+    data -= offset
+    data *= gain
+    dt_py = time.perf_counter() - t0
+
+    print(f"\ncorrect_image_data (gain and offset) with {data_type} - "
+          f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
+
+
+def bench_correct_gain_offset():
+    gain = np.random.randn(64, 1024, 512)
+    offset = np.random.randn(64, 1024, 512)
+
+    _run_correct_gain_offset_image_array(np.float32, gain, offset)
+    _run_correct_gain_offset_image_array(np.float64, gain, offset)
+    _run_correct_gain_image_array(np.float32, gain)
+    _run_correct_gain_image_array(np.float64, gain)
+    _run_correct_offset_image_array(np.float32, offset)
+    _run_correct_offset_image_array(np.float64, offset)
 
 
 if __name__ == "__main__":
@@ -186,4 +229,4 @@ if __name__ == "__main__":
     bench_moving_average_image_array()
     bench_mask_image_array()
     bench_nan2zero_image_array()
-    bench_sub_dark_image_array()
+    bench_correct_gain_offset()

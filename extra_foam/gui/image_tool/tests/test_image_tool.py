@@ -10,13 +10,11 @@ import numpy as np
 from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
-from extra_foam.algorithms import mask_image
 from extra_foam.config import (
     AnalysisType, config, _Config, ConfigWrapper, Normalizer, RoiCombo, RoiFom
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
-from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
@@ -27,43 +25,6 @@ from extra_foam.database import MetaProxy
 app = mkQApp()
 
 logger.setLevel('CRITICAL')
-
-
-class TestSimpleImageData(unittest.TestCase):
-    @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
-    def testGeneral(self):
-        with self.assertRaises(TypeError):
-            _SimpleImageData([1, 2, 3])
-
-        gt_data = np.random.randn(3, 3).astype(np.float32)
-        img_data = _SimpleImageData.from_array(gt_data)
-
-        img_data.offset = 1
-        np.testing.assert_array_almost_equal(gt_data - 1, img_data.masked)
-        img_data.offset = 0
-        np.testing.assert_array_almost_equal(gt_data, img_data.masked)
-
-        img_data.threshold_mask = (3, 6)
-        masked_gt = gt_data.copy()
-        mask_image(masked_gt, threshold_mask=(3, 6))
-        np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
-        img_data.offset = 3
-        masked_gt = gt_data.copy() - 3
-        mask_image(masked_gt, threshold_mask=(3, 6))
-        np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
-
-        self.assertEqual(1.0e-3, img_data.pixel_size)
-
-    @patch.dict(config._data, {"PIXEL_SIZE": 1e-3})
-    def testInstantiateFromArray(self):
-        gt_data = np.ones((2, 2, 2))
-
-        image_data = _SimpleImageData.from_array(gt_data)
-
-        np.testing.assert_array_equal(np.ones((2, 2)), image_data.masked)
-        self.assertEqual(1e-3, image_data.pixel_size)
-        self.assertEqual(0, image_data.offset)
-        self.assertEqual(None, image_data.threshold_mask)
 
 
 class TestImageTool(unittest.TestCase):
@@ -241,36 +202,65 @@ class TestImageTool(unittest.TestCase):
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
 
-    def testSetAndRemoveReference(self):
-        widget = self.image_tool._image_ctrl_widget
+    def testReferenceCtrlWidget(self):
+        widget = self.image_tool._reference_view._ctrl_widget
+        corrected = self.image_tool._reference_view._corrected
         proc = self.pulse_worker._image_proc
 
         data = self._get_data()
 
         # test setting reference (no image)
-        widget.set_ref_btn.clicked.emit()
-        proc.process(data)
-        self.assertIsNone(proc._reference)
+        QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
+        ref = proc._ref_sub.update(proc._reference)
+        self.assertIsNone(ref)
 
         # test setting reference
-        self.view._image = 2 * np.ones((10, 10), np.float32)
-        widget.set_ref_btn.clicked.emit()
-        proc.process(data)
-        # This test fails randomly if 'testDrawMask', which is executed before
-        # it, is not there.
-        np.testing.assert_array_equal(self.view._image, proc._reference)
+        corrected._image = 2 * np.ones((10, 10), np.float32)
+        QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
+        ref = proc._ref_sub.update(corrected.image.copy())
+        np.testing.assert_array_equal(corrected.image, ref)
+
+        # test setting reference multiple times
+        for i in range(5):
+            corrected._image = np.random.rand(10, 10).astype(np.float32)
+            QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
+        ref = proc._ref_sub.update(None)
+        np.testing.assert_array_equal(corrected.image, ref)
 
         # test removing reference
-        widget.remove_ref_btn.clicked.emit()
-        proc.process(data)
-        self.assertIsNone(proc._reference)
+        QTest.mouseClick(widget._remove_ref_btn, Qt.LeftButton)
+        ref = proc._ref_sub.update(corrected.image.copy())
+        self.assertIsNone(ref)
 
-        # test setting reference but the reference shape is different
-        # from the image shape
-        with self.assertRaises(ImageProcessingError):
-            self.view._image = np.ones((2, 2), np.float32)
-            widget.set_ref_btn.clicked.emit()
-            proc.process(data)
+        # ------------------------------
+        # test load and remove reference
+        # ------------------------------
+
+        # Here we test that "proc._ref_sub.update()" works properly. The rest
+        # is done in the unittests of ImageProcessor.
+
+        ref_gt = np.ones([2, 2], dtype=np.float32)
+
+        def _read_image_side_effect(fn):
+            if fn == "reference/file/path":
+                return ref_gt
+
+        # caveat: first establish the connection
+        proc._cal_sub.update(None, None)
+
+        with patch('extra_foam.gui.ctrl_widgets.ref_image_ctrl_widget.read_image',
+                   side_effect=_read_image_side_effect):
+            with patch('extra_foam.gui.ctrl_widgets.ref_image_ctrl_widget.QFileDialog.getOpenFileName',
+                       return_value=["reference/file/path"]):
+                QTest.mouseClick(widget._load_ref_btn, Qt.LeftButton)
+                self.assertEqual("reference/file/path", widget._ref_fp_le.text())
+                ref = proc._ref_sub.update(None)
+                np.testing.assert_array_equal(ref, ref_gt)
+
+                QTest.mouseClick(widget._remove_ref_btn, Qt.LeftButton)
+                self.assertEqual("", widget._ref_fp_le.text())
+                ref = proc._ref_sub.update(ref_gt)
+                self.assertIsNone(ref)
 
     def testDrawMask(self):
         # TODO: test by really drawing something on ImageTool
@@ -291,7 +281,7 @@ class TestImageTool(unittest.TestCase):
 
         # test adding mask
         n_attempts = 0
-        # FIXME: repeat to prevent random failure
+        # repeat to prevent random failure
         while n_attempts < 10:
             n_attempts += 1
 
@@ -330,43 +320,6 @@ class TestImageTool(unittest.TestCase):
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
 
-    def testDarkRun(self):
-        image_proc = self.pulse_worker._image_proc
-
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
-
-        # test "Recording dark" action
-        self.image_tool._views_tab.setCurrentWidget(self.image_tool._dark_view)
-
-        collect_btn = self.image_tool._dark_view._ctrl_widget._collect_btn
-
-        # start recording
-        QTest.mouseClick(collect_btn, Qt.LeftButton)
-        image_proc.update()
-        self.assertTrue(image_proc._recording)
-        # stop recording
-        QTest.mouseClick(collect_btn, Qt.LeftButton)
-        image_proc.update()
-        self.assertFalse(image_proc._recording)
-
-        # test "Remove dark" action
-        remove_btn = self.image_tool._dark_view._ctrl_widget._remove_btn
-
-        data = np.ones((10, 10), dtype=np.float32)
-        image_proc._dark_run = data
-        image_proc._dark_mean = data
-        QTest.mouseClick(remove_btn, Qt.LeftButton)
-        image_proc.update()
-        self.assertIsNone(image_proc._dark_run)
-        self.assertIsNone(image_proc._dark_mean)
-
-        # test "subtract dark" checkbox
-        self.assertTrue(image_proc._dark_subtraction)
-        self.image_tool._image_ctrl_widget.darksubtraction_cb.setChecked(False)
-        image_proc.update()
-        self.assertFalse(image_proc._dark_subtraction)
-
     def testBulletinView(self):
         processed = ProcessedData(1357)
 
@@ -390,14 +343,105 @@ class TestImageTool(unittest.TestCase):
         proc = self.pulse_worker._image_proc
 
         proc.update()
-        self.assertEqual(1.0, proc._gain)
-        self.assertEqual(0.0, proc._offset)
+        self.assertTrue(proc._correct_gain)
+        self.assertTrue(proc._correct_offset)
+        self.assertEqual(slice(None), proc._gain_slicer)
+        self.assertEqual(slice(None), proc._offset_slicer)
+        self.assertTrue(proc._dark_as_offset)
+        self.assertFalse(proc._recording_dark)
 
-        widget._gain_le.setText("2.0")
-        widget._offset_le.setText("-100")
+        widget._correct_gain_cb.setChecked(False)
+        widget._correct_offset_cb.setChecked(False)
+        widget._gain_slicer_le.setText(":70")
+        widget._offset_slicer_le.setText("2:120:4")
+        widget._dark_as_offset_cb.setChecked(False)
+        QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
         proc.update()
-        self.assertEqual(2.0, proc._gain)
-        self.assertEqual(-100.0, proc._offset)
+        self.assertFalse(proc._correct_gain)
+        self.assertFalse(proc._correct_offset)
+        self.assertEqual(slice(None, 70), proc._gain_slicer)
+        self.assertEqual(slice(2, 120, 4), proc._offset_slicer)
+        self.assertFalse(proc._dark_as_offset)
+        self.assertTrue(proc._recording_dark)
+
+        # test stop dark recording
+        QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
+        proc.update()
+        self.assertFalse(proc._recording_dark)
+
+        # test remove dark
+        data = np.ones((10, 10), dtype=np.float32)
+        proc._dark = data
+        proc._dark_mean = data
+        QTest.mouseClick(widget._remove_dark_btn, Qt.LeftButton)
+        proc.update()
+        self.assertIsNone(proc._dark)
+        self.assertIsNone(proc._dark_mean)
+
+        # --------------------------------
+        # test load and remove gain/offset
+        # --------------------------------
+
+        # Here we test that "proc._cal_sub.update()" works properly. The rest
+        # is done in the unittests of ImageProcessor.
+
+        const_gt = np.ones([2, 2])
+
+        def _read_constants_side_effect(fn):
+            if fn in ["gain/file/path", "offset/file/path"]:
+                return const_gt
+
+        # caveat: first establish the connection
+        proc._cal_sub.update(None, None)
+
+        with patch('extra_foam.ipc.read_cal_constants', side_effect=_read_constants_side_effect):
+            with patch('extra_foam.gui.ctrl_widgets.calibration_ctrl_widget.QFileDialog.getOpenFileName',
+                       return_value=["gain/file/path"]):
+                QTest.mouseClick(widget._load_gain_btn, Qt.LeftButton)
+                time.sleep(0.1)  # wait to write into redis
+                self.assertEqual("gain/file/path", widget._gain_fp_le.text())
+
+                n_attempts = 0
+                # repeat to prevent random failure at Travis
+                while n_attempts < 10:
+                    n_attempts += 1
+                    new_gain, gain, new_offset, offset = proc._cal_sub.update(None, None)
+                    if new_gain:
+                        break
+                    time.sleep(0.001)
+
+                np.testing.assert_array_equal(gain, const_gt)
+                self.assertFalse(new_offset)
+                self.assertIsNone(offset)
+
+                QTest.mouseClick(widget._remove_gain_btn, Qt.LeftButton)
+                self.assertEqual("", widget._gain_fp_le.text())
+                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
+                self.assertTrue(new_gain)
+                self.assertIsNone(gain)
+                self.assertFalse(new_offset)
+                self.assertIsNone(offset)
+
+            with patch('extra_foam.gui.ctrl_widgets.calibration_ctrl_widget.QFileDialog.getOpenFileName',
+                       return_value=["offset/file/path"]):
+                proc._gain = const_gt
+
+                QTest.mouseClick(widget._load_offset_btn, Qt.LeftButton)
+                time.sleep(0.1)  # wait to write data into redis
+                self.assertEqual("offset/file/path", widget._offset_fp_le.text())
+                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
+                self.assertFalse(new_gain)
+                np.testing.assert_array_equal(gain, const_gt)
+                self.assertTrue(new_offset)
+                np.testing.assert_array_equal(offset, const_gt)
+
+                QTest.mouseClick(widget._remove_offset_btn, Qt.LeftButton)
+                self.assertEqual("", widget._offset_fp_le.text())
+                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, const_gt)
+                self.assertFalse(new_gain)
+                np.testing.assert_array_equal(gain, const_gt)
+                self.assertTrue(new_offset)
+                self.assertIsNone(offset)
 
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
@@ -553,28 +597,30 @@ class TestImageTool(unittest.TestCase):
         tab = self.image_tool._views_tab
         self.assertEqual(0, tab.currentIndex())
 
-        # switch to "gain / offset"
-        tab.tabBarClicked.emit(self.image_tool.TabIndex.GAIN_OFFSET)
-        tab.setCurrentIndex(self.image_tool.TabIndex.GAIN_OFFSET)
+        TabIndex = self.image_tool.TabIndex
 
-        # switch to "dark"
-        collect_btn = self.image_tool._dark_view._ctrl_widget._collect_btn
-        tab.tabBarClicked.emit(self.image_tool.TabIndex.DARK)
-        tab.setCurrentIndex(self.image_tool.TabIndex.DARK)
-        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
-        QTest.mouseClick(collect_btn, Qt.LeftButton)  # start recording
-        self.assertTrue(collect_btn.isChecked())
+        # switch to "gain / offset"
+        record_btn = self.image_tool._gain_offset_view._ctrl_widget._record_dark_btn
+        tab.tabBarClicked.emit(TabIndex.GAIN_OFFSET)
+        tab.setCurrentIndex(TabIndex.GAIN_OFFSET)
+        QTest.mouseClick(record_btn, Qt.LeftButton)  # start recording
+        self.assertTrue(record_btn.isChecked())
+
+        # switch to "reference"
+        tab.tabBarClicked.emit(TabIndex.REFERENCE)
+        tab.setCurrentIndex(TabIndex.REFERENCE)
+        # test automatically stop dark recording when switching tab
+        self.assertFalse(record_btn.isChecked())
 
         # switch to "azimuthal integration 1D"
         self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
-        tab.tabBarClicked.emit(self.image_tool.TabIndex.AZIMUTHAL_INTEG_1D)
-        tab.setCurrentIndex(self.image_tool.TabIndex.AZIMUTHAL_INTEG_1D)
+        tab.tabBarClicked.emit(TabIndex.AZIMUTHAL_INTEG_1D)
+        tab.setCurrentIndex(TabIndex.AZIMUTHAL_INTEG_1D)
         self.assertEqual('1', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
-        self.assertFalse(collect_btn.isChecked())
 
         # switch to "geometry"
-        tab.tabBarClicked.emit(self.image_tool.TabIndex.GEOMETRY)
-        tab.setCurrentIndex(self.image_tool.TabIndex.GEOMETRY)
+        tab.tabBarClicked.emit(TabIndex.GEOMETRY)
+        tab.setCurrentIndex(TabIndex.GEOMETRY)
 
 
 class TestImageToolTs(unittest.TestCase):
@@ -621,3 +667,7 @@ class TestImageToolTs(unittest.TestCase):
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
+
+
+if __name__ == '__main__':
+    unittest.main()

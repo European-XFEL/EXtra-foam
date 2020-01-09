@@ -64,17 +64,29 @@ class Mediator(QObject):
         else:
             self._meta.remove_data_source(item)
 
-    def onCaliGainChange(self, value: float):
-        self._meta.hset(mt.IMAGE_PROC, "gain", value)
+    def onCalGainCorrection(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "correct gain", str(value))
 
-    def onCaliOffsetChange(self, value: float):
-        self._meta.hset(mt.IMAGE_PROC, "offset", value)
+    def onCalOffsetCorrection(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "correct offset", str(value))
+
+    def onCalGainSlicerChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "gain slicer", str(value))
+
+    def onCalOffsetSlicerChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "offset slicer", str(value))
+
+    def onCalDarkAsOffset(self, value:bool):
+        self._meta.hset(mt.IMAGE_PROC, "dark as offset", str(value))
+
+    def onCalDarkRecording(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "recording dark", str(value))
+
+    def onCalDarkRemove(self):
+        self._meta.hset(mt.IMAGE_PROC, "remove dark", 1)
 
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
-
-    def onDarkSubtractionStateChange(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "dark_subtraction", str(value))
 
     def onGeomAssembleWithGeometryChange(self, value: bool):
         self._meta.hset(mt.GEOMETRY_PROC, "with_geometry", str(value))
@@ -238,12 +250,6 @@ class Mediator(QObject):
 
     def onPfFomRangeChange(self, value: tuple):
         self._meta.hset(mt.PULSE_FILTER_PROC, "fom_range", str(value))
-
-    def onRdStateChange(self, value: bool):
-        self._meta.hset(mt.GLOBAL_PROC, "recording_dark", str(value))
-
-    def onRdRemoveDark(self):
-        self._meta.hset(mt.GLOBAL_PROC, "remove_dark", 1)
 
     def onTrXasScanStateToggled(self, value: IntEnum, state: bool):
         if state:

@@ -30,10 +30,10 @@ namespace foam
 {
 
 template<typename T, xt::layout_type L>
-struct is_image<xt::pytensor<T, 2, L>> : std::true_type {};
+struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
 
 template<typename T, xt::layout_type L>
-struct is_image_array<xt::pytensor<T, 3, L>> : std::true_type {};
+struct IsImageArray<xt::pytensor<T, 3, L>> : std::true_type {};
 
 } // foam
 
@@ -129,17 +129,42 @@ PYBIND11_MODULE(image_proc, m)
   m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<double, 3>>, py::arg("src").noconvert());
   m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<float, 3>>, py::arg("src").noconvert());
 
-  m.def("subDarkImageArray", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
-                             &subDarkImageArray<xt::pytensor<double, 3>>,
-                             py::arg("src").noconvert(), py::arg("dark").noconvert());
-  m.def("subDarkImageArray", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
-                             &subDarkImageArray<xt::pytensor<float, 3>>,
-                             py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<double, 3>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<float, 3>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<double, 2>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<float, 2>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
 
-  m.def("subDarkImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-                        &subDarkImage<xt::pytensor<double, 2>>,
-                        py::arg("src").noconvert(), py::arg("dark").noconvert());
-  m.def("subDarkImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-                        &subDarkImage<xt::pytensor<float, 2>>,
-                        py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                       &correctImageData<GainPolicy, xt::pytensor<double, 3>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                       &correctImageData<GainPolicy, xt::pytensor<float, 3>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                       &correctImageData<GainPolicy, xt::pytensor<double, 2>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                       &correctImageData<GainPolicy, xt::pytensor<float, 2>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+
+  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                             &correctImageData<xt::pytensor<double, 3>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                             &correctImageData<xt::pytensor<float, 3>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                             &correctImageData<xt::pytensor<double, 2>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                             &correctImageData<xt::pytensor<float, 2>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
 }

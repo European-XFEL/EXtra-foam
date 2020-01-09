@@ -21,7 +21,7 @@ from .azimuthal_integ_1d_view import AzimuthalInteg1dView
 from .corrected_view import CorrectedView
 from .calibration_view import CalibrationView
 from .bulletin_view import BulletinView
-from .dark_view import DarkView
+from .reference_view import ReferenceView
 from .geometry_view import GeometryView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
@@ -45,7 +45,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     class TabIndex(IntEnum):
         CORRECTED = 0
         GAIN_OFFSET = 1
-        DARK = 2
+        REFERENCE = 2
         AZIMUTHAL_INTEG_1D = 3
         GEOMETRY = 4
 
@@ -110,7 +110,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._views_tab = QTabWidget()
         self._corrected_view = self.createView(CorrectedView)
         self._gain_offset_view = self.createView(CalibrationView)
-        self._dark_view = self.createView(DarkView)
+        self._reference_view = self.createView(ReferenceView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
 
@@ -132,7 +132,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             self._corrected_view, "Corrected")
         cali_idx = self._views_tab.addTab(
             self._gain_offset_view, "Gain / offset")
-        dark_tab_idx = self._views_tab.addTab(self._dark_view, "Dark")
+        ref_idx = self._views_tab.addTab(self._reference_view, "Reference")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
         geom_tab_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
@@ -141,7 +141,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         assert(corrected_tab_idx == self.TabIndex.CORRECTED)
         assert(cali_idx == self.TabIndex.GAIN_OFFSET)
-        assert(dark_tab_idx == self.TabIndex.DARK)
+        assert(ref_idx == self.TabIndex.REFERENCE)
         assert(azimuthal_integ_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D)
         assert(geom_tab_idx == self.TabIndex.GEOMETRY)
 
@@ -188,21 +188,12 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             mediator.reset_image_level_sgn)
         self._image_ctrl_widget.save_image_btn.clicked.connect(
             self._corrected_view.imageView.writeImage)
-        self._image_ctrl_widget.load_ref_btn.clicked.connect(
-            self._corrected_view.imageView.loadReferenceImage)
-        self._image_ctrl_widget.set_ref_btn.clicked.connect(
-            self._corrected_view.imageView.setReferenceImage)
-        self._image_ctrl_widget.remove_ref_btn.clicked.connect(
-            self._corrected_view.imageView.removeReferenceImage)
 
         # use lambda here to facilitate unittest of slot call
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: mediator.onImageThresholdMaskChange(x))
-
-        self._image_ctrl_widget.darksubtraction_cb.toggled.connect(
-            self._mediator.onDarkSubtractionStateChange)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)

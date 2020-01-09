@@ -138,8 +138,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
 
-        # off_pulse_le will be disabled when the mode is PRE_DEFINED_OFF
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
+        # off_pulse_le will be disabled when the mode is REFERENCE_AS_OFF
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
         self.assertTrue(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.EVEN_TRAIN_ON])
@@ -601,7 +601,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertListEqual([-1], pp_proc._indices_on)
         self.assertListEqual([-1], pp_proc._indices_off)
 
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.PRE_DEFINED_OFF])
+        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
         self.assertEqual(2, len(spy))
         # test on_pulse_le is still disabled, which will become enabled if the
         # detector is pulse-resolved

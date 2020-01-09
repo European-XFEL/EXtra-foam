@@ -42,14 +42,8 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         # avoid collapse on online and maxwell clusters
         self.threshold_mask_le.setMinimumWidth(160)
 
-        self.darksubtraction_cb = QCheckBox("Subtract dark")
-        self.darksubtraction_cb.setChecked(True)
-
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
-        self.load_ref_btn = QPushButton("Load reference")
-        self.set_ref_btn = QPushButton("Set reference")
-        self.remove_ref_btn = QPushButton("Remove reference")
 
         self.initUI()
         self.initConnections()
@@ -75,15 +69,7 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.threshold_mask_le, row, 1)
 
         row += 1
-        layout.addWidget(self.darksubtraction_cb, row, 0, AR)
-
-        row += 1
         layout.addWidget(self.save_image_btn, row, 0)
-        layout.addWidget(self.load_ref_btn, row, 1)
-
-        row += 1
-        layout.addWidget(self.set_ref_btn, row, 0)
-        layout.addWidget(self.remove_ref_btn, row, 1)
 
         layout.setVerticalSpacing(20)
         self.setLayout(layout)
@@ -97,6 +83,4 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
     def updateMetaData(self):
         """Override."""
         self.threshold_mask_le.returnPressed.emit()
-        self.darksubtraction_cb.toggled.emit(
-            self.darksubtraction_cb.isChecked())
         return True

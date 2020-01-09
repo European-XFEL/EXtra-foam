@@ -58,3 +58,9 @@ class CalibrationView(_AbstractImageToolView):
         """Override."""
         if auto_update or self._corrected.image is None:
             self._corrected.setImageData(_SimpleImageData(data.image))
+            self._offset.setImage(data.image.offset_mean)
+            self._gain.setImage(data.image.gain_mean)
+
+    def onDeactivated(self):
+        """Override."""
+        self._ctrl_widget.onDeactivated()

@@ -27,19 +27,20 @@ namespace foam
 {
 
 template<typename T>
-struct is_image : std::false_type {};
+struct IsImage : std::false_type {};
 
 template<typename T, xt::layout_type L>
-struct is_image<xt::xtensor<T, 2, L>> : std::true_type {};
+struct IsImage<xt::xtensor<T, 2, L>> : std::true_type {};
 
 template<typename T>
-struct is_image_array : std::false_type {};
+struct IsImageArray : std::false_type {};
 
 template<typename T, xt::layout_type L>
-struct is_image_array<xt::xtensor<T, 3, L>> : std::true_type {};
+struct IsImageArray<xt::xtensor<T, 3, L>> : std::true_type {};
 
 template<typename E, template<typename> class C>
-using check_container = std::enable_if_t<C<E>::value, bool>;
+using EnableIf = std::enable_if_t<C<E>::value, bool>;
+
 
 #if defined(FOAM_WITH_TBB)
 namespace detail
@@ -110,8 +111,7 @@ inline auto nanmeanImageArrayImp(E&& src, const std::vector<size_t>& keep = {})
  * @param keep: a list of selected indices.
  * @return: the nanmean image. shape = (y, x)
  */
-template<typename E, template <typename> class C = is_image_array,
-  check_container<std::decay_t<E>, C> = false>
+template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
 inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
 {
 #if defined(FOAM_WITH_TBB)
@@ -127,8 +127,7 @@ inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
 #endif
 }
 
-template<typename E, template <typename> class C = is_image_array,
-  check_container<std::decay_t<E>, C> = false>
+template<typename E, EnableIf<std::decay_t<E>, IsImageArray> = false>
 inline auto nanmeanImageArray(E&& src)
 {
 #if defined(FOAM_WITH_TBB)
@@ -195,8 +194,7 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename T, template <typename> class C = is_image,
-  check_container<E, C> = false>
+template <typename E, typename T, EnableIf<E, IsImage> = false>
 inline void maskImage(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -219,8 +217,8 @@ inline void maskImage(E& src, T lb, T ub)
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
  */
-template <typename E, typename M, template <typename> class C = is_image,
-  check_container<E, C> = false, check_container<M, C> = false>
+template <typename E, typename M,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
 inline void maskImage(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -251,8 +249,8 @@ inline void maskImage(E& src, const M& mask)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename M, typename T, template <typename> class C = is_image,
-  check_container<E, C> = false, check_container<M, C> = false>
+template <typename E, typename M, typename T,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
 inline void maskImage(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -282,8 +280,7 @@ inline void maskImage(E& src, const M& mask, T lb, T ub)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
-template <typename E, typename T, template <typename> class C = is_image_array,
-  check_container<E, C> = false>
+template <typename E, typename T, EnableIf<E, IsImageArray> = false>
 inline void maskImageArray(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -319,8 +316,7 @@ inline void maskImageArray(E& src, T lb, T ub)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
-  template <typename> class C = is_image_array, template <typename> class D = is_image,
-  check_container<E, C> = false, check_container<M, D> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
 inline void maskImageArray(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -372,8 +368,7 @@ inline void maskImageArray(E& src, const M& mask)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M, typename T,
-  template <typename> class C = is_image_array, template <typename> class D = is_image,
-  check_container<E, C> = false, check_container<M, D> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
 inline void maskImageArray(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -425,7 +420,7 @@ inline void maskImageArray(E& src, const M& mask, T lb, T ub)
  *
  * @param src: image data. shape = (y, x)
  */
-template <typename E, template <typename> class C = is_image, check_container<E, C> = false>
+template <typename E, EnableIf<E, IsImage> = false>
 inline void nanToZeroImage(E& src)
 {
   using value_type = typename E::value_type;
@@ -445,7 +440,7 @@ inline void nanToZeroImage(E& src)
  *
  * @param src: image data. shape = (indices, y, x)
  */
-template <typename E, template <typename> class C = is_image_array, check_container<E, C> = false>
+template <typename E, EnableIf<E, IsImageArray> = false>
 inline void nanToZeroImageArray(E& src)
 {
   using value_type = typename E::value_type;
@@ -479,7 +474,7 @@ inline void nanToZeroImageArray(E& src)
  * @param data: new image data. shape = (y, x)
  * @param count: new moving average count.
  */
-template <typename E, template <typename> class C = is_image, check_container<E, C> = false>
+template <typename E, EnableIf<E, IsImage> = false>
 inline void movingAverageImage(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
@@ -505,7 +500,7 @@ inline void movingAverageImage(E& src, const E& data, size_t count)
  * @param data: new image data. shape = (indices, y, x)
  * @param count: new moving average count.
  */
-template <typename E, template <typename> class C = is_image_array, check_container<E, C> = false>
+template <typename E, EnableIf<E, IsImageArray> = false>
 inline void movingAverageImageArray(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
@@ -543,16 +538,40 @@ inline void movingAverageImageArray(E& src, const E& data, size_t count)
 #endif
 }
 
-template <typename E, template <typename> class C = is_image_array, check_container<E, C> = false>
-inline void subDarkImageArray(E& src, const E& dark)
+class OffsetPolicy {
+public:
+  template<typename T>
+  static T correct(T v, T a) {
+    return v - a;
+  }
+};
+
+class GainPolicy {
+public:
+  template<typename T>
+  static T correct(T v, T a) {
+    return v * a;
+  }
+};
+
+/**
+ * Inplace apply either gain or offset correct for an array of images.
+ *
+ * @tparam Policy: correction policy (OffsetPolicy or GainPolicy)
+ *
+ * @param src: image data. shape = (indices, y, x)
+ * @param constants: correction constants, which has the same shape as src.
+ */
+template <typename Policy, typename E, EnableIf<E, IsImageArray> = false>
+inline void correctImageData(E& src, const E& constants)
 {
   auto shape = src.shape();
-  if (shape != dark.shape())
+  if (shape != constants.shape())
     throw std::invalid_argument("Inconsistent data shape!");
 
 #if defined(FOAM_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src, &dark] (const tbb::blocked_range3d<int> &block)
+    [&src, &constants] (const tbb::blocked_range3d<int> &block)
     {
       for(int i=block.pages().begin(); i != block.pages().end(); ++i)
       {
@@ -568,7 +587,7 @@ inline void subDarkImageArray(E& src, const E& dark)
           for (size_t k = 0; k < shape[2]; ++k)
           {
 #endif
-            src(i, j, k) -= dark(i, j, k);
+            src(i, j, k) = Policy::correct(src(i, j, k), constants(i, j, k));
           }
         }
       }
@@ -578,18 +597,91 @@ inline void subDarkImageArray(E& src, const E& dark)
 #endif
 }
 
-template <typename E, template <typename> class C = is_image, check_container<E, C> = false>
-inline void subDarkImage(E& src, const E& dark)
+/**
+* Inplace apply either gain or offset correct for an image.
+*
+* @tparam Policy: correction policy (OffsetPolicy or GainPolicy)
+*
+* @param src: image data. shape = (y, x)
+* @param constants: correction constants, which has the same shape as src.
+*/
+template <typename Policy, typename E, EnableIf<E, IsImage> = false>
+inline void correctImageData(E& src, const E& constants)
 {
   auto shape = src.shape();
-  if (shape != dark.shape())
+  if (shape != constants.shape())
     throw std::invalid_argument("Inconsistent data shape!");
 
   for (size_t j = 0; j < shape[0]; ++j)
   {
     for (size_t k = 0; k < shape[1]; ++k)
     {
-      src(j, k) -= dark(j, k);
+      src(j, k) = Policy::correct(src(j, k), constants(j, k));
+    }
+  }
+}
+
+/**
+* Inplace apply both gain and offset correct for an array of images.
+*
+* @param src: image data. shape = (indices, y, x)
+* @param gain: gain correction constants, which has the same shape as src.
+* @param offset: offset correction constants, which has the same shape as src.
+*/
+template <typename E, EnableIf<E, IsImageArray> = false>
+inline void correctImageData(E& src, const E& gain, const E& offset)
+{
+  auto shape = src.shape();
+  if (shape != gain.shape() || shape != offset.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, &gain, &offset] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+  for (size_t i = 0; i < shape[0]; ++i)
+    {
+      for (size_t j = 0; j < shape[1]; ++j)
+      {
+        for (size_t k = 0; k < shape[2]; ++k)
+        {
+#endif
+          src(i, j, k) = gain(i, j, k) * (src(i, j, k) - offset(i, j, k));
+        }
+      }
+    }
+#if defined(FOAM_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+* Inplace apply both gain and offset correct for an image.
+*
+* @param src: image data. shape = (y, x)
+* @param gain: gain correction constants, which has the same shape as src.
+* @param offset: offset correction constants, which has the same shape as src.
+*/
+template <typename E, EnableIf<E, IsImage> = false>
+inline void correctImageData(E& src, const E& gain, const E& offset)
+{
+  auto shape = src.shape();
+  if (shape != gain.shape() || shape != offset.shape())
+    throw std::invalid_argument("Inconsistent data shape!");
+
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      src(j, k) = gain(j, k) * (src(j, k) - offset(j, k));
     }
   }
 }

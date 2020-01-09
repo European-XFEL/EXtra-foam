@@ -20,11 +20,11 @@ import itertools
 import multiprocessing as mp
 
 from PyQt5.QtCore import (
-    pyqtSignal, pyqtSlot, QObject, QSize, Qt, QThread, QTimer
+    pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QAction, QHBoxLayout, QMainWindow, QPushButton, QScrollArea, QSplitter,
+    QAction, QHBoxLayout, QMainWindow, QScrollArea, QSplitter,
     QTabWidget, QVBoxLayout, QWidget
 )
 from redis import ConnectionError
