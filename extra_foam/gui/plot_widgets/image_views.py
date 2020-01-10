@@ -68,10 +68,8 @@ class ImageAnalysis(ImageViewF):
         :param _SimpleImageData image_data: _SimpleImageData instance.
         """
         self._image_data = image_data
-        if image_data is None:
-            return
-
-        self.setImage(image_data.masked)
+        if image_data is not None:
+            self.setImage(image_data.masked)
 
     def writeImage(self):
         """Write the current detector image to file.
