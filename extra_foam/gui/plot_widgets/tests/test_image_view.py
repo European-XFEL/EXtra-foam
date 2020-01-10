@@ -33,8 +33,9 @@ class TestImageView(unittest.TestCase):
         with self.assertRaises(TypeError):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
 
-        with self.assertRaises(TypeError):
-            widget.setImage(None)
+        widget.setImage(None)
+        self.assertIsNone(widget._image)
+        self.assertIsNone(widget._image_item.image)
 
     def testRoiImageView(self):
         widget = RoiImageView(1)

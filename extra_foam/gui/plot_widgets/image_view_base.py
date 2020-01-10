@@ -158,6 +158,10 @@ class ImageViewF(QWidget):
         :param tuple/list scale: the origin of the displayed image image in
             (x_scale, y_scale).
         """
+        if img is None:
+            self.clear()
+            return
+
         if not isinstance(img, np.ndarray):
             raise TypeError("Image data must be a numpy array!")
 
@@ -165,6 +169,7 @@ class ImageViewF(QWidget):
         self._image = img
 
         self._image_item.resetTransform()
+
         if scale is not None:
             self._image_item.scale(*scale)
         if pos is not None:
@@ -179,6 +184,7 @@ class ImageViewF(QWidget):
 
     def clear(self):
         self._image = None
+        # FIXME: there is a bug in ImageItem.setImage if the input is None
         self._image_item.clear()
 
     def _updateImage(self):
