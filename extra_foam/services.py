@@ -99,10 +99,12 @@ def start_redis_server():
     port = config["REDIS_PORT"]
 
     # Construct the command to start the Redis server.
+    # TODO: Add log rotation or something else which prevent logfile bloating
     command = [executable,
                "--port", str(port),
                "--requirepass", password,
-               "--loglevel", "warning"]
+               "--loglevel", "warning",
+               "--logfile", config["REDIS_LOGFILE"]]
 
     process = psutil.Popen(command)
 
