@@ -165,6 +165,7 @@ class _Config(dict):
         "REDIS_MAX_MEMORY_FRAC": 0.2,  # must <= 0.5
         # password to access the Redis server
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
+        "REDIS_LOGFILE": osp.join(ROOT_PATH, "redis.log")
     }
 
     # system configurations which will appear in the config file so that
