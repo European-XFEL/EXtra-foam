@@ -137,6 +137,20 @@ def start_redis_server():
             logger.error(f"Failed to config the Redis server.\n" + repr(e))
             sys.exit(0)
 
+        # Increase the hard and soft limits for the redis client pubsub buffer
+        # to 512MB and 128MB, respectively.
+        cli_buffer_cfg = (client.config_get("client-output-buffer-limit")[
+            "client-output-buffer-limit"]).split()
+        assert len(cli_buffer_cfg) == 12
+        soft_limit = 128 * 1024 ** 2  # 128 MB
+        soft_second = 60  # in second
+        hard_limit = 4 * soft_limit
+        cli_buffer_cfg[8:] = [
+            "pubsub", str(hard_limit), str(soft_limit), str(soft_second)
+        ]
+        client.config_set("client-output-buffer-limit",
+                          " ".join(cli_buffer_cfg))
+
     else:
         logger.info(f"Found existing Redis server at {host}:{port}")
 
