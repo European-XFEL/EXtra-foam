@@ -44,10 +44,7 @@ class DarkView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         # always update when activated
-        if data.image.dark_mean is None:
-            self._dark_view.clear()
-        else:
-            self._dark_view.setImage(data.image.dark_mean)
+        self._dark_view.setImage(data.image.dark_mean)
 
     def onDeactivated(self):
         """Override."""
