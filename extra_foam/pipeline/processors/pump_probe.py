@@ -17,7 +17,7 @@ from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import mask_image, nanmean_image_data
+from extra_foam.algorithms import mask_image_data, nanmean_image_data
 
 
 class PumpProbeProcessor(_BaseProcessor):
@@ -134,9 +134,9 @@ class PumpProbeProcessor(_BaseProcessor):
 
         # apply mask to the averaged images of the train
         masked_mean = images_mean.copy()
-        mask_image(masked_mean,
-                   image_mask=image_mask,
-                   threshold_mask=threshold_mask)
+        mask_image_data(masked_mean,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask)
 
         processed.image.mean = images_mean
         processed.image.masked_mean = masked_mean
@@ -145,13 +145,13 @@ class PumpProbeProcessor(_BaseProcessor):
         # Note: due to the in-place masking, the pump-probe code the the
         #       rest code are interleaved.
         if image_on is not None:
-            mask_image(image_on,
-                       image_mask=image_mask,
-                       threshold_mask=threshold_mask)
+            mask_image_data(image_on,
+                            image_mask=image_mask,
+                            threshold_mask=threshold_mask)
 
-            mask_image(image_off,
-                       image_mask=image_mask,
-                       threshold_mask=threshold_mask)
+            mask_image_data(image_off,
+                            image_mask=image_mask,
+                            threshold_mask=threshold_mask)
 
             processed.pp.image_on = image_on
             processed.pp.image_off = image_off

@@ -10,7 +10,7 @@ All rights reserved.
 from ...pipeline.data_model import ImageData
 from ...utils import cached_property
 
-from extra_foam.algorithms import mask_image
+from extra_foam.algorithms import mask_image_data
 
 
 class _SimpleImageData:
@@ -74,7 +74,7 @@ class _SimpleImageData:
     @cached_property
     def masked(self):
         img = self._image.copy()
-        mask_image(img, threshold_mask=self._threshold_mask)
+        mask_image_data(img, threshold_mask=self._threshold_mask)
         return img
 
     @classmethod

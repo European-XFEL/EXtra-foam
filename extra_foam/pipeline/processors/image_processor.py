@@ -19,7 +19,7 @@ from ...ipc import (
 from ...utils import profiler
 
 from extra_foam.algorithms import (
-    mask_image, nanmean_image_data, correct_image_data
+    correct_image_data, mask_image_data, nanmean_image_data
 )
 
 
@@ -278,11 +278,9 @@ class ImageProcessor(_BaseProcessor):
         for i in image_data.poi_indices:
             if i < n_images:
                 image_data.images[i] = assembled[i].copy()
-                mask_image(
-                    image_data.images[i],
-                    image_mask=self._image_mask,
-                    threshold_mask=self._threshold_mask,
-                )
+                mask_image_data(image_data.images[i],
+                                image_mask=self._image_mask,
+                                threshold_mask=self._threshold_mask)
             else:
                 out_of_bound_poi_indices.append(i)
 
