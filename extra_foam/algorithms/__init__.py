@@ -5,10 +5,7 @@ from .data_structures import Stack
 from .helpers import intersection
 
 from .image_proc import (
-    nanmeanImageArray,
-    movingAverageImage, movingAverageImageArray,
-    nanToZeroImage, nanToZeroImageArray,
-    maskImage, maskImageArray,
+    nanmeanImageArray, movingAvgImageData, maskImageData,
     correctGain, correctOffset, correctGainOffset
 )
 
@@ -20,7 +17,7 @@ from .data_model import (
 
 
 def nanmean_image_data(data, kept=None):
-    """Helper function for calculating nanmean.
+    """Compute nanmean of an array of images of a tuple/list of two images.
 
     :param tuple/list/numpy.array data: a tuple/list of two 2D arrays, or
         a 2D or 3D numpy array.
@@ -42,11 +39,13 @@ def correct_image_data(data, *,
                        gain=None,
                        offset=None,
                        slicer=slice(None, None)):
-    """Helper function for applying gain and/or offset correct.
+    """Apply gain and/or offset correct to image data.
 
-    :param numpy.array data: image data, 2D or 3D.
-    :param None/numpy.array gain: gain constants, same shape as data.
-    :param None/numpy.array offset: offset constants, same shape as data.
+    :param numpy.array data: image data, Shape = (y, x) or (indices, y, x)
+    :param None/numpy.array gain: gain constants, which has the same
+        shape as the image data.
+    :param None/numpy.array offset: offset constants, which has the same
+        shape as the image data.
     :param slice slicer: gain and offset slicer.
     """
     if gain is not None and offset is not None:
@@ -57,49 +56,23 @@ def correct_image_data(data, *,
         correctGain(data, gain[slicer])
 
 
-def mask_image(image, *,
-               image_mask=None,
-               threshold_mask=None):
-    """Mask image by image mask and/or threshold mask.
+def mask_image_data(image_data, *, image_mask=None, threshold_mask=None):
+    """Mask image data by image mask and/or threshold mask.
 
-    The masked pixel value will will be set to 0.
+    The Nan pixel value will be set to 0.
+    The masked pixel value will be set to 0.
 
-    :param numpy.ndarray image: image to be masked. Shape = (y, x)
-    :param numpy.ndarray/None image_mask: image mask. It assumes the shape
-        of the image_mask is the same as the image.
+    :param numpy.ndarray image_data: image to be masked.
+        Shape = (y, x) or (indices, y, x)
+    :param numpy.ndarray/None image_mask: image mask, which has the same
+        shape as the image.
     :param tuple/None threshold_mask: (min, max) of the threshold mask.
     """
     if image_mask is None and threshold_mask is None:
-        nanToZeroImage(image)
+        maskImageData(image_data)
+    elif image_mask is None:
+        maskImageData(image_data, *threshold_mask)
+    elif threshold_mask is None:
+        maskImageData(image_data, image_mask)
     else:
-        if image_mask is None:
-            maskImage(image, *threshold_mask)
-        elif threshold_mask is None:
-            maskImage(image, image_mask)
-        else:
-            maskImage(image, image_mask, *threshold_mask)
-
-
-def mask_image_array(images, *,
-                     threshold_mask=None,
-                     image_mask=None):
-    """Mask an array of images by image mask and/or threshold mask.
-
-    The masked pixel value will will be set to 0.
-
-    :param numpy.ndarray image: image array to be masked.
-        Shape = (index, y, x)
-    :param numpy.ndarray/None image_mask: image mask. It assumes the shape
-        of the image_mask is the same as the image.
-    :param tuple/None threshold_mask: (min, max) of the threshold mask.
-    """
-    if image_mask is None and threshold_mask is None:
-        nanToZeroImageArray(images)
-    else:
-        if image_mask is None:
-            maskImageArray(images, *threshold_mask)
-        elif threshold_mask is None:
-            maskImageArray(images, image_mask)
-        else:
-            maskImageArray(images, image_mask, *threshold_mask)
-
+        maskImageData(image_data, image_mask, *threshold_mask)

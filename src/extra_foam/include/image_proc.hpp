@@ -188,6 +188,26 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
 }
 
 /**
+ * Inplace converting nan to zero for an image.
+ *
+ * @param src: image data. shape = (y, x)
+ */
+template <typename E, EnableIf<E, IsImage> = false>
+inline void maskImageData(E& src)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      if (std::isnan(src(j, k))) src(j, k) = value_type(0);
+    }
+  }
+}
+
+/**
  * Mask an image by threshold inplace.
  *
  * @param src: image data. shape = (y, x)
@@ -195,7 +215,7 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
  * @param ub: upper threshold
  */
 template <typename E, typename T, EnableIf<E, IsImage> = false>
-inline void maskImage(E& src, T lb, T ub)
+inline void maskImageData(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -219,7 +239,7 @@ inline void maskImage(E& src, T lb, T ub)
  */
 template <typename E, typename M,
   EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
-inline void maskImage(E& src, const M& mask)
+inline void maskImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -251,7 +271,7 @@ inline void maskImage(E& src, const M& mask)
  */
 template <typename E, typename M, typename T,
   EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
-inline void maskImage(E& src, const M& mask, T lb, T ub)
+inline void maskImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -274,6 +294,38 @@ inline void maskImage(E& src, const M& mask, T lb, T ub)
 }
 
 /**
+ * Inplace converting nan to zero for an array of images.
+ *
+ * @param src: image data. shape = (indices, y, x)
+ */
+template <typename E, EnableIf<E, IsImageArray> = false>
+inline void maskImageData(E& src)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+            if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
+          }
+        }
+      }
+    }
+  );
+#else
+  xt::filter(src, xt::isnan(src)) = value_type(0);
+#endif
+}
+
+/**
  * Mask an array of images by threshold inplace.
  *
  * @param src: image data. shape = (slices, y, x)
@@ -281,7 +333,7 @@ inline void maskImage(E& src, const M& mask, T lb, T ub)
  * @param ub: upper threshold
  */
 template <typename E, typename T, EnableIf<E, IsImageArray> = false>
-inline void maskImageArray(E& src, T lb, T ub)
+inline void maskImageData(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
 #if defined(FOAM_WITH_TBB)
@@ -317,7 +369,7 @@ inline void maskImageArray(E& src, T lb, T ub)
  */
 template <typename E, typename M,
   EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
-inline void maskImageArray(E& src, const M& mask)
+inline void maskImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -369,7 +421,7 @@ inline void maskImageArray(E& src, const M& mask)
  */
 template <typename E, typename M, typename T,
   EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
-inline void maskImageArray(E& src, const M& mask, T lb, T ub)
+inline void maskImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -416,58 +468,6 @@ inline void maskImageArray(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace converting nan to zero for an image.
- *
- * @param src: image data. shape = (y, x)
- */
-template <typename E, EnableIf<E, IsImage> = false>
-inline void nanToZeroImage(E& src)
-{
-  using value_type = typename E::value_type;
-  auto shape = src.shape();
-
-  for (size_t j = 0; j < shape[0]; ++j)
-  {
-    for (size_t k = 0; k < shape[1]; ++k)
-    {
-      if (std::isnan(src(j, k))) src(j, k) = value_type(0);
-    }
-  }
-}
-
-/**
- * Inplace converting nan to zero for an array of images.
- *
- * @param src: image data. shape = (indices, y, x)
- */
-template <typename E, EnableIf<E, IsImageArray> = false>
-inline void nanToZeroImageArray(E& src)
-{
-  using value_type = typename E::value_type;
-  auto shape = src.shape();
-
-#if defined(FOAM_WITH_TBB)
-  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
-    [&src] (const tbb::blocked_range3d<int> &block)
-    {
-      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
-      {
-        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
-        {
-          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
-          {
-            if (std::isnan(src(i, j, k))) src(i, j, k) = value_type(0);
-          }
-        }
-      }
-    }
-  );
-#else
-  xt::filter(src, xt::isnan(src)) = value_type(0);
-#endif
-}
-
-/**
  * Inplace moving average of an image
  *
  * @param src: moving average of image data. shape = (y, x)
@@ -475,7 +475,7 @@ inline void nanToZeroImageArray(E& src)
  * @param count: new moving average count.
  */
 template <typename E, EnableIf<E, IsImage> = false>
-inline void movingAverageImage(E& src, const E& data, size_t count)
+inline void movingAvgImageData(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
 
@@ -501,7 +501,7 @@ inline void movingAverageImage(E& src, const E& data, size_t count)
  * @param count: new moving average count.
  */
 template <typename E, EnableIf<E, IsImageArray> = false>
-inline void movingAverageImageArray(E& src, const E& data, size_t count)
+inline void movingAvgImageData(E& src, const E& data, size_t count)
 {
   if (count == 0) throw std::invalid_argument("'count' cannot be zero!");
 

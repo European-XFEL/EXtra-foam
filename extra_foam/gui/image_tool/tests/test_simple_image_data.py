@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from extra_foam.algorithms import mask_image
+from extra_foam.algorithms import mask_image_data
 from extra_foam.config import config
 from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 
@@ -19,7 +19,7 @@ class TestSimpleImageData(unittest.TestCase):
 
         img_data.threshold_mask = (3, 6)
         masked_gt = gt_data.copy()
-        mask_image(masked_gt, threshold_mask=(3, 6))
+        mask_image_data(masked_gt, threshold_mask=(3, 6))
         np.testing.assert_array_almost_equal(masked_gt, img_data.masked)
 
         self.assertEqual(1.0e-3, img_data.pixel_size)

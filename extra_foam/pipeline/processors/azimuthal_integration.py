@@ -22,7 +22,7 @@ from ...config import Normalizer, AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import mask_image
+from extra_foam.algorithms import mask_image_data
 
 
 def energy2wavelength(energy):
@@ -159,7 +159,7 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
 
         def _integrate1d_imp(i):
             masked = assembled[i].copy()
-            mask_image(masked, threshold_mask=threshold_mask)
+            mask_image_data(masked, threshold_mask=threshold_mask)
             return integ1d(masked, integ_points)
 
         intensities = []  # pulsed A.I.

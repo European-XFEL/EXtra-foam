@@ -16,8 +16,7 @@ import numpy as np
 from ..config import config, AnalysisType, PumpProbeMode
 
 from extra_foam.algorithms import (
-    intersection, nanmean_image_data, movingAverageImage,
-    movingAverageImageArray, mask_image
+    intersection, mask_image_data, movingAvgImageData, nanmean_image_data
 )
 
 
@@ -113,18 +112,14 @@ class MovingAverageArray:
                 self._count <= self._window and data.shape == self._data.shape:
             if self._count < self._window:
                 self._count += 1
-                if data.ndim == 2:
-                    movingAverageImage(self._data, data, self._count)
-                elif data.ndim == 3:
-                    movingAverageImageArray(self._data, data, self._count)
+                if data.ndim in (2, 3):
+                    movingAvgImageData(self._data, data, self._count)
                 else:
                     self._data += (data - self._data) / self._count
             else:  # self._count == self._window
                 # here is an approximation
-                if data.ndim == 2:
-                    movingAverageImage(self._data, data, self._count)
-                elif data.ndim == 3:
-                    movingAverageImageArray(self._data, data, self._count)
+                if data.ndim in (2, 3):
+                    movingAvgImageData(self._data, data, self._count)
                 else:
                     self._data += (data - self._data) / self._count
         else:
@@ -476,9 +471,9 @@ class ImageData:
         instance.poi_indices = poi_indices
 
         instance.masked_mean = instance.mean.copy()
-        mask_image(instance.masked_mean,
-                   image_mask=image_mask,
-                   threshold_mask=threshold_mask)
+        mask_image_data(instance.masked_mean,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask)
         instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
 

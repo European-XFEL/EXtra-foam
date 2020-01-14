@@ -93,6 +93,7 @@ if(FOAM_WITH_XSIMD OR XTENSOR_USE_XSIMD)
 endif()
 
 # pybind11
+set(PYBIND11_CPP_STANDARD -std=c++14)
 add_subdirectory(thirdparty/pybind11)
 find_package(pybind11 REQUIRED)
 
