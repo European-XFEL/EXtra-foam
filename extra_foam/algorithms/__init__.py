@@ -1,6 +1,7 @@
 from .miscellaneous import normalize_auc
 from .sampling import down_sample, quick_min_max, slice_curve, up_sample
 from .data_structures import Stack
+from .azimuthal_integ import compute_q, energy2wavelength
 
 from .helpers import intersection
 

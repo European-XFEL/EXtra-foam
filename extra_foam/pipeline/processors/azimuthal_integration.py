@@ -11,7 +11,6 @@ from concurrent.futures import ThreadPoolExecutor
 import functools
 
 import numpy as np
-from scipy import constants
 
 from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 
@@ -22,17 +21,11 @@ from ...config import Normalizer, AnalysisType
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import mask_image_data
+from extra_foam.algorithms import energy2wavelength, mask_image_data
 
 
-def energy2wavelength(energy):
-    # Plank-einstein relation (E=hv)
-    HC_E = 1e-3 * constants.c * constants.h / constants.e
-    return HC_E / energy
-
-
-class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
-    """Base class for AzimuthalIntegrationProcessors.
+class _AzimuthalIntegProcessorBase(_BaseProcessor):
+    """Base class for AzimuthalIntegProcessors.
 
     Attributes:
         _sample_dist (float): distance from the sample to the
@@ -56,6 +49,8 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         _fom_integ_range (tuple): integration range for calculating FOM from
             the normalized azimuthal integration.
         _integrator (AzimuthalIntegrator): AzimuthalIntegrator instance.
+        _q_map (numpy.ndarray): momentum transfer of map of the detector image.
+            q = 4 * pi * sin(theta) / lambda
         _ma_window (int): moving average window size.
     """
 
@@ -80,6 +75,7 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         self._fom_integ_range = None
 
         self._integrator = None
+        self._q_map = None
 
         self._reset_ma = False
 
@@ -87,7 +83,7 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
         """Override."""
         g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._sample_dist = float(g_cfg['sample_distance'])
-        self._wavelength = energy2wavelength(float(g_cfg['photon_energy']))
+        self._wavelength = energy2wavelength(1e3 * float(g_cfg['photon_energy']))
         self._update_moving_average(g_cfg)
 
         cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
@@ -129,13 +125,19 @@ class _AzimuthalIntegrationProcessorBase(_BaseProcessor):
                                             0,
                                             self._wavelength))
 
+        try:
+            # 1/nm -> 1/A
+            self._q_map = 0.1 * self._integrator._cached_array["q_center"]
+        except KeyError:
+            pass
+
         return self._integrator
 
     def _update_moving_average(self, v):
         pass
 
 
-class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
+class AzimuthalIntegProcessorPulse(_AzimuthalIntegProcessorBase):
     """Pulse-resolved azimuthal integration processor."""
 
     @profiler("Azimuthal Integration Processor (Pulse)")
@@ -186,15 +188,17 @@ class AzimuthalIntegrationProcessorPulse(_AzimuthalIntegrationProcessorBase):
                 diff, momentum, *self._fom_integ_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
-        processed.pulse.ai.x = momentum
-        processed.pulse.ai.y = intensities
-        processed.pulse.ai.fom = foms
+        ai = processed.pulse.ai
+        ai.x = momentum
+        ai.y = intensities
+        ai.fom = foms
+
         # Note: It is not correct to calculate the mean of intensities
         #       since the result is equivalent to setting all nan to zero
         #       instead of nanmean.
 
 
-class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
+class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
     """Train-resolved azimuthal integration processor."""
 
     _intensity_ma = MovingAverageArray()
@@ -248,9 +252,11 @@ class AzimuthalIntegrationProcessorTrain(_AzimuthalIntegrationProcessorBase):
             fom = slice_curve(self._intensity_ma, momentum, *self._fom_integ_range)[0]
             fom = np.sum(np.abs(fom))
 
-            processed.ai.x = momentum
-            processed.ai.y = self._intensity_ma
-            processed.ai.fom = fom
+            ai = processed.ai
+            ai.x = momentum
+            ai.y = self._intensity_ma
+            ai.fom = fom
+            ai.q_map = self._q_map
 
         # ------------------------------------
         # pump-probe azimuthal integration
