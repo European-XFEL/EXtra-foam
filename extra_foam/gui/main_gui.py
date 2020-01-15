@@ -164,8 +164,9 @@ class MainGUI(QMainWindow):
         self._tool_bar.addSeparator()
 
         image_tool_at = self.addAction("Image tool", "image_tool.png")
-        image_tool_at.triggered.connect(lambda: (self._image_tool.show(),
-                                                 self._image_tool.activateWindow()))
+        image_tool_at.triggered.connect(
+            lambda: (self._image_tool.show(),
+                     self._image_tool.activateWindow()))
 
         open_poi_window_at = self.addAction("Pulse-of-interest", "poi.png")
         open_poi_window_at.triggered.connect(

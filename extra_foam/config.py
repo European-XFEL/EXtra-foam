@@ -127,6 +127,9 @@ class _Config(dict):
         "TOPIC": "",
         # QTimer interval for updating plots, in milliseconds
         "PLOT_UPDATE_INTERVAL": 10,
+        # Update interval for updating accumulated data, e.g. correlation,
+        # heatmap, in milliseconds
+        "ACCUMULATED_PLOT_UPDATE_INTERVAL": 1000,
         # QTimer interval for monitoring processes, in milliseconds
         "PROCESS_MONITOR_HEART_BEAT": 5000,
         # QTimer interval for updating available sources, in milliseconds

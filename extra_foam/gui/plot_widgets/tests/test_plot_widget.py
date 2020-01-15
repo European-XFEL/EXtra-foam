@@ -1,7 +1,8 @@
 import unittest
+from unittest.mock import MagicMock
 
 from extra_foam.gui import mkQApp
-from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF
+from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF, TimedPlotWidgetF
 from extra_foam.logger import logger
 
 
@@ -56,3 +57,17 @@ class TestPlotWidget(unittest.TestCase):
         # test if y_min/ymax have different lengths
         with self.assertRaises(ValueError):
             plot.setData([1, 2, 3], [1, 2, 3], y_min=[0, 0, 0], y_max=[2, 2])
+
+
+class TestTimedPlotWidgetF(unittest.TestCase):
+    def testUpdate(self):
+        widget = TimedPlotWidgetF()
+        widget.refresh = MagicMock()
+
+        self.assertIsNone(widget._data)
+        widget._refresh_imp()
+        widget.refresh.assert_not_called()
+
+        widget.updateF(1)
+        widget._refresh_imp()
+        widget.refresh.assert_called_once()
