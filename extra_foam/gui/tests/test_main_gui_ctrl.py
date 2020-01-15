@@ -15,7 +15,6 @@ from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import PulseOfInterestWindow
 from extra_foam.config import (
     _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode,
-    RoiCombo
 )
 from extra_foam.processes import wait_until_redis_shutdown
 

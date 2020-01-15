@@ -9,7 +9,7 @@ from extra_foam.gui import mkQApp
 from extra_foam.config import config
 from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
 from extra_foam.services import start_redis_server
-from extra_foam.processes import wait_until_redis_shutdown
+from extra_foam.processes import ProcessInfoList, wait_until_redis_shutdown
 
 app = mkQApp()
 
@@ -30,10 +30,10 @@ class TestDataSourceWidget(unittest.TestCase):
         wait_until_redis_shutdown()
 
     @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCES_EXPIRATION_TIME": 10})
-    def testDataSourceList(self):
+    def testDataSourceListMV(self):
         parent = self.DummyParent()
         widget = DataSourceWidget(parent)
-        model = widget._list_model
+        model = widget._avail_src_model
         proxy = widget._mon
 
         # test default
@@ -54,6 +54,39 @@ class TestDataSourceWidget(unittest.TestCase):
         time.sleep(0.020)
         widget.updateSourceList()
         self.assertListEqual([], model._sources)
+
+    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS"})
+    @patch("extra_foam.gui.ctrl_widgets.data_source_widget.list_foam_processes")
+    def testProcessMonitorMV(self, query):
+        parent = self.DummyParent()
+        widget = DataSourceWidget(parent)
+        view = widget._process_mon_view
+        model = widget._process_mon_model
+
+        query.return_value = [ProcessInfoList(
+            name='ZeroMQ',
+            foam_name='foam name',
+            foam_type='foam type',
+            pid=1234,
+            status='zombie'
+        )]
+        widget.updateProcessInfo()
+        self.assertEqual("ZeroMQ", view.model().index(0, 0).data())
+        self.assertEqual(1234, view.model().index(0, 3).data())
+        self.assertEqual("zombie", view.model().index(0, 4).data())
+        # test old text will be removed
+        query.return_value = [ProcessInfoList(
+            name='kafka',
+            foam_name='foam name',
+            foam_type='foam type',
+            pid=1234,
+            status='sleeping'
+        )]
+        widget.updateProcessInfo()
+        self.assertEqual("kafka", view.model().index(0, 0).data())
+        self.assertEqual(1234, view.model().index(0, 3).data())
+        self.assertEqual("sleeping", view.model().index(0, 4).data())
+        self.assertIsNone(view.model().index(1, 4).data())
 
     def testDataSourceTreeItem(self):
         pass

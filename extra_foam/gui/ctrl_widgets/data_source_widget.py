@@ -10,13 +10,14 @@ All rights reserved.
 import copy
 
 from PyQt5.QtCore import (
-    QAbstractItemModel, QAbstractListModel, QModelIndex, Qt, QTimer,
-    pyqtSignal, pyqtSlot
+    QAbstractItemModel, QAbstractListModel, QAbstractTableModel, QModelIndex,
+    Qt, QTimer, pyqtSignal, pyqtSlot
 )
 from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
-    QComboBox, QGridLayout, QLabel, QLineEdit, QListView, QSplitter,
-    QStyledItemDelegate, QTabWidget, QTreeView, QVBoxLayout, QWidget
+    QComboBox, QGridLayout, QHeaderView, QLabel, QLineEdit, QListView,
+    QSplitter, QStyledItemDelegate, QTableView, QTabWidget, QTreeView,
+    QVBoxLayout, QWidget
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
@@ -29,9 +30,10 @@ from ...database import (
     MonProxy, SourceItem
 )
 from ...config import config, DataSource
+from ...processes import list_foam_processes
 
 
-class DSPropertyDelegate(QStyledItemDelegate):
+class PropertyItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -56,7 +58,7 @@ class DSPropertyDelegate(QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
 
-class DSSlicerDelegate(QStyledItemDelegate):
+class SlicerItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -81,7 +83,7 @@ class DSSlicerDelegate(QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
 
-class DSVrangeDelegate(QStyledItemDelegate):
+class BoundaryItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -107,7 +109,7 @@ class DSVrangeDelegate(QStyledItemDelegate):
 
 
 class DataSourceTreeItem:
-    """Item used in DataSourceTreeModel."""
+    """Item used in DataSourceItemModel."""
     def __init__(self, data, exclusive=False, parent=None):
         self._children = []
         self._data = data
@@ -124,7 +126,7 @@ class DataSourceTreeItem:
         try:
             return self._children[number]
         except IndexError:
-            return None
+            pass
 
     def appendChild(self, item):
         """Append a child item."""
@@ -152,7 +154,7 @@ class DataSourceTreeItem:
         try:
             return self._data[column]
         except IndexError:
-            return None
+            pass
 
     def setData(self, value, column):
         if 0 <= column < len(self._data):
@@ -174,7 +176,7 @@ class DataSourceTreeItem:
         return self._exclusive
 
 
-class DataSourceTreeModel(QAbstractItemModel):
+class DataSourceItemModel(QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
     device_toggled_sgn = pyqtSignal(object, bool)
@@ -389,7 +391,7 @@ class DataSourceListModel(QAbstractListModel):
     def data(self, index, role=None):
         """Override."""
         if not index.isValid() or index.row() > len(self._sources):
-            return None
+            return
 
         if role == Qt.DisplayRole:
             return self._sources[index.row()]
@@ -403,6 +405,46 @@ class DataSourceListModel(QAbstractListModel):
             self.beginResetModel()
             self._sources = sources
             self.endResetModel()
+
+
+class ProcessMonitorTableModel(QAbstractTableModel):
+    """Table model interface for monitoring running processes."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._processes = []
+        self._headers = ["Process name", "Foam name", "Foam type", "pid", "status"]
+
+    def headerData(self, section, orientation, role=None):
+        """Override."""
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
+
+    def data(self, index, role=None):
+        """Override."""
+        row, col = index.row(), index.column()
+        if not index.isValid() \
+                or row > len(self._processes) or col > len(self._headers):
+            return
+
+        if role == Qt.TextAlignmentRole:
+            return Qt.AlignCenter
+
+        if role == Qt.DisplayRole:
+            return self._processes[row][col]
+
+    def rowCount(self, parent=None, *args, **kwargs):
+        """Override."""
+        return len(self._processes)
+
+    def columnCount(self, parent=None, *args, **kwargs):
+        """Override."""
+        return len(self._headers)
+
+    def setupModelData(self, processes):
+        self.beginResetModel()
+        self._processes = processes
+        self.endResetModel()
 
 
 class ConnectionCtrlWidget(_AbstractCtrlWidget):
@@ -511,37 +553,47 @@ class DataSourceWidget(QWidget):
             ConnectionCtrlWidget)
 
         self._tree_view = QTreeView()
-        self._tree_model = DataSourceTreeModel(self)
-        self._tree_ppt_delegate = DSPropertyDelegate(self)
-        self._tree_slicer_delegate = DSSlicerDelegate(self)
-        self._tree_range_delegate = DSVrangeDelegate(self)
+        self._tree_model = DataSourceItemModel(self)
+        self._tree_ppt_delegate = PropertyItemDelegate(self)
+        self._tree_slicer_delegate = SlicerItemDelegate(self)
+        self._tree_range_delegate = BoundaryItemDelegate(self)
         self._tree_view.setModel(self._tree_model)
         self._tree_view.setItemDelegateForColumn(1, self._tree_ppt_delegate)
         self._tree_view.setItemDelegateForColumn(2, self._tree_slicer_delegate)
         self._tree_view.setItemDelegateForColumn(3, self._tree_range_delegate)
 
-        self._list_container = QTabWidget()
-        self._list_view = QListView()
-        self._list_model = DataSourceListModel()
-        self._list_view.setModel(self._list_model)
+        self._monitor_tb = QTabWidget()
+        self._avail_src_view = QListView()
+        self._avail_src_model = DataSourceListModel()
+        self._avail_src_view.setModel(self._avail_src_model)
+        self._process_mon_view = QTableView()
+        self._process_mon_model = ProcessMonitorTableModel()
+        self._process_mon_view.setModel(self._process_mon_model)
+        self._process_mon_view.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch)
 
         self.initUI()
 
         self._mon = MonProxy()
 
-        self._timer = QTimer()
-        self._timer.timeout.connect(self.updateSourceList)
-        self._timer.start(config["SOURCES_UPDATE_INTERVAL"])
+        self._avail_src_timer = QTimer()
+        self._avail_src_timer.timeout.connect(self.updateSourceList)
+        self._avail_src_timer.start(config["SOURCES_UPDATE_INTERVAL"])
+
+        self._process_mon_timer = QTimer()
+        self._process_mon_timer.timeout.connect(self.updateProcessInfo)
+        self._process_mon_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
 
     def initUI(self):
-        self._list_container.setTabPosition(QTabWidget.TabPosition.South)
-        self._list_container.addTab(self._list_view, "Available sources")
+        self._monitor_tb.setTabPosition(QTabWidget.TabPosition.South)
+        self._monitor_tb.addTab(self._avail_src_view, "Available sources")
+        self._monitor_tb.addTab(self._process_mon_view, "Process monitor")
 
         splitter = QSplitter(Qt.Vertical)
         splitter.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(self._tree_view)
-        splitter.addWidget(self._list_container)
+        splitter.addWidget(self._monitor_tb)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
 
@@ -556,4 +608,10 @@ class DataSourceWidget(QWidget):
     def updateSourceList(self):
         available_sources = self._mon.get_available_sources()
         if available_sources is not None:  # for unittest
-            self._list_model.setupModelData(list(available_sources.keys()))
+            self._avail_src_model.setupModelData(list(available_sources.keys()))
+
+    def updateProcessInfo(self):
+        info = []
+        for p in list_foam_processes():
+            info.append(list(p))
+        self._process_mon_model.setupModelData(info)
