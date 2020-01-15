@@ -18,11 +18,9 @@ __all__ = [
 
 
 from .file_stream_controller_w import FileStreamControllerWindow
-from .process_monitor_w import ProcessMonitor
 from .about_w import AboutWindow
 
 __all__ += [
-    "ProcessMonitor",
     "FileStreamControllerWindow",
     "AboutWindow",
 ]

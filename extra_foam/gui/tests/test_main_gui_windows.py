@@ -8,7 +8,7 @@ from extra_foam.gui.main_gui import MainGUI
 from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import (
     BinningWindow, StatisticsWindow, PulseOfInterestWindow, PumpProbeWindow,
-    ProcessMonitor, FileStreamControllerWindow, AboutWindow,
+    FileStreamControllerWindow, AboutWindow,
 )
 
 app = mkQApp()
@@ -81,20 +81,17 @@ class TestOpenCloseWindows(unittest.TestCase):
         streamer_window = self._check_open_satellite_window(streamer_action)
         self.assertIsInstance(streamer_window, FileStreamControllerWindow)
 
-        monitor_window = self._check_open_satellite_window(monitor_action)
-        self.assertIsInstance(monitor_window, ProcessMonitor)
         # open one window twice
-        self._check_open_satellite_window(monitor_action, registered=False)
+        self._check_open_satellite_window(about_action, registered=False)
 
         self._check_close_satellite_window(about_window)
         self._check_close_satellite_window(streamer_window)
-        self._check_close_satellite_window(monitor_window)
 
         # if a window is closed, it can be re-opened and a new instance
         # will be created
-        monitor_window_new = self._check_open_satellite_window(monitor_action)
-        self.assertIsInstance(monitor_window_new, ProcessMonitor)
-        self.assertIsNot(monitor_window_new, monitor_window)
+        about_window_new = self._check_open_satellite_window(about_action)
+        self.assertIsInstance(about_window_new, AboutWindow)
+        self.assertIsNot(about_window_new, about_window)
 
     def _check_open_window(self, action, registered=True):
         """Check triggering action about opening a window.
