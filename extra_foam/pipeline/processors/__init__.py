@@ -2,8 +2,7 @@ from .base_processor import (
     _BaseProcessor, SharedProperty
 )
 from .azimuthal_integration import (
-    AzimuthalIntegrationProcessorPulse,
-    AzimuthalIntegrationProcessorTrain,
+    AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
 )
 from .broker import Broker
 from .bin import BinProcessor

@@ -185,8 +185,11 @@ class DataItem:
 
 class AzimuthalIntegrationData(DataItem):
     """Azimuthal integration data item."""
-    __slots__ = ['x', 'y', 'fom']
-    pass
+    __slots__ = ['x', 'y', 'fom', 'q_map']
+
+    def __init__(self):
+        super().__init__()
+        self.q_map = None
 
 
 class _RoiGeomBase(ABC):
@@ -195,7 +198,7 @@ class _RoiGeomBase(ABC):
 
     """RoiGeom base class."""
     def __init__(self):
-        pass
+        super().__init__()
 
     @abstractmethod
     def rect(self, data, copy=False):

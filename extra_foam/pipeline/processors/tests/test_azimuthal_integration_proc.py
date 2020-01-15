@@ -1,12 +1,11 @@
 import unittest
 
 from extra_foam.pipeline.processors import (
-    AzimuthalIntegrationProcessorTrain,
-    AzimuthalIntegrationProcessorPulse
+    AzimuthalIntegProcessorTrain, AzimuthalIntegProcessorPulse
 )
 
 
-class TestAzimuthalIntegrationProcessor(unittest.TestCase):
+class TestAzimuthalIntegProcessor(unittest.TestCase):
     def setUp(self):
         # TODO: add test
         pass

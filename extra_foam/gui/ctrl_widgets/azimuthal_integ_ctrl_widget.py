@@ -15,10 +15,19 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ...algorithms import compute_q
 from ...config import Normalizer, config
 
 
 _DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
+
+
+def _estimate_q_range():
+    # TODO: Improve!
+    max_x = 1500 * config["PIXEL_SIZE"]
+    max_q = 1e-10 * compute_q(
+        config["SAMPLE_DISTANCE"], max_x, 1000 * config["PHOTON_ENERGY"])
+    return f'0, {max_q:.4f}'
 
 
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
@@ -64,8 +73,9 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._integ_method_cb = QComboBox()
         for method in config["AZIMUTHAL_INTEG_METHODS"]:
             self._integ_method_cb.addItem(method)
-        self._integ_range_le = SmartBoundaryLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
+
+        q_range = _estimate_q_range()
+        self._integ_range_le = SmartBoundaryLineEdit(q_range)
         self._integ_pts_le = SmartLineEdit(
             str(_DEFAULT_AZIMUTHAL_INTEG_POINTS))
         self._integ_pts_le.setValidator(QIntValidator(1, 8192))
@@ -74,11 +84,8 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         for v in self._available_norms:
             self._norm_cb.addItem(v)
 
-        self._auc_range_le = SmartBoundaryLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
-
-        self._fom_integ_range_le = SmartBoundaryLineEdit(
-            ', '.join([str(v) for v in config["AZIMUTHAL_INTEG_RANGE"]]))
+        self._auc_range_le = SmartBoundaryLineEdit("0, Inf")
+        self._fom_integ_range_le = SmartBoundaryLineEdit("0, Inf")
 
         self.initUI()
         self.initConnections()
