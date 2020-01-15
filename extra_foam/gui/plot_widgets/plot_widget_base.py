@@ -9,13 +9,15 @@ All rights reserved.
 """
 import abc
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QTimer
 from PyQt5.QtWidgets import QSizePolicy
 
 from .. import pyqtgraph as pg
 
 from .plot_items import BarPlotItem, ErrorBarItem
 from ..misc_widgets import make_pen
+from ...config import config
+from ...typing import final
 
 
 class PlotWidgetF(pg.GraphicsView):
@@ -162,3 +164,28 @@ class PlotWidgetF(pg.GraphicsView):
         if parent is not None:
             parent.unregisterPlotWidget(self)
         super().closeEvent(QCloseEvent)
+
+
+class TimedPlotWidgetF(PlotWidgetF):
+    def __init__(self, *args, **kwargs):
+        """Initialization."""
+        super().__init__(*args, **kwargs)
+
+        self._data = None
+
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._refresh_imp)
+        self._timer.start(config["ACCUMULATED_PLOT_UPDATE_INTERVAL"])
+
+    @abc.abstractmethod
+    def refresh(self):
+        pass
+
+    def _refresh_imp(self):
+        if self._data is not None:
+            self.refresh()
+
+    @final
+    def updateF(self, data):
+        """Override."""
+        self._data = data

@@ -10,6 +10,7 @@ All rights reserved.
 import abc
 from weakref import WeakKeyDictionary
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QSplitter, QWidget
 
 from ..mediator import Mediator
@@ -60,6 +61,7 @@ class _AbstractPlotWindow(QMainWindow, _AbstractWindowMixin):
             pulse-resolved or not.
         """
         super().__init__(parent=parent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         if parent is not None:
             parent.registerWindow(self)
 
@@ -118,6 +120,7 @@ class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
     def __init__(self, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         if parent is not None:
             parent.registerSatelliteWindow(self)
 
@@ -160,6 +163,7 @@ class _AbstractSpecialAnalysisWindow(QMainWindow, _AbstractWindowMixin):
             pulse-resolved or not.
         """
         super().__init__(parent=parent)
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         if parent is not None:
             parent.registerSpecialWindow(self)
 

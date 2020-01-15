@@ -11,12 +11,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import PlotWidgetF, ImageViewF
+from ..plot_widgets import TimedPlotWidgetF, TimedImageViewF
 from ..misc_widgets import make_brush, make_pen
 from ...config import config
 
 
-class Bin1dHist(PlotWidgetF):
+class Bin1dHist(TimedPlotWidgetF):
     """Bin1dHist class.
 
     Widget for visualizing histogram of count for 1D-binning.
@@ -44,9 +44,9 @@ class Bin1dHist(PlotWidgetF):
 
         self.updateLabel(self._device_id, self._ppt)
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        item = data.bin[0]
+        item = self._data.bin[0]
 
         device_id = item.device_id
         ppt = item.property
@@ -72,7 +72,7 @@ class Bin1dHist(PlotWidgetF):
         self.setLabel('left', self._default_y_label)
 
 
-class Bin1dHeatmap(ImageViewF):
+class Bin1dHeatmap(TimedImageViewF):
     """Bin1dHeatmap class.
 
     Widget for visualizing the heatmap of 1D binning.
@@ -93,9 +93,9 @@ class Bin1dHeatmap(ImageViewF):
 
         self.updateLabel(self._device_id, self._ppt)
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        item = data.bin[0]
+        item = self._data.bin[0]
 
         device_id = item.device_id
         ppt = item.property
@@ -129,7 +129,7 @@ class Bin1dHeatmap(ImageViewF):
         self.setLabel('left', self._default_y_label)
 
 
-class Bin2dHeatmap(ImageViewF):
+class Bin2dHeatmap(TimedImageViewF):
     """Bin2dHeatmap class.
 
     Widget for visualizing the heatmap of 2D binning.
@@ -160,9 +160,9 @@ class Bin2dHeatmap(ImageViewF):
                 self._device_ids, self._ppts, ['bottom', 'left']):
             self.updateLabel(dev, ppt, pos)
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        bin = data.bin
+        bin = self._data.bin
 
         for i in range(2):
             device_id = bin[i].device_id
