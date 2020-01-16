@@ -13,7 +13,9 @@ Contents:
    start
    main_gui
    image_tool
-   plot_windows
+   pump_probe
+   statistics
+   stream_data
 
 .. toctree::
    :caption: Tutorials

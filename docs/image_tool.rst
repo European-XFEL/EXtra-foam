@@ -1,6 +1,11 @@
 IMAGE TOOL
 ==========
 
+.. _pyFAI: https://github.com/silx-kit/pyFAI
+.. _imageio: https://github.com/imageio/imageio
+.. _clipping: https://docs.scipy.org/doc/numpy/reference/generated/numpy.clip.html
+
+
 The *ImageTool* window is the second control window which provides various image-related
 information and controls.
 
@@ -24,31 +29,10 @@ _____________
 |                            | but also in other plot windows) by automatically selecting levels  |
 |                            | based on the maximum and minimum values in the data.               |
 +----------------------------+--------------------------------------------------------------------+
-| *Moving average*           | Moving average window size of image data (only applied to          |
-|                            | train-resolved detectors). It is worth noting that the average is  |
-|                            | **not** calculated by nanmean_. It is helpful for visualization    |
-|                            | if the signal is very weak. Please note that this moving average   |
-|                            | will also affect the analysis. Namely, if this one and the moving  |
-|                            | average in the *Global setup* are specified at the same time, you  |
-|                            | will get a moving average of a moving average.                     |
-+----------------------------+--------------------------------------------------------------------+
 | *Threshold mask*           | An interval that pixel values outside the interval are set to 0.   |
 |                            | Please distinguish *threshold mask* from clipping_.                |
 +----------------------------+--------------------------------------------------------------------+
-| *Subtract dark*            | Apply pulse-by-pulse dark subtraction if checked.                  |
-+----------------------------+--------------------------------------------------------------------+
-| *Subtract background*      | A fixed background value to be subtracted from all the pixel       |
-|                            | values.                                                            |
-+----------------------------+--------------------------------------------------------------------+
 | *Save image*               | Save the current image to file. Please also see ImageFileFormat_   |
-+----------------------------+--------------------------------------------------------------------+
-| *Load reference*           | Load a reference image from file. Please also see ImageFileFormat_ |
-+----------------------------+--------------------------------------------------------------------+
-| *Set reference*            | Set the current displayed image as a reference image. For now,     |
-|                            | reference image is used as a stationary off-image in the           |
-|                            | *predefined off* mode in *pump-probe* analysis.                    |
-+----------------------------+--------------------------------------------------------------------+
-| *Remove reference*         | Remove the reference image.                                        |
 +----------------------------+--------------------------------------------------------------------+
 
 
@@ -101,8 +85,8 @@ Define the 1D projection of ROI (region of interest) analysis setup.
 +----------------------------+--------------------------------------------------------------------+
 
 
-Dark run
-________
+Gain / offset
+_____________
 
 Users can record a "dark run" whenever data is available. The dark run consists of a number
 of trains. The moving average of the each "dark pulse" in the train will be calculated,
@@ -122,8 +106,24 @@ which will then be used to apply dark subtraction to image data pulse-by-pulse.
     in a certain pulse is *NaN*, the moving average of that pixel will be *NaN* for that pulse.
 
 
-Azimuthal integration
-_____________________
+Reference
+_________
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| *Load reference*           | Load a reference image from file. Please also see ImageFileFormat_ |
++----------------------------+--------------------------------------------------------------------+
+| *Set reference*            | Set the current displayed image as a reference image. For now,     |
+|                            | reference image is used as a stationary off-image in the           |
+|                            | *predefined off* mode in *pump-probe* analysis.                    |
++----------------------------+--------------------------------------------------------------------+
+| *Remove reference*         | Remove the reference image.                                        |
++----------------------------+--------------------------------------------------------------------+
+
+
+Azimuthal integration 1D
+________________________
 
 **EXtra-foam** uses pyFAI_ to do azimuthal integration. As illustrated in the sketch below,
 the **origin** is located at the sample position, more precisely, where the X-ray beam crosses
@@ -193,3 +193,14 @@ https://karabo-data.readthedocs.io/en/latest/geometry.html
 |                            | local file system. For LPD and DSSC, **Extra-foam** provides a     |
 |                            | default geometry file.                                             |
 +----------------------------+--------------------------------------------------------------------+
+
+
+.. _ImageFileFormat:
+
+.. Note:: Image file format
+
+    The two recommended image file formats are `.npy` and `.tif`. However,
+    depending on the OS, the opened file dialog may allow you to enter any filename.
+    Therefore, in principle, users can save and load any other image file formats
+    supported by imageio_. However, it can be wrong if one writes and then loads a
+    `.png` file due to the auto scaling of pixel values.

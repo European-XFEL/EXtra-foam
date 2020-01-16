@@ -44,9 +44,9 @@ To build and run the c++ unittest (we use GoogleTest_):
 Release **EXtra-foam**
 """"""""""""""""""""""
 
-- Update the **ChangeLog** in the `documentation` branch;
+- Update the **changeLog**;
 - Update the version number in `docs/conf.py` and `extra_foam/__init__.py`;
-- Merge the `documentation` branch into the `dev` branch;
+- Merge the above change into the `dev` branch;
 - Merge the `dev` branch into the `master` branch;
 - Tag the `master` branch.
 
