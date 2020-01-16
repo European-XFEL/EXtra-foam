@@ -45,7 +45,7 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
 
     def testPpPredefinedOff(self):
         proc = self._proc
-        proc._mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
 
         data, processed = self._gen_data(1001)
 
@@ -158,7 +158,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc._indices_on = [0, 1, 5]
         proc._indices_off = [1]
 
-        proc._mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
         with self.assertRaises(PumpProbeIndexError):
             # the maximum index is 4
             data, _ = self._gen_data(1001)
@@ -180,10 +180,10 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
             data, _ = self._gen_data(1001)
             proc.process(data)
 
-        # off-indices check is not trigger in PRE_DEFINED_OFF mode
+        # off-indices check is not trigger in REFERENCE_AS_OFF mode
         proc._indices_on = [0, 1]
         proc._indices_off = [5]
-        proc._mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
         data, _ = self._gen_data(1001)
         proc.process(data)
 
@@ -204,7 +204,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
 
     def testPredefinedOff(self):
         proc = self._proc
-        proc._mode = PumpProbeMode.PRE_DEFINED_OFF
+        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
         proc._indices_on = [0, 2]
         proc._indices_off = [1, 3]
 

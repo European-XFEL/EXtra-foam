@@ -44,7 +44,7 @@ def read_image(filepath, *, expected_shape=None):
     """Read an image from file.
 
     :param str filepath: path of the image file.
-    :param tuple expected_shape: expect shape of the image.
+    :param tuple/None expected_shape: expect shape of the image.
 
     :return numpy.ndarray: image data.
     """
@@ -63,6 +63,8 @@ def read_image(filepath, *, expected_shape=None):
         if expected_shape is not None and img.shape != expected_shape:
             raise ValueError(f"Shape of image {img.shape} differs from "
                              f"expected {expected_shape}!")
+        elif img.ndim != 2:
+            raise ValueError("Image must be an array with 2 dimensions!")
 
         image_dtype = config["IMAGE_DTYPE"]
         if img.dtype != image_dtype:
@@ -72,3 +74,30 @@ def read_image(filepath, *, expected_shape=None):
 
     except Exception as e:
         raise ValueError(f"Failed to load image from {filepath}: {str(e)}")
+
+
+def read_cal_constants(filepath):
+    """Read calibration constant from the given file.
+
+    The file must be a '.npy' file.
+
+    :param str filepath: path of the constant file.
+
+    :return numpy.ndarray: constant array.
+    """
+    if not filepath:
+        raise ValueError("Please specify the image file!")
+
+    try:
+        c = np.load(filepath)
+    except Exception as e:
+        raise ValueError(f"Failed to load constants from {filepath}: {str(e)}")
+
+    if c.ndim not in (2, 3):
+        raise ValueError("Constants must be an array with 2 or 3 dimensions!")
+
+    image_dtype = config["IMAGE_DTYPE"]
+    if c.dtype != image_dtype:
+        c = c.astype(image_dtype)
+
+    return c

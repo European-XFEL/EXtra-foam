@@ -24,7 +24,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     _available_modes = OrderedDict({
         "": PumpProbeMode.UNDEFINED,
-        "predefined off": PumpProbeMode.PRE_DEFINED_OFF,
+        "reference as off": PumpProbeMode.REFERENCE_AS_OFF,
         "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
         "odd/even train": PumpProbeMode.ODD_TRAIN_ON
@@ -131,8 +131,8 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         if not self._pulse_resolved:
             return
 
-        if pp_mode == PumpProbeMode.PRE_DEFINED_OFF:
-            # off-pulse indices are ignored in PRE_DEFINED_OFF mode.
+        if pp_mode == PumpProbeMode.REFERENCE_AS_OFF:
+            # off-pulse indices are ignored in REFERENCE_AS_OFF mode.
             self._off_pulse_le.setEnabled(False)
         else:
             self._off_pulse_le.setEnabled(True)

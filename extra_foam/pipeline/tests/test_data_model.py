@@ -246,8 +246,6 @@ class TestImageData(unittest.TestCase):
         imgs[:, 0, :] = 2
         image_data = ImageData.from_array(imgs,
                                           threshold_mask=(0, 1),
-                                          gain=2.0,
-                                          offset=-100,
                                           poi_indices=[0, 1])
 
         self.assertEqual(2e-3, image_data.pixel_size)
@@ -266,8 +264,8 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(np.array([[0., 0.], [1., 1.]]),
                                       image_data.masked_mean)
 
-        self.assertEqual(2.0, image_data.gain)
-        self.assertEqual(-100, image_data.offset)
+        self.assertIsNone(image_data.gain_mean)
+        self.assertIsNone(image_data.offset_mean)
         self.assertEqual((0, 1), image_data.threshold_mask)
 
         # ---------------------
@@ -288,8 +286,6 @@ class TestImageData(unittest.TestCase):
         np.testing.assert_array_equal(np.array([[0., 1.], [1., 1.]]),
                                       image_data.masked_mean)
 
-        self.assertEqual(1, image_data.gain)
-        self.assertEqual(0, image_data.offset)
         self.assertEqual((0, 1), image_data.threshold_mask)
 
 

@@ -20,7 +20,7 @@ from ...database import Metadata as mt
 from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
 
-from extra_foam.algorithms import intersection, mask_image, mask_image_array
+from extra_foam.algorithms import intersection, mask_image_data
 
 
 class _RoiProcessorBase:
@@ -104,11 +104,12 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
                 f"[ROI][FOM] Unknown FOM type: {fom_type}")
 
         if roi.ndim == 3:
-            mask_image_array(
-                roi, image_mask=mask, threshold_mask=threshold_mask)
+            mask_image_data(roi,
+                            image_mask=mask,
+                            threshold_mask=threshold_mask)
             return handler(roi, axis=(-1, -2))
 
-        mask_image(roi, image_mask=mask, threshold_mask=threshold_mask)
+        mask_image_data(roi, image_mask=mask, threshold_mask=threshold_mask)
         return np.array([handler(roi)])
 
     def _process_norm(self, assembled, processed):

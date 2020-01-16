@@ -17,7 +17,7 @@ from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import mask_image, nanmeanImageArray, nanmeanImageArray
+from extra_foam.algorithms import mask_image_data, nanmean_image_data
 
 
 class PumpProbeProcessor(_BaseProcessor):
@@ -116,7 +116,7 @@ class PumpProbeProcessor(_BaseProcessor):
             if len(curr_means) == 1:
                 images_mean = curr_means[0].copy()
             else:
-                images_mean = nanmeanImageArray(image_on, image_off)
+                images_mean = nanmean_image_data((image_on, image_off))
         else:
             if assembled.ndim == 3:
                 if dropped_indices:
@@ -124,19 +124,19 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices:
                         raise DropAllPulsesError(
                             f"{tid}: all pulses were dropped")
-                    images_mean = nanmeanImageArray(assembled, indices)
+                    images_mean = nanmean_image_data(assembled, indices)
                 else:
                     # for performance
-                    images_mean = nanmeanImageArray(assembled)
+                    images_mean = nanmean_image_data(assembled)
             else:
                 # Note: _image is _mean for train-resolved detectors
                 images_mean = assembled
 
         # apply mask to the averaged images of the train
         masked_mean = images_mean.copy()
-        mask_image(masked_mean,
-                   image_mask=image_mask,
-                   threshold_mask=threshold_mask)
+        mask_image_data(masked_mean,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask)
 
         processed.image.mean = images_mean
         processed.image.masked_mean = masked_mean
@@ -145,13 +145,13 @@ class PumpProbeProcessor(_BaseProcessor):
         # Note: due to the in-place masking, the pump-probe code the the
         #       rest code are interleaved.
         if image_on is not None:
-            mask_image(image_on,
-                       image_mask=image_mask,
-                       threshold_mask=threshold_mask)
+            mask_image_data(image_on,
+                            image_mask=image_mask,
+                            threshold_mask=threshold_mask)
 
-            mask_image(image_off,
-                       image_mask=image_mask,
-                       threshold_mask=threshold_mask)
+            mask_image_data(image_off,
+                            image_mask=image_mask,
+                            threshold_mask=threshold_mask)
 
             processed.pp.image_on = image_on
             processed.pp.image_off = image_off
@@ -184,21 +184,21 @@ class PumpProbeProcessor(_BaseProcessor):
             indices_off = list(set(self._indices_off) - set(dropped_indices))
 
             # on and off are not from different trains
-            if mode in (PumpProbeMode.PRE_DEFINED_OFF,
+            if mode in (PumpProbeMode.REFERENCE_AS_OFF,
                         PumpProbeMode.SAME_TRAIN):
                 if assembled.ndim == 3:
                     # pulse resolved
                     if not indices_on:
                         raise DropAllPulsesError(
                             f"{tid}: all on pulses were dropped")
-                    image_on = nanmeanImageArray(assembled, indices_on)
+                    image_on = nanmean_image_data(assembled, indices_on)
 
                     curr_indices.extend(indices_on)
                     curr_means.append(image_on)
                 else:
                     image_on = assembled.copy()
 
-                if mode == PumpProbeMode.PRE_DEFINED_OFF:
+                if mode == PumpProbeMode.REFERENCE_AS_OFF:
                     if reference is None:
                         image_off = np.zeros_like(image_on)
                     else:
@@ -209,7 +209,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices_off:
                         raise DropAllPulsesError(
                             f"{tid}: all off pulses were dropped")
-                    image_off = nanmeanImageArray(assembled, indices_off)
+                    image_off = nanmean_image_data(assembled, indices_off)
                     curr_indices.extend(indices_off)
                     curr_means.append(image_off)
 
@@ -234,7 +234,7 @@ class PumpProbeProcessor(_BaseProcessor):
                         if not indices_on:
                             raise DropAllPulsesError(
                                 f"{tid}: all on pulses were dropped")
-                        self._prev_unmasked_on = nanmeanImageArray(
+                        self._prev_unmasked_on = nanmean_image_data(
                             assembled, indices_on)
                         curr_indices.extend(indices_on)
                         curr_means.append(self._prev_unmasked_on)
@@ -256,7 +256,7 @@ class PumpProbeProcessor(_BaseProcessor):
                             if not indices_off:
                                 raise DropAllPulsesError(
                                     f"{tid}: all off pulses were dropped")
-                            image_off = nanmeanImageArray(assembled, indices_off)
+                            image_off = nanmean_image_data(assembled, indices_off)
                             curr_indices.extend(indices_off)
                             curr_means.append(image_off)
                         else:
@@ -292,7 +292,7 @@ class PumpProbeProcessor(_BaseProcessor):
               how many pulses are there in the train.
         """
         # check index range
-        if self._mode == PumpProbeMode.PRE_DEFINED_OFF:
+        if self._mode == PumpProbeMode.REFERENCE_AS_OFF:
             max_index = max(self._indices_on)
         else:
             max_index = max(max(self._indices_on), max(self._indices_off))

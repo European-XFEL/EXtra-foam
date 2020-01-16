@@ -16,8 +16,7 @@ from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
 from .plot_items import ImageItem, MaskItem
-from ...file_io import read_image, write_image
-from ...ipc import ReferencePub
+from ...file_io import write_image
 from ...logger import logger
 
 
@@ -55,8 +54,6 @@ class ImageAnalysis(ImageViewF):
 
         self._image_data = None
 
-        self._ref_pub = ReferencePub()
-
     def setImage(self, *args, **kwargs):
         """Overload."""
         super().setImage(*args, **kwargs)
@@ -88,36 +85,6 @@ class ImageAnalysis(ImageViewF):
         try:
             write_image(self._image, filepath)
             logger.info(f"[Image tool] Image saved in {filepath}")
-        except ValueError as e:
-            logger.error(f"[Image tool] {str(e)}")
-
-    def setReferenceImage(self):
-        """Set the displayed image as reference image.
-
-        Note: image mask is not included.
-        """
-        self._ref_pub.set(self._image)
-
-    def removeReferenceImage(self):
-        """Remove reference image."""
-        self._ref_pub.remove()
-
-    def loadReferenceImage(self):
-        """Load the reference image from a file."""
-        if self._image is None:
-            logger.error("[Image tool] Cannot load reference image without "
-                         "detector image!")
-            return
-
-        filepath = QFileDialog.getOpenFileName(
-            caption="Load reference image",
-            directory=osp.expanduser("~"),
-            filter=self.IMAGE_FILE_FILTER)[0]
-
-        try:
-            img = read_image(filepath, expected_shape=self._image.shape)
-            logger.info(f"[Image tool] Loaded reference image from {filepath}")
-            self._ref_pub.set(img)
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 

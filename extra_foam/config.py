@@ -28,7 +28,7 @@ class DataSource(IntEnum):
 
 class PumpProbeMode(IntEnum):
     UNDEFINED = 0
-    PRE_DEFINED_OFF = 1  # use pre-defined reference image
+    REFERENCE_AS_OFF = 1  # use pre-defined reference image
     SAME_TRAIN = 2  # on-/off- pulses in the same train
     EVEN_TRAIN_ON = 3  # on-/off- pulses have even/odd train IDs, respectively
     ODD_TRAIN_ON = 4  # on/-off- pulses have odd/even train IDs, respectively
@@ -144,8 +144,6 @@ class _Config(dict):
         "MAX_QUEUE_SIZE": 2,
         # blocking time (s) in get/put method of Queue
         "TIMEOUT": 0.1,
-        # maximum number of trains in a dark run
-        "MAX_DARK_TRAIN_COUNT": 999999,
         # colors of for ROI 1 to 4
         "ROI_COLORS": ['b', 'r', 'g', 'o'],
         # colors for correlation parameters 1 to 4

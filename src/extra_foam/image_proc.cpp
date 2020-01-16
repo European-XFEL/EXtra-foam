@@ -30,10 +30,10 @@ namespace foam
 {
 
 template<typename T, xt::layout_type L>
-struct is_image<xt::pytensor<T, 2, L>> : std::true_type {};
+struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
 
 template<typename T, xt::layout_type L>
-struct is_image_array<xt::pytensor<T, 3, L>> : std::true_type {};
+struct IsImageArray<xt::pytensor<T, 3, L>> : std::true_type {};
 
 } // foam
 
@@ -69,77 +69,111 @@ PYBIND11_MODULE(image_proc, m)
     { return nanmeanImageArray(src1, src2); },
     py::arg("src1").noconvert(), py::arg("src2").noconvert());
 
-  m.def("movingAverageImage", &movingAverageImage<xt::pytensor<double, 2>>,
+  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<double, 2>>,
                               py::arg("src").noconvert(), py::arg("data").noconvert(),
                               py::arg("count"));
-  m.def("movingAverageImage", &movingAverageImage<xt::pytensor<float, 2>>,
+  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<float, 2>>,
                               py::arg("src").noconvert(), py::arg("data").noconvert(),
                               py::arg("count"));
 
-  m.def("movingAverageImageArray", &movingAverageImageArray<xt::pytensor<double, 3>>,
-                                   py::arg("src").noconvert(), py::arg("data").noconvert(),
-                                   py::arg("count"));
-  m.def("movingAverageImageArray", &movingAverageImageArray<xt::pytensor<float, 3>>,
-                                   py::arg("src").noconvert(), py::arg("data").noconvert(),
-                                   py::arg("count"));
+  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<double, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(),
+                              py::arg("count"));
+  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<float, 3>>,
+                              py::arg("src").noconvert(), py::arg("data").noconvert(),
+                              py::arg("count"));
 
-  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, double, double))
-                     &maskImage<xt::pytensor<double, 2>, double>,
-                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, float, float))
-                     &maskImage<xt::pytensor<float, 2>, float>,
-                     py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", &maskImageData<xt::pytensor<double, 2>>, py::arg("src").noconvert());
+  m.def("maskImageData", &maskImageData<xt::pytensor<float, 2>>, py::arg("src").noconvert());
 
-  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
-                     py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
-                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
-                     py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, double, double))
+                         &maskImageData<xt::pytensor<double, 2>, double>,
+                         py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, float, float))
+                         &maskImageData<xt::pytensor<float, 2>, float>,
+                         py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&, double, double))
-                     &maskImage<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
-                     py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&, float, float))
-                     &maskImage<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
-                     py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("maskImageArray", &maskImageArray<xt::pytensor<double, 3>, double>,
-                          py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImageArray", &maskImageArray<xt::pytensor<float, 3>, float>,
-                          py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&, double, double))
+                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(),
+                         py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&, float, float))
+                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(),
+                         py::arg("lb"), py::arg("ub"));
 
-  m.def("maskImageArray", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
-                          &maskImageArray<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
-                          py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskImageArray", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
-                          &maskImageArray<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
-                          py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskImageData", &maskImageData<xt::pytensor<double, 3>, double>,
+                         py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", &maskImageData<xt::pytensor<float, 3>, float>,
+                         py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskImageArray", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&, double, double))
-                          &maskImageArray<xt::pytensor<double, 3>, xt::pytensor<bool, 2>, double>,
-                          py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImageArray", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&, float, float))
-                          &maskImageArray<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
-                          py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<double, 2>>, py::arg("src").noconvert());
-  m.def("nanToZeroImage", &nanToZeroImage<xt::pytensor<float, 2>>, py::arg("src").noconvert());
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&, double, double))
+                         &maskImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>, double>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&, float, float))
+                         &maskImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<double, 3>>, py::arg("src").noconvert());
-  m.def("nanToZeroImageArray", &nanToZeroImageArray<xt::pytensor<float, 3>>, py::arg("src").noconvert());
+  m.def("maskImageData", &maskImageData<xt::pytensor<double, 3>>, py::arg("src").noconvert());
+  m.def("maskImageData", &maskImageData<xt::pytensor<float, 3>>, py::arg("src").noconvert());
 
-  m.def("subDarkImageArray", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
-                             &subDarkImageArray<xt::pytensor<double, 3>>,
-                             py::arg("src").noconvert(), py::arg("dark").noconvert());
-  m.def("subDarkImageArray", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
-                             &subDarkImageArray<xt::pytensor<float, 3>>,
-                             py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<double, 3>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<float, 3>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
 
-  m.def("subDarkImage", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-                        &subDarkImage<xt::pytensor<double, 2>>,
-                        py::arg("src").noconvert(), py::arg("dark").noconvert());
-  m.def("subDarkImage", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-                        &subDarkImage<xt::pytensor<float, 2>>,
-                        py::arg("src").noconvert(), py::arg("dark").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<double, 2>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  m.def("correctOffset", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                         &correctImageData<OffsetPolicy, xt::pytensor<float, 2>>,
+                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+
+  m.def("correctGain", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                       &correctImageData<GainPolicy, xt::pytensor<double, 3>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                       &correctImageData<GainPolicy, xt::pytensor<float, 3>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+
+  m.def("correctGain", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                       &correctImageData<GainPolicy, xt::pytensor<double, 2>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  m.def("correctGain", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                       &correctImageData<GainPolicy, xt::pytensor<float, 2>>,
+                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+
+  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 3>&,
+                                       const xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
+                             &correctImageData<xt::pytensor<double, 3>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 3>&,
+                                       const xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
+                             &correctImageData<xt::pytensor<float, 3>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+
+  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 2>&,
+                                       const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
+                             &correctImageData<xt::pytensor<double, 2>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 2>&,
+                                       const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
+                             &correctImageData<xt::pytensor<float, 2>>,
+                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
 }
