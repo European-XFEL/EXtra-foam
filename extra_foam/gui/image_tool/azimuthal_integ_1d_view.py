@@ -7,13 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtWidgets import QVBoxLayout, QSplitter
+from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
 from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import make_pen
-from ..plot_widgets import ImageAnalysis, PlotWidgetF
+from ..plot_widgets import ImageAnalysis, ImageViewF, PlotWidgetF
 from ...config import AnalysisType, plot_labels
 
 
@@ -54,6 +54,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._image_view = ImageAnalysis(hide_axis=False)
+        self._q_view = ImageViewF(hide_axis=False)
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
         self._ctrl_widget = self.parent().createCtrlWidget(
             AzimuthalIntegCtrlWidget)
@@ -62,10 +63,14 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
 
     def initUI(self):
         """Override."""
+        view_tab = QTabWidget()
+        view_tab.setTabPosition(QTabWidget.TabPosition.South)
+        view_tab.addTab(self._image_view, "Corrected")
+        view_tab.addTab(self._q_view, "Momentum transfer (q)")
+
         view_splitter = QSplitter()
-        view_splitter.setHandleWidth(9)
         view_splitter.setChildrenCollapsible(False)
-        view_splitter.addWidget(self._image_view)
+        view_splitter.addWidget(view_tab)
         view_splitter.addWidget(self._azimuthal_integ_1d_curve)
 
         layout = QVBoxLayout()
@@ -81,6 +86,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         """Override."""
         if auto_update or self._image_view.image is None:
             self._image_view.setImageData(_SimpleImageData(data.image))
+            self._q_view.setImage(data.ai.q_map, auto_range=True, auto_levels=True)
             self._azimuthal_integ_1d_curve.updateF(data)
 
     def onActivated(self):

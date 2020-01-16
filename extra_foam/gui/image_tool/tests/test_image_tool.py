@@ -456,17 +456,15 @@ class TestImageTool(unittest.TestCase):
         proc.update()
 
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'], proc._sample_dist)
-        self.assertAlmostEqual(energy2wavelength(config['PHOTON_ENERGY']), proc._wavelength)
+        self.assertAlmostEqual(0.001 * energy2wavelength(config['PHOTON_ENERGY']), proc._wavelength)
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         default_integ_method = 'BBox'
         self.assertEqual(default_integ_method, proc._integ_method)
         default_normalizer = Normalizer.UNDEFINED
         self.assertEqual(default_normalizer, proc._normalizer)
         self.assertEqual(_DEFAULT_AZIMUTHAL_INTEG_POINTS, proc._integ_points)
-        default_integ_range = tuple(config["AZIMUTHAL_INTEG_RANGE"])
-        self.assertTupleEqual(tuple(config["AZIMUTHAL_INTEG_RANGE"]), proc._integ_range)
-        self.assertTupleEqual(default_integ_range, proc._auc_range)
-        self.assertTupleEqual(default_integ_range, proc._fom_integ_range)
+        self.assertTupleEqual((0, math.inf), proc._auc_range)
+        self.assertTupleEqual((0, math.inf), proc._fom_integ_range)
         default_pixel_size = config["PIXEL_SIZE"]
         self.assertEqual(default_pixel_size, proc._pixel1)
         self.assertEqual(default_pixel_size, proc._pixel2)

@@ -16,7 +16,7 @@ import time
 from .exceptions import StopPipelineError, ProcessingError
 from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
-    AzimuthalIntegrationProcessorPulse, AzimuthalIntegrationProcessorTrain,
+    AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
     BinProcessor,
     Broker,
     CorrelationProcessor,
@@ -199,7 +199,7 @@ class PulseWorker(ProcessWorker):
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
         self._roi_proc = RoiProcessorPulse()
-        self._ai_proc = AzimuthalIntegrationProcessorPulse()
+        self._ai_proc = AzimuthalIntegProcessorPulse()
         self._post_pulse_filter = PostPulseFilter()
         self._pp_proc = PumpProbeProcessor()
 
@@ -225,7 +225,7 @@ class TrainWorker(ProcessWorker):
         self._output = MpOutQueue(drop=True, final=True)
 
         self._roi_proc = RoiProcessorTrain()
-        self._ai_proc = AzimuthalIntegrationProcessorTrain()
+        self._ai_proc = AzimuthalIntegProcessorTrain()
 
         self._histogram = HistogramProcessor()
         self._correlation_proc = CorrelationProcessor()

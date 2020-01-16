@@ -24,7 +24,7 @@ from PyQt5.QtCore import (
 )
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
-    QAction, QHBoxLayout, QMainWindow, QScrollArea, QSplitter,
+    QAction, QFrame, QHBoxLayout, QMainWindow, QScrollArea, QSplitter,
     QTabWidget, QVBoxLayout, QWidget
 )
 from redis import ConnectionError
@@ -38,9 +38,8 @@ from .gui_helpers import create_icon_button
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    BinningWindow, ProcessMonitor, StatisticsWindow, PulseOfInterestWindow,
-    PumpProbeWindow,
-    FileStreamControllerWindow, AboutWindow, TrXasWindow
+    BinningWindow, StatisticsWindow, PulseOfInterestWindow,
+    PumpProbeWindow, FileStreamControllerWindow, AboutWindow, TrXasWindow
 )
 from .. import __version__
 from ..config import config
@@ -98,7 +97,6 @@ class MainGUI(QMainWindow):
 
     _db = RedisConnection()
 
-    _SPLITTER_HANDLE_WIDTH = 9
     _SPECIAL_ANALYSIS_ICON_WIDTH = 100
 
     _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
@@ -126,14 +124,14 @@ class MainGUI(QMainWindow):
 
         self._cw = QSplitter()
         self._cw.setChildrenCollapsible(False)
-        self._cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
         self.setCentralWidget(self._cw)
 
         self._left_cw_container = QScrollArea()
+        self._left_cw_container.setFrameShape(QFrame.NoFrame)
         self._left_cw = QTabWidget()
         self._right_cw_container = QScrollArea()
+        self._right_cw_container.setFrameShape(QFrame.NoFrame)
         self._right_cw = QSplitter(Qt.Vertical)
-        self._right_cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
         self._right_cw.setChildrenCollapsible(False)
 
         self._source_cw = DataSourceWidget(self)
@@ -187,11 +185,6 @@ class MainGUI(QMainWindow):
             functools.partial(self.onOpenPlotWindow, BinningWindow))
 
         self._tool_bar.addSeparator()
-
-        open_process_monitor_at = self.addAction(
-            "Process monitor", "process_monitor.png")
-        open_process_monitor_at.triggered.connect(
-            lambda: self.onOpenSatelliteWindow(ProcessMonitor))
 
         open_file_stream_window_at = self.addAction(
             "File streamer", "file_streamer.png")
@@ -412,6 +405,7 @@ class MainGUI(QMainWindow):
                 logger.warning(f"No response from the Redis server! "
                                f"Shutting down!")
                 self.close()
+            time.sleep(5)
 
     def addAction(self, description, filename):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))

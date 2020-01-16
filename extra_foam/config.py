@@ -296,8 +296,6 @@ class _Config(dict):
                 'nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel', 'lut',
                 'lut_ocl'
             ],
-            # range (lower, upper) of the radial unit of azimuthal integration
-            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
             # pixels with values outside the (lower, upper) range will be masked
             "MASK_RANGE": [-1e5, 1e5],
             # photon energy, in keV
@@ -323,7 +321,6 @@ class _Config(dict):
                 'lut',
                 'lut_ocl'
             ],
-            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.1],
             "SAMPLE_DISTANCE": 5.5,
             "PHOTON_ENERGY": 9.3,
         },
@@ -350,7 +347,6 @@ class _Config(dict):
                 'lut',
                 'lut_ocl'
             ],
-            "AZIMUTHAL_INTEG_RANGE": [0.2, 5],
             "SAMPLE_DISTANCE": 0.4,
             "PHOTON_ENERGY": 9.3,
         },
@@ -369,7 +365,6 @@ class _Config(dict):
                 "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
                 "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
             ],
-            "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "SAMPLE_DISTANCE": 2.0,
             "PHOTON_ENERGY": 9.3,
         },
@@ -386,7 +381,6 @@ class _Config(dict):
                 "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
                 "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
             ],
-            "AZIMUTHAL_INTEG_RANGE": [0.05, 0.4],
             "SAMPLE_DISTANCE": 2.0,
             "PHOTON_ENERGY": 9.3,
         },
@@ -399,7 +393,6 @@ class _Config(dict):
             "SOURCE_NAME_FILE": [
                 "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
             ],
-            "AZIMUTHAL_INTEG_RANGE": [1e-3, 0.02],
             "SAMPLE_DISTANCE": 0.6,
             "PHOTON_ENERGY": 0.780,
         },
@@ -430,7 +423,6 @@ class _Config(dict):
                 'lut',
                 'lut_ocl'
             ],
-            "AZIMUTHAL_INTEG_RANGE": [0, 0.18],
             "SAMPLE_DISTANCE": 0.6,
             "PHOTON_ENERGY": 0.780,
         },
