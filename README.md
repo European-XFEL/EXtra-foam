@@ -9,4 +9,4 @@ on-line (real-time, as fast as the calibration pipeline) and off-line data
 analysis and visualization for experiments at European XFEL that using 2D 
 detectors, e.g. AGIPD, DSSC, LPD, JungFrau, etc.
 
-[Documentation](https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/)
+[Documentation](https://extra-foam.readthedocs.io/en/latest/)
