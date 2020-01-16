@@ -1,6 +1,45 @@
 CHANGELOG
 =========
 
+0.7.2 (16 January 2020)
+-----------------------
+
+- **Improvement**
+
+    - Remove 'AZIMUTHAL_INTEG_RANGE' from configuration #32
+    - Remove 'process monitor' from action and make it a tab in DataSourceWidget #32
+    - Reduce the update frequency of plots which accumulates data, for example, correlation,
+      histogram, heatmap, etc., to 1 Hz #31
+    - Improve Redis server configuration #29
+    - Allow ImageViewF.setImage(None) #28
+    - Provide better interface for users to call C++ code #25
+    - Log geometry change and remove 'AZIMUTHAL_INTEG_POINTS", "CENTER_X", "CENTER_Y" from
+      configuration #24
+    - Rearrange C++ code and separate benchmark code from unittest #15
+    - Re-implement PairData -> SimplePairSequence and AccumulatedData -> OneWayAccuPairSequence #14
+    - Re-implement BinProcessor. Now, data history is stored and users can re-bin it at anytime #14
+    - Reduce MAX_QUEUE_SIZE from 5 to 2 to reduce latency #14
+    - Remove 'update_hist' in PumpProbeData and CorrelationData. Now GUI update is completely
+      decoupled from processors #14
+    - Merge CorrelationWindow into StatisticsWindow. Rename the old statistics widgets to histogram
+      widgets; add a new tab in the MainGUI which is dedicated for 'statistics' control #14
+    - Update dependencies #11
+    - Simplify ThreadLogger code #10
+
+- **New Feature**
+
+    - Implement q-map visualization #32
+    - Implement pixel-wise gain-offset correction by loading numpy array from files #25
+    - New ROI analysis interface (enable different FOMs of ROI; enable pulse-resolved
+      ROI normalizer; enable pulse-resolved ROI1 +/- ROI2 FOM; enable visualization of
+      ROI projection and pulse-resolved ROI FOM in ImageTool) #12
+
+- **Bug Fix**
+
+    - Fix a bug in MovingAverageScalar and MovingAverageArray. Setting a new
+      value of None will reset the moving average instead of being ignored #14
+
+
 0.7.1 (4 December 2019)
 -----------------------
 
