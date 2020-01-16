@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import ImageViewF, PlotWidgetF
+from ..plot_widgets import ImageViewF, PlotWidgetF, TimedPlotWidgetF
 from ..misc_widgets import make_brush, make_pen
 from ...config import config, AnalysisType, plot_labels
 
@@ -104,7 +104,7 @@ class PumpProbeVFomPlot(PlotWidgetF):
             self._off_pulse.setData(x, y_off)
 
 
-class PumpProbeFomPlot(PlotWidgetF):
+class PumpProbeFomPlot(TimedPlotWidgetF):
     """PumpProbeFomPlot class.
 
     Widget for displaying the evolution of FOM in pump-probe analysis.
@@ -120,9 +120,9 @@ class PumpProbeFomPlot(PlotWidgetF):
 
         self._plot = self.plotScatter(brush=make_brush('g'))
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        pp = data.corr.pp
+        pp = self._data.corr.pp
         x, y = pp.x, pp.y
         self._plot.setData(x, y)
 

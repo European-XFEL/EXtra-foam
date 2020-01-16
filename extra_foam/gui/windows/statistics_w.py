@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..misc_widgets import make_brush, make_pen
-from ..plot_widgets import PlotWidgetF
+from ..plot_widgets import PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
 
@@ -40,7 +40,7 @@ class InTrainFomPlot(PlotWidgetF):
             self._plot.setData(range(len(foms)), foms)
 
 
-class FomHist(PlotWidgetF):
+class FomHist(TimedPlotWidgetF):
     """FomHist class
 
     Plot statistics of accumulated FOMs from different analysis.
@@ -53,16 +53,18 @@ class FomHist(PlotWidgetF):
         self.setLabel('bottom', 'FOM')
         self._plot = self.plotBar()
 
-    def updateF(self, data):
-        bin_centers = data.hist.bin_centers
-        hist = data.hist.hist
+    def refresh(self):
+        """Override."""
+        item = self._data.hist
+        hist, bin_centers = item.hist, item.bin_centers
+
         if bin_centers is None:
             self.reset()
         else:
             self._plot.setData(bin_centers, hist)
 
 
-class CorrelationPlot(PlotWidgetF):
+class CorrelationPlot(TimedPlotWidgetF):
     """CorrelationPlot class.
 
     Widget for displaying correlations between FOM and different parameters.
@@ -90,9 +92,9 @@ class CorrelationPlot(PlotWidgetF):
 
         self._newScatterPlot()
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        item = data.corr[self._idx]
+        item = self._data.corr[self._idx]
 
         device_id = item.device_id
         ppt = item.property

@@ -7,8 +7,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import abc
+
 import numpy as np
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
 from .. import pyqtgraph as pg
@@ -19,6 +21,7 @@ from ..misc_widgets import colorMapFactory, make_pen
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
 from ...config import config
+from ...typing import final
 
 
 class ImageViewF(QWidget):
@@ -231,3 +234,28 @@ class ImageViewF(QWidget):
     def close(self):
         self.parent().unregisterPlotWidget(self)
         super().close()
+
+
+class TimedImageViewF(ImageViewF):
+    def __init__(self, *args, **kwargs):
+        """Initialization."""
+        super().__init__(*args, **kwargs)
+
+        self._data = None
+
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._refresh_imp)
+        self._timer.start(config["ACCUMULATED_PLOT_UPDATE_INTERVAL"])
+
+    @abc.abstractmethod
+    def refresh(self):
+        pass
+
+    def _refresh_imp(self):
+        if self._data is not None:
+            self.refresh()
+
+    @final
+    def updateF(self, data):
+        """Override."""
+        self._data = data

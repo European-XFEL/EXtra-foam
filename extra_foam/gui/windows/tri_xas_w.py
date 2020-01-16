@@ -11,12 +11,12 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractSpecialAnalysisWindow
-from ..plot_widgets import RoiImageView, ImageViewF, PlotWidgetF
+from ..plot_widgets import RoiImageView, TimedImageViewF, TimedPlotWidgetF
 from ..misc_widgets import make_pen
 from ...config import config
 
 
-class TrXasAbsorptionPlot(PlotWidgetF):
+class TrXasAbsorptionPlot(TimedPlotWidgetF):
     """TrXasAbsorptionPlot class.
 
     Display absorption(s) binned by time delay.
@@ -38,9 +38,9 @@ class TrXasAbsorptionPlot(PlotWidgetF):
             self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen(c[0]))
             self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen(c[1]))
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        xas = data.trxas
+        xas = self._data.trxas
 
         delay = xas.delay_bin_centers
         if delay is None:
@@ -53,7 +53,7 @@ class TrXasAbsorptionPlot(PlotWidgetF):
             self._a23.setData(delay, xas.a23_stats)
 
 
-class TrXasHeatmap(ImageViewF):
+class TrXasHeatmap(TimedImageViewF):
     """TrXasHeatmap class.
 
     Display absorption binned by delay and energy.
@@ -68,9 +68,9 @@ class TrXasHeatmap(ImageViewF):
         self.setLabel('left', 'Delay (arb. u.)')
         self.setTitle("Absorption (ROI2/ROI1)")
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
-        xas = data.trxas
+        xas = self._data.trxas
 
         energy = xas.energy_bin_centers
         delay = xas.delay_bin_centers

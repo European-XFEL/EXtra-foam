@@ -7,7 +7,7 @@ import numpy as np
 from extra_foam.gui import mkQApp, pyqtgraph
 from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 from extra_foam.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
-from extra_foam.gui.plot_widgets.image_view_base import ImageViewF
+from extra_foam.gui.plot_widgets.image_view_base import ImageViewF, TimedImageViewF
 from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
 )
@@ -57,6 +57,20 @@ class TestImageView(unittest.TestCase):
         processed.roi.geom1.geometry = [0, 0, 2, 2]
         widget.updateF(processed)
         widget.setImage.assert_called_once()
+
+
+class TestTimedImageView(unittest.TestCase):
+    def testUpdate(self):
+        view = TimedImageViewF()
+        view.refresh = MagicMock()
+
+        self.assertIsNone(view._data)
+        view._refresh_imp()
+        view.refresh.assert_not_called()
+
+        view.updateF(1)
+        view._refresh_imp()
+        view.refresh.assert_called_once()
 
 
 class TestImageAnalysis(unittest.TestCase):

@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import ImageViewF, PlotWidgetF
+from ..plot_widgets import ImageViewF, TimedPlotWidgetF
 from ...config import config
 
 
@@ -45,7 +45,7 @@ class PoiImageView(ImageViewF):
         self.setTitle(f"Pulse-of-interest {idx}")
 
 
-class PoiHist(PlotWidgetF):
+class PoiHist(TimedPlotWidgetF):
     """PoiHist class.
 
     A widget which monitors the histogram of the FOM of the POI pulse.
@@ -61,10 +61,10 @@ class PoiHist(PlotWidgetF):
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'FOM')
 
-    def updateF(self, data):
+    def refresh(self):
         """Override."""
         try:
-            hist, bin_centers = data.hist[self._index]
+            hist, bin_centers = self._data.hist[self._index]
         except KeyError:
             self.reset()
             return
