@@ -49,7 +49,7 @@ class AboutWindow(_AbstractSatelliteWindow):
         name_ft.setBold(True)
         name.setFont(name_ft)
 
-        doc_lb = QLabel("<a href = 'https://in.xfel.eu/readthedocs/docs/karabofai/en/latest/'>Documentation</a>")
+        doc_lb = QLabel("<a href = 'https://extra-foam.readthedocs.io/en/stable/'>Documentation</a>")
         doc_ft = QFont("monospace")
         doc_ft.setStyleHint(QFont.TypeWriter)
         doc_ft.setPointSize(14)
