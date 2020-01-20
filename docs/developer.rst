@@ -75,13 +75,10 @@ versions of **EXtra-foam**
      - Deployment environment
 
    * - Latest
-     - exfel_anaconda3/beta.
+     - EXtra-foam/beta
 
    * - Stable
-     - extra_foam
-
-   * - some-feature-branch (only for developers to test new features)
-     - extra_foam/beta
+     - EXtra-foam
 
 
 .. code-block:: console

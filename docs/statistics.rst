@@ -53,7 +53,7 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 
 
 Correlation
-"""""""""""
+-----------
 
 Setup the visualization of correlations of a given FOM with various slow data.
 
