@@ -7,8 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import copy
-
 from PyQt5.QtCore import (
     QAbstractItemModel, QAbstractListModel, QAbstractTableModel, QModelIndex,
     Qt, QTimer, pyqtSignal, pyqtSlot
@@ -21,96 +19,55 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
-from .smart_widgets import SmartSliceLineEdit, SmartBoundaryLineEdit
-from ..gui_helpers import parse_boundary, parse_slice
-from ..mediator import Mediator
-from ...database import (
-    DATA_SOURCE_CATEGORIES, EXCLUSIVE_SOURCE_CATEGORIES,
-    DATA_SOURCE_PROPERTIES, DATA_SOURCE_SLICER, DATA_SOURCE_VRANGE,
-    MonProxy, SourceItem
+from .smart_widgets import (
+    SmartBoundaryLineEdit, SmartLineEdit, SmartSliceLineEdit
 )
+from ..gui_helpers import parse_boundary, parse_id, parse_slice
+from ..mediator import Mediator
+from ...database import MonProxy, SourceItem
 from ...config import config, DataSource
 from ...processes import list_foam_processes
+from ...logger import logger
 
 
-class PropertyItemDelegate(QStyledItemDelegate):
+class _BaseItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    def createEditor(self, parent, option, index):
-        """Override."""
-        cb = QComboBox(parent)
-        channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
-        ctg = index.parent().data(Qt.DisplayRole)
-        cb.addItems(DATA_SOURCE_PROPERTIES[ctg if len(channels) == 1
-                                           else f"{ctg}:{channels[-1]}"])
-        return cb
-
     def setEditorData(self, editor, index):
         """Override."""
-        value = index.data(Qt.EditRole)
-        editor.setCurrentText(value)
+        editor.setTextWithoutSignal(index.data(Qt.DisplayRole))
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.currentText(), Qt.EditRole)
-
-    def updateEditorGeometry(self, editor, option, index):
-        editor.setGeometry(option.rect)
-
-
-class SlicerItemDelegate(QStyledItemDelegate):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def createEditor(self, parent, option, index):
         """Override."""
-        channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
-        ctg = index.parent().data(Qt.DisplayRole)
-        if len(channels) > 1 or ctg in config.detectors:
-            # pipeline data
-            le = SmartSliceLineEdit(DATA_SOURCE_SLICER['default'], parent)
-            return le
-
-    def setEditorData(self, editor, index):
-        """Override."""
-        value = index.data(Qt.DisplayRole)
-        editor.setTextWithoutSignal(value)
-
-    def setModelData(self, editor, model, index):
         model.setData(index, editor.text(), Qt.EditRole)
 
     def updateEditorGeometry(self, editor, option, index):
+        """Override."""
         editor.setGeometry(option.rect)
 
 
-class BoundaryItemDelegate(QStyledItemDelegate):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
+class LineEditItemDelegate(_BaseItemDelegate):
     def createEditor(self, parent, option, index):
         """Override."""
-        channels = index.sibling(index.row(), 0).data(Qt.DisplayRole).split(':')
-        ctg = index.parent().data(Qt.DisplayRole)
-        # TODO: add more supports
-        if ctg == 'XGM' and len(channels) > 1:
-            le = SmartBoundaryLineEdit(DATA_SOURCE_VRANGE['XGM'], parent)
-            return le
+        return SmartLineEdit(index.data(Qt.DisplayRole), parent)
 
-    def setEditorData(self, editor, index):
+
+class SliceItemDelegate(_BaseItemDelegate):
+    def createEditor(self, parent, option, index):
         """Override."""
-        value = index.data(Qt.DisplayRole)
-        editor.setTextWithoutSignal(value)
+        return SmartSliceLineEdit(index.data(Qt.DisplayRole), parent)
 
-    def setModelData(self, editor, model, index):
-        model.setData(index, editor.text(), Qt.EditRole)
 
-    def updateEditorGeometry(self, editor, option, index):
-        editor.setGeometry(option.rect)
+class BoundaryItemDelegate(_BaseItemDelegate):
+    def createEditor(self, parent, option, index):
+        """Override."""
+        return SmartBoundaryLineEdit(index.data(Qt.DisplayRole), parent)
 
 
 class DataSourceTreeItem:
     """Item used in DataSourceItemModel."""
-    def __init__(self, data, exclusive=False, parent=None):
+    def __init__(self, data, *, exclusive=False, parent=None):
         self._children = []
         self._data = data
         self._parent = parent
@@ -132,7 +89,8 @@ class DataSourceTreeItem:
         """Append a child item."""
         if not isinstance(item, DataSourceTreeItem):
             raise TypeError(f"Child item must be a {self.__class__}")
-        self._children.append(item)
+        if item not in self._children:
+            self._children.append(item)
 
     def childCount(self):
         """Return the total number of children."""
@@ -179,7 +137,8 @@ class DataSourceTreeItem:
 class DataSourceItemModel(QAbstractItemModel):
     """Tree model interface for managing data sources."""
 
-    device_toggled_sgn = pyqtSignal(object, bool)
+    # checked, SourceItem
+    source_item_toggled_sgn = pyqtSignal(bool, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -190,7 +149,8 @@ class DataSourceItemModel(QAbstractItemModel):
             "Source name", "Property", "Pulse slicer", "Value range"])
         self.setupModelData()
 
-        self.device_toggled_sgn.connect(self._mediator.onDataSourceToggled)
+        self.source_item_toggled_sgn.connect(
+            self._mediator.onSourceItemToggled)
 
     def data(self, index, role=None):
         """Override."""
@@ -210,10 +170,10 @@ class DataSourceItemModel(QAbstractItemModel):
     def setData(self, index, value, role=None) -> bool:
         """Override."""
         def _parse_slice(x):
-            return slice(*parse_slice(x)) if x else None
+            return str(parse_slice(x)) if x else x
 
         def _parse_boundary(x):
-            return parse_boundary(x) if x else None
+            return str(parse_boundary(x)) if x else x
 
         if role == Qt.CheckStateRole or role == Qt.EditRole:
             item = index.internalPointer()
@@ -227,44 +187,43 @@ class DataSourceItemModel(QAbstractItemModel):
                                 item_sb.setChecked(False)
                                 self.dataChanged.emit(index.sibling(i, 0),
                                                       index.sibling(i, 0))
-                                self.device_toggled_sgn.emit(
-                                    SourceItem(
-                                        item_sb.parent().data(0),
-                                        item_sb.data(0),
-                                        item_sb.data(1),
-                                        _parse_slice(item_sb.data(2)),
-                                        _parse_boundary(item_sb.data(3)),
-                                    ),
-                                    False)
+                                self.source_item_toggled_sgn.emit(
+                                    False,
+                                    SourceItem('',
+                                               item_sb.data(0),
+                                               [],
+                                               item_sb.data(1),
+                                               '',
+                                               ''))
                                 break
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
                 old_ppt = item.data(1)
-                old_slicer = item.data(2)
-                old_vrange = item.data(3)
                 item.setData(value, index.column())
                 if index.column() >= 1:
                     # remove registered item with the old property
-                    self.device_toggled_sgn.emit(
-                        SourceItem(
-                            item.parent().data(0),
-                            item.data(0),
-                            old_ppt,
-                            _parse_slice(old_slicer),
-                            _parse_boundary(old_vrange)
-                        ),
-                        False)
+                    self.source_item_toggled_sgn.emit(
+                        False,
+                        SourceItem('', item.data(0), [], old_ppt, '', ''))
 
-            self.device_toggled_sgn.emit(
+            ctg = item.parent().data(0)
+            src_name = item.data(0)
+            if ctg == config["DETECTOR"] \
+                    and config["NUMBER_OF_MODULES"] > 1 and '*' in src_name:
+                modules = [*range(config["NUMBER_OF_MODULES"])]
+            else:
+                modules = []
+
+            self.source_item_toggled_sgn.emit(
+                item.isChecked(),
                 SourceItem(
-                    item.parent().data(0),
-                    item.data(0),
+                    ctg,
+                    src_name,
+                    modules,
                     item.data(1),
                     _parse_slice(item.data(2)),
-                    _parse_boundary(item.data(3)),
-                ),
-                item.isChecked())
+                    _parse_boundary(item.data(3))))
             return True
         return False
 
@@ -278,7 +237,7 @@ class DataSourceItemModel(QAbstractItemModel):
         if item.rank() > 1:
             if index.column() == 0:
                 flags |= Qt.ItemIsUserCheckable
-            elif item.isChecked() and index.column() >= 1:
+            if item.isChecked():
                 flags |= Qt.ItemIsEditable
 
         return flags
@@ -336,49 +295,69 @@ class DataSourceItemModel(QAbstractItemModel):
 
     def setupModelData(self):
         """Setup the data for the whole tree."""
-        topic = config["TOPIC"]
-        det = config["DETECTOR"]
+        src_categories = dict()
 
-        sources = copy.deepcopy(DATA_SOURCE_CATEGORIES[topic])
+        for ctg, srcs in config.pipeline_sources.items():
+            ctg_item = DataSourceTreeItem(
+                [ctg, "", "", "", ""], exclusive=False, parent=self._root)
+            self._root.appendChild(ctg_item)
+            src_categories[ctg] = ctg_item
 
-        if det not in sources:
-            raise KeyError(f"{det} is not installed in instrument {topic}")
+            default_slicer = ':'
+            # for 2D detectors we does not apply pixel-wise filtering for now
+            default_v_range = '-inf, inf' if ctg not in config.detectors else ''
+            for src, ppts in srcs.items():
+                for ppt in ppts:
+                    # only the main detector is exclusive since only it can
+                    # have so many different names :-(
+                    src_item = DataSourceTreeItem(
+                        [src, ppt, default_slicer, default_v_range],
+                        exclusive=ctg == config["DETECTOR"],
+                        parent=ctg_item)
+                    ctg_item.appendChild(src_item)
 
-        sources[det].update(config["SOURCE_NAME_BRIDGE"])
-        sources[det].update(config["SOURCE_NAME_FILE"])
-        sources[det] = sorted(sources[det])
+        for ctg, srcs in config.control_sources.items():
+            if ctg not in src_categories:
+                ctg_item = DataSourceTreeItem(
+                    [ctg, "", "", "", ""], exclusive=False, parent=self._root)
+                self._root.appendChild(ctg_item)
+                src_categories[ctg] = ctg_item
+            else:
+                ctg_item = src_categories[ctg]
 
-        for ctg, srcs in sources.items():
-            self._root.appendChild(DataSourceTreeItem([ctg, "", "", ""],
-                                                      exclusive=False,
-                                                      parent=self._root))
+            # ctrl source does not support slice by default
+            default_slicer = ''
+            default_v_range = '-inf, inf'
+            for src, ppts in srcs.items():
+                for ppt in ppts:
+                    ctg_item.appendChild(DataSourceTreeItem(
+                        [src, ppt, default_slicer, default_v_range],
+                        exclusive=False,
+                        parent=ctg_item))
 
-            last_child = self._root.child(-1)
-
-            try:
-                exclusive = ctg in EXCLUSIVE_SOURCE_CATEGORIES
-                for src in srcs:
-                    channels = src.split(':')
-                    key = ctg if len(channels) == 1 else f"{ctg}:{channels[-1]}"
-                    default_ppt = list(DATA_SOURCE_PROPERTIES[key].keys())[0]
-                    if len(channels) > 1 or ctg in config.detectors:
-                        default_slicer = DATA_SOURCE_SLICER['default']
-                    else:
-                        default_slicer = DATA_SOURCE_SLICER['not_supported']
-
-                    # TODO: add more supports
-                    if ctg == 'XGM' and len(channels) > 1:
-                        default_v_range = DATA_SOURCE_VRANGE['XGM']
-                    else:
-                        default_v_range = DATA_SOURCE_VRANGE['not_supported']
-
-                    last_child.appendChild(DataSourceTreeItem(
-                        [src, default_ppt, default_slicer, default_v_range],
-                        exclusive,
-                        parent=last_child))
-            except KeyError as e:
-                # TODO: log the error information!
-                pass
+        # Add a couple of user defined instrument sources
+        # Note: In order to meet the requirement to change sources on
+        #       the fly, instead of allowing users to insert and delete
+        #       items in the tree, we provided a couple of user defined
+        #       instrument sources, which greatly simplifies te
+        #       implementation and avoids subtle bugs. I believe there
+        #       will be no need to modify the pipeline source on the fly.
+        #       For example, if the device ID or the property of the main
+        #       detector is not there, the user should close the app and
+        #       modify the configuration file. And this should be usually
+        #       done before the experiment.
+        user_defined = config["SOURCE_USER_DEFINED_CATEGORY"]
+        n_user_defined = 4
+        assert user_defined not in src_categories
+        ctg_item = DataSourceTreeItem([user_defined, "", "", "", ""],
+                                      exclusive=False,
+                                      parent=self._root)
+        self._root.appendChild(ctg_item)
+        for i in range(n_user_defined):
+            ctg_item.appendChild(DataSourceTreeItem(
+                [f"Device-ID-{i+1}", f"Property-{i+1}", "", '-inf, inf'],
+                exclusive=False,
+                parent=ctg_item))
 
 
 class DataSourceListModel(QAbstractListModel):
@@ -461,7 +440,8 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
         self._source_type_cb = QComboBox()
         self._source_type_cb.addItem("run directory", DataSource.FILE)
         self._source_type_cb.addItem("ZeroMQ bridge", DataSource.BRIDGE)
-        self._source_type_cb.setCurrentIndex(config['DEFAULT_SOURCE_TYPE'])
+        self._source_type_cb.setCurrentIndex(
+            config['SOURCE_DEFAULT_TYPE'])
         self._current_source_type = None
 
         self._non_reconfigurable_widgets = [
@@ -527,10 +507,10 @@ class ConnectionCtrlWidget(_AbstractCtrlWidget):
         self._current_source_type = source_type
 
         if source_type == DataSource.BRIDGE:
-            hostname = config["SERVER_ADDR"]
-            port = config["SERVER_PORT"]
+            hostname = config["BRIDGE_ADDR"]
+            port = config["BRIDGE_PORT"]
         else:
-            hostname = config["LOCAL_HOST"]
+            hostname = config["LOCAL_ADDR"]
             port = config["LOCAL_PORT"]
 
         self._hostname_le.setText(hostname)
@@ -554,13 +534,15 @@ class DataSourceWidget(QWidget):
 
         self._tree_view = QTreeView()
         self._tree_model = DataSourceItemModel(self)
-        self._tree_ppt_delegate = PropertyItemDelegate(self)
-        self._tree_slicer_delegate = SlicerItemDelegate(self)
-        self._tree_range_delegate = BoundaryItemDelegate(self)
+        self._tree_device_delegate = LineEditItemDelegate(self)
+        self._tree_ppt_delegate = LineEditItemDelegate(self)
+        self._tree_slicer_delegate = SliceItemDelegate(self)
+        self._tree_boundary_delegate = BoundaryItemDelegate(self)
         self._tree_view.setModel(self._tree_model)
+        self._tree_view.setItemDelegateForColumn(0, self._tree_device_delegate)
         self._tree_view.setItemDelegateForColumn(1, self._tree_ppt_delegate)
         self._tree_view.setItemDelegateForColumn(2, self._tree_slicer_delegate)
-        self._tree_view.setItemDelegateForColumn(3, self._tree_range_delegate)
+        self._tree_view.setItemDelegateForColumn(3, self._tree_boundary_delegate)
 
         self._monitor_tb = QTabWidget()
         self._avail_src_view = QListView()
@@ -578,11 +560,11 @@ class DataSourceWidget(QWidget):
 
         self._avail_src_timer = QTimer()
         self._avail_src_timer.timeout.connect(self.updateSourceList)
-        self._avail_src_timer.start(config["SOURCES_UPDATE_INTERVAL"])
+        self._avail_src_timer.start(config["SOURCE_AVAIL_UPDATE_TIMER"])
 
         self._process_mon_timer = QTimer()
         self._process_mon_timer.timeout.connect(self.updateProcessInfo)
-        self._process_mon_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        self._process_mon_timer.start(config["PROCESS_MONITOR_UPDATE_TIMER"])
 
     def initUI(self):
         self._monitor_tb.setTabPosition(QTabWidget.TabPosition.South)
@@ -599,6 +581,7 @@ class DataSourceWidget(QWidget):
 
         self._tree_view.expandToDepth(1)
         self._tree_view.resizeColumnToContents(0)
+        self._tree_view.resizeColumnToContents(1)
 
         layout = QVBoxLayout()
         layout.addWidget(self._connection_ctrl_widget)

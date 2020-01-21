@@ -50,7 +50,7 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         data, processed = self._gen_data(1001)
 
         proc.process(data)
-        np.testing.assert_array_almost_equal(processed.pp.image_on, data['detector']['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_on, data['assembled']['sliced'])
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
         self._check_pp_params_in_data_model(processed)
@@ -70,20 +70,20 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
 
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
 
         data, processed = self._gen_data(1005)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1006)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
-        np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled']['sliced'])
 
         self._check_pp_params_in_data_model(processed)
 
@@ -101,21 +101,21 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
 
         # test when two 'on' are received successively
         data, processed = self._gen_data(1004)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], proc._prev_unmasked_on)
+        np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1005)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
-        np.testing.assert_array_almost_equal(processed.pp.image_off, data['detector']['assembled'])
+        np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled']['sliced'])
 
         self._check_pp_params_in_data_model(processed)
 
@@ -149,7 +149,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         # test calculating the average image after pulse filtering
         np.testing.assert_array_equal(
-            np.nanmean(data['detector']['assembled'][[1, 3]], axis=0),
+            np.nanmean(data['assembled']['sliced'][[1, 3]], axis=0),
             image_data.mean
         )
 
@@ -211,7 +211,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         data, processed = self._gen_data(1001)
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_on, np.mean(data['detector']['assembled'][::2, :, :], axis=0))
+            processed.pp.image_on, np.mean(data['assembled']['sliced'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
 
         # --------------------
@@ -231,7 +231,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # test image_on correctness
         processed.pidx.mask([0])
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
+        np.testing.assert_array_equal(processed.pp.image_on, data['assembled']['sliced'][2])
 
         self._check_pp_params_in_data_model(processed)
 
@@ -244,9 +244,9 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         data, processed = self._gen_data(1001)
         proc.process(data)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_on, np.mean(data['detector']['assembled'][::2, :, :], axis=0))
+            processed.pp.image_on, np.mean(data['assembled']['sliced'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
 
         # --------------------
         # test pulse filtering
@@ -266,8 +266,8 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         data, processed = self._gen_data(1002)
         processed.pidx.mask([0, 1])
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_on, data['detector']['assembled'][2])
-        np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
+        np.testing.assert_array_equal(processed.pp.image_on, data['assembled']['sliced'][2])
+        np.testing.assert_array_equal(processed.pp.image_off, data['assembled']['sliced'][3])
 
         self._check_pp_params_in_data_model(processed)
 
@@ -288,7 +288,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
         np.testing.assert_array_almost_equal(
-            np.mean(data['detector']['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1003)  # off
@@ -296,7 +296,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
 
         # --------------------
         # test pulse filtering
@@ -313,7 +313,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # drop one on/off indices each
         processed.pidx.mask([0, 1])
         proc.process(data)
-        np.testing.assert_array_equal(proc._prev_unmasked_on, data['detector']['assembled'][2])
+        np.testing.assert_array_equal(proc._prev_unmasked_on, data['assembled']['sliced'][2])
 
         data, processed = self._gen_data(1003)
         processed.pidx.mask([1, 3])  # drop all off indices
@@ -332,7 +332,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         processed.pidx.mask([0, 1])
         proc._prev_unmasked_on = np.ones((2, 2), np.float32)  # any value except None
         proc.process(data)
-        np.testing.assert_array_equal(processed.pp.image_off, data['detector']['assembled'][3])
+        np.testing.assert_array_equal(processed.pp.image_off, data['assembled']['sliced'][3])
 
         self._check_pp_params_in_data_model(processed)
 
@@ -353,7 +353,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
         np.testing.assert_array_almost_equal(
-            np.mean(data['detector']['assembled'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
 
         data, processed = self._gen_data(1004)  # off
@@ -361,7 +361,7 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
-            processed.pp.image_off, np.mean(data['detector']['assembled'][1::2, :, :], axis=0))
+            processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
 
         self._check_pp_params_in_data_model(processed)
 

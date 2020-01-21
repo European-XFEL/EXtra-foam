@@ -79,7 +79,7 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
     """PulseOfInterestWindow class."""
     _title = "Pulse-of-interest"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

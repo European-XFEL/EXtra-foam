@@ -39,7 +39,7 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
 
         self._proc.process(data)
         # FIXME
-        # np.testing.assert_array_equal(data['detector']['assembled'], processed.image.images)
+        # np.testing.assert_array_equal(data['assembled']['data'], processed.image.images)
         self.assertIsInstance(processed.image.images, list)
         self.assertListEqual([0], processed.image.sliced_indices)
 
@@ -47,7 +47,7 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
         self._proc._pulse_slicer = slice(0, 2)
         self._proc.process(data)
         # FIXME
-        # np.testing.assert_array_equal(data['detector']['assembled'], processed.image.images)
+        # np.testing.assert_array_equal(data['assembled']['data'], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
 
     def testDarkRecordingAndSubtraction(self):
@@ -106,7 +106,7 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self._proc._dark_as_offset = False
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        dark_run_gt = data['detector']['assembled'].copy()
+        dark_run_gt = data['assembled']['data'].copy()
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark)
         np.testing.assert_array_almost_equal(
@@ -114,14 +114,14 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
 
         # test moving average is going on
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
+        assembled_gt = data['assembled']['data'].copy()
         dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark)
         np.testing.assert_array_almost_equal(
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
         # test 'assembled' is not subtracted by dark
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], assembled_gt)
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt)
 
         # --------------------------
         # test with dark subtraction
@@ -133,7 +133,7 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self._proc._dark_mean = None
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        dark_run_gt = data['detector']['assembled'].copy()
+        dark_run_gt = data['assembled']['data'].copy()
         assembled_gt = dark_run_gt
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark)
@@ -141,10 +141,10 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
         # test 'assembled' is dark run subtracted
         np.testing.assert_array_almost_equal(
-            data['detector']['assembled'], assembled_gt - self._proc._dark)
+            data['assembled']['data'], assembled_gt - self._proc._dark)
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
+        assembled_gt = data['assembled']['data'].copy()
         dark_run_gt = (dark_run_gt + assembled_gt) / 2.0
         self._proc.process(data)
         np.testing.assert_array_almost_equal(dark_run_gt, self._proc._dark)
@@ -152,7 +152,7 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
             np.nanmean(dark_run_gt, axis=0), self._proc._dark_mean)
         # test 'assembled' is subtracted by dark
         np.testing.assert_array_almost_equal(
-            data['detector']['assembled'], assembled_gt - self._proc._dark)
+            data['assembled']['data'], assembled_gt - self._proc._dark)
 
         # test image has different shape from the dark
         # (this test should use the env from the above test)
@@ -177,9 +177,9 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc._correct_gain = False
         proc._correct_offset = False
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
+        assembled_gt = data['assembled']['data'].copy()
         self._proc.process(data)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], assembled_gt)
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt)
 
         # ---------------------------------
         # test apply offset correction only
@@ -188,11 +188,11 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc._correct_offset = True
         proc._dark_as_offset = False
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
+        assembled_gt = data['assembled']['data'].copy()
         offset_gt = np.random.randn(4, 2, 2).astype(np.float32)
         proc._offset = offset_gt
         self._proc.process(data)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'], assembled_gt - offset_gt)
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt - offset_gt)
 
         # ------------------------------------------
         # test apply both gain and offset correction
@@ -201,20 +201,18 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc._correct_gain = True
         proc._dark_as_offset = True
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
-        proc._dark = data['detector']['assembled'] / 2.0
+        assembled_gt = data['assembled']['data'].copy()
+        proc._dark = data['assembled']['data'] / 2.0
         gain_gt = np.random.randn(4, 2, 2).astype(np.float32)
         proc._gain = gain_gt
         self._proc.process(data)
-        np.testing.assert_array_almost_equal(data['detector']['assembled'],
+        np.testing.assert_array_almost_equal(data['assembled']['data'],
                                              proc._gain * (assembled_gt - proc._dark))
 
     def testPulseSlicing(self):
         proc = self._proc
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        assembled_gt = data['detector']['assembled'].copy()
-
         proc.process(data)
         self.assertEqual(4, processed.image.n_images)
         self.assertListEqual([0, 1, 2, 3], processed.image.sliced_indices)
@@ -223,11 +221,12 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # Test slice to list of indices.
         # ---------------------------------------------------------------------
 
-        data['detector']['pulse_slicer'] = slice(0, 2)
+        data, processed = self.data_with_assembled(1, (4, 2, 2), slicer=slice(0, 2))
+        assembled_gt = data['assembled']['data'].copy()
         proc.process(data)
         # Note: this test ensures that POI and on/off pulse indices are all
         # based on the assembled data after pulse slicing.
-        np.testing.assert_array_equal(assembled_gt[0:2], data['detector']['assembled'])
+        np.testing.assert_array_equal(assembled_gt[0:2], data['assembled']['sliced'])
         self.assertEqual(2, processed.image.n_images)
         self.assertListEqual([0, 1], processed.image.sliced_indices)
 
@@ -240,11 +239,10 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
 
         proc._recording_dark = True
         proc._dark_as_offset = True
-        data, processed = self.data_with_assembled(1, (4, 2, 2))
         slicer = slice(0, 2)
+        data, processed = self.data_with_assembled(1, (4, 2, 2), slicer=slicer)
         # ground truth of the dark run is unsliced
-        dark_run_gt = data['detector']['assembled'].copy()
-        data['detector']['pulse_slicer'] = slicer
+        dark_run_gt = data['assembled']['data'].copy()
         # ground truth of assembled is sliced
         assembled_gt = dark_run_gt[slicer]
         self._proc.process(data)
@@ -254,7 +252,7 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # Important: Test 'assembled' is sliced and is also subtracted by the sliced dark.
         #            This test ensures that the the pump-probe processor will use the sliced data
         np.testing.assert_array_almost_equal(
-            data['detector']['assembled'], assembled_gt - self._proc._dark[slicer])
+            data['assembled']['sliced'], assembled_gt - self._proc._dark[slicer])
         proc._recording = False
 
     def testReferenceUpdate(self):
@@ -274,7 +272,7 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
     def testPOI(self):
         proc = self._proc
         data, processed = self.data_with_assembled(1, (4, 2, 2))
-        imgs_gt_unsliced = data['detector']['assembled'].copy()
+        imgs_gt_unsliced = data['assembled']['data'].copy()
 
         proc.process(data)
         imgs = processed.image.images
@@ -307,9 +305,8 @@ class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # Test POI indices is based on the sliced data.
         # ---------------------------------------------
 
-        data, processed = self.data_with_assembled(1, (4, 2, 2))
-        imgs_gt_unsliced = data['detector']['assembled'].copy()
-        data['detector']['pulse_slicer'] = slice(0, 4, 2)
+        data, processed = self.data_with_assembled(1, (4, 2, 2), slicer=slice(0, 4, 2))
+        imgs_gt_unsliced = data['assembled']['data'].copy()
         proc._poi_indices = [0, 1]  # POI indices should based on the sliced data
         proc.process(data)
         imgs = processed.image.images

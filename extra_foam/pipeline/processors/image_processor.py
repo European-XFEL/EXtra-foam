@@ -123,9 +123,12 @@ class ImageProcessor(_BaseProcessor):
     @profiler("Image Processor (pulse)")
     def process(self, data):
         image_data = data['processed'].image
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['data']
+        catalog = data['catalog']
+        det = catalog.main_detector
+        pulse_slicer = catalog.get_slicer(det)
+
         n_total = assembled.shape[0] if assembled.ndim == 3 else 1
-        pulse_slicer = data['detector']['pulse_slicer']
         sliced_assembled = assembled[pulse_slicer]
         sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
         n_sliced = len(sliced_indices)
@@ -142,7 +145,7 @@ class ImageProcessor(_BaseProcessor):
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
         #       based on the sliced data.
-        data['detector']['assembled'] = sliced_assembled
+        data['assembled']['sliced'] = sliced_assembled
 
         image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
@@ -167,8 +170,7 @@ class ImageProcessor(_BaseProcessor):
     def _record_dark(self, assembled):
         if self._dark is None:
             # _dark should not share the memory with
-            # data['detector']['assembled'] since the latter will
-            # be dark subtracted.
+            # data[src] since the latter will be dark subtracted.
             self._dark = assembled.copy()
         else:
             # moving average (it reset the current moving average if the

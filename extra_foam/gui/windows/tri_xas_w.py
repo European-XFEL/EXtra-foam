@@ -34,7 +34,7 @@ class TrXasAbsorptionPlot(TimedPlotWidgetF):
         if diff:
             self._a21 = self.plotCurve(name="ROI2/ROI1", pen=make_pen("g"))
         else:
-            c = config['ROI_COLORS']
+            c = config['GUI_ROI_COLORS']
             self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen(c[0]))
             self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen(c[1]))
 
@@ -93,7 +93,7 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
     """TrXasWindow class."""
     _title = "Tr-XAS"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

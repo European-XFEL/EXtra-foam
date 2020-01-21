@@ -330,6 +330,42 @@ class TestRoiGeom(unittest.TestCase):
             np.testing.assert_array_equal(img[..., 2:2+2, 1:1+3], roi.rect(img))
 
 
+class TestXgmData(unittest.TestCase):
+
+    from extra_foam.pipeline.data_model import XgmData
+
+    def testGeneral(self):
+        data = self.XgmData()
+
+        data.intensity, data.x, data.y = 100., 0.1, -0.1
+        data.on.intensity, data.on.x, data.on.y = 100., 0.1, -0.1
+        data.off.intensity, data.off.x, data.off.y = 100., 0.1, -0.1
+
+        with self.assertRaises(AttributeError):
+            data.xx = 0.2
+
+
+class TestAdqDigitizerData(unittest.TestCase):
+
+    from extra_foam.pipeline.data_model import (
+        _AdqDigitizerDataItem, _AdqDigitizerChannelData, AdqDigitizerData)
+
+    def testGeneral(self):
+        data = self.AdqDigitizerData()
+
+        self.assertIn('A', data)
+
+        for cn, item in data.items():
+            self.assertIsInstance(item, self._AdqDigitizerDataItem)
+
+        data['D'].pulse_integral = [1, 2, 3]
+        with self.assertRaises(AttributeError):
+            data['D'].sample
+
+        self.assertIsInstance(data.on, self._AdqDigitizerChannelData)
+        self.assertIsInstance(data.off, self._AdqDigitizerChannelData)
+
+
 class TestBinData(unittest.TestCase):
 
     from extra_foam.pipeline.data_model import BinData
@@ -339,6 +375,10 @@ class TestBinData(unittest.TestCase):
 
         # test mapping
         self.assertEqual(2, len(data))
+        self.assertIn(0, data)
+        self.assertIn(1, data)
+        self.assertNotIn(2, data)
+
         for b in data:
             self.assertIsInstance(b, self.BinData.BinDataItem)
         with self.assertRaises(IndexError):
@@ -359,6 +399,10 @@ class TestCorrelationData(unittest.TestCase):
 
         # test mapping
         self.assertEqual(2, len(data))
+        self.assertIn(0, data)
+        self.assertIn(1, data)
+        self.assertNotIn(2, data)
+
         for c in data:
             self.assertIsInstance(c, data.CorrelationDataItem)
         with self.assertRaises(IndexError):

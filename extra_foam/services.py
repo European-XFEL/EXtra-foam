@@ -127,6 +127,9 @@ def start_redis_server():
 
         register_foam_process(ProcessInfo(name="redis", process=process))
 
+        # subscribe List commands
+        # client.config_set("notify-keyspace-events", "Kl")
+
         try:
             frac = config["REDIS_MAX_MEMORY_FRAC"]
             if frac < 0.01 or frac > 0.5:
@@ -137,7 +140,7 @@ def start_redis_server():
                         f"{mem_in_bytes / 1024 ** 3:.1f} GB")
         except Exception as e:
             logger.error(f"Failed to config the Redis server.\n" + repr(e))
-            sys.exit(0)
+            sys.exit(1)
 
         # Increase the hard and soft limits for the redis client pubsub buffer
         # to 512MB and 128MB, respectively.
@@ -152,6 +155,7 @@ def start_redis_server():
         ]
         client.config_set("client-output-buffer-limit",
                           " ".join(cli_buffer_cfg))
+
     else:
         logger.info(f"Found existing Redis server at {host}:{port}")
 
@@ -267,8 +271,8 @@ def application():
                         help="Run in debug mode")
     parser.add_argument("--topic", help="Name of the instrument",
                         type=lambda s: s.upper(),
-                        choices=['FXE', 'HED', 'MID', 'SCS', 'SPB', 'SQS'],
-                        default='UNKNOWN')
+                        choices=config.topics,
+                        required=True)
 
     args = parser.parse_args()
     health_check()
@@ -289,8 +293,7 @@ def application():
     )
 
     # update global configuration
-    config.load(detector)
-    config.set_topic(topic)
+    config.load(detector, topic)
 
     foam = Foam().init()
 

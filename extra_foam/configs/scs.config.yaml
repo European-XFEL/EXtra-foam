@@ -1,0 +1,86 @@
+SOURCE:
+    # Default source type: FILES or BRIDGE
+    DEFAULT_TYPE: 1
+    CATEGORY:
+        DSSC:
+            PIPELINE:
+                SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED:
+                    - image.data
+                SCS_CDIDET_DSSC/CAL/APPEND_RAW:
+                    - image.data
+                SCS_DET_DSSC1M-1/DET/*CH0:xtdf:
+                    - image.data
+
+        FastCCD:
+            PIPELINE:
+                SCS_CDIDET_FCCD2M/DAQ/FCCD:output:
+                    - data.image
+                SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput:
+                    - data.image.data
+
+        XGM:
+            CONTROL:
+                SCS_BLU_XGM/XGM/DOOCS:
+                    - pulseEnergy.photonFlux
+                    - beamPosition.ixPos
+                    - beamPosition.iyPos
+            PIPELINE:
+                SCS_BLU_XGM/XGM/DOOCS:output:
+                    - data.intensitySa3TD
+
+        AdqDigitizer:
+            PIPELINE:
+                SCS_UTC1_ADQ/ADC/1:network:
+                    - digitizers.channel_1_A.apd.pulseIntegral
+                    - digitizers.channel_1_B.apd.pulseIntegral
+                    - digitizers.channel_1_C.apd.pulseIntegral
+                    - digitizers.channel_1_D.apd.pulseIntegral
+        Magnet:
+            CONTROL:
+                SCS_CDIFFT_MAG/SUPPLY/CURRENT:
+                    - actualCurrent
+
+        Monochromator:
+            CONTROL:
+                SA3_XTD10_MONO/MDL/PHOTON_ENERGY:
+                    - actualEnergy
+
+        Motor:
+            CONTROL:
+                SCS_ILH_LAS/MOTOR/LT3:
+                    - actualPosition
+
+
+DETECTOR:
+    DSSC:
+        GEOMETRY_FILE: dssc_geo_june19.h5
+        QUAD_POSITIONS:
+            x1: -124.100
+            y1:    3.112
+            x2: -133.068
+            y2: -110.604
+            x3:    0.988
+            y3: -125.236
+            x4:    4.528
+            y4:   -4.912
+        BRIDGE_ADDR: 10.253.0.140
+        BRIDGE_PORT: 4511
+        LOCAL_ADDR: 127.0.0.1
+        LOCAL_PORT: 45452
+        SAMPLE_DISTANCE: 0.6
+        PHOTON_ENERGY: 0.780
+
+    FastCCD:
+        BRIDGE_ADDR: 10.253.0.140
+        BRIDGE_PORT: 4502
+        LOCAL_ADDR: 127.0.0.1
+        LOCAL_PORT: 45454
+        SAMPLE_DISTANCE: 0.6
+        PHOTON_ENERGY: 0.780
+
+    BaslerCamera:
+        BRIDGE_ADDR: 127.0.0.1
+        BRIDGE_PORT: 45459
+        LOCAL_ADDR: 127.0.0.1
+        LOCAL_PORT: 45459
+        SAMPLE_DISTANCE: 1.0

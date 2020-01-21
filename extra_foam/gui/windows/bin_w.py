@@ -39,21 +39,18 @@ class Bin1dHist(TimedPlotWidgetF):
             self._default_y_label = "FOM (arb. u.)"
             self._plot = self.plotScatter(brush=make_brush('p'))
 
-        self._device_id = ""
-        self._ppt = ""
+        self._source = ""
 
-        self.updateLabel(self._device_id, self._ppt)
+        self.updateLabel()
 
     def refresh(self):
         """Override."""
         item = self._data.bin[0]
 
-        device_id = item.device_id
-        ppt = item.property
-        if device_id != self._device_id or ppt != self._ppt:
-            self._device_id = device_id
-            self._ppt = ppt
-            self.updateLabel(device_id, ppt)
+        src = item.source
+        if src != self._source:
+            self._source = src
+            self.updateLabel()
 
         if self._count:
             hist = item.counts
@@ -62,9 +59,10 @@ class Bin1dHist(TimedPlotWidgetF):
 
         self._plot.setData(item.centers, hist)
 
-    def updateLabel(self, device_id, ppt):
-        if device_id and ppt:
-            new_label = f"{device_id + ' | ' + ppt} (arb. u.)"
+    def updateLabel(self):
+        src = self._source
+        if src:
+            new_label = f"{src} (arb. u.)"
         else:
             new_label = self._default_x_label
         self.setLabel('bottom', new_label)
@@ -88,21 +86,18 @@ class Bin1dHeatmap(TimedImageViewF):
         self._default_y_label = 'VFOM (arb. u.)'
         self.setTitle('')
 
-        self._device_id = ""
-        self._ppt = ""
+        self._source = ""
 
-        self.updateLabel(self._device_id, self._ppt)
+        self.updateLabel()
 
     def refresh(self):
         """Override."""
         item = self._data.bin[0]
 
-        device_id = item.device_id
-        ppt = item.property
-        if device_id != self._device_id or ppt != self._ppt:
-            self._device_id = device_id
-            self._ppt = ppt
-            self.updateLabel(device_id, ppt)
+        src = item.source
+        if src != self._source:
+            self._source = src
+            self.updateLabel()
 
         heatmap = item.heat
         if heatmap is not None:
@@ -119,9 +114,10 @@ class Bin1dHeatmap(TimedImageViewF):
         else:
             self.clear()
 
-    def updateLabel(self, device_id, ppt):
-        if device_id and ppt:
-            new_label = f"{device_id + ' | ' + ppt} (arb. u.)"
+    def updateLabel(self):
+        src = self._source
+        if src:
+            new_label = f"{src} (arb. u.)"
         else:
             new_label = self._default_x_label
         self.setLabel('bottom', new_label)
@@ -153,25 +149,25 @@ class Bin2dHeatmap(TimedImageViewF):
         else:
             self.setTitle("2D binning (FOM)")
 
-        self._device_ids = ["", ""]
-        self._ppts = ["", ""]
+        self._source_x = ""
+        self._source_y = ""
 
-        for dev, ppt, pos in zip(
-                self._device_ids, self._ppts, ['bottom', 'left']):
-            self.updateLabel(dev, ppt, pos)
+        self.updateXLabel()
+        self.updateYLabel()
 
     def refresh(self):
         """Override."""
         bin = self._data.bin
 
-        for i in range(2):
-            device_id = bin[i].device_id
-            ppt = bin[i].property
-            if device_id != self._device_ids[i] or ppt != self._ppts[i]:
-                self._device_ids[i] = device_id
-                self._ppts[i] = ppt
-                self.updateLabel(device_id, ppt,
-                                 'bottom' if i == 0 else 'left')
+        src_x = bin[0].source
+        if src_x != self._source_x:
+            self._source_x = src_x
+            self.updateXLabel()
+
+        src_y = bin[1].source
+        if src_y != self._source_y:
+            self._source_y = src_y
+            self.updateYLabel()
 
         if self._count:
             heatmap = bin.heat_count
@@ -193,13 +189,21 @@ class Bin2dHeatmap(TimedImageViewF):
         else:
             self.clear()
 
-    def updateLabel(self, device_id, ppt, pos):
-        if device_id and ppt:
-            new_label = f"{device_id + ' | ' + ppt} (arb. u.)"
+    def updateXLabel(self):
+        src = self._source_x
+        if src:
+            new_label = f"{src} (arb. u.)"
         else:
-            new_label = self._default_x_label \
-                if pos == 'bottom' else self._default_y_label
-        self.setLabel(pos, new_label)
+            new_label = self._default_x_label
+        self.setLabel('bottom', new_label)
+
+    def updateYLabel(self):
+        src = self._source_y
+        if src:
+            new_label = f"{src} (arb. u.)"
+        else:
+            new_label = self._default_y_label
+        self.setLabel('left', new_label)
 
 
 class BinningWindow(_AbstractPlotWindow):
@@ -209,7 +213,7 @@ class BinningWindow(_AbstractPlotWindow):
     """
     _title = "Binning 1D"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

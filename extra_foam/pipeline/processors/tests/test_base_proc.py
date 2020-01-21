@@ -36,9 +36,11 @@ class TestRedisParserMixin(unittest.TestCase):
         self.assertTupleEqual((1.0, 2.0), self._proc.str2tuple('(1, 2)'))
 
     def testStr2List(self):
-        self.assertListEqual([1.0, 2.0], self._proc.str2list('[1, 2]'))
-        self.assertListEqual([1], self._proc.str2list('[1]'))
-        self.assertListEqual([], self._proc.str2list('[]'))
+        str2list = self._proc.str2list
+
+        self.assertListEqual([1.0, 2.0], str2list('[1, 2]'))
+        self.assertListEqual([1], str2list('[1]'))
+        self.assertListEqual([], str2list('[]'))
 
     def testStr2Slice(self):
         self.assertEqual(slice(None, 2), self._proc.str2slice('[None, 2]'))

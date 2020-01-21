@@ -112,7 +112,6 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         if not osp.isfile(geom_file):
             logger.error(f"<Geometry file>: {geom_file} is not a valid file")
             return False
-
         self._mediator.onGeomFilenameChange(geom_file)
 
         try:

@@ -80,7 +80,7 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
     @profiler("ROI Processor (pulse)")
     def process(self, data):
         processed = data['processed']
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['sliced']
 
         roi = processed.roi
         img_shape = assembled.shape[-2:]

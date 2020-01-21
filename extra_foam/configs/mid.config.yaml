@@ -1,0 +1,29 @@
+SOURCE:
+    # Default source type: FILES or BRIDGE
+    DEFAULT_TYPE: 1
+    CATEGORY:
+        AGIPD:
+            PIPELINE:
+                SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED:
+                    - image.data
+                SPB_DET_AGIPD1M-1/DET/*CH0:xtdf:
+                    - image.data
+
+DETECTOR:
+    AGIPD:
+        GEOMETRY_FILE: agipd_mar18_v11.geom
+        QUAD_POSITIONS:
+            x1: -526
+            y1:  630
+            x2: -549
+            y2:   -4
+            x3:  522
+            y3: -157
+            x4:  543
+            y4:  477
+        BRIDGE_ADDR: 10.253.0.51
+        BRIDGE_PORT:  45012
+        LOCAL_ADDR: 127.0.0.1
+        LOCAL_PORT: 45450
+        SAMPLE_DISTANCE: 5.5
+        PHOTON_ENERGY: 9.3

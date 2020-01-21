@@ -29,7 +29,7 @@ class InTrainFomPlot(PlotWidgetF):
 
         self.setLabel('left', "FOM")
         self.setLabel('bottom', "Pulse index")
-        self.setTitle('Pulse resolved FOMs in a train')
+        self.setTitle('Pulse-resolved FOMs in a train')
 
     def updateF(self, data):
         """Override."""
@@ -69,7 +69,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     Widget for displaying correlations between FOM and different parameters.
     """
-    _colors = config["CORRELATION_COLORS"]
+    _colors = config["GUI_CORRELATION_COLORS"]
     _pens = [make_pen(color) for color in _colors]
     _brushes = [make_brush(color, 120) for color in _colors]
     _opaque_brushes = [make_brush(color) for color in _colors]
@@ -84,11 +84,10 @@ class CorrelationPlot(TimedPlotWidgetF):
         self._default_x_label = "Correlator (arb. u.)"
         self._default_y_label = "FOM (arb. u.)"
 
-        self._device_id = ""
-        self._ppt = ""
+        self._source = ""
         self._resolution = 0.0
 
-        self.updateLabel(self._device_id, self._ppt)
+        self.updateLabel()
 
         self._newScatterPlot()
 
@@ -96,13 +95,10 @@ class CorrelationPlot(TimedPlotWidgetF):
         """Override."""
         item = self._data.corr[self._idx]
 
-        device_id = item.device_id
-        ppt = item.property
-
-        if device_id != self._device_id or ppt != self._ppt:
-            self.updateLabel(device_id, ppt)
-            self._device_id = device_id
-            self._ppt = ppt
+        src = item.source
+        if src != self._source:
+            self._source = src
+            self.updateLabel()
 
         resolution = item.resolution
         y = item.y
@@ -120,9 +116,10 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._resolution = resolution
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
 
-    def updateLabel(self, device_id, ppt):
-        if device_id and ppt:
-            new_label = f"{device_id + ' | ' + ppt} (arb. u.)"
+    def updateLabel(self):
+        src = self._source
+        if src:
+            new_label = f"{src} (arb. u.)"
         else:
             new_label = self._default_x_label
         self.setLabel('bottom', new_label)
@@ -146,7 +143,7 @@ class StatisticsWindow(_AbstractPlotWindow):
     """
     _title = "Statistics"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

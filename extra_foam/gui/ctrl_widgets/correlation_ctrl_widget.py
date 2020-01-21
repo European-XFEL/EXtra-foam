@@ -13,7 +13,7 @@ import functools
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import (
-    QComboBox, QGridLayout, QHeaderView, QLabel, QPushButton, QTableWidget
+    QComboBox, QGridLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
@@ -21,7 +21,7 @@ from .smart_widgets import SmartLineEdit
 from ...config import AnalysisType, config
 
 _N_PARAMS = 2  # maximum number of correlated parameters
-_DEFAULT_RESOLUTION = "0.0"
+_DEFAULT_RESOLUTION = 0.0
 
 
 class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -35,6 +35,8 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
 
+    _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
+
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation setup", *args, **kwargs)
 
@@ -45,6 +47,9 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._reset_btn = QPushButton("Reset")
 
         self._table = QTableWidget()
+
+        self._src_instrument = config.control_sources
+        self._src_metadata = config.meta_sources
 
         self.initUI()
         self.initConnections()
@@ -86,21 +91,31 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         table.setRowCount(n_row)
         table.setHorizontalHeaderLabels([
             'Category', 'Karabo Device ID', 'Property Name', 'Resolution'])
-        table.setVerticalHeaderLabels([str(i+1) for i in range(_N_PARAMS)])
+        table.setVerticalHeaderLabels([str(i+1) for i in range(n_row)])
+
         for i_row in range(_N_PARAMS):
-            combo = QComboBox()
-            for t in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]].keys():
-                combo.addItem(t)
-            table.setCellWidget(i_row, 0, combo)
-            combo.currentTextChanged.connect(
+            category_cb = QComboBox()
+            category_cb.addItem('')  # default is empty
+            for k, v in self._src_metadata.items():
+                if v:
+                    category_cb.addItem(k)
+            for k, v in self._src_instrument.items():
+                if v:
+                    category_cb.addItem(k)
+            category_cb.addItem(self._user_defined_key)
+            table.setCellWidget(i_row, 0, category_cb)
+            category_cb.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            for i_col in range(1, 3):
+            # Set up "device id" and "property" cells for category ''
+            for i_col in [1, 2]:
                 widget = SmartLineEdit()
-                table.setCellWidget(i_row, i_col, widget)
                 widget.setReadOnly(True)
+                table.setCellWidget(i_row, i_col, widget)
 
-            widget = self._get_default_resolution_widget()
+            # Set up "resolution" cell for category ''
+            widget = SmartLineEdit(str(_DEFAULT_RESOLUTION))
+            widget.setReadOnly(True)
             table.setCellWidget(i_row, 3, widget)
 
         header = table.horizontalHeader()
@@ -117,18 +132,19 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._table.setMaximumHeight(header_height * (_N_PARAMS + 2.5))
 
     @pyqtSlot(str)
-    def onCategoryChange(self, i_row, text):
-        resolution_le = self._get_default_resolution_widget()
+    def onCategoryChange(self, i_row, category):
+        resolution_le = SmartLineEdit(str(_DEFAULT_RESOLUTION))
+        validator = QDoubleValidator()
+        validator.setBottom(0.0)
+        resolution_le.setValidator(validator)
 
-        # i_row is the row number in the QTableWidget
-        if not text or text == "User defined":
-            # '' or 'User defined'
+        if not category or category == self._user_defined_key:
             device_id_le = SmartLineEdit()
             property_le = SmartLineEdit()
-
-            if not text:
+            if not category:
                 device_id_le.setReadOnly(True)
                 property_le.setReadOnly(True)
+                resolution_le.setReadOnly(True)
             else:
                 device_id_le.returnPressed.connect(functools.partial(
                     self.onCorrelationParamChangeLe, i_row))
@@ -143,23 +159,25 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
             self.onCorrelationParamChangeLe(i_row)
         else:
-            combo_device_ids = QComboBox()
-            for device_id in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].device_ids:
-                combo_device_ids.addItem(device_id)
+            srcs = self._src_metadata if category in config.meta_sources \
+                else self._src_instrument
+            category_srcs = srcs.get(category, dict())
+            device_id_cb = QComboBox()
+            property_cb = QComboBox()
+            for device_id in category_srcs:
+                device_id_cb.addItem(device_id)
+                for ppt in category_srcs[device_id]:
+                    property_cb.addItem(ppt)
 
-            combo_device_ids.currentTextChanged.connect(functools.partial(
+            device_id_cb.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
-            self._table.setCellWidget(i_row, 1, combo_device_ids)
-
-            combo_properties = QComboBox()
-            for ppt in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].properties:
-                combo_properties.addItem(ppt)
-            combo_properties.currentTextChanged.connect(functools.partial(
+            property_cb.currentTextChanged.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
-            self._table.setCellWidget(i_row, 2, combo_properties)
-
             resolution_le.returnPressed.connect(functools.partial(
                 self.onCorrelationParamChangeCb, i_row))
+
+            self._table.setCellWidget(i_row, 1, device_id_cb)
+            self._table.setCellWidget(i_row, 2, property_cb)
             self._table.setCellWidget(i_row, 3, resolution_le)
 
             self.onCorrelationParamChangeCb(i_row)
@@ -170,8 +188,8 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         ppt = self._table.cellWidget(i_row, 2).text()
         res = float(self._table.cellWidget(i_row, 3).text())
 
-        self._mediator.onCorrelationParamChange(
-            (i_row+1, device_id, ppt, res))
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onCorrelationParamChange((i_row+1, src, res))
 
     @pyqtSlot(str)
     def onCorrelationParamChangeCb(self, i_row):
@@ -179,8 +197,8 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         ppt = self._table.cellWidget(i_row, 2).currentText()
         res = float(self._table.cellWidget(i_row, 3).text())
 
-        self._mediator.onCorrelationParamChange(
-            (i_row+1, device_id, ppt, res))
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onCorrelationParamChange((i_row+1, src, res))
 
     def updateMetaData(self):
         """Overload."""
@@ -189,15 +207,8 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         for i_row in range(_N_PARAMS):
             category = self._table.cellWidget(i_row, 0).currentText()
-            if not category or category == "User defined":
+            if not category or category == self._user_defined_key:
                 self.onCorrelationParamChangeLe(i_row)
             else:
                 self.onCorrelationParamChangeCb(i_row)
         return True
-
-    def _get_default_resolution_widget(self):
-        resolution_le = SmartLineEdit(_DEFAULT_RESOLUTION)
-        validator = QDoubleValidator()
-        validator.setBottom(0.0)
-        resolution_le.setValidator(validator)
-        return resolution_le

@@ -56,10 +56,8 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         analysis_type (AnalysisType): binning analysis type.
         _pp_analysis_type (AnalysisType): pump-probe analysis type.
         _mode (BinMode): binning mode.
-        _device_id1 (str): device ID 1.
-        _property1 (str): property of the device 1.
-        _device_id2 (str): device ID 2.
-        _property2 (str): property of the device 2.
+        _source1 (str): data source 1.
+        _source2 (str): data source 2.
         _range1 (tuple): bin 1 range.
         _range2 (tuple): bin 2 range.
         _n_bins1 (int): number of 1 bins.
@@ -106,10 +104,8 @@ class BinProcessor(_BaseProcessor, _BinMixin):
 
         self._mode = None
 
-        self._device_id1 = ''
-        self._property1 = ''
-        self._device_id2 = ''
-        self._property2 = ''
+        self._source1 = ''
+        self._source2 = ''
 
         # For performance reason, I prefer defining 'slow1', 'slow2' instead
         # of 'slows', which can be a tuple or list, although it leads to a
@@ -161,23 +157,19 @@ class BinProcessor(_BaseProcessor, _BinMixin):
             self._bin2d = True
             self._mode = mode
 
-        device_id1 = cfg['device_id1']
-        property1 = cfg['property1']
-        if device_id1 != self._device_id1 or property1 != self._property1:
-            self._device_id1 = device_id1
-            self._property1 = property1
-            if device_id1 and property1:
+        source1 = cfg['source1']
+        if source1 != self._source1:
+            self._source1 = source1
+            if source1:
                 self._has_param1 = True
             else:
                 self._has_param1 = False
             self._reset = True
 
-        device_id2 = cfg['device_id2']
-        property2 = cfg['property2']
-        if device_id2 != self._device_id2 or property2 != self._property2:
-            self._device_id2 = device_id2
-            self._property2 = property2
-            if device_id2 and property2:
+        source2 = cfg['source2']
+        if source2 != self._source2:
+            self._source2 = source2
+            if source2:
                 self._has_param2 = True
             else:
                 self._has_param2 = False
@@ -263,8 +255,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
 
         bin = processed.bin
         bin1 = bin[0]
-        bin1.device_id = self._device_id1
-        bin1.property = self._property1
+        bin1.source = self._source1
         bin1.centers = self.edges2centers(self._edges1)
         bin1.stats = self._stats1
         bin1.counts = self._counts1
@@ -272,8 +263,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         bin1.x = self._vfom_x1
 
         bin2 = bin[1]
-        bin2.device_id = self._device_id2
-        bin2.property = self._property2
+        bin2.source = self._source2
         bin2.centers = self.edges2centers(self._edges2)
 
         bin.heat = self._heat
@@ -311,13 +301,13 @@ class BinProcessor(_BaseProcessor, _BinMixin):
 
         tid = processed.tid
 
-        slow1, err = self._fetch_property_data(
-            tid, raw, self._device_id1, self._property1)
+        slow1, err = self._fetch_property_data(tid, raw, self._source1)
+
         if err:
             raise ProcessingError(err)
 
-        slow2, err = self._fetch_property_data(
-            tid, raw, self._device_id2, self._property2)
+        slow2, err = self._fetch_property_data(tid, raw, self._source2)
+
         if err:
             raise ProcessingError(err)
 

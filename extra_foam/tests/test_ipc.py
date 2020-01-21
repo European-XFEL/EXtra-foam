@@ -8,7 +8,7 @@ from extra_foam.logger import logger
 from extra_foam.services import start_redis_server
 from extra_foam.ipc import (
     redis_connection, RedisConnection, RedisSubscriber, RedisPSubscriber,
-    _global_connections, reset_redis_connections, MetaRedisConnection
+    _global_connections, reset_redis_connections
 )
 from extra_foam.pipeline.worker import ProcessWorker
 from extra_foam.processes import wait_until_redis_shutdown

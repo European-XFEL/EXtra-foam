@@ -58,7 +58,7 @@ class Mediator(QObject):
     def onSourceTypeChange(self, value: IntEnum):
         self._meta.hset(mt.CONNECTION, "source_type", int(value))
 
-    def onDataSourceToggled(self, item, checked: bool):
+    def onSourceItemToggled(self, checked: bool, item: object):
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -111,10 +111,11 @@ class Mediator(QObject):
         self._meta.hset(mt.GLOBAL_PROC, "ma_window", value)
 
     def onResetMa(self):
-        self._meta.hmset(mt.GLOBAL_PROC,
-                         {"reset_ma_ai": 1,
-                          "reset_ma_roi": 1,
-                          "reset_ma_xgm": 1})
+        self._meta.hmset(mt.GLOBAL_PROC, {
+            "reset_ma_ai": 1,
+            "reset_ma_roi": 1,
+            "reset_ma_xgm": 1,
+            "reset_ma_adq": 1})
 
     def onAiPixelSizeXChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_x', value)
@@ -204,23 +205,21 @@ class Mediator(QObject):
         self._meta.hset(mt.CORRELATION_PROC, "analysis_type", int(value))
 
     def onCorrelationParamChange(self, value: tuple):
-        # index, device ID, property name, resolution
+        # index, source, resolution
         # index starts from 1
-        index, device_id, ppt, resolution = value
-        self._meta.hset(mt.CORRELATION_PROC, f'device_id{index}', device_id)
-        self._meta.hset(mt.CORRELATION_PROC, f'property{index}', ppt)
+        index, src, resolution = value
+        self._meta.hset(mt.CORRELATION_PROC, f'source{index}', src)
         self._meta.hset(mt.CORRELATION_PROC, f'resolution{index}', resolution)
 
     def onCorrelationReset(self):
         self._meta.hset(mt.CORRELATION_PROC, "reset", 1)
 
-    def onBinGroupChange(self, value: tuple):
-        # index, device ID, property name, bin_range, number of bins,
+    def onBinParamChange(self, value: tuple):
+        # index, source, bin_range, number of bins,
         # where the index starts from 1
-        index, device_id, ppt, bin_range, n_bins = value
+        index, src, bin_range, n_bins = value
 
-        self._meta.hset(mt.BIN_PROC, f'device_id{index}', device_id)
-        self._meta.hset(mt.BIN_PROC, f'property{index}', ppt)
+        self._meta.hset(mt.BIN_PROC, f'source{index}', src)
         self._meta.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
         self._meta.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
 
@@ -257,17 +256,11 @@ class Mediator(QObject):
         else:
             self._meta.hdel(mt.TR_XAS_PROC, "analysis_type")
 
-    def onTrXasDelayDeviceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_device", value)
+    def onTrXasDelaySourceChange(self, value: str):
+        self._meta.hset(mt.TR_XAS_PROC, "delay_source", value)
 
-    def onTrXasDelayPropertyChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_property", value)
-
-    def onTrXasEnergyDeviceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_device", value)
-
-    def onTrXasEnergyPropertyChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_property", value)
+    def onTrXasEnergySourceChange(self, value: str):
+        self._meta.hset(mt.TR_XAS_PROC, "energy_source", value)
 
     def onTrXasNoDelayBinsChange(self, value: int):
         self._meta.hset(mt.TR_XAS_PROC, "n_delay_bins", value)

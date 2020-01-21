@@ -19,6 +19,9 @@ class _AbstractProxy:
     _db = RedisConnection()
     _db_nodecode = RedisConnection(decode_responses=False)
 
+    def pubsub(self):
+        return self._db.pubsub()
+
     def reset(self):
         _AbstractProxy.__dict__["_db"].reset()
         _AbstractProxy.__dict__["_db_nodecode"].reset()

@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...algorithms import compute_q
-from ...config import Normalizer, config
+from ...config import config, list_azimuthal_integ_methods, Normalizer
 
 
 _DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
@@ -71,7 +71,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._rz_le.setEnabled(False)
 
         self._integ_method_cb = QComboBox()
-        for method in config["AZIMUTHAL_INTEG_METHODS"]:
+        for method in list_azimuthal_integ_methods(config["DETECTOR"]):
             self._integ_method_cb.addItem(method)
 
         q_range = _estimate_q_range()

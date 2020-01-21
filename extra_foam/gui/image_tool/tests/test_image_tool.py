@@ -11,13 +11,14 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, _Config, ConfigWrapper, Normalizer, RoiCombo, RoiFom
+    AnalysisType, config, Normalizer, RoiCombo, RoiFom
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
+from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
 from extra_foam.database import MetaProxy
@@ -26,15 +27,25 @@ app = mkQApp()
 
 logger.setLevel('CRITICAL')
 
+_tmp_cfg_dir = tempfile.mkdtemp()
 
-class TestImageTool(unittest.TestCase):
+
+def setup_module(module):
+    from extra_foam import config
+    module._backup_ROOT_PATH = config.ROOT_PATH
+    config.ROOT_PATH = _tmp_cfg_dir
+
+
+def teardown_module(module):
+    os.rmdir(_tmp_cfg_dir)
+    from extra_foam import config
+    config.ROOT_PATH = module._backup_ROOT_PATH
+
+
+class TestImageTool(unittest.TestCase, _BaseProcessorTest):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
-        config.load('LPD')
-        config.set_topic("FXE")
+        config.load('LPD', 'FXE')
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
@@ -53,6 +64,8 @@ class TestImageTool(unittest.TestCase):
 
         wait_until_redis_shutdown()
 
+        os.remove(config.config_file)
+
     def setUp(self):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
@@ -63,12 +76,6 @@ class TestImageTool(unittest.TestCase):
         self.view = self.image_tool._corrected_view.imageView
         self.view.setImageData(None)
         self.view._image = None
-
-    def _get_data(self):
-        return {'detector': {
-                    'assembled': np.ones((4, 10, 10), np.float32),
-                    'pulse_slicer': slice(None, None)},
-                'processed': ProcessedData(1001)}
 
     def testGeneral(self):
         self.assertEqual(9, len(self.image_tool._ctrl_widgets))
@@ -207,7 +214,7 @@ class TestImageTool(unittest.TestCase):
         corrected = self.image_tool._reference_view._corrected
         proc = self.pulse_worker._image_proc
 
-        data = self._get_data()
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # test setting reference (no image)
         QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
@@ -268,13 +275,13 @@ class TestImageTool(unittest.TestCase):
 
         pub = ImageMaskPub()
         proc = self.pulse_worker._image_proc
-        data = self._get_data()
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # trigger the lazily evaluated subscriber
         proc.process(data)
         self.assertIsNone(proc._image_mask)
 
-        mask_gt = np.zeros(data['detector']['assembled'].shape[-2:], dtype=np.bool)
+        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
 
         pub.add((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
@@ -624,11 +631,7 @@ class TestImageTool(unittest.TestCase):
 class TestImageToolTs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
-        config.load('JungFrau')
-        config.set_topic("FXE")
+        config.load('JungFrau', 'FXE')
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
@@ -643,6 +646,8 @@ class TestImageToolTs(unittest.TestCase):
         cls.foam.terminate()
 
         wait_until_redis_shutdown()
+
+        os.remove(config.config_file)
 
     def setUp(self):
         # construct a fresh ImageToolWindow for each test

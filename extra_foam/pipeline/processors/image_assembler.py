@@ -8,7 +8,6 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
-import re
 
 import json
 import numpy as np
@@ -25,20 +24,19 @@ from ...ipc import process_logger as logger
 from ...utils import profiler
 
 
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
+_RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
+
+
 class ImageAssemblerFactory(ABC):
     class BaseAssembler(_BaseProcessor, _RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:
-            _source_name (str): detector data source name.
-            _pulse_slicer (slice object): detector data pulse slicer.
         """
         def __init__(self):
             """Initialization."""
             super().__init__()
-
-            self._source_name = None
-            self._pulse_slicer = None
 
             self._geom_file = None
             self._quad_position = None
@@ -47,15 +45,6 @@ class ImageAssemblerFactory(ABC):
             self._n_images = None
 
         def update(self):
-            srcs = self._meta.get_all_data_sources(config["DETECTOR"])
-            if srcs:
-                assert(len(srcs) == 1)
-                self._source_name = srcs[-1].name
-                self._pulse_slicer = srcs[-1].slicer
-            else:
-                self._source_name = None
-                self._pulse_slicer = None
-
             if config['REQUIRE_GEOMETRY']:
                 geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
 
@@ -77,25 +66,14 @@ class ImageAssemblerFactory(ABC):
                     self._geom = None
 
         @abstractmethod
-        def _get_modules_bridge(self, data, src_name):
+        def _get_modules_bridge(self, data, src):
             """Get modules data from bridge."""
             pass
 
         @abstractmethod
-        def _get_modules_file(self, data, src_name):
+        def _get_modules_file(self, data, src):
             """Get modules data from file."""
             pass
-
-        def _clear_det_data(self, data, src_name):
-            """Delete detector related data from the raw data."""
-            try:
-                del data[src_name]
-            except KeyError:
-                # stream multi-module detector data from files
-                devices = [dev for dev in data.keys()]
-                for device in devices:
-                    if re.search(r'/DET/(\d+)CH', device):
-                        del data[device]
 
         def load_geometry(self, filepath, quad_positions):
             """Load geometry from file.
@@ -107,7 +85,7 @@ class ImageAssemblerFactory(ABC):
 
         def _modules_to_assembled(self, modules):
             """Convert modules data to assembled image data."""
-            image_dtype = config["IMAGE_DTYPE"]
+            image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
             if self._geom is not None:
                 # karabo_data interface
                 n_images = (modules.shape[0], )
@@ -141,7 +119,7 @@ class ImageAssemblerFactory(ABC):
             # is only readable since the data is owned by a pointer in
             # the zmq message (it is not copied). However, other data
             # like data['metadata'] is writeable.
-            return modules.astype(image_dtype)
+            return modules.astype(image_dtype, copy=True)
 
         @profiler("Image Assembler")
         def process(self, data):
@@ -149,24 +127,29 @@ class ImageAssemblerFactory(ABC):
 
             :returns assembled: assembled detector image data.
             """
-            src_name = self._source_name
-            if src_name is None:
-                raise AssemblingError(f"Unspecified {config['DETECTOR']} "
-                                      f"source name!")
-            src_type = data['source_type']
+            meta = data['meta']
             raw = data['raw']
+
+            src = data["catalog"].main_detector
+            if src not in meta:
+                raise AssemblingError(
+                    f"{config['DETECTOR']} source <{src}> not found!")
+            src_type = meta[src]['source_type']
 
             try:
                 if src_type == DataSource.FILE:
-                    modules_data = self._get_modules_file(raw, src_name)
+                    modules_data = self._get_modules_file(raw, src)
                 elif src_type == DataSource.BRIDGE:
-                    modules_data = self._get_modules_bridge(raw, src_name)
+                    modules_data = self._get_modules_bridge(raw, src)
                 else:
                     raise ValueError(f"Unknown source type: {src_type}")
 
-                self._clear_det_data(raw, src_name)
+                # Remove raw detector data since we do not want to serialize
+                # it and send around.
+                raw[src] = None
+
             except (ValueError, IndexError, KeyError) as e:
-                raise AssemblingError(e)
+                raise AssemblingError(repr(e))
 
             shape = modules_data.shape
             ndim = len(shape)
@@ -174,8 +157,8 @@ class ImageAssemblerFactory(ABC):
                 n_modules = config["NUMBER_OF_MODULES"]
                 module_shape = config["MODULE_SHAPE"]
 
-                # BaslerCamera has module shape [-1, -1]
-                if module_shape[0] > 0 and list(shape[-2:]) != module_shape:
+                # BaslerCamera has module shape (-1, -1)
+                if module_shape[0] > 0 and shape[-2:] != module_shape:
                     raise ValueError(f"Expected module shape {module_shape}, "
                                      f"but get {shape[-2:]} instead!")
                 elif ndim >= 3 and shape[-3] != n_modules:
@@ -191,87 +174,171 @@ class ImageAssemblerFactory(ABC):
             except ValueError as e:
                 raise AssemblingError(e)
 
-            assembled = self._modules_to_assembled(modules_data)
-            data['detector'] = dict()
-            data['detector']['assembled'] = assembled
-            data['detector']['pulse_slicer'] = self._pulse_slicer
+            data['assembled'] = {
+                'data': self._modules_to_assembled(modules_data),
+            }
+
+            # Assign the global train ID once the main detector was
+            # successfully assembled.
+            raw["META timestamp.tid"] = meta[src]["tid"]
 
     class AgipdImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            # (memory cells, modules, y, x)
-            modules_data = data[src_name]["image.data"]
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            Should work for both raw and calibrated data, according to DSSC.
+
+            - calibrated, "image.data", (modules, x, y, memory cells)
+            - raw, "image.data", (modules, x, y, memory cells)
+            """
+            modules_data = data[src]
             if modules_data.shape[1] == config["MODULE_SHAPE"][1]:
-                # online-calibrated data, if reshaping not done upstream
-                # (modules, fs, ss, pulses) -> (pulses, modules, ss, fs)
+                # Reshaping could have already been done upstream (e.g.
+                # at the PipeToZeroMQ device), if not:
+                #   (modules, fs, ss, pulses) -> (pulses, modules, ss, fs)
+                #   (modules, x, y, memory cells) -> (memory cells, modules, y, x)
                 return np.transpose(modules_data, (3, 0, 2, 1))
+            # (memory cells, modules, y, x)
             return modules_data
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            if not src_name.endswith(":xtdf"):
-                # force to select the "correct" source name
-                raise KeyError(src_name)
+        def _get_modules_file(self, data, src):
+            """Override.
 
-            det_data = {k: v for k, v in data.items() if 'AGIPD' in k}
-            # (memory cells, modules, y, x)
-            return stack_detector_data(det_data, "image.data")
+            - calibrated, "image.data", (memory cells, modules, y, x)
+            - raw, "image.data", (memory cell, 2, modules, y, x)
+                [:, 0, ...] -> data
+                [:, 1, ...] -> gain
+            """
+            modules_data = stack_detector_data(data[src], src.split(' ')[1])
+            dtype = modules_data.dtype
+
+            if dtype == _IMAGE_DTYPE:
+                return modules_data
+
+            if dtype == _RAW_IMAGE_DTYPE:
+                return modules_data[:, 0, ...]
+
+            raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
         def load_geometry(self, filename, quad_positions):
-            """Overload."""
+            """Override."""
             try:
                 self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
             except (ImportError, ModuleNotFoundError, OSError) as e:
                 raise AssemblingError(e)
 
     class LpdImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            Should work for both raw and calibrated data, according to DSSC.
+
+            - calibrated, "image.data", (modules, x, y, memory cells)
+            - raw, "image.data", (modules, x, y, memory cells)
+            """
             # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
-            return np.moveaxis(
-                np.moveaxis(data[src_name]["image.data"], 3, 0), 3, 2)
+            return np.moveaxis(np.moveaxis(data[src], 3, 0), 3, 2)
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            if not src_name.endswith(":xtdf"):
-                # force to select the "correct" source name
-                raise KeyError(src_name)
+        def _get_modules_file(self, data, src):
+            """Override.
 
-            det_data = {k: v for k, v in data.items() if 'LPD' in k}
-            # (memory cells, modules, y, x)
-            return stack_detector_data(det_data, "image.data")
+            - calibrated, "image.data", (memory cells, modules, y, x)
+            - raw, "image.data", (memory cell, 1, modules, y, x)
+            """
+            modules_data = stack_detector_data(data[src], src.split(' ')[1])
+            dtype = modules_data.dtype
+
+            if dtype == _IMAGE_DTYPE:
+                return modules_data
+
+            if dtype == _RAW_IMAGE_DTYPE:
+                return np.squeeze(modules_data, axis=1)
+
+            raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
         def load_geometry(self, filename, quad_positions):
-            """Overload."""
+            """Override."""
             try:
                 self._geom = LPD_1MGeometry.from_h5_file_and_quad_positions(
                     filename, quad_positions)
             except OSError as e:
                 raise AssemblingError(e)
 
+    class DsscImageAssembler(BaseAssembler):
+        @profiler("Prepare Module Data")
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            - calibrated, "image.data", (modules, x, y, memory cells)
+            - raw, "image.data", (modules, x, y, memory cells)
+            """
+            # (modules, x, y, memory cells) -> (memory cells, modules, y, x)
+            return np.moveaxis(np.moveaxis(data[src], 3, 0), 3, 2)
+
+        @profiler("Prepare Module Data")
+        def _get_modules_file(self, data, src):
+            """Override.
+
+            - calibrated, "image.data", (memory cells, modules, y, x)
+            - raw, "image.data", (memory cell, 1, modules, y, x)
+            """
+            modules_data = stack_detector_data(data[src], src.split(' ')[1])
+            dtype = modules_data.dtype
+
+            if dtype == _IMAGE_DTYPE:
+                return modules_data
+
+            if dtype == _RAW_IMAGE_DTYPE:
+                return np.squeeze(modules_data, axis=1)
+
+            raise AssemblingError(f"Unknown detector data type: {dtype}!")
+
+        def load_geometry(self, filename, quad_positions):
+            """Override."""
+            try:
+                self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
+                    filename, quad_positions)
+            # FIXME: OSError?
+            except Exception as e:
+                raise AssemblingError(e)
+
     class JungFrauImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            modules_data = data[src_name]["data.adc"]
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            Calibrated data only.
+
+            - calibrated, "data.adc", (y, x, modules)
+            - raw, "data.adc", TODO
+            """
+            modules_data = data[src]
             if modules_data.shape[-1] == 1:
-                # (y, x, modules) -> (y, x)
                 return modules_data.squeeze(axis=-1)
             else:
                 raise NotImplementedError("Number of modules > 1")
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            modules_data = data[src_name]['data.adc']
+        def _get_modules_file(self, data, src):
+            """Override.
+
+            - calibrated, "data.adc", (modules, y, x)
+            - raw, "data.adc", (modules, y, x)
+            """
+            modules_data = data[src]
             if modules_data.shape[0] == 1:
-                # (modules, y, x) -> (y, x)
                 return modules_data.squeeze(axis=0)
             else:
                 raise NotImplementedError("Number of modules > 1")
 
     class JungFrauPulseResolvedImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            modules_data = data[src_name]["data.adc"]
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            Calibrated data only.
+
+            - calibrated, "data.adc", TODO
+            - raw, "data.adc", TODO
+            """
+            modules_data = data[src]
             shape = modules_data.shape
             ndim = len(shape)
             if ndim == 3:
@@ -280,8 +347,8 @@ class ImageAssemblerFactory(ABC):
             # (modules, y, x, memory cells) -> (memory cells, modules, y, x)
             return np.moveaxis(modules_data, -1, 0)
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
+        def _get_modules_file(self, data, src):
+            """Override."""
             # modules_data = data[src_name]["data.adc"]
             # shape = modules_data.shape
             # ndim = len(shape)
@@ -293,70 +360,45 @@ class ImageAssemblerFactory(ABC):
             raise NotImplementedError
 
     class FastCCDImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            try:
-                # calibrated data, (y, x, 1) -> (y, x)
-                return data[src_name]["data.image"].squeeze(axis=-1)
-            except KeyError:
-                # raw data, (y, x)
-                return data[src_name]["data.image.data"]
+        def _get_modules_bridge(self, data, src):
+            """Override.
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            # (y, x)
-            return data[src_name]['data.image.pixels']
+            - calibrated, "data.image", (y, x, 1)
+            - raw, "data.image.data", (y, x)
+            """
+            img_data = data[src]
+            dtype = img_data.dtype
 
-    class BaslerCameraImageAssembler(BaseAssembler):
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            # (y, x)
-            return data[src_name]["data.image.data"]
+            if dtype == _IMAGE_DTYPE:
+                return img_data.squeeze(axis=-1)
 
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            raise NotImplementedError
-
-    class DsscImageAssembler(BaseAssembler):
-        @profiler("Prepare Module Data")
-        def _get_modules_bridge(self, data, src_name):
-            """Overload."""
-            # (memory cells, modules, y, x)
-            return np.moveaxis(
-                np.moveaxis(data[src_name]["image.data"], 3, 0), 3, 2)
-
-        @profiler("Prepare Module Data")
-        def _get_modules_file(self, data, src_name):
-            """Overload."""
-            if not src_name.endswith(":xtdf"):
-                # force to select the "correct" source name
-                raise KeyError(src_name)
-
-            det_data = {k: v for k, v in data.items() if 'DSSC' in k}
-            modules_data = stack_detector_data(det_data, "image.data")
-
-            dtype = modules_data.dtype
-
-            # calibrated data
-            if dtype == np.float32:
-                # (memory cells, modules, y, x)
-                return modules_data
-
-            # raw data
-            if dtype == np.uint16:
-                # (memory cell, 1, modules, y, x) -> (memory cells, modules, y, x)
-                return np.squeeze(modules_data, axis=1)
+            if dtype == _RAW_IMAGE_DTYPE:
+                return img_data
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
-        def load_geometry(self, filename, quad_positions):
-            """Overload."""
-            try:
-                self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
-                        filename, quad_positions)
-            # FIXME: OSError?
-            except Exception as e:
-                raise AssemblingError(e)
+        def _get_modules_file(self, data, src):
+            """Override.
+
+            - calibrated, "data.image.pixels", (y, x)
+            - raw, "data.image.pixels", (y, x)
+            """
+            return data[src]
+
+    class BaslerCameraImageAssembler(BaseAssembler):
+        # TODO: remove BaslerCamera from detector
+        #       make a category for BaslerCamera.
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            - raw, "data.image.data", (y, x)
+            """
+            # (y, x)
+            return data[src]
+
+        def _get_modules_file(self, data, src):
+            """Override."""
+            raise NotImplementedError
 
     @classmethod
     def create(cls, detector):
@@ -366,6 +408,9 @@ class ImageAssemblerFactory(ABC):
         if detector == 'LPD':
             return cls.LpdImageAssembler()
 
+        if detector == 'DSSC':
+            return cls.DsscImageAssembler()
+
         if detector == 'JungFrau':
             return cls.JungFrauImageAssembler()
 
@@ -374,9 +419,6 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'BaslerCamera':
             return cls.BaslerCameraImageAssembler()
-
-        if detector == 'DSSC':
-            return cls.DsscImageAssembler()
 
         if detector == 'JungFrauPR':
             return cls.JungFrauPulseResolvedImageAssembler()

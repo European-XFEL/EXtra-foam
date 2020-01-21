@@ -65,7 +65,7 @@ class _SingleRoiCtrlWidget(QWidget):
         label = QLabel(f"ROI{idx}: ")
         palette = label.palette()
         palette.setColor(palette.WindowText,
-                         QColor(*getattr(Colors(), config['ROI_COLORS'][idx-1])))
+                         QColor(*getattr(Colors(), config['GUI_ROI_COLORS'][idx-1])))
         label.setPalette(palette)
         layout.addWidget(label)
 

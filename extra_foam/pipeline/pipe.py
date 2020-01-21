@@ -8,17 +8,22 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
+import copy
 import multiprocessing as mp
 import threading
 from queue import Empty, Full, Queue
 import time
 
 from karabo_bridge import Client
-
+from .data_model import ProcessedData
+from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
-from ..utils import profiler
+from ..utils import profiler, run_in_thread
+from ..ipc import RedisSubscriber
 from ..ipc import process_logger as logger
-from ..database import MetaProxy, MonProxy
+from ..database import (
+    DataTransformer, MetaProxy, MonProxy, SourceCatalog, SourceItem
+)
 from ..database import Metadata as mt
 
 
@@ -40,7 +45,7 @@ class _PipeBase(ABC):
         self._drop = drop
         self._final = final
 
-        self._data = Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._data = Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
 
         self._meta = MetaProxy()
         self._mon = MonProxy()
@@ -60,15 +65,10 @@ class _PipeBase(ABC):
         """
         # clean the residual data
         self.clean()
-
-        thread = threading.Thread(target=self._work,
-                                  args=(close_ev, self._update_ev),
-                                  daemon=True)
-        thread.start()
-        return thread
+        self.run(close_ev, self._update_ev)
 
     @abstractmethod
-    def _work(self, close_ev, update_ev):
+    def run(self, close_ev, update_ev):
         """Target function for running in a thread.
 
         :param multiprocessing.Event close_ev: if this event is set, the
@@ -130,14 +130,68 @@ class _PipeOutBase(_PipeBase):
             self._data.put_nowait(item)
 
 
-class KaraboBridge(_PipeInBase):
+class KaraboBridge(_PipeInBase, _RedisParserMixin):
     """Karabo bridge client which is an input pipe."""
+
+    _sub = RedisSubscriber(mt.DATA_SOURCE)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _work(self, close_ev, update_ev):
+        self._catalog = SourceCatalog()
+
+        self._lock = threading.Lock()
+
+    def start(self, close_ev):
         """Override."""
-        timeout = config['TIMEOUT']
+        self.clean()
+        self.update_source_items()
+        self.run(close_ev, self._update_ev)
+
+    @run_in_thread(daemon=True)
+    def update_source_items(self):
+        """Updated requested source items."""
+        sub = self._sub
+        while True:
+            msg = sub.get_message(ignore_subscribe_messages=True)
+
+            if msg is not None:
+                src = msg['data']
+
+                item = self._meta.hget_all(src)
+                with self._lock:
+                    if item:
+                        # add a new source item
+                        category = item['category']
+                        modules = item['modules']
+                        slicer = item['slicer']
+                        vrange = item['vrange']
+
+                        self._catalog.add_item(SourceItem(
+                            category,
+                            item['name'],
+                            self.str2list(modules, handler=int)
+                            if modules else None,
+                            item['property'],
+                            self.str2slice(slicer) if slicer else None,
+                            self.str2tuple(vrange) if vrange else None))
+                    else:
+                        # remove a source item
+                        if src not in self._catalog:
+                            # Raised when there were two checked items in
+                            # the data source tree with the same "device ID"
+                            # and "property". The item has already been
+                            # deleted when one of them was unchecked.
+                            logger.error("Duplicated data source items")
+                            continue
+                        self._catalog.remove_item(src)
+
+            time.sleep(0.001)
+
+    @run_in_thread(daemon=True)
+    def run(self, close_ev, update_ev):
+        """Override."""
+        timeout = config['PIPELINE_TIMEOUT']
 
         # the time when the previous data was received
         prev_data_arrival_time = None
@@ -163,7 +217,22 @@ class KaraboBridge(_PipeInBase):
                 continue
 
             try:
-                data = self._recv_imp(client)
+                raw, meta = self._recv_imp(client)
+                tid = next(iter(meta.values()))["timestamp.tid"]
+
+                self._update_available_sources(meta)
+
+                with self._lock:
+                    catalog = copy.deepcopy(self._catalog)
+
+                if not catalog.main_detector:
+                    # skip the pipeline if the main detector is not specified
+                    logger.error(f"Unspecified {config['DETECTOR']} source!")
+                    continue
+
+                # extract new raw and meta
+                new_raw, new_meta = DataTransformer.transform_euxfel(
+                    raw, meta, catalog=catalog, source_type=src_type)
 
                 if prev_data_arrival_time is not None:
                     fps = 1.0 / (time.time() - prev_data_arrival_time)
@@ -176,17 +245,21 @@ class KaraboBridge(_PipeInBase):
                 #       owner process.
                 while not close_ev.is_set():
                     try:
-                        self._data.put({"raw": data[0],
-                                        "meta": data[1],
-                                        "source_type": src_type,
-                                        "processed": None},
-                                       timeout=timeout)
+                        self._data.put({
+                            "catalog": catalog,
+                            "meta": new_meta,
+                            "raw": new_raw,
+                            "processed": ProcessedData(tid)}, timeout=timeout)
                         break
                     except Full:
                         continue
 
             except TimeoutError:
                 pass
+
+    def _update_available_sources(self, meta):
+        sources = {k: v["timestamp.tid"] for k, v in meta.items()}
+        self._mon.set_available_sources(sources)
 
     @profiler("Receive Data from Bridge")
     def _recv_imp(self, client):
@@ -202,11 +275,12 @@ class MpInQueue(_PipeInBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._client = mp.Queue(maxsize=config["MAX_QUEUE_SIZE"])
+        self._client = mp.Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
 
-    def _work(self, close_ev, update_ev):
+    @run_in_thread(daemon=True)
+    def run(self, close_ev, update_ev):
         """Override."""
-        timeout = config['TIMEOUT']
+        timeout = config['PIPELINE_TIMEOUT']
 
         while not close_ev.is_set():
             try:
@@ -251,9 +325,10 @@ class MpOutQueue(_PipeOutBase):
             self._client.get_nowait()
             self._client.put_nowait(item)
 
-    def _work(self, close_ev, update_ev):
+    @run_in_thread(daemon=True)
+    def run(self, close_ev, update_ev):
         """Override."""
-        timeout = config['TIMEOUT']
+        timeout = config['PIPELINE_TIMEOUT']
 
         while not close_ev.is_set():
             try:
@@ -271,8 +346,8 @@ class MpOutQueue(_PipeOutBase):
                 except Empty:
                     continue
             else:
-                data_out = {key: data[key] for key
-                            in ['processed', 'source_type', 'meta', 'raw']}
+                data_out = {key: data[key]
+                            for key in ['processed', 'catalog', 'meta', 'raw']}
 
                 while not close_ev.is_set():
                     try:

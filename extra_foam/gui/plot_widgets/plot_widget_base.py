@@ -175,7 +175,7 @@ class TimedPlotWidgetF(PlotWidgetF):
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._refresh_imp)
-        self._timer.start(config["ACCUMULATED_PLOT_UPDATE_INTERVAL"])
+        self._timer.start(config["GUI_PLOT_WITH_STATE_UPDATE_TIMER"])
 
     @abc.abstractmethod
     def refresh(self):

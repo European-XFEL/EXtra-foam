@@ -12,7 +12,7 @@ import psutil
 import multiprocessing as mp
 import functools
 import subprocess
-from threading import RLock
+from threading import RLock, Thread
 import time
 
 from .logger import logger
@@ -219,3 +219,15 @@ def query_yes_no(question):
             return True
         if ans == 'n' or ans == 'no':
             return False
+
+
+def run_in_thread(daemon=False):
+    """Run a function/method in a thread."""
+    def wrap(f):
+        @functools.wraps(f)
+        def threaded_f(*args, **kwargs):
+            t = Thread(target=f, daemon=daemon, args=args, kwargs=kwargs)
+            t.start()
+            return t
+        return threaded_f
+    return wrap

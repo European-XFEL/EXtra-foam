@@ -96,7 +96,7 @@ class MaskItem(pg.GraphicsObject):
         item.draw_finished_sgn.connect(self.onDrawFinished)
 
         # pen for drawing the bounding box
-        self._pen = make_pen(config['MASK_BOUNDING_BOX_COLOR'])
+        self._pen = make_pen(config['GUI_MASK_BOUNDING_BOX_COLOR'])
 
         self.state = MaskState.UNMASK
         self._mask_pub = ImageMaskPub()
