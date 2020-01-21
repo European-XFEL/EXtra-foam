@@ -59,7 +59,7 @@ class ThreadLoggerBridge(QObject):
     """
     log_msg_sgn = pyqtSignal(str, str)
 
-    __sub = RedisPSubscriber("log:*")
+    _sub = RedisPSubscriber("log:*")
 
     def __init__(self):
         super().__init__()
@@ -70,11 +70,9 @@ class ThreadLoggerBridge(QObject):
         self._running = True
         while self._running:
             try:
-                msg = self.__sub.get_message()
-                if msg:
-                    self.log_msg_sgn.emit(msg['channel'], msg['data'])
-
-            except (ConnectionError, RuntimeError, AttributeError, IndexError):
+                msg = self._sub.get_message(ignore_subscribe_messages=True)
+                self.log_msg_sgn.emit(msg['channel'], msg['data'])
+            except Exception:
                 pass
 
             time.sleep(0.001)
