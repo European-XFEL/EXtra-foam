@@ -7,6 +7,23 @@ real-time and off-line data analysis (**azimuthal integration**, **ROI**, **corr
 *DSSC* , *FastCCD*, *JungFrau*, *LPD*, etc.) at European XFEL.
 
 
++------------+-------------------------+-------------------------+
+|            | online                  | offline                 |
+|            +------------+------------+------------+------------+
+|            | raw        | calibrated | raw        | calibrated |
++============+============+============+============+============+
+| AGIPD      | True       | True       | True       | True       |
++------------+------------+------------+------------+------------+
+| LPD        | True       | True       | True       | True       |
++------------+------------+------------+------------+------------+
+| DSSC       | True       | True       | True       | True       |
++------------+------------+------------+------------+------------+
+| JungFrau   | False      | True       | True       | True       |
++------------+------------+------------+------------+------------+
+| FastCCD    | True       | True       | True       | True       |
++------------+------------+------------+------------+------------+
+
+
 Why use **EXtra-foam**
 ----------------------
 
@@ -22,12 +39,15 @@ are distributed (e.g. in the same train or different train) by providing several
 It also integrates important plots in a single window so that users can gather abundant information
 in a glance;
 
-3. It allows uses to 'replay' the experiment offline with files. This is another very useful
+3. It allows uses to **replay the experiment** with files. This is another very useful
 feature since for both newcomers and veterans. For newcomers, it helps to understand what whey
 will see during a real experiment by running the 'replay' with some sample/real data; for veterans,
 it helps to optimize the parameters which in turn provides a better real-time monitoring and feedback
-during experiments. It is worth noting that the 'replay' result could be different from the real-time
-result since the offline calibration algorithms are more complicated than the real-time ones.
+during experiments. Moreover, *When starting a new type of experiment, you may not be able to observe
+the expected signal during the first run. It could be worthy of double checking the analysis setup by
+replaying the experiment before searching for other reasons.* It is worth noting that the 'replay'
+result could be different from the real-time result if you are using the real-time calibration service
+from Karabo, since the offline calibration algorithms are more complicated than the real-time ones.
 
 
 Performance

@@ -114,8 +114,8 @@ Define the 1D projection of ROI (region of interest) analysis setup.
 +----------------------------+--------------------------------------------------------------------+
 
 
-Gain / offset
--------------
+Gain / offset correction
+------------------------
 
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
@@ -137,8 +137,8 @@ which will then be used to apply dark subtraction to image data pulse-by-pulse.
     in a certain pulse is *NaN*, the moving average of that pixel will be *NaN* for that pulse.
 
 
-Reference
----------
+Reference image
+---------------
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
