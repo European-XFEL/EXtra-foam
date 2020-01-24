@@ -53,14 +53,24 @@ from Karabo, since the offline calibration algorithms are more complicated than 
 Performance
 -----------
 
-For train-resolved detectors like JungFrau and FastCCD, **EXtra-foam** can process and visualize the data
-at **10 Hz**. For large detectors like AGIPD, LPD and DSSC, the processing and visualization rate is
-**2 ~ 3 Hz** with 64 pulses/train. It can even process the DSSC data with **400 pulses/train** at a rate of
-about 0.3 ~ 0.4 Hz.
+.. table:: Performance on the online cluster [72 Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz, 754 GB RAM]
+
+    +-----------------+--------------------------------------+---------------------------------------+
+    |                 | multi-frame/pulse-resolved detectors | single-frame/train-resolved detectors |
+    +=================+======================================+=======================================+
+    | processing rate | 2 ~ 3 Hz with 64 pulses/train        | 10 Hz                                 |
+    |                 +--------------------------------------+                                       |
+    |                 | 0.3 ~ 0.4 Hz with 400 pulses/train   |                                       |
+    +-----------------+--------------------------------------+---------------------------------------+
+
+.. note::
+    Due to the limited performance of `PyQt`, the visualization rate could be slower
+    than the processing rate if there are too many plots to render, especially for
+    train-resolved detectors.
 
 
 Galleries
------------
+---------
 
 .. image:: images/MainGUI.png
    :width: 800
