@@ -204,6 +204,10 @@ def bench_correct_gain_offset():
 
 
 if __name__ == "__main__":
+    print("*" * 80)
+    print("Benchmark image processing")
+    print("*" * 80)
+
     bench_nanmean_image_array()
     bench_moving_average_image_array()
     bench_mask_image_array()

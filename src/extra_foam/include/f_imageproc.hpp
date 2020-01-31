@@ -12,9 +12,8 @@
 
 #include <type_traits>
 
-#include "xtensor/xtensor.hpp"
-#include "xtensor/xmath.hpp"
 #include "xtensor/xview.hpp"
+#include "xtensor/xmath.hpp"
 #include "xtensor/xindex_view.hpp"
 
 #if defined(FOAM_WITH_TBB)
@@ -23,24 +22,11 @@
 #include "tbb/blocked_range3d.h"
 #endif
 
+#include "f_traits.hpp"
+
+
 namespace foam
 {
-
-template<typename T>
-struct IsImage : std::false_type {};
-
-template<typename T, xt::layout_type L>
-struct IsImage<xt::xtensor<T, 2, L>> : std::true_type {};
-
-template<typename T>
-struct IsImageArray : std::false_type {};
-
-template<typename T, xt::layout_type L>
-struct IsImageArray<xt::xtensor<T, 3, L>> : std::true_type {};
-
-template<typename E, template<typename> class C>
-using EnableIf = std::enable_if_t<C<E>::value, bool>;
-
 
 #if defined(FOAM_WITH_TBB)
 namespace detail

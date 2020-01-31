@@ -8,10 +8,12 @@
  * All rights reserved.
  */
 
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#ifndef EXTRA_FOAM_F_HELPERS_H
+#define EXTRA_FOAM_F_HELPERS_H
 
 #include <array>
+
+namespace foam {
 
 /**
  * Calculate the intersection area of two rectangles.
@@ -24,7 +26,7 @@
  * @returns: (x, y, w, h) of the intersection area.
  */
 inline std::array<int, 4>
-intersection(const std::array<int, 4>& rect1, const std::array<int, 4>& rect2) {
+intersection(const std::array<int, 4> &rect1, const std::array<int, 4> &rect2) {
   int x = std::max(rect1[0], rect2[0]);
   int xx = std::min(rect1[0] + rect1[2], rect2[0] + rect2[2]);
   int y = std::max(rect1[1], rect2[1]);
@@ -36,12 +38,6 @@ intersection(const std::array<int, 4>& rect1, const std::array<int, 4>& rect2) {
   return {x, y, w, h};
 }
 
-
-namespace py = pybind11;
-
-
-PYBIND11_MODULE(helpers, m) {
-  m.doc() = "Miscellaneous helper functions in cpp";
-
-  m.def("intersection", &intersection);
 }
+
+#endif //EXTRA_FOAM_F_HELPERS_H

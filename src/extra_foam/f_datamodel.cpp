@@ -171,7 +171,7 @@ void declare_RawImageData(py::module &m, const std::string &type_str) {
 }
 
 
-PYBIND11_MODULE(data_model, m) {
+PYBIND11_MODULE(datamodel, m) {
   xt::import_numpy();
 
   declare_MovingAverage<float>(m, "Float");

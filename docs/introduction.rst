@@ -53,7 +53,6 @@ from Karabo, since the offline calibration algorithms are more complicated than 
 Performance
 -----------
 
-
 European XFEL can provide X-ray free-electron laser pulse trains (macropulse in accelerator terminology)
 at a maximum repetition rate of 10 Hz. These pulse trains can be filled with up to 2700 pulses (micropulse
 in accelerator terminology), corresponding to a maximum intra-train repetition rate of 4.5 MHz. Detectors

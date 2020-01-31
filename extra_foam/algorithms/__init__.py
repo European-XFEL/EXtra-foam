@@ -1,3 +1,12 @@
+"""
+Distributed under the terms of the BSD 3-Clause License.
+
+The full license is in the file LICENSE, distributed with this software.
+
+Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
+Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
+All rights reserved.
+"""
 from .miscellaneous import normalize_auc
 from .sampling import down_sample, quick_min_max, slice_curve, up_sample
 from .data_structures import OrderedSet, Stack
@@ -5,12 +14,12 @@ from .azimuthal_integ import compute_q, energy2wavelength
 
 from .helpers import intersection
 
-from .image_proc import (
+from .imageproc import (
     nanmeanImageArray, movingAvgImageData, maskImageData,
     correctGain, correctOffset, correctGainOffset
 )
 
-from .data_model import (
+from .datamodel import (
     RawImageDataFloat, RawImageDataDouble,
     MovingAverageArrayFloat, MovingAverageArrayDouble,
     MovingAverageFloat, MovingAverageDouble

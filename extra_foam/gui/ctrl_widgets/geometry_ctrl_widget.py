@@ -8,37 +8,52 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import os.path as osp
+from collections import OrderedDict
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QCheckBox, QFileDialog, QHeaderView, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHeaderView, QHBoxLayout,
+    QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
+    QVBoxLayout
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from ..gui_helpers import parse_table_widget
-from ...config import config
+from ...config import config, GeomAssembler
 from ...logger import logger
 
 
 class GeometryCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up detector geometry parameters."""
 
+    _assemblers = OrderedDict({
+        "EXtra-foam": GeomAssembler.OWN,
+        "EXtra-geom": GeomAssembler.EXTRA_GEOM,
+    })
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._with_geometry_cb = QCheckBox("Assemble with geometry")
-        self._with_geometry_cb.setChecked(True)
+        self._assembler_cb = QComboBox()
+        for item in self._assemblers:
+            self._assembler_cb.addItem(item)
+
+        self._stack_only_cb = QCheckBox("Stack only")
+        self._stack_only_cb.setChecked(False)
+
+        if config["DETECTOR"] == "AGIPD":
+            # FIXME: native AGIPD geometry is not implemented yet
+            self._assembler_cb.removeItem(0)
+            self._stack_only_cb.setEnabled(False)
 
         self._quad_positions_tb = QTableWidget()
+
         self._geom_file_le = QLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
         self._geom_file_open_btn.clicked.connect(self.loadGeometryFile)
 
         self._non_reconfigurable_widgets = [
-            self._with_geometry_cb,
-            self._quad_positions_tb,
-            self._geom_file_le,
-            self._geom_file_open_btn
+            self
         ]
 
         self.initUI()
@@ -48,22 +63,38 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
     def initUI(self):
         """Override."""
         self.initQuadTable()
+        AR = Qt.AlignRight
 
-        layout = QVBoxLayout()
+        layout1 = QVBoxLayout()
         sub_layout1 = QHBoxLayout()
         sub_layout1.addWidget(self._geom_file_open_btn)
         sub_layout1.addWidget(self._geom_file_le)
         sub_layout2 = QHBoxLayout()
         sub_layout2.addWidget(QLabel("Quadrant positions:"))
         sub_layout2.addWidget(self._quad_positions_tb)
-        layout.addWidget(self._with_geometry_cb)
-        layout.addLayout(sub_layout1)
-        layout.addLayout(sub_layout2)
+        layout1.addLayout(sub_layout1)
+        layout1.addLayout(sub_layout2)
+
+        layout2 = QGridLayout()
+        layout2.addWidget(QLabel("Assembler: "), 0, 0, AR)
+        layout2.addWidget(self._assembler_cb, 0, 1)
+        layout2.addWidget(self._stack_only_cb, 1, 0, 1, 2, AR)
+
+        layout = QHBoxLayout()
+        layout.addLayout(layout1)
+        layout.addLayout(layout2)
         self.setLayout(layout)
 
     def initConnections(self):
         """Overload."""
-        pass
+        mediator = self._mediator
+
+        self._stack_only_cb.toggled.connect(
+            mediator.onGeomStackOnlyChange)
+
+        self._assembler_cb.currentTextChanged.connect(
+            lambda x: mediator.onGeomAssemblerChange(
+                self._assemblers[x]))
 
     def initQuadTable(self):
         n_row = 2
@@ -105,8 +136,10 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         if not config['REQUIRE_GEOMETRY']:
             return True
 
-        self._mediator.onGeomAssembleWithGeometryChange(
-            self._with_geometry_cb.isChecked())
+        self._stack_only_cb.toggled.emit(self._stack_only_cb.isChecked())
+
+        self._assembler_cb.currentTextChanged.emit(
+            self._assembler_cb.currentText())
 
         geom_file = self._geom_file_le.text()
         if not osp.isfile(geom_file):

@@ -90,8 +90,11 @@ class Mediator(QObject):
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
 
-    def onGeomAssembleWithGeometryChange(self, value: bool):
-        self._meta.hset(mt.GEOMETRY_PROC, "with_geometry", str(value))
+    def onGeomStackOnlyChange(self, value: bool):
+        self._meta.hset(mt.GEOMETRY_PROC, "stack_only", str(value))
+
+    def onGeomAssemblerChange(self, value: IntEnum):
+        self._meta.hset(mt.GEOMETRY_PROC, "assembler", int(value))
 
     def onGeomFilenameChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)

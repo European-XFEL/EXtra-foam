@@ -67,6 +67,11 @@ class AnalysisType(IntEnum):
     AZIMUTHAL_INTEG_PULSE = 2741
 
 
+class GeomAssembler(IntEnum):
+    OWN = 1  # use Extra-foam own geometry assembler
+    EXTRA_GEOM = 2  # use Extra-geom geometry assembler
+
+
 def list_azimuthal_integ_methods(detector):
     """Return a list of available azimuthal integration methos.
 
