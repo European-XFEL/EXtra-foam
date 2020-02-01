@@ -129,7 +129,7 @@ class CorrectedView(_AbstractImageToolView):
 
     def updateF(self, data, auto_update):
         """Override."""
-        if auto_update or self._image_view.image is None:
+        if auto_update or self._corrected.image is None:
             self._corrected.setImageData(_SimpleImageData(data.image))
             self._roi_proj_plot.updateF(data)
             self._roi_fom_plot.updateF(data)
