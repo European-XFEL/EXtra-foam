@@ -215,11 +215,13 @@ class _Config(dict):
         # -------------------------------------------------------------
         # absolute path of the Redis server executable
         "REDIS_EXECUTABLE": osp.join(_abs_dirpath, "thirdparty/bin/redis-server"),
-        # default REDIS port used in testing. Each detector has its
-        # dedicated REDIS port.
+        # default Redis port used in testing. Each detector has its
+        # dedicated Redis port.
         "REDIS_PORT": 6379,
         # maximum attempts to ping the Redis server before shutting down the app
-        "REDIS_MAX_PING_ATTEMPTS": 10,
+        "REDIS_MAX_PING_ATTEMPTS": 3,
+        # interval for pinging the Redis server from the main GUI, in milliseconds
+        "REDIS_PING_ATTEMPT_INTERVAL": 5000,
         # If the path is given, redis-py will use UnixDomainSocketConnection.
         # Otherwise, normal TCP socket connection.
         "REDIS_UNIX_DOMAIN_SOCKET_PATH": "",

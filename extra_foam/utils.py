@@ -173,7 +173,7 @@ def _get_system_gpu_info():
         return info
     except FileNotFoundError as e:
         # raised when 'nvidia-smi' does not exist
-        logger.info(repr(e))
+        logger.debug(repr(e))
         return GpuInfo()
     except Exception as e:
         # We don't want to prevent the app from starting simply because

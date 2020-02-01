@@ -53,7 +53,6 @@ class TestBaseProcessor(unittest.TestCase):
         start_redis_server()
 
         cls._meta = MetaProxy()
-        cls._meta.initialize_analysis_types()
 
     @classmethod
     def tearDownClass(cls):

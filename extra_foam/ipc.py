@@ -69,8 +69,16 @@ _GLOBAL_REDIS_CONNECTION_BYTES = None
 _global_connections = dict()
 
 
-def reset_redis_connections():
-    """Reset all connections."""
+def init_redis_connection(host, port, *, password=None):
+    """Initialize Redis client connection.
+
+    :param str host: IP address of the Redis server.
+    :param int port:: Port of the Redis server.
+    :param str password: password for the Redis server.
+
+    :return: Redis connection.
+    """
+    # reset all connections first
     global _GLOBAL_REDIS_CONNECTION
     _GLOBAL_REDIS_CONNECTION = None
     global _GLOBAL_REDIS_CONNECTION_BYTES
@@ -82,39 +90,31 @@ def reset_redis_connections():
             if c is not None:
                 c.reset()
 
+    # initialize new connection
+    if config["REDIS_UNIX_DOMAIN_SOCKET_PATH"]:
+        raise NotImplementedError(
+            "Unix domain socket connection is not supported!")
+        # connection = redis.Redis(
+        #     unix_socket_path=config["REDIS_UNIX_DOMAIN_SOCKET_PATH"],
+        #     decode_responses=decode_responses
+        # )
+    else:
+        # the following two must have different pools
+        connection = redis.Redis(
+            host, port, password=password, decode_responses=True)
+        connection_byte = redis.Redis(
+            host, port, password=password, decode_responses=False)
+
+    _GLOBAL_REDIS_CONNECTION = connection
+    _GLOBAL_REDIS_CONNECTION_BYTES = connection_byte
+    return connection
+
 
 def redis_connection(decode_responses=True):
     """Return a Redis connection."""
     if decode_responses:
-        global _GLOBAL_REDIS_CONNECTION
-        connection = _GLOBAL_REDIS_CONNECTION
-        decode_responses = True
-    else:
-        global _GLOBAL_REDIS_CONNECTION_BYTES
-        connection = _GLOBAL_REDIS_CONNECTION_BYTES
-        decode_responses = False
-
-    if connection is None:
-        if config["REDIS_UNIX_DOMAIN_SOCKET_PATH"]:
-            raise NotImplementedError(
-                "Unix domain socket connection is not supported!")
-            # connection = redis.Redis(
-            #     unix_socket_path=config["REDIS_UNIX_DOMAIN_SOCKET_PATH"],
-            #     decode_responses=decode_responses
-            # )
-        else:
-            connection = redis.Redis(
-                'localhost', config['REDIS_PORT'],
-                password=config['REDIS_PASSWORD'],
-                decode_responses=decode_responses
-            )
-
-        if decode_responses:
-            _GLOBAL_REDIS_CONNECTION = connection
-        else:
-            _GLOBAL_REDIS_CONNECTION_BYTES = connection
-
-    return connection
+        return _GLOBAL_REDIS_CONNECTION
+    return _GLOBAL_REDIS_CONNECTION_BYTES
 
 
 class MetaRedisConnection(type):
@@ -194,7 +194,11 @@ class RedisPSubscriber(metaclass=MetaRedisConnection):
 
 
 class ProcessLogger:
-    """Worker which publishes log message in another Process."""
+    """Worker which publishes log message in another Process.
+
+    Note: remember to change other part of the code if the log pattern
+    changes.
+    """
 
     _db = RedisConnection()
 

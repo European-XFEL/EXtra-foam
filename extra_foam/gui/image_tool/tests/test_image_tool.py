@@ -21,7 +21,7 @@ from extra_foam.pipeline.exceptions import ImageProcessingError
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
-from extra_foam.database import MetaProxy
+from extra_foam.database import Metadata, MetaProxy
 
 app = mkQApp()
 
@@ -618,10 +618,10 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         self.assertFalse(record_btn.isChecked())
 
         # switch to "azimuthal integration 1D"
-        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
         tab.tabBarClicked.emit(TabIndex.AZIMUTHAL_INTEG_1D)
         tab.setCurrentIndex(TabIndex.AZIMUTHAL_INTEG_1D)
-        self.assertEqual('1', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('1', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
 
         # switch to "geometry"
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)

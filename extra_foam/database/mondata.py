@@ -9,7 +9,6 @@ All rights reserved.
 """
 import time
 
-from .metadata import Metadata as mt
 from .base_proxy import _AbstractProxy
 from .db_utils import redis_except_handler
 from ..config import config

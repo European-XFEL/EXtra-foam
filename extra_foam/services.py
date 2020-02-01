@@ -9,6 +9,7 @@ All rights reserved.
 """
 import argparse
 import os
+import datetime
 import time
 import faulthandler
 import sys
@@ -20,9 +21,9 @@ import psutil
 import redis
 
 from . import __version__
-from .config import config
-from .database import MetaProxy
-from .ipc import redis_connection, reset_redis_connections
+from .config import AnalysisType, config
+from .database import Metadata as mt
+from .ipc import init_redis_connection
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import PulseWorker, TrainWorker
@@ -33,28 +34,31 @@ from .gui.windows import FileStreamControllerWindow
 _CPU_INFO, _GPU_INFO, _MEMORY_INFO = check_system_resource()
 
 
-def try_to_connect_redis_server(host, port, *, n_attempts=5):
+def try_to_connect_redis_server(host, port, *, password=None, n_attempts=5):
     """Try to connect to a starting Redis server.
 
-    :param str host: IP address of the redis server.
-    :param int port:: Port of the redis server.
+    :param str host: IP address of the Redis server.
+    :param int port:: Port of the Redis server.
+    :param str password: password for the Redis server.
     :param int n_attempts: Number of attempts to connect to the redis server.
+
+    :return: Redis connection client.
 
     Raises:
         ConnectionError: raised if the Redis server cannot be connected.
     """
-    client = redis_connection()
+    client = redis.Redis(host=host, port=port, password=password)
 
     for i in range(n_attempts):
         try:
             logger.info(f"Say hello to Redis server at {host}:{port}")
             client.ping()
-        except redis.ConnectionError:
+        except (redis.ConnectionError, redis.InvalidResponse):
             time.sleep(1)
             logger.info("No response from the Redis server")
         else:
             logger.info("Received response from the Redis server")
-            return
+            return client
 
     raise ConnectionError(f"Failed to connect to the Redis server at "
                           f"{host}:{port}.")
@@ -68,7 +72,7 @@ def start_redis_client():
     exec_ = config["REDIS_EXECUTABLE"].replace("redis-server", "redis-cli")
 
     if not os.path.isfile(exec_):
-        raise FileNotFoundError
+        raise FileNotFoundError(f"Redis executable file {exec_} not found!")
 
     command = [exec_]
     command.extend(sys.argv[1:])
@@ -79,27 +83,23 @@ def start_redis_client():
     proc.wait()
 
 
-def start_redis_server():
+def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
     """Start a Redis server.
 
-    :return ProcessInfo: process info.
-
-    Raises:
-        FileNotFoundError: raised if the Redis executable does not exist.
-        ConnectionError: raised if failed to start Redis server.
+    :param str host: IP address of the Redis server.
+    :param int port:: Port of the Redis server.
+    :param str password: password for the Redis server.
     """
-    reset_redis_connections()
-
     executable = config["REDIS_EXECUTABLE"]
     if not os.path.isfile(executable):
-        raise FileNotFoundError
-
-    password = config["REDIS_PASSWORD"]
-    host = 'localhost'
-    port = config["REDIS_PORT"]
+        logger.error(f"Unable to find the Redis executable file: "
+                     f"{executable}!")
+        sys.exit(1)
 
     # Construct the command to start the Redis server.
     # TODO: Add log rotation or something else which prevent logfile bloating
+    if password is None:
+        password = ''
     command = [executable,
                "--port", str(port),
                "--requirepass", password,
@@ -108,20 +108,30 @@ def start_redis_server():
 
     process = psutil.Popen(command)
 
-    # The global redis client is created
-    client = redis_connection()
-
     try:
         # wait for the Redis server to start
-        try_to_connect_redis_server(host, port)
+        try_to_connect_redis_server(host, port, password=password)
     except ConnectionError:
-        logger.error(f"Unable to start a Redis server at {host}:{port}")
-        raise
+        # TODO: whether we need a back-up port for each detector?
+        # Allow users to assign the port by themselves is also a disaster!
+        logger.error(f"Unable to start a Redis server at {host}:{port}. "
+                     f"Please check whether the port is already taken up.")
+        sys.exit(1)
 
-    time.sleep(0.1)
     if process.poll() is None:
+        client = init_redis_connection(host, port, password=password)
+
         # Put a time stamp in Redis to indicate when it was started.
-        client.set(f"{config['DETECTOR']}:redis_start_time", time.time())
+        client.hmset(mt.SESSION, {
+            'detector': config["DETECTOR"],
+            'topic': config["TOPIC"],
+            'redis_server_start_time': time.time(),
+        })
+
+        # TODO: find a better place to do the initialization
+        # Prevent 'has_analysis', 'has_any_analysis' and
+        # 'has_all_analysis' from getting None when querying.
+        client.hmset(mt.ANALYSIS_TYPE, {t: 0 for t in AnalysisType})
 
         logger.info(f"Redis server started at {host}:{port}")
 
@@ -157,60 +167,105 @@ def start_redis_server():
                           " ".join(cli_buffer_cfg))
 
     else:
-        logger.info(f"Found existing Redis server at {host}:{port}")
+        # It is unlikely to happen on the online cluster since we have
+        # checked the existing Redis server before trying to start a new one.
+        # Nevertheless, it could happen if someone just started a Redis
+        # server after the check.
+        logger.error(f"Unable to start a Redis server at {host}:{port}. "
+                     f"Please check whether the port is already taken up.")
+        sys.exit(1)
 
 
-def health_check():
-    residual = []
-    for proc in psutil.process_iter(attrs=["name", "pid", "cmdline"]):
-        if proc.info['pid'] == os.getpid():
-            continue
+def check_existing_redis_server(host, port, password):
+    """Check existing Redis servers.
 
-        if 'redis-server' in proc.info['name'] or \
-                'extra_foam.services' in proc.info['cmdline']:
-            residual.append(proc)
+    Allow to shut down the Redis server when possible and agreed.
+    """
+    def wait_after_shutdown(n):
+        for _count in range(n):
+            print(f"Start new Redis server after {n} seconds "
+                  + "." * _count, end="\r")
+            time.sleep(1)
 
-    if residual:
-        if query_yes_no(
-            "Warning: Found old extra-foam instance(s) running in this "
-            "machine!!!\n\n"
-            "Running more than two extra-foam instances with the same \n"
-            "detector can result in undefined behavior. You can try to \n"
-            "kill the other instances if it is owned by you. \n"
-            "Note: you are not able to kill other users' instances! \n\n"
-            "Send SIGKILL?"
-        ):
-            try:
-                for p in residual:
-                    p.kill()
-            except psutil.AccessDenied:
-                pass
+    while True:
+        try:
+            client = try_to_connect_redis_server(
+                host, port, password=password, n_attempts=1)
+        except ConnectionError:
+            break
 
-        gone, alive = psutil.wait_procs(residual, timeout=1.0)
-        if alive:
-            for p in alive:
-                print(f"{p} survived SIGKILL, please contact the user: "
-                      f"{p.username()}")
+        sess = client.hgetall(mt.SESSION)
+        det = sess.get(b'detector', b'').decode("utf-8")
+        start_time = sess.get(
+            b'redis_server_start_time', b'').decode("utf-8")
+        if start_time:
+            start_time = datetime.datetime.fromtimestamp(
+                float(start_time))
+
+        if det == config["DETECTOR"]:
+            logger.warning(
+                f"Found Redis server for {det} (started at "
+                f"{start_time}) already running on this machine "
+                f"using port {port}!")
+
+            if query_yes_no(
+                    "\nYou can choose to shut down the Redis server. Please "
+                    "note that the owner of the Redis server will be "
+                    "informed (your username and IP address).\n\n"
+                    "Shut down the existing Redis server?"
+            ):
+                try:
+                    proc = psutil.Process()
+                    killer = proc.username()
+                    killer_from = proc.connections()
+                    client.publish("log:warning",
+                                   f"<{killer}> from <{killer_from}> "
+                                   f"will shut down the Redis server "
+                                   f"immediately!")
+                    client.execute_command("SHUTDOWN")
+
+                except redis.exceptions.ConnectionError:
+                    logger.info("The old Redis server was shut down!")
+
+                # ms -> s, give enough margin
+                wait_time = int(config["REDIS_PING_ATTEMPT_INTERVAL"] / 1000
+                                * config["REDIS_MAX_PING_ATTEMPTS"] * 2)
+                wait_after_shutdown(wait_time)
+                continue
+
+            else:
+                # not shutdown the existing Redis server
+                sys.exit(0)
+
         else:
-            print("Residual processes have been terminated!!!")
+            logger.warning(f"Found Unknown Redis server running on "
+                           f"this machine using port {port}!")
+            # Unlike to happen, who sets a Redis server with the same
+            # password??? Then we can boldly shut it down.
+            try:
+                client.execute_command("SHUTDOWN")
+            except redis.exceptions.ConnectionError:
+                logger.info("The unknown Redis server was shut down!")
+
+            # give some time for any affiliated processes
+            wait_after_shutdown(5)
+            continue
 
 
 class Foam:
-    def __init__(self):
+    def __init__(self, redis_address="127.0.0.1"):
 
         self._gui = None
 
+        host = redis_address
+        port = config["REDIS_PORT"]
+        password = config["REDIS_PASSWORD"]
+
+        check_existing_redis_server(host, port, password)
+
         # Redis server must be started at first since when the GUI starts,
         # it needs to write all the configuration into Redis.
-        try:
-            start_redis_server()
-        except (ConnectionError, FileNotFoundError):
-            sys.exit(1)
-
-        proxy = MetaProxy()
-        proxy.set_session({'detector': config['DETECTOR'],
-                           'topic': config['TOPIC']})
-        proxy.initialize_analysis_types()
+        start_redis_server(host, port, password=password)
 
         try:
             self.pulse_worker = PulseWorker()
@@ -267,25 +322,30 @@ def application():
     parser.add_argument("detector", help="detector name (case insensitive)",
                         choices=[det.upper() for det in config.detectors],
                         type=lambda s: s.upper())
+    parser.add_argument("topic", help="Name of the instrument",
+                        choices=config.topics,
+                        type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
-    parser.add_argument("--topic", help="Name of the instrument",
-                        type=lambda s: s.upper(),
-                        choices=config.topics,
-                        required=True)
+    parser.add_argument("--redis_address", help="Address of the Redis server (optional)",
+                        default="127.0.0.1",
+                        type=lambda s: s.lower())
 
     args = parser.parse_args()
-    health_check()
 
     if args.debug:
-        logger.debug("'faulthandler enabled")
-    else:
-        logger.setLevel("INFO")
+        logger.setLevel("DEBUG")
+    # No ideal whether it affects the performance. If it does, enable it only
+    # in debug mode.
+    faulthandler.enable(all_threads=False)
 
     detector = config.parse_detector_name(args.detector)
     topic = args.topic
-    if not faulthandler.is_enabled():
-        faulthandler.enable(all_threads=False)
+
+    redis_address = args.redis_address
+    if redis_address not in ["localhost", "127.0.0.1"]:
+        raise NotImplementedError("Connecting to remote Redis server is "
+                                  "not supported yet!")
 
     app = mkQApp()
     app.setStyleSheet(
@@ -295,7 +355,7 @@ def application():
     # update global configuration
     config.load(detector, topic)
 
-    foam = Foam().init()
+    foam = Foam(redis_address=redis_address).init()
 
     app.exec_()
 
@@ -311,10 +371,14 @@ def kill_application():
     thirdparty_procs = []  # thirdparty processes like redis-server
     for proc in psutil.process_iter(attrs=['pid', 'cmdline']):
         cmdline = proc.info['cmdline']
-        if cmdline and 'extra-foam' in cmdline[0]:
+        if cmdline and config["REDIS_EXECUTABLE"] in cmdline[0]:
             thirdparty_procs.append(proc)
         elif len(cmdline) > 2 and 'extra_foam.services' in cmdline[2]:
             py_procs.append(proc)
+
+    if not py_procs and not thirdparty_procs:
+        print("Found no EXtra-foam process!")
+        return
 
     # kill Python processes first
     for proc in py_procs:
@@ -331,7 +395,9 @@ def kill_application():
     if alive:
         for p in alive:
             print(f"{p} survived SIGKILL, "
-                  f"please try again or clean it manually")
+                  f"please try again or kill it manually")
+    else:
+        print("All the above EXtra-foam processes have been killed!")
 
 
 def stream_file():

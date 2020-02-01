@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import sys
 import argparse
 
 import dash
@@ -16,9 +17,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 
-from ..config import config
+from ..ipc import init_redis_connection
 from ..database import Metadata, MetaProxy, MonProxy
-from ..ipc import reset_redis_connections
 
 
 class Color:
@@ -76,7 +76,6 @@ def get_top_bar():
 def get_analysis_types():
     """Query and parse analysis types."""
     ret = []
-
     query = meta_proxy.get_all_analysis()
     if query is not None:
         for k, v in query.items():
@@ -110,8 +109,7 @@ def update_top_bar(n_intervals):
     else:
         _, tid = ret
 
-    sess = meta_proxy.get_session()
-
+    sess = meta_proxy.hget_all(Metadata.SESSION)
     detector = "Unknown" if sess is None else sess['detector']
     topic = "Unknown" if sess is None else sess['topic']
 
@@ -178,94 +176,95 @@ def update_performance(n_intervals):
     return figure
 
 
-# define content and layout of the web page
-app.layout = html.Div(
-    children=[
-        dcc.Interval(
-            id='fast_interval1', interval=FAST_UPDATE * 1000, n_intervals=0,
-        ),
-        dcc.Interval(
-            id='fast_interval2', interval=FAST_UPDATE * 1000, n_intervals=0,
-        ),
-        dcc.Interval(
-            id='fast_interval3', interval=FAST_UPDATE * 1000, n_intervals=0,
-        ),
-        dcc.Interval(
-            id='slow_interval', interval=SLOW_UPDATE * 1000, n_intervals=0,
-        ),
-        html.Div([
-            html.H4(
-                className='header-title',
-                children="EXtra-foam status monitor",
+def get_monitor_layout():
+    """define content and layout of the web page."""
+    return html.Div(
+        children=[
+            dcc.Interval(
+                id='fast_interval1', interval=FAST_UPDATE * 1000, n_intervals=0,
             ),
-        ]),
-        html.Div(
-            id="top_bar",
-            className="div-top-bar",
-            children=get_top_bar(),
-        ),
-        html.Div(
-            children=[dcc.Graph(
-                id='performance',
-            )]
-        ),
-        html.Div(
-            children=[
-                html.Div(
-                    id='processor_list',
-                    className='display-inlineblock',
-                    children=[
-                        dcc.Dropdown(
-                            id='processor_dropdown',
-                            options=[
-                                {'label': n.replace('_', ' '), 'value': n}
-                                for n in Metadata.processors
-                            ]
-                        ),
-                        dt.DataTable(
-                            id='processor_params_table',
-                            columns=[{'name': 'Parameter', 'id': 'param'},
-                                     {'name': 'Value', 'id': 'value'}],
-                            data=get_processor_params(),
-                            style_header={
-                                'color': Color.TEXT,
-                            },
-                            style_cell={
-                                'backgroundColor': Color.BKG,
-                                'color': Color.INFO,
-                                'fontWeight': 'bold',
-                                'fontSize': '18px',
-                                'text-align': 'left',
-                            },
-                        ),
-                    ],
+            dcc.Interval(
+                id='fast_interval2', interval=FAST_UPDATE * 1000, n_intervals=0,
+            ),
+            dcc.Interval(
+                id='fast_interval3', interval=FAST_UPDATE * 1000, n_intervals=0,
+            ),
+            dcc.Interval(
+                id='slow_interval', interval=SLOW_UPDATE * 1000, n_intervals=0,
+            ),
+            html.Div([
+                html.H4(
+                    className='header-title',
+                    children="EXtra-foam status monitor",
                 ),
-                html.Div(
-                    id='analysis_type',
-                    className='display-inlineblock',
-                    children=[
-                        dt.DataTable(
-                            id='analysis_type_table',
-                            columns=[{'name': 'Analysis type', 'id': 'type'},
-                                     {'name': 'Count', 'id': 'count'}],
-                            data=get_analysis_types(),
-                            style_header={
-                                'color': Color.TEXT,
-                            },
-                            style_cell={
-                                'backgroundColor': Color.BKG,
-                                'color': Color.INFO,
-                                'fontWeight': 'bold',
-                                'fontSize': '18px',
-                                'text-align': 'left',
-                            },
-                        ),
-                    ]
-                ),
-            ]
-        ),
-    ]
-)
+            ]),
+            html.Div(
+                id="top_bar",
+                className="div-top-bar",
+                children=get_top_bar(),
+            ),
+            html.Div(
+                children=[dcc.Graph(
+                    id='performance',
+                )]
+            ),
+            html.Div(
+                children=[
+                    html.Div(
+                        id='processor_list',
+                        className='display-inlineblock',
+                        children=[
+                            dcc.Dropdown(
+                                id='processor_dropdown',
+                                options=[
+                                    {'label': n.replace('_', ' '), 'value': n}
+                                    for n in Metadata.processors
+                                ]
+                            ),
+                            dt.DataTable(
+                                id='processor_params_table',
+                                columns=[{'name': 'Parameter', 'id': 'param'},
+                                         {'name': 'Value', 'id': 'value'}],
+                                data=get_processor_params(),
+                                style_header={
+                                    'color': Color.TEXT,
+                                },
+                                style_cell={
+                                    'backgroundColor': Color.BKG,
+                                    'color': Color.INFO,
+                                    'fontWeight': 'bold',
+                                    'fontSize': '18px',
+                                    'text-align': 'left',
+                                },
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        id='analysis_type',
+                        className='display-inlineblock',
+                        children=[
+                            dt.DataTable(
+                                id='analysis_type_table',
+                                columns=[{'name': 'Analysis type', 'id': 'type'},
+                                         {'name': 'Count', 'id': 'count'}],
+                                data=get_analysis_types(),
+                                style_header={
+                                    'color': Color.TEXT,
+                                },
+                                style_cell={
+                                    'backgroundColor': Color.BKG,
+                                    'color': Color.INFO,
+                                    'fontWeight': 'bold',
+                                    'fontSize': '18px',
+                                    'text-align': 'left',
+                                },
+                            ),
+                        ]
+                    ),
+                ]
+            ),
+        ]
+    )
 
 
 def web_monitor():
@@ -274,17 +273,30 @@ def web_monitor():
     This function is for the command line tool: extra-foam-monitor.
     """
     ap = argparse.ArgumentParser(prog="extra-foam-monitor")
-    ap.add_argument("detector", help="detector name (case insensitive)",
-                    choices=[det.upper() for det in config.detectors],
-                    type=lambda s: s.upper())
-    ap.add_argument("port", help="TCP port to run server on")
+
+    ap.add_argument("--redis_address", help="Address of the Redis server",
+                    default="127.0.0.1")
+    ap.add_argument("--redis_port", help="Port of the Redis server",
+                    default=6379)
+    ap.add_argument("-p", "--password", help="Password of the Redis server",
+                    default=None)
 
     args = ap.parse_args()
+    redis_host = args.redis_address
+    redis_port = args.redis_port
+    password = args.password
 
-    reset_redis_connections()
-    meta_proxy.reset()
-    mon_proxy.reset()
+    init_redis_connection(redis_host, redis_port, password=password)
 
-    config.load(config.parse_detector_name(args.detector))
+    app.layout = get_monitor_layout()
 
-    app.run_server(port=args.port)
+    # The good practice is to use the predefined ports on the online cluster
+    for port in [8050, 8051, 8052, 8053, 8054]:
+        try:
+            app.run_server(port=port)
+            sys.exit(0)
+        except OSError:
+            print(f"\n--- Port {port} is already in use! ---\n")
+            continue
+
+    print("--- All the ports are in use! ---")
