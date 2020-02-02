@@ -4,7 +4,7 @@ from collections import Counter, deque
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp, MainGUI
 from extra_foam.gui.windows import (
-    BinningWindow, StatisticsWindow, PumpProbeWindow, RoiWindow
+    BinningWindow, CorrelationWindow, HistogramWindow, PumpProbeWindow, RoiWindow
 )
 from extra_foam.gui.plot_widgets import RoiImageView
 
@@ -67,21 +67,32 @@ class TestPlotWindows(unittest.TestCase):
 
         win.updateWidgetsF()
 
-    def testStatisticsWindow(self):
-        from extra_foam.gui.windows.statistics_w import (
-            CorrelationPlot, FomHist, InTrainFomPlot
-        )
+    def testCorrelationWindow(self):
+        from extra_foam.gui.windows.correlation_w import CorrelationPlot
 
-        win = StatisticsWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+        win = CorrelationWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(2, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(2, counter[CorrelationPlot])
+
+        win.updateWidgetsF()
+
+    def testHistogramWindow(self):
+        from extra_foam.gui.windows.histogram_w import FomHist, InTrainFomPlot
+
+        win = HistogramWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[InTrainFomPlot])
         self.assertEqual(1, counter[FomHist])
-        self.assertEqual(2, counter[CorrelationPlot])
 
         win.updateWidgetsF()
 

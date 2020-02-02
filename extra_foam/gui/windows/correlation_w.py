@@ -12,56 +12,8 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..misc_widgets import make_brush, make_pen
-from ..plot_widgets import PlotWidgetF, TimedPlotWidgetF
+from ..plot_widgets import TimedPlotWidgetF
 from ...config import config
-
-
-class InTrainFomPlot(PlotWidgetF):
-    """InTrainFomPlot class.
-
-    A widget which allows users to monitor the FOM of each pulse in a train.
-    """
-    def __init__(self, *, parent=None):
-        """Initialization."""
-        super().__init__(parent=parent)
-
-        self._plot = self.plotScatter()
-
-        self.setLabel('left', "FOM")
-        self.setLabel('bottom', "Pulse index")
-        self.setTitle('Pulse-resolved FOMs in a train')
-
-    def updateF(self, data):
-        """Override."""
-        foms = data.hist.pulse_foms
-        if foms is None:
-            self.reset()
-        else:
-            self._plot.setData(range(len(foms)), foms)
-
-
-class FomHist(TimedPlotWidgetF):
-    """FomHist class
-
-    Plot statistics of accumulated FOMs from different analysis.
-    """
-    def __init__(self, *, parent=None):
-        super().__init__(parent=parent)
-
-        self.setTitle("FOM Histogram")
-        self.setLabel('left', 'Counts')
-        self.setLabel('bottom', 'FOM')
-        self._plot = self.plotBar()
-
-    def refresh(self):
-        """Override."""
-        item = self._data.hist
-        hist, bin_centers = item.hist, item.bin_centers
-
-        if bin_centers is None:
-            self.reset()
-        else:
-            self._plot.setData(bin_centers, hist)
 
 
 class CorrelationPlot(TimedPlotWidgetF):
@@ -136,21 +88,19 @@ class CorrelationPlot(TimedPlotWidgetF):
                                        pen=self._pens[self._idx-1])
 
 
-class StatisticsWindow(_AbstractPlotWindow):
-    """StatisticsWindow class.
+class CorrelationWindow(_AbstractPlotWindow):
+    """CorrelationWindow class.
 
-    Visualize statistics.
+    Visualize correlation.
     """
-    _title = "Statistics"
+    _title = "Correlation"
 
     _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
+    _TOTAL_H /= 2
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
         super().__init__(*args, **kwargs)
-
-        self._pulse_fom = InTrainFomPlot(parent=self)
-        self._fom_hist = FomHist(parent=self)
 
         self._corr1 = CorrelationPlot(0, parent=self)
         self._corr2 = CorrelationPlot(1, parent=self)
@@ -165,20 +115,11 @@ class StatisticsWindow(_AbstractPlotWindow):
     def initUI(self):
         """Override."""
         self._cw = QSplitter()
-        left_panel = QSplitter(Qt.Vertical)
-        right_panel = QSplitter(Qt.Vertical)
-        self._cw.addWidget(left_panel)
-        self._cw.addWidget(right_panel)
+        self._cw.addWidget(self._corr1)
+        self._cw.addWidget(self._corr2)
         self._cw.setSizes([1, 1])
+
         self.setCentralWidget(self._cw)
-
-        left_panel.addWidget(self._pulse_fom)
-        left_panel.addWidget(self._fom_hist)
-        left_panel.setSizes([1, 1])
-
-        right_panel.addWidget(self._corr1)
-        right_panel.addWidget(self._corr2)
-        left_panel.setSizes([1, 1])
 
     def initConnections(self):
         """Override."""

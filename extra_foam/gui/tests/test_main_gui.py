@@ -13,7 +13,11 @@ from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
 from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
-from extra_foam.gui.windows import PulseOfInterestWindow
+from extra_foam.gui.windows import (
+    BinningWindow, CorrelationWindow, HistogramWindow,
+    PulseOfInterestWindow, PumpProbeWindow,
+    FileStreamControllerWindow, AboutWindow,
+)
 from extra_foam.config import (
     config, AnalysisType, BinMode, PumpProbeMode,
 )
@@ -112,12 +116,14 @@ class TestMainGuiCtrl(unittest.TestCase):
         # the PoiWindow will be informed when opened
         self.assertEqual(0, len(self.gui._plot_windows))
         poi_action = self.gui._tool_bar.actions()[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
         poi_action.trigger()
         win = list(self.gui._plot_windows.keys())[-1]
         self.assertIsInstance(win, PulseOfInterestWindow)
         for i, index in enumerate(new_indices):
             self.assertEqual(index, win._poi_imgs[i]._index)
             self.assertEqual(index, win._poi_hists[i]._index)
+        win.close()
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -599,6 +605,114 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._scan_btn_set.reset_sgn.emit()
         proc.update()
         self.assertTrue(proc._reset)
+
+    def testOpenCloseWindows(self):
+        actions = self.gui._tool_bar.actions()
+
+        poi_action = actions[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
+        pp_action = actions[5]
+        self.assertEqual("Pump-probe", pp_action.text())
+        correlation_action = actions[6]
+        self.assertEqual("Correlation", correlation_action.text())
+        histogram_action = actions[7]
+        self.assertEqual("Histogram", histogram_action.text())
+        binning_action = actions[8]
+        self.assertEqual("Binning", binning_action.text())
+
+        pp_window = self._check_open_window(pp_action)
+        self.assertIsInstance(pp_window, PumpProbeWindow)
+
+        correlation_window = self._check_open_window(correlation_action)
+        self.assertIsInstance(correlation_window, CorrelationWindow)
+
+        binning_window = self._check_open_window(binning_action)
+        self.assertIsInstance(binning_window, BinningWindow)
+
+        histogram_window = self._check_open_window(histogram_action)
+        self.assertIsInstance(histogram_window, HistogramWindow)
+
+        poi_window = self._check_open_window(poi_action)
+        self.assertIsInstance(poi_window, PulseOfInterestWindow)
+        # open one window twice
+        self._check_open_window(poi_action, registered=False)
+
+        self._check_close_window(pp_window)
+        self._check_close_window(correlation_window)
+        self._check_close_window(binning_window)
+        self._check_close_window(histogram_window)
+        self._check_close_window(poi_window)
+
+        # if a plot window is closed, it can be re-openned and a new instance
+        # will be created
+        pp_window_new = self._check_open_window(pp_action)
+        self.assertIsInstance(pp_window_new, PumpProbeWindow)
+        self.assertIsNot(pp_window_new, pp_window)
+
+    def testOpenCloseSatelliteWindows(self):
+        actions = self.gui._tool_bar.actions()
+        about_action = actions[-1]
+        streamer_action = actions[-2]
+
+        about_window = self._check_open_satellite_window(about_action)
+        self.assertIsInstance(about_window, AboutWindow)
+
+        streamer_window = self._check_open_satellite_window(streamer_action)
+        self.assertIsInstance(streamer_window, FileStreamControllerWindow)
+
+        # open one window twice
+        self._check_open_satellite_window(about_action, registered=False)
+
+        self._check_close_satellite_window(about_window)
+        self._check_close_satellite_window(streamer_window)
+
+        # if a window is closed, it can be re-opened and a new instance
+        # will be created
+        about_window_new = self._check_open_satellite_window(about_action)
+        self.assertIsInstance(about_window_new, AboutWindow)
+        self.assertIsNot(about_window_new, about_window)
+
+    def _check_open_window(self, action, registered=True):
+        """Check triggering action about opening a window.
+
+        :param bool registered: True for the new window is expected to be
+            registered; False for the old window will be activate and thus
+            no new window will be registered.
+        """
+        n_registered = len(self.gui._plot_windows)
+        action.trigger()
+        if registered:
+            window = list(self.gui._plot_windows.keys())[-1]
+            self.assertEqual(n_registered+1, len(self.gui._plot_windows))
+            return window
+
+        self.assertEqual(n_registered, len(self.gui._plot_windows))
+
+    def _check_close_window(self, window):
+        n_registered = len(self.gui._plot_windows)
+        window.close()
+        self.assertEqual(n_registered-1, len(self.gui._plot_windows))
+
+    def _check_open_satellite_window(self, action, registered=True):
+        """Check triggering action about opening a satellite window.
+
+        :param bool registered: True for the new window is expected to be
+            registered; False for the old window will be activate and thus
+            no new window will be registered.
+        """
+        n_registered = len(self.gui._satellite_windows)
+        action.trigger()
+        if registered:
+            window = list(self.gui._satellite_windows.keys())[-1]
+            self.assertEqual(n_registered+1, len(self.gui._satellite_windows))
+            return window
+
+        self.assertEqual(n_registered, len(self.gui._satellite_windows))
+
+    def _check_close_satellite_window(self, window):
+        n_registered = len(self.gui._satellite_windows)
+        window.close()
+        self.assertEqual(n_registered-1, len(self.gui._satellite_windows))
 
 
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
