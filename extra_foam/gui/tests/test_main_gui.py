@@ -335,6 +335,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
             _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
         )
+        _DEFAULT_BIN_RANGE = tuple([float(v) for v in _DEFAULT_BIN_RANGE.split(",")])
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = self.gui.bin_ctrl_widget
@@ -351,17 +352,19 @@ class TestMainGuiCtrl(unittest.TestCase):
                                  combo_lst)
 
         train_worker = self.train_worker
-        proc = train_worker._bin_proc
+        proc = train_worker._binning_proc
         proc.update()
 
         # test default
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertEqual(BinMode.AVERAGE, proc._mode)
         self.assertEqual("", proc._source1)
-        self.assertTupleEqual(_DEFAULT_BIN_RANGE, proc._range1)
+        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range1)
+        self.assertListEqual([True, True], proc._auto_range1)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
         self.assertEqual("", proc._source2)
-        self.assertEqual(_DEFAULT_BIN_RANGE, proc._range2)
+        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range2)
+        self.assertListEqual([True, True], proc._auto_range2)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
         self.assertFalse(proc._has_param1)
         self.assertFalse(proc._has_param2)
@@ -449,21 +452,23 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._table.cellWidget(0, 4).setText("5")  # n_bins
         proc.update()
         self.assertEqual(5, proc._n_bins1)
-        self.assertTupleEqual((0, 10), proc._range1)
+        self.assertTupleEqual((0, 10), proc._bin_range1)
+        self.assertListEqual([False, False], proc._auto_range1)
         self.assertTrue(proc._bin1d)
         self.assertTrue(proc._bin2d)
         proc._bin1d = False
         proc._bin2d = False
         # bin parameter 2
-        widget._table.cellWidget(1, 3).setText("-4, 4")  # range
+        widget._table.cellWidget(1, 3).setText("-4, inf")  # range
         widget._table.cellWidget(1, 4).setText("2")  # n_bins
         proc.update()
         self.assertEqual(2, proc._n_bins2)
-        self.assertTupleEqual((-4, 4), proc._range2)
+        self.assertTupleEqual((-4, np.inf), proc._bin_range2)
+        self.assertListEqual([False, True], proc._auto_range2)
         self.assertFalse(proc._bin1d)
         self.assertTrue(proc._bin2d)
 
-        # test reset button
+        # test "reset" button
         proc._reset = False
         proc._bin1d = False
         proc._bin2d = False
@@ -472,6 +477,20 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._reset)
         self.assertFalse(proc._bin1d)
         self.assertFalse(proc._bin2d)
+
+        # test "Auto level" button
+        binning_action = self.gui._tool_bar.actions()[8]
+        self.assertEqual("Binning", binning_action.text())
+        binning_action.trigger()
+        win = list(self.gui._plot_windows.keys())[-1]
+        win._bin1d_vfom._auto_level = False
+        win._bin2d_value._auto_level = False
+        win._bin2d_count._auto_level = False
+        QTest.mouseClick(widget._auto_level_btn, Qt.LeftButton)
+        self.assertTrue(win._bin1d_vfom._auto_level)
+        self.assertTrue(win._bin2d_value._auto_level)
+        self.assertTrue(win._bin2d_count._auto_level)
+        win.close()
 
     def testHistogramCtrlWidget(self):
         widget = self.gui.histogram_ctrl_widget

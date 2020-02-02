@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
@@ -30,13 +30,14 @@ class Bin1dHist(TimedPlotWidgetF):
 
         self._count = count
 
-        self.setTitle('')
         self._default_x_label = "Bin center (arb. u.)"
         if count:
             self._default_y_label = "Count"
+            self.setTitle('1D binning (count)')
             self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
         else:
             self._default_y_label = "FOM (arb. u.)"
+            self.setTitle('1D binning (FOM)')
             self._plot = self.plotScatter(brush=make_brush('p'))
 
         self._source = ""
@@ -79,12 +80,15 @@ class Bin1dHeatmap(TimedImageViewF):
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(has_roi=False, hide_axis=False, parent=parent)
+
         self.invertY(False)
         self.setAspectLocked(False)
 
+        self._auto_level = True
+
         self._default_x_label = 'Bin center (arb. u.)'
         self._default_y_label = 'VFOM (arb. u.)'
-        self.setTitle('')
+        self.setTitle('1D binning (VFOM)')
 
         self._source = ""
 
@@ -106,13 +110,15 @@ class Bin1dHeatmap(TimedImageViewF):
             h_range = item.x
 
             self.setImage(heatmap,
-                          auto_levels=True,
-                          auto_range=True,
+                          auto_levels=self._auto_level,
+                          auto_range=False,
                           pos=[w_range[0], h_range[0]],
                           scale=[(w_range[-1] - w_range[0])/w,
                                  (h_range[-1] - h_range[0])/h])
         else:
             self.clear()
+
+        self._auto_level = False
 
     def updateLabel(self):
         src = self._source
@@ -123,6 +129,10 @@ class Bin1dHeatmap(TimedImageViewF):
         self.setLabel('bottom', new_label)
 
         self.setLabel('left', self._default_y_label)
+
+    @pyqtSlot()
+    def onAutoLevel(self):
+        self._auto_level = True
 
 
 class Bin2dHeatmap(TimedImageViewF):
@@ -141,6 +151,8 @@ class Bin2dHeatmap(TimedImageViewF):
 
         self.invertY(False)
         self.setAspectLocked(False)
+
+        self._auto_level = True
 
         self._default_x_label = 'Bin center (arb. u.)'
         self._default_y_label = 'Bin center (arb. u.)'
@@ -181,13 +193,15 @@ class Bin2dHeatmap(TimedImageViewF):
             h_range = bin[1].centers
 
             self.setImage(heatmap,
-                          auto_levels=True,
-                          auto_range=True,
+                          auto_levels=self._auto_level,
+                          auto_range=False,
                           pos=[w_range[0], h_range[0]],
                           scale=[(w_range[-1] - w_range[0])/w,
                                  (h_range[-1] - h_range[0])/h])
         else:
             self.clear()
+
+        self._auto_level = False
 
     def updateXLabel(self):
         src = self._source_x
@@ -204,6 +218,10 @@ class Bin2dHeatmap(TimedImageViewF):
         else:
             new_label = self._default_y_label
         self.setLabel('left', new_label)
+
+    @pyqtSlot()
+    def onAutoLevel(self):
+        self._auto_level = True
 
 
 class BinningWindow(_AbstractPlotWindow):
@@ -227,6 +245,7 @@ class BinningWindow(_AbstractPlotWindow):
         self._bin2d_count = Bin2dHeatmap(count=True, parent=self)
 
         self.initUI()
+        self.initConnections()
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
         self.setMinimumSize(0.6*self._TOTAL_W, 0.6*self._TOTAL_H)
@@ -255,4 +274,11 @@ class BinningWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        pass
+        mediator = self._mediator
+
+        mediator.bin_heatmap_autolevel_sgn.connect(
+            self._bin1d_vfom.onAutoLevel)
+        mediator.bin_heatmap_autolevel_sgn.connect(
+            self._bin2d_value.onAutoLevel)
+        mediator.bin_heatmap_autolevel_sgn.connect(
+            self._bin2d_count.onAutoLevel)

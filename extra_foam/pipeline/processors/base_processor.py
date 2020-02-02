@@ -400,6 +400,8 @@ class SimpleSequence(_AbstractSequence):
         super().__init__(max_len=max_len)
 
         self._x = np.zeros(self._OVER_CAPACITY * max_len, dtype=dtype)
+        self._min = None
+        self._max = None
 
     def __getitem__(self, index):
         """Override."""
@@ -421,11 +423,34 @@ class SimpleSequence(_AbstractSequence):
                 self._i0 = 0
                 self._x[:max_len] = self._x[max_len:]
 
+        if self._min is None:
+            self._min = item
+            self._max = item
+        else:
+            if item < self._min:
+                self._min = item
+            elif item > self._max:
+                self._max = item
+
+    @property
+    def min(self):
+        return self._min
+
+    @property
+    def max(self):
+        return self._max
+
+    @property
+    def range(self):
+        return self._min, self._max
+
     def reset(self):
         """Override."""
         self._i0 = 0
         self._len = 0
         self._x.fill(0)
+        self._min = None
+        self._max = None
 
     def extend(self, v_lst):
         # TODO: improve

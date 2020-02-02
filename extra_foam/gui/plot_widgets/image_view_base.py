@@ -154,7 +154,7 @@ class ImageViewF(QWidget):
 
         :param np.ndarray img: the image to be displayed.
         :param bool auto_range: whether to scale/pan the view to fit
-            the image. defaut = False
+            the image. default = False
         :param bool auto_levels: whether to update the white/black levels
             to fit the image. default = False
         :param tuple/list pos: the origin of the displayed image in (x, y).

@@ -493,7 +493,8 @@ class BinData(collections.abc.Mapping):
 
     class BinDataItem:
 
-        __slots__ = ['source', 'centers', 'counts', 'stats', 'x', 'heat']
+        __slots__ = ['source', 'centers', 'counts', 'stats', 'x', 'heat',
+                     'x_range']
 
         def __init__(self):
             self.source = ""
@@ -502,6 +503,7 @@ class BinData(collections.abc.Mapping):
             self.stats = None
             self.x = None
             self.heat = None
+            self.x_range = None
 
     __slots__ = ['mode', '_common', 'heat', 'heat_count']
 

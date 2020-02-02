@@ -13,7 +13,7 @@ import pytest
 import numpy as np
 
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
-from extra_foam.pipeline.processors.bin import _BinMixin, BinProcessor
+from extra_foam.pipeline.processors.binning import _BinMixin, BinningProcessor
 from extra_foam.config import AnalysisType, BinMode
 
 
@@ -36,10 +36,10 @@ class TestBinMixin:
         assert 0 == proc.searchsorted([0, 1, 2, 3], 0)
 
 
-class TestBinProcessor(_BaseProcessorTest):
+class TestBinningProcessor(_BaseProcessorTest):
     @pytest.fixture(autouse=True)
     def setUp(self):
-        self._proc = BinProcessor()
+        self._proc = BinningProcessor()
         yield
         self._proc._clear_history()
 
@@ -53,11 +53,9 @@ class TestBinProcessor(_BaseProcessorTest):
 
         proc._slow1.extend(np.arange(10))
         proc._n_bins1 = 4
-        proc._range1 = [0, 8]
+        proc._actual_range1 = [0, 8]
 
         proc._new_1d_binning()
-        assert not proc._bin1d
-        assert proc._bin2d
         assert 4 == len(proc._stats1)
         assert [2, 2, 2, 3] == proc._counts1.tolist()
         assert [0, 2, 4, 6, 8] == proc._edges1.tolist()
@@ -91,11 +89,15 @@ class TestBinProcessor(_BaseProcessorTest):
 
         proc._mode = mode
         proc._n_bins1 = 4
-        proc._range1 = [1, 3]
+        proc._actual_range1 = (1, 3)
 
-        vfom = np.random.randn(10)
+        vfom = np.random.randn(10)  # this is VFOM for a single point
         vfom_x = np.arange(10)
+        # caveat: sequence
         proc._init_vfom_binning(vfom, vfom_x)
+        proc._fom.append(0)  # any single FOM
+        proc._slow1.append(0)
+        proc._new_1d_binning()
 
         assert (10, 4) == proc._vfom_heat1.shape
         assert (1, 10) == proc._vfom.data().shape
@@ -130,14 +132,11 @@ class TestBinProcessor(_BaseProcessorTest):
         proc._slow1.extend(np.arange(10))
         proc._slow2.extend(np.arange(10) + 1)
         proc._n_bins1 = 4
-        proc._range1 = [1, 8]
+        proc._actual_range1 = [1, 8]
         proc._n_bins2 = 2
-        proc._range2 = [2, 6]
+        proc._actual_range2 = [2, 6]
 
         proc._new_2d_binning()
-        assert proc._bin1d
-        assert not proc._bin2d
-
         assert (2, 4) == proc._heat.shape
         assert (2, 4) == proc._heat_count.shape
         assert [[2, 0], [0, 2], [0, 1], [0, 0]], proc._heat_count.tolist()
@@ -209,9 +208,11 @@ class TestBinProcessor(_BaseProcessorTest):
 
         proc.analysis_type = analysis_type
         proc._n_bins1 = 4
-        proc._range1 = [-1, 1]
+        proc._bin_range1 = (-1, 1)
+        assert proc._actual_range1 is None
         proc._source1 = 'A ppt'
         proc._has_param1 = True
+        proc._has_param2 = False
 
         fom_gt = 10
         vfom_gt = [0.5, 2.0, 1.0]
@@ -219,6 +220,7 @@ class TestBinProcessor(_BaseProcessorTest):
         self._set_ret(processed, analysis_type, fom_gt, vfom_gt, vfom_x_gt)
 
         proc.process(data)
+        assert proc._actual_range1 == proc._bin_range1
 
         def assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt):
             bin = processed.bin
@@ -227,9 +229,9 @@ class TestBinProcessor(_BaseProcessorTest):
             np.testing.assert_array_equal([0, 0, 1, 0], bin[0].counts)
             np.testing.assert_array_equal([0, 0, fom_gt, 0], bin[0].stats)
             np.testing.assert_array_equal(vfom_x_gt, bin[0].x)
-            heat_gt = np.zeros((len(vfom_gt), len(bin[0].centers)))
-            heat_gt[:, 2] = vfom_gt
-            np.testing.assert_array_equal(heat_gt, bin[0].heat)
+            vfom_heat_gt = np.zeros((len(vfom_gt), len(bin[0].centers)))
+            vfom_heat_gt[:, 2] = vfom_gt
+            np.testing.assert_array_equal(vfom_heat_gt, bin[0].heat)
 
         assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt)
 
@@ -239,10 +241,8 @@ class TestBinProcessor(_BaseProcessorTest):
         data['raw'] = {'AA ppt': 0.1, 'B ppt': 5}
 
         proc.process(data)
-
         error.assert_called_once()
         error.reset_mock()
-
         # Test that even if the slow data is not available, the existing data
         # will be posted.
         assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt)
@@ -258,7 +258,6 @@ class TestBinProcessor(_BaseProcessorTest):
             error.reset_mock()
         else:
             assert 1 == proc._pp_fail_flag
-
         # Test that the existing data will be posted even if the new FOM is None
         assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt)
 
@@ -276,13 +275,7 @@ class TestBinProcessor(_BaseProcessorTest):
         vfom_x_gt = [1, 2, 3, 4]
         self._set_ret(processed, analysis_type, fom_gt, vfom_gt, vfom_x_gt)
         proc.process(data)
-
         assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt)
-
-        proc._n_bins1 = 2
-        proc._range1 = [-2, 2]
-        proc._device_id1 = 'B ppt'
-        proc._has_param1 = True
 
         # 2D binning function not called
         proc._new_2d_binning.assert_not_called()
@@ -300,24 +293,66 @@ class TestBinProcessor(_BaseProcessorTest):
 
         proc.analysis_type = analysis_type
         proc._n_bins1 = 4
-        proc._range1 = [-1, 1]
+        proc._bin_range1 = (-1, 1)
         proc._source1 = 'A ppt'
         proc._has_param1 = True
         proc._n_bins2 = 2
-        proc._range2 = [0, 1]
+        proc._bin_range2 = (0, 1)
+        assert proc._actual_range2 is None
         proc._source2 = 'B ppt'
         proc._has_param2 = False
+
+        # test '_has_param2' and '_bin2d'
 
         fom_gt = 10
         vfom_gt = [0.5, 2.0, 1.0, 5.0]
         vfom_x_gt = [1, 2, 3, 4]
         self._set_ret(processed, analysis_type, fom_gt, vfom_gt, vfom_x_gt)
         proc.process(data)
+        assert proc._actual_range2 is None
         proc._new_2d_binning.assert_not_called()
         proc._update_2d_binning.assert_not_called()
 
-        # test '_has_param2'
         proc._has_param2 = True
         proc.process(data)
+        assert proc._actual_range2 == proc._bin_range2
         proc._new_2d_binning.assert_called_once()
+        proc._update_2d_binning.assert_not_called()
+
+        proc.process(data)
         proc._update_2d_binning.assert_called_once()
+
+    @patch('extra_foam.ipc.ProcessLogger.error')
+    def testAutoBinRange(self, error):
+        proc = self._proc
+
+        data, processed = self.simple_data(1001, (4, 2, 2))
+        data['raw'] = {'A ppt': 0.1, 'B ppt': 5}
+
+        proc.analysis_type = AnalysisType.AZIMUTHAL_INTEG
+        proc._n_bins1 = 4
+        proc._bin_range1 = (-np.inf, np.inf)
+        proc._auto_range1 = [True, True]
+        proc._source1 = 'A ppt'
+        proc._has_param1 = True
+
+        # test if the number of data points is 0, it will not raise
+        proc.process(data)
+        assert proc._auto_range1 == [True, True]
+
+        fom_gt = 10
+        self._set_ret(processed, proc.analysis_type, fom_gt, None, None)
+        proc.process(data)
+        assert proc._actual_range1 == (0.1, 0.1)
+        data['raw'] = {'A ppt': 0.2, 'B ppt': 5}
+        proc.process(data)
+        assert proc._actual_range1 == (0.1, 0.2)
+
+        proc._reset = True
+        proc._has_param2 = True
+        proc._n_bins2 = 5
+        proc._bin_range2 = (-np.inf, np.inf)
+        proc._auto_range2 = [True, True]
+        proc._source2 = 'B ppt'
+        proc.process(data)
+        assert proc._auto_range2 == [True, True]

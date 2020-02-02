@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import math
+
 import numpy as np
 from scipy import stats
 
@@ -45,8 +47,8 @@ class _BinMixin:
         return np.searchsorted(edges, v, side='right') - 1
 
 
-class BinProcessor(_BaseProcessor, _BinMixin):
-    """BinProcessor class.
+class BinningProcessor(_BaseProcessor, _BinMixin):
+    """BinningProcessor class.
 
     Bin data based on 1 or 2 slow (control) data. For 1D binning, only the
     first slow data will be used. For the heat map of 2D binning, x and y
@@ -58,8 +60,10 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         _mode (BinMode): binning mode.
         _source1 (str): data source 1.
         _source2 (str): data source 2.
-        _range1 (tuple): bin 1 range.
-        _range2 (tuple): bin 2 range.
+        _bin_range1 (tuple): bin 1 range requested.
+        _bin_range2 (tuple): bin 2 range requested.
+        _actual_range1 (tuple): actual bin 1 range used in binning.
+        _actual_range2 (tuple): actual bin 2 range used in binning.
         _n_bins1 (int): number of 1 bins.
         _n_bins2 (int): number of 2 bins.
         _edges1 (numpy.array): bin edges for parameter 1.
@@ -89,6 +93,8 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         _bin2d (bool): a flag indicates whether data need to be re-binned
             with respect to param1 and param2.
         _reset (bool): True for clearing all the existing data.
+        _reset_bin2d (bool): True for clearing all the existing data which
+            only relate to 2D binning.
     """
 
     # 10 pulses/train * 60 seconds * 30 minutes = 18,000
@@ -115,9 +121,13 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         self._fom = SimpleSequence(max_len=self._MAX_POINTS)
         self._vfom = None
 
-        self._range1 = None
+        self._bin_range1 = None
+        self._auto_range1 = [False, False]
+        self._actual_range1 = None
         self._n_bins1 = None
-        self._range2 = None
+        self._bin_range2 = None
+        self._auto_range2 = [False, False]
+        self._actual_range2 = None
         self._n_bins2 = None
 
         self._edges1 = None
@@ -137,10 +147,11 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         self._has_param1 = False
         self._has_param2 = False
 
-        self._bin1d = True
-        self._bin2d = True
+        self._bin1d = False
+        self._bin2d = False
 
-        self._reset = True
+        self._reset = False
+        self._reset_bin2d = False
 
     def update(self):
         """Override."""
@@ -160,10 +171,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         source1 = cfg['source1']
         if source1 != self._source1:
             self._source1 = source1
-            if source1:
-                self._has_param1 = True
-            else:
-                self._has_param1 = False
+            self._has_param1 = bool(source1)
             self._reset = True
 
         source2 = cfg['source2']
@@ -171,25 +179,35 @@ class BinProcessor(_BaseProcessor, _BinMixin):
             self._source2 = source2
             if source2:
                 self._has_param2 = True
+                # When the 2nd parameter (2D binning) is changed, the current
+                # 1D binning result will also be cleared.
+                self._reset = True
             else:
                 self._has_param2 = False
-            # When the 2nd parameter (2D binning) is activated, the current
-            # 1D binning result will be cleared.
-            self._reset = True
+                self._reset_bin2d = True
 
         n_bins1 = int(cfg['n_bins1'])
-        bin_range1 = self.str2tuple(cfg['bin_range1'])
-        if n_bins1 != self._n_bins1 or bin_range1 != self._range1:
+        if n_bins1 != self._n_bins1:
             self._n_bins1 = n_bins1
-            self._range1 = bin_range1
+            self._bin1d = True
+            self._bin2d = True
+
+        bin_range1 = self.str2tuple(cfg['bin_range1'])
+        if bin_range1 != self._bin_range1:
+            self._bin_range1 = bin_range1
+            self._auto_range1[:] = [math.isinf(v) for v in bin_range1]
             self._bin1d = True
             self._bin2d = True
 
         n_bins2 = int(cfg['n_bins2'])
-        bin_range2 = self.str2tuple(cfg['bin_range2'])
-        if n_bins2 != self._n_bins2 or bin_range2 != self._range2:
+        if n_bins2 != self._n_bins2:
             self._n_bins2 = n_bins2
-            self._range2 = bin_range2
+            self._bin2d = True
+
+        bin_range2 = self.str2tuple(cfg['bin_range2'])
+        if bin_range2 != self._bin_range2:
+            self._bin_range2 = bin_range2
+            self._auto_range2[:] = [math.isinf(v) for v in bin_range2]
             self._bin2d = True
 
         if 'reset' in cfg:
@@ -205,7 +223,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         if not self._has_param1:
             return
 
-        processed = data['processed']
+        processed, raw = data['processed'], data['raw']
 
         if self.analysis_type == AnalysisType.PUMP_PROBE:
             pp_analysis_type = processed.pp.analysis_type
@@ -215,45 +233,49 @@ class BinProcessor(_BaseProcessor, _BinMixin):
 
         if self._reset:
             self._clear_history()
-            self._reset = False
+        elif self._reset_bin2d:
+            self._clear_bin2d_history()
+
+        try:
+            fom, vfom, vfom_x, s1, s2 = self._update_data_point(
+                processed, raw)
+        except ProcessingError as e:
+            logger.error(f"[Binning] {str(e)}!")
+            fom = None
+
+        actual_range1 = (
+            self._slow1.min if self._auto_range1[0] else self._bin_range1[0],
+            self._slow1.max if self._auto_range1[1] else self._bin_range1[1])
+        if actual_range1 != self._actual_range1:
+            self._actual_range1 = actual_range1
+            self._bin1d = True
+            self._bin2d = True
 
         if self._bin1d:
             self._new_1d_binning()
-
-        if self._has_param2 and self._bin2d:
-            self._new_2d_binning()
-
-        try:
-            fom, vfom_x, vfom, s1, s2 = self._get_data_point(
-                processed, data['raw'])
-
-            # if the above line of code raises, no data point will be added
-
-            if vfom is not None:
-                if self._vfom is None:
-                    self._init_vfom_binning(vfom, vfom_x)
-                else:
-                    try:
-                        self._vfom.append(vfom)
-                    except ValueError:
-                        # vfom cannot be scalar data. Therefore, we assume the
-                        # ValueError is caused by length mismatch.
-                        self._init_vfom_binning(vfom, vfom_x)
-
+            self._bin1d = False
+        else:
             if fom is not None:
-                self._slow1.append(s1)
-                if self._has_param2:
-                    self._slow2.append(s2)
-                self._fom.append(fom)
-
                 self._update_1d_binning(fom, vfom, s1)
-                if self._has_param2:
+
+        if self._has_param2:
+            actual_range2 = (
+                self._slow2.min if self._auto_range2[0] else self._bin_range2[0],
+                self._slow2.max if self._auto_range2[1] else self._bin_range2[1])
+            if actual_range2 != self._actual_range2:
+                self._actual_range2 = actual_range2
+                self._bin1d = True
+                self._bin2d = True
+
+            if self._bin2d:
+                self._new_2d_binning()
+                self._bin2d = False
+            else:
+                if fom is not None:
                     self._update_2d_binning(fom, s1, s2)
 
-        except ProcessingError as e:
-            logger.error(f"[Bin] {str(e)}!")
-
         bin = processed.bin
+
         bin1 = bin[0]
         bin1.source = self._source1
         bin1.centers = self.edges2centers(self._edges1)
@@ -269,7 +291,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
         bin.heat = self._heat
         bin.heat_count = self._heat_count
 
-    def _get_data_point(self, processed, raw):
+    def _update_data_point(self, processed, raw):
         analysis_type = self.analysis_type
         if analysis_type == AnalysisType.PUMP_PROBE:
             ret = processed.pp
@@ -280,6 +302,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                 if self._pp_fail_flag == 2:
                     self._pp_fail_flag = 0
                     raise ProcessingError("Pump-probe FOM is not available")
+                return None, None, None, None, None
             else:
                 self._pp_fail_flag = 0
         elif analysis_type == AnalysisType.ROI_FOM:
@@ -297,29 +320,59 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                     "Azimuthal integration FOM is not available")
         else:
             raise UnknownParameterError(
-                f"[Bin] Unknown analysis type: {self.analysis_type}")
+                f"[Binning] Unknown analysis type: {self.analysis_type}")
 
         tid = processed.tid
 
         slow1, err = self._fetch_property_data(tid, raw, self._source1)
-
         if err:
+            # The number of data points in slow1, slow2 (if requested),
+            # fom and vfom (if applicable) must be kept the same. So we
+            # drop the train if any of them is not available.
             raise ProcessingError(err)
 
         slow2, err = self._fetch_property_data(tid, raw, self._source2)
-
         if err:
             raise ProcessingError(err)
 
-        return ret.fom, ret.x, ret.y, slow1, slow2
+        fom, vfom, vfom_x = ret.fom, ret.y, ret.x
+
+        if vfom is not None:
+            if self._vfom is None:
+                # after analysis type changed
+                self._init_vfom_binning(vfom, vfom_x)
+            else:
+                try:
+                    self._vfom.append(vfom)
+                except ValueError:
+                    # vfom cannot be scalar data. Therefore, we assume the
+                    # ValueError is caused by length mismatch.
+
+                    # The number of VFOM and FOM data are always the same.
+                    self._clear_history()
+                    self._bin1d = True
+                    self._bin2d = True
+                    self._init_vfom_binning(vfom, vfom_x)
+
+        self._slow1.append(slow1)
+        if self._has_param2:
+            self._slow2.append(slow2)
+        self._fom.append(fom)
+
+        return fom, vfom, vfom_x, slow1, slow2
 
     def _new_1d_binning(self):
+        if self._actual_range1[0] is None:
+            # deal with the case when actual_range1 == (None, None) and
+            # there is no (FOM, etc.) data
+            self._actual_range1 = (0, 0)
+
         self._stats1, self._edges1, _ = \
             stats.binned_statistic(self._slow1.data(),
                                    self._fom.data(),
                                    self._statistics(),
                                    self._n_bins1,
-                                   self._range1)
+                                   self._actual_range1)
         np.nan_to_num(self._stats1, copy=False)
 
         if self._vfom is not None:
@@ -328,7 +381,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                                        self._vfom.data().T,
                                        self._statistics(),
                                        self._n_bins1,
-                                       self._range1)
+                                       self._actual_range1)
             np.nan_to_num(self._vfom_heat1, copy=False)
 
         self._counts1, _, _ = \
@@ -336,20 +389,13 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                                    self._fom.data(),
                                    'count',
                                    self._n_bins1,
-                                   self._range1)
+                                   self._actual_range1)
         np.nan_to_num(self._counts1, copy=False)
 
-        self._bin1d = False
-
     def _init_vfom_binning(self, vfom, vfom_x):
-        self._clear_history()
         self._vfom = SimpleVectorSequence(
             len(vfom), max_len=self._MAX_POINTS, order='F')
         self._vfom_x1 = vfom_x
-        # caveat: sequence of the following two lines
-        self._new_1d_binning()
-        if self._has_param2:
-            self._new_2d_binning()
         self._vfom.append(vfom)
 
     def _update_1d_binning(self, fom, vfom, s1):
@@ -368,6 +414,11 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                         (vfom - self._vfom_heat1[:, iloc]) / count
 
     def _new_2d_binning(self):
+        if self._actual_range2[0] is None:
+            # deal with the case when actual_range2 == (None, None) and
+            # there is no (FOM, etc.) data
+            self._actual_range2 = (0, 0)
+
         # Note: the return array from 'stats.binned_statistic_2d' has a swap x and y
         # axis compared to conventional image data
         self._heat, self._edges2, _, _ = \
@@ -376,7 +427,7 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                                       self._fom.data(),
                                       self._statistics(),
                                       [self._n_bins2, self._n_bins1],
-                                      [self._range2, self._range1])
+                                      [self._actual_range2, self._actual_range1])
         np.nan_to_num(self._heat, copy=False)
 
         self._heat_count, _, _, _ = \
@@ -385,10 +436,8 @@ class BinProcessor(_BaseProcessor, _BinMixin):
                                       self._fom.data(),
                                       'count',
                                       [self._n_bins2, self._n_bins1],
-                                      [self._range2, self._range1])
+                                      [self._actual_range2, self._actual_range1])
         np.nan_to_num(self._heat_count, copy=False)
-
-        self._bin2d = False
 
     def _update_2d_binning(self, fom, s1, s2):
         iloc_x = self.searchsorted(self._edges1, s1)
@@ -408,20 +457,27 @@ class BinProcessor(_BaseProcessor, _BinMixin):
 
     def _clear_history(self):
         self._slow1.reset()
-        self._slow2.reset()
         self._fom.reset()
         self._vfom = None
+        self._reset = False
+        self._bin1d = True
 
         self._edges1 = None
         self._counts1 = None
         self._stats1 = None
         self._vfom_heat1 = None
         self._vfom_x1 = None
+
+        self._clear_bin2d_history()
+
+    def _clear_bin2d_history(self):
+        self._slow2.reset()
+        self._reset_bin2d = False
+        self._bin2d = True
+
         self._edges2 = None
         self._counts2 = None
         self._stats2 = None
+
         self._heat = None
         self._heat_count = None
-
-        self._bin1d = True
-        self._bin2d = True
