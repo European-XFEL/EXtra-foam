@@ -42,12 +42,11 @@ class TestCorrelationProcessor(_BaseProcessorTest):
     @pytest.mark.parametrize("analysis_type", _analysis_types)
     def testGeneral(self, error, analysis_type):
         data, processed = self.simple_data(1001, (2, 2))
-        data['raw'] = {'A': {'e': 1}}
+        data['raw'] = {'A ppt': 1}
 
         proc = CorrelationProcessor()
         proc.analysis_type = analysis_type
-        proc._device_ids = ['A', '']
-        proc._properties = ['e', '']
+        proc._sources = ['A ppt', '']
         proc._resolutions = [0.0, 0.0]
 
         empty_arr = np.array([], dtype=np.float64)
@@ -57,21 +56,18 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         proc.process(data)
 
         corr = processed.corr
-        assert 'A' == corr[0].device_id
-        assert 'e' == corr[0].property
+        assert 'A ppt' == corr[0].source
         assert 0.0 == corr[0].resolution
         np.testing.assert_array_equal(np.array([1], dtype=np.float64), corr[0].x)
         np.testing.assert_array_equal(np.array([10], dtype=np.float64), corr[0].y)
 
-        assert '' == corr[1].device_id
-        assert '' == corr[1].property
+        assert '' == corr[1].source
         assert 0.0 == corr[1].resolution
         np.testing.assert_array_equal(empty_arr, corr[1].x)
         np.testing.assert_array_equal(empty_arr, corr[1].y)
 
         if analysis_type == AnalysisType.PUMP_PROBE:
-            assert '' == corr.pp.device_id
-            assert '' == corr.pp.property
+            assert '' == corr.pp.source
             assert 0.0 == corr.pp.resolution
             np.testing.assert_array_equal(np.array([1001]), corr.pp.x)
             np.testing.assert_array_equal(np.array([fom_gt]), corr.pp.y)
@@ -79,8 +75,7 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         # ---------------
         # new data arrive
         # ---------------
-        proc._device_ids = ['A', 'B']
-        proc._properties = ['e', 'f']
+        proc._sources = ['A ppt', 'B ppt']
         proc._resolutions = [0.0, 0.0]
 
         fom_gt = 20.
@@ -94,13 +89,12 @@ class TestCorrelationProcessor(_BaseProcessorTest):
         # ------------------------
         # set slow data source 'B'
         # ------------------------
-        data['raw'] = {'A': {'e': 2}, 'B': {'f': 5}}
+        data['raw'] = {'A ppt': 2, 'B ppt': 5}
         proc.process(data)
         np.testing.assert_array_equal(np.array([1, 1, 2], dtype=np.float64), corr[0].x)
         np.testing.assert_array_equal(np.array([10, 20, 20], dtype=np.float64), corr[0].y)
 
-        assert 'B' == corr[1].device_id
-        assert 'f' == corr[1].property
+        assert 'B ppt' == corr[1].source
         assert 0.0 == corr[1].resolution
         np.testing.assert_array_equal(np.array([5], dtype=np.float64), corr[1].x)
         np.testing.assert_array_equal(np.array([20], dtype=np.float64), corr[1].y)

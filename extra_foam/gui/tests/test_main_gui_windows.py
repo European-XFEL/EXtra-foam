@@ -3,7 +3,7 @@ import tempfile
 import os
 
 from extra_foam.logger import logger
-from extra_foam.config import _Config, ConfigWrapper
+from extra_foam.config import config
 from extra_foam.gui.main_gui import MainGUI
 from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import (
@@ -15,21 +15,33 @@ app = mkQApp()
 
 logger.setLevel('CRITICAL')
 
+_tmp_cfg_dir = tempfile.mkdtemp()
+
+
+def setup_module(module):
+    from extra_foam import config
+    module._backup_ROOT_PATH = config.ROOT_PATH
+    config.ROOT_PATH = _tmp_cfg_dir
+
+
+def teardown_module(module):
+    os.rmdir(_tmp_cfg_dir)
+    from extra_foam import config
+    config.ROOT_PATH = module._backup_ROOT_PATH
+
 
 class TestOpenCloseWindows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        config = ConfigWrapper()  # ensure file
-
-        config.load('LPD')
+        config.load('LPD', 'FXE')
 
         cls.gui = MainGUI()
 
     @classmethod
     def tearDownClass(cls):
         cls.gui.close()
+
+        os.remove(config.config_file)
 
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()

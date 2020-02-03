@@ -16,12 +16,14 @@ import time
 from .exceptions import StopPipelineError, ProcessingError
 from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
+    AdqDigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
     BinProcessor,
     Broker,
     CorrelationProcessor,
     ImageAssemblerFactory,
     ImageProcessor,
+    CtrlDataProcessor,
     PostPulseFilter,
     PumpProbeProcessor,
     RoiProcessorPulse, RoiProcessorTrain,
@@ -52,7 +54,7 @@ class ProcessWorker(mp.Process):
         self._pause_ev = mp.Event()
         self._close_ev = mp.Event()
 
-        self._timeout = config["TIMEOUT"]
+        self._timeout = config["PIPELINE_TIMEOUT"]
 
         # the time when the previous data processing was finished
         self._prev_processed_time = None
@@ -97,7 +99,8 @@ class ProcessWorker(mp.Process):
         try:
             # get the data from pipe-in
             data = self._input.get(timeout=timeout)
-            src_type = data['source_type']
+            det = data['catalog'].main_detector
+            src_type = data['meta'][det]['source_type']
         except Empty:
             return
 
@@ -195,7 +198,9 @@ class PulseWorker(ProcessWorker):
         self._output = MpOutQueue()
 
         self._broker = Broker()
+        self._ctrl_data_proc = CtrlDataProcessor()
         self._xgm_proc = XgmProcessor()
+        self._digitizer_proc = AdqDigitizerProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
         self._roi_proc = RoiProcessorPulse()
@@ -206,6 +211,8 @@ class PulseWorker(ProcessWorker):
         self._tasks = [
             self._broker,
             self._xgm_proc,
+            self._digitizer_proc,
+            self._ctrl_data_proc,
             self._assembler,
             self._image_proc,
             self._roi_proc,

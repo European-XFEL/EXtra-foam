@@ -53,7 +53,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageAnalysis(hide_axis=False)
         self._q_view = ImageViewF(hide_axis=False)
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
         self._ctrl_widget = self.parent().createCtrlWidget(
@@ -65,7 +65,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         """Override."""
         view_tab = QTabWidget()
         view_tab.setTabPosition(QTabWidget.TabPosition.South)
-        view_tab.addTab(self._image_view, "Corrected")
+        view_tab.addTab(self._corrected, "Corrected")
         view_tab.addTab(self._q_view, "Momentum transfer (q)")
 
         view_splitter = QSplitter()
@@ -84,8 +84,8 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
 
     def updateF(self, data, auto_update):
         """Override."""
-        if auto_update or self._image_view.image is None:
-            self._image_view.setImageData(_SimpleImageData(data.image))
+        if auto_update or self._corrected.image is None:
+            self._corrected.setImageData(_SimpleImageData(data.image))
             self._q_view.setImage(data.ai.q_map, auto_range=True, auto_levels=True)
             self._azimuthal_integ_1d_curve.updateF(data)
 

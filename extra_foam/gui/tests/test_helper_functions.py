@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from extra_foam.gui.gui_helpers import parse_boundary, parse_ids, parse_slice
+from extra_foam.gui.gui_helpers import parse_boundary, parse_id, parse_slice
 
 
 class TestGUI(unittest.TestCase):
@@ -27,30 +27,30 @@ class TestGUI(unittest.TestCase):
         self.assertTrue(math.isinf(ub))
 
     def test_parseids(self):
-        self.assertEqual([-1], parse_ids(":"))
-        self.assertEqual([-1], parse_ids("  : "))
-        self.assertEqual([], parse_ids("  "))
-        self.assertEqual([1, 2, 3], parse_ids("1, 2, 3"))
-        self.assertEqual([1, 2, 3], parse_ids("1, 2, ,3"))
-        self.assertEqual([1], parse_ids("1, 1, ,1"))
+        self.assertEqual([-1], parse_id(":"))
+        self.assertEqual([-1], parse_id("  : "))
+        self.assertEqual([], parse_id("  "))
+        self.assertEqual([1, 2, 3], parse_id("1, 2, 3"))
+        self.assertEqual([1, 2, 3], parse_id("1, 2, ,3"))
+        self.assertEqual([1], parse_id("1, 1, ,1"))
 
-        self.assertEqual([1, 2], parse_ids("1:3"))
-        self.assertEqual([1, 2, 5], parse_ids("1:3, 5"))
-        self.assertEqual([1, 2, 5], parse_ids("1:3, , 5"))
-        self.assertEqual([1, 2, 5], parse_ids(" 1 : 3 , , 5"))
-        self.assertEqual([1, 2, 5], parse_ids(",, 1 : 3 , , 5,, "))
-        self.assertEqual([1, 2, 5], parse_ids("1:3, 5"))
-        self.assertEqual([0, 1, 2, 5, 6, 7], parse_ids("0:3, 5, 6:8"))
-        self.assertEqual([0, 1, 2, 3, 4], parse_ids("0:3, 1:5"))
-        self.assertEqual([0, 1, 2, 3, 4], parse_ids("0:3, 1:5"))
-        self.assertEqual([], parse_ids("4:4"))
-        self.assertEqual([0, 2, 4, 6, 8], parse_ids("0:10:2"))
+        self.assertEqual([1, 2], parse_id("1:3"))
+        self.assertEqual([1, 2, 5], parse_id("1:3, 5"))
+        self.assertEqual([1, 2, 5], parse_id("1:3, , 5"))
+        self.assertEqual([1, 2, 5], parse_id(" 1 : 3 , , 5"))
+        self.assertEqual([1, 2, 5], parse_id(",, 1 : 3 , , 5,, "))
+        self.assertEqual([1, 2, 5], parse_id("1:3, 5"))
+        self.assertEqual([0, 1, 2, 5, 6, 7], parse_id("0:3, 5, 6:8"))
+        self.assertEqual([0, 1, 2, 3, 4], parse_id("0:3, 1:5"))
+        self.assertEqual([0, 1, 2, 3, 4], parse_id("0:3, 1:5"))
+        self.assertEqual([], parse_id("4:4"))
+        self.assertEqual([0, 2, 4, 6, 8], parse_id("0:10:2"))
 
         invalid_inputs = ["1, 2, ,a", "1:", ":1", "-1:3", "2:a", "a:b",
                           "1:2:3:4", "4:1:-1"]
         for v in invalid_inputs:
             with self.assertRaises(ValueError):
-                parse_ids(v)
+                parse_id(v)
 
     def test_parseslice(self):
         with self.assertRaises(ValueError):

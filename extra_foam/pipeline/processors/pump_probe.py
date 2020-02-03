@@ -13,7 +13,7 @@ from .base_processor import _BaseProcessor
 from ..exceptions import (
     DropAllPulsesError, ProcessingError, PumpProbeIndexError
 )
-from ...config import AnalysisType, PumpProbeMode
+from ...config import AnalysisType, config, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
 
@@ -80,7 +80,7 @@ class PumpProbeProcessor(_BaseProcessor):
     @profiler("Pump-probe processor")
     def process(self, data):
         processed = data['processed']
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['sliced']
 
         pp = processed.pp
         pp.reset = self._reset

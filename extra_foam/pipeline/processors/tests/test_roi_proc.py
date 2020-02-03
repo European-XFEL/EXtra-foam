@@ -30,7 +30,7 @@ _handlers = {
 
 class TestRoiProcessorPulse(_BaseProcessorTest):
     @pytest.fixture(autouse=True)
-    def setup(self):
+    def setUp(self):
         proc = RoiProcessorPulse()
         proc._geom1 = [0, 1, 2, 3]
         proc._geom2 = [1, 0, 1, 3]
@@ -66,7 +66,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
             proc._norm_type = norm_type
             proc.process(data)
             s = self._get_roi_slice(getattr(proc, geom))
-            fom_gt = fom_handler(data['detector']['assembled'][:, s[0], s[1]], axis=(-1, -2))
+            fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
             np.testing.assert_array_equal(fom_gt, processed.pulse.roi.norm)
 
         for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
@@ -75,9 +75,9 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
             proc._norm_type = norm_type
             proc.process(data)
             s3 = self._get_roi_slice(proc._geom3)
-            fom3_gt = fom_handler(data['detector']['assembled'][:, s3[0], s3[1]], axis=(-1, -2))
+            fom3_gt = fom_handler(data['assembled']['sliced'][:, s3[0], s3[1]], axis=(-1, -2))
             s4 = self._get_roi_slice(proc._geom4)
-            fom4_gt = fom_handler(data['detector']['assembled'][:, s4[0], s4[1]], axis=(-1, -2))
+            fom4_gt = fom_handler(data['assembled']['sliced'][:, s4[0], s4[1]], axis=(-1, -2))
             if norm_combo == RoiCombo.ROI3_SUB_ROI4:
                 np.testing.assert_array_equal(fom3_gt - fom4_gt, processed.pulse.roi.norm)
             else:
@@ -94,7 +94,7 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
             proc._fom_norm = Normalizer.UNDEFINED
             proc.process(data)
             s = self._get_roi_slice(getattr(proc, geom))
-            fom_gt = fom_handler(data['detector']['assembled'][:, s[0], s[1]], axis=(-1, -2))
+            fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
             np.testing.assert_array_equal(fom_gt, processed.pulse.roi.fom)
 
         for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
@@ -104,9 +104,9 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
             proc._fom_norm = Normalizer.UNDEFINED
             proc.process(data)
             s1 = self._get_roi_slice(proc._geom1)
-            fom1_gt = fom_handler(data['detector']['assembled'][:, s1[0], s1[1]], axis=(-1, -2))
+            fom1_gt = fom_handler(data['assembled']['sliced'][:, s1[0], s1[1]], axis=(-1, -2))
             s2 = self._get_roi_slice(proc._geom2)
-            fom2_gt = fom_handler(data['detector']['assembled'][:, s2[0], s2[1]], axis=(-1, -2))
+            fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
             if fom_combo == RoiCombo.ROI1_SUB_ROI2:
                 np.testing.assert_array_equal(fom1_gt - fom2_gt, processed.pulse.roi.fom)
             else:

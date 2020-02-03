@@ -27,8 +27,7 @@ class CorrelationProcessor(_BaseProcessor):
         _correlations (list): a list of pair sequences (SimplePairSequence,
             OneWayAccuPairSequence) for storing the history of
             (correlator, FOM).
-        _device_ids (list): a list of device ids for slow data correlators.
-        _properties (list): a list of properties for slow data correlators.
+        _sources (list): a list of sources for slow data correlators.
         _resolutions (list): a list of resolutions for correlations.
         _resets (list): reset flags for correlation data.
         _correlation_pp (SimplePairSequence): store the history of
@@ -51,8 +50,7 @@ class CorrelationProcessor(_BaseProcessor):
         for i in range(self._n_params):
             self._correlations.append(
                 SimplePairSequence(max_len=self._MAX_POINTS))
-        self._device_ids = [""] * self._n_params
-        self._properties = [""] * self._n_params
+        self._sources = [""] * self._n_params
         self._resolutions = [0.0] * self._n_params
         self._resets = [False] * self._n_params
 
@@ -68,14 +66,9 @@ class CorrelationProcessor(_BaseProcessor):
                 self._resets[i] = True
 
         for i in range(len(self._correlations)):
-            device_id = cfg[f'device_id{i+1}']
-            if self._device_ids[i] != device_id:
-                self._device_ids[i] = device_id
-                self._resets[i] = True
-
-            ppt = cfg[f'property{i+1}']
-            if self._properties[i] != ppt:
-                self._properties[i] = ppt
+            src = cfg[f'source{i+1}']
+            if self._sources[i] != src:
+                self._sources[i] = src
                 self._resets[i] = True
 
             resolution = float(cfg[f'resolution{i+1}'])
@@ -86,6 +79,8 @@ class CorrelationProcessor(_BaseProcessor):
                 self._correlations[i] = OneWayAccuPairSequence(
                     resolution, max_len=self._MAX_POINTS)
             elif self._resolutions[i] != resolution:
+                # In the above two cases, we do not need 'reset' since
+                # new Sequence object will be constructed.
                 self._resets[i] = True
             self._resolutions[i] = resolution
 
@@ -152,8 +147,7 @@ class CorrelationProcessor(_BaseProcessor):
         if fom is not None:
             for i in range(self._n_params):
                 v, err = self._fetch_property_data(
-                    processed.tid, data['raw'],
-                    self._device_ids[i], self._properties[i])
+                    processed.tid, data['raw'], self._sources[i])
 
                 if err:
                     logger.error(err)
@@ -165,8 +159,7 @@ class CorrelationProcessor(_BaseProcessor):
             out = processed.corr[i]
             c = self._correlations[i]
             out.x, out.y = c.data()
-            out.device_id = self._device_ids[i]
-            out.property = self._properties[i]
+            out.source = self._sources[i]
             out.resolution = self._resolutions[i]
 
     def _process_pump_probe(self, data):

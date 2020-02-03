@@ -205,13 +205,12 @@ class TestBinProcessor(_BaseProcessorTest):
         proc._update_2d_binning = MagicMock()
 
         data, processed = self.simple_data(1001, (4, 2, 2))
-        data['raw'] = {'A': {'e': 0.1}, 'B': {'f': 5}}
+        data['raw'] = {'A ppt': 0.1, 'B ppt': 5}
 
         proc.analysis_type = analysis_type
         proc._n_bins1 = 4
         proc._range1 = [-1, 1]
-        proc._device_id1 = 'A'
-        proc._property1 = 'e'
+        proc._source1 = 'A ppt'
         proc._has_param1 = True
 
         fom_gt = 10
@@ -223,8 +222,7 @@ class TestBinProcessor(_BaseProcessorTest):
 
         def assert_ret1(processed, fom_gt, vfom_gt, vfom_x_gt):
             bin = processed.bin
-            assert 'A' == bin[0].device_id
-            assert 'e' == bin[0].property
+            assert 'A ppt' == bin[0].source
             np.testing.assert_array_equal([-0.75, -0.25, 0.25, 0.75], bin[0].centers)
             np.testing.assert_array_equal([0, 0, 1, 0], bin[0].counts)
             np.testing.assert_array_equal([0, 0, fom_gt, 0], bin[0].stats)
@@ -238,7 +236,7 @@ class TestBinProcessor(_BaseProcessorTest):
         # -------------------------
         # Slow data cannot be found
         # -------------------------
-        data['raw'] = {'AA': {'e': 0.1}, 'B': {'f': 5}}
+        data['raw'] = {'AA ppt': 0.1, 'B ppt': 5}
 
         proc.process(data)
 
@@ -252,7 +250,7 @@ class TestBinProcessor(_BaseProcessorTest):
         # -----------
         # FOM is None
         # -----------
-        data['raw'] = {'A': {'e': 0.1}, 'B': {'f': 5}}
+        data['raw'] = {'A ppt': 0.1, 'B ppt': 5}
         self._set_ret(processed, analysis_type, None, vfom_gt, vfom_x_gt)
         proc.process(data)
         if analysis_type != AnalysisType.PUMP_PROBE:
@@ -283,8 +281,7 @@ class TestBinProcessor(_BaseProcessorTest):
 
         proc._n_bins1 = 2
         proc._range1 = [-2, 2]
-        proc._device_id1 = 'B'
-        proc._property1 = 'f'
+        proc._device_id1 = 'B ppt'
         proc._has_param1 = True
 
         # 2D binning function not called
@@ -299,18 +296,16 @@ class TestBinProcessor(_BaseProcessorTest):
         proc._update_2d_binning = MagicMock()
 
         data, processed = self.simple_data(1001, (4, 2, 2))
-        data['raw'] = {'A': {'e': 0.1}, 'B': {'f': 5}}
+        data['raw'] = {'A ppt': 0.1, 'B ppt': 5}
 
         proc.analysis_type = analysis_type
         proc._n_bins1 = 4
         proc._range1 = [-1, 1]
-        proc._device_id1 = 'A'
-        proc._property1 = 'e'
+        proc._source1 = 'A ppt'
         proc._has_param1 = True
         proc._n_bins2 = 2
         proc._range2 = [0, 1]
-        proc._device_id2 = 'B'
-        proc._property2 = 'f'
+        proc._source2 = 'B ppt'
         proc._has_param2 = False
 
         fom_gt = 10

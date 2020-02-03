@@ -95,11 +95,11 @@ def redis_connection(decode_responses=True):
         decode_responses = False
 
     if connection is None:
-        if config["UNIX_DOMAIN_SOCKET_PATH"]:
+        if config["REDIS_UNIX_DOMAIN_SOCKET_PATH"]:
             raise NotImplementedError(
                 "Unix domain socket connection is not supported!")
             # connection = redis.Redis(
-            #     unix_socket_path=config["UNIX_DOMAIN_SOCKET_PATH"],
+            #     unix_socket_path=config["REDIS_UNIX_DOMAIN_SOCKET_PATH"],
             #     decode_responses=decode_responses
             # )
         else:

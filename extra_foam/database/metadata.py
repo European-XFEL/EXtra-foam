@@ -46,16 +46,16 @@ class Metadata(metaclass=MetaMetadata):
     DARK_RUN_PROC = "meta:proc:dark_run"
     TR_XAS_PROC = "meta:proc:tr_xas"
 
-
-class MetaProxy(_AbstractProxy):
-    """Proxy for retrieving metadata."""
-    SESSION = "meta:session"
-
     # The real key depends on the category of the data source. For example,
     # 'XGM' has the key 'meta:sources:XGM' and 'DSSC' has the key
     # 'meta:sources:DSSC'.
     # The value is an unordered set for each source.
     DATA_SOURCE = "meta:data_source"
+
+
+class MetaProxy(_AbstractProxy):
+    """Proxy for retrieving metadata."""
+    SESSION = "meta:session"
 
     ANALYSIS_TYPE = "meta:analysis_type"
 
@@ -132,30 +132,28 @@ class MetaProxy(_AbstractProxy):
         return 0
 
     @redis_except_handler
-    def add_data_source(self, src):
+    def add_data_source(self, item):
         """Add a data source.
 
-        :return: the number of elements that were added to the set, not
-                 including all the elements already present into the set.
+        :param SourceItem item: source item.
         """
-        return self._db.sadd(f'{self.DATA_SOURCE}:{src.category}',
-                             pickle.dumps(src))
+        key = f"{item.name} {item.property}"
+        return self._db.pipeline().execute_command(
+            'HMSET', key, 'category', item.category,
+                          'name', item.name,
+                          'modules', str(item.modules),  # list -> str
+                          'property', item.property,
+                          'slicer', item.slicer,
+                          'vrange', item.vrange).execute_command(
+            'PUBLISH', Metadata.DATA_SOURCE, key).execute()
 
     @redis_except_handler
-    def remove_data_source(self, src):
+    def remove_data_source(self, item):
         """Remove a data source.
 
-        :return: the number of members that were removed from the set,
-                 not including non existing members.
+        :param SourceItem item: source item.
         """
-        return self._db.srem(f'{self.DATA_SOURCE}:{src.category}',
-                             pickle.dumps(src))
-
-    @redis_except_handler
-    def get_all_data_sources(self, category):
-        """Get all the data sources in a category.
-
-        :return: a list of SourceItem.
-        """
-        return [pickle.loads(src) for src in
-                self._db_nodecode.smembers(f'{self.DATA_SOURCE}:{category}')]
+        key = f"{item.name} {item.property}"
+        return self._db.pipeline().execute_command(
+            'DEL', key).execute_command(
+            'PUBLISH', Metadata.DATA_SOURCE, key).execute()

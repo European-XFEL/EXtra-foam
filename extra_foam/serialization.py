@@ -13,8 +13,8 @@ import numpy as np
 from .config import config
 
 
-if 'IMAGE_DTYPE' in config:
-    _DEFAULT_DTYPE = config['IMAGE_DTYPE']
+if 'SOURCE_PROC_IMAGE_DTYPE' in config:
+    _DEFAULT_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 else:
     _DEFAULT_DTYPE = np.float32
 

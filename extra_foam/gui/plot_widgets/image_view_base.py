@@ -89,7 +89,7 @@ class ImageViewF(QWidget):
         self._hist_widget.setImageItem(self._image_item)
 
         if color_map is None:
-            self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
+            self.setColorMap(colorMapFactory[config["GUI_COLOR_MAP"]])
         else:
             self.setColorMap(colorMapFactory["thermal"])
 
@@ -117,7 +117,7 @@ class ImageViewF(QWidget):
         pass
 
     def _initializeROIs(self):
-        for i, color in enumerate(config["ROI_COLORS"], 1):
+        for i, color in enumerate(config["GUI_ROI_COLORS"], 1):
             roi = RectROI(i,
                           pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
                           size=self.ROI_SIZE0,
@@ -245,7 +245,7 @@ class TimedImageViewF(ImageViewF):
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._refresh_imp)
-        self._timer.start(config["ACCUMULATED_PLOT_UPDATE_INTERVAL"])
+        self._timer.start(config["GUI_PLOT_WITH_STATE_UPDATE_TIMER"])
 
     @abc.abstractmethod
     def refresh(self):

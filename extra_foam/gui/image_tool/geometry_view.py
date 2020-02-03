@@ -23,7 +23,7 @@ class GeometryView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._image_view = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageAnalysis(hide_axis=False)
         self._ctrl_widget = self.parent().createCtrlWidget(
             GeometryCtrlWidget)
 
@@ -32,7 +32,7 @@ class GeometryView(_AbstractImageToolView):
     def initUI(self):
         """Override."""
         layout = QVBoxLayout()
-        layout.addWidget(self._image_view)
+        layout.addWidget(self._corrected)
         layout.addWidget(self._ctrl_widget)
         self.setLayout(layout)
 
@@ -42,5 +42,5 @@ class GeometryView(_AbstractImageToolView):
 
     def updateF(self, data, auto_update):
         """Override."""
-        if auto_update or self._image_view.image is None:
-            self._image_view.setImageData(_SimpleImageData(data.image))
+        if auto_update or self._corrected.image is None:
+            self._corrected.setImageData(_SimpleImageData(data.image))

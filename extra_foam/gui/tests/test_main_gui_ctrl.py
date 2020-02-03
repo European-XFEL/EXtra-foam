@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock, Mock
+import random
 import tempfile
 import os
 
@@ -14,7 +15,7 @@ from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import PulseOfInterestWindow
 from extra_foam.config import (
-    _Config, ConfigWrapper, config, AnalysisType, BinMode, PumpProbeMode,
+    config, AnalysisType, BinMode, PumpProbeMode,
 )
 from extra_foam.processes import wait_until_redis_shutdown
 
@@ -23,14 +24,25 @@ app = mkQApp()
 logger.setLevel("CRITICAL")
 
 
-class TestLpdMainGuiCtrl(unittest.TestCase):
+_tmp_cfg_dir = tempfile.mkdtemp()
+
+
+def setup_module(module):
+    from extra_foam import config
+    module._backup_ROOT_PATH = config.ROOT_PATH
+    config.ROOT_PATH = _tmp_cfg_dir
+
+
+def teardown_module(module):
+    os.rmdir(_tmp_cfg_dir)
+    from extra_foam import config
+    config.ROOT_PATH = module._backup_ROOT_PATH
+
+
+class TestMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('LPD')
-        config.set_topic("FXE")
+        config.load(*random.choice([('LPD', 'FXE'), ('DSSC', 'SCS')]))
 
         cls.foam = Foam().init()
 
@@ -43,6 +55,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         cls.foam.terminate()
 
         wait_until_redis_shutdown()
+
+        os.remove(config.config_file)
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())
@@ -183,8 +197,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         # test passing tcp hostname and port
 
         # TODO: testit
-        # hostname = config['SERVER_ADDR']
-        # port = config['SERVER_PORT']
+        # hostname = config['BRIDGE_ADDR']
+        # port = config['BRIDGE_PORT']
         # self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
 
         #
@@ -227,16 +241,19 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         from extra_foam.pipeline.processors.base_processor import (
             SimplePairSequence, OneWayAccuPairSequence
         )
+        USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = self.gui.correlation_ctrl_widget
-        analysis_types = {value: key for key, value in
-                          widget._analysis_types.items()}
+        analysis_types = {value: key for key, value in widget._analysis_types.items()}
 
         for i in range(_N_PARAMS):
+            # test category list
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
                          for j in range(widget._table.cellWidget(i, 0).count())]
-            self.assertEqual(
-                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+            self.assertListEqual(["", "Metadata"]
+                                 + [k for k, v in config.control_sources.items() if v]
+                                 + [USER_DEFINED_KEY],
+                                 combo_lst)
 
         train_worker = self.train_worker
         proc = train_worker._correlation_proc
@@ -245,9 +262,8 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 
         # test default
         self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual([""] * _N_PARAMS, proc._device_ids)
-        self.assertEqual([""] * _N_PARAMS, proc._properties)
-        self.assertEqual([0.0] * _N_PARAMS, proc._resolutions)
+        self.assertEqual([""] * _N_PARAMS, proc._sources)
+        self.assertEqual([_DEFAULT_RESOLUTION] * _N_PARAMS, proc._resolutions)
 
         # set new FOM
         proc._resets = [False] * _N_PARAMS
@@ -256,28 +272,52 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
         self.assertTrue(all(proc._resets))
 
-        # change device_id
-        proc._resets = [False] * _N_PARAMS
+        # change source
         for i in range(_N_PARAMS):
-            widget._table.cellWidget(i, 0).setCurrentIndex(1)
-            widget._table.cellWidget(i, 1).setCurrentIndex(1)
-        proc.update()
-        for i in range(_N_PARAMS):
-            device_id = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(device_id, proc._device_ids[i])
-            ppt = widget._table.cellWidget(i, 1).currentText()
-            self.assertEqual(ppt, proc._device_ids[i])
-        self.assertTrue(all(proc._resets))
+            proc._resets[i] = False
+            ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
+            widget._table.cellWidget(i, 0).setCurrentText(ctg)
+            self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
+            self.assertEqual(ppt, widget._table.cellWidget(i, 2).currentText())
+            proc.update()
+            src = f"{device_id} {ppt}" if device_id and ppt else ""
+            self.assertEqual(src, proc._sources[i])
+            self.assertTrue(proc._resets[i])
+
+            # just test we can set a motor source
+            proc._resets[i] = False
+            widget._table.cellWidget(i, 0).setCurrentText("Motor")
+            proc.update()
+            self.assertTrue(proc._resets[i])
+
+            proc._resets[i] = False
+            ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
+            widget._table.cellWidget(i, 0).setCurrentText(ctg)
+            self.assertEqual('', widget._table.cellWidget(i, 1).text())
+            self.assertEqual('', widget._table.cellWidget(i, 2).text())
+            widget._table.cellWidget(i, 1).setText(device_id)
+            widget._table.cellWidget(i, 2).setText(ppt)
+            self.assertEqual(device_id, widget._table.cellWidget(0, 1).text())
+            self.assertEqual(ppt, widget._table.cellWidget(0, 2).text())
+            proc.update()
+            src = f"{device_id} {ppt}" if device_id and ppt else ""
+            self.assertEqual(src, proc._sources[i])
+            self.assertTrue(proc._resets[i])
 
         # change resolution
         proc._resets = [False] * _N_PARAMS
         for i in range(_N_PARAMS):
             self.assertIsInstance(proc._correlations[i], SimplePairSequence)
             widget._table.cellWidget(i, 3).setText(str(1.0))
-        proc.update()
-        for i in range(_N_PARAMS):
+            proc.update()
             self.assertEqual(1.0, proc._resolutions[i])
             self.assertIsInstance(proc._correlations[i], OneWayAccuPairSequence)
+            # sequence type change will not have 'reset'
+            self.assertFalse(proc._resets[i])
+            widget._table.cellWidget(i, 3).setText(str(2.0))
+            proc.update()
+            self.assertEqual(2.0, proc._resolutions[i])
+            self.assertTrue(proc._resets[i])
 
         # test reset button
         proc._resets = [False] * _N_PARAMS
@@ -289,6 +329,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
             _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
         )
+        USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = self.gui.bin_ctrl_widget
 
@@ -298,25 +339,23 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         for i in range(_N_PARAMS):
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
                          for j in range(widget._table.cellWidget(i, 0).count())]
-            self.assertEqual(
-                list(widget._TOPIC_DATA_CATEGORIES[config["TOPIC"]]), combo_lst)
+            self.assertListEqual(["", "Metadata"]
+                                 + [k for k, v in config.control_sources.items() if v]
+                                 + [USER_DEFINED_KEY],
+                                 combo_lst)
 
         train_worker = self.train_worker
         proc = train_worker._bin_proc
         proc.update()
 
-        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
-
         # test default
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertEqual(BinMode.AVERAGE, proc._mode)
-        self.assertEqual("", proc._device_id1)
-        self.assertEqual("", proc._property1)
-        self.assertTupleEqual(default_bin_range, proc._range1)
+        self.assertEqual("", proc._source1)
+        self.assertTupleEqual(_DEFAULT_BIN_RANGE, proc._range1)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
-        self.assertEqual("", proc._device_id2)
-        self.assertEqual("", proc._property2)
-        self.assertEqual(default_bin_range, proc._range2)
+        self.assertEqual("", proc._source2)
+        self.assertEqual(_DEFAULT_BIN_RANGE, proc._range2)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
         self.assertFalse(proc._has_param1)
         self.assertFalse(proc._has_param2)
@@ -343,35 +382,58 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertTrue(proc._bin1d)
         self.assertTrue(proc._bin2d)
 
-        # test device id and property change
-        proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
-        # bin parameter 1
-        widget._table.cellWidget(0, 0).setCurrentText('Train ID')
-        self.assertEqual("Train ID", widget._table.cellWidget(0, 0).currentText())
-        widget._table.cellWidget(0, 1).setCurrentText('Any')
-        self.assertEqual("Any", widget._table.cellWidget(0, 1).currentText())
-        self.assertEqual("timestamp.tid", widget._table.cellWidget(0, 2).currentText())
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
-        self.assertTrue(proc._has_param1)
-        self.assertFalse(proc._has_param2)
-        proc._reset = False
-        # bin parameter 2
-        widget._table.cellWidget(1, 0).setCurrentText('User defined')
-        self.assertEqual("User defined", widget._table.cellWidget(1, 0).currentText())
-        widget._table.cellWidget(1, 1).setText('Any')
-        self.assertEqual("Any", widget._table.cellWidget(1, 1).text())
-        widget._table.cellWidget(1, 2).setText('timestamp.tid')
-        self.assertEqual("timestamp.tid", widget._table.cellWidget(1, 2).text())
-        proc.update()
-        self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
-        self.assertTrue(proc._has_param2)
+        # test source change
+        for i in range(_N_PARAMS):
+            proc._reset = False
+            proc._bin1d = False
+            proc._bin2d = False
+            ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
+            widget._table.cellWidget(i, 0).setCurrentText(ctg)
+            self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
+            self.assertEqual(ppt, widget._table.cellWidget(i, 2).currentText())
+            proc.update()
+            src = f"{device_id} {ppt}" if device_id and ppt else ""
+            self.assertEqual(src, getattr(proc, f"_source{i+1}"))
+            self.assertTrue(proc._reset)
+            self.assertFalse(proc._bin1d)
+            self.assertFalse(proc._bin2d)
+            self.assertTrue(proc._has_param1)
+            if i == 1:
+                self.assertTrue(proc._has_param2)
+
+            # just test we can set a motor source
+            proc._reset = False
+            proc._bin1d = False
+            proc._bin2d = False
+            widget._table.cellWidget(i, 0).setCurrentText("Motor")
+            proc.update()
+            self.assertTrue(proc._reset)
+            self.assertFalse(proc._bin1d)
+            self.assertFalse(proc._bin2d)
+            self.assertTrue(proc._has_param1)
+            if i == 1:
+                self.assertTrue(proc._has_param2)
+
+            proc._reset = False
+            proc._bin1d = False
+            proc._bin2d = False
+            ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
+            widget._table.cellWidget(i, 0).setCurrentText(ctg)
+            self.assertEqual('', widget._table.cellWidget(i, 1).text())
+            self.assertEqual('', widget._table.cellWidget(i, 2).text())
+            widget._table.cellWidget(i, 1).setText(device_id)
+            widget._table.cellWidget(i, 2).setText(ppt)
+            self.assertEqual(device_id, widget._table.cellWidget(0, 1).text())
+            self.assertEqual(ppt, widget._table.cellWidget(0, 2).text())
+            proc.update()
+            src = f"{device_id} {ppt}" if device_id and ppt else ""
+            self.assertEqual(src, getattr(proc, f"_source{i+1}"))
+            self.assertTrue(proc._reset)
+            self.assertFalse(proc._bin1d)
+            self.assertFalse(proc._bin2d)
+            self.assertTrue(proc._has_param1)
+            if i == 1:
+                self.assertTrue(proc._has_param2)
 
         # test bin range and number of bins change
         proc._bin1d = False
@@ -516,19 +578,17 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_delay_bins)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_energy_bins)
 
-        widget._energy_device_le.setText("new mono")
-        widget._energy_ppt_le.setText("new mono ppt")
-        widget._delay_device_le.setText("new phase shifter")
-        widget._delay_ppt_le.setText("new phase shifter ppt")
+        widget._energy_device_le.setText("new/mono")
+        widget._energy_ppt_le.setText("new/mono/ppt")
+        widget._delay_device_le.setText("new/phase/shifter")
+        widget._delay_ppt_le.setText("new/phase/shifter/ppt")
         widget._delay_range_le.setText("-1, 1")
         widget._energy_range_le.setText("-1.0, 1.0")
         widget._n_delay_bins_le.setText("100")
         widget._n_energy_bins_le.setText("1000")
         proc.update()
-        self.assertEqual("new mono", proc._energy_device)
-        self.assertEqual("new mono ppt", proc._energy_ppt)
-        self.assertEqual("new phase shifter", proc._delay_device)
-        self.assertEqual("new phase shifter ppt", proc._delay_ppt)
+        self.assertEqual("new/mono new/mono/ppt", proc._energy_src)
+        self.assertEqual("new/phase/shifter new/phase/shifter/ppt", proc._delay_src)
         self.assertTupleEqual((-1, 1), proc._delay_range)
         self.assertTupleEqual((-1.0, 1.0), proc._energy_range)
         self.assertEqual(100, proc._n_delay_bins)
@@ -544,11 +604,7 @@ class TestLpdMainGuiCtrl(unittest.TestCase):
 class TestJungFrauMainGuiCtrl(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('JungFrau')
-        config.set_topic("FXE")
+        config.load('JungFrau', 'FXE')
 
         cls.foam = Foam().init()
 
@@ -560,6 +616,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         cls.foam.terminate()
 
         wait_until_redis_shutdown()
+
+        os.remove(config.config_file)
 
     def setUp(self):
         self.assertTrue(self.gui.updateMetaData())

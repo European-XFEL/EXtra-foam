@@ -310,7 +310,7 @@ class RoiData(DataItem):
         proj (RoiProjData): ROI projection data item
     """
 
-    N_ROIS = len(config['ROI_COLORS'])
+    N_ROIS = len(config['GUI_ROI_COLORS'])
 
     __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj']
 
@@ -436,7 +436,7 @@ class ImageData:
             raise ValueError(f"The shape of image data must be (y, x) or "
                              f"(n_pulses, y, x)!")
 
-        image_dtype = config['IMAGE_DTYPE']
+        image_dtype = config['SOURCE_PROC_IMAGE_DTYPE']
         if arr.dtype != image_dtype:
             arr = arr.astype(image_dtype)
 
@@ -493,12 +493,10 @@ class BinData(collections.abc.Mapping):
 
     class BinDataItem:
 
-        __slots__ = ['device_id', 'property',
-                     'centers', 'counts', 'stats', 'x', 'heat']
+        __slots__ = ['source', 'centers', 'counts', 'stats', 'x', 'heat']
 
         def __init__(self):
-            self.device_id = ""
-            self.property = ""
+            self.source = ""
             self.centers = None
             self.counts = None
             self.stats = None
@@ -507,27 +505,33 @@ class BinData(collections.abc.Mapping):
 
     __slots__ = ['mode', '_common', 'heat', 'heat_count']
 
+    _N_BINS = 2
+
     def __init__(self):
         self.mode = None
 
         self._common = []
-        for i in range(2):
+        for i in range(self._N_BINS):
             self._common.append(self.BinDataItem())
 
         self.heat = None
         self.heat_count = None
 
+    def __contains__(self, idx):
+        """Override."""
+        return 0 <= idx < self._N_BINS
+
     def __getitem__(self, idx):
         """Overload."""
-        return self._common[idx]
+        return self._common.__getitem__(idx)
 
     def __iter__(self):
         """Overload."""
-        return iter(self._common)
+        return self._common.__iter__()
 
     def __len__(self):
         """overload."""
-        return len(self._common)
+        return self._N_BINS
 
 
 class CorrelationData(collections.abc.Mapping):
@@ -535,36 +539,41 @@ class CorrelationData(collections.abc.Mapping):
 
     class CorrelationDataItem:
 
-        __slots__ = ['x', 'y', 'device_id', 'property', 'resolution']
+        __slots__ = ['x', 'y', 'source', 'resolution']
 
         def __init__(self):
             self.x = None
             self.y = None  # FOM
-            self.device_id = ""
-            self.property = ""
+            self.source = ""
             self.resolution = 0.0
 
     __slots__ = ['_common', '_pp']
 
+    _N_CORRELATIONS = 2
+
     def __init__(self):
         self._common = []
-        for i in range(2):
+        for i in range(self._N_CORRELATIONS):
             self._common.append(self.CorrelationDataItem())
 
         # pump-probe data
         self._pp = self.CorrelationDataItem()
 
+    def __contains__(self, idx):
+        """Override."""
+        return 0 <= idx < self._N_CORRELATIONS
+
     def __getitem__(self, idx):
         """Overload."""
-        return self._common[idx]
+        return self._common.__getitem__(idx)
 
     def __iter__(self):
         """Overload."""
-        return iter(self._common)
+        return self._common.__iter__()
 
     def __len__(self):
         """overload."""
-        return len(self._common)
+        return self._N_CORRELATIONS
 
     @property
     def pp(self):
@@ -685,6 +694,8 @@ class _XgmDataItem:
     Store XGM pipeline data.
     """
 
+    __slots__ = ['intensity', 'x', 'y']
+
     def __init__(self):
         self.intensity = None  # FEL intensity
         self.x = None  # x position
@@ -696,11 +707,80 @@ class XgmData(_XgmDataItem):
 
     Store XGM pipeline data.
     """
+
+    __slots__ = ['on', 'off']
+
     def __init__(self):
         super().__init__()
 
         self.on = _XgmDataItem()
         self.off = _XgmDataItem()
+
+
+class _AdqDigitizerDataItem:
+    """_AdqDigitizerDataItem class.
+
+    Store AdqDigitizer pipeline data.
+    """
+
+    __slots__ = 'pulse_integral'
+
+    def __init__(self):
+        self.pulse_integral = None
+
+
+class _AdqDigitizerChannelData(collections.abc.Mapping):
+    """_AdqDigitizerDataItem class.
+
+    Store AdqDigitizer pipeline data.
+    """
+
+    # For a Karabo device, we have maximum 4 boards and each
+    # board has 4 channels.
+    _CHANNEL_NAMES = ('A', 'B', 'C', 'D')
+
+    __slots__ = ['_pulse_integrals']
+
+    def __init__(self):
+        super().__init__()
+
+        self._pulse_integrals = dict()
+        for cn in self._CHANNEL_NAMES:
+            self._pulse_integrals[cn] = _AdqDigitizerDataItem()
+
+    def __contains__(self, cn):
+        """Override."""
+        return self._CHANNEL_NAMES.__contains__(cn)
+
+    def __getitem__(self, cn):
+        """Overload."""
+        return self._pulse_integrals.__getitem__(cn)
+
+    def __iter__(self):
+        """Overload."""
+        return self._CHANNEL_NAMES.__iter__()
+
+    def __len__(self):
+        """overload."""
+        return len(self._CHANNEL_NAMES)
+
+    def items(self):
+        return self._pulse_integrals.items()
+
+
+class AdqDigitizerData(_AdqDigitizerChannelData):
+    """AdqDigitizerData class.
+
+    Store AdqDigitizer pipeline data.
+    """
+
+    __slots__ = ["on", "off"]
+
+    def __init__(self):
+        super().__init__()
+
+        self.on = _AdqDigitizerChannelData()
+        self.off = _AdqDigitizerChannelData()
 
 
 class ProcessedData:
@@ -721,12 +801,13 @@ class ProcessedData:
     class PulseData:
         """Container for pulse-resolved data."""
 
-        __slots__ = ['ai', 'roi', 'xgm']
+        __slots__ = ['ai', 'roi', 'xgm', 'adq']
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
             self.xgm = XgmData()
+            self.adq = AdqDigitizerData()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',

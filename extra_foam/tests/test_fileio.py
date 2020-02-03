@@ -41,7 +41,7 @@ class TestFileIO(unittest.TestCase):
         # test dtype
         with patch('imageio.imread', return_value=np.ones((3, 2), dtype=bool)):
             img = read_image('abc')
-            self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
+            self.assertEqual(img.dtype, config['SOURCE_PROC_IMAGE_DTYPE'])
             self.assertEqual((3, 2), img.shape)
 
         # test read invalid file format
@@ -89,7 +89,7 @@ class TestFileIO(unittest.TestCase):
         # test dtype
         with patch('numpy.load', return_value=np.ones([3, 2], dtype=bool)):
             img = read_cal_constants('abc')
-            self.assertEqual(img.dtype, config['IMAGE_DTYPE'])
+            self.assertEqual(img.dtype, config['SOURCE_PROC_IMAGE_DTYPE'])
             self.assertEqual((3, 2), img.shape)
 
         for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:

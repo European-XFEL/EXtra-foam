@@ -29,7 +29,7 @@ class TestDataSourceWidget(unittest.TestCase):
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
-    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCES_EXPIRATION_TIME": 10})
+    @patch.dict(config._data, {"DETECTOR": "DSSC", "TOPIC": "SCS", "SOURCE_EXPIRATION_TIMER": 10})
     def testDataSourceListMV(self):
         parent = self.DummyParent()
         widget = DataSourceWidget(parent)

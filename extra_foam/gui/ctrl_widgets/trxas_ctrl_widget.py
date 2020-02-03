@@ -33,12 +33,10 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._delay_device_le = SmartStringLineEdit("Any")
+        self._delay_device_le = SmartStringLineEdit("META")
         self._delay_ppt_le = SmartStringLineEdit("timestamp.tid")
 
-        # self._energy_device_le = SmartLineEdit("SA3_XTD10_MONO/MDL/PHOTON_ENERGY")
-        # self._energy_ppt_le = SmartLineEdit("actualEnergy")
-        self._energy_device_le = SmartStringLineEdit("Any")
+        self._energy_device_le = SmartStringLineEdit("META")
         self._energy_ppt_le = SmartStringLineEdit("timestamp.tid")
 
         self._delay_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
@@ -113,14 +111,14 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
         mediator = self._mediator
 
         self._delay_device_le.value_changed_sgn.connect(
-            mediator.onTrXasDelayDeviceChange)
+            self._onDelaySourceChange)
         self._delay_ppt_le.value_changed_sgn.connect(
-            mediator.onTrXasDelayPropertyChange)
+            self._onDelaySourceChange)
 
         self._energy_device_le.value_changed_sgn.connect(
-            mediator.onTrXasEnergyDeviceChange)
+            self._onEnergySourceChange)
         self._energy_ppt_le.value_changed_sgn.connect(
-            mediator.onTrXasEnergyPropertyChange)
+            self._onEnergySourceChange)
 
         self._n_delay_bins_le.value_changed_sgn.connect(
             mediator.onTrXasNoDelayBinsChange)
@@ -164,6 +162,18 @@ class TrXasCtrlWidget(_AbstractCtrlWidget):
             self.onStop()
 
         self._mediator.onTrXasScanStateToggled(AnalysisType.TR_XAS, state)
+
+    def _onDelaySourceChange(self):
+        device_id = self._delay_device_le.text()
+        ppt = self._delay_ppt_le.text()
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onTrXasDelaySourceChange(src)
+
+    def _onEnergySourceChange(self):
+        device_id = self._energy_device_le.text()
+        ppt = self._energy_ppt_le.text()
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onTrXasEnergySourceChange(src)
 
     def _swapEnergyDelay(self):
         self._swapLineEditContent(self._delay_device_le, self._energy_device_le)

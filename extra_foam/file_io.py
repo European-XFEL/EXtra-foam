@@ -66,7 +66,7 @@ def read_image(filepath, *, expected_shape=None):
         elif img.ndim != 2:
             raise ValueError("Image must be an array with 2 dimensions!")
 
-        image_dtype = config["IMAGE_DTYPE"]
+        image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
         if img.dtype != image_dtype:
             img = img.astype(image_dtype)
 
@@ -96,7 +96,7 @@ def read_cal_constants(filepath):
     if c.ndim not in (2, 3):
         raise ValueError("Constants must be an array with 2 or 3 dimensions!")
 
-    image_dtype = config["IMAGE_DTYPE"]
+    image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
     if c.dtype != image_dtype:
         c = c.astype(image_dtype)
 

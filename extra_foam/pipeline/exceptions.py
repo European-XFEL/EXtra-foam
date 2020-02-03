@@ -50,3 +50,8 @@ class PumpProbeIndexError(StopPipelineError):
 class DropAllPulsesError(StopPipelineError):
     """Raised when no pulse is valid after pulse filtering."""
     pass
+
+
+class SkipTrainError(StopPipelineError):
+    """Raised when the train is skipped after pulse filtering."""
+    pass

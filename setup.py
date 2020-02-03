@@ -284,7 +284,8 @@ setup(
         'extra_foam': [
             'gui/icons/*.png',
             'gui/icons/*.jpg',
-            'geometries/*.h5'
+            'geometries/*.h5',
+            'configs/*.yaml',
         ]
     },
     install_requires=[
@@ -303,6 +304,7 @@ setup(
         'redis>=3.3.11',
         'psutil>=5.6.2',
         'imageio>=2.5.0',
+        'pyyaml>=5.2',
     ],
     extras_require={
         'docs': [

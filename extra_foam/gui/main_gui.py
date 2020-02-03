@@ -59,7 +59,7 @@ class ThreadLoggerBridge(QObject):
     """
     log_msg_sgn = pyqtSignal(str, str)
 
-    __sub = RedisPSubscriber("log:*")
+    _sub = RedisPSubscriber("log:*")
 
     def __init__(self):
         super().__init__()
@@ -70,11 +70,9 @@ class ThreadLoggerBridge(QObject):
         self._running = True
         while self._running:
             try:
-                msg = self.__sub.get_message()
-                if msg:
-                    self.log_msg_sgn.emit(msg['channel'], msg['data'])
-
-            except (ConnectionError, RuntimeError, AttributeError, IndexError):
+                msg = self._sub.get_message(ignore_subscribe_messages=True)
+                self.log_msg_sgn.emit(msg['channel'], msg['data'])
+            except Exception:
                 pass
 
             time.sleep(0.001)
@@ -99,7 +97,7 @@ class MainGUI(QMainWindow):
 
     _SPECIAL_ANALYSIS_ICON_WIDTH = 100
 
-    _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
+    _WIDTH, _HEIGHT = config['GUI_MAIN_GUI_SIZE']
 
     def __init__(self):
         """Initialization."""
@@ -143,6 +141,16 @@ class MainGUI(QMainWindow):
 
         self._util_panel_container = QWidget()
         self._util_panel_cw = QTabWidget()
+
+        # *************************************************************
+        # Menu bar
+        # *************************************************************
+        self._menu_bar = self.menuBar()
+        file_menu = self._menu_bar.addMenu('&Config')
+        save_cfg = QAction('Save config', self)
+        file_menu.addAction(save_cfg)
+        load_cfg = QAction('Load config', self)
+        file_menu.addAction(load_cfg)
 
         # *************************************************************
         # Tool bar
@@ -395,7 +403,7 @@ class MainGUI(QMainWindow):
             self.__redis_connection_fails = 0
         except ConnectionError:
             self.__redis_connection_fails += 1
-            rest_attempts = config["MAX_REDIS_PING_ATTEMPTS"] - \
+            rest_attempts = config["REDIS_MAX_PING_ATTEMPTS"] - \
                 self.__redis_connection_fails
 
             if rest_attempts > 0:
@@ -484,8 +492,8 @@ class MainGUI(QMainWindow):
         ProcessWorker interface.
         """
         self._thread_logger_t.start()
-        self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
-        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
+        self._plot_timer.start(config["GUI_PLOT_UPDATE_TIMER"])
+        self._redis_timer.start(config["PROCESS_MONITOR_UPDATE_TIMER"])
         self._input.start(self._close_ev)
 
     def onStart(self):

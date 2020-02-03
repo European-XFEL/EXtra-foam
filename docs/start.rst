@@ -145,14 +145,14 @@ Steps to follow in case you are facing issues operating **EXtra-foam**
 
   .. code-block:: console
 
-     The following invalid keys were found in /home/user/.EXtra-foam/config.json:
+     The following invalid keys were found in /home/user/.EXtra-foam/config.yaml:
 
      LPD.GEOMETRY_FIL1.
 
      This could be caused by a version update.
      Create a new config file? (y/n)
 
-  This warning is triggered when the local config file `/home/user/.EXtra-foam/config.json`
+  This warning is triggered when the local config file `/home/user/.EXtra-foam/config.yaml`
   was either created by an old version of **EXtra-foam** or some keys name were manually
   changed by the user by mistake like in the above warning "GEOMETRY_FILE" key that 
   is expected by **EXtra-foam** was manually changed to "GEOMETRY_FIL1" by the user in their

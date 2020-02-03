@@ -10,10 +10,11 @@ All rights reserved.
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from collections.abc import Sequence
+import math
 
 import numpy as np
 
-from ..exceptions import ProcessingError
+from ..exceptions import ProcessingError, SkipTrainError
 from ...database import MetaProxy
 from ...algorithms import normalize_auc
 from ...config import AnalysisType, Normalizer
@@ -301,37 +302,65 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         return normalized_on, normalized_off
 
     @staticmethod
-    def _fetch_property_data(tid, raw, src_name, ppt):
+    def _fetch_property_data(tid, raw, src):
         """Fetch property data from raw data.
 
         :param int tid: train ID.
         :param dict raw: raw data.
-        :param str src_name: device ID.
-        :param str ppt: property name.
+        :param str src: source.
 
         :returns (value, error str)
         """
-        if not src_name or not ppt:
+        if not src:
             # not activated is not an error
             return None, ""
 
-        if src_name == "Any":
-            return tid, ""
-        else:
-            try:
-                device_data = raw[src_name]
-            except KeyError:
-                return None, f"[{tid}] source '{src_name}' is not in the data!"
+        try:
+            return raw[src], ""
+        except KeyError:
+            return None, f"[{tid}] '{src}' not found!"
 
-            ppt_orig = ppt
-            try:
-                if ppt not in device_data:
-                    # instrument data from file
-                    ppt += '.value'
-                return device_data[ppt], ""
-            except KeyError:
-                return None, f"[{tid}] '{src_name}' does not contain " \
-                             f"property '{ppt_orig}'"
+    @staticmethod
+    def filter_train_by_vrange(v, src, catalog):
+        """Filter a train by train-resolved value.
+
+        :param float v: value of a control data.
+        :param str src: data source.
+        :param SourceCatalog catalog: source catalog.
+        """
+        vrange = catalog.get_vrange(src)
+        if vrange is not None:
+            lb, ub = vrange
+            if v > ub or v < lb:
+                raise SkipTrainError(f"<{src}> value {v:.4e} is "
+                                     f"out of range [{lb}, {ub}]")
+
+    @staticmethod
+    def filter_pulse_by_vrange(arr, src, index_mask, catalog):
+        """Filter pulses in a train by pulse-resolved value.
+
+        :param numpy.array arr: pulse-resolved values of control data
+            in a train.
+        :param str src: data source.
+        :param PulseIndexMask index_mask: pulse index msk
+        :param SourceCatalog catalog: source catalog.
+        """
+        vrange = catalog.get_vrange(src)
+        if vrange is not None:
+            lb, ub = vrange
+
+            if not math.isinf(lb) and not math.isinf(ub):
+                for i, v in enumerate(arr):
+                    if v > ub or v < lb:
+                        index_mask.mask(i)
+            elif not math.isinf(lb):
+                for i, v in enumerate(arr):
+                    if v < lb:
+                        index_mask.mask(i)
+            elif not math.isinf(ub):
+                for i, v in enumerate(arr):
+                    if v > ub:
+                        index_mask.mask(i)
 
 
 class _AbstractSequence(Sequence):

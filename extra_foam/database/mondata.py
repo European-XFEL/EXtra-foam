@@ -65,19 +65,19 @@ class MonProxy(_AbstractProxy):
         """
         return self.hget_all(f"meta:proc:{proc}")
 
+    @redis_except_handler
     def set_available_sources(self, mapping):
         """Set available sources.
 
         :return: None if the connection failed;
                  A list of results of 'DEL', 'hmset' and 'PEXPIRE'.
         """
-        # TODO: this does not work if we want to match data after processing
         pipe = self._db.pipeline()
         key = self.MON_AVAILABLE_SOURCES
         pipe.execute_command('DEL', key)
         pipe.hmset(key, mapping)
         # key expiration time should be longer than sources update interval
-        pipe.execute_command('PEXPIRE', key, config['SOURCES_EXPIRATION_TIME'])
+        pipe.execute_command('PEXPIRE', key, config['SOURCE_EXPIRATION_TIMER'])
         return pipe.execute()
 
     def get_available_sources(self):
