@@ -400,20 +400,24 @@ class MainGUI(QMainWindow):
     def pingRedisServer(self):
         try:
             self._db.ping()
-            self.__redis_connection_fails = 0
+            if self.__redis_connection_fails > 0:
+                # Note: Indeed, we do not have mechanism to recover from
+                #       a Redis server crash. It is recommended to restart
+                #       Extra-foam if you encounter this situation.
+                logger.info("Reconnect to the Redis server!")
+                self.__redis_connection_fails = 0
         except ConnectionError:
             self.__redis_connection_fails += 1
             rest_attempts = config["REDIS_MAX_PING_ATTEMPTS"] - \
                 self.__redis_connection_fails
 
             if rest_attempts > 0:
-                logger.warning(f"No response from the Redis server! Shutting "
+                logger.warning(f"No response from the Redis server! Shut "
                                f"down after {rest_attempts} attempts ...")
             else:
                 logger.warning(f"No response from the Redis server! "
                                f"Shutting down!")
                 self.close()
-            time.sleep(5)
 
     def addAction(self, description, filename):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
@@ -493,7 +497,7 @@ class MainGUI(QMainWindow):
         """
         self._thread_logger_t.start()
         self._plot_timer.start(config["GUI_PLOT_UPDATE_TIMER"])
-        self._redis_timer.start(config["PROCESS_MONITOR_UPDATE_TIMER"])
+        self._redis_timer.start(config["REDIS_PING_ATTEMPT_INTERVAL"])
         self._input.start(self._close_ev)
 
     def onStart(self):

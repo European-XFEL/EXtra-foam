@@ -1,7 +1,7 @@
 import unittest
 
 from extra_foam.config import AnalysisType
-from extra_foam.database.metadata import MetaMetadata
+from extra_foam.database.metadata import Metadata, MetaMetadata
 from extra_foam.database import MetaProxy, MonProxy
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import start_redis_server
@@ -13,8 +13,6 @@ class TestDataProxy(unittest.TestCase):
         start_redis_server()
 
         cls._meta = MetaProxy()
-        cls._meta.initialize_analysis_types()
-
         cls._mon = MonProxy()
 
     @classmethod
@@ -44,7 +42,7 @@ class TestDataProxy(unittest.TestCase):
         # register an analysis type twice
         self._meta.register_analysis(type2)
         self.assertTrue(self._meta.has_all_analysis([type1, type2]))
-        self.assertEqual('2', self._meta.hget(self._meta.ANALYSIS_TYPE, type2))
+        self.assertEqual('2', self._meta.hget(Metadata.ANALYSIS_TYPE, type2))
 
         # unregister an analysis type
         self._meta.unregister_analysis(type1)
@@ -52,7 +50,7 @@ class TestDataProxy(unittest.TestCase):
 
         # unregister an analysis type which has not been registered
         self._meta.unregister_analysis(type3)
-        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, type3))
+        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, type3))
 
     def testMetaMetadata(self):
         class Dummy(metaclass=MetaMetadata):

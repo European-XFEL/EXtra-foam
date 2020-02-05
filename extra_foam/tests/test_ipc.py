@@ -1,14 +1,14 @@
 import unittest
+from unittest.mock import patch
 import time
 
 from redis.client import PubSub, Redis
 
-from extra_foam.config import config
 from extra_foam.logger import logger
 from extra_foam.services import start_redis_server
 from extra_foam.ipc import (
-    redis_connection, RedisConnection, RedisSubscriber, RedisPSubscriber,
-    _global_connections, reset_redis_connections
+    init_redis_connection, redis_connection, RedisConnection, RedisSubscriber,
+    RedisPSubscriber, _global_connections
 )
 from extra_foam.pipeline.worker import ProcessWorker
 from extra_foam.processes import wait_until_redis_shutdown
@@ -19,54 +19,47 @@ logger.setLevel("CRITICAL")
 class TestRedisConnection(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        start_redis_server()
+        cls._port = 6390
+        # use a port that is not used in other unittests
+        start_redis_server('127.0.0.1', cls._port)
 
     @classmethod
     def tearDownClass(cls):
         wait_until_redis_shutdown()
 
     def setUp(self):
-        self._db = redis_connection()
-
+        self._db = init_redis_connection('127.0.0.1', self._port)
         for c in self._db.client_list():
-            self._db.execute_command("CLIENT KILL", "ID", c["id"])
-
-        reset_redis_connections()
+            self._db.client_kill_filter(c["id"])
 
     def testCreateConnection(self):
-        client_list = self._db.client_list()
-        n_clients = len(client_list)
-        self.assertEqual(1, n_clients)
+        n_clients = len(self._db.client_list())
+
+        # clients share the same pool
 
         db = redis_connection()
         self.assertTrue(db.ping())
-        # _GLOBAL_REDIS_CONNECTION was set to None in "setUp", so new pool is created.
-        self.assertIsNot(db, self._db)
-        n_clients += 1
+        self.assertIs(db, self._db)
         self.assertEqual(n_clients, len(self._db.client_list()))
 
-        # _GLOBAL_REDIS_CONNECTION_BYTES was set to None in "setUp", so new pool is created
         db1_bytes = redis_connection(decode_responses=False)
         self.assertTrue(db1_bytes.ping())
         db2_bytes = redis_connection(decode_responses=False)
         self.assertTrue(db2_bytes.ping())
         self.assertIs(db1_bytes, db2_bytes)
-        n_clients += 1
-        self.assertEqual(n_clients, len(db1_bytes.client_list()))
+        # one more connection because of the different decode response
+        self.assertEqual(n_clients+1, len(db1_bytes.client_list()))
 
-    def testCreateConnectionLazily(self):
+    @patch("extra_foam.ipc.redis_connection")
+    def testCreateConnectionLazily(self, connection):
         class Host:
             db = RedisConnection()
 
-        n_clients = len(self._db.client_list())
-
         host = Host()  # lazily created client
-        self.assertEqual(n_clients, len(self._db.client_list()))
+        connection.assert_not_called()
 
-        host.db.ping()  # new pool is created
-        n_clients += 1
-        # connection was already created when the server was started
-        self.assertEqual(n_clients, len(self._db.client_list()))
+        host.db.ping()
+        connection.assert_called_once()
 
     def testCreateConnectionInProcess(self):
         class DumpyProcess(ProcessWorker):
@@ -93,14 +86,12 @@ class TestRedisConnection(unittest.TestCase):
 
         n_clients = len(self._db.client_list())
         sub_host = SubHost()
-        self.assertEqual(n_clients, len(self._db.client_list()))
         # add a connection when first called
         sub_host.sub.get_message()
         n_clients += 1
         self.assertEqual(n_clients, len(self._db.client_list()))
 
         psub_host = PSubHost()
-        self.assertEqual(n_clients, len(self._db.client_list()))
         # add a connection when first called
         psub_host.sub.get_message()
         n_clients += 1
@@ -152,7 +143,9 @@ class TestRedisConnection(unittest.TestCase):
         self.assertIsInstance(_global_connections['RedisPSubscriber'][0]()._sub, PubSub)
         PSubHost2().sub
         self.assertIsInstance(_global_connections['RedisPSubscriber'][1]()._sub, PubSub)
-        reset_redis_connections()
+
+        init_redis_connection('localhost', self._port)
+
         self.assertIsNone(_global_connections['RedisConnection'][0]()._db)
         self.assertIsNone(_global_connections['RedisSubscriber'][0]()._sub)
         self.assertIsNone(_global_connections['RedisPSubscriber'][0]()._sub)

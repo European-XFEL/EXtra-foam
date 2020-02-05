@@ -22,20 +22,17 @@ def create_logger():
     """Create the logger object for the whole API."""
     name = "EXtra-foam"
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
 
     log_file = os.path.join(ROOT_PATH, name + ".log")
     fh = TimedRotatingFileHandler(log_file, when='midnight')
 
     fh.suffix = "%Y%m%d"
-    fh.setLevel(logging.INFO)
     formatter = logging.Formatter(
         '%(asctime)s - %(filename)s - %(levelname)s - %(message)s'
     )
     fh.setFormatter(formatter)
 
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         '%(filename)s - %(levelname)s - %(message)s'
     )
@@ -49,3 +46,4 @@ def create_logger():
 
 
 logger = create_logger()
+logger.setLevel(logging.INFO)

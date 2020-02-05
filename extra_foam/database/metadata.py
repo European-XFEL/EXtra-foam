@@ -7,8 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import pickle
-
 from .base_proxy import _AbstractProxy
 from .db_utils import redis_except_handler
 from ..config import AnalysisType
@@ -30,7 +28,11 @@ class MetaMetadata(type):
 
 class Metadata(metaclass=MetaMetadata):
 
+    SESSION = "meta:session"
+
     CONNECTION = "meta:connection"
+
+    ANALYSIS_TYPE = "meta:analysis_type"
 
     # The key of processors' metadata must end with '_PROC'
     GLOBAL_PROC = "meta:proc:global"
@@ -55,22 +57,13 @@ class Metadata(metaclass=MetaMetadata):
 
 class MetaProxy(_AbstractProxy):
     """Proxy for retrieving metadata."""
-    SESSION = "meta:session"
-
-    ANALYSIS_TYPE = "meta:analysis_type"
-
-    def set_session(self, mapping):
-        return self.hmset(self.SESSION, mapping)
-
-    def get_session(self):
-        return self.hget_all(self.SESSION)
 
     def has_analysis(self, analysis_type):
         """Check if the given analysis type has been registered.
 
         :param AnalysisType analysis_type: analysis type.
         """
-        return int(self.hget(self.ANALYSIS_TYPE, analysis_type))
+        return int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type))
 
     def has_any_analysis(self, analysis_types):
         """Check if any of the listed analysis types has been registered.
@@ -81,7 +74,7 @@ class MetaProxy(_AbstractProxy):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_types:
-            if int(self.hget(self.ANALYSIS_TYPE, analysis_type)) > 0:
+            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) > 0:
                 return True
         return False
 
@@ -94,7 +87,7 @@ class MetaProxy(_AbstractProxy):
             raise TypeError("Input must be a tuple or list!")
 
         for analysis_type in analysis_types:
-            if int(self.hget(self.ANALYSIS_TYPE, analysis_type)) <= 0:
+            if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) <= 0:
                 return False
         return True
 
@@ -105,30 +98,22 @@ class MetaProxy(_AbstractProxy):
                  otherwise, a dictionary of key-value pairs (
                  analysis type: number of registrations).
         """
-        return self.hget_all(self.ANALYSIS_TYPE)
-
-    def initialize_analysis_types(self):
-        """Initialize all analysis types in Redis.
-
-        Prevent 'has_analysis', 'has_any_analysis' and 'has_all_analysis'
-        from getting None when querying.
-        """
-        return self.hmset(self.ANALYSIS_TYPE, {t: 0 for t in AnalysisType})
+        return self.hget_all(Metadata.ANALYSIS_TYPE)
 
     def register_analysis(self, analysis_type):
         """Register the given analysis type.
 
         :param AnalysisType analysis_type: analysis type.
         """
-        return self.hincrease_by(self.ANALYSIS_TYPE, analysis_type, 1)
+        return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type, 1)
 
     def unregister_analysis(self, analysis_type):
         """Unregister the given analysis type.
 
         :param AnalysisType analysis_type: analysis type.
         """
-        if int(self.hget(self.ANALYSIS_TYPE, analysis_type)) > 0:
-            return self.hincrease_by(self.ANALYSIS_TYPE, analysis_type, -1)
+        if int(self.hget(Metadata.ANALYSIS_TYPE, analysis_type)) > 0:
+            return self.hincrease_by(Metadata.ANALYSIS_TYPE, analysis_type, -1)
         return 0
 
     @redis_except_handler
