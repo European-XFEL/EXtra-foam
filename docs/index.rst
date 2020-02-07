@@ -11,6 +11,7 @@ Contents:
    introduction
    installation
    start
+   config_file
    main_gui
    image_tool
    pump_probe

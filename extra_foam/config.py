@@ -14,6 +14,7 @@ from collections import abc, namedtuple
 
 import yaml
 from yaml.scanner import ScannerError
+from yaml.parser import ParserError
 
 import numpy as np
 
@@ -386,10 +387,10 @@ class _Config(dict):
         with open(config_file, 'r') as fp:
             try:
                 cfg = yaml.load(fp, Loader=yaml.Loader)
-            except ScannerError as e:
+            except (ScannerError, ParserError) as e:
                 msg = f"Invalid config file: {config_file}\n{repr(e)}"
                 logger.error(msg)
-                raise IOError(msg)
+                raise OSError(msg)
 
         if cfg is None:
             raise ValueError(f"Config file {config_file} is empty: "

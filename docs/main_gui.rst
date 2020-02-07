@@ -25,20 +25,34 @@ Data source
 | *Port*                     | Port number of the data source.                                    |
 +----------------------------+--------------------------------------------------------------------+
 
-In the data source tree, one can select which sources (*Source name* and *Property*) are required
-in the analysis. The available sources are monitored and displayed in the *Available sources*
-window below.
+.. image:: images/data_source_tree.png
+   :width: 640
 
-Further filtering operations are provided for each data source if applicable.
+In the data source tree, one can select which source items (a source item is defined by both the
+*Source name* and *Property*) are required in the analysis. The available sources are monitored
+and displayed in the *Available sources* widget below. However, for properties, you will need some
+instrument-domain knowledge. Users are not allowed to add/remove source items to/from the tree during
+the run time, however, they can be configured via :ref:`config file`. Nevertheless, one can still
+make use of "User-defined" source to define a control data source item dynamically.
+
+For each data source item, one can also set up the following attribute when applicable.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
 | *Pulse slicer*             | The input will be used to construct a *slice* object in Python     |
-|                            | which is used to select the specified pulse pattern in a train.    |
+|                            | which is used to select the specified pulse pattern in a train     |
+|                            | from a pipeline data.                                              |
 +----------------------------+--------------------------------------------------------------------+
-| *Value range*              | Value range filter of the corresponding source.                    |
+| *Value range*              | Value range filter of the corresponding source. When it applies to |
+|                            | pipeline data, it will apply data filtering pulse-by-pulse. When   |
+|                            | it applies to control data, it will then apply data filtering      |
+|                            | train-by-train. *Not all pipeline data support it*                 |
 +----------------------------+--------------------------------------------------------------------+
+
+.. Note::
+
+    One can modify a data source item only when it is checked.
 
 
 General analysis

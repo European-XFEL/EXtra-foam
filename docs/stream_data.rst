@@ -1,4 +1,4 @@
-.. _Stream data from run directory:
+.. _stream data from run directory:
 
 STREAM DATA FROM RUN DIRECTORY
 ==============================
