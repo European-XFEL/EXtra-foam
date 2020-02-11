@@ -158,9 +158,9 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(MAX_LENGTH, len(ax))
         self.assertEqual(overflow, ax[0])
         self.assertEqual(MAX_LENGTH + overflow - 1, ax[-1])
-        self.assertEqual(0, hist.min)
-        self.assertEqual(MAX_LENGTH + overflow - 1, hist.max)
-        self.assertTupleEqual((0, MAX_LENGTH + overflow - 1), hist.range)
+        self.assertEqual(ax.min(), hist.min)
+        self.assertEqual(ax.max(), hist.max)
+        self.assertTupleEqual((ax.min(), ax.max()), hist.range)
 
     def testSimpleVectorSequence(self):
         MAX_LENGTH = 1000

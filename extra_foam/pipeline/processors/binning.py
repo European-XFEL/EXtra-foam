@@ -192,23 +192,22 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
             self._bin1d = True
             self._bin2d = True
 
-        bin_range1 = self.str2tuple(cfg['bin_range1'])
-        if bin_range1 != self._bin_range1:
-            self._bin_range1 = bin_range1
-            self._auto_range1[:] = [math.isinf(v) for v in bin_range1]
-            self._bin1d = True
-            self._bin2d = True
-
         n_bins2 = int(cfg['n_bins2'])
         if n_bins2 != self._n_bins2:
             self._n_bins2 = n_bins2
             self._bin2d = True
 
+        bin_range1 = self.str2tuple(cfg['bin_range1'])
+        if bin_range1 != self._bin_range1:
+            self._bin_range1 = bin_range1
+            self._auto_range1[:] = [math.isinf(v) for v in bin_range1]
+            # whether the data should be re-binned is determined by the
+            # change of self._actual_range
+
         bin_range2 = self.str2tuple(cfg['bin_range2'])
         if bin_range2 != self._bin_range2:
             self._bin_range2 = bin_range2
             self._auto_range2[:] = [math.isinf(v) for v in bin_range2]
-            self._bin2d = True
 
         if 'reset' in cfg:
             self._meta.hdel(mt.BIN_PROC, 'reset')
@@ -264,7 +263,6 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
                 self._slow2.max if self._auto_range2[1] else self._bin_range2[1])
             if actual_range2 != self._actual_range2:
                 self._actual_range2 = actual_range2
-                self._bin1d = True
                 self._bin2d = True
 
             if self._bin2d:
@@ -467,6 +465,8 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         self._stats1 = None
         self._vfom_heat1 = None
         self._vfom_x1 = None
+
+        self._pp_fail_flag = 0
 
         self._clear_bin2d_history()
 

@@ -360,42 +360,20 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(BinMode.AVERAGE, proc._mode)
         self.assertEqual("", proc._source1)
         self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range1)
-        self.assertListEqual([True, True], proc._auto_range1)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
         self.assertEqual("", proc._source2)
         self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range2)
-        self.assertListEqual([True, True], proc._auto_range2)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
-        self.assertFalse(proc._has_param1)
-        self.assertFalse(proc._has_param2)
 
-        # test analysis type change
-        proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
+        # test analysis type and mode change
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.PUMP_PROBE])
-        proc.update()
-        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
-        self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
-
-        # test mode change
-        proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
         widget._mode_cb.setCurrentText(bin_modes[BinMode.ACCUMULATE])
         proc.update()
+        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
         self.assertEqual(BinMode.ACCUMULATE, proc._mode)
-        self.assertFalse(proc._reset)
-        self.assertTrue(proc._bin1d)
-        self.assertTrue(proc._bin2d)
 
         # test source change
         for i in range(_N_PARAMS):
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
             widget._table.cellWidget(i, 0).setCurrentText(ctg)
             self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
@@ -403,29 +381,11 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
             self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
             # just test we can set a motor source
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             widget._table.cellWidget(i, 0).setCurrentText("Motor")
             proc.update()
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
             widget._table.cellWidget(i, 0).setCurrentText(ctg)
             self.assertEqual('', widget._table.cellWidget(i, 1).text())
@@ -437,46 +397,25 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
             self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
         # test bin range and number of bins change
-        proc._bin1d = False
-        proc._bin2d = False
+
         # bin parameter 1
         widget._table.cellWidget(0, 3).setText("0, 10")  # range
         widget._table.cellWidget(0, 4).setText("5")  # n_bins
-        proc.update()
-        self.assertEqual(5, proc._n_bins1)
-        self.assertTupleEqual((0, 10), proc._bin_range1)
-        self.assertListEqual([False, False], proc._auto_range1)
-        self.assertTrue(proc._bin1d)
-        self.assertTrue(proc._bin2d)
-        proc._bin1d = False
-        proc._bin2d = False
-        # bin parameter 2
         widget._table.cellWidget(1, 3).setText("-4, inf")  # range
         widget._table.cellWidget(1, 4).setText("2")  # n_bins
         proc.update()
+        self.assertEqual(5, proc._n_bins1)
+        self.assertTupleEqual((0, 10), proc._bin_range1)
         self.assertEqual(2, proc._n_bins2)
         self.assertTupleEqual((-4, np.inf), proc._bin_range2)
-        self.assertListEqual([False, True], proc._auto_range2)
-        self.assertFalse(proc._bin1d)
-        self.assertTrue(proc._bin2d)
 
         # test "reset" button
         proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
 
         # test "Auto level" button
         binning_action = self.gui._tool_bar.actions()[8]
