@@ -114,8 +114,10 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
 
     def initConnections(self):
         """Override."""
-        self._mediator.poi_index_change_sgn.connect(self._updatePoiIndex)
-        self._mediator.poi_window_initialized_sgn.emit()
+        mediator = self._mediator
+
+        mediator.poi_index_change_sgn.connect(self._updatePoiIndex)
+        mediator.poi_window_initialized_sgn.emit()
 
     def _updatePoiIndex(self, poi_idx, pulse_idx):
         self._poi_imgs[poi_idx].setPulseIndex(pulse_idx)

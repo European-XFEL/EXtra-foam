@@ -421,6 +421,24 @@ class SimpleSequence(_AbstractSequence):
                 self._i0 = 0
                 self._x[:max_len] = self._x[max_len:]
 
+    @property
+    def min(self):
+        if self._len == 0:
+            return
+        return self.data().min()
+
+    @property
+    def max(self):
+        if self._len == 0:
+            return
+        return self.data().max()
+
+    @property
+    def range(self):
+        if self._len == 0:
+            return None, None
+        return self.data().min(), self.data().max()
+
     def reset(self):
         """Override."""
         self._i0 = 0

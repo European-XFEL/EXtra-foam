@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 
 from .base_processor import _BaseProcessor, SimpleSequence
-from .bin import _BinMixin
+from .binning import _BinMixin
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...utils import profiler

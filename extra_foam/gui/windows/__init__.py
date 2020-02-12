@@ -1,16 +1,18 @@
 from .base_window import _AbstractWindowMixin
 from .pump_probe_w import PumpProbeWindow
 from .roi_w import RoiWindow
-from .bin_w import BinningWindow
-from .statistics_w import StatisticsWindow
+from .binning_w import BinningWindow
+from .correlation_w import CorrelationWindow
+from .histogram_w import HistogramWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
 from .tri_xas_w import TrXasWindow
 
 __all__ = [
     "_AbstractWindowMixin",
     "BinningWindow",
+    "CorrelationWindow",
+    "HistogramWindow",
     "PulseOfInterestWindow",
-    "StatisticsWindow",
     "PumpProbeWindow",
     "RoiWindow",
     "TrXasWindow"

@@ -38,7 +38,7 @@ from .gui_helpers import create_icon_button
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    BinningWindow, StatisticsWindow, PulseOfInterestWindow,
+    BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
     PumpProbeWindow, FileStreamControllerWindow, AboutWindow, TrXasWindow
 )
 from .. import __version__
@@ -184,11 +184,15 @@ class MainGUI(QMainWindow):
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
-        open_statistics_window_at = self.addAction("Statistics", "statistics.png")
+        open_statistics_window_at = self.addAction("Correlation", "correlation.png")
         open_statistics_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, StatisticsWindow))
+            functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
-        open_bin2d_window_at = self.addAction("Binning", "heatmap.png")
+        open_statistics_window_at = self.addAction("Histogram", "histogram.png")
+        open_statistics_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, HistogramWindow))
+
+        open_bin2d_window_at = self.addAction("Binning", "binning.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, BinningWindow))
 
@@ -332,9 +336,9 @@ class MainGUI(QMainWindow):
 
     def initStatisticsAnalysisUI(self):
         layout = QVBoxLayout()
+        layout.addWidget(self.correlation_ctrl_widget)
         layout.addWidget(self.bin_ctrl_widget)
         layout.addWidget(self.histogram_ctrl_widget)
-        layout.addWidget(self.correlation_ctrl_widget)
         self._statistics_cw.setLayout(layout)
 
     def initSpecialAnalysisUI(self):

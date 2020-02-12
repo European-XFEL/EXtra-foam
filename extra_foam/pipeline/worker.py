@@ -18,7 +18,7 @@ from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
     AdqDigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
-    BinProcessor,
+    BinningProcessor,
     Broker,
     CorrelationProcessor,
     ImageAssemblerFactory,
@@ -236,7 +236,7 @@ class TrainWorker(ProcessWorker):
 
         self._histogram = HistogramProcessor()
         self._correlation_proc = CorrelationProcessor()
-        self._bin_proc = BinProcessor()
+        self._binning_proc = BinningProcessor()
 
         self._tr_xas = TrXasProcessor()
 
@@ -245,6 +245,6 @@ class TrainWorker(ProcessWorker):
             self._ai_proc,
             self._histogram,
             self._correlation_proc,
-            self._bin_proc,
+            self._binning_proc,
             self._tr_xas,
         ]

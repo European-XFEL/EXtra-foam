@@ -1,12 +1,16 @@
 import unittest
+from unittest.mock import MagicMock, patch
 from collections import Counter, deque
 
+from PyQt5.QtWidgets import QMainWindow
+
 from extra_foam.logger import logger
-from extra_foam.gui import mkQApp, MainGUI
+from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import (
-    BinningWindow, StatisticsWindow, PumpProbeWindow, RoiWindow
+    BinningWindow, CorrelationWindow, HistogramWindow, PumpProbeWindow, RoiWindow
 )
 from extra_foam.gui.plot_widgets import RoiImageView
+from extra_foam.pipeline.data_model import ProcessedData
 
 app = mkQApp()
 
@@ -16,7 +20,9 @@ logger.setLevel('CRITICAL')
 class TestPlotWindows(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.gui = MainGUI()
+        cls.gui = QMainWindow()  # dummy MainGUI
+        cls.gui.registerWindow = MagicMock()
+        cls.gui.registerSpecialWindow = MagicMock()
 
     @classmethod
     def tearDownClass(cls):
@@ -52,7 +58,7 @@ class TestPlotWindows(unittest.TestCase):
         win.updateWidgetsF()
 
     def testBinningWindow(self):
-        from extra_foam.gui.windows.bin_w import Bin1dHeatmap, Bin1dHist, Bin2dHeatmap
+        from extra_foam.gui.windows.binning_w import Bin1dHeatmap, Bin1dHist, Bin2dHeatmap
 
         win = BinningWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
 
@@ -67,21 +73,32 @@ class TestPlotWindows(unittest.TestCase):
 
         win.updateWidgetsF()
 
-    def testStatisticsWindow(self):
-        from extra_foam.gui.windows.statistics_w import (
-            CorrelationPlot, FomHist, InTrainFomPlot
-        )
+    def testCorrelationWindow(self):
+        from extra_foam.gui.windows.correlation_w import CorrelationPlot
 
-        win = StatisticsWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+        win = CorrelationWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(2, len(win._plot_widgets))
+        counter = Counter()
+        for key in win._plot_widgets:
+            counter[key.__class__] += 1
+
+        self.assertEqual(2, counter[CorrelationPlot])
+
+        win.updateWidgetsF()
+
+    def testHistogramWindow(self):
+        from extra_foam.gui.windows.histogram_w import FomHist, InTrainFomPlot
+
+        win = HistogramWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
+
+        self.assertEqual(2, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[InTrainFomPlot])
         self.assertEqual(1, counter[FomHist])
-        self.assertEqual(2, counter[CorrelationPlot])
 
         win.updateWidgetsF()
 
@@ -118,3 +135,54 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(1, counter[TrXasHeatmap])
 
         win.updateWidgetsF()
+
+
+class testBinningWidgets(unittest.TestCase):
+    def testHeatmap1D(self):
+        from extra_foam.gui.windows.binning_w import Bin1dHeatmap
+
+        widget = Bin1dHeatmap()
+        widget._data = ProcessedData(1)
+
+        # test "Auto level" reset
+        widget._auto_level = True
+        widget.refresh()
+        self.assertFalse(widget._auto_level)
+
+    def testHeatmap2D(self):
+        from extra_foam.gui.windows.binning_w import Bin2dHeatmap
+
+        for is_count in [False, True]:
+            widget = Bin2dHeatmap(count=is_count)
+            widget._data = ProcessedData(1)
+
+            # test "Auto level" reset
+            widget._auto_level = True
+            widget.refresh()
+            self.assertFalse(widget._auto_level)
+
+
+class testCorrrelationWidgets(unittest.TestCase):
+    def testGeneral(self):
+        from extra_foam.gui.windows.correlation_w import CorrelationPlot
+
+        for i in range(2):
+            widget = CorrelationPlot(0)
+            widget._data = ProcessedData(1)
+            widget.refresh()
+
+
+class testHistogramWidgets(unittest.TestCase):
+    def testFomHist(self):
+        from extra_foam.gui.windows.histogram_w import FomHist
+
+        widget = FomHist()
+        widget._data = ProcessedData(1)
+        widget.refresh()
+
+    def testInTrainFomPlot(self):
+        from extra_foam.gui.windows.histogram_w import InTrainFomPlot
+
+        widget = InTrainFomPlot()
+        data = ProcessedData(1)
+        widget.updateF(data)

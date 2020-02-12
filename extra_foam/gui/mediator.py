@@ -27,6 +27,8 @@ class Mediator(QObject):
     poi_index_change_sgn = pyqtSignal(int, int)
     poi_window_initialized_sgn = pyqtSignal()
 
+    bin_heatmap_autolevel_sgn = pyqtSignal()
+
     __instance = None
 
     _meta = MetaProxy()

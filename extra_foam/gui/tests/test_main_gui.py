@@ -13,7 +13,11 @@ from extra_foam.database import Metadata as mt
 from extra_foam.logger import logger
 from extra_foam.services import Foam
 from extra_foam.gui import mkQApp
-from extra_foam.gui.windows import PulseOfInterestWindow
+from extra_foam.gui.windows import (
+    BinningWindow, CorrelationWindow, HistogramWindow,
+    PulseOfInterestWindow, PumpProbeWindow,
+    FileStreamControllerWindow, AboutWindow,
+)
 from extra_foam.config import (
     config, AnalysisType, BinMode, PumpProbeMode,
 )
@@ -112,12 +116,14 @@ class TestMainGuiCtrl(unittest.TestCase):
         # the PoiWindow will be informed when opened
         self.assertEqual(0, len(self.gui._plot_windows))
         poi_action = self.gui._tool_bar.actions()[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
         poi_action.trigger()
         win = list(self.gui._plot_windows.keys())[-1]
         self.assertIsInstance(win, PulseOfInterestWindow)
         for i, index in enumerate(new_indices):
             self.assertEqual(index, win._poi_imgs[i]._index)
             self.assertEqual(index, win._poi_hists[i]._index)
+        win.close()
 
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
@@ -329,6 +335,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
             _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
         )
+        _DEFAULT_BIN_RANGE = tuple([float(v) for v in _DEFAULT_BIN_RANGE.split(",")])
         USER_DEFINED_KEY = config["SOURCE_USER_DEFINED_CATEGORY"]
 
         widget = self.gui.bin_ctrl_widget
@@ -345,48 +352,28 @@ class TestMainGuiCtrl(unittest.TestCase):
                                  combo_lst)
 
         train_worker = self.train_worker
-        proc = train_worker._bin_proc
+        proc = train_worker._binning_proc
         proc.update()
 
         # test default
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertEqual(BinMode.AVERAGE, proc._mode)
         self.assertEqual("", proc._source1)
-        self.assertTupleEqual(_DEFAULT_BIN_RANGE, proc._range1)
+        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range1)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins1)
         self.assertEqual("", proc._source2)
-        self.assertEqual(_DEFAULT_BIN_RANGE, proc._range2)
+        self.assertEqual(_DEFAULT_BIN_RANGE, proc._bin_range2)
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
-        self.assertFalse(proc._has_param1)
-        self.assertFalse(proc._has_param2)
 
-        # test analysis type change
-        proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
+        # test analysis type and mode change
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.PUMP_PROBE])
-        proc.update()
-        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
-        self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
-
-        # test mode change
-        proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
         widget._mode_cb.setCurrentText(bin_modes[BinMode.ACCUMULATE])
         proc.update()
+        self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
         self.assertEqual(BinMode.ACCUMULATE, proc._mode)
-        self.assertFalse(proc._reset)
-        self.assertTrue(proc._bin1d)
-        self.assertTrue(proc._bin2d)
 
         # test source change
         for i in range(_N_PARAMS):
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
             widget._table.cellWidget(i, 0).setCurrentText(ctg)
             self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
@@ -394,29 +381,11 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
             self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
             # just test we can set a motor source
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             widget._table.cellWidget(i, 0).setCurrentText("Motor")
             proc.update()
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
-            proc._reset = False
-            proc._bin1d = False
-            proc._bin2d = False
             ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
             widget._table.cellWidget(i, 0).setCurrentText(ctg)
             self.assertEqual('', widget._table.cellWidget(i, 1).text())
@@ -428,44 +397,39 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
             self.assertEqual(src, getattr(proc, f"_source{i+1}"))
-            self.assertTrue(proc._reset)
-            self.assertFalse(proc._bin1d)
-            self.assertFalse(proc._bin2d)
-            self.assertTrue(proc._has_param1)
-            if i == 1:
-                self.assertTrue(proc._has_param2)
 
         # test bin range and number of bins change
-        proc._bin1d = False
-        proc._bin2d = False
+
         # bin parameter 1
         widget._table.cellWidget(0, 3).setText("0, 10")  # range
         widget._table.cellWidget(0, 4).setText("5")  # n_bins
-        proc.update()
-        self.assertEqual(5, proc._n_bins1)
-        self.assertTupleEqual((0, 10), proc._range1)
-        self.assertTrue(proc._bin1d)
-        self.assertTrue(proc._bin2d)
-        proc._bin1d = False
-        proc._bin2d = False
-        # bin parameter 2
-        widget._table.cellWidget(1, 3).setText("-4, 4")  # range
+        widget._table.cellWidget(1, 3).setText("-4, inf")  # range
         widget._table.cellWidget(1, 4).setText("2")  # n_bins
         proc.update()
+        self.assertEqual(5, proc._n_bins1)
+        self.assertTupleEqual((0, 10), proc._bin_range1)
         self.assertEqual(2, proc._n_bins2)
-        self.assertTupleEqual((-4, 4), proc._range2)
-        self.assertFalse(proc._bin1d)
-        self.assertTrue(proc._bin2d)
+        self.assertTupleEqual((-4, np.inf), proc._bin_range2)
 
-        # test reset button
+        # test "reset" button
         proc._reset = False
-        proc._bin1d = False
-        proc._bin2d = False
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
-        self.assertFalse(proc._bin1d)
-        self.assertFalse(proc._bin2d)
+
+        # test "Auto level" button
+        binning_action = self.gui._tool_bar.actions()[8]
+        self.assertEqual("Binning", binning_action.text())
+        binning_action.trigger()
+        win = list(self.gui._plot_windows.keys())[-1]
+        win._bin1d_vfom._auto_level = False
+        win._bin2d_value._auto_level = False
+        win._bin2d_count._auto_level = False
+        QTest.mouseClick(widget._auto_level_btn, Qt.LeftButton)
+        self.assertTrue(win._bin1d_vfom._auto_level)
+        self.assertTrue(win._bin2d_value._auto_level)
+        self.assertTrue(win._bin2d_count._auto_level)
+        win.close()
 
     def testHistogramCtrlWidget(self):
         widget = self.gui.histogram_ctrl_widget
@@ -599,6 +563,114 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._scan_btn_set.reset_sgn.emit()
         proc.update()
         self.assertTrue(proc._reset)
+
+    def testOpenCloseWindows(self):
+        actions = self.gui._tool_bar.actions()
+
+        poi_action = actions[4]
+        self.assertEqual("Pulse-of-interest", poi_action.text())
+        pp_action = actions[5]
+        self.assertEqual("Pump-probe", pp_action.text())
+        correlation_action = actions[6]
+        self.assertEqual("Correlation", correlation_action.text())
+        histogram_action = actions[7]
+        self.assertEqual("Histogram", histogram_action.text())
+        binning_action = actions[8]
+        self.assertEqual("Binning", binning_action.text())
+
+        pp_window = self._check_open_window(pp_action)
+        self.assertIsInstance(pp_window, PumpProbeWindow)
+
+        correlation_window = self._check_open_window(correlation_action)
+        self.assertIsInstance(correlation_window, CorrelationWindow)
+
+        binning_window = self._check_open_window(binning_action)
+        self.assertIsInstance(binning_window, BinningWindow)
+
+        histogram_window = self._check_open_window(histogram_action)
+        self.assertIsInstance(histogram_window, HistogramWindow)
+
+        poi_window = self._check_open_window(poi_action)
+        self.assertIsInstance(poi_window, PulseOfInterestWindow)
+        # open one window twice
+        self._check_open_window(poi_action, registered=False)
+
+        self._check_close_window(pp_window)
+        self._check_close_window(correlation_window)
+        self._check_close_window(binning_window)
+        self._check_close_window(histogram_window)
+        self._check_close_window(poi_window)
+
+        # if a plot window is closed, it can be re-openned and a new instance
+        # will be created
+        pp_window_new = self._check_open_window(pp_action)
+        self.assertIsInstance(pp_window_new, PumpProbeWindow)
+        self.assertIsNot(pp_window_new, pp_window)
+
+    def testOpenCloseSatelliteWindows(self):
+        actions = self.gui._tool_bar.actions()
+        about_action = actions[-1]
+        streamer_action = actions[-2]
+
+        about_window = self._check_open_satellite_window(about_action)
+        self.assertIsInstance(about_window, AboutWindow)
+
+        streamer_window = self._check_open_satellite_window(streamer_action)
+        self.assertIsInstance(streamer_window, FileStreamControllerWindow)
+
+        # open one window twice
+        self._check_open_satellite_window(about_action, registered=False)
+
+        self._check_close_satellite_window(about_window)
+        self._check_close_satellite_window(streamer_window)
+
+        # if a window is closed, it can be re-opened and a new instance
+        # will be created
+        about_window_new = self._check_open_satellite_window(about_action)
+        self.assertIsInstance(about_window_new, AboutWindow)
+        self.assertIsNot(about_window_new, about_window)
+
+    def _check_open_window(self, action, registered=True):
+        """Check triggering action about opening a window.
+
+        :param bool registered: True for the new window is expected to be
+            registered; False for the old window will be activate and thus
+            no new window will be registered.
+        """
+        n_registered = len(self.gui._plot_windows)
+        action.trigger()
+        if registered:
+            window = list(self.gui._plot_windows.keys())[-1]
+            self.assertEqual(n_registered+1, len(self.gui._plot_windows))
+            return window
+
+        self.assertEqual(n_registered, len(self.gui._plot_windows))
+
+    def _check_close_window(self, window):
+        n_registered = len(self.gui._plot_windows)
+        window.close()
+        self.assertEqual(n_registered-1, len(self.gui._plot_windows))
+
+    def _check_open_satellite_window(self, action, registered=True):
+        """Check triggering action about opening a satellite window.
+
+        :param bool registered: True for the new window is expected to be
+            registered; False for the old window will be activate and thus
+            no new window will be registered.
+        """
+        n_registered = len(self.gui._satellite_windows)
+        action.trigger()
+        if registered:
+            window = list(self.gui._satellite_windows.keys())[-1]
+            self.assertEqual(n_registered+1, len(self.gui._satellite_windows))
+            return window
+
+        self.assertEqual(n_registered, len(self.gui._satellite_windows))
+
+    def _check_close_satellite_window(self, window):
+        n_registered = len(self.gui._satellite_windows)
+        window.close()
+        self.assertEqual(n_registered-1, len(self.gui._satellite_windows))
 
 
 class TestJungFrauMainGuiCtrl(unittest.TestCase):

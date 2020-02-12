@@ -22,9 +22,9 @@ from ...config import AnalysisType, BinMode, config
 
 
 _N_PARAMS = 2
-_DEFAULT_BIN_RANGE = (0, 1000)
 _DEFAULT_N_BINS = 10
-_MAX_N_BINS = 9999
+_DEFAULT_BIN_RANGE = "-inf, inf"
+_MAX_N_BINS = 999
 
 
 class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -58,6 +58,8 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._mode_cb = QComboBox()
         self._mode_cb.addItems(list(self._bin_modes.keys()))
 
+        self._auto_level_btn = QPushButton("Auto level")
+
         self._src_instrument = config.control_sources
         self._src_metadata = config.meta_sources
 
@@ -77,6 +79,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(self._mode_cb, 0, 3)
         layout.addWidget(self._reset_btn, 0, 4, 1, 2, AR)
         layout.addWidget(self._table, 2, 0, 1, 6)
+        layout.addWidget(self._auto_level_btn, 3, 0)
 
         self.setLayout(layout)
 
@@ -95,6 +98,9 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._mode_cb.currentTextChanged.connect(
             lambda x: mediator.onBinModeChange(self._bin_modes[x]))
 
+        self._auto_level_btn.clicked.connect(
+            mediator.bin_heatmap_autolevel_sgn)
+
     def initParamTable(self):
         """Initialize the correlation parameter table widget."""
         table = self._table
@@ -106,7 +112,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         table.setRowCount(n_row)
         table.setHorizontalHeaderLabels([
             'Category', 'Karabo Device ID', 'Property Name',
-            'Value range', '# of bins'
+            'Bin range', '# of bins'
         ])
         table.setVerticalHeaderLabels([str(i+1) for i in range(n_row)])
 
@@ -132,7 +138,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
                 widget.setReadOnly(True)
 
             # Set up "value range" and "# of bins" cell for category ''
-            widget = SmartBoundaryLineEdit(str(_DEFAULT_BIN_RANGE)[1:-1])
+            widget = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
             widget.setReadOnly(True)
             table.setCellWidget(i_row, 3, widget)
             widget = SmartLineEdit(str(_DEFAULT_N_BINS))
@@ -155,7 +161,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     @pyqtSlot(str)
     def onCategoryChange(self, i_row, category):
-        bin_range_le = SmartBoundaryLineEdit(str(_DEFAULT_BIN_RANGE)[1:-1])
+        bin_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
 
         n_bins_le = SmartLineEdit(str(_DEFAULT_N_BINS))
         n_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))

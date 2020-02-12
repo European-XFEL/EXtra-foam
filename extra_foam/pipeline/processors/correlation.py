@@ -10,7 +10,7 @@ All rights reserved.
 from .base_processor import (
     _BaseProcessor, SimplePairSequence, OneWayAccuPairSequence
 )
-from ..exceptions import UnknownParameterError
+from ..exceptions import ProcessingError, UnknownParameterError
 from ...ipc import process_logger as logger
 from ...config import AnalysisType
 from ...database import Metadata as mt
@@ -99,7 +99,7 @@ class CorrelationProcessor(_BaseProcessor):
         if self.analysis_type == AnalysisType.UNDEFINED:
             return
 
-        processed = data['processed']
+        processed, raw = data['processed'], data['raw']
 
         if self.analysis_type == AnalysisType.PUMP_PROBE:
             pp_analysis_type = processed.pp.analysis_type
@@ -113,52 +113,14 @@ class CorrelationProcessor(_BaseProcessor):
                 self._correlations[i].reset()
                 self._resets[i] = False
 
-        analysis_type = self.analysis_type
-        if analysis_type == AnalysisType.PUMP_PROBE:
-            fom = processed.pp.fom
-            if fom is None:
-                self._pp_fail_flag += 1
-                # if on/off pulses are in different trains, pump-probe FOM is
-                # only calculated every other train.
-                if self._pp_fail_flag == 2:
-                    logger.error(
-                        "[Correlation] Pump-probe FOM is not available")
-                    self._pp_fail_flag = 0
-            else:
-                self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI_FOM:
-            fom = processed.roi.fom
-            if fom is None:
-                logger.error("[Correlation] ROI FOM is not available")
-        elif analysis_type == AnalysisType.ROI_PROJ:
-            fom = processed.roi.proj.fom
-            if fom is None:
-                logger.error(
-                    "[Correlation] ROI projection FOM is not available")
-        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            fom = processed.ai.fom
-            if fom is None:
-                logger.error("[Correlation] Azimuthal integration FOM is not "
-                             "available")
-        else:
-            raise UnknownParameterError(
-                f"[Correlation] Unknown analysis type: {self.analysis_type}")
-
-        if fom is not None:
-            for i in range(self._n_params):
-                v, err = self._fetch_property_data(
-                    processed.tid, data['raw'], self._sources[i])
-
-                if err:
-                    logger.error(err)
-
-                if v is not None:
-                    self._correlations[i].append((v, fom))
+        try:
+            self._update_data_point(processed, raw)
+        except ProcessingError as e:
+            logger.error(f"[Correlation] {str(e)}!")
 
         for i in range(self._n_params):
             out = processed.corr[i]
-            c = self._correlations[i]
-            out.x, out.y = c.data()
+            out.x, out.y = self._correlations[i].data()
             out.source = self._sources[i]
             out.resolution = self._resolutions[i]
 
@@ -181,3 +143,44 @@ class CorrelationProcessor(_BaseProcessor):
 
         c = processed.corr.pp
         c.x, c.y = self._correlation_pp.data()
+
+    def _update_data_point(self, processed, raw):
+        analysis_type = self.analysis_type
+        if analysis_type == AnalysisType.PUMP_PROBE:
+            fom = processed.pp.fom
+            if fom is None:
+                self._pp_fail_flag += 1
+                # if on/off pulses are in different trains, pump-probe FOM is
+                # only calculated every other train.
+                if self._pp_fail_flag == 2:
+                    self._pp_fail_flag = 0
+                    raise ProcessingError("Pump-probe FOM is not available")
+                return
+            else:
+                self._pp_fail_flag = 0
+        elif analysis_type == AnalysisType.ROI_FOM:
+            fom = processed.roi.fom
+            if fom is None:
+                raise ProcessingError("ROI FOM is not available")
+        elif analysis_type == AnalysisType.ROI_PROJ:
+            fom = processed.roi.proj.fom
+            if fom is None:
+                raise ProcessingError("ROI projection FOM is not available")
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            fom = processed.ai.fom
+            if fom is None:
+                raise ProcessingError(
+                    "Azimuthal integration FOM is not available")
+        else:
+            raise UnknownParameterError(
+                f"[Correlation] Unknown analysis type: {self.analysis_type}")
+
+        for i in range(self._n_params):
+            v, err = self._fetch_property_data(
+                processed.tid, raw, self._sources[i])
+
+            if err:
+                logger.error(err)
+
+            if v is not None:
+                self._correlations[i].append((v, fom))
