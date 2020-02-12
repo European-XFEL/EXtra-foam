@@ -152,6 +152,16 @@ Reference image
 | *Remove reference*         | Remove the reference image.                                        |
 +----------------------------+--------------------------------------------------------------------+
 
+.. _ImageFileFormat:
+
+.. Note:: Image file format
+
+    The two recommended image file formats are `.npy` and `.tif`. However,
+    depending on the OS, the opened file dialog may allow you to enter any filename.
+    Therefore, in principle, users can save and load any other image file formats
+    supported by imageio_. However, it can be wrong if one writes and then loads a
+    `.png` file due to the auto scaling of pixel values.
+
 
 Azimuthal integration 1D
 ------------------------
@@ -190,11 +200,11 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 | *Sample distance*          | Sample-detector distance in m. Only used in azimuthal integration. |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation x (rad)*         |                                                                    |
+| *Rotation x (rad)*         | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation y (rad)*         |                                                                    |
+| *Rotation y (rad)*         | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation z (rad)*         |                                                                    |
+| *Rotation z (rad)*         | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
 | *Photon energy (keV)*      | Photon energy in keV. Only used in azimuthal integration for now.  |
 +----------------------------+--------------------------------------------------------------------+
@@ -206,7 +216,7 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 | *Norm*                     | Normalizer of the azimuthal integration result.                    |
 +----------------------------+--------------------------------------------------------------------+
-| *AUC range (1/A)*          | AUC (area under a curve) range.                                    |
+| *AUC range (1/A)*          | AUC (area under curve) range.                                      |
 +----------------------------+--------------------------------------------------------------------+
 | *FOM range (1/A)*          | Integration range when calculating the figure-of-merit of the      |
 |                            | azimuthal integration result.                                      |
@@ -216,33 +226,38 @@ aforementioned coordinate system, respectively.
 Geometry
 --------
 
+.. _EXtra-geom : https://github.com/European-XFEL/EXtra-geom
+
 Geometry is only available for the multi-module detector which requires a geometry file to
-assemble the images from different modules, for example, AGIPD, LPD and DSSC. **EXtra-foam**
-uses karabo_data_ for image assembling. For detailed information about geometries of those
-detectors, please refer to
-https://karabo-data.readthedocs.io/en/latest/geometry.html
+assemble the images from different modules, for example, AGIPD, LPD and DSSC. For details
+about geometries of those detectors, please refer to the
+`documentation <https://extra-geom.readthedocs.io/en/latest/geometry.html>`_.
+
+.. image:: images/geometry.png
+   :width: 640
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Quadrant positions*       | The first pixel of the first module in each quadrant,              |
+| ``Quadrant positions``     | The first pixel of the first module in each quadrant,              |
 |                            | corresponding to data channels 0, 4, 8 and 12.                     |
 +----------------------------+--------------------------------------------------------------------+
-| *Load geometry file*       | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system. For LPD and DSSC, **Extra-foam** provides a     |
+| ``Load geometry file``     | Open a *FileDialog* window to choose a geometry file from the      |
+|                            | local file system. For LPD and DSSC, *Extra-foam* provides a       |
 |                            | default geometry file.                                             |
 +----------------------------+--------------------------------------------------------------------+
+| ``Assembler``              | There are two assemblers available in *EXtra-foam*. One is         |
+|                            | EXtra-geom_ implemented in Python and the other is the local C++   |
+|                            | implementation. Indeed, the latter follows the assembling          |
+|                            | methodology implemented in the former but is much faster with      |
+|                            | multi-core processors.                                             |
++----------------------------+--------------------------------------------------------------------+
+| ``Stack only``             | When the checkbox is checked, the modules will be seamlessly       |
+|                            | stacked together. Unfortunately, it does not mean that this will   |
+|                            | be faster than assembling with a geometry. It simply provides an   |
+|                            | alternative to check the data from different modules.              |
++----------------------------+--------------------------------------------------------------------+
 
+.. Note::
 
-.. _ImageFileFormat:
-
-.. Note:: Image file format
-
-    The two recommended image file formats are `.npy` and `.tif`. However,
-    depending on the OS, the opened file dialog may allow you to enter any filename.
-    Therefore, in principle, users can save and load any other image file formats
-    supported by imageio_. However, it can be wrong if one writes and then loads a
-    `.png` file due to the auto scaling of pixel values.
-
-
-.. _karabo_data: https://github.com/European-XFEL/karabo_data
+    The C++ implementation for *AGIPD* is still ongoing.
