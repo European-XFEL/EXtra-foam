@@ -245,12 +245,11 @@ class ImageAssemblerFactory(ABC):
             if self._require_geom:
                 cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
 
+                assembler_type = GeomAssembler(int(cfg["assembler"]))
                 stack_only = cfg["stack_only"] == 'True'
                 if stack_only:
                     # ignore "assembler" setup
                     assembler_type = GeomAssembler.OWN
-                else:
-                    assembler_type = GeomAssembler(int(cfg["assembler"]))
 
                 geom_file = cfg["geometry_file"]
                 quad_positions = json.loads(cfg["quad_positions"],

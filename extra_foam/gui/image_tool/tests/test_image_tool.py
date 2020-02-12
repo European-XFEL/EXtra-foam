@@ -597,18 +597,22 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         self.assertFalse(proc._stack_only)
         self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
 
-        # test assembler type change
+        # test assembler
         avail_assemblers = {value: key for key, value in widget._assemblers.items()}
         widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
         proc.update()
         self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
-        self.assertIsInstance(proc._geom, LPD_1MGeometry)
 
-        # test stack only change
+        # test stack only
         widget._stack_only_cb.setChecked(True)
         proc.update()
         self.assertTrue(proc._stack_only)
-        self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
+        # when "stack only" is checked, "assembler type" setup will be ignored
+        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
+
+        # test geometry file
+        widget._geom_file_le.setText("/geometry/file/")
+        self.assertFalse(widget.updateMetaData())
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab

@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import unittest
+from unittest.mock import MagicMock, patch
 import copy
 import os
 import random
@@ -213,6 +214,50 @@ class TestLpdAssembler:
         src = f'{src_name} {key_name}'
         catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
+
+    @patch('extra_foam.ipc.ProcessLogger.info')
+    def testUpdate(self, info):
+        import json
+        from extra_foam.geometries import LPD_1MGeometryFast
+        from extra_geom import LPD_1MGeometry
+
+        # Note: this test does not need to repeat for each detector
+        proc = self._assembler
+        proc._meta.hget_all = MagicMock()
+        get_cfg = proc._meta.hget_all
+
+        get_cfg.return_value = {
+            'stack_only': False,
+            'assembler': '2',
+            'geometry_file': self._geom_file,
+            'quad_positions': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
+        }
+
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
+
+        # test assembler type is ignored if 'stack_only' is True
+        get_cfg.return_value.update({'stack_only': 'True'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
+
+        # test assembler switching
+        get_cfg.return_value.update({'stack_only': 'False'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
+        get_cfg.return_value.update({'assembler': 1})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
+
+        # test file and quad position change
+        proc._load_geometry = MagicMock()
+        get_cfg.return_value.update({'geometry_file': '/New/File'})
+        proc.update()
+        proc._load_geometry.assert_called_once()
+        proc._load_geometry.reset_mock()
+        get_cfg.return_value.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
+        proc.update()
+        proc._load_geometry.assert_called_once()
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleFileCal(self, assembler_type):
