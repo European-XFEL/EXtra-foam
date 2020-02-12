@@ -53,14 +53,25 @@ from Karabo, since the offline calibration algorithms are more complicated than 
 Performance
 -----------
 
+
+European XFEL can provide X-ray free-electron laser pulse trains (macropulse in accelerator terminology)
+at a maximum repetition rate of 10 Hz. These pulse trains can be filled with up to 2700 pulses (micropulse
+in accelerator terminology), corresponding to a maximum intra-train repetition rate of 4.5 MHz. Detectors
+at European XFEL can be categorized into pulse-resolved and train-resolved ones. Speaking of the performance
+of real-time analysis, we use the combination of repetition rate (trains/s) and frame rate (pulses/train).
+For instance, 10 Hz with 64 pulses/train on a DSSC detector means that 640 frames of 1M megapixel images
+can be preprocessed and analysed per second.
+
 .. table:: Performance on the online cluster [72 Intel(R) Xeon(R) Gold 6140 CPU @ 2.30GHz, 754 GB RAM]
 
     +-----------------+--------------------------------------+---------------------------------------+
-    |                 | multi-frame/pulse-resolved detectors | single-frame/train-resolved detectors |
+    |                 | pulse-resolved/multi-frame detectors | train-resolved/single-frame detectors |
     +=================+======================================+=======================================+
-    | processing rate | 2 ~ 3 Hz with 64 pulses/train        | 10 Hz                                 |
+    | processing rate | > 10 Hz with 64 pulses/train         | > 10 Hz                               |
+    |                 | (DSSC and LPD)                       |                                       |
     |                 +--------------------------------------+                                       |
-    |                 | 0.3 ~ 0.4 Hz with 400 pulses/train   |                                       |
+    |                 | > 2 Hz with 64 pulses/train          |                                       |
+    |                 | (AGIPD)                              |                                       |
     +-----------------+--------------------------------------+---------------------------------------+
 
 .. note::
