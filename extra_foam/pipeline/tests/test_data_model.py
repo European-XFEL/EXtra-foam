@@ -338,9 +338,6 @@ class TestXgmData(unittest.TestCase):
         data = self.XgmData()
 
         data.intensity, data.x, data.y = 100., 0.1, -0.1
-        data.on.intensity, data.on.x, data.on.y = 100., 0.1, -0.1
-        data.off.intensity, data.off.x, data.off.y = 100., 0.1, -0.1
-
         with self.assertRaises(AttributeError):
             data.xx = 0.2
 
@@ -361,9 +358,6 @@ class TestDigitizerData(unittest.TestCase):
         data['D'].pulse_integral = [1, 2, 3]
         with self.assertRaises(AttributeError):
             data['D'].sample
-
-        self.assertIsInstance(data.on, self._DigitizerChannelData)
-        self.assertIsInstance(data.off, self._DigitizerChannelData)
 
 
 class TestBinData(unittest.TestCase):

@@ -38,6 +38,8 @@ class _BaseProcessorTest:
                             gen='random',
                             with_image_mask=False,
                             slicer=None,
+                            with_xgm=False,
+                            with_digitizer=False,
                             **kwargs):
         imgs = self._gen_images(gen, shape, dtype)
 
@@ -56,6 +58,22 @@ class _BaseProcessorTest:
         src = f'{src_name} {key_name}'
         catalog.add_item(SourceItem(ctg, src_name, [], key_name, slicer, None))
         catalog._main_detector = src
+
+        n_pulses = processed.n_pulses
+
+        if with_xgm:
+            # generate XGM data
+            processed.pulse.xgm.intensity = np.random.rand(n_pulses)
+            processed.xgm.intensity = random.random()
+            processed.xgm.x = random.random()
+            processed.xgm.y = random.random()
+
+        if with_digitizer:
+            # generate digitizer data
+            digitizer = processed.pulse.digitizer
+            digitizer.ch_normalizer = 'B'
+            for ch in digitizer:
+                digitizer[ch].pulse_integral = np.random.rand(n_pulses)
 
         data = {
             'processed': processed,

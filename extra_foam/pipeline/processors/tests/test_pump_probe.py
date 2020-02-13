@@ -17,7 +17,29 @@ from extra_foam.pipeline.exceptions import DropAllPulsesError,PumpProbeIndexErro
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 
 
-class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
+class _PumpProbeTestMixin:
+    def _check_pp_params_in_data_model(self, data):
+        self.assertEqual(self._proc._mode, data.pp.mode)
+        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
+        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)
+
+    def check_other_none(self, processed):
+        pp = processed.pp
+        self.assertIsNone(pp.on.xgm_intensity)
+        self.assertIsNone(pp.off.xgm_intensity)
+        self.assertIsNone(pp.on.digitizer_pulse_integral)
+        self.assertIsNone(pp.off.digitizer_pulse_integral)
+
+    def check_xgm(self, processed, onoff, indices):
+        self.assertEqual(np.mean(processed.pulse.xgm.intensity[indices]),
+                         processed.pp.__dict__[onoff].xgm_intensity)
+
+    def check_digitizer(self, processed, onoff, indices):
+        self.assertEqual(np.mean(processed.pulse.digitizer['B'].pulse_integral[indices]),
+                         processed.pp.__dict__[onoff].digitizer_pulse_integral)
+
+
+class TestPumpProbeProcessorTr(unittest.TestCase, _PumpProbeTestMixin, _BaseProcessorTest):
     """Test train-resolved ImageProcessor.
 
     For train-resolved data.
@@ -27,10 +49,12 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         self._proc._indices_on = [0]
         self._proc._indices_off = [0]
 
-    def _gen_data(self, tid):
+    def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         return self.data_with_assembled(tid, (2, 2),
                                         threshold_mask=(-100, 100),
-                                        poi_indices=[0, 0])
+                                        poi_indices=[0, 0],
+                                        with_xgm=with_xgm,
+                                        with_digitizer=with_digitizer)
 
     def testPpUndefined(self):
         proc = self._proc
@@ -48,12 +72,18 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc._mode = PumpProbeMode.REFERENCE_AS_OFF
 
         data, processed = self._gen_data(1001)
-
         proc.process(data)
         np.testing.assert_array_almost_equal(processed.pp.image_on, data['assembled']['sliced'])
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
+        self.check_xgm(processed, "on", [0])
+        self.check_digitizer(processed, "on", [0])
+        self.assertEqual(1, processed.pp.off.xgm_intensity)
+        self.assertEqual(1, processed.pp.off.digitizer_pulse_integral)
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
     def testPpOddOn(self):
         proc = self._proc
@@ -64,11 +94,13 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
 
         data, processed = self._gen_data(1003)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
 
         np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
 
@@ -76,16 +108,28 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
         np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
+        self.assertEqual(processed.pulse.xgm.intensity[0], proc._prev_xi_on)
+        prev_xi_on = proc._prev_xi_on
+        self.assertEqual(processed.pulse.digitizer['B'].pulse_integral[0], proc._prev_dpi_on)
+        prev_dpi_on = proc._prev_dpi_on
 
         data, processed = self._gen_data(1006)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled']['sliced'])
+        self.assertEqual(processed.pp.on.xgm_intensity, prev_xi_on)
+        self.check_xgm(processed, 'off', [0])
+        self.assertEqual(processed.pp.on.digitizer_pulse_integral, prev_dpi_on)
+        self.check_digitizer(processed, 'off', [0])
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
     def testPpEvenOn(self):
         proc = self._proc
@@ -96,11 +140,13 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
 
         data, processed = self._gen_data(1002)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
         np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
 
         # test when two 'on' are received successively
@@ -108,24 +154,28 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
         np.testing.assert_array_almost_equal(data['assembled']['sliced'], proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
+        self.assertEqual(processed.pulse.xgm.intensity[0], proc._prev_xi_on)
+        prev_xi_on = proc._prev_xi_on
+        self.assertEqual(processed.pulse.digitizer['B'].pulse_integral[0], proc._prev_dpi_on)
+        prev_dpi_on = proc._prev_dpi_on
 
         data, processed = self._gen_data(1005)  # off
         proc.process(data)
         self.assertIsNone(proc._prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(processed.pp.image_off, data['assembled']['sliced'])
+        self.assertEqual(processed.pp.on.xgm_intensity, prev_xi_on)
+        self.check_xgm(processed, 'off', [0])
+        self.assertEqual(processed.pp.on.digitizer_pulse_integral, prev_dpi_on)
+        self.check_digitizer(processed, 'off', [0])
 
         self._check_pp_params_in_data_model(processed)
 
-    def _check_pp_params_in_data_model(self, data):
-        self.assertEqual(self._proc._mode, data.pp.mode)
-        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
-        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)
 
-
-class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
+class TestPumpProbeProcessorPr(unittest.TestCase, _PumpProbeTestMixin, _BaseProcessorTest):
     """Test train-resolved PumpProbeProcessor.
 
     For pulse-resolved data.
@@ -135,10 +185,12 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         self._proc._indices_on = [0]
         self._proc._indices_off = [0]
 
-    def _gen_data(self, tid):
+    def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         return self.data_with_assembled(tid, (4, 2, 2),
                                         threshold_mask=(-100, 100),
-                                        poi_indices=[0, 0])
+                                        poi_indices=[0, 0],
+                                        with_xgm=with_xgm,
+                                        with_digitizer=with_digitizer)
 
     def testPulseFilter(self):
         proc = self._proc
@@ -213,6 +265,11 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         np.testing.assert_array_almost_equal(
             processed.pp.image_on, np.mean(data['assembled']['sliced'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(processed.pp.image_off, np.zeros((2, 2)))
+        # XGM and digitizer
+        self.check_xgm(processed, "on", [0, 2])
+        self.check_digitizer(processed, "on", [0, 2])
+        self.assertEqual(1, processed.pp.off.xgm_intensity)
+        self.assertEqual(1, processed.pp.off.digitizer_pulse_integral)
 
         # --------------------
         # test pulse filtering
@@ -232,8 +289,14 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         processed.pidx.mask([0])
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['assembled']['sliced'][2])
+        # XGM and digitizer
+        self.check_xgm(processed, "on", [2])
+        self.check_digitizer(processed, "on", [2])
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
     def testSameTrain(self):
         proc = self._proc
@@ -247,6 +310,11 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
             processed.pp.image_on, np.mean(data['assembled']['sliced'][::2, :, :], axis=0))
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
+        # XGM and digitizer
+        self.check_xgm(processed, 'on', [0, 2])
+        self.check_xgm(processed, 'off', [1, 3])
+        self.check_digitizer(processed, 'on', [0, 2])
+        self.check_digitizer(processed, 'off', [1, 3])
 
         # --------------------
         # test pulse filtering
@@ -268,8 +336,16 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_on, data['assembled']['sliced'][2])
         np.testing.assert_array_equal(processed.pp.image_off, data['assembled']['sliced'][3])
+        # XGM and digitizer
+        self.check_xgm(processed, 'on', [2])
+        self.check_xgm(processed, 'off', [3])
+        self.check_digitizer(processed, 'on', [2])
+        self.check_digitizer(processed, 'off', [3])
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
     def testEvenOn(self):
         proc = self._proc
@@ -282,14 +358,21 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
 
         data, processed = self._gen_data(1002)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
         np.testing.assert_array_almost_equal(
             np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
+        # XGM and digitizer
+        self.assertEqual(np.mean(processed.pulse.xgm.intensity[::2]), proc._prev_xi_on)
+        prev_xi_on = proc._prev_xi_on
+        self.assertEqual(np.mean(processed.pulse.digitizer['B'].pulse_integral[::2]), proc._prev_dpi_on)
+        prev_dpi_on = proc._prev_dpi_on
 
         data, processed = self._gen_data(1003)  # off
         proc.process(data)
@@ -297,6 +380,11 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
+        # XGM and digitizer
+        self.assertEqual(processed.pp.on.xgm_intensity, prev_xi_on)
+        self.check_xgm(processed, 'off', [1, 3])
+        self.assertEqual(processed.pp.on.digitizer_pulse_integral, prev_dpi_on)
+        self.check_digitizer(processed, 'off', [1, 3])
 
         # --------------------
         # test pulse filtering
@@ -313,7 +401,10 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         # drop one on/off indices each
         processed.pidx.mask([0, 1])
         proc.process(data)
-        np.testing.assert_array_equal(proc._prev_unmasked_on, data['assembled']['sliced'][2])
+        np.testing.assert_array_equal(data['assembled']['sliced'][2], proc._prev_unmasked_on)
+        # XGM and digitizer
+        self.assertEqual(processed.pulse.xgm.intensity[2], proc._prev_xi_on)
+        self.assertEqual(processed.pulse.digitizer['B'].pulse_integral[2], proc._prev_dpi_on)
 
         data, processed = self._gen_data(1003)
         processed.pidx.mask([1, 3])  # drop all off indices
@@ -333,8 +424,14 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc._prev_unmasked_on = np.ones((2, 2), np.float32)  # any value except None
         proc.process(data)
         np.testing.assert_array_equal(processed.pp.image_off, data['assembled']['sliced'][3])
+        # XGM and digitizer
+        self.check_xgm(processed, 'off', [3])
+        self.check_digitizer(processed, 'off', [3])
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
     def testOddOn(self):
         proc = self._proc
@@ -347,14 +444,21 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
 
         data, processed = self._gen_data(1003)  # on
         proc.process(data)
         self.assertIsNone(processed.pp.image_on)
         self.assertIsNone(processed.pp.image_off)
+        self.check_other_none(processed)
         np.testing.assert_array_almost_equal(
             np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
+        # XGM and digitizer
         prev_unmasked_on = proc._prev_unmasked_on
+        self.assertEqual(np.mean(processed.pulse.xgm.intensity[::2]), proc._prev_xi_on)
+        prev_xi_on = proc._prev_xi_on
+        self.assertEqual(np.mean(processed.pulse.digitizer['B'].pulse_integral[::2]), proc._prev_dpi_on)
+        prev_dpi_on = proc._prev_dpi_on
 
         data, processed = self._gen_data(1004)  # off
         proc.process(data)
@@ -362,15 +466,18 @@ class TestPumpProbeProcessorPr(unittest.TestCase, _BaseProcessorTest):
         np.testing.assert_array_almost_equal(processed.pp.image_on, prev_unmasked_on)
         np.testing.assert_array_almost_equal(
             processed.pp.image_off, np.mean(data['assembled']['sliced'][1::2, :, :], axis=0))
+        # XGM and digitizer
+        self.assertEqual(processed.pp.on.xgm_intensity, prev_xi_on)
+        self.check_xgm(processed, 'off', [1, 3])
+        self.assertEqual(processed.pp.on.digitizer_pulse_integral, prev_dpi_on)
+        self.check_digitizer(processed, 'off', [1, 3])
 
         self._check_pp_params_in_data_model(processed)
+        data, processed = self._gen_data(1001, with_xgm=False, with_digitizer=False)
+        proc.process(data)
+        self.check_other_none(processed)
 
         # --------------------
         # test pulse filtering
         # --------------------
         # not necessary according to the implementation
-
-    def _check_pp_params_in_data_model(self, data):
-        self.assertEqual(self._proc._mode, data.pp.mode)
-        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
-        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)

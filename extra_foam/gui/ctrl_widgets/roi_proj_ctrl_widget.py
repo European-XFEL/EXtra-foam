@@ -12,20 +12,15 @@ from collections import OrderedDict
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import Normalizer, RoiCombo
+from ...config import RoiCombo
 
 
 class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up ROI 1D projection analysis parameters."""
 
-    _available_norms = OrderedDict({
-        "": Normalizer.UNDEFINED,
-        "AUC": Normalizer.AUC,
-        "XGM": Normalizer.XGM,
-        "ROI": Normalizer.ROI,
-    })
+    _available_norms = _AbstractCtrlWidget._available_norms
 
     _available_combos = OrderedDict({
         "ROI1": RoiCombo.ROI1,

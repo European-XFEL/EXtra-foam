@@ -7,8 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from collections import OrderedDict
-
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
@@ -16,7 +14,7 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...algorithms import compute_q
-from ...config import config, list_azimuthal_integ_methods, Normalizer
+from ...config import config, list_azimuthal_integ_methods
 
 
 _DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
@@ -32,13 +30,6 @@ def _estimate_q_range():
 
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up azimuthal integration parameters."""
-
-    _available_norms = OrderedDict({
-        "": Normalizer.UNDEFINED,
-        "AUC": Normalizer.AUC,
-        "XGM": Normalizer.XGM,
-        "ROI": Normalizer.ROI,
-    })
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

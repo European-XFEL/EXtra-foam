@@ -6,7 +6,7 @@ from extra_foam.config import AnalysisType
 from extra_foam.database import MetaProxy
 from extra_foam.logger import logger
 from extra_foam.pipeline.processors.base_processor import (
-    _BaseProcessor, ProcessingError, SimpleSequence, SimpleVectorSequence,
+    _BaseProcessor, UnknownParameterError, SimpleSequence, SimpleVectorSequence,
     SimplePairSequence, _StatDataItem, OneWayAccuPairSequence
 )
 from extra_foam.processes import wait_until_redis_shutdown
@@ -63,7 +63,7 @@ class TestBaseProcessor(unittest.TestCase):
         self._proc2 = _DummyProcessor()
         self._proc3 = _DummyProcessor()
 
-        with self.assertRaises(ProcessingError):
+        with self.assertRaises(UnknownParameterError):
             self._proc1._update_analysis(1)
 
         self._proc1._update_analysis(AnalysisType.UNDEFINED)

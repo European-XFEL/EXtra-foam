@@ -418,21 +418,21 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
         norm4_off = self._compute_fom(self._roi4_off, self._norm_type)
 
         if self._norm_combo == RoiCombo.ROI3:
-            pp.roi_norm_on = norm3_on
-            pp.roi_norm_off = norm3_off
+            pp.on.roi_norm = norm3_on
+            pp.off.roi_norm = norm3_off
         elif self._norm_combo == RoiCombo.ROI4:
-            pp.roi_norm_on = norm4_on
-            pp.roi_norm_off = norm4_off
+            pp.on.roi_norm = norm4_on
+            pp.off.roi_norm = norm4_off
         else:
             if norm3_on is None or norm4_on is None:
                 return
 
             if self._norm_combo == RoiCombo.ROI3_SUB_ROI4:
-                pp.roi_norm_on = norm3_on - norm4_on
-                pp.roi_norm_off = norm3_off - norm4_off
+                pp.on.roi_norm = norm3_on - norm4_on
+                pp.off.roi_norm = norm3_off - norm4_off
             elif self._norm_combo == RoiCombo.ROI3_ADD_ROI4:
-                pp.roi_norm_on = norm3_on + norm4_on
-                pp.roi_norm_off = norm3_off + norm4_off
+                pp.on.roi_norm = norm3_on + norm4_on
+                pp.off.roi_norm = norm3_off + norm4_off
             else:
                 raise UnknownParameterError(
                     f"[ROI][normalizer] Unknown ROI combo: {self._norm_combo}")

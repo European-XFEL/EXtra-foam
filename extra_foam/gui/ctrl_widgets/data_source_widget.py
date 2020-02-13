@@ -308,11 +308,10 @@ class DataSourceItemModel(QAbstractItemModel):
             default_v_range = '-inf, inf' if ctg not in config.detectors else ''
             for src, ppts in srcs.items():
                 for ppt in ppts:
-                    # only the main detector is exclusive since only it can
-                    # have so many different names :-(
+                    # For now, all pipeline data are exclusive
                     src_item = DataSourceTreeItem(
                         [src, ppt, default_slicer, default_v_range],
-                        exclusive=ctg == config["DETECTOR"],
+                        exclusive=True,
                         parent=ctg_item)
                     ctg_item.appendChild(src_item)
 

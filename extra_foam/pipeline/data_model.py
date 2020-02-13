@@ -331,6 +331,17 @@ class RoiData(DataItem):
 class PumpProbeData(DataItem):
     """Pump-probe data."""
 
+    class OnOff:
+        """on/off quantity averaged over a train."""
+        __slots__ = ["roi_norm",
+                     "xgm_intensity",
+                     "digitizer_pulse_integral"]
+
+        def __init__(self):
+            self.roi_norm = None
+            self.xgm_intensity = None
+            self.digitizer_pulse_integral = None
+
     def __init__(self):
         super().__init__()
 
@@ -346,9 +357,10 @@ class PumpProbeData(DataItem):
         self.image_on = None
         self.image_off = None
 
-        # on/off ROI normalizer averaged over a train
-        self.roi_norm_on = None
-        self.roi_norm_off = None
+        # TODO: modify other attributes
+        # on/off normalizer averaged over a train
+        self.on = self.OnOff()
+        self.off = self.OnOff()
 
         # on/off normalized VFOM
         # Note: VFOM = normalized on-VFOM - normalized off-VFOM
@@ -710,13 +722,10 @@ class XgmData(_XgmDataItem):
     Store XGM pipeline data.
     """
 
-    __slots__ = ['on', 'off']
+    __slots__ = []
 
     def __init__(self):
         super().__init__()
-
-        self.on = _XgmDataItem()
-        self.off = _XgmDataItem()
 
 
 class _DigitizerDataItem:
@@ -725,7 +734,7 @@ class _DigitizerDataItem:
     Store Digitizer pipeline data.
     """
 
-    __slots__ = 'pulse_integral'
+    __slots__ = ['pulse_integral']
 
     def __init__(self):
         self.pulse_integral = None
@@ -776,13 +785,12 @@ class DigitizerData(_DigitizerChannelData):
     Store Digitizer pipeline data.
     """
 
-    __slots__ = ["on", "off"]
+    __slots__ = ["ch_normalizer"]
 
     def __init__(self):
         super().__init__()
-
-        self.on = _DigitizerChannelData()
-        self.off = _DigitizerChannelData()
+        # name of the channel as a normalizer
+        self.ch_normalizer = self._CHANNEL_NAMES[0]
 
 
 class ProcessedData:
@@ -803,13 +811,13 @@ class ProcessedData:
     class PulseData:
         """Container for pulse-resolved data."""
 
-        __slots__ = ['ai', 'roi', 'xgm', 'adq']
+        __slots__ = ['ai', 'roi', 'xgm', 'digitizer']
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
             self.xgm = XgmData()
-            self.adq = DigitizerData()
+            self.digitizer = DigitizerData()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',
