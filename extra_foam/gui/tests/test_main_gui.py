@@ -72,7 +72,7 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         xgm_proc = pulse_worker._xgm_proc
         ai_proc = train_worker._ai_proc
-        roi_proc = train_worker._roi_proc
+        roi_proc = train_worker._image_roi
 
         # test "Moving average window"
         widget._ma_window_le.setText("5")

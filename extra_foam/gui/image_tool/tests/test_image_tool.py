@@ -106,7 +106,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
-        proc = self.pulse_worker._roi_proc
+        proc = self.pulse_worker._image_roi
         self.assertEqual(4, len(roi_ctrls))
 
         proc.update()
@@ -510,7 +510,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -534,7 +534,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -555,7 +555,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_norms = {value: key for key, value in widget._available_norms.items()}
         avail_combos = {value: key for key, value in widget._available_combos.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values

@@ -10,15 +10,15 @@ All rights reserved.
 import unittest
 
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
-from extra_foam.pipeline.processors.adq_digitizer import AdqDigitizerProcessor
+from extra_foam.pipeline.processors.digitizer import DigitizerProcessor
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import UnknownParameterError
 
 
-class TestAdqDigitizer(unittest.TestCase, _BaseProcessorTest):
+class TestDigitizer(unittest.TestCase, _BaseProcessorTest):
     @classmethod
     def setUpClass(cls):
-        cls._channels = AdqDigitizerProcessor._pulse_integral_channels.keys()
+        cls._channels = DigitizerProcessor._pulse_integral_channels.keys()
 
     def testGeneral(self):
         data, processed = self.simple_data(1234, (2, 2))
@@ -26,8 +26,8 @@ class TestAdqDigitizer(unittest.TestCase, _BaseProcessorTest):
         raw = data['raw']
         catalog = data['catalog']
 
-        proc = AdqDigitizerProcessor()
-        category = 'AdqDigitizer'
+        proc = DigitizerProcessor()
+        category = 'Digitizer'
 
         # empty source
         self.assertNotIn(category, catalog)

@@ -16,7 +16,7 @@ import time
 from .exceptions import StopPipelineError, ProcessingError
 from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
-    AdqDigitizerProcessor,
+    DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
     BinningProcessor,
     Broker,
@@ -26,7 +26,7 @@ from .processors import (
     CtrlDataProcessor,
     PostPulseFilter,
     PumpProbeProcessor,
-    RoiProcessorPulse, RoiProcessorTrain,
+    ImageRoiPulse, ImageRoiTrain,
     HistogramProcessor,
     XgmProcessor,
     TrXasProcessor,
@@ -200,10 +200,10 @@ class PulseWorker(ProcessWorker):
         self._broker = Broker()
         self._ctrl_data_proc = CtrlDataProcessor()
         self._xgm_proc = XgmProcessor()
-        self._digitizer_proc = AdqDigitizerProcessor()
+        self._digitizer_proc = DigitizerProcessor()
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
-        self._roi_proc = RoiProcessorPulse()
+        self._image_roi = ImageRoiPulse()
         self._ai_proc = AzimuthalIntegProcessorPulse()
         self._post_pulse_filter = PostPulseFilter()
         self._pp_proc = PumpProbeProcessor()
@@ -215,7 +215,7 @@ class PulseWorker(ProcessWorker):
             self._ctrl_data_proc,
             self._assembler,
             self._image_proc,
-            self._roi_proc,
+            self._image_roi,
             self._ai_proc,
             self._post_pulse_filter,
             self._pp_proc,
@@ -231,7 +231,7 @@ class TrainWorker(ProcessWorker):
         self._input = MpInQueue()
         self._output = MpOutQueue(drop=True, final=True)
 
-        self._roi_proc = RoiProcessorTrain()
+        self._image_roi = ImageRoiTrain()
         self._ai_proc = AzimuthalIntegProcessorTrain()
 
         self._histogram = HistogramProcessor()
@@ -241,7 +241,7 @@ class TrainWorker(ProcessWorker):
         self._tr_xas = TrXasProcessor()
 
         self._tasks = [
-            self._roi_proc,
+            self._image_roi,
             self._ai_proc,
             self._histogram,
             self._correlation_proc,

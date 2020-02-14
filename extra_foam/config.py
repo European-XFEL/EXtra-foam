@@ -325,7 +325,7 @@ class _Config(dict):
     }
 
     _misc_source_categories = (
-        'XGM', 'AdqDigitizer', 'Magnet', 'Motor', 'Monochromator')
+        'XGM', 'Digitizer', 'Magnet', 'Motor', 'Monochromator')
 
     def __init__(self):
         super().__init__()

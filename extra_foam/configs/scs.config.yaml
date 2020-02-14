@@ -28,7 +28,7 @@ SOURCE:
                 SCS_BLU_XGM/XGM/DOOCS:output:
                     - data.intensitySa3TD
 
-        AdqDigitizer:
+        Digitizer:
             PIPELINE:
                 SCS_UTC1_ADQ/ADC/1:network:
                     - digitizers.channel_1_A.apd.pulseIntegral

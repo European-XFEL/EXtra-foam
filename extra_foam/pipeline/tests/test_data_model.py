@@ -345,25 +345,25 @@ class TestXgmData(unittest.TestCase):
             data.xx = 0.2
 
 
-class TestAdqDigitizerData(unittest.TestCase):
+class TestDigitizerData(unittest.TestCase):
 
     from extra_foam.pipeline.data_model import (
-        _AdqDigitizerDataItem, _AdqDigitizerChannelData, AdqDigitizerData)
+        _DigitizerDataItem, _DigitizerChannelData, DigitizerData)
 
     def testGeneral(self):
-        data = self.AdqDigitizerData()
+        data = self.DigitizerData()
 
         self.assertIn('A', data)
 
         for cn, item in data.items():
-            self.assertIsInstance(item, self._AdqDigitizerDataItem)
+            self.assertIsInstance(item, self._DigitizerDataItem)
 
         data['D'].pulse_integral = [1, 2, 3]
         with self.assertRaises(AttributeError):
             data['D'].sample
 
-        self.assertIsInstance(data.on, self._AdqDigitizerChannelData)
-        self.assertIsInstance(data.off, self._AdqDigitizerChannelData)
+        self.assertIsInstance(data.on, self._DigitizerChannelData)
+        self.assertIsInstance(data.off, self._DigitizerChannelData)
 
 
 class TestBinData(unittest.TestCase):

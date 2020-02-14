@@ -16,10 +16,10 @@ from ...database import Metadata as mt
 from ...utils import profiler
 
 
-class AdqDigitizerProcessor(_BaseProcessor):
-    """AdqDigitizer data processor.
+class DigitizerProcessor(_BaseProcessor):
+    """Digitizer data processor.
 
-    Process the AdqDigitizer pipeline data.
+    Process the Digitizer pipeline data.
     """
 
     _pulse_integral_a_ma = MovingAverageArray()
@@ -69,14 +69,14 @@ class AdqDigitizerProcessor(_BaseProcessor):
 
         self._ma_window = v
 
-    @profiler("AdqDigitizer Processor")
+    @profiler("Digitizer Processor")
     def process(self, data):
         """Override."""
         processed = data['processed']
         raw = data['raw']
         catalog = data['catalog']
 
-        digitizer_srcs = catalog.from_category('AdqDigitizer')
+        digitizer_srcs = catalog.from_category('Digitizer')
         for src in digitizer_srcs:
             arr = raw[src]
             device_id, ppt = src.split(' ')
@@ -97,4 +97,4 @@ class AdqDigitizerProcessor(_BaseProcessor):
                     self._pulse_integral_a_ma, src, processed.pidx, catalog)
             else:
                 raise UnknownParameterError(
-                    f'[AdqDigitizer] Unknown property: {ppt}')
+                    f'[Digitizer] Unknown property: {ppt}')

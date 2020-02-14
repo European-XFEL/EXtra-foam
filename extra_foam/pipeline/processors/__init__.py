@@ -1,7 +1,7 @@
 from .base_processor import (
     _BaseProcessor, SharedProperty
 )
-from .adq_digitizer import AdqDigitizerProcessor
+from .digitizer import DigitizerProcessor
 from .azimuthal_integration import (
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
 )
@@ -12,7 +12,7 @@ from .image_processor import ImageProcessor
 from .image_assembler import ImageAssemblerFactory
 from .control_data import CtrlDataProcessor
 from .pump_probe import PumpProbeProcessor
-from .roi import RoiProcessorPulse, RoiProcessorTrain
+from .image_roi import ImageRoiPulse, ImageRoiTrain
 from .xgm import XgmProcessor
 from .histogram import HistogramProcessor
 from .pulse_filter import PostPulseFilter
