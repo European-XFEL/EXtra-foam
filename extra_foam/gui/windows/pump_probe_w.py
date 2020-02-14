@@ -118,7 +118,7 @@ class PumpProbeFomPlot(TimedPlotWidgetF):
         self.setLabel('left', "FOM (arb. u.)")
         self.setTitle('FOM correlation')
 
-        self._plot = self.plotScatter(brush=make_brush('g'))
+        self._plot = self.plotScatter(pen=None)
 
     def refresh(self):
         """Override."""

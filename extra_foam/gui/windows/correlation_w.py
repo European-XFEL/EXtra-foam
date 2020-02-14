@@ -64,7 +64,7 @@ class CorrelationPlot(TimedPlotWidgetF):
         else:
             # OneWayAccuPairSequence
             if self._resolution == 0:
-                self._newErrorBarPlot(resolution)
+                self._newStatisticsBarPlot(resolution)
                 self._resolution = resolution
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
 
@@ -82,10 +82,10 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.clear()
         self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
-    def _newErrorBarPlot(self, resolution):
+    def _newStatisticsBarPlot(self, resolution):
         self.clear()
-        self._plot = self.plotErrorBar(beam=resolution,
-                                       pen=self._pens[self._idx-1])
+        self._plot = self.plotStatisticsBar(beam=resolution,
+                                            pen=self._pens[self._idx-1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):

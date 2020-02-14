@@ -253,9 +253,66 @@ class RectROI(pg.ROI):
         self.addScaleHandle([1, 1], [0, 0])
 
 
+class CurvePlotItem(pg.GraphicsObject):
+    """CurvePlotItem."""
+
+    def __init__(self, x=None, y=None, *, pen=None):
+        """Initialization."""
+        super().__init__()
+
+        self._path = None
+
+        self._x = None
+        self._y = None
+
+        self._pen = make_pen('g') if pen is None else pen
+
+        self.setData(x, y)
+
+    def setData(self, x, y):
+        """PlotItem interface."""
+        self._x = [] if x is None else x
+        self._y = [] if y is None else y
+
+        if len(self._x) != len(self._y):
+            raise ValueError("'x' and 'y' data have different lengths!")
+
+        self._path = None
+        # Schedules a redraw of the area covered by rect in this item.
+        self.update()
+        self.informViewBoundsChanged()
+
+    def preparePath(self):
+        p = QPainterPath()
+
+        x, y = self._x, self._y
+        if len(x) >= 2:
+            p.moveTo(x[0], y[0])
+            for px, py in zip(x[1:], y[1:]):
+                p.lineTo(px, py)
+
+        self._path = p
+        # Prepares the item for a geometry change.
+        self.prepareGeometryChange()
+
+    def paint(self, painter, *args):
+        """Override."""
+        if self._path is None:
+            self.preparePath()
+
+        painter.setPen(self._pen)
+        painter.drawPath(self._path)
+
+    def boundingRect(self):
+        """Override."""
+        if self._path is None:
+            self.preparePath()
+        return self._path.boundingRect()
+
+
 class BarPlotItem(pg.GraphicsObject):
     """_BarPlotItem"""
-    def __init__(self, x=None, y=None, width=1.0, pen=None, brush=None):
+    def __init__(self, x=None, y=None, *, width=1.0, pen=None, brush=None):
         """Initialization."""
         super().__init__()
 
@@ -264,15 +321,16 @@ class BarPlotItem(pg.GraphicsObject):
         self._x = None
         self._y = None
 
-        self._width = None
-        self.width = width
+        if width > 1.0 or width <= 0:
+            width = 1.0
+        self._width = width
 
         self._pen = make_pen('g') if pen is None else pen
         self._brush = make_brush('b') if brush is None else brush
 
         self.setData(x, y)
 
-    def setData(self, x, y, width=None, pen=None):
+    def setData(self, x, y):
         """PlotItem interface."""
         self._x = [] if x is None else x
         self._y = [] if y is None else y
@@ -280,33 +338,13 @@ class BarPlotItem(pg.GraphicsObject):
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
 
-        self.width = width
-
-        if pen is not None:
-            self._pen = pen
-
         self._picture = None
         self.update()
-        self.prepareGeometryChange()
         self.informViewBoundsChanged()
-
-    @property
-    def width(self):
-        return self._width
-
-    @width.setter
-    def width(self, value):
-        if value is None:
-            return
-
-        if value > 1.0 or value <= 0:
-            value = 1.0  # set to default
-        self._width = value
 
     def drawPicture(self):
         self._picture = QPicture()
         p = QPainter(self._picture)
-
         p.setPen(self._pen)
         p.setBrush(self._brush)
 
@@ -318,33 +356,29 @@ class BarPlotItem(pg.GraphicsObject):
             width = self._width
 
         for x, y in zip(self._x, self._y):
-            rect = QRectF(x - width/2, 0, width, y)
-            p.drawRect(rect)
+            p.drawRect(QRectF(x - width/2, 0, width, y))
 
         p.end()
         self.prepareGeometryChange()
 
-    def paint(self, p, *args):
+    def paint(self, painter, *args):
+        """Override."""
         if self._picture is None:
             self.drawPicture()
-        self._picture.play(p)
+        self._picture.play(painter)
 
     def boundingRect(self):
+        """Override."""
         if self._picture is None:
             self.drawPicture()
         return QRectF(self._picture.boundingRect())
 
 
-class ErrorBarItem(pg.GraphicsObject):
-    """ErrorBarItem."""
+class StatisticsBarItem(pg.GraphicsObject):
+    """StatisticsBarItem."""
 
-    def __init__(self,
-                 x=None,
-                 y=None,
-                 y_min=None,
-                 y_max=None,
-                 beam=None,
-                 pen=None):
+    def __init__(self, x=None, y=None, *, y_min=None, y_max=None, beam=None,
+                 pen=None, line=False):
         """Initialization.
 
         Note: y is not used for now.
@@ -363,7 +397,7 @@ class ErrorBarItem(pg.GraphicsObject):
 
         self.setData(x, y, y_min=y_min, y_max=y_max)
 
-    def setData(self, x, y, y_min=None, y_max=None, beam=None, pen=None):
+    def setData(self, x, y, y_min=None, y_max=None):
         """PlotItem interface."""
         self._x = [] if x is None else x
         self._y = [] if y is None else y
@@ -377,21 +411,14 @@ class ErrorBarItem(pg.GraphicsObject):
             raise ValueError(
                 "'y_min' and 'y_max' data have different lengths!")
 
-        if beam is not None and beam >= 0.0:
-            self._beam = beam
-        if pen is not None:
-            self._pen = pen
-
         self._path = None
         self.update()
-        self.prepareGeometryChange()
         self.informViewBoundsChanged()
 
-    def drawPath(self):
+    def preparePath(self):
         p = QPainterPath()
 
         x = self._x
-
         for i in range(len(x)):
             # plot the lower horizontal lines
             p.moveTo(x[i] - self._beam / 2., self._y_min[i])
@@ -408,14 +435,16 @@ class ErrorBarItem(pg.GraphicsObject):
         self._path = p
         self.prepareGeometryChange()
 
-    def paint(self, p, *args):
+    def paint(self, painter, *args):
+        """Override."""
         if self._path is None:
-            self.drawPath()
+            self.preparePath()
 
-        p.setPen(self._pen)
-        p.drawPath(self._path)
+        painter.setPen(self._pen)
+        painter.drawPath(self._path)
 
     def boundingRect(self):
+        """Override."""
         if self._path is None:
-            self.drawPath()
+            self.preparePath()
         return self._path.boundingRect()

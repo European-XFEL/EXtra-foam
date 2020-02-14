@@ -21,7 +21,7 @@ class TrXasAbsorptionPlot(TimedPlotWidgetF):
 
     Display absorption(s) binned by time delay.
     """
-    def __init__(self, diff, *, parent=None):
+    def __init__(self, diff=False, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
@@ -103,7 +103,7 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
         self._roi2_image = RoiImageView(2, parent=self)
         self._roi3_image = RoiImageView(3, parent=self)
 
-        self._a13_a23 = TrXasAbsorptionPlot(False, parent=self)
+        self._a13_a23 = TrXasAbsorptionPlot(parent=self)
         self._a21 = TrXasAbsorptionPlot(True, parent=self)
         self._a21_heatmap = TrXasHeatmap(parent=self)
 

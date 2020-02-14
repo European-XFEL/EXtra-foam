@@ -38,7 +38,7 @@ class Bin1dHist(TimedPlotWidgetF):
         else:
             self._default_y_label = "FOM (arb. u.)"
             self.setTitle('1D binning (FOM)')
-            self._plot = self.plotScatter(brush=make_brush('p'))
+            self._plot = self.plotSta(brush=make_brush('p'))
 
         self._source = ""
 
