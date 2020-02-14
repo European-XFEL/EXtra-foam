@@ -17,7 +17,6 @@ from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
 import itertools
-import multiprocessing as mp
 
 from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
@@ -99,15 +98,16 @@ class MainGUI(QMainWindow):
 
     _WIDTH, _HEIGHT = config['GUI_MAIN_GUI_SIZE']
 
-    def __init__(self):
+    def __init__(self, pause_ev, close_ev):
         """Initialization."""
         super().__init__()
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
         self._queue = deque(maxlen=1)
 
-        self._input = MpInQueue()
-        self._close_ev = mp.Event()
+        self._pause_ev = pause_ev
+        self._close_ev = close_ev
+        self._input = MpInQueue(pause_ev, close_ev)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -132,7 +132,7 @@ class MainGUI(QMainWindow):
         self._right_cw = QSplitter(Qt.Vertical)
         self._right_cw.setChildrenCollapsible(False)
 
-        self._source_cw = DataSourceWidget(self)
+        self._source_cw = self.createCtrlWidget(DataSourceWidget)
 
         self._ctrl_panel_cw = QTabWidget()
         self._analysis_cw = QWidget()
@@ -378,8 +378,6 @@ class MainGUI(QMainWindow):
         try:
             processed = self._input.get_nowait()
             self._queue.append(processed)
-
-            logger.info(f"[{processed.tid}] update plots")
         except Empty:
             return
 
@@ -502,11 +500,12 @@ class MainGUI(QMainWindow):
         self._thread_logger_t.start()
         self._plot_timer.start(config["GUI_PLOT_UPDATE_TIMER"])
         self._redis_timer.start(config["REDIS_PING_ATTEMPT_INTERVAL"])
-        self._input.start(self._close_ev)
+        self._input.start()
 
     def onStart(self):
         if not self.updateMetaData():
             return
+
         self.start_sgn.emit()
 
         self._start_at.setEnabled(False)
@@ -560,7 +559,7 @@ class MainGUI(QMainWindow):
         # prevent from logging in the GUI when it has been closed
         logging.getLogger().removeHandler(self._logger)
 
-        # clean up the input queue
+        # tell all processes to close
         self._close_ev.set()
 
         # clean up the logger thread

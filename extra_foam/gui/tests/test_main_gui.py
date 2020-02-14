@@ -183,42 +183,11 @@ class TestMainGuiCtrl(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
 
-    @patch.dict(config._data, {"SOURCE_NAME_BRIDGE": ["E", "F", "G"],
-                               "SOURCE_NAME_FILE": ["A", "B"]})
-    def testConnectionCtrlWidget(self):
-        from extra_foam.gui.ctrl_widgets.data_source_widget import ConnectionCtrlWidget
+    def testDataSourceWidget(self):
+        from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
 
-        for widget in self.gui._ctrl_widgets:
-            if isinstance(widget, ConnectionCtrlWidget):
-                break
-
-        train_worker = self.train_worker
-        pulse_worker = self.pulse_worker
-        assembler = pulse_worker._assembler
-
-        # test passing tcp hostname and port
-
-        # TODO: testit
-        # hostname = config['BRIDGE_ADDR']
-        # port = config['BRIDGE_PORT']
-        # self.assertEqual(f"tcp://{hostname}:{port}", bridge._endpoint)
-
-        #
-        # widget._hostname_le.setText('127.0.0.1')
-        # widget._port_le.setText('12345')
-        # self.assertEqual(f"tcp://127.0.0.1:12345", bridge._endpoint)
-
-        # self.assertEqual("A", assembler._source_name)
-        # items = []
-        # for i in range(widget._detector_src_cb.count()):
-        #     items.append(widget._detector_src_cb.itemText(i))
-        # self.assertListEqual(["A", "B"], items)
-
-        # self.assertEqual("E", assembler._source_name)
-        # items = []
-        # for i in range(widget._detector_src_cb.count()):
-        #     items.append(widget._detector_src_cb.itemText(i))
-        # self.assertListEqual(["E", "F", "G"], items)
+        widget = self.gui._source_cw
+        self.assertIsInstance(widget, DataSourceWidget)
 
     def testPulseFilterCtrlWidget(self):
         widget = self.gui.pulse_filter_ctrl_widget
@@ -467,6 +436,8 @@ class TestMainGuiCtrl(unittest.TestCase):
            'updateMetaData', MagicMock(return_value=True))
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
+    @patch('extra_foam.gui.ctrl_widgets.DataSourceWidget.'
+           'updateMetaData', MagicMock(return_value=True))
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.onStart', Mock())
     @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.onStart', Mock())
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStart', Mock())
@@ -490,37 +461,43 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         # test a ctrl widget own by the ImageToolWindow
         azimuthal_integ_ctrl_widget = self.gui._image_tool._azimuthal_integ_1d_view._ctrl_widget
+        geometry_ctrl_widget = self.gui._image_tool._geometry_view._ctrl_widget
+        pump_probe_ctrl_widget = self.gui.pump_probe_ctrl_widget
+        histogram_ctrl_widget = self.gui.histogram_ctrl_widget
+        source_ctrl_widget = self.gui._source_cw
 
-        self.gui.pump_probe_ctrl_widget.updateMetaData. \
-            assert_called_once()
-        self.gui.histogram_ctrl_widget.updateMetaData. \
-            assert_called_once()
-        azimuthal_integ_ctrl_widget.updateMetaData. \
-            assert_called_once()
+        azimuthal_integ_ctrl_widget.updateMetaData.assert_called_once()
+        pump_probe_ctrl_widget.updateMetaData.assert_called_once()
+        histogram_ctrl_widget.updateMetaData.assert_called_once()
+        source_ctrl_widget.updateMetaData.assert_called_once()
 
         self.assertEqual(1, len(start_spy))
 
-        self.gui.pump_probe_ctrl_widget.onStart.assert_called_once()
-        self.gui.histogram_ctrl_widget.onStart.assert_called_once()
+        pump_probe_ctrl_widget.onStart.assert_called_once()
+        histogram_ctrl_widget.onStart.assert_called_once()
         azimuthal_integ_ctrl_widget.onStart.assert_called_once()
 
         self.assertFalse(start_action.isEnabled())
         self.assertTrue(stop_action.isEnabled())
+        self.assertFalse(source_ctrl_widget._con_view.isEnabled())
+        self.assertFalse(geometry_ctrl_widget.isEnabled())
 
         # -------------------------------------------------------------
-        # test when the start action button is clicked
+        # test when the stop action button is clicked
         # -------------------------------------------------------------
 
         stop_action.trigger()
 
-        self.gui.pump_probe_ctrl_widget.onStop.assert_called_once()
-        self.gui.histogram_ctrl_widget.onStop.assert_called_once()
+        pump_probe_ctrl_widget.onStop.assert_called_once()
+        histogram_ctrl_widget.onStop.assert_called_once()
         azimuthal_integ_ctrl_widget.onStop.assert_called_once()
 
         self.assertEqual(1, len(stop_spy))
 
         self.assertTrue(start_action.isEnabled())
         self.assertFalse(stop_action.isEnabled())
+        self.assertTrue(source_ctrl_widget._con_view.isEnabled())
+        self.assertTrue(geometry_ctrl_widget.isEnabled())
 
     def testTrXasCtrl(self):
         from extra_foam.gui.ctrl_widgets.trxas_ctrl_widget import (

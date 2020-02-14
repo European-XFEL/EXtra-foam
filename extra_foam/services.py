@@ -15,6 +15,7 @@ import faulthandler
 import sys
 import traceback
 import itertools
+import multiprocessing as mp
 
 import psutil
 
@@ -27,7 +28,7 @@ from .ipc import init_redis_connection
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import PulseWorker, TrainWorker
-from .processes import ProcessInfo, register_foam_process
+from .processes import register_foam_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
 
@@ -135,7 +136,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
 
         logger.info(f"Redis server started at {host}:{port}")
 
-        register_foam_process(ProcessInfo(name="redis", process=process))
+        register_foam_process("redis", process)
 
         # subscribe List commands
         # client.config_set("notify-keyspace-events", "Kl")
@@ -268,11 +269,16 @@ class Foam:
         start_redis_server(host, port, password=password)
 
         try:
-            self.pulse_worker = PulseWorker()
-            self.train_worker = TrainWorker()
+            # The following two events controls the pause and close
+            # of all processes.
+            self._pause_ev = mp.Event()
+            self._close_ev = mp.Event()
+
+            self.pulse_worker = PulseWorker(self._pause_ev, self._close_ev)
+            self.train_worker = TrainWorker(self._pause_ev, self._close_ev)
             self.train_worker.input.connect(self.pulse_worker.output)
 
-            self._gui = MainGUI()
+            self._gui = MainGUI(self._pause_ev, self._close_ev)
             self._gui.input.connect(self.train_worker.output)
 
         except Exception as e:
@@ -284,27 +290,14 @@ class Foam:
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
 
+        self._gui.start_sgn.connect(self._pause_ev.set)
+        self._gui.stop_sgn.connect(self._pause_ev.clear)
         self._gui.start()
-        self._gui.start_sgn.connect(self._resume)
-        self._gui.stop_sgn.connect(self._pause)
 
         self.pulse_worker.start()
-        register_foam_process(ProcessInfo(name=self.pulse_worker.name,
-                                          process=self.pulse_worker))
-
         self.train_worker.start()
-        register_foam_process(ProcessInfo(name=self.train_worker.name,
-                                          process=self.train_worker))
 
         return self
-
-    def _resume(self):
-        self.train_worker.resume()
-        self.pulse_worker.resume()
-
-    def _pause(self):
-        self.train_worker.pause()
-        self.pulse_worker.pause()
 
     def terminate(self):
         if self._gui is not None:

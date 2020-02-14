@@ -184,7 +184,6 @@ class _Config(dict):
         "SAMPLE_DISTANCE": 1.0,
         # photon energy, in keV
         "PHOTON_ENERGY": 12.4,
-
         # -------------------------------------------------------------
         # Process
         # -------------------------------------------------------------
@@ -274,6 +273,10 @@ class _Config(dict):
         "REDIS_PORT", "PULSE_RESOLVED", "REQUIRE_GEOMETRY",
         "NUMBER_OF_MODULES", "MODULE_SHAPE", "PIXEL_SIZE"])
 
+    # "name" is only used for labeling, it is ignored in the pipeline code.
+    StreamerEndpointItem = namedtuple("StreamerEndpointItem",
+                                      ["name", "type", "address", "port"])
+
     for key in _AreaDetectorConfig._fields:
         assert key in _opts
 
@@ -352,6 +355,8 @@ class _Config(dict):
                 "META": ["timestamp.tid"],
             }
         }
+
+        self.appendix_streamers = []
 
     @classmethod
     def topics(cls):
@@ -434,16 +439,26 @@ class _Config(dict):
             # of them will be needed.
             if ctg == detector or ctg not in self.detectors():
                 if ctg != detector and ctg not in self._misc_source_categories:
-                    raise ValueError(f"Invalid source category: {ctg}!\n"
-                                     f"The valid source categories are: "
-                                     f"{self._misc_source_categories + self.detectors()}")
+                    raise ValueError(
+                        f"Invalid source category: {ctg}!\n"
+                        f"The valid source categories are: "
+                        f"{self._misc_source_categories + self.detectors()}")
                 self.control_sources[ctg] = srcs.get("CONTROL", dict())
                 self.pipeline_sources[ctg] = srcs.get("PIPELINE", dict())
+
+        # update connection
+        con_cfg = cfg.get("STREAMER", dict())
+        stream_cfg = con_cfg.get("ZMQ", dict())
+        for name, opts in stream_cfg.items():
+            self.appendix_streamers.append(
+                self.StreamerEndpointItem(
+                    name, opts["DEFAULT_TYPE"], opts["ADDR"], opts["PORT"]))
 
 
 class ConfigWrapper(abc.Mapping):
     """Readonly config."""
     def __init__(self):
+        super().__init__()
         self._data = _Config()
 
     def __contains__(self, key):
@@ -491,6 +506,10 @@ class ConfigWrapper(abc.Mapping):
     @property
     def meta_sources(self):
         return self._data.meta_sources
+
+    @property
+    def appendix_streamers(self):
+        return self._data.appendix_streamers
 
     @staticmethod
     def parse_detector_name(detector):

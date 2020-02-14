@@ -54,11 +54,12 @@ class Mediator(QObject):
     def unregisterAnalysis(self, analysis_type):
         self._meta.unregister_analysis(analysis_type)
 
-    def onBridgeEndpointChange(self, value: str):
-        self._meta.hset(mt.CONNECTION, "endpoint", value)
-
-    def onSourceTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.CONNECTION, "source_type", int(value))
+    def onBridgeConnectionsChange(self, connections: dict):
+        # key = endpoint, value = source type
+        pipe = self._meta.pipeline()
+        pipe.delete(mt.CONNECTION)
+        pipe.hmset(mt.CONNECTION, connections)
+        pipe.execute()
 
     def onSourceItemToggled(self, checked: bool, item: object):
         if checked:
@@ -213,8 +214,10 @@ class Mediator(QObject):
         # index, source, resolution
         # index starts from 1
         index, src, resolution = value
-        self._meta.hset(mt.CORRELATION_PROC, f'source{index}', src)
-        self._meta.hset(mt.CORRELATION_PROC, f'resolution{index}', resolution)
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.CORRELATION_PROC, f'source{index}', src)
+        pipe.hset(mt.CORRELATION_PROC, f'resolution{index}', resolution)
+        pipe.execute()
 
     def onCorrelationReset(self):
         self._meta.hset(mt.CORRELATION_PROC, "reset", 1)
@@ -224,9 +227,11 @@ class Mediator(QObject):
         # where the index starts from 1
         index, src, bin_range, n_bins = value
 
-        self._meta.hset(mt.BIN_PROC, f'source{index}', src)
-        self._meta.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
-        self._meta.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.BIN_PROC, f'source{index}', src)
+        pipe.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
+        pipe.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
+        pipe.execute()
 
     def onBinAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.BIN_PROC, "analysis_type", int(value))
