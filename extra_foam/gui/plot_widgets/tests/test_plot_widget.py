@@ -19,12 +19,27 @@ class TestPlotWidget(unittest.TestCase):
         self._widget.plotCurve()
         self._widget.plotScatter()
         self._widget.plotBar()
-        self._widget.plotErrorBar()
+        self._widget.plotStatisticsBar()
 
         self.assertEqual(len(self._widget.plotItem.items), 4)
 
         self._widget.clear()
         self.assertFalse(self._widget.plotItem.items)
+
+    def testCurvePlot(self):
+        plot = self._widget.plotCurve(range(3), range(1, 4, 1))
+        app.processEvents()
+
+        # test set empty data
+        plot.setData([], [])
+        app.processEvents()
+
+        plot.setData([1], [1])
+        app.processEvents()
+
+        # test if x and y have different lengths
+        with self.assertRaises(ValueError):
+            plot.setData([1, 2, 3], [])
 
     def testBarPlot(self):
         # set any valid number
@@ -33,6 +48,7 @@ class TestPlotWidget(unittest.TestCase):
 
         # test set empty data
         plot.setData([], [])
+        app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):
@@ -40,7 +56,7 @@ class TestPlotWidget(unittest.TestCase):
 
     def testErrorBarPlot(self):
         # set any valid number
-        plot = self._widget.plotErrorBar([1, 2], [3, 4])
+        plot = self._widget.plotStatisticsBar([1, 2], [3, 4])
         app.processEvents()
 
         # set x, y, y_min and y_max together
@@ -49,6 +65,7 @@ class TestPlotWidget(unittest.TestCase):
 
         # test set empty data
         plot.setData([], [])
+        app.processEvents()
 
         # test if x and y have different lengths
         with self.assertRaises(ValueError):

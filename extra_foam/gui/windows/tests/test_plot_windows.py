@@ -137,6 +137,35 @@ class TestPlotWindows(unittest.TestCase):
         win.updateWidgetsF()
 
 
+class testPumpProbeWidgets(unittest.TestCase):
+    def testPumpProbeImageView(self):
+        from extra_foam.gui.windows.pump_probe_w import PumpProbeImageView
+
+        widget = PumpProbeImageView()
+
+    def testPumpProbeVFomPlot(self):
+        from extra_foam.gui.windows.pump_probe_w import PumpProbeVFomPlot
+
+        widget = PumpProbeVFomPlot()
+
+    def testPumpProbeFomPlot(self):
+        from extra_foam.gui.windows.pump_probe_w import PumpProbeFomPlot
+
+        widget = PumpProbeFomPlot()
+
+
+class testPulseOfInterestWidgets(unittest.TestCase):
+    def testPoiImageView(self):
+        from extra_foam.gui.windows.pulse_of_interest_w import PoiImageView
+
+        widget = PoiImageView(0)
+
+    def testPoiHist(self):
+        from extra_foam.gui.windows.pulse_of_interest_w import PoiHist
+
+        widget = PoiHist(0)
+
+
 class testBinningWidgets(unittest.TestCase):
     def testHeatmap1D(self):
         from extra_foam.gui.windows.binning_w import Bin1dHeatmap
@@ -186,3 +215,15 @@ class testHistogramWidgets(unittest.TestCase):
         widget = InTrainFomPlot()
         data = ProcessedData(1)
         widget.updateF(data)
+
+
+class testTriXasWidgets(unittest.TestCase):
+    def testTrXasAbsorptionPlot(self):
+        from extra_foam.gui.windows.tri_xas_w import TrXasAbsorptionPlot
+
+        widget = TrXasAbsorptionPlot()
+
+    def testTrXasHeatmap(self):
+        from extra_foam.gui.windows.tri_xas_w import TrXasHeatmap
+
+        widget = TrXasHeatmap()

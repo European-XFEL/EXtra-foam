@@ -14,8 +14,9 @@ from PyQt5.QtWidgets import QSizePolicy
 
 from .. import pyqtgraph as pg
 
-from .plot_items import BarPlotItem, ErrorBarItem
-from ..misc_widgets import make_pen
+from .plot_items import (
+    BarPlotItem, CurvePlotItem, StatisticsBarItem
+)
 from ...config import config
 from ...typing import final
 
@@ -33,9 +34,6 @@ class PlotWidgetF(pg.GraphicsView):
     # signals wrapped from PlotItem / ViewBox
     sigRangeChanged = pyqtSignal(object, object)
     sigTransformChanged = pyqtSignal(object)
-
-    _pen = make_pen(None)
-    _brush_size = 8
 
     def __init__(self, parent=None, background='default', **kargs):
         """Initialization."""
@@ -92,14 +90,9 @@ class PlotWidgetF(pg.GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotScatter(self, *args, pen=None, size=None, **kwargs):
+    def plotScatter(self, *args, **kwargs):
         """Add and return a new scatter plot."""
-        if pen is None:
-            pen = self._pen
-        if size is None:
-            size = self._brush_size
-
-        item = pg.ScatterPlotItem(*args, pen=pen, size=size, **kwargs)
+        item = pg.ScatterPlotItem(*args, **kwargs)
         self.plotItem.addItem(item)
         return item
 
@@ -109,19 +102,10 @@ class PlotWidgetF(pg.GraphicsView):
         self.plotItem.addItem(item)
         return item
 
-    def plotErrorBar(self,
-                     x=None,
-                     y=None,
-                     y_min=None,
-                     y_max=None,
-                     beam=None,
-                     **kwargs):
-        item = ErrorBarItem(x=x,
-                            y=y,
-                            y_min=y_min,
-                            y_max=y_max,
-                            beam=beam,
-                            **kwargs)
+    def plotStatisticsBar(self, x=None, y=None, y_min=None, y_max=None,
+                          beam=None, **kwargs):
+        item = StatisticsBarItem(x=x, y=y, y_min=y_min, y_max=y_max, beam=beam,
+                                 **kwargs)
         self.plotItem.addItem(item)
         return item
 
