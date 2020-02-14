@@ -15,7 +15,7 @@ from queue import Empty, Full, Queue
 import time
 
 from karabo_bridge import Client
-from .data_model import ProcessedData
+from .f_queue import CorrelateQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
 from ..utils import profiler, run_in_thread
@@ -27,7 +27,28 @@ from ..database import (
 from ..database import Metadata as mt
 
 
-class _PipeBase(ABC):
+class _ProcessControlMixin:
+    # Note: the following mixin methods could be called from a different
+    #       process.
+    @property
+    def closing(self):
+        return self._close_ev.is_set()
+
+    @property
+    def running(self):
+        return self._pause_ev.is_set()
+
+    def wait(self):
+        self._pause_ev.wait()
+
+    def resume(self):
+        self._pause_ev.set()
+
+    def pause(self):
+        self._pause_ev.clear()
+
+
+class _PipeBase(ABC, _ProcessControlMixin):
     """Abstract Pipe class.
 
     Pipe is used to transfer data between different processes via socket,
@@ -35,28 +56,25 @@ class _PipeBase(ABC):
     multi-threading queue and exchanges data within its own process via
     this Queue.
     """
+    _pipeline_dtype = ('catalog', 'meta', 'raw', 'processed')
 
-    def __init__(self, *, drop=False, final=False):
+    def __init__(self, pause_ev, close_ev, *, final=False):
         """Initialization.
 
-        :param bool drop: True if data is allowed to be dropped.
         :param bool final: True if the pipe is the final one in the pipeline.
         """
-        self._drop = drop
+        super().__init__()
+
+        self._pause_ev = pause_ev
+        self._close_ev = close_ev
         self._final = final
 
-        self._data = Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
+        self._queue = Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
 
         self._meta = MetaProxy()
         self._mon = MonProxy()
 
-        self._update_ev = threading.Event()
-
-    def update(self):
-        """Signal update."""
-        self._update_ev.set()
-
-    def start(self, close_ev):
+    def start(self):
         """Start to run pipe in a thread.
 
         For input pipe, it starts to receive data from the client and put it
@@ -65,24 +83,23 @@ class _PipeBase(ABC):
         """
         # clean the residual data
         self.clean()
-        self.run(close_ev, self._update_ev)
+        self.pre_run()
+        self.run()
+
+    def pre_run(self):
+        """"""
+        pass
 
     @abstractmethod
-    def run(self, close_ev, update_ev):
-        """Target function for running in a thread.
-
-        :param multiprocessing.Event close_ev: if this event is set, the
-            target function running in a thread will be terminated.
-        :param multithreading.Event update_ev: if this event is set, the
-            pipe will update its state.
-        """
+    def run(self):
+        """Target function for running in a thread."""
         raise NotImplementedError
 
     def clean(self):
         """Empty the data queue."""
-        while not self._data.empty():
+        while not self._queue.empty():
             try:
-                self._data.get_nowait()
+                self._queue.get_nowait()
             except Empty:
                 break
 
@@ -96,10 +113,10 @@ class _PipeInBase(_PipeBase):
 
     def get(self, timeout=None):
         """Remove and return the first data item in the queue."""
-        return self._data.get(timeout=timeout)
+        return self._queue.get(timeout=timeout)
 
     def get_nowait(self):
-        return self._data.get_nowait()
+        return self._queue.get_nowait()
 
 
 class _PipeOutBase(_PipeBase):
@@ -111,10 +128,10 @@ class _PipeOutBase(_PipeBase):
 
     def put(self, item, timeout=None):
         """Add a new data item into the queue."""
-        return self._data.put(item, timeout=timeout)
+        return self._queue.put(item, timeout=timeout)
 
     def put_nowait(self, item):
-        return self._data.put_nowait(item)
+        return self._queue.put_nowait(item)
 
     def put_pop(self, item, timeout=None):
         """Add a new data item into the queue aggressively.
@@ -123,11 +140,10 @@ class _PipeOutBase(_PipeBase):
         new data item will be added again without blocking.
         """
         try:
-            self._data.put(item, timeout=timeout)
+            self._queue.put(item, timeout=timeout)
         except Full:
-            self._data.get_nowait()
-            logger.warning(f"Data dropped due to slowness of the pipeline")
-            self._data.put_nowait(item)
+            self._queue.get_nowait()
+            self._queue.put_nowait(item)
 
 
 class KaraboBridge(_PipeInBase, _RedisParserMixin):
@@ -138,15 +154,14 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._queue = CorrelateQueue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
+
         self._catalog = SourceCatalog()
 
         self._lock = threading.Lock()
 
-    def start(self, close_ev):
-        """Override."""
-        self.clean()
+    def pre_run(self):
         self.update_source_items()
-        self.run(close_ev, self._update_ev)
 
     @run_in_thread(daemon=True)
     def update_source_items(self):
@@ -154,7 +169,6 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
         sub = self._sub
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
-
             if msg is not None:
                 src = msg['data']
 
@@ -189,7 +203,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
             time.sleep(0.001)
 
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
         timeout = config['PIPELINE_TIMEOUT']
 
@@ -197,41 +211,44 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
         prev_data_arrival_time = None
         # Karabo bridge client instance
         client = None
-        while not close_ev.is_set():
-            if update_ev.is_set():
-                cfg = self._meta.hget_all(mt.CONNECTION)
-                endpoint = cfg['endpoint']
-                src_type = DataSource(int(cfg['source_type']))
+        while not self.closing:
+            if not self.running:
+                self.wait()
 
-                if client is None:
+                cons = self._meta.hget_all(mt.CONNECTION)
+                endpoint = list(cons.keys())[0]
+                src_type = DataSource(int(list(cons.values())[0]))
+
+                if client is not None:
                     # destroy the zmq socket
                     del client
                 # instantiate a new client
                 client = Client(endpoint, timeout=timeout)
                 logger.debug(f"Instantiate a bridge client connected to "
                              f"{endpoint}")
-                update_ev.clear()
 
             if client is None:
                 time.sleep(0.001)
                 continue
 
             try:
-                raw, meta = self._recv_imp(client)
-                tid = next(iter(meta.values()))["timestamp.tid"]
-
-                self._update_available_sources(meta)
-
+                # first make a copy of the source item table
                 with self._lock:
                     catalog = copy.deepcopy(self._catalog)
 
                 if not catalog.main_detector:
                     # skip the pipeline if the main detector is not specified
                     logger.error(f"Unspecified {config['DETECTOR']} source!")
+                    time.sleep(1)  # wait a bit longer
                     continue
 
+                # receive data from the bridge
+                raw, meta = self._recv_imp(client)
+
+                self._update_available_sources(meta)
+
                 # extract new raw and meta
-                new_raw, new_meta = DataTransformer.transform_euxfel(
+                new_raw, new_meta, _ = DataTransformer.transform_euxfel(
                     raw, meta, catalog=catalog, source_type=src_type)
 
                 if prev_data_arrival_time is not None:
@@ -243,15 +260,14 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                 # Note: if the queue is full, whether the data should be
                 #       dropped is determined by the main thread of its
                 #       owner process.
-                while not close_ev.is_set():
+                data = {"catalog": catalog, "meta": new_meta, "raw": new_raw}
+                again = False
+                while not self.closing:
                     try:
-                        self._data.put({
-                            "catalog": catalog,
-                            "meta": new_meta,
-                            "raw": new_raw,
-                            "processed": ProcessedData(tid)}, timeout=timeout)
+                        self._queue.put(data, timeout=timeout, again=again)
                         break
                     except Full:
+                        again = True
                         continue
 
             except TimeoutError:
@@ -278,19 +294,22 @@ class MpInQueue(_PipeInBase):
         self._client = mp.Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
 
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
         timeout = config['PIPELINE_TIMEOUT']
 
-        while not close_ev.is_set():
+        while not self.closing:
+            if not self.running:
+                self.wait()
+
             try:
                 data = self._client.get(timeout=timeout)
             except Empty:
                 continue
 
-            while not close_ev.is_set():
+            while not self.closing:
                 try:
-                    self._data.put(data, timeout=timeout)
+                    self._queue.put(data, timeout=timeout)
                     break
                 except Full:
                     continue
@@ -313,48 +332,37 @@ class MpOutQueue(_PipeOutBase):
 
         self._client = None
 
-    def _put_pop_queue(self, item, timeout=None):
-        """Add a new data item into the multiprocessing queue aggressively.
-
-        If the queue is full, the first item will be removed and the
-        new data item will be added again without blocking.
-        """
-        try:
-            self._client.put(item, timeout=timeout)
-        except Full:
-            self._client.get_nowait()
-            self._client.put_nowait(item)
-
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
         timeout = config['PIPELINE_TIMEOUT']
 
-        while not close_ev.is_set():
+        while not self.closing:
+            if not self.running:
+                self.wait()
+
             try:
-                data = self._data.get(timeout=timeout)
+                data = self._queue.get(timeout=timeout)
             except Empty:
                 continue
 
             if self._final:
-                self._mon.add_tid_with_timestamp(data['processed'].tid)
-
-            if self._drop:
                 data_out = data['processed']
+
+                tid = data_out.tid
+                self._mon.add_tid_with_timestamp(tid)
+                logger.info(f"Train {tid} processed!")
+            else:
+                data_out = {key: data[key] for key in self._pipeline_dtype}
+
+            try:
+                self._client.put(data_out, timeout=timeout)
+            except Full:
                 try:
-                    self._put_pop_queue(data_out, timeout=timeout)
+                    self._client.get_nowait()
                 except Empty:
                     continue
-            else:
-                data_out = {key: data[key]
-                            for key in ['processed', 'catalog', 'meta', 'raw']}
-
-                while not close_ev.is_set():
-                    try:
-                        self._client.put(data_out, timeout=timeout)
-                        break
-                    except Full:
-                        continue
+                self._client.put_nowait(data_out)
 
         self._client.cancel_join_thread()
 

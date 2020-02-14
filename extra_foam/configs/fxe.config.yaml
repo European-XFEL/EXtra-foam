@@ -100,3 +100,18 @@ DETECTOR:
         LOCAL_PORT: 45453
         SAMPLE_DISTANCE: 2.0
         PHOTON_ENERGY: 9.3
+
+STREAMER:
+    ZMQ:
+        Control:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4600
+        Pipeline1:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4601
+        Pipeline2:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4602

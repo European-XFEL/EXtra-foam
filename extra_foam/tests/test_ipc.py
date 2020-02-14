@@ -70,7 +70,7 @@ class TestRedisConnection(unittest.TestCase):
 
         n_clients = len(self._db.client_list())
 
-        proc = DumpyProcess('dummy')
+        proc = DumpyProcess('dummy', None, None)
         proc.start()
         # child process share the same connection as that in the main process
         self.assertEqual(n_clients, len(self._db.client_list()))
