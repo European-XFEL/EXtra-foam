@@ -15,8 +15,9 @@ from PyQt5.QtWidgets import QSizePolicy
 from .. import pyqtgraph as pg
 
 from .plot_items import (
-    BarPlotItem, CurvePlotItem, StatisticsBarItem
+    BarGraphItem, CurvePlotItem, StatisticsBarItem
 )
+from ..misc_widgets import FColor
 from ...config import config
 from ...typing import final
 
@@ -46,20 +47,21 @@ class PlotWidgetF(pg.GraphicsView):
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
-        self.plotItem = pg.PlotItem(**kargs)
-        self.setCentralItem(self.plotItem)
+        self._plot_item = pg.PlotItem(**kargs)
+        self._vb2 = None  # ViewBox for y2 axis
+        self.setCentralItem(self._plot_item)
 
-        self.plotItem.sigRangeChanged.connect(self.viewRangeChanged)
+        self._plot_item.sigRangeChanged.connect(self.viewRangeChanged)
 
     def clear(self):
         """Remove all the items in the PlotItem object."""
-        plot_item = self.plotItem
+        plot_item = self._plot_item
         for i in plot_item.items[:]:
             plot_item.removeItem(i)
 
     def reset(self):
         """Clear the data of all the items in the PlotItem object."""
-        for item in self.plotItem.items:
+        for item in self._plot_item.items:
             item.setData([], [])
 
     @abc.abstractmethod
@@ -68,8 +70,8 @@ class PlotWidgetF(pg.GraphicsView):
         raise NotImplementedError
 
     def close(self):
-        self.plotItem.close()
-        self.plotItem = None
+        self._plot_item.close()
+        self._plot_item = None
         self.setParent(None)
         super().close()
 
@@ -79,34 +81,49 @@ class PlotWidgetF(pg.GraphicsView):
         This method must be here to override the addItem method in
         GraphicsView. Otherwise, people may misuse the addItem method.
         """
-        self.plotItem.addItem(*args, **kwargs)
+        self._plot_item.addItem(*args, **kwargs)
 
     def removeItem(self, *args, **kwargs):
-        self.plotItem.removeItem(*args, **kwargs)
+        self._plot_item.removeItem(*args, **kwargs)
 
     def plotCurve(self, *args, **kwargs):
         """Add and return a new curve plot."""
         item = pg.PlotCurveItem(*args, **kwargs)
-        self.plotItem.addItem(item)
+        self._plot_item.addItem(item)
         return item
 
     def plotScatter(self, *args, **kwargs):
         """Add and return a new scatter plot."""
+        if 'pen' not in kwargs:
+            kwargs['pen'] = FColor.mkPen(None)
         item = pg.ScatterPlotItem(*args, **kwargs)
-        self.plotItem.addItem(item)
+        self._plot_item.addItem(item)
         return item
 
-    def plotBar(self, x=None, y=None, width=1.0, **kwargs):
+    def plotBar(self, x=None, y=None, width=1.0, y2=False, **kwargs):
         """Add and return a new bar plot."""
-        item = BarPlotItem(x=x, y=y, width=width, **kwargs)
-        self.plotItem.addItem(item)
+        item = BarGraphItem(x=x, y=y, width=width, **kwargs)
+
+        if y2:
+            if self._vb2 is None:
+                self.createY2()
+            self._vb2.addItem(item)
+        else:
+            self._plot_item.addItem(item)
+
         return item
 
     def plotStatisticsBar(self, x=None, y=None, y_min=None, y_max=None,
-                          beam=None, **kwargs):
-        item = StatisticsBarItem(x=x, y=y, y_min=y_min, y_max=y_max, beam=beam,
-                                 **kwargs)
-        self.plotItem.addItem(item)
+                          beam=None, y2=False, **kwargs):
+        item = StatisticsBarItem(x=x, y=y, y_min=y_min, y_max=y_max,
+                                 beam=beam, **kwargs)
+        if y2:
+            if self._vb2 is None:
+                self.createY2()
+            self._vb2.addItem(item)
+        else:
+            self._plot_item.addItem(item)
+
         return item
 
     def plotImage(self, *args, **kargs):
@@ -114,34 +131,52 @@ class PlotWidgetF(pg.GraphicsView):
         # TODO: this will be done when another branch is merged
         raise NotImplemented
 
+    def createY2(self):
+        vb = pg.ViewBox()
+        plot_item = self._plot_item
+        plot_item.scene().addItem(vb)
+        plot_item.getAxis('right').linkToView(vb)
+        vb.setXLink(self._plot_item.vb)
+        self._plot_item.vb.sigResized.connect(self.updateY2View)
+        self._vb2 = vb
+
+    def updateY2View(self):
+        vb = self._vb2
+        if vb is None:
+            return
+        # update ViewBox-y2 to match ViewBox-y
+        vb.setGeometry(self._plot_item.vb.sceneBoundingRect())
+        # not sure this is required
+        # vb.linkedViewChanged(self._plot_item.vb, vb.XAxis)
+
     def setAspectLocked(self, *args, **kwargs):
-        self.plotItem.setAspectLocked(*args, **kwargs)
+        self._plot_item.setAspectLocked(*args, **kwargs)
 
     def setLabel(self, *args, **kwargs):
-        self.plotItem.setLabel(*args, **kwargs)
+        self._plot_item.setLabel(*args, **kwargs)
 
     def setTitle(self, *args, **kwargs):
-        self.plotItem.setTitle(*args, **kwargs)
+        self._plot_item.setTitle(*args, **kwargs)
 
     def addLegend(self, *args, **kwargs):
-        self.plotItem.addLegend(*args, **kwargs)
+        self._plot_item.addLegend(*args, **kwargs)
 
     def hideAxis(self):
         for v in ["left", 'bottom']:
-            self.plotItem.hideAxis(v)
+            self._plot_item.hideAxis(v)
 
     def showAxis(self):
         for v in ["left", 'bottom']:
-            self.plotItem.showAxis(v)
+            self._plot_item.showAxis(v)
 
     def viewRangeChanged(self, view, range):
         self.sigRangeChanged.emit(self, range)
 
     def saveState(self):
-        return self.plotItem.saveState()
+        return self._plot_item.saveState()
 
     def restoreState(self, state):
-        return self.plotItem.restoreState(state)
+        return self._plot_item.restoreState(state)
 
     def closeEvent(self, QCloseEvent):
         parent = self.parent()

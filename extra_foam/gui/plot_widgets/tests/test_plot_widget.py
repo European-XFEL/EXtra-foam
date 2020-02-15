@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
+import numpy as np
+
 from extra_foam.gui import mkQApp
 from extra_foam.gui.plot_widgets.plot_widget_base import PlotWidgetF, TimedPlotWidgetF
 from extra_foam.logger import logger
@@ -21,13 +23,13 @@ class TestPlotWidget(unittest.TestCase):
         self._widget.plotBar()
         self._widget.plotStatisticsBar()
 
-        self.assertEqual(len(self._widget.plotItem.items), 4)
+        self.assertEqual(len(self._widget._plot_item.items), 4)
 
         self._widget.clear()
-        self.assertFalse(self._widget.plotItem.items)
+        self.assertFalse(self._widget._plot_item.items)
 
     def testCurvePlot(self):
-        plot = self._widget.plotCurve(range(3), range(1, 4, 1))
+        plot = self._widget.plotCurve(np.arange(3), np.arange(1, 4, 1))
         app.processEvents()
 
         # test set empty data
@@ -38,7 +40,7 @@ class TestPlotWidget(unittest.TestCase):
         app.processEvents()
 
         # test if x and y have different lengths
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             plot.setData([1, 2, 3], [])
 
     def testBarPlot(self):

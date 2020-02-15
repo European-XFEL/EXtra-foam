@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractSpecialAnalysisWindow
 from ..plot_widgets import RoiImageView, TimedImageViewF, TimedPlotWidgetF
-from ..misc_widgets import make_pen
+from ..misc_widgets import FColor
 from ...config import config
 
 
@@ -32,11 +32,11 @@ class TrXasAbsorptionPlot(TimedPlotWidgetF):
         self.addLegend(offset=(-40, 20))
 
         if diff:
-            self._a21 = self.plotCurve(name="ROI2/ROI1", pen=make_pen("g"))
+            self._a21 = self.plotCurve(name="ROI2/ROI1", pen=FColor.mkPen("g"))
         else:
             c = config['GUI_ROI_COLORS']
-            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen(c[0]))
-            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen(c[1]))
+            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=FColor.mkPen(c[0]))
+            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=FColor.mkPen(c[1]))
 
     def refresh(self):
         """Override."""

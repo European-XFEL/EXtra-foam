@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QColor, QIntValidator
+from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 )
@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
 from ..mediator import Mediator
 from ..plot_widgets.plot_items import RectROI
 from ..ctrl_widgets import _AbstractCtrlWidget, SmartLineEdit
-from ..misc_widgets import Colors
+from ..misc_widgets import FColor
 from ...config import config
 from ...pipeline.data_model import RectRoiGeom
 
@@ -65,7 +65,7 @@ class _SingleRoiCtrlWidget(QWidget):
         label = QLabel(f"ROI{idx}: ")
         palette = label.palette()
         palette.setColor(palette.WindowText,
-                         QColor(*getattr(Colors(), config['GUI_ROI_COLORS'][idx-1])))
+                         FColor.mkColor(config['GUI_ROI_COLORS'][idx-1]))
         label.setPalette(palette)
         layout.addWidget(label)
 

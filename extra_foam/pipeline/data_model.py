@@ -505,12 +505,14 @@ class BinData(collections.abc.Mapping):
 
     class BinDataItem:
 
-        __slots__ = ['source', 'centers', 'counts', 'stats', 'x', 'heat',
-                     'x_range']
+        __slots__ = ['source', 'size', 'centers', 'counts', 'stats',
+                     'x', 'heat', 'x_range']
 
         def __init__(self):
             self.source = ""
             self.centers = None
+            # bin size, needed when there is only one center
+            self.size = None
             self.counts = None
             self.stats = None
             self.x = None

@@ -19,7 +19,7 @@ from ..ctrl_widgets import (
     RoiProjCtrlWidget, RoiCtrlWidget, RoiFomCtrlWidget,
     RoiNormCtrlWidget,
 )
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ...config import AnalysisType, plot_labels
 
 
@@ -37,7 +37,7 @@ class RoiProjPlot(PlotWidgetF):
         self.setLabel('left', y_label)
         self.setTitle('ROI projection (average over train)')
 
-        self._plot = self.plotCurve(pen=make_pen("p"))
+        self._plot = self.plotCurve(pen=FColor.mkPen("p"))
 
     def updateF(self, data):
         """Override."""
@@ -62,7 +62,7 @@ class InTrainRoiFomPlot(PlotWidgetF):
         self.setLabel('left', "ROI FOM")
         self.setTitle('Pulse-resolved ROI FOMs (per train)')
 
-        self._plot = self.plotScatter(brush=make_brush('b'))
+        self._plot = self.plotScatter(brush=FColor.mkBrush('b'))
 
     def updateF(self, data):
         """Override."""
