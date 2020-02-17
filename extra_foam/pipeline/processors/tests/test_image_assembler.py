@@ -8,10 +8,13 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import unittest
+from unittest.mock import MagicMock, patch
 import copy
 import os
 import random
 import tempfile
+
+import pytest
 
 import numpy as np
 
@@ -20,7 +23,7 @@ from extra_foam.pipeline.processors.image_assembler import (
 )
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 from extra_foam.pipeline.exceptions import AssemblingError
-from extra_foam.config import config, DataSource
+from extra_foam.config import GeomAssembler, config, DataSource
 from extra_foam.database import SourceCatalog, SourceItem
 
 
@@ -32,8 +35,8 @@ def _check_assembled_result(data, src):
     assert 3 == assembled.ndim
     assembled_shape = assembled.shape
     assert 4 == assembled_shape[0]
-    assert assembled_shape[1] > 1024
-    assert assembled_shape[2] > 1024
+    assert assembled_shape[1] >= 1024
+    assert assembled_shape[2] >= 1024
 
 
 _tmp_cfg_dir = tempfile.mkdtemp()
@@ -65,7 +68,7 @@ class TestAgipdAssembler(unittest.TestCase, _BaseProcessorTest):
 
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -186,21 +189,25 @@ class TestAgipdAssembler(unittest.TestCase, _BaseProcessorTest):
         _check_assembled_result(data, src)
 
 
-class TestLpdAssembler(unittest.TestCase):
+class TestLpdAssembler:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         config.load('LPD', 'FXE')
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         os.remove(config.config_file)
 
-    def setUp(self):
+    def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("LPD")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._load_geometry(GeomAssembler.EXTRA_GEOM)
+
+    def _load_geometry(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -208,10 +215,58 @@ class TestLpdAssembler(unittest.TestCase):
         catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
 
-    def testAssembleFileCal(self):
+    @patch('extra_foam.ipc.ProcessLogger.info')
+    def testUpdate(self, info):
+        import json
+        from extra_foam.geometries import LPD_1MGeometryFast
+        from extra_geom import LPD_1MGeometry
+
+        # Note: this test does not need to repeat for each detector
+        proc = self._assembler
+        proc._meta.hget_all = MagicMock()
+        get_cfg = proc._meta.hget_all
+
+        get_cfg.return_value = {
+            'stack_only': False,
+            'assembler': '2',
+            'geometry_file': self._geom_file,
+            'quad_positions': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
+        }
+
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
+
+        # test assembler type is ignored if 'stack_only' is True
+        get_cfg.return_value.update({'stack_only': 'True'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
+
+        # test assembler switching
+        get_cfg.return_value.update({'stack_only': 'False'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
+        get_cfg.return_value.update({'assembler': 1})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
+
+        # test file and quad position change
+        proc._load_geometry = MagicMock()
+        get_cfg.return_value.update({'geometry_file': '/New/File'})
+        proc.update()
+        proc._load_geometry.assert_called_once()
+        proc._load_geometry.reset_mock()
+        get_cfg.return_value.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
+        proc.update()
+        proc._load_geometry.assert_called_once()
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileCal(self, assembler_type):
+        self._load_geometry(assembler_type)
         self._runAssembleFileTest((4, 256, 256), _IMAGE_DTYPE)
 
-    def testAssembleFileRaw(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileRaw(self, assembler_type):
+        self._load_geometry(assembler_type)
         self._runAssembleFileTest((4, 1, 256, 256), _RAW_IMAGE_DTYPE)
 
     def _runAssembleFileTest(self, shape, dtype):
@@ -243,11 +298,14 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
         _check_assembled_result(data, src)
 
-    def testAssembleBridge(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleBridge(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
                 'catalog': catalog,
                 'meta': {
@@ -262,11 +320,11 @@ class TestLpdAssembler(unittest.TestCase):
             }
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
+        with pytest.raises(AssemblingError, match='modules, but'):
             data['raw'][src] = np.ones((15, 256, 256, 4), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
             data['raw'][src] = np.ones((16, 256, 256, 0), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
@@ -275,7 +333,10 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
         _check_assembled_result(data, src)
 
-    def testOutArray(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testOutArray(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
@@ -294,34 +355,34 @@ class TestLpdAssembler(unittest.TestCase):
         self._assembler.process(data)
 
         assembled_shape = data['assembled']['data'].shape
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
-        self.assertEqual(_IMAGE_DTYPE, self._assembler._out_array.dtype)
+        assert self._assembler._out_array.shape == assembled_shape
+        assert _IMAGE_DTYPE == self._assembler._out_array.dtype
 
         # Test number of pulses change on the fly
         data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape = data['assembled']['data'].shape
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        assert self._assembler._out_array.shape == assembled_shape
 
         # test quad_positions (geometry) change on the fly
         quad_positions = [list(v) for v in self._quad_positions]
         quad_positions[0][1] += 2  # modify the quad positions
         quad_positions[3][0] -= 4
         quad_positions = [tuple(v) for v in quad_positions]
-        self._assembler.load_geometry(self._geom_file, tuple(quad_positions))
+        self._assembler._load_geometry(self._geom_file, tuple(quad_positions))
         data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
         assembled_shape = data['assembled']['data'].shape
-        self.assertNotEqual(assembled_shape_old, assembled_shape)
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        assert assembled_shape_old != assembled_shape
+        assert self._assembler._out_array.shape == assembled_shape
         # change the geometry back
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
-    def testAssembleDtype(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleDtype(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
@@ -337,31 +398,41 @@ class TestLpdAssembler(unittest.TestCase):
                 src: np.ones((16, 256, 256, 4), dtype=np.float64)
             },
         }
-        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
-        with self.assertRaises(TypeError):
+        # dtype conversion float64 -> float32 throws TypeError (extra_geom)
+        with pytest.raises(TypeError):
             self._assembler.process(data)
 
         data['raw'][src] = np.ones((16, 256, 256, 4), dtype=np.int16)
-        self._assembler.process(data)
-        assembled_dtype = data['assembled']['data'].dtype
-        self.assertEqual(_IMAGE_DTYPE, assembled_dtype)
+        if assembler_type == GeomAssembler.EXTRA_GEOM:
+            self._assembler.process(data)
+
+            assembled_dtype = data['assembled']['data'].dtype
+            assert _IMAGE_DTYPE == assembled_dtype
+        else:
+            # C++ implementation does not allow any implicit type conversion
+            with pytest.raises(TypeError):
+                self._assembler.process(data)
 
 
-class TestDSSCAssembler(unittest.TestCase):
+class TestDSSCAssembler:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         config.load('DSSC', 'SCS')
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         os.remove(config.config_file)
 
-    def setUp(self):
+    def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("DSSC")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._load_geometry(GeomAssembler.EXTRA_GEOM)
+
+    def _load_geometry(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
     def _create_catalog(self, src_name, key_name):
         catalog = SourceCatalog()
@@ -369,10 +440,14 @@ class TestDSSCAssembler(unittest.TestCase):
         catalog.add_item(SourceItem('DSSC', src_name, [], key_name, slice(None, None), None))
         return src, catalog
 
-    def testAssembleFileCal(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileCal(self, assembler_type):
+        self._load_geometry(assembler_type)
         self._runAssembleFileTest((4, 128, 512), _IMAGE_DTYPE)
 
-    def testAssembleFileRaw(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileRaw(self, assembler_type):
+        self._load_geometry(assembler_type)
         self._runAssembleFileTest((4, 1, 128, 512), _RAW_IMAGE_DTYPE)
 
     def _runAssembleFileTest(self, shape, dtype):
@@ -406,18 +481,21 @@ class TestDSSCAssembler(unittest.TestCase):
 
         # test invalid data type
         data['raw'][src] = np.ones((4, 1, 128, 512), dtype=np.float64)
-        with self.assertRaises(AssemblingError):
+        with pytest.raises(AssemblingError):
             self._assembler.process(data)
 
         data['raw'][src] = np.ones((4, 1, 128, 512), dtype=np.int64)
-        with self.assertRaises(AssemblingError):
+        with pytest.raises(AssemblingError):
             self._assembler.process(data)
 
-    def testAssembleBridge(self):
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleBridge(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
         src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
                 'catalog': catalog,
                 'meta': {
@@ -432,11 +510,11 @@ class TestDSSCAssembler(unittest.TestCase):
             }
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
+        with pytest.raises(AssemblingError, match='modules, but'):
             data['raw'][src] = np.ones((15, 512, 128, 4), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
             data['raw'][src] = np.ones((16, 512, 128, 0), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
@@ -464,15 +542,13 @@ class TestDSSCAssembler(unittest.TestCase):
         self._assembler.process(data)
         assembled_shape = data['assembled']['data'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
-        self.assertEqual(_IMAGE_DTYPE, self._assembler._out_array.dtype)
+        assert _IMAGE_DTYPE == self._assembler._out_array.dtype
 
         # Test output array shape change on the fly
         data['raw'][src] = np.ones((16, 512, 128, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape = data['assembled']['data'].shape
         np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
 
     def testAssembleDtype(self):
         key_name = 'image.data'
@@ -490,14 +566,14 @@ class TestDSSCAssembler(unittest.TestCase):
                 src: np.ones((16, 512, 128, 4), dtype=np.float64)
             },
         }
-        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
-        with self.assertRaises(TypeError):
+        # dtype conversion float64 -> float32 throws TypeError (extra_geom)
+        with pytest.raises(TypeError):
             self._assembler.process(data)
 
         data['raw'][src] = np.ones((16, 512, 128, 4), dtype=np.int16)
         self._assembler.process(data)
         assembled_dtype = data['assembled']['data'].dtype
-        self.assertEqual(_IMAGE_DTYPE, assembled_dtype)
+        assert _IMAGE_DTYPE == assembled_dtype
 
 
 class TestJungfrauAssembler(unittest.TestCase):

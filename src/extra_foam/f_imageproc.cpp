@@ -10,37 +10,15 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
-#if defined(FOAM_WITH_TBB)
-#include "tbb/parallel_for.h"
-#include "tbb/blocked_range2d.h"
-#endif
-
-#include "xtensor/xview.hpp"
 #include "xtensor/xmath.hpp"
-#include "xtensor/xarray.hpp"
-#define FORCE_IMPORT_ARRAY
-#include "xtensor-python/pyvectorize.hpp"
-#include "xtensor-python/pyarray.hpp"
-#include "xtensor-python/pytensor.hpp"
 
-#include "image_proc.hpp"
-
-
-namespace foam
-{
-
-template<typename T, xt::layout_type L>
-struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
-
-template<typename T, xt::layout_type L>
-struct IsImageArray<xt::pytensor<T, 3, L>> : std::true_type {};
-
-} // foam
+#include "f_imageproc.hpp"
+#include "f_pyconfig.hpp"
 
 namespace py = pybind11;
 
 
-PYBIND11_MODULE(image_proc, m)
+PYBIND11_MODULE(imageproc, m)
 {
   xt::import_numpy();
 

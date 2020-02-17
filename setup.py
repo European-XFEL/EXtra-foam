@@ -245,7 +245,8 @@ class BenchmarkCommand(Command):
         pass
 
     def run(self):
-        self.spawn(['python', 'benchmarks/benchmark_image_proc.py'])
+        self.spawn(['python', 'benchmarks/benchmark_imageproc.py'])
+        self.spawn(['python', 'benchmarks/benchmark_geometry.py'])
 
 
 class BinaryDistribution(Distribution):
@@ -296,7 +297,8 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
-        'karabo-data>=0.6.2',
+        'EXtra-data>=0.8.0',
+        'EXtra-geom>=0.8.0',
         'karabo-bridge>=0.3.0',
         'toolz>=0.9.0',
         'silx>=0.9.0',

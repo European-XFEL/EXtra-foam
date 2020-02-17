@@ -719,10 +719,10 @@ class XgmData(_XgmDataItem):
         self.off = _XgmDataItem()
 
 
-class _AdqDigitizerDataItem:
-    """_AdqDigitizerDataItem class.
+class _DigitizerDataItem:
+    """_DigitizerDataItem class.
 
-    Store AdqDigitizer pipeline data.
+    Store Digitizer pipeline data.
     """
 
     __slots__ = 'pulse_integral'
@@ -731,10 +731,10 @@ class _AdqDigitizerDataItem:
         self.pulse_integral = None
 
 
-class _AdqDigitizerChannelData(collections.abc.Mapping):
-    """_AdqDigitizerDataItem class.
+class _DigitizerChannelData(collections.abc.Mapping):
+    """_DigitizerDataItem class.
 
-    Store AdqDigitizer pipeline data.
+    Store Digitizer pipeline data.
     """
 
     # For a Karabo device, we have maximum 4 boards and each
@@ -748,7 +748,7 @@ class _AdqDigitizerChannelData(collections.abc.Mapping):
 
         self._pulse_integrals = dict()
         for cn in self._CHANNEL_NAMES:
-            self._pulse_integrals[cn] = _AdqDigitizerDataItem()
+            self._pulse_integrals[cn] = _DigitizerDataItem()
 
     def __contains__(self, cn):
         """Override."""
@@ -770,10 +770,10 @@ class _AdqDigitizerChannelData(collections.abc.Mapping):
         return self._pulse_integrals.items()
 
 
-class AdqDigitizerData(_AdqDigitizerChannelData):
-    """AdqDigitizerData class.
+class DigitizerData(_DigitizerChannelData):
+    """DigitizerData class.
 
-    Store AdqDigitizer pipeline data.
+    Store Digitizer pipeline data.
     """
 
     __slots__ = ["on", "off"]
@@ -781,8 +781,8 @@ class AdqDigitizerData(_AdqDigitizerChannelData):
     def __init__(self):
         super().__init__()
 
-        self.on = _AdqDigitizerChannelData()
-        self.off = _AdqDigitizerChannelData()
+        self.on = _DigitizerChannelData()
+        self.off = _DigitizerChannelData()
 
 
 class ProcessedData:
@@ -809,7 +809,7 @@ class ProcessedData:
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
             self.xgm = XgmData()
-            self.adq = AdqDigitizerData()
+            self.adq = DigitizerData()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',

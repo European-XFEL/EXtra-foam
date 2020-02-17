@@ -14,7 +14,7 @@ import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.processors import RoiProcessorTrain, RoiProcessorPulse
+from extra_foam.pipeline.processors import ImageRoiTrain, ImageRoiPulse
 from extra_foam.config import AnalysisType, Normalizer, RoiCombo, RoiFom
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 
@@ -28,10 +28,10 @@ _handlers = {
 }
 
 
-class TestRoiProcessorPulse(_BaseProcessorTest):
+class TestImageRoiPulse(_BaseProcessorTest):
     @pytest.fixture(autouse=True)
     def setUp(self):
-        proc = RoiProcessorPulse()
+        proc = ImageRoiPulse()
         proc._geom1 = [0, 1, 2, 3]
         proc._geom2 = [1, 0, 1, 3]
         proc._geom3 = [1, 2, 2, 3]
@@ -113,11 +113,11 @@ class TestRoiProcessorPulse(_BaseProcessorTest):
                 np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
 
 
-class TestRoiProcessorTrain(_BaseProcessorTest):
+class TestImageRoiTrain(_BaseProcessorTest):
 
     @pytest.fixture(autouse=True)
     def setUp(self):
-        proc = RoiProcessorTrain()
+        proc = ImageRoiTrain()
         proc._reset_roi_moving_average()
         proc._set_roi_moving_average_window(1)
 
@@ -132,7 +132,7 @@ class TestRoiProcessorTrain(_BaseProcessorTest):
     def _get_data(self):
         shape = (20, 20)
         data, processed = self.data_with_assembled(1001, shape)
-        proc = RoiProcessorPulse()
+        proc = ImageRoiPulse()
         proc._geom1 = [0, 1, 2, 3]
         proc._geom2 = [1, 0, 2, 3]
         proc._geom3 = [1, 2, 2, 3]

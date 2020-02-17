@@ -4,9 +4,9 @@ SOURCE:
     CATEGORY:
         AGIPD:
             PIPELINE:
-                SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED:
+                MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED:
                     - image.data
-                SPB_DET_AGIPD1M-1/DET/*CH0:xtdf:
+                MID_DET_AGIPD1M-1/DET/*CH0:xtdf:
                     - image.data
 
 DETECTOR:

@@ -33,7 +33,7 @@ class _RoiProcessorBase:
     }
 
 
-class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
+class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
     """Pulse-resolved ROI processor.
 
     Attributes:
@@ -191,7 +191,7 @@ class RoiProcessorPulse(_BaseProcessor, _RoiProcessorBase):
         # TODO: normalize
 
 
-class RoiProcessorTrain(_BaseProcessor, _RoiProcessorBase):
+class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
     """Train-resolved ROI processor.
 
     Attributes:

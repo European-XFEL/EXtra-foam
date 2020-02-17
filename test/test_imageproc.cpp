@@ -14,7 +14,7 @@
 
 #include "xtensor/xtensor.hpp"
 
-#include "image_proc.hpp"
+#include "f_imageproc.hpp"
 
 namespace foam
 {

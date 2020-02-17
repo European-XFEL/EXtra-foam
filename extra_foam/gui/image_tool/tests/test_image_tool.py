@@ -106,7 +106,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
-        proc = self.pulse_worker._roi_proc
+        proc = self.pulse_worker._image_roi
         self.assertEqual(4, len(roi_ctrls))
 
         proc.update()
@@ -510,7 +510,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -534,7 +534,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -555,7 +555,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         avail_norms = {value: key for key, value in widget._available_norms.items()}
         avail_combos = {value: key for key, value in widget._available_combos.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -579,24 +579,40 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         self.assertEqual((30, 40), proc._proj_auc_range)
 
     def testGeometryCtrlWidget(self):
-        from karabo_data.geometry2 import LPD_1MGeometry
+        from extra_geom import LPD_1MGeometry as LPD_1MGeometry
+        from extra_foam.geometries import LPD_1MGeometryFast
+        from extra_foam.config import GeomAssembler
 
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
 
-        pulse_worker = self.pulse_worker
+        proc = self.pulse_worker._assembler
 
-        widget._geom_file_le.setText(config["GEOMETRY_FILE"])
+        # test default
         self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
+        proc.update()
+        self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
+        self.assertFalse(proc._stack_only)
+        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
 
-        widget._with_geometry_cb.setChecked(False)
-        self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsNone(pulse_worker._assembler._geom)
+        # test assembler
+        avail_assemblers = {value: key for key, value in widget._assemblers.items()}
+        widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
+        proc.update()
+        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
+
+        # test stack only
+        widget._stack_only_cb.setChecked(True)
+        proc.update()
+        self.assertTrue(proc._stack_only)
+        # when "stack only" is checked, "assembler type" setup will be ignored
+        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
+
+        # test geometry file
+        widget._geom_file_le.setText("/geometry/file/")
+        self.assertFalse(widget.updateMetaData())
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
