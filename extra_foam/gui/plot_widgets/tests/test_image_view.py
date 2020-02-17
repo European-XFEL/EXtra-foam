@@ -22,13 +22,13 @@ logger.setLevel("CRITICAL")
 class TestImageView(unittest.TestCase):
     def testGeneral(self):
         widget = ImageViewF()
-        plot_items = widget._plot_widget.plotItem.items
+        plot_items = widget._plot_widget._plot_item.items
         self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
         for i in range(1, 5):
             self.assertIsInstance(plot_items[i], RectROI)
 
         widget = ImageViewF(has_roi=False)
-        self.assertEqual(1, len(widget._plot_widget.plotItem.items))
+        self.assertEqual(1, len(widget._plot_widget._plot_item.items))
 
         with self.assertRaises(TypeError):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
@@ -80,7 +80,7 @@ class TestImageAnalysis(unittest.TestCase):
 
     def testGeneral(self):
         widget = ImageAnalysis()
-        plot_items = widget._plot_widget.plotItem.items
+        plot_items = widget._plot_widget._plot_item.items
         self.assertIsInstance(plot_items[0], ImageItem)
         self.assertIsInstance(plot_items[1], MaskItem)
         for i in range(2, 6):

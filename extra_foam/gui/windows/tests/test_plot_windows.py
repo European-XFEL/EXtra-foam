@@ -62,13 +62,13 @@ class TestPlotWindows(unittest.TestCase):
 
         win = BinningWindow(deque(maxlen=1), pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(5, len(win._plot_widgets))
+        self.assertEqual(4, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[Bin1dHeatmap])
-        self.assertEqual(2, counter[Bin1dHist])
+        self.assertEqual(1, counter[Bin1dHist])
         self.assertEqual(2, counter[Bin2dHeatmap])
 
         win.updateWidgetsF()

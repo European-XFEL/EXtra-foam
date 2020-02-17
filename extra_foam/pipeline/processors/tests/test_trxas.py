@@ -33,20 +33,6 @@ class TestTrXasProcessor(_BaseProcessorTest):
         proc.process(data)
         proc._get_data_point.assert_not_called()
 
-    @patch('extra_foam.ipc.ProcessLogger.error')
-    def testProcess(self, error):
-        proc = self._proc
-        data, processed = self.simple_data(1001, (4, 2, 2))
-
-        proc._meta.has_analysis = MagicMock(return_value=True)
-        proc._n_delay_bins = 10
-        proc._delay_range = [-1, 1]
-        proc._n_energy_bins = 10
-        proc._energy_range = [-1, 1]
-        proc.process(data)
-
-        # TODO: add more
-
     def test1dBinning(self):
         proc = self._proc
 
@@ -114,3 +100,25 @@ class TestTrXasProcessor(_BaseProcessorTest):
         assert [[3, 0], [0, 2], [0, 1], [0, 0]] == proc._a21_heatcount.tolist()
 
         # TODO: test moving average calculation
+
+    @patch('extra_foam.ipc.ProcessLogger.error')
+    def testProcess(self, error):
+        proc = self._proc
+        data, processed = self.simple_data(1001, (4, 2, 2))
+
+        proc._meta.has_analysis = MagicMock(return_value=True)
+        proc._n_delay_bins = 4
+        proc._delay_range = [-1, 1]
+        proc._n_energy_bins = 2
+        proc._energy_range = [-1, 1]
+        n = 10
+        proc._delays.extend(np.random.randn(n))
+        proc._energies.extend(np.random.randn(n))
+        proc._a13.extend(np.random.randn(n))
+        proc._a23.extend(np.random.randn(n))
+        proc._a21.extend(np.random.randn(n))
+        proc.process(data)
+
+        xas = processed.trxas
+        np.testing.assert_array_almost_equal([-.75, -0.25, 0.25, .75], xas.delay_bin_centers)
+        np.testing.assert_array_almost_equal([-.5, .5], xas.energy_bin_centers)

@@ -17,7 +17,7 @@ from .. import pyqtgraph as pg
 
 from .plot_widget_base import PlotWidgetF
 from .plot_items import RectROI
-from ..misc_widgets import colorMapFactory, make_pen
+from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
 from ...config import config
@@ -121,7 +121,7 @@ class ImageViewF(QWidget):
             roi = RectROI(i,
                           pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
                           size=self.ROI_SIZE0,
-                          pen=make_pen(color, width=2, style=Qt.SolidLine))
+                          pen=FColor.mkPen(color, width=2, style=Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)
 
@@ -183,7 +183,7 @@ class ImageViewF(QWidget):
             self.setLevels(rgba=[self._image_levels])
 
         if auto_range:
-            self._plot_widget.plotItem.vb.autoRange()
+            self._plot_widget._plot_item.vb.autoRange()
 
     def clear(self):
         self._image = None
@@ -223,7 +223,7 @@ class ImageViewF(QWidget):
         self._plot_widget.setTitle(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
-        self._plot_widget.plotItem.invertY(*args, **kwargs)
+        self._plot_widget._plot_item.invertY(*args, **kwargs)
 
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)

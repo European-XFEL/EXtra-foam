@@ -176,12 +176,12 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
 
         # update processed
         xas = processed.trxas
-        xas.delay_bin_centers = self.edges2centers(self._delay_bin_edges)
+        xas.delay_bin_centers, _ = self.edges2centers(self._delay_bin_edges)
         xas.delay_bin_counts = self._delay_bin_counts
         xas.a13_stats = self._a13_stats
         xas.a23_stats = self._a23_stats
         xas.a21_stats = self._a21_stats
-        xas.energy_bin_centers = self.edges2centers(self._energy_bin_edges)
+        xas.energy_bin_centers, _ = self.edges2centers(self._energy_bin_edges)
         xas.a21_heat = self._a21_heat
         xas.a21_heatcount = self._a21_heatcount
 

@@ -14,7 +14,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QPoint, QRectF, Qt
 
 from .. import pyqtgraph as pg
 
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ...config import config, MaskState
 from ...ipc import ImageMaskPub
 
@@ -96,7 +96,7 @@ class MaskItem(pg.GraphicsObject):
         item.draw_finished_sgn.connect(self.onDrawFinished)
 
         # pen for drawing the bounding box
-        self._pen = make_pen(config['GUI_MASK_BOUNDING_BOX_COLOR'])
+        self._pen = FColor.mkPen(config['GUI_MASK_BOUNDING_BOX_COLOR'])
 
         self.state = MaskState.UNMASK
         self._mask_pub = ImageMaskPub()
@@ -265,7 +265,7 @@ class CurvePlotItem(pg.GraphicsObject):
         self._x = None
         self._y = None
 
-        self._pen = make_pen('g') if pen is None else pen
+        self._pen = FColor.mkPen('g') if pen is None else pen
 
         self.setData(x, y)
 
@@ -310,8 +310,8 @@ class CurvePlotItem(pg.GraphicsObject):
         return self._path.boundingRect()
 
 
-class BarPlotItem(pg.GraphicsObject):
-    """_BarPlotItem"""
+class BarGraphItem(pg.GraphicsObject):
+    """BarGraphItem"""
     def __init__(self, x=None, y=None, *, width=1.0, pen=None, brush=None):
         """Initialization."""
         super().__init__()
@@ -325,8 +325,12 @@ class BarPlotItem(pg.GraphicsObject):
             width = 1.0
         self._width = width
 
-        self._pen = make_pen('g') if pen is None else pen
-        self._brush = make_brush('b') if brush is None else brush
+        if pen is None and brush is None:
+            self._pen = FColor.mkPen(None)
+            self._brush = FColor.mkBrush('b')
+        else:
+            self._pen = FColor.mkPen(None) if pen is None else pen
+            self._brush = FColor.mkBrush(None) if brush is None else brush
 
         self.setData(x, y)
 
@@ -378,7 +382,7 @@ class StatisticsBarItem(pg.GraphicsObject):
     """StatisticsBarItem."""
 
     def __init__(self, x=None, y=None, *, y_min=None, y_max=None, beam=None,
-                 pen=None, line=False):
+                 line=False, pen=None):
         """Initialization.
 
         Note: y is not used for now.
@@ -393,17 +397,21 @@ class StatisticsBarItem(pg.GraphicsObject):
         self._y_max = None
 
         self._beam = 0.0 if beam is None else beam
-        self._pen = make_pen('b') if pen is None else pen
+        self._line = line
+        self._pen = FColor.mkPen('p') if pen is None else pen
 
         self.setData(x, y, y_min=y_min, y_max=y_max)
 
-    def setData(self, x, y, y_min=None, y_max=None):
+    def setData(self, x, y, y_min=None, y_max=None, beam=None):
         """PlotItem interface."""
         self._x = [] if x is None else x
         self._y = [] if y is None else y
 
         self._y_min = self._y if y_min is None else y_min
         self._y_max = self._y if y_max is None else y_max
+        if beam is not None:
+            # keep the default beam if not specified
+            self._beam = beam
 
         if len(self._x) != len(self._y):
             raise ValueError("'x' and 'y' data have different lengths!")
@@ -418,19 +426,24 @@ class StatisticsBarItem(pg.GraphicsObject):
     def preparePath(self):
         p = QPainterPath()
 
-        x = self._x
-        for i in range(len(x)):
+        beam = self._beam
+        for x, u, l in zip(self._x, self._y_min, self._y_max):
             # plot the lower horizontal lines
-            p.moveTo(x[i] - self._beam / 2., self._y_min[i])
-            p.lineTo(x[i] + self._beam / 2., self._y_min[i])
+            p.moveTo(x - beam / 2., l)
+            p.lineTo(x + beam / 2., l)
 
             # plot the vertical line
-            p.moveTo(x[i], self._y_min[i])
-            p.lineTo(x[i], self._y_max[i])
+            p.moveTo(x, l)
+            p.lineTo(x, u)
 
             # plot the upper horizontal line
-            p.moveTo(x[i] - self._beam / 2., self._y_max[i])
-            p.lineTo(x[i] + self._beam / 2., self._y_max[i])
+            p.moveTo(x - beam / 2., u)
+            p.lineTo(x + beam / 2., u)
+
+        if self._line and len(self._x) > 2:
+            p.moveTo(self._x[-1], self._y[-1])
+            for x, y in zip(reversed(self._x[:-1]), reversed(self._y[:-1])):
+                p.lineTo(x, y)
 
         self._path = p
         self.prepareGeometryChange()

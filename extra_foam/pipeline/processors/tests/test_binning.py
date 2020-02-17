@@ -259,6 +259,7 @@ class TestBinningProcessor(_BaseProcessorTest):
             vfom_heat_gt = np.zeros((len(vfom_gt), len(bin[0].centers)))
             vfom_heat_gt[:, 2] = vfom_gt
             np.testing.assert_array_equal(vfom_heat_gt, bin[0].heat)
+            assert 0.5 == bin[0].size
 
         proc = self._proc
         proc._new_2d_binning = MagicMock()

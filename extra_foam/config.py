@@ -254,6 +254,9 @@ class _Config(dict):
         # color map in contour plots, valid options are: thermal, flame,
         # yellowy, bipolar, spectrum, cyclic, greyclip, grey
         "GUI_COLOR_MAP": 'thermal',
+        # foreground/background color (r, g, b, alpha)
+        "GUI_FOREGROUND_COLOR": (0, 0, 0, 255),
+        "GUI_BACKGROUND_COLOR": (225, 225, 225, 255),
         # colors of for ROI bounding boxes 1 to 4
         "GUI_ROI_COLORS": ('b', 'r', 'g', 'o'),
         # colors for correlation plots 1 to 4
