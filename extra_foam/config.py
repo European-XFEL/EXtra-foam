@@ -429,6 +429,7 @@ class _Config(dict):
 
         # update data sources
         src_cfg = cfg.get("SOURCE", dict())
+        self["SOURCE_DEFAULT_TYPE"] = src_cfg["DEFAULT_TYPE"]
         for ctg, srcs in src_cfg.get("CATEGORY", dict()).items():
             # We assume the main detector type is exclusive, i.e., only one
             # of them will be needed.
