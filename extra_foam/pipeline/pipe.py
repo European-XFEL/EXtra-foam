@@ -12,8 +12,7 @@ import multiprocessing as mp
 from queue import Empty, Full
 import time
 
-from karabo_bridge import Client
-
+from .f_zmq import BridgeProxy
 from .f_queue import CorrelateQueue, SimpleQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
@@ -162,30 +161,29 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     continue
                 self._catalog.remove_item(src)
 
-    def _update_client(self):
+    def _update_connection(self, proxy):
         cons = self._meta.hget_all(mt.CONNECTION)
         endpoints = list(cons.keys())
         # cannot have different types for different endpoints
         src_type = DataSource(int(list(cons.values())[0]))
 
-        endpoint = endpoints[0]
-        client = Client(endpoint, timeout=config["BRIDGE_TIMEOUT"])
+        endpoint = endpoints
+        proxy.stop()
+        proxy.connect(endpoints)
         logger.debug(f"Instantiate a bridge client connected to "
                      f"{endpoint}")
-        return client, src_type
+        proxy.start()
+        return proxy, src_type
 
     @run_in_thread(daemon=True)
     def run(self):
         """Override."""
         data_in = None
         again = False
-        client = None
+        proxy = BridgeProxy()
         while not self.closing:
             if self.updating:
-                if client is not None:
-                    # destroy the zmq socket
-                    del client
-                client, src_type = self._update_client()
+                client, src_type = self._update_connection(proxy)
 
                 data_in = None
                 self.clear()
@@ -193,7 +191,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
             self._update_source_items()
 
-            if self.running and client is not None:
+            if self.running and proxy.client is not None:
                 if not self._catalog.main_detector:
                     # skip the pipeline if the main detector is not specified
                     logger.error(f"{config['DETECTOR']} source unspecified!")
@@ -203,7 +201,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                 if data_in is None:
                     try:
                         # always pull the latest data from the bridge
-                        raw, meta = self._recv_imp(client)
+                        raw, meta = self._recv_imp(proxy.client)
                         self._update_available_sources(meta)
 
                         # extract new raw and meta
