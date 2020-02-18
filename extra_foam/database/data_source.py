@@ -133,10 +133,6 @@ class DataTransformer:
         :param DataSource source_type: the format of the main detector
             source.
 
-        FIXME: I hate weak language and use dictionary without
-               encapsulation to store these read-only data. This is
-               the source of imperceptible bugs.
-
         :raises: this method should not raise!!!
         """
         new_raw, new_meta = dict(), dict()

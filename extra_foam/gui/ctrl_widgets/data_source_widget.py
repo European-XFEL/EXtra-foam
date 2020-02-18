@@ -618,6 +618,7 @@ class ConnectionTableModel(QAbstractTableModel):
 
     def connections(self):
         endpoints = []
+        src_types = set()
         cons = dict()
         for checked, _, src_type, addr, port in self._connections:
             if checked:
@@ -626,6 +627,10 @@ class ConnectionTableModel(QAbstractTableModel):
                 if endpoint in endpoints:
                     raise ValueError(f"Duplicated endpoint: {endpoint}")
                 endpoints.append(endpoint)
+                src_types.add(src_type)
+                if len(src_types) > 1:
+                    raise ValueError(f"All endpoints must have the same "
+                                     f"source type!")
                 cons[endpoint] = src_type
         return cons
 

@@ -445,8 +445,6 @@ class TestMainGuiCtrl(unittest.TestCase):
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.onStop', Mock())
     @patch('extra_foam.gui.ctrl_widgets.HistogramCtrlWidget.onStop', Mock())
     @patch('extra_foam.gui.ctrl_widgets.AzimuthalIntegCtrlWidget.onStop', Mock())
-    @patch('extra_foam.pipeline.TrainWorker.resume', Mock())
-    @patch('extra_foam.pipeline.TrainWorker.pause', Mock())
     def testStartStop(self):
         start_spy = QSignalSpy(self.gui.start_sgn)
         stop_spy = QSignalSpy(self.gui.stop_sgn)
@@ -483,6 +481,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertFalse(source_ctrl_widget._con_view.isEnabled())
         self.assertFalse(geometry_ctrl_widget.isEnabled())
 
+        self.assertTrue(self.train_worker.running)
+        self.assertTrue(self.pulse_worker.running)
+
         # -------------------------------------------------------------
         # test when the stop action button is clicked
         # -------------------------------------------------------------
@@ -499,6 +500,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertFalse(stop_action.isEnabled())
         self.assertTrue(source_ctrl_widget._con_view.isEnabled())
         self.assertTrue(geometry_ctrl_widget.isEnabled())
+
+        self.assertFalse(self.train_worker.running)
+        self.assertFalse(self.pulse_worker.running)
 
     def testTrXasCtrl(self):
         from extra_foam.gui.ctrl_widgets.trxas_ctrl_widget import (

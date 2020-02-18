@@ -80,16 +80,6 @@ class TestAgipdAssembler(unittest.TestCase, _BaseProcessorTest):
         # Note: this test does not need to repeat for each detector
         key_name = 'image.data'
 
-        # test detector sources not found
-        data = {
-            'catalog': SourceCatalog(),
-            'meta': {},
-            'raw': {},
-        }
-
-        with self.assertRaisesRegex(AssemblingError, "AGIPD source"):
-            self._assembler.process(data)
-
         # test required fields in metadata
 
         src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/DET/*CH0:xtdf', key_name)

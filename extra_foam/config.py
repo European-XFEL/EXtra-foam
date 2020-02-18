@@ -198,8 +198,10 @@ class _Config(dict):
         # maximum length of the queue in data pipeline (the smaller the queue
         # size, the smaller the latency)
         "PIPELINE_MAX_QUEUE_SIZE": 2,
-        # blocking time in get/put method of Queue, in second
-        "PIPELINE_TIMEOUT": 0.1,
+        # timeout of the zmq bridge, in second
+        "BRIDGE_TIMEOUT": 0.1,
+        # maximum length of the cache used in data correlation by train ID
+        "CORRELATION_QUEUE_CACHE_SIZE": 20,
         # -------------------------------------------------------------
         # Source of data
         # -------------------------------------------------------------

@@ -350,10 +350,7 @@ class ImageAssemblerFactory(ABC):
             catalog = data["catalog"]
 
             src = catalog.main_detector
-            if not src:
-                raise AssemblingError(f"{config['DETECTOR']} source not found!")
             src_type = meta[src]['source_type']
-
             try:
                 if src_type == DataSource.FILE:
                     modules_data = self._get_modules_file(raw, src)
