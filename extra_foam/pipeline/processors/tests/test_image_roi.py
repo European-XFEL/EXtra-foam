@@ -289,8 +289,8 @@ class TestImageRoiTrain(_BaseProcessorTest):
             proc._norm_type = norm_type
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            assert fom_handler(processed.pp.image_on[s[0], s[1]]) == processed.pp.roi_norm_on
-            assert fom_handler(processed.pp.image_off[s[0], s[1]]) == processed.pp.roi_norm_off
+            assert fom_handler(processed.pp.image_on[s[0], s[1]]) == processed.pp.on.roi_norm
+            assert fom_handler(processed.pp.image_off[s[0], s[1]]) == processed.pp.off.roi_norm
 
         for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
             data, processed = self._get_data()
@@ -310,8 +310,8 @@ class TestImageRoiTrain(_BaseProcessorTest):
             else:
                 fom_on_gt = fom3_on_gt + fom4_on_gt
                 fom_off_gt = fom3_off_gt + fom4_off_gt
-            assert fom_on_gt == processed.pp.roi_norm_on
-            assert fom_off_gt == processed.pp.roi_norm_off
+            assert fom_on_gt == processed.pp.on.roi_norm
+            assert fom_off_gt == processed.pp.off.roi_norm
 
     @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _handlers.items()])
     def testRoiFomPumpProbe(self, fom_type, fom_handler):

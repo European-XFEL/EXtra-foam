@@ -3,7 +3,7 @@ Distributed under the terms of the BSD 3-Clause License.
 
 The full license is in the file LICENSE, distributed with this software.
 
-Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
+Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
@@ -51,14 +51,14 @@ class DigitizerProcessor(_BaseProcessor):
         self._update_moving_average(cfg)
 
     def _update_moving_average(self, cfg):
-        if 'reset_ma_adq' in cfg:
+        if 'reset_ma_digitizer' in cfg:
             # reset moving average
             del self._pulse_integral_a_ma
             del self._pulse_integral_b_ma
             del self._pulse_integral_c_ma
             del self._pulse_integral_d_ma
 
-            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_adq')
+            self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_digitizer')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
@@ -88,13 +88,16 @@ class DigitizerProcessor(_BaseProcessor):
                 self.__class__.__dict__[attr_name].__set__(self, np.array(
                     arr[catalog.get_slicer(src)], dtype=np.float32))
 
-                processed.pulse.adq[channel].pulse_integral = \
+                processed.pulse.digitizer[channel].pulse_integral = \
                     self.__class__.__dict__[attr_name].__get__(
                         self, self.__class__)
 
                 # apply pulse filter
                 self.filter_pulse_by_vrange(
                     self._pulse_integral_a_ma, src, processed.pidx, catalog)
+
+                # It is allowed to select only one digitizer channel
+                processed.pulse.digitizer.ch_normalizer = channel
             else:
                 raise UnknownParameterError(
                     f'[Digitizer] Unknown property: {ppt}')

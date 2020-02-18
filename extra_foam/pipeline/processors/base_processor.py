@@ -14,7 +14,9 @@ import math
 
 import numpy as np
 
-from ..exceptions import ProcessingError, SkipTrainError
+from ..exceptions import (
+    ProcessingError, SkipTrainError, UnknownParameterError
+)
 from ...database import MetaProxy
 from ...algorithms import normalize_auc
 from ...config import AnalysisType, Normalizer
@@ -159,7 +161,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         :return: True if the analysis type has changed and False for not.
         """
         if not isinstance(analysis_type, AnalysisType):
-            raise ProcessingError(
+            raise UnknownParameterError(
                 f"Unknown analysis type: {str(analysis_type)}")
 
         if analysis_type != self.analysis_type:
@@ -223,6 +225,18 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 raise ProcessingError("XGM normalizer is zero!")
 
             normalized = y / denominator
+        elif normalizer == Normalizer.DIGITIZER:
+            # normalized by DIGITIZER
+            channel = processed.pulse.digitizer.ch_normalizer
+            pulse_integral = processed.pulse.digitizer[channel].pulse_integral
+            if pulse_integral is None:
+                raise ProcessingError("Digitizer normalizer is not available!")
+            denominator = np.mean(pulse_integral)
+
+            if denominator == 0:
+                raise ProcessingError("Digitizer normalizer is zero!")
+
+            normalized = y / denominator
         elif normalizer == Normalizer.ROI:
             # normalized by ROI
             denominator = processed.roi.norm
@@ -236,7 +250,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized = y / denominator
 
         else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            raise UnknownParameterError(
+                f"Unknown normalizer: {repr(normalizer)}")
 
         return normalized
 
@@ -256,13 +271,14 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             return y_on, y_off
 
         if normalizer == Normalizer.AUC:
-            # normalized by area under curve (AUC)
+            # normalized by AUC
             normalized_on = normalize_auc(y_on, x, auc_range)
             normalized_off = normalize_auc(y_off, x, auc_range)
+
         elif normalizer == Normalizer.XGM:
             # normalized by XGM
-            denominator_on = processed.xgm.on.intensity
-            denominator_off = processed.xgm.off.intensity
+            denominator_on = processed.pp.on.xgm_intensity
+            denominator_off = processed.pp.off.xgm_intensity
 
             if denominator_on is None or denominator_off is None:
                 raise ProcessingError("XGM normalizer is not available!")
@@ -276,10 +292,27 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized_on = y_on / denominator_on
             normalized_off = y_off / denominator_off
 
+        elif normalizer == Normalizer.DIGITIZER:
+            # normalized by Digitizer
+            denominator_on = processed.pp.on.digitizer_pulse_integral
+            denominator_off = processed.pp.off.digitizer_pulse_integral
+
+            if denominator_on is None or denominator_off is None:
+                raise ProcessingError("Digitizer normalizer is not available!")
+
+            if denominator_on == 0:
+                raise ProcessingError("Digitizer normalizer (on) is zero!")
+
+            if denominator_off == 0:
+                raise ProcessingError("Digitizer normalizer (off) is zero!")
+
+            normalized_on = y_on / denominator_on
+            normalized_off = y_off / denominator_off
+
         elif normalizer == Normalizer.ROI:
             # normalized by ROI
-            denominator_on = processed.pp.roi_norm_on
-            denominator_off = processed.pp.roi_norm_off
+            denominator_on = processed.pp.on.roi_norm
+            denominator_off = processed.pp.off.roi_norm
 
             if denominator_on is None:
                 raise ProcessingError("ROI normalizer (on) is not available!")
@@ -297,7 +330,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized_off = y_off / denominator_off
 
         else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            raise UnknownParameterError(
+                f"Unknown normalizer: {repr(normalizer)}")
 
         return normalized_on, normalized_off
 

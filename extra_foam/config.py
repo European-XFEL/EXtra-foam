@@ -131,7 +131,8 @@ class Normalizer(IntEnum):
     UNDEFINED = 0
     AUC = 1  # area under curve
     XGM = 2
-    ROI = 3
+    DIGITIZER = 3
+    ROI = 4
 
 
 # a simple class saves the trouble when the attribute needs to be read/write

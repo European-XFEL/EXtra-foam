@@ -13,6 +13,7 @@ from collections import OrderedDict
 from PyQt5.QtWidgets import QFrame, QGroupBox
 
 from ..mediator import Mediator
+from ...config import Normalizer
 
 
 class _AbstractCtrlWidgetMixin:
@@ -45,6 +46,15 @@ class _AbstractCtrlWidgetMixin:
 
 
 class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
+
+    _available_norms = OrderedDict({
+        "": Normalizer.UNDEFINED,
+        "AUC": Normalizer.AUC,
+        "XGM": Normalizer.XGM,
+        "DIGITIZER": Normalizer.DIGITIZER,
+        "ROI": Normalizer.ROI,
+    })
+
     def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 

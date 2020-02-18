@@ -71,29 +71,25 @@ class TestMainGuiCtrl(unittest.TestCase):
         pulse_worker = self.pulse_worker
 
         xgm_proc = pulse_worker._xgm_proc
-        ai_proc = train_worker._ai_proc
+        digitizer_proc = pulse_worker._digitizer_proc
         roi_proc = train_worker._image_roi
+        ai_proc = train_worker._ai_proc
 
-        # test "Moving average window"
-        widget._ma_window_le.setText("5")
-        xgm_proc.update()
-        self.assertEqual(5, xgm_proc.__class__._pulse_intensity_ma.window)
-        self.assertEqual(5, xgm_proc.__class__._intensity_ma.window)
-        self.assertEqual(5, xgm_proc.__class__._x_ma.window)
-        self.assertEqual(5, xgm_proc.__class__._y_ma.window)
-
+        meta = xgm_proc._meta  # any meta is OK
         # test "Reset moving average" button
         widget._reset_ma_btn.clicked.emit()
-        self.assertEqual('1', xgm_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
-        self.assertEqual('1', ai_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
-        self.assertEqual('1', roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
-
-        xgm_proc.update()
-        self.assertIsNone(xgm_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
-        ai_proc.update()
-        self.assertIsNone(ai_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        self.assertEqual('1', meta.hget(mt.GLOBAL_PROC, 'reset_ma_digitizer'))
         roi_proc.update()
-        self.assertIsNone(roi_proc._meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_roi'))
+        ai_proc.update()
+        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_ai'))
+        xgm_proc.update()
+        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_xgm'))
+        digitizer_proc.update()
+        self.assertIsNone(meta.hget(mt.GLOBAL_PROC, 'reset_ma_digitizer'))
 
         # ----------------
         # Test POI indices
