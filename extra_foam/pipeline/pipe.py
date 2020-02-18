@@ -202,6 +202,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                     try:
                         # always pull the latest data from the bridge
                         raw, meta = self._recv_imp(proxy.client)
+
                         self._update_available_sources(meta)
 
                         # extract new raw and meta
