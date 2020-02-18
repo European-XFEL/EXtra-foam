@@ -8,14 +8,14 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import multiprocessing as mp
-from threading import Condition
+from threading import Event
 from queue import Empty, Full
 import sys
 import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from .pipe import KaraboBridge, MpInQueue, MpOutQueue, _ProcessControlMixin
+from .pipe import KaraboBridge, MpInQueue, MpOutQueue
 from .processors import (
     DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
@@ -38,7 +38,7 @@ from ..ipc import process_logger as logger
 from ..processes import register_foam_process
 
 
-class ProcessWorker(mp.Process, _ProcessControlMixin):
+class ProcessWorker(mp.Process):
     """Base worker class for heavy online data analysis."""
 
     _db = RedisConnection()
@@ -56,8 +56,8 @@ class ProcessWorker(mp.Process, _ProcessControlMixin):
 
         self._pause_ev = pause_ev
         self._close_ev = close_ev
-
-        self._timeout = config["PIPELINE_TIMEOUT"]
+        self._input_update_ev = Event()
+        self._output_update_ev = Event()
 
         # the time when the previous data processing was finished
         self._prev_processed_time = None
@@ -83,40 +83,31 @@ class ProcessWorker(mp.Process, _ProcessControlMixin):
         while not self.closing:
             if not self.running:
                 self.wait()
+                self.notify_update()
 
             try:
-                self._process_input_output()
-            except Exception as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                logger.debug(repr(traceback.format_tb(exc_traceback)) +
-                             repr(e))
-                logger.error(repr(e))
+                # get the data from pipe-in
+                data = self._input.get()
+            except Empty:
+                time.sleep(0.001)
+                continue
 
-    def _process_input_output(self):
-        timeout = self._timeout
+            try:
+                self._run_tasks(data)
+            except StopPipelineError:
+                self._prev_processed_time = time.time()
+                continue
 
-        try:
-            # get the data from pipe-in
-            data = self._input.get(timeout=timeout)
-        except Empty:
-            return
-
-        try:
-            self._run_tasks(data)
-        except StopPipelineError:
+            if self._prev_processed_time is not None:
+                fps = 1.0 / (time.time() - self._prev_processed_time)
+                logger.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
             self._prev_processed_time = time.time()
-            return
 
-        if self._prev_processed_time is not None:
-            fps = 1.0 / (time.time() - self._prev_processed_time)
-            logger.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
-        self._prev_processed_time = time.time()
-
-        try:
-            # always keep the latest data in the queue
-            self._output.put_pop(data, timeout=timeout)
-        except Empty:
-            return
+            try:
+                # always keep the latest data in the queue
+                self._output.put_pop(data)
+            except Empty:
+                pass
 
     def _run_tasks(self, data):
         """Run all tasks for once:
@@ -144,6 +135,21 @@ class ProcessWorker(mp.Process, _ProcessControlMixin):
                              repr(e))
                 logger.error(repr(e))
 
+    @property
+    def closing(self):
+        return self._close_ev.is_set()
+
+    @property
+    def running(self):
+        return self._pause_ev.is_set()
+
+    def wait(self):
+        self._pause_ev.wait()
+
+    def notify_update(self):
+        self._input_update_ev.set()
+        self._output_update_ev.set()
+
 
 class PulseWorker(ProcessWorker):
     """Pipeline worker for pulse-resolved data."""
@@ -151,8 +157,8 @@ class PulseWorker(ProcessWorker):
         """Initialization."""
         super().__init__('pulse worker', pause_ev, close_ev)
 
-        self._input = KaraboBridge(pause_ev, close_ev)
-        self._output = MpOutQueue(pause_ev, close_ev)
+        self._input = KaraboBridge(self._input_update_ev, pause_ev, close_ev)
+        self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev)
 
         self._broker = Broker()
         self._ctrl_data_proc = CtrlDataProcessor()
@@ -185,8 +191,9 @@ class TrainWorker(ProcessWorker):
         """Initialization."""
         super().__init__('train worker', pause_ev, close_ev)
 
-        self._input = MpInQueue(pause_ev, close_ev)
-        self._output = MpOutQueue(pause_ev, close_ev, final=True)
+        self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
+        self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev,
+                                  final=True)
 
         self._image_roi = ImageRoiTrain()
         self._ai_proc = AzimuthalIntegProcessorTrain()

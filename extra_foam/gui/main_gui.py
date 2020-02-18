@@ -17,6 +17,7 @@ from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
 import itertools
+from threading import Event
 
 from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
@@ -102,12 +103,13 @@ class MainGUI(QMainWindow):
         """Initialization."""
         super().__init__()
 
-        self._pulse_resolved = config["PULSE_RESOLVED"]
-        self._queue = deque(maxlen=1)
-
         self._pause_ev = pause_ev
         self._close_ev = close_ev
-        self._input = MpInQueue(pause_ev, close_ev)
+        self._input_update_ev = Event()
+        self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
+
+        self._pulse_resolved = config["PULSE_RESOLVED"]
+        self._queue = deque(maxlen=1)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -376,7 +378,7 @@ class MainGUI(QMainWindow):
             return
 
         try:
-            processed = self._input.get_nowait()
+            processed = self._input.get()
             self._queue.append(processed)
         except Empty:
             return
@@ -516,6 +518,7 @@ class MainGUI(QMainWindow):
         self._image_tool.onStart()
 
         self._running = True  # starting to update plots
+        self._input_update_ev.set()  # notify update
 
     def onStop(self):
         """Actions taken before the end of a 'run'."""

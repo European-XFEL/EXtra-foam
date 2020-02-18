@@ -97,7 +97,7 @@ class TestDataSourceWidget(unittest.TestCase):
 
         streamers.return_value = [
             StreamerEndpointItem("s1", 1, "127.0.0.1", 12345),
-            StreamerEndpointItem("s2", 0, "127.0.0.2", 12346),
+            StreamerEndpointItem("s2", 1, "127.0.0.2", 12346),
         ]
         widget = DataSourceWidget(parent=self._dummy)
         view = widget._con_view
@@ -105,7 +105,7 @@ class TestDataSourceWidget(unittest.TestCase):
 
         self.assertEqual([False, 's1', model._getSourceTypeString(1), '127.0.0.1', '12345'],
                          model._connections[1])
-        self.assertEqual([False, 's2', model._getSourceTypeString(0), '127.0.0.2', '12346'],
+        self.assertEqual([False, 's2', model._getSourceTypeString(1), '127.0.0.2', '12346'],
                          model._connections[2])
 
         # TODO: test with QtTest
@@ -118,13 +118,20 @@ class TestDataSourceWidget(unittest.TestCase):
         with patch("extra_foam.gui.ctrl_widgets.data_source_widget.logger.error") as mocked_error:
             self.assertFalse(widget.updateMetaData())
             mocked_error.assert_called_once()
+        model._connections[2] = con2_backup
+
+        # Test different source types
+        model._connections[2][2] = model._getSourceTypeString(0)
+        with patch("extra_foam.gui.ctrl_widgets.data_source_widget.logger.error") as mocked_error:
+            self.assertFalse(widget.updateMetaData())
+            mocked_error.assert_called_once()
 
         # Test the connections are set in Redis
-        model._connections[2] = con2_backup
+        model._connections[2][2] = model._getSourceTypeString(1)
         self.assertTrue(widget.updateMetaData())
         cons = MetaProxy().hget_all(Metadata.CONNECTION)
         for addr, tp in zip(['tcp://127.0.0.1:45454', 'tcp://127.0.0.1:12345', 'tcp://127.0.0.2:12346'],
-                            ['1', '1', '0']):
+                            ['1', '1', '1']):
             self.assertIn(addr, cons)
             self.assertEqual(tp, cons[addr])
 

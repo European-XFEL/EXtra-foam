@@ -40,6 +40,8 @@ class Stack:
 
 class OrderedSet(MutableSet):
     def __init__(self, sequence=None):
+        super().__init__()
+
         if sequence is None:
             self._data = OrderedDict()
         else:
