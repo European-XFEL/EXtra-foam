@@ -312,7 +312,8 @@ class RoiData(DataItem):
 
     N_ROIS = len(config['GUI_ROI_COLORS'])
 
-    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj']
+    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj',
+                 'hist']
 
     def __init__(self):
         super().__init__()
@@ -326,6 +327,8 @@ class RoiData(DataItem):
 
         # ROI projection
         self.proj = DataItem()
+
+        self.hist = HistogramDataPulse()
 
 
 class PumpProbeData(DataItem):
@@ -483,6 +486,8 @@ class ImageData:
                                  "'sliced_indices'!")
             instance.sliced_indices = [0]  # be consistent
 
+        if poi_indices is None:
+            poi_indices = [0, 0]
         instance.poi_indices = poi_indices
 
         instance.masked_mean = instance.mean.copy()
@@ -596,13 +601,22 @@ class CorrelationData(collections.abc.Mapping):
         return self._pp
 
 
+_StatisticsItem = namedtuple('_StatisticsItem',
+                             ['mean', 'median', 'std'], defaults=(None,) * 3)
+
+
 class HistogramDataItem:
 
-    __slots__ = ['hist', 'bin_centers']
+    __slots__ = ['hist', 'bin_centers', 'stats']
 
-    def __init__(self, hist=None, bin_centers=None):
+    def __init__(self, hist=None, bin_centers=None, *args, **kwargs):
         self.hist = hist
         self.bin_centers = bin_centers
+
+        if kwargs:
+            self.stats = _StatisticsItem(**kwargs)
+        else:
+            self.stats = _StatisticsItem(*args)
 
 
 class HistogramDataPulse(collections.abc.MutableMapping):
@@ -629,12 +643,7 @@ class HistogramDataPulse(collections.abc.MutableMapping):
         if not isinstance(key, int) or key < 0 or key >= max_k:
             raise KeyError("key must be an integer within [0, {max_k})!")
 
-        try:
-            hist, bin_centers = v
-        except (TypeError, ValueError) as e:
-            raise e
-
-        self._data[key] = HistogramDataItem(hist, bin_centers)
+        self._data[key] = HistogramDataItem(*v)
 
     def __delitem__(self, key):
         """Overload."""

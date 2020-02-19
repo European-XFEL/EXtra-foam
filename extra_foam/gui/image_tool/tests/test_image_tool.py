@@ -78,7 +78,7 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         self.view._image = None
 
     def testGeneral(self):
-        self.assertEqual(9, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(10, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 
@@ -528,6 +528,28 @@ class TestImageTool(unittest.TestCase, _BaseProcessorTest):
         self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._fom_combo)
         self.assertEqual(RoiFom.MEDIAN, proc._fom_type)
         self.assertEqual(Normalizer.ROI, proc._fom_norm)
+
+    def testRoiHistCtrl(self):
+        widget = self.image_tool._corrected_view._roi_hist_ctrl_widget
+        avail_combos = {value: key for key, value in widget._available_combos.items()}
+
+        proc = self.pulse_worker._image_roi
+        proc.update()
+
+        # test default reconfigurable values
+        self.assertEqual(RoiCombo.UNDEFINED, proc._hist_combo)
+        self.assertEqual(10, proc._hist_n_bins)
+        self.assertTupleEqual((0.001, math.inf), proc._hist_bin_range)
+
+        # test setting new values
+        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
+        widget._n_bins_le.setText("100")
+        widget._bin_range_le.setText("-1.0, 10.0")
+        proc.update()
+
+        self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._hist_combo)
+        self.assertEqual(100, proc._hist_n_bins)
+        self.assertEqual((-1.0, 10.0), proc._hist_bin_range)
 
     def testRoiNormCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_norm_ctrl_widget

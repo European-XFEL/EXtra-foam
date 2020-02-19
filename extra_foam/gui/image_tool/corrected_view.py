@@ -17,7 +17,7 @@ from .base_view import _AbstractImageToolView
 from ..plot_widgets import ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
     RoiProjCtrlWidget, RoiCtrlWidget, RoiFomCtrlWidget,
-    RoiNormCtrlWidget,
+    RoiNormCtrlWidget, RoiHistCtrlWidget
 )
 from ..misc_widgets import FColor
 from ...config import AnalysisType, plot_labels
@@ -90,6 +90,8 @@ class CorrectedView(_AbstractImageToolView):
             RoiCtrlWidget, self._corrected.rois)
         self._roi_fom_ctrl_widget = self.parent().createCtrlWidget(
             RoiFomCtrlWidget)
+        self._roi_hist_ctrl_widget = self.parent().createCtrlWidget(
+            RoiHistCtrlWidget)
         self._roi_norm_ctrl_widget = self.parent().createCtrlWidget(
             RoiNormCtrlWidget)
         self._roi_proj_ctrl_widget = self.parent().createCtrlWidget(
@@ -101,10 +103,12 @@ class CorrectedView(_AbstractImageToolView):
     def initUI(self):
         """Override."""
         ctrl_layout = QHBoxLayout()
+        AT = Qt.AlignTop
         ctrl_layout.addWidget(self._roi_ctrl_widget)
-        ctrl_layout.addWidget(self._roi_fom_ctrl_widget, alignment=Qt.AlignTop)
-        ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=Qt.AlignTop)
-        ctrl_layout.addWidget(self._roi_proj_ctrl_widget)
+        ctrl_layout.addWidget(self._roi_fom_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
 
         subview_splitter = QSplitter(Qt.Vertical)
         subview_splitter.setHandleWidth(9)

@@ -60,20 +60,22 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         row = 0
         layout.addWidget(QLabel("Combo: "), row, 0, AR)
         layout.addWidget(self._combo_cb, row, 1)
-        layout.addWidget(QLabel("Direction: "), row, 2, AR)
-        layout.addWidget(self._direct_cb, row, 3)
+
+        row += 1
+        layout.addWidget(QLabel("Direction: "), row, 0, AR)
+        layout.addWidget(self._direct_cb, row, 1)
 
         row += 1
         layout.addWidget(QLabel("Norm: "), row, 0, AR)
-        layout.addWidget(self._norm_cb, row, 1, 1, 3)
+        layout.addWidget(self._norm_cb, row, 1)
 
         row += 1
         layout.addWidget(QLabel("AUC range: "), row, 0, AR)
-        layout.addWidget(self._auc_range_le, row, 1, 1, 3)
+        layout.addWidget(self._auc_range_le, row, 1)
 
         row += 1
         layout.addWidget(QLabel("FOM range: "), row, 0, AR)
-        layout.addWidget(self._fom_integ_range_le, row, 1, 1, 3)
+        layout.addWidget(self._fom_integ_range_le, row, 1)
 
         self.setLayout(layout)
 

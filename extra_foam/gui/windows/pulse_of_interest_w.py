@@ -7,11 +7,14 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from string import Template
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import ImageViewF, TimedPlotWidgetF
+from ..misc_widgets import FColor
+from ..plot_widgets import ImageViewF, PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
 
@@ -45,8 +48,8 @@ class PoiImageView(ImageViewF):
         self.setTitle(f"Pulse-of-interest {idx}")
 
 
-class PoiHist(TimedPlotWidgetF):
-    """PoiHist class.
+class PoiFomHist(TimedPlotWidgetF):
+    """PoiFomHist class.
 
     A widget which monitors the histogram of the FOM of the POI pulse.
     """
@@ -55,7 +58,7 @@ class PoiHist(TimedPlotWidgetF):
         super().__init__(parent=parent)
 
         self._index = idx
-        self._plot = self.plotBar()
+        self._plot = self.plotBar(brush=FColor.mkBrush('p'))
 
         self.setTitle("FOM Histogram")
         self.setLabel('left', 'Counts')
@@ -75,6 +78,46 @@ class PoiHist(TimedPlotWidgetF):
         self._index = idx
 
 
+class PoiRoiHist(PlotWidgetF):
+    """PoiRoiHist class.
+
+    A widget which monitors the pixel-wised histogram of the ROI of
+    the POI pulse.
+    """
+    def __init__(self, idx, *, parent=None):
+        """Initialization."""
+        super().__init__(parent=parent)
+
+        self._index = idx
+        self._plot = self.plotBar()
+
+        self._title_template = Template(
+            f"ROI Histogram (mean: $mean, median: $median, std: $std)")
+        self.setTitle(self._title_template.substitute(
+            mean=None, median=None, std=None))
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'Pixel value')
+
+    def updateF(self, data):
+        """Override."""
+        try:
+            hist = data.pulse.roi.hist[self._index]
+        except KeyError:
+            self.reset()
+            return
+
+        self._plot.setData(hist.bin_centers, hist.hist)
+        stats = hist.stats
+        self._updateTitle(*stats)
+
+    def setPulseIndex(self, idx):
+        self._index = idx
+
+    def _updateTitle(self, mean, median, std):
+        self.setTitle(self._title_template.substitute(
+            mean=f"{mean:.2e}", median=f"{median:.2e}", std=f"{std:.2e}"))
+
+
 class PulseOfInterestWindow(_AbstractPlotWindow):
     """PulseOfInterestWindow class."""
     _title = "Pulse-of-interest"
@@ -87,8 +130,10 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
 
         self._poi_imgs = [PoiImageView(0, parent=self),
                           PoiImageView(0, parent=self)]
-        self._poi_hists = [PoiHist(0, parent=self),
-                           PoiHist(0, parent=self)]
+        self._poi_fom_hists = [PoiFomHist(0, parent=self),
+                               PoiFomHist(0, parent=self)]
+        self._poi_roi_hists = [PoiRoiHist(0, parent=self),
+                               PoiRoiHist(0, parent=self)]
 
         self.initUI()
         self.initConnections()
@@ -103,12 +148,20 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
         """Override."""
         self._cw = QSplitter(Qt.Vertical)
 
-        for img, hist in zip(self._poi_imgs, self._poi_hists):
+        for img, fom_hist, roi_hist in zip(self._poi_imgs,
+                                           self._poi_fom_hists,
+                                           self._poi_roi_hists):
+            rw = QSplitter(Qt.Vertical)
+            rw.addWidget(fom_hist)
+            rw.addWidget(roi_hist)
+
             w = QSplitter()
             w.addWidget(img)
-            w.addWidget(hist)
+            w.addWidget(rw)
+
             w.setSizes([self._TOTAL_W / 2, self._TOTAL_W / 2])
             self._cw.addWidget(w)
+
         self.setCentralWidget(self._cw)
         self._cw.setHandleWidth(self._SPLITTER_HANDLE_WIDTH)
 
@@ -121,4 +174,5 @@ class PulseOfInterestWindow(_AbstractPlotWindow):
 
     def _updatePoiIndex(self, poi_idx, pulse_idx):
         self._poi_imgs[poi_idx].setPulseIndex(pulse_idx)
-        self._poi_hists[poi_idx].setPulseIndex(pulse_idx)
+        self._poi_fom_hists[poi_idx].setPulseIndex(pulse_idx)
+        self._poi_roi_hists[poi_idx].setPulseIndex(pulse_idx)

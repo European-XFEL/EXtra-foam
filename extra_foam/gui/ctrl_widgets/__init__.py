@@ -15,6 +15,7 @@ from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from .trxas_ctrl_widget import TrXasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
 from .roi_fom_ctrl_widget import RoiFomCtrlWidget
+from .roi_hist_ctrl_widget import RoiHistCtrlWidget
 from .roi_norm_ctrl_widget import RoiNormCtrlWidget
 from .roi_proj_ctrl_widget import RoiProjCtrlWidget
 
@@ -35,6 +36,7 @@ __all__ = [
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",
     "RoiFomCtrlWidget",
+    "RoiHistCtrlWidget",
     "RoiNormCtrlWidget",
     "RoiProjCtrlWidget",
     "SmartLineEdit",

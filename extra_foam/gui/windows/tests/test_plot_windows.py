@@ -104,18 +104,19 @@ class TestPlotWindows(unittest.TestCase):
 
     def testPulseOfInterestWindow(self):
         from extra_foam.gui.windows.pulse_of_interest_w import (
-            PulseOfInterestWindow, PoiImageView, PoiHist
+            PulseOfInterestWindow, PoiImageView, PoiFomHist, PoiRoiHist
         )
 
         win = PulseOfInterestWindow(deque(), pulse_resolved=True, parent=self.gui)
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(6, len(win._plot_widgets))
         counter = Counter()
         for key in win._plot_widgets:
             counter[key.__class__] += 1
 
         self.assertEqual(2, counter[PoiImageView])
-        self.assertEqual(2, counter[PoiHist])
+        self.assertEqual(2, counter[PoiFomHist])
+        self.assertEqual(2, counter[PoiRoiHist])
 
         win.updateWidgetsF()
 
@@ -168,12 +169,19 @@ class testPulseOfInterestWidgets(unittest.TestCase):
         data = ProcessedData(1)
         widget.updateF(data)
 
-    def testPoiHist(self):
-        from extra_foam.gui.windows.pulse_of_interest_w import PoiHist
+    def testPoiFomHist(self):
+        from extra_foam.gui.windows.pulse_of_interest_w import PoiFomHist
 
-        widget = PoiHist(0)
+        widget = PoiFomHist(0)
         widget._data = ProcessedData(1)
         widget.refresh()
+
+    def testPoiRoiHist(self):
+        from extra_foam.gui.windows.pulse_of_interest_w import PoiRoiHist
+
+        widget = PoiRoiHist(0)
+        data = ProcessedData(1)
+        widget.updateF(data)
 
 
 class testBinningWidgets(unittest.TestCase):

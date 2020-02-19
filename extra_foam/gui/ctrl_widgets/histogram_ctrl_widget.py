@@ -38,7 +38,7 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._pulse_resolved_cb.setChecked(True)
 
         self._n_bins_le = SmartLineEdit("10")
-        self._n_bins_le.setValidator(QIntValidator(1, 10000))
+        self._n_bins_le.setValidator(QIntValidator(1, 999))
 
         self._reset_btn = QPushButton("Reset")
 

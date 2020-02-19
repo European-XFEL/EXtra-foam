@@ -433,10 +433,16 @@ class TestHistogramData(unittest.TestCase):
         data[0] = (hist_gt, bin_centers_gt)
         np.testing.assert_array_equal(hist_gt, data[0].hist)
         np.testing.assert_array_equal(bin_centers_gt, data[0].bin_centers)
+        self.assertIsNone(data[0].stats.mean)
+        self.assertIsNone(data[0].stats.median)
+        self.assertIsNone(data[0].stats.std)
 
-        data[100] = (2 * hist_gt, 2 * bin_centers_gt)
+        data[100] = (2 * hist_gt, 2 * bin_centers_gt, 1, 2, 3)
         np.testing.assert_array_equal(2 * hist_gt, data[100].hist)
         np.testing.assert_array_equal(2 * bin_centers_gt, data[100].bin_centers)
+        self.assertEqual(1, data[100].stats.mean)
+        self.assertEqual(2, data[100].stats.median)
+        self.assertEqual(3, data[100].stats.std)
 
         # __iter__
         for _, item in data.items():
@@ -448,3 +454,14 @@ class TestHistogramData(unittest.TestCase):
         self.assertEqual(1, len(data))
         del data[0]
         self.assertEqual(0, len(data))
+
+        # test keyword constructor of HistogramDataItem
+        item = HistogramDataItem(hist=[1, 2], bin_centers=[2, 3], mean=1, median=2)
+        self.assertListEqual([1, 2], item.hist)
+        self.assertListEqual([2, 3], item.bin_centers)
+        self.assertEqual(1, item.stats.mean)
+        self.assertEqual(2, item.stats.median)
+        self.assertIsNone(item.stats.std)
+
+        with self.assertRaises(TypeError):
+            HistogramDataItem(hist=[1, 2], bin_centers=[2, 3], mean=1, median=2, max=4)

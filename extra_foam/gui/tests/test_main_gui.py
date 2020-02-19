@@ -118,7 +118,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertIsInstance(win, PulseOfInterestWindow)
         for i, index in enumerate(new_indices):
             self.assertEqual(index, win._poi_imgs[i]._index)
-            self.assertEqual(index, win._poi_hists[i]._index)
+            self.assertEqual(index, win._poi_fom_hists[i]._index)
+            self.assertEqual(index, win._poi_roi_hists[i]._index)
         win.close()
 
     def testPumpProbeCtrlWidget(self):
