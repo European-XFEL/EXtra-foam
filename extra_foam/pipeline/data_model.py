@@ -596,25 +596,26 @@ class CorrelationData(collections.abc.Mapping):
         return self._pp
 
 
-_HistogramDataItem = namedtuple('_HistogramDataItem', ['hist', 'bin_centers'])
+class HistogramDataItem:
+
+    __slots__ = ['hist', 'bin_centers']
+
+    def __init__(self, hist=None, bin_centers=None):
+        self.hist = hist
+        self.bin_centers = bin_centers
 
 
-class HistogramData(collections.abc.MutableMapping):
-    """Histogram data model.
+class HistogramDataPulse(collections.abc.MutableMapping):
+    """Pulse-resolved histogram data model.
 
     Attributes:
         pulse_foms (np.array): 1D array for pulse-resolved FOMs in a train.
-        hist (np.array): 1D array for counts of bins.
-        bin_centers (np.array): 1D array for centers of bins.
     """
 
-    __slots__ = ['pulse_foms', 'hist', 'bin_centers', '_data']
+    __slots__ = ['pulse_foms', '_data']
 
     def __init__(self):
         self.pulse_foms = None
-
-        self.hist = None
-        self.bin_centers = None
 
         self._data = dict()
 
@@ -633,7 +634,7 @@ class HistogramData(collections.abc.MutableMapping):
         except (TypeError, ValueError) as e:
             raise e
 
-        self._data[key] = _HistogramDataItem(hist, bin_centers)
+        self._data[key] = HistogramDataItem(hist, bin_centers)
 
     def __delitem__(self, key):
         """Overload."""
@@ -813,13 +814,15 @@ class ProcessedData:
     class PulseData:
         """Container for pulse-resolved data."""
 
-        __slots__ = ['ai', 'roi', 'xgm', 'digitizer']
+        __slots__ = ['ai', 'roi', 'xgm', 'digitizer',
+                     'hist']
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
             self.roi = RoiData()
             self.xgm = XgmData()
             self.digitizer = DigitizerData()
+            self.hist = HistogramDataPulse()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',
@@ -841,7 +844,7 @@ class ProcessedData:
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
 
-        self.hist = HistogramData()
+        self.hist = HistogramDataItem()
         self.corr = CorrelationData()
         self.bin = BinData()
 

@@ -78,7 +78,7 @@ class HistogramProcessor(_BaseProcessor):
                     logger.error(
                         "[Histogram] Pulse resolved ROI FOM is not available")
                 else:
-                    processed.hist.pulse_foms = \
+                    processed.pulse.hist.pulse_foms = \
                         fom if self._pulse_resolved else None
                     self._fom.extend(fom)
             else:
@@ -100,15 +100,17 @@ class HistogramProcessor(_BaseProcessor):
 
         # ought to calculate the histogram even if there is no new FOM coming
         hist, bin_edges = np.histogram(self._fom.data(), bins=self._n_bins)
-        processed.hist.hist = hist
-        processed.hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+        train_hist = processed.hist
+        train_hist.hist = hist
+        train_hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
 
     def _process_poi(self, processed):
         """Calculate histograms of FOMs of POI pulses."""
         n_pulses = processed.n_pulses
+        pulse_hist = processed.pulse.hist
         for i in processed.image.poi_indices:
             if i >= n_pulses:
                 return
             poi_fom = self._fom.data()[i::n_pulses]
             hist, bin_edges = np.histogram(poi_fom, bins=self._n_bins)
-            processed.hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0)
+            pulse_hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0)

@@ -64,12 +64,12 @@ class PoiHist(TimedPlotWidgetF):
     def refresh(self):
         """Override."""
         try:
-            hist, bin_centers = self._data.hist[self._index]
+            hist = self._data.pulse.hist[self._index]
         except KeyError:
             self.reset()
             return
 
-        self._plot.setData(bin_centers, hist)
+        self._plot.setData(hist.bin_centers, hist.hist)
 
     def setPulseIndex(self, idx):
         self._index = idx

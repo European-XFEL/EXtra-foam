@@ -411,9 +411,9 @@ class TestCorrelationData(unittest.TestCase):
 class TestHistogramData(unittest.TestCase):
 
     def testGeneral(self):
-        from extra_foam.pipeline.data_model import HistogramData, _HistogramDataItem
+        from extra_foam.pipeline.data_model import HistogramDataItem, HistogramDataPulse
 
-        data = HistogramData()
+        data = HistogramDataPulse()
 
         # test mutable mapping
         self.assertEqual(0, len(data))
@@ -431,16 +431,16 @@ class TestHistogramData(unittest.TestCase):
             data[2700] = (hist_gt, bin_centers_gt)
 
         data[0] = (hist_gt, bin_centers_gt)
-        np.testing.assert_array_equal(hist_gt, data[0][0])
-        np.testing.assert_array_equal(bin_centers_gt, data[0][1])
+        np.testing.assert_array_equal(hist_gt, data[0].hist)
+        np.testing.assert_array_equal(bin_centers_gt, data[0].bin_centers)
 
         data[100] = (2 * hist_gt, 2 * bin_centers_gt)
-        np.testing.assert_array_equal(2 * hist_gt, data[100][0])
-        np.testing.assert_array_equal(2 * bin_centers_gt, data[100][1])
+        np.testing.assert_array_equal(2 * hist_gt, data[100].hist)
+        np.testing.assert_array_equal(2 * bin_centers_gt, data[100].bin_centers)
 
         # __iter__
         for _, item in data.items():
-            self.assertIsInstance(item, _HistogramDataItem)
+            self.assertIsInstance(item, HistogramDataItem)
 
         # __delitem__ and __len__
         self.assertEqual(2, len(data))

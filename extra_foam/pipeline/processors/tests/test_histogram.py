@@ -51,12 +51,11 @@ class TestHistogramProcessor(_BaseProcessorTest):
         data, processed = self.simple_data(1001, (5, 2, 2))
         self._proc.process(data)
 
-        hist = processed.hist
-        assert hist.pulse_foms is None
-        assert hist.hist is None
-        assert hist.bin_centers is None
+        assert processed.hist.hist is None
+        assert processed.hist.bin_centers is None
+        assert processed.pulse.hist.pulse_foms is None
         with pytest.raises(KeyError):
-            processed.hist[0]
+            processed.pulse.hist[0]
 
     @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("analysis_name, analysis_type",
@@ -87,10 +86,12 @@ class TestHistogramProcessor(_BaseProcessorTest):
         # test POI histogram
         assert 5 == processed.n_pulses
         assert [0, 0] == processed.image.poi_indices
-        np.testing.assert_array_equal([1, 0, 0, 0, 1], processed.hist[0].hist)  # histogram of [10, 30]
-        np.testing.assert_array_equal([12., 16., 20., 24., 28.], processed.hist[0].bin_centers)
+        np.testing.assert_array_equal([1, 0, 0, 0, 1],
+                                      processed.pulse.hist[0].hist)  # histogram of [10, 30]
+        np.testing.assert_array_equal([12., 16., 20., 24., 28.],
+                                      processed.pulse.hist[0].bin_centers)
         with pytest.raises(KeyError):
-            processed.hist[1]
+            processed.pulse.hist[1]
 
         # change POI indices
         fom_gt3 = [25] * 5
@@ -99,13 +100,18 @@ class TestHistogramProcessor(_BaseProcessorTest):
         proc.process(data) # assume that the same data comes again
         np.testing.assert_array_equal(fom_gt1 + fom_gt2 + fom_gt3, proc._fom)
         np.testing.assert_array_almost_equal([3, 3, 5, 2, 2], processed.hist.hist)
-        np.testing.assert_array_almost_equal([13.,  19.,  25.,  31.,  37.], processed.hist.bin_centers)
+        np.testing.assert_array_almost_equal([13.,  19.,  25.,  31.,  37.],
+                                             processed.hist.bin_centers)
 
         # test POI histogram
-        np.testing.assert_array_equal([1, 0, 0, 1, 1], processed.hist[0].hist)  # histogram of [10, 25, 30]
-        np.testing.assert_array_equal([12, 16, 20, 24, 28], processed.hist[0].bin_centers)
-        np.testing.assert_array_equal([1, 0, 0, 0, 2], processed.hist[3].hist)  # histogram of [40, 40, 25]
-        np.testing.assert_array_equal([26.5, 29.5, 32.5, 35.5, 38.5], processed.hist[3].bin_centers)
+        np.testing.assert_array_equal([1, 0, 0, 1, 1],
+                                      processed.pulse.hist[0].hist)  # histogram of [10, 25, 30]
+        np.testing.assert_array_equal([12, 16, 20, 24, 28],
+                                      processed.pulse.hist[0].bin_centers)
+        np.testing.assert_array_equal([1, 0, 0, 0, 2],
+                                      processed.pulse.hist[3].hist)  # histogram of [40, 40, 25]
+        np.testing.assert_array_equal([26.5, 29.5, 32.5, 35.5, 38.5],
+                                      processed.pulse.hist[3].bin_centers)
 
     @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("analysis_name, analysis_type",
@@ -126,12 +132,12 @@ class TestHistogramProcessor(_BaseProcessorTest):
             processed.roi.fom = item
             proc.process(data)
 
-        assert processed.hist.pulse_foms is None
+        assert processed.pulse.hist.pulse_foms is None
         np.testing.assert_array_equal(fom_gt, proc._fom)
         np.testing.assert_array_almost_equal([13.,  19.,  25.,  31.,  37.], processed.hist.bin_centers)
         np.testing.assert_array_almost_equal([3, 3, 0, 2, 2], processed.hist.hist)
         with pytest.raises(KeyError):
-            processed.hist[0]
+            processed.pulse.hist[0]
 
         # the same data comes again
         for item in fom_gt:

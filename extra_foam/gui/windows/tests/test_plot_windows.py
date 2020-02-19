@@ -142,16 +142,22 @@ class testPumpProbeWidgets(unittest.TestCase):
         from extra_foam.gui.windows.pump_probe_w import PumpProbeImageView
 
         widget = PumpProbeImageView()
+        data = ProcessedData(1)
+        widget.updateF(data)
 
     def testPumpProbeVFomPlot(self):
         from extra_foam.gui.windows.pump_probe_w import PumpProbeVFomPlot
 
         widget = PumpProbeVFomPlot()
+        data = ProcessedData(1)
+        widget.updateF(data)
 
     def testPumpProbeFomPlot(self):
         from extra_foam.gui.windows.pump_probe_w import PumpProbeFomPlot
 
         widget = PumpProbeFomPlot()
+        widget._data = ProcessedData(1)
+        widget.refresh()
 
 
 class testPulseOfInterestWidgets(unittest.TestCase):
@@ -159,11 +165,15 @@ class testPulseOfInterestWidgets(unittest.TestCase):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiImageView
 
         widget = PoiImageView(0)
+        data = ProcessedData(1)
+        widget.updateF(data)
 
     def testPoiHist(self):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiHist
 
         widget = PoiHist(0)
+        widget._data = ProcessedData(1)
+        widget.refresh()
 
 
 class testBinningWidgets(unittest.TestCase):
