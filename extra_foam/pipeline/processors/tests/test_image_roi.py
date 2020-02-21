@@ -15,7 +15,7 @@ import pytest
 import numpy as np
 
 from extra_foam.pipeline.processors import ImageRoiTrain, ImageRoiPulse
-from extra_foam.config import AnalysisType, Normalizer, RoiCombo, RoiFom
+from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom
 from extra_foam.pipeline.processors.tests import _BaseProcessorTest
 
 
@@ -31,7 +31,9 @@ _handlers = {
 class TestImageRoiPulse(_BaseProcessorTest):
     @pytest.fixture(autouse=True)
     def setUp(self):
-        proc = ImageRoiPulse()
+        with patch.dict(config._data, {"PULSE_RESOLVED": True}):
+            proc = ImageRoiPulse()
+
         proc._geom1 = [0, 1, 2, 3]
         proc._geom2 = [1, 0, 2, 3]
         proc._geom3 = [1, 2, 2, 3]
@@ -204,6 +206,19 @@ class TestImageRoiPulse(_BaseProcessorTest):
                 proc._geom2 = [1, 0, 1, 3]
                 proc.process(data)
                 error.assert_called_once()
+
+    def testOnTrainResolvedDetector(self):
+        proc = self._proc
+        proc._pulse_resolved = False
+        proc._process_fom = MagicMock()
+        proc._process_norm = MagicMock()
+        proc._process_hist = MagicMock()
+
+        data, processed = self._get_data()
+        proc.process(data)
+        proc._process_fom.assert_not_called()
+        proc._process_norm.assert_not_called()
+        proc._process_hist.assert_not_called()
 
 
 class TestImageRoiTrain(_BaseProcessorTest):
