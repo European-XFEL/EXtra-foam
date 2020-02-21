@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import TimedPlotWidgetF, TimedImageViewF
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ...config import config
 
 
@@ -21,24 +21,19 @@ class Bin1dHist(TimedPlotWidgetF):
 
     Widget for visualizing histogram of count for 1D-binning.
     """
-    def __init__(self, *, count=False, parent=None):
-        """Initialization.
-
-        :param bool count: True for count plot and False for FOM plot.
-        """
+    def __init__(self, *, parent=None):
+        """Initialization."""
         super().__init__(parent=parent)
 
-        self._count = count
-
         self._default_x_label = "Bin center (arb. u.)"
-        if count:
-            self._default_y_label = "Count"
-            self.setTitle('1D binning (count)')
-            self._plot = self.plotBar(pen=make_pen('g'), brush=make_brush('b'))
-        else:
-            self._default_y_label = "FOM (arb. u.)"
-            self.setTitle('1D binning (FOM)')
-            self._plot = self.plotScatter(brush=make_brush('p'))
+
+        self.setTitle('1D binning (FOM, Count)')
+        self._default_y_label = "FOM (arb. u.)"
+        self._default_y2_label = "Count"
+
+        self._count_plot = self.plotBar(
+            y2=True, brush=FColor.mkBrush('w', alpha=50))
+        self._fom_plot = self.plotStatisticsBar(line=True)
 
         self._source = ""
 
@@ -53,12 +48,8 @@ class Bin1dHist(TimedPlotWidgetF):
             self._source = src
             self.updateLabel()
 
-        if self._count:
-            hist = item.counts
-        else:
-            hist = item.stats
-
-        self._plot.setData(item.centers, hist)
+        self._count_plot.setData(item.centers, item.counts)
+        self._fom_plot.setData(item.centers, item.stats, beam=item.size)
 
     def updateLabel(self):
         src = self._source
@@ -69,6 +60,7 @@ class Bin1dHist(TimedPlotWidgetF):
         self.setLabel('bottom', new_label)
 
         self.setLabel('left', self._default_y_label)
+        self.setLabel('right', self._default_y2_label)
 
 
 class Bin1dHeatmap(TimedImageViewF):
@@ -86,8 +78,8 @@ class Bin1dHeatmap(TimedImageViewF):
 
         self._auto_level = True
 
-        self._default_x_label = 'Bin center (arb. u.)'
-        self._default_y_label = 'VFOM (arb. u.)'
+        self._default_x_label = 'VFOM (arb. u.)'
+        self._default_y_label = 'Bin center (arb. u.)'
         self.setTitle('1D binning (VFOM)')
 
         self._source = ""
@@ -105,9 +97,11 @@ class Bin1dHeatmap(TimedImageViewF):
 
         heatmap = item.heat
         if heatmap is not None:
+            # VFOM -> x, slow data -> y
+            heatmap = heatmap.T
             h, w = heatmap.shape
-            w_range = item.centers
-            h_range = item.x
+            h_range = item.centers
+            w_range = item.x
 
             self.setImage(heatmap,
                           auto_levels=self._auto_level,
@@ -125,10 +119,9 @@ class Bin1dHeatmap(TimedImageViewF):
         if src:
             new_label = f"{src} (arb. u.)"
         else:
-            new_label = self._default_x_label
-        self.setLabel('bottom', new_label)
-
-        self.setLabel('left', self._default_y_label)
+            new_label = self._default_y_label
+        self.setLabel('left', new_label)
+        self.setLabel('bottom', self._default_x_label)
 
     @pyqtSlot()
     def onAutoLevel(self):
@@ -238,8 +231,7 @@ class BinningWindow(_AbstractPlotWindow):
         super().__init__(*args, **kwargs)
 
         self._bin1d_vfom = Bin1dHeatmap(parent=self)
-        self._bin1d_fom = Bin1dHist(parent=self)
-        self._bin1d_count = Bin1dHist(count=True, parent=self)
+        self._bin1d = Bin1dHist(parent=self)
 
         self._bin2d_value = Bin2dHeatmap(count=False, parent=self)
         self._bin2d_count = Bin2dHeatmap(count=True, parent=self)
@@ -262,11 +254,8 @@ class BinningWindow(_AbstractPlotWindow):
         self.setCentralWidget(self._cw)
 
         left_panel.addWidget(self._bin1d_vfom)
-        left_panel.addWidget(self._bin1d_fom)
-        left_panel.addWidget(self._bin1d_count)
-        # A value smaller than the minimal size hint of the respective
-        # widget will be replaced by the value of the hint.
-        left_panel.setSizes([self._TOTAL_H/2, self._TOTAL_H/3, self._TOTAL_H/6])
+        left_panel.addWidget(self._bin1d)
+        left_panel.setSizes([1, 1])
 
         right_panel.addWidget(self._bin2d_value)
         right_panel.addWidget(self._bin2d_count)

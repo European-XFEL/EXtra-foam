@@ -68,7 +68,7 @@ class BarGraphItem(GraphicsObject):
         
         if pen is None and pens is None:
             pen = getConfigOption('foreground')
-        
+
         brush = self.opts['brush']
         brushes = self.opts['brushes']
         if brush is None and brushes is None:

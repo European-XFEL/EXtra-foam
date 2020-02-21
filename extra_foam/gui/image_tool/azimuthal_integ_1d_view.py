@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
-from ..misc_widgets import make_pen
+from ..misc_widgets import FColor
 from ..plot_widgets import ImageAnalysis, ImageViewF, PlotWidgetF
 from ...config import AnalysisType, plot_labels
 
@@ -31,7 +31,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         self.setLabel('left', y_label)
         self.setTitle(' ')
 
-        self._plot = self.plotCurve(pen=make_pen("p"))
+        self._plot = self.plotCurve(pen=FColor.mkPen("p"))
 
     def updateF(self, data):
         """Override."""

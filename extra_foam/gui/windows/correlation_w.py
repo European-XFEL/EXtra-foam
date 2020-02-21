@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ..plot_widgets import TimedPlotWidgetF
 from ...config import config
 
@@ -22,9 +22,9 @@ class CorrelationPlot(TimedPlotWidgetF):
     Widget for displaying correlations between FOM and different parameters.
     """
     _colors = config["GUI_CORRELATION_COLORS"]
-    _pens = [make_pen(color) for color in _colors]
-    _brushes = [make_brush(color, 120) for color in _colors]
-    _opaque_brushes = [make_brush(color) for color in _colors]
+    _pens = [FColor.mkPen(color) for color in _colors]
+    _brushes = [FColor.mkBrush(color, alpha=120) for color in _colors]
+    _opaque_brushes = [FColor.mkBrush(color) for color in _colors]
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
@@ -64,7 +64,7 @@ class CorrelationPlot(TimedPlotWidgetF):
         else:
             # OneWayAccuPairSequence
             if self._resolution == 0:
-                self._newErrorBarPlot(resolution)
+                self._newStatisticsBarPlot(resolution)
                 self._resolution = resolution
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
 
@@ -82,10 +82,10 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.clear()
         self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
-    def _newErrorBarPlot(self, resolution):
+    def _newStatisticsBarPlot(self, resolution):
         self.clear()
-        self._plot = self.plotErrorBar(beam=resolution,
-                                       pen=self._pens[self._idx-1])
+        self._plot = self.plotStatisticsBar(beam=resolution,
+                                            pen=self._pens[self._idx-1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):

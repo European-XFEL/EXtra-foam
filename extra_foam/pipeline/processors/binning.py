@@ -24,8 +24,8 @@ class _BinMixin:
     @staticmethod
     def edges2centers(edges):
         if edges is None:
-            return None
-        return (edges[1:] + edges[:-1]) / 2.0
+            return None, None
+        return (edges[1:] + edges[:-1]) / 2.0, edges[1] - edges[0]
 
     @staticmethod
     def searchsorted(edges, v):
@@ -58,8 +58,12 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
         analysis_type (AnalysisType): binning analysis type.
         _pp_analysis_type (AnalysisType): pump-probe analysis type.
         _mode (BinMode): binning mode.
-        _source1 (str): data source 1.
-        _source2 (str): data source 2.
+        _source1 (str): name of data source 1.
+        _source2 (str): name of data source 2.
+        _slow1 (SimpleSequence): store the data points of slow data 1.
+        _slow2 (SimpleSequence): store the data points of slow data 2.
+        _fom (SimpleSequence): store the data points of FOM.
+        _vfom (SimpleVectorSequence): store the data points of VFOM.
         _bin_range1 (tuple): bin 1 range requested.
         _bin_range2 (tuple): bin 2 range requested.
         _actual_range1 (tuple): actual bin 1 range used in binning.
@@ -276,7 +280,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
 
         bin1 = bin[0]
         bin1.source = self._source1
-        bin1.centers = self.edges2centers(self._edges1)
+        bin1.centers, bin1.size = self.edges2centers(self._edges1)
         bin1.stats = self._stats1
         bin1.counts = self._counts1
         bin1.heat = self._vfom_heat1
@@ -284,7 +288,7 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
 
         bin2 = bin[1]
         bin2.source = self._source2
-        bin2.centers = self.edges2centers(self._edges2)
+        bin2.centers, bin2.size = self.edges2centers(self._edges2)
 
         bin.heat = self._heat
         bin.heat_count = self._heat_count
