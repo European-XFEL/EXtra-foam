@@ -185,6 +185,15 @@ class Mediator(QObject):
     def onRoiFomNormChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, "fom:norm", int(value))
 
+    def onRoiHistComboChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, "hist:combo", int(value))
+
+    def onRoiHistNumBinsChange(self, value: int):
+        self._meta.hset(mt.ROI_PROC, "hist:n_bins", int(value))
+
+    def onRoiHistBinRangeChange(self, value: tuple):
+        self._meta.hset(mt.ROI_PROC, "hist:bin_range", str(value))
+
     def onRoiNormTypeChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'norm:type', int(value))
 

@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import random
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 
@@ -33,15 +33,18 @@ class TestImageRoiPulse(_BaseProcessorTest):
     def setUp(self):
         proc = ImageRoiPulse()
         proc._geom1 = [0, 1, 2, 3]
-        proc._geom2 = [1, 0, 1, 3]
+        proc._geom2 = [1, 0, 2, 3]
         proc._geom3 = [1, 2, 2, 3]
         proc._geom4 = [3, 2, 3, 4]
         self._proc = proc
 
-    def _get_data(self):
-        return self.data_with_assembled(1001, (4, 20, 20))
+    def _get_data(self, poi_indices=None):
+        if poi_indices is None:
+            poi_indices = [0, 0]
+        return self.data_with_assembled(1001, (4, 20, 20), poi_indices=poi_indices)
 
     def _get_roi_slice(self, geom):
+        # get a tuple of slice object which can be used to slice ROI
         return slice(geom[1], geom[1] + geom[3]), slice(geom[0], geom[0] + geom[2])
 
     def testRoiGeom(self):
@@ -112,6 +115,96 @@ class TestImageRoiPulse(_BaseProcessorTest):
             else:
                 np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
 
+    def testComputeHist(self):
+        proc = self._proc
+
+        # case 1
+        roi = np.array([[1, 2], [3, 6]], dtype=np.float32)
+        proc._hist_bin_range = (1, 3)
+        proc._hist_n_bins = 4
+        hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        np.testing.assert_array_equal([1, 0, 1, 1], hist)
+        np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
+        arr_gt = [1, 2, 3]
+        assert np.mean(arr_gt) == mean
+        assert np.median(arr_gt) == median
+        assert np.std(arr_gt) == pytest.approx(std)
+
+        # case 2 (the actual array is empty after filtering)
+        roi = np.array([[0, 0], [0, 0]], dtype=np.float32)
+        proc._hist_bin_range = (1, 3)
+        proc._hist_n_bins = 4
+        with np.warnings.catch_warnings():
+            np.warnings.simplefilter("ignore", category=RuntimeWarning)
+            hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        np.testing.assert_array_equal([0, 0, 0, 0], hist)
+        assert np.isnan(mean)
+        assert np.isnan(median)
+        assert np.isnan(std)
+
+        # case 3 (elements in the actual array have the same value)
+        roi = np.array([[1, 0], [1, 0]], dtype=np.float32)
+        proc._hist_bin_range = (1e-6, 3)
+        proc._hist_n_bins = 4
+        hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        np.testing.assert_array_equal([0, 2, 0, 0], hist)
+        assert 1 == mean
+        assert 1 == median
+        assert 0 == std
+
+    def testRoiHist(self):
+        proc = self._proc
+
+        mocked_return = 1, 1, 1, 1, 1
+        with patch.object(proc, "_compute_hist", return_value=mocked_return) as compute_hist:
+            for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
+                data, processed = self._get_data(poi_indices=[0, 2])
+                proc._hist_combo = combo
+                proc._hist_n_bins = 10
+                proc.process(data)
+
+                s = self._get_roi_slice(getattr(proc, geom))
+                compute_hist.assert_called()
+                # ROI of the second POI
+                roi_gt = data['assembled']['sliced'][2, s[0], s[1]]
+                np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
+                compute_hist.reset_mock()
+
+                hist = processed.pulse.roi.hist
+                with pytest.raises(KeyError):
+                    hist[1]
+                with pytest.raises(KeyError):
+                    hist[3]
+
+            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+                data, processed = self._get_data(poi_indices=[1, 2])
+                proc._hist_combo = fom_combo
+                proc._hist_n_bins = 20
+                proc.process(data)
+
+                s1 = self._get_roi_slice(proc._geom1)
+                # ROI of the second POI
+                roi1_gt = data['assembled']['sliced'][2, s1[0], s1[1]]
+                s2 = self._get_roi_slice(proc._geom2)
+                roi2_gt = data['assembled']['sliced'][2, s2[0], s2[1]]
+                compute_hist.assert_called()
+                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                    np.testing.assert_array_equal(roi1_gt - roi2_gt, compute_hist.call_args[0][0])
+                else:
+                    np.testing.assert_array_equal(roi1_gt + roi2_gt, compute_hist.call_args[0][0])
+                compute_hist.reset_mock()
+
+                hist = processed.pulse.roi.hist
+                with pytest.raises(KeyError):
+                    hist[0]
+                with pytest.raises(KeyError):
+                    hist[3]
+
+            with patch('extra_foam.ipc.ProcessLogger.error') as error:
+                proc._geom2 = [1, 0, 1, 3]
+                proc.process(data)
+                error.assert_called_once()
+
 
 class TestImageRoiTrain(_BaseProcessorTest):
 
@@ -138,6 +231,7 @@ class TestImageRoiTrain(_BaseProcessorTest):
         proc._geom3 = [1, 2, 2, 3]
         proc._geom4 = [3, 2, 3, 4]
         # set processed.roi.geom{1, 2, 3, 4}
+        proc._process_hist = MagicMock()  # it does not affect train-resolved analysis
         proc.process(data)
         processed.pp.image_on = np.random.randn(*shape).astype(np.float32)
         processed.pp.image_off = np.random.randn(*shape).astype(np.float32)
@@ -202,9 +296,8 @@ class TestImageRoiTrain(_BaseProcessorTest):
             else:
                 assert fom1_gt + fom2_gt == processed.roi.fom
 
-    @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
-    def testProjFom(self, error, direct, axis):
+    def testProjFom(self, direct, axis):
         proc = self._proc
 
         for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
@@ -237,11 +330,11 @@ class TestImageRoiTrain(_BaseProcessorTest):
             np.testing.assert_array_equal(y_gt, processed.roi.proj.y)
             np.testing.assert_array_equal(np.sum(y_gt), processed.roi.proj.fom)
 
+        with patch('extra_foam.ipc.ProcessLogger.error') as error:
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
             proc.process(data)
             error.assert_called_once()
-            error.reset_mock()
 
     def testGeneralPumpProbe(self):
         proc = self._proc

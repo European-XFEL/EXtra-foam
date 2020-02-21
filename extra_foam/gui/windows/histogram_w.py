@@ -31,7 +31,7 @@ class InTrainFomPlot(PlotWidgetF):
 
     def updateF(self, data):
         """Override."""
-        foms = data.hist.pulse_foms
+        foms = data.pulse.hist.pulse_foms
         if foms is None:
             self.reset()
         else:
@@ -53,13 +53,12 @@ class FomHist(TimedPlotWidgetF):
 
     def refresh(self):
         """Override."""
-        item = self._data.hist
-        hist, bin_centers = item.hist, item.bin_centers
-
+        hist = self._data.hist
+        bin_centers = hist.bin_centers
         if bin_centers is None:
             self.reset()
         else:
-            self._plot.setData(bin_centers, hist)
+            self._plot.setData(bin_centers, hist.hist)
 
 
 class HistogramWindow(_AbstractPlotWindow):

@@ -36,6 +36,7 @@ class PumpProbeMode(IntEnum):
 
 
 class RoiCombo(IntEnum):
+    UNDEFINED = 0
     ROI1 = 1
     ROI2 = 2
     ROI1_SUB_ROI2 = 3

@@ -1,8 +1,10 @@
 import unittest
 
+import math
+
 import numpy as np
 
-from extra_foam.algorithms import normalize_auc
+from extra_foam.algorithms import find_actual_range, normalize_auc
 
 
 class TestMiscellaneous(unittest.TestCase):
@@ -42,3 +44,31 @@ class TestMiscellaneous(unittest.TestCase):
         # test data is copied in this case
         y[0] = 1
         self.assertEqual(0, y_normalized[0])
+
+    def testFindActualRange(self):
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((-1.5, 2.5), find_actual_range(arr, (-1.5, 2.5)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((1, 4), find_actual_range(arr, (-math.inf, math.inf)))
+
+        arr = np.array([1, 1, 1, 1])
+        self.assertTupleEqual((0.5, 1.5), find_actual_range(arr, (-math.inf, math.inf)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((3, 4), find_actual_range(arr, (3, math.inf)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((4, 5), find_actual_range(arr, (4, math.inf)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((5, 6), find_actual_range(arr, (5, math.inf)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((0, 1), find_actual_range(arr, (-math.inf, 1)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((-1, 0), find_actual_range(arr, (-math.inf, 0)))
+
+        arr = np.array([1, 2, 3, 4])
+        self.assertTupleEqual((-1, 0), find_actual_range(arr, (-math.inf, 0)))

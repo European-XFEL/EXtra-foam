@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from ...algorithms import slice_curve
+from ...algorithms import find_actual_range, slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
 from ..exceptions import UnknownParameterError
@@ -41,6 +41,7 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         _fom_combo (RoiCombo): ROI combination when calculating FOM.
         _fom_type (RoiFom): ROI FOM type.
         _fom_norm (Normalizer): ROI FOM normalizer.
+        _hist_combo (RoiCombo): ROI combination when calculating histogram.
         _norm_combo (RoiCombo): ROI combination when calculating ROI
             normalizer.
         _norm_type (RoiFom): ROI normalizer type.
@@ -58,6 +59,10 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         self._fom_type = RoiFom.SUM
         self._fom_norm = Normalizer.UNDEFINED
 
+        self._hist_combo = RoiCombo.ROI1
+        self._hist_n_bins = 10
+        self._hist_bin_range = (-math.inf, math.inf)
+
         self._norm_combo = RoiCombo.ROI3
         self._norm_type = RoiFom.SUM
 
@@ -73,6 +78,10 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         self._fom_combo = RoiCombo(int(cfg['fom:combo']))
         self._fom_type = RoiFom(int(cfg['fom:type']))
         self._fom_norm = Normalizer(int(cfg['fom:norm']))
+
+        self._hist_combo = RoiCombo(int(cfg['hist:combo']))
+        self._hist_n_bins = int(cfg['hist:n_bins'])
+        self._hist_bin_range = self.str2tuple(cfg["hist:bin_range"])
 
         self._norm_combo = RoiCombo(int(cfg['norm:combo']))
         self._norm_type = RoiFom(int(cfg['norm:type']))
@@ -92,8 +101,9 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
 
         self._process_norm(assembled, processed)
         self._process_fom(assembled, processed)
+        self._process_hist(processed)
 
-    def _compute_fom(self, roi, fom_type, mask, threshold_mask):
+    def _compute_fom(self, roi, fom_type, image_mask, threshold_mask):
         if roi is None:
             return
 
@@ -105,12 +115,31 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
 
         if roi.ndim == 3:
             mask_image_data(roi,
-                            image_mask=mask,
+                            image_mask=image_mask,
                             threshold_mask=threshold_mask)
             return handler(roi, axis=(-1, -2))
 
-        mask_image_data(roi, image_mask=mask, threshold_mask=threshold_mask)
+        mask_image_data(roi,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask)
         return np.array([handler(roi)])
+
+    def _compute_hist(self, roi):
+        # TODO: optimize the performance
+
+        # POI image has already been masked
+        v_min, v_max = find_actual_range(roi, self._hist_bin_range)
+
+        filtered = roi[(roi >= v_min) & (roi <= v_max)]
+        hist, bin_edges = np.histogram(filtered,
+                                       range=(v_min, v_max),
+                                       bins=self._hist_n_bins)
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+
+        mean, median, std = \
+            np.mean(filtered), np.median(filtered), np.std(filtered)
+
+        return hist, bin_centers, mean, median, std
 
     def _process_norm(self, assembled, processed):
         """Calculate pulse-resolved ROI normalizers.
@@ -189,6 +218,45 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
                         f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
         # TODO: normalize
+
+    def _process_hist(self, processed):
+        """Calculate pixel-wise histogram for POI pulses."""
+        if self._hist_combo == RoiCombo.UNDEFINED:
+            return
+
+        roi_data = processed.roi
+
+        for idx in processed.image.poi_indices:
+            img = processed.image.images[idx]
+            roi1 = roi_data.geom1.rect(img)
+            roi2 = roi_data.geom2.rect(img)
+
+            if self._hist_combo == RoiCombo.ROI1:
+                roi = roi1
+            elif self._hist_combo == RoiCombo.ROI2:
+                roi = roi2
+            else:
+                if roi1 is None or roi2 is None:
+                    return
+
+                if roi1.shape != roi2.shape:
+                    logger.error(
+                        f"[ROI][histogram] ROI1 and ROI2 must have the same shape")
+                    return
+
+                if self._hist_combo == RoiCombo.ROI1_SUB_ROI2:
+                    roi = roi1 - roi2
+                elif self._hist_combo == RoiCombo.ROI1_ADD_ROI2:
+                    roi = roi1 + roi2
+                else:
+                    raise UnknownParameterError(
+                        f"[ROI][histogram] Unknown ROI histogram combo: "
+                        f"{self._hist_combo}")
+
+            if roi is None:
+                continue
+
+            processed.pulse.roi.hist[idx] = self._compute_hist(roi)
 
 
 class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
