@@ -709,6 +709,10 @@ class TestImageToolTs(unittest.TestCase):
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
 
+    def testCalibrationCtrlWidget(self):
+        widget = self.image_tool._gain_offset_view._ctrl_widget
+        self.assertFalse(widget._gain_slicer_le.isEnabled())
+        self.assertFalse(widget._offset_slicer_le.isEnabled())
 
 if __name__ == '__main__':
     unittest.main()

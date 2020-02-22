@@ -47,6 +47,9 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._gain_slicer_le = SmartSliceLineEdit(":")
         self._offset_slicer_le = SmartSliceLineEdit(":")
+        if not self._pulse_resolved:
+            self._gain_slicer_le.setEnabled(False)
+            self._offset_slicer_le.setEnabled(False)
 
         self._dark_as_offset_cb = QCheckBox("Use dark as offset")
         self._dark_as_offset_cb.setChecked(True)
