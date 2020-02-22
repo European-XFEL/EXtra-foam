@@ -257,7 +257,7 @@ class DataSourceItemModel(QAbstractItemModel):
                     for i in range(n_rows):
                         if i != index.row():
                             item_sb = index.sibling(i, 0).internalPointer()
-                            if item_sb.isChecked():
+                            if item_sb.isExclusive() and item_sb.isChecked():
                                 item_sb.setChecked(False)
                                 self.dataChanged.emit(index.siblingAtRow(i),
                                                       index.siblingAtRow(i))
