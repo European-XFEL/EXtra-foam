@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import numpy as np
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.binning import _BinMixin, BinningProcessor
 from extra_foam.config import AnalysisType, BinMode
 
@@ -36,7 +36,7 @@ class TestBinMixin:
         assert 0 == proc.searchsorted([0, 1, 2, 3], 0)
 
 
-class TestBinningProcessor(_BaseProcessorTest):
+class TestBinningProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = BinningProcessor()

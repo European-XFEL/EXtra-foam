@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..misc_widgets import FColor
-from ..plot_widgets import ImageViewF, PlotWidgetF, TimedPlotWidgetF
+from ..plot_widgets import HistMixin, ImageViewF, PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
 
@@ -48,7 +48,7 @@ class PoiImageView(ImageViewF):
         self.setTitle(f"Pulse-of-interest {idx}")
 
 
-class PoiFomHist(TimedPlotWidgetF):
+class PoiFomHist(HistMixin, TimedPlotWidgetF):
     """PoiFomHist class.
 
     A widget which monitors the histogram of the FOM of the POI pulse.
@@ -60,7 +60,9 @@ class PoiFomHist(TimedPlotWidgetF):
         self._index = idx
         self._plot = self.plotBar(brush=FColor.mkBrush('p'))
 
-        self.setTitle("FOM Histogram")
+        self._title_template = Template(
+            f"FOM Histogram (mean: $mean, median: $median, std: $std)")
+        self.updateTitle()
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'FOM')
 
@@ -70,15 +72,15 @@ class PoiFomHist(TimedPlotWidgetF):
             hist = self._data.pulse.hist[self._index]
         except KeyError:
             self.reset()
-            return
-
-        self._plot.setData(hist.bin_centers, hist.hist)
+        else:
+            self._plot.setData(hist.bin_centers, hist.hist)
+            self.updateTitle(hist.mean, hist.median, hist.std)
 
     def setPulseIndex(self, idx):
         self._index = idx
 
 
-class PoiRoiHist(PlotWidgetF):
+class PoiRoiHist(HistMixin, PlotWidgetF):
     """PoiRoiHist class.
 
     A widget which monitors the pixel-wised histogram of the ROI of
@@ -93,8 +95,7 @@ class PoiRoiHist(PlotWidgetF):
 
         self._title_template = Template(
             f"ROI Histogram (mean: $mean, median: $median, std: $std)")
-        self.setTitle(self._title_template.substitute(
-            mean=None, median=None, std=None))
+        self.updateTitle()
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'Pixel value')
 
@@ -104,18 +105,12 @@ class PoiRoiHist(PlotWidgetF):
             hist = data.pulse.roi.hist[self._index]
         except KeyError:
             self.reset()
-            return
-
-        self._plot.setData(hist.bin_centers, hist.hist)
-        stats = hist.stats
-        self._updateTitle(*stats)
+        else:
+            self._plot.setData(hist.bin_centers, hist.hist)
+            self.updateTitle(hist.mean, hist.median, hist.std)
 
     def setPulseIndex(self, idx):
         self._index = idx
-
-    def _updateTitle(self, mean, median, std):
-        self.setTitle(self._title_template.substitute(
-            mean=f"{mean:.2e}", median=f"{median:.2e}", std=f"{std:.2e}"))
 
 
 class PulseOfInterestWindow(_AbstractPlotWindow):

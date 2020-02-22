@@ -11,6 +11,7 @@ import numpy as np
 
 from .base_processor import _BaseProcessor, SimpleSequence
 from ..exceptions import UnknownParameterError
+from ...algorithms import compute_statistics
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType
@@ -103,6 +104,8 @@ class HistogramProcessor(_BaseProcessor):
         train_hist = processed.hist
         train_hist.hist = hist
         train_hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+        train_hist.mean,  train_hist.median,  train_hist.std = \
+            compute_statistics(self._fom.data())
 
     def _process_poi(self, processed):
         """Calculate histograms of FOMs of POI pulses."""
@@ -113,4 +116,6 @@ class HistogramProcessor(_BaseProcessor):
                 return
             poi_fom = self._fom.data()[i::n_pulses]
             hist, bin_edges = np.histogram(poi_fom, bins=self._n_bins)
-            pulse_hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0)
+            mean, median, std = compute_statistics(poi_fom)
+            pulse_hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0,
+                             mean, median, std)

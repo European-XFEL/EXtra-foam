@@ -71,3 +71,14 @@ def find_actual_range(arr, range):
             v_min = v_max - 1.0  # must have v_max > v_min
 
     return v_min, v_max
+
+
+def compute_statistics(arr):
+    """Compute statistics of an array.
+
+    :TODO: optimize
+    """
+    if len(arr) == 0:
+        # suppress runtime warning
+        return np.nan, np.nan, np.nan
+    return np.mean(arr), np.median(arr), np.std(arr)

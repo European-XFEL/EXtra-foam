@@ -21,7 +21,7 @@ import numpy as np
 from extra_foam.pipeline.processors.image_assembler import (
     _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, ImageAssemblerFactory
 )
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.exceptions import AssemblingError
 from extra_foam.config import GeomAssembler, config, DataSource
 from extra_foam.database import SourceCatalog, SourceItem
@@ -54,7 +54,7 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestAgipdAssembler(unittest.TestCase, _BaseProcessorTest):
+class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config.load('AGIPD', random.choice(['SPB', 'MID']))

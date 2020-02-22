@@ -9,6 +9,8 @@ All rights reserved.
 """
 import abc
 
+import numpy as np
+
 from PyQt5.QtCore import pyqtSignal, QTimer
 from PyQt5.QtWidgets import QSizePolicy
 
@@ -208,3 +210,13 @@ class TimedPlotWidgetF(PlotWidgetF):
     def updateF(self, data):
         """Override."""
         self._data = data
+
+
+class HistMixin:
+    def updateTitle(self, mean=np.nan, median=np.nan, std=np.nan):
+        self.setTitle(self._title_template.substitute(
+            mean=f"{mean:.2e}", median=f"{median:.2e}", std=f"{std:.2e}"))
+
+    def reset(self):
+        super().reset()
+        self.updateTitle()

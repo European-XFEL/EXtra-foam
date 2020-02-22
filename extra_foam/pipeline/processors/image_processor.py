@@ -128,10 +128,16 @@ class ImageProcessor(_BaseProcessor):
         det = catalog.main_detector
         pulse_slicer = catalog.get_slicer(det)
 
-        n_total = assembled.shape[0] if assembled.ndim == 3 else 1
-        sliced_assembled = assembled[pulse_slicer]
-        sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
-        n_sliced = len(sliced_indices)
+        if assembled.ndim == 3:
+            n_total = assembled.shape[0]
+            sliced_assembled = assembled[pulse_slicer]
+            sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
+            n_sliced = len(sliced_indices)
+        else:
+            n_total = 1
+            sliced_assembled = assembled
+            sliced_indices = [0]
+            n_sliced = 1
 
         if self._recording_dark:
             self._record_dark(assembled)
@@ -275,7 +281,7 @@ class ImageProcessor(_BaseProcessor):
             return
 
         n_images = image_data.n_images
-        out_of_bound_poi_indices = []
+        out_of_bound_indices = []
         # only keep POI in 'images'
         for i in image_data.poi_indices:
             if i < n_images:
@@ -284,11 +290,15 @@ class ImageProcessor(_BaseProcessor):
                                 image_mask=self._image_mask,
                                 threshold_mask=self._threshold_mask)
             else:
-                out_of_bound_poi_indices.append(i)
+                out_of_bound_indices.append(i)
 
-        if out_of_bound_poi_indices:
+            if image_data.poi_indices[1] == image_data.poi_indices[0]:
+                # skip the second one if two POIs have the same index
+                break
+
+        if out_of_bound_indices:
             # This is still ProcessingError since it is not fatal and should
             # not stop the pipeline.
             raise ProcessingError(
-                f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
+                f"[Image processor] POI indices {out_of_bound_indices[0]} "
                 f"is out of bound (0 - {n_images-1}")

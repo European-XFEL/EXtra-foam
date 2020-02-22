@@ -18,7 +18,7 @@ from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
 from extra_foam.database import Metadata, MetaProxy
@@ -42,7 +42,7 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestImageTool(unittest.TestCase, _BaseProcessorTest):
+class TestImageTool(unittest.TestCase, _TestDataMixin):
     @classmethod
     def setUpClass(cls):
         config.load('LPD', 'FXE')

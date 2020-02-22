@@ -15,16 +15,16 @@ import numpy as np
 from extra_foam.pipeline.data_model import ProcessedData
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.histogram import HistogramProcessor
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.config import AnalysisType
 
+np.warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _analysis_types = {
     'ROI': AnalysisType.ROI_FOM
 }
 
-
-class TestHistogramProcessor(_BaseProcessorTest):
+class TestHistogramProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = HistogramProcessor()

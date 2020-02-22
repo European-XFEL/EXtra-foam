@@ -16,7 +16,7 @@ import numpy as np
 
 from extra_foam.pipeline.processors import ImageRoiTrain, ImageRoiPulse
 from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 
 
 _handlers = {
@@ -28,7 +28,7 @@ _handlers = {
 }
 
 
-class TestImageRoiPulse(_BaseProcessorTest):
+class TestImageRoiPulse(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         with patch.dict(config._data, {"PULSE_RESOLVED": True}):
@@ -122,9 +122,7 @@ class TestImageRoiPulse(_BaseProcessorTest):
 
         # case 1
         roi = np.array([[1, 2], [3, 6]], dtype=np.float32)
-        proc._hist_bin_range = (1, 3)
-        proc._hist_n_bins = 4
-        hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1, 3), 4)
         np.testing.assert_array_equal([1, 0, 1, 1], hist)
         np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
         arr_gt = [1, 2, 3]
@@ -134,11 +132,7 @@ class TestImageRoiPulse(_BaseProcessorTest):
 
         # case 2 (the actual array is empty after filtering)
         roi = np.array([[0, 0], [0, 0]], dtype=np.float32)
-        proc._hist_bin_range = (1, 3)
-        proc._hist_n_bins = 4
-        with np.warnings.catch_warnings():
-            np.warnings.simplefilter("ignore", category=RuntimeWarning)
-            hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1, 3), 4)
         np.testing.assert_array_equal([0, 0, 0, 0], hist)
         assert np.isnan(mean)
         assert np.isnan(median)
@@ -146,9 +140,7 @@ class TestImageRoiPulse(_BaseProcessorTest):
 
         # case 3 (elements in the actual array have the same value)
         roi = np.array([[1, 0], [1, 0]], dtype=np.float32)
-        proc._hist_bin_range = (1e-6, 3)
-        proc._hist_n_bins = 4
-        hist, bin_centers, mean, median, std = proc._compute_hist(roi)
+        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1e-6, 3), 4)
         np.testing.assert_array_equal([0, 2, 0, 0], hist)
         assert 1 == mean
         assert 1 == median
@@ -221,7 +213,7 @@ class TestImageRoiPulse(_BaseProcessorTest):
         proc._process_hist.assert_not_called()
 
 
-class TestImageRoiTrain(_BaseProcessorTest):
+class TestImageRoiTrain(_TestDataMixin):
 
     @pytest.fixture(autouse=True)
     def setUp(self):
@@ -342,8 +334,8 @@ class TestImageRoiTrain(_BaseProcessorTest):
             else:
                 y_gt = y1_gt + y2_gt
             np.testing.assert_array_equal(np.arange(len(y_gt)), processed.roi.proj.x)
-            np.testing.assert_array_equal(y_gt, processed.roi.proj.y)
-            np.testing.assert_array_equal(np.sum(y_gt), processed.roi.proj.fom)
+            np.testing.assert_array_almost_equal(y_gt, processed.roi.proj.y)
+            np.testing.assert_array_almost_equal(np.sum(y_gt), processed.roi.proj.fom)
 
         with patch('extra_foam.ipc.ProcessLogger.error') as error:
             # test when ROI2 has different shape from ROI1
@@ -501,16 +493,17 @@ class TestImageRoiTrain(_BaseProcessorTest):
             else:
                 y_on_gt = y1_on_gt + y2_on_gt
                 y_off_gt = y1_off_gt + y2_off_gt
-            np.testing.assert_array_equal(y_on_gt, processed.pp.y_on)
-            np.testing.assert_array_equal(y_off_gt, processed.pp.y_off)
-            np.testing.assert_array_equal(y_on_gt - y_off_gt, processed.pp.y)
-            assert np.abs(y_on_gt - y_off_gt).sum() == processed.pp.fom
+            np.testing.assert_array_almost_equal(y_on_gt, processed.pp.y_on)
+            np.testing.assert_array_almost_equal(y_off_gt, processed.pp.y_off)
+            np.testing.assert_array_almost_equal(y_on_gt - y_off_gt, processed.pp.y)
+            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, abs=1e-6)
             # test abs_difference == False
             processed.pp.abs_difference = False
             proc.process(data)
-            assert (y_on_gt - y_off_gt).sum() == processed.pp.fom
+            assert (y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, abs=1e-6)
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
-            proc.process(data)
+            with patch.object(proc, "_process_proj"):
+                proc.process(data)
             error.assert_called_once()
             error.reset_mock()

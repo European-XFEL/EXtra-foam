@@ -14,10 +14,10 @@ import numpy as np
 
 from extra_foam.pipeline.processors.image_processor import ImageProcessor
 from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 
 
-class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
+class TestImageProcessorTr(_TestDataMixin, unittest.TestCase):
     """Test pulse-resolved ImageProcessor.
 
     For train-resolved data.
@@ -82,7 +82,7 @@ class TestImageProcessorTr(unittest.TestCase, _BaseProcessorTest):
         proc._reference = None
 
 
-class TestImageProcessorPr(unittest.TestCase, _BaseProcessorTest):
+class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
     """Test pulse-resolved ImageProcessor.
 
     For pulse-resolved data.

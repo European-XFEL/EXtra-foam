@@ -9,14 +9,14 @@ All rights reserved.
 """
 import unittest
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.control_data import CtrlDataProcessor
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import SkipTrainError
 from extra_foam.config import config
 
 
-class TestCtrlData(unittest.TestCase, _BaseProcessorTest):
+class TestCtrlData(_TestDataMixin, unittest.TestCase):
     def testGeneral(self):
         proc = CtrlDataProcessor()
 
