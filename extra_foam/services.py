@@ -22,7 +22,7 @@ import psutil
 import redis
 
 from . import __version__
-from .config import AnalysisType, config
+from .config import AnalysisType, config, PipelineSlowPolicy
 from .database import Metadata as mt
 from .ipc import init_redis_connection
 from .logger import logger
@@ -320,7 +320,15 @@ def application():
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
-    parser.add_argument("--redis_address", help="Address of the Redis server (optional)",
+    parser.add_argument("--pipeline_slow_policy",
+                        help="Pipeline policy when the processing rate is "
+                             "slower than the arrival rate (0 for always "
+                             "process the latest data and 1 for wait until "
+                             "processing of the current data finishes)",
+                        choices=[0, 1],
+                        default=1,
+                        type=int)
+    parser.add_argument("--redis_address", help="Address of the Redis server",
                         default="127.0.0.1",
                         type=lambda s: s.lower())
 
@@ -346,7 +354,8 @@ def application():
     )
 
     # update global configuration
-    config.load(detector, topic)
+    config.load(detector, topic,
+                PIPELINE_SLOW_POLICY=PipelineSlowPolicy(args.pipeline_slow_policy))
 
     foam = Foam(redis_address=redis_address).init()
 

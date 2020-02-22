@@ -73,6 +73,11 @@ class GeomAssembler(IntEnum):
     EXTRA_GEOM = 2  # use Extra-geom geometry assembler
 
 
+class PipelineSlowPolicy(IntEnum):
+    DROP = 0
+    WAIT = 1
+
+
 def list_azimuthal_integ_methods(detector):
     """Return a list of available azimuthal integration methos.
 
@@ -198,6 +203,7 @@ class _Config(dict):
         # maximum length of the queue in data pipeline (the smaller the queue
         # size, the smaller the latency)
         "PIPELINE_MAX_QUEUE_SIZE": 2,
+        "PIPELINE_SLOW_POLICY": PipelineSlowPolicy.DROP,
         # timeout of the zmq bridge, in second
         "BRIDGE_TIMEOUT": 0.1,
         # maximum length of the cache used in data correlation by train ID
@@ -381,7 +387,7 @@ class _Config(dict):
                 self._abs_dirpath, f"configs/{osp.basename(config_file)}"),
                 config_file)
 
-    def load(self, det, topic):
+    def load(self, det, topic, **kwargs):
         """Update configs from the config file.
 
         :param str det: detector name.
@@ -391,6 +397,11 @@ class _Config(dict):
 
         self.__setitem__("DETECTOR", det)
         self.__setitem__("TOPIC", topic)
+        for k, v in kwargs.items():
+            if k in kwargs:
+                self.__setitem__(k, v)
+            else:
+                raise KeyError
 
         # update the configurations of the main detector
         for k, v in self._detector_config[det]._asdict().items():
@@ -480,8 +491,8 @@ class ConfigWrapper(abc.Mapping):
         """Override."""
         return self._data.__iter__()
 
-    def load(self, detector, topic):
-        self._data.load(detector, topic)
+    def load(self, detector, topic, **kwargs):
+        self._data.load(detector, topic, **kwargs)
 
     @property
     def detectors(self):

@@ -32,7 +32,7 @@ from .processors import (
     XgmProcessor,
     TrXasProcessor,
 )
-from ..config import config
+from ..config import config, PipelineSlowPolicy
 from ..ipc import RedisConnection
 from ..ipc import process_logger as logger
 from ..processes import register_foam_process
@@ -48,6 +48,8 @@ class ProcessWorker(mp.Process):
 
         self._name = name
         register_foam_process(name, self)
+
+        self._slow_policy = config["PIPELINE_SLOW_POLICY"]
 
         self._input = None  # pipe-in
         self._output = None  # pipe-out
@@ -80,27 +82,41 @@ class ProcessWorker(mp.Process):
         self._input.start()
         self._output.start()
 
+        data_out = None
         while not self.closing:
             if not self.running:
+                data_out = None
+
                 self.wait()
                 self.notify_update()
 
-            try:
-                # get the data from pipe-in
-                data = self._input.get()
-            except Empty:
-                time.sleep(0.001)
-                continue
+            if data_out is None:
+                try:
+                    # get the data from pipe-in
+                    data_out = self._input.get()
 
-            try:
-                self._run_tasks(data)
-            except StopPipelineError:
-                continue
+                    try:
+                        self._run_tasks(data_out)
+                    except StopPipelineError:
+                        data_out = None
 
-            # TODO: still put the data but signal the data has been dropped.
+                except Empty:
+                    pass
 
-            # always keep the latest data in the cache
-            self._output.put_pop(data)
+            if data_out is not None:
+                # TODO: still put the data but signal the data has been dropped.
+                if self._slow_policy == PipelineSlowPolicy.WAIT:
+                    try:
+                        self._output.put(data_out)
+                        data_out = None
+                    except Full:
+                        pass
+                else:
+                    # always keep the latest data in the cache
+                    self._output.put_pop(data_out)
+                    data_out = None
+
+            time.sleep(0.001)
 
     def _run_tasks(self, data):
         """Run all tasks for once:
