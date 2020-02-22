@@ -188,6 +188,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
                 self.clear()
                 self.finish_updating()
 
+            # this cannot be in a thread since SourceCatalog is not thread-safe
             self._update_source_items()
 
             if self.running and proxy.client is not None:

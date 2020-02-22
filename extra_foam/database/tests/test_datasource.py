@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+import copy
 
 from extra_foam.database.data_source import (
     DataTransformer, OrderedSet, SourceCatalog, SourceItem
@@ -41,6 +42,20 @@ class TestSourceCatalog(unittest.TestCase):
         catalog.clear()
         self.assertEqual(0, len(catalog))
         self.assertEqual('', catalog.main_detector)
+
+    def testCopy(self):
+        catalog = SourceCatalog()
+        catalog.add_item(SourceItem('DSSC', 'dssc_device_id', [], 'image.data', None, None))
+        catalog.add_item(SourceItem('Motor', 'motor_device1', [], 'actualPosition', None, (-1, 1)))
+        catalog.add_item(SourceItem('XGM', 'xgm_device', [], 'intensityTD', slice(1, 10, 1), (0, 100)))
+
+        catalog_cp = copy.copy(catalog)
+        self.assertDictEqual(catalog._items, catalog_cp._items)
+        self.assertIsNot(catalog._items, catalog_cp._items)
+        self.assertDictEqual(catalog._categories, catalog_cp._categories)
+        self.assertIsNot(catalog._categories, catalog_cp._categories)
+        self.assertEqual(catalog._main_detector_category, catalog_cp._main_detector_category)
+        self.assertEqual(catalog._main_detector, catalog_cp._main_detector)
 
 
 class TestDataTransformer(unittest.TestCase):

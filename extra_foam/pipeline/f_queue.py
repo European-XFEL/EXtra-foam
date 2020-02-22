@@ -127,7 +127,8 @@ class CorrelateQueue(SimpleQueue):
         tid = next(iter(new_meta.values()))["tid"]
         if tid > self._correlated_tid:
             # update cached data
-            cached = self._cached.setdefault(tid, {'meta': dict(), 'raw': dict()})
+            cached = self._cached.setdefault(
+                tid, {'meta': dict(), 'raw': dict()})
 
             cached_meta = cached['meta']
             cached_raw = cached['raw']
@@ -137,7 +138,9 @@ class CorrelateQueue(SimpleQueue):
 
             if _found_all(catalog, cached_meta):
                 self._correlated = {
-                    'catalog': catalog, 'meta': cached_meta, 'raw': cached_raw,
+                    'catalog': catalog.__copy__(),
+                    'meta': cached_meta,
+                    'raw': cached_raw,
                     'processed': ProcessedData(tid)
                 }
                 self._correlated_tid = tid

@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import abc, namedtuple
+import copy
 
 from ..algorithms import OrderedSet
 from ..config import config
@@ -111,6 +112,17 @@ class SourceCatalog(abc.Collection):
         self._items.clear()
         self._categories.clear()
         self._main_detector = ''
+
+    def __copy__(self):
+        instance = self.__class__()
+        instance._items = copy.deepcopy(self._items)
+        instance._categories = copy.deepcopy(self._categories)
+        instance._main_detector_category = self._main_detector_category
+        instance._main_detector = self._main_detector
+        return instance
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
 
     def __repr__(self):
         return f'SourceCatalog(main_detector={self._main_detector}, ' \
