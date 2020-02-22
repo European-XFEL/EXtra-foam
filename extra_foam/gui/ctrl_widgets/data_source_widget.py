@@ -379,7 +379,10 @@ class DataSourceItemModel(QAbstractItemModel):
             self._root.appendChild(ctg_item)
             src_categories[ctg] = ctg_item
 
+            # train-resolved detectors do not need slicer
             default_slicer = ':'
+            if ctg in config.detectors and not config["PULSE_RESOLVED"]:
+                default_slicer = ''
             # for 2D detectors we does not apply pixel-wise filtering for now
             default_v_range = '-inf, inf' if ctg not in config.detectors else ''
             for src, ppts in srcs.items():
