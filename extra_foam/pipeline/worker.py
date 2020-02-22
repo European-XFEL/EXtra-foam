@@ -95,19 +95,12 @@ class ProcessWorker(mp.Process):
             try:
                 self._run_tasks(data)
             except StopPipelineError:
-                self._prev_processed_time = time.time()
                 continue
 
-            if self._prev_processed_time is not None:
-                fps = 1.0 / (time.time() - self._prev_processed_time)
-                logger.debug(f"FPS of {self._name}: {fps:>4.1f} Hz")
-            self._prev_processed_time = time.time()
+            # TODO: still put the data but signal the data has been dropped.
 
-            try:
-                # always keep the latest data in the queue
-                self._output.put_pop(data)
-            except Empty:
-                pass
+            # always keep the latest data in the cache
+            self._output.put_pop(data)
 
     def _run_tasks(self, data):
         """Run all tasks for once:

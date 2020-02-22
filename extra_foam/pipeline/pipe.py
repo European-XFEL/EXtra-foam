@@ -47,8 +47,7 @@ class _PipeBase(ABC):
         self._close_ev = close_ev
         self._final = final
 
-        # the queue is not used for queuing data, it serves as a cache here
-        self._queue = SimpleQueue(maxsize=1)
+        self._cache = SimpleQueue(maxsize=1)
 
         self._meta = MetaProxy()
         self._mon = MonProxy()
@@ -84,7 +83,7 @@ class _PipeBase(ABC):
         self._update_ev.clear()
 
     def clear(self):
-        self._queue.clear()
+        self._cache.clear()
 
 
 class _PipeInBase(_PipeBase):
@@ -95,7 +94,7 @@ class _PipeInBase(_PipeBase):
         pass
 
     def get(self):
-        return self._queue.get_nowait()
+        return self._cache.get_nowait()
 
 
 class _PipeOutBase(_PipeBase):
@@ -106,10 +105,10 @@ class _PipeOutBase(_PipeBase):
         pass
 
     def put(self, item):
-        self._queue.put_nowait(item)
+        self._cache.put_nowait(item)
 
     def put_pop(self, item):
-        self._queue.put_pop(item)
+        self._cache.put_pop(item)
 
 
 class KaraboBridge(_PipeInBase, _RedisParserMixin):
@@ -123,7 +122,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
         self._catalog = SourceCatalog()
 
         # override SimpleQueue
-        self._queue = CorrelateQueue(self._catalog, maxsize=1)
+        self._cache = CorrelateQueue(self._catalog, maxsize=1)
 
     def _update_source_items(self):
         """Updated requested source items."""
@@ -216,7 +215,7 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
                 if data_in is not None:
                     try:
-                        self._queue.put(data_in, again=again)
+                        self._cache.put(data_in, again=again)
                         data_in = None
                         again = False
                     except Full:
@@ -262,7 +261,7 @@ class MpInQueue(_PipeInBase):
 
             if data_in is not None:
                 try:
-                    self._queue.put_nowait(data_in)
+                    self._cache.put_nowait(data_in)
                     data_in = None
                 except Full:
                     pass
@@ -299,7 +298,7 @@ class MpOutQueue(_PipeOutBase):
 
             if data_out is None:
                 try:
-                    data = self._queue.get_nowait()
+                    data = self._cache.get_nowait()
 
                     if self._final:
                         data_out = data['processed']
