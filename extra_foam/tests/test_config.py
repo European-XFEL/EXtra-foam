@@ -73,6 +73,8 @@ class TestConfig:
         with pytest.raises(KeyError):
             cfg.load('DSSC', 'SCS', PIPELINE_SLOW=100)
 
+        os.remove(cfg.config_file)
+
     def testLoadConfigFromFile(self):
         cfg = self._cfg
         cfg.load('DSSC', 'SCS')

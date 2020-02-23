@@ -398,7 +398,7 @@ class _Config(dict):
         self.__setitem__("DETECTOR", det)
         self.__setitem__("TOPIC", topic)
         for k, v in kwargs.items():
-            if k in kwargs:
+            if k in self:
                 self.__setitem__(k, v)
             else:
                 raise KeyError

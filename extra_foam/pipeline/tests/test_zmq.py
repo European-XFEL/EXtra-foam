@@ -34,14 +34,23 @@ class TestZmq(unittest.TestCase):
                     self._socket.send_multipart([self.dumps(meta), self.dumps(data)])
 
     def testMultiServerConnection(self):
+        import socket
+
+        def _get_free_tcp_port():
+            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tcp.bind(('', 0))
+            _, port = tcp.getsockname()
+            tcp.close()
+            return port
+
         endpoints = []
 
         proxy = BridgeProxy()
-        ctx = proxy._context
+        ctx = zmq.Context()
 
         # start 3 'REP' server
         for src in ['A', 'B', 'C']:
-            endpoint = f"inproc://server{src}"
+            endpoint = f"tcp://127.0.0.1:{_get_free_tcp_port()}"
             server = self.Server(ctx, endpoint, src=src)
             server.start()
             endpoints.append(endpoint)
@@ -66,3 +75,5 @@ class TestZmq(unittest.TestCase):
             # test stop and connect again
             proxy.stop()
             self.assertIsNone(proxy._client)
+
+        ctx.destroy(linger=0)
