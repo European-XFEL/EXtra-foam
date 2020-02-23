@@ -19,20 +19,20 @@ Image control
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Update image*             | Manually update the current displayed image in the *ImageTool*     |
+| ``Update image``           | Manually update the current displayed image in the *ImageTool*     |
 |                            | window. Disabled if *Update automatically* is checked.             |
 +----------------------------+--------------------------------------------------------------------+
-| *Update automatically*     | Automatically update the current displayed image in the            |
+| ``Update automatically``   | Automatically update the current displayed image in the            |
 |                            | *ImageTool* window.                                                |
 +----------------------------+--------------------------------------------------------------------+
-| *Auto level*               | Update the detector images (not only in the *ImageTool* window,    |
+| ``Auto level``             | Update the detector images (not only in the *ImageTool* window,    |
 |                            | but also in other plot windows) by automatically selecting levels  |
 |                            | based on the maximum and minimum values in the data.               |
 +----------------------------+--------------------------------------------------------------------+
-| *Threshold mask*           | An interval that pixel values outside the interval are set to 0.   |
+| ``Threshold mask``         | An interval that pixel values outside the interval are set to 0.   |
 |                            | Please distinguish *threshold mask* from clipping_.                |
 +----------------------------+--------------------------------------------------------------------+
-| *Save image*               | Save the current image to file. Please also see ImageFileFormat_   |
+| ``Save image``             | Save the current image to file. Please also see ImageFileFormat_   |
 +----------------------------+--------------------------------------------------------------------+
 
 
@@ -45,15 +45,15 @@ masked region will be set to 0.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Mask*                     | Mask a rectangular region.                                         |
+| ``Mask``                   | Mask a rectangular region.                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Unmask*                   | Remove mask in a rectangular region.                               |
+| ``Unmask``                 | Remove mask in a rectangular region.                               |
 +----------------------------+--------------------------------------------------------------------+
-| *Trash mask*               | Remove all the mask.                                               |
+| ``Trash mask``             | Remove all the mask.                                               |
 +----------------------------+--------------------------------------------------------------------+
-| *Save image mask*          | Save the current image mask in `.npy` format.                      |
+| ``Save image mask``        | Save the current image mask in `.npy` format.                      |
 +----------------------------+--------------------------------------------------------------------+
-| *Load image mask*          | Load a image mask in `.npy` format.                                |
+| ``Load image mask``        | Load a image mask in `.npy` format.                                |
 +----------------------------+--------------------------------------------------------------------+
 
 
@@ -74,11 +74,24 @@ ROI FOM setup
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Combo*                    | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
+| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
 +----------------------------+--------------------------------------------------------------------+
-| *FOM*                      | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
+| ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
 +----------------------------+--------------------------------------------------------------------+
 
+ROI histogram setup
+"""""""""""""""""""
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
++----------------------------+--------------------------------------------------------------------+
+| ``Bin range``              | Lower and upper boundaries of all the bins. In case of *+/- Inf*,  |
+|                            | the boundary will be calculated dynamically.                       |
++----------------------------+--------------------------------------------------------------------+
+| ``# of bins``              | Number of bins of the histogram.                                   |
++----------------------------+--------------------------------------------------------------------+
 
 ROI normalizer setup
 """"""""""""""""""""
@@ -86,9 +99,9 @@ ROI normalizer setup
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Combo*                    | ROI combination, e.g. *ROI3*, *ROI4*, *ROI3 + ROI4*, *ROI3 - ROI4*.|
+| ``Combo``                  | ROI combination, e.g. *ROI3*, *ROI4*, *ROI3 + ROI4*, *ROI3 - ROI4*.|
 +----------------------------+--------------------------------------------------------------------+
-| *FOM*                      | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
+| ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
 +----------------------------+--------------------------------------------------------------------+
 
 .. _ROI projection setup:
@@ -101,23 +114,28 @@ Define the 1D projection of ROI (region of interest) analysis setup.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Combo*                    | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
+| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
 +----------------------------+--------------------------------------------------------------------+
-| *Direction*                | Direction of 1D projection (x or y).                               |
+| ``Direction``              | Direction of 1D projection (x or y).                               |
 +----------------------------+--------------------------------------------------------------------+
-| *Norm*                     | Normalizer of the 1D-projection VFOM.                              |
+| ``Norm``                   | Normalizer of the 1D-projection VFOM.                              |
 +----------------------------+--------------------------------------------------------------------+
-| *AUC range*                | AUC (area under a curve) integration range.                        |
+| ``AUC range``              | AUC (area under a curve) integration range.                        |
 +----------------------------+--------------------------------------------------------------------+
-| *FOM range*                | Integration range when calculating the figure-of-merit of 1D       |
+| ``FOM range``              | Integration range when calculating the figure-of-merit of 1D       |
 |                            | projection.                                                        |
 +----------------------------+--------------------------------------------------------------------+
 
 
-Gain / offset correction
-------------------------
+Gain / offset
+-------------
 
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
+
+Apply pixel-wised gain and offset correction, where
+.. math::
+
+   A_{corrected} = (A_{raw} - I_{offset}) * I_{gain}
 
 Users can record a "dark run" whenever data is available. The dark run consists of a number
 of trains. The moving average of the each "dark pulse" in the train will be calculated,
@@ -126,9 +144,16 @@ which will then be used to apply dark subtraction to image data pulse-by-pulse.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Record dark*              | Start and stop dark run recording.                                 |
+| ``Gain correction``        | Check to activate gain correction.                                 |
 +----------------------------+--------------------------------------------------------------------+
-| *Remove dark*              | Remove the recorded dark run.                                      |
+| ``Offset correction``      | Check to activate offset correction.                               |
++----------------------------+--------------------------------------------------------------------+
+| ``Use dark as offset``     | Check to use recorded dark images as offset. The already loaded    |
+|                            | offset constants will be ignored.                                  |
++----------------------------+--------------------------------------------------------------------+
+| ``Record dark``            | Start and stop dark run recording.                                 |
++----------------------------+--------------------------------------------------------------------+
+| ``Remove dark``            | Remove the recorded dark run.                                      |
 +----------------------------+--------------------------------------------------------------------+
 
 .. Note::
@@ -140,17 +165,17 @@ which will then be used to apply dark subtraction to image data pulse-by-pulse.
 Reference image
 ---------------
 
-+----------------------------+--------------------------------------------------------------------+
-| Input                      | Description                                                        |
-+============================+====================================================================+
-| *Load reference*           | Load a reference image from file. Please also see ImageFileFormat_ |
-+----------------------------+--------------------------------------------------------------------+
-| *Set current as reference* | Set the current displayed image as a reference image. For now,     |
-|                            | reference image is used as a stationary off-image in the           |
-|                            | *predefined off* mode in *pump-probe* analysis.                    |
-+----------------------------+--------------------------------------------------------------------+
-| *Remove reference*         | Remove the reference image.                                        |
-+----------------------------+--------------------------------------------------------------------+
++------------------------------+--------------------------------------------------------------------+
+| Input                        | Description                                                        |
++==============================+====================================================================+
+| ``Load reference``           | Load a reference image from file. Please also see ImageFileFormat_ |
++------------------------------+--------------------------------------------------------------------+
+| ``Set current as reference`` | Set the current displayed image as a reference image. For now,     |
+|                              | reference image is used as a stationary off-image in the           |
+|                              | *predefined off* mode in *pump-probe* analysis.                    |
++------------------------------+--------------------------------------------------------------------+
+| ``Remove reference``         | Remove the reference image.                                        |
++------------------------------+--------------------------------------------------------------------+
 
 .. _ImageFileFormat:
 
@@ -188,37 +213,37 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Cx (pixel)*               | Coordinate of the point of normal incidence along the detector's   |
+| ``Cx (pixel)``             | Coordinate of the point of normal incidence along the detector's   |
 |                            | 2nd dimension.                                                     |
 +----------------------------+--------------------------------------------------------------------+
-| *Cy (pixel)*               | Coordinate of the point of normal incidence along the detector's   |
+| ``Cy (pixel)``             | Coordinate of the point of normal incidence along the detector's   |
 |                            | 1st dimension.                                                     |
 +----------------------------+--------------------------------------------------------------------+
-| *Pixel x (m)*              | Pixel size along the detector's 2nd dimension.                     |
+| ``Pixel x (m)``            | Pixel size along the detector's 2nd dimension.                     |
 +----------------------------+--------------------------------------------------------------------+
-| *Pixel y (m)*              | Pixel size along the detector's 1st dimension.                     |
+| ``Pixel y (m)``            | Pixel size along the detector's 1st dimension.                     |
 +----------------------------+--------------------------------------------------------------------+
-| *Sample distance*          | Sample-detector distance in m. Only used in azimuthal integration. |
+| ``Sample distance``        | Sample-detector distance in m. Only used in azimuthal integration. |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation x (rad)*         | *Not used*                                                         |
+| ``Rotation x (rad)``       | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation y (rad)*         | *Not used*                                                         |
+| ``Rotation y (rad)``       | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Rotation z (rad)*         | *Not used*                                                         |
+| ``Rotation z (rad)``       | *Not used*                                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Photon energy (keV)*      | Photon energy in keV. Only used in azimuthal integration for now.  |
+| ``Photon energy (keV)``    | Photon energy in keV. Only used in azimuthal integration for now.  |
 +----------------------------+--------------------------------------------------------------------+
-| *Integ method*             | Azimuthal integration methods provided by pyFAI_.                  |
+| ``Integ method``           | Azimuthal integration methods provided by pyFAI_.                  |
 +----------------------------+--------------------------------------------------------------------+
-| *Integ points*             | Number of points in the output pattern of azimuthal integration.   |
+| ``Integ points``           | Number of points in the output pattern of azimuthal integration.   |
 +----------------------------+--------------------------------------------------------------------+
-| *Integ range (1/A)*        | Azimuthal integration range.                                       |
+| ``Integ range (1/A)``      | Azimuthal integration range.                                       |
 +----------------------------+--------------------------------------------------------------------+
-| *Norm*                     | Normalizer of the azimuthal integration result.                    |
+| ``Norm``                   | Normalizer of the azimuthal integration result.                    |
 +----------------------------+--------------------------------------------------------------------+
-| *AUC range (1/A)*          | AUC (area under curve) range.                                      |
+| ``AUC range (1/A)``        | AUC (area under curve) range.                                      |
 +----------------------------+--------------------------------------------------------------------+
-| *FOM range (1/A)*          | Integration range when calculating the figure-of-merit of the      |
+| ``FOM range (1/A)``        | Integration range when calculating the figure-of-merit of the      |
 |                            | azimuthal integration result.                                      |
 +----------------------------+--------------------------------------------------------------------+
 
