@@ -409,6 +409,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
         self.assertTrue(proc._pulse_resolved)
         self.assertEqual(10, proc._n_bins)
+        self.assertEqual((-np.inf, np.inf), proc._bin_range)
 
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
         proc.update()
@@ -423,7 +424,9 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.ROI_FOM, proc.analysis_type)
 
         widget._n_bins_le.setText("100")
+        widget._bin_range_le.setText("-1, 2")
         proc.update()
+        self.assertEqual((-1, 2), proc._bin_range)
         self.assertEqual(100, proc._n_bins)
 
         proc._reset = False

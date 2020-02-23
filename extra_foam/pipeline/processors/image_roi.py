@@ -107,12 +107,14 @@ class _RoiProcessorBase(_BaseProcessor):
 
     @staticmethod
     def _compute_hist(roi, bin_range, n_bins):
-        # TODO: optimize the performance
+        # roi is guaranteed to be non-empty
 
         # POI image has already been masked
         v_min, v_max = find_actual_range(roi, bin_range)
 
+        # TODO: optimize the performance
         filtered = roi[(roi >= v_min) & (roi <= v_max)]
+
         hist, bin_edges = np.histogram(
             filtered, range=(v_min, v_max), bins=n_bins)
         bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
