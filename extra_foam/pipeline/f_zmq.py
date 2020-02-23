@@ -31,7 +31,7 @@ class BridgeProxy:
 
     def __init__(self):
 
-        self._context = zmq.Context()
+        self._context = None
 
         self._client = None
         self._frontend = None
@@ -57,18 +57,22 @@ class BridgeProxy:
             raise ValueError("Endpoints must be either a string or "
                              "a tuple/list of string!")
 
+        context = zmq.Context()
+
         for end in endpoints:
-            backend = self._context.socket(zmq.DEALER)
+            backend = context.socket(zmq.DEALER)
             backend.connect(end)
             self._backend[end] = backend
 
         frontendpoint = "inproc://frontend"
-        self._frontend = self._context.socket(zmq.ROUTER)
+        self._frontend = context.socket(zmq.ROUTER)
         self._frontend.bind(frontendpoint)
 
         self._client = Client(frontendpoint,
-                              context=self._context,
+                              context=context,
                               timeout=config['BRIDGE_TIMEOUT'])
+
+        self._context = context
 
     @run_in_thread()
     def start(self):
@@ -109,13 +113,13 @@ class BridgeProxy:
 
         for bk in self._backend.values():
             bk.setsockopt(zmq.LINGER, 0)
-            bk.close()
         self._backend.clear()
         self._backend_ready.clear()
         self._frontend.setsockopt(zmq.LINGER, 0)
-        self._frontend.close()
-        del self._client
+        self._frontend = None
         self._client = None
+        self._context.destroy(linger=0)
+        self._context = None
 
         self._stopped.set()
 
