@@ -246,9 +246,8 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
             logger.error(f"[Binning] {str(e)}!")
             fom = None
 
-        actual_range1 = (
-            self._slow1.min if self._auto_range1[0] else self._bin_range1[0],
-            self._slow1.max if self._auto_range1[1] else self._bin_range1[1])
+        actual_range1 = self._get_actual_range(
+            self._slow1.data(), self._bin_range1, self._auto_range1)
         if actual_range1 != self._actual_range1:
             self._actual_range1 = actual_range1
             self._bin1d = True
@@ -262,9 +261,8 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
                 self._update_1d_binning(fom, vfom, s1)
 
         if self._has_param2:
-            actual_range2 = (
-                self._slow2.min if self._auto_range2[0] else self._bin_range2[0],
-                self._slow2.max if self._auto_range2[1] else self._bin_range2[1])
+            actual_range2 = self._get_actual_range(
+                self._slow2.data(), self._bin_range2, self._auto_range2)
             if actual_range2 != self._actual_range2:
                 self._actual_range2 = actual_range2
                 self._bin2d = True
@@ -485,3 +483,39 @@ class BinningProcessor(_BaseProcessor, _BinMixin):
 
         self._heat = None
         self._heat_count = None
+
+    def _get_actual_range(self, data, bin_range, auto_range):
+        # It is guaranteed that bin_range[0] < bin_range[1]
+        if not auto_range[0] and not auto_range[1]:
+            return bin_range
+
+        if auto_range[0]:
+            v_min = None if data.size == 0 else data.min()
+        else:
+            v_min = bin_range[0]
+
+        if auto_range[1]:
+            v_max = None if data.size == 0 else data.max()
+        else:
+            v_max = bin_range[1]
+
+        # The following three cases caused by zero-sized array.
+        if v_min is None and v_max is None:
+            return 0., 1.
+        if v_min is None:
+            return v_max - 1., v_max
+        if v_max is None:
+            return v_min, v_min + 1.
+
+        if auto_range[0] and auto_range[1]:
+            if v_min == v_max:
+                # all elements have the same value
+                return v_min - 0.5, v_max + 0.5
+        elif v_min >= v_max:
+            # two tricky corner cases
+            if auto_range[0]:
+                v_min = v_max - 1.0
+            elif auto_range[1]:
+                v_max = v_min + 1.0
+            # else cannot happen
+        return v_min, v_max

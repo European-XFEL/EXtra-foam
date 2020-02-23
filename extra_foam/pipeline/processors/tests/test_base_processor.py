@@ -136,16 +136,9 @@ class TestSequenceData(unittest.TestCase):
             hist[4]
         self.assertEqual(4, len(hist))
 
-        self.assertEqual(1, hist.min)
-        self.assertEqual(4, hist.max)
-        self.assertTupleEqual((1, 4), hist.range)
-
         # test reset
         hist.reset()
         np.testing.assert_array_almost_equal([], hist.data())
-        self.assertEqual(None, hist.min)
-        self.assertEqual(None, hist.max)
-        self.assertTupleEqual((None, None), hist.range)
 
         # ----------------------------
         # test when max length reached
@@ -158,9 +151,6 @@ class TestSequenceData(unittest.TestCase):
         self.assertEqual(MAX_LENGTH, len(ax))
         self.assertEqual(overflow, ax[0])
         self.assertEqual(MAX_LENGTH + overflow - 1, ax[-1])
-        self.assertEqual(ax.min(), hist.min)
-        self.assertEqual(ax.max(), hist.max)
-        self.assertTupleEqual((ax.min(), ax.max()), hist.range)
 
     def testSimpleVectorSequence(self):
         MAX_LENGTH = 1000

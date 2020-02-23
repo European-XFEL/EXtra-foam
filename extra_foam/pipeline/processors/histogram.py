@@ -125,6 +125,7 @@ class HistogramProcessor(_BaseProcessor):
         for i in image_data.poi_indices:
             if i >= n_pulses:
                 return
+
             poi_fom = self._fom.data()[i::n_pulses]
             if poi_fom.size == 0:
                 continue
