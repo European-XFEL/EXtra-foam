@@ -257,7 +257,7 @@ class DataSourceItemModel(QAbstractItemModel):
                     for i in range(n_rows):
                         if i != index.row():
                             item_sb = index.sibling(i, 0).internalPointer()
-                            if item_sb.isChecked():
+                            if item_sb.isExclusive() and item_sb.isChecked():
                                 item_sb.setChecked(False)
                                 self.dataChanged.emit(index.siblingAtRow(i),
                                                       index.siblingAtRow(i))
@@ -379,7 +379,10 @@ class DataSourceItemModel(QAbstractItemModel):
             self._root.appendChild(ctg_item)
             src_categories[ctg] = ctg_item
 
+            # train-resolved detectors do not need slicer
             default_slicer = ':'
+            if ctg in config.detectors and not config["PULSE_RESOLVED"]:
+                default_slicer = ''
             # for 2D detectors we does not apply pixel-wise filtering for now
             default_v_range = '-inf, inf' if ctg not in config.detectors else ''
             for src, ppts in srcs.items():

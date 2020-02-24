@@ -12,10 +12,10 @@ import unittest
 from extra_foam.pipeline.processors import PostPulseFilter
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.config import AnalysisType
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 
 
-class TestPulseFilters(unittest.TestCase, _BaseProcessorTest):
+class TestPulseFilters(_TestDataMixin, unittest.TestCase):
     def testPostPulseFilter(self):
         proc = PostPulseFilter()
 

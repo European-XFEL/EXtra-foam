@@ -11,10 +11,10 @@ import math
 
 import numpy as np
 
-from ...algorithms import find_actual_range, slice_curve
+from ...algorithms import compute_statistics, find_actual_range, slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
-from ..exceptions import UnknownParameterError
+from ..exceptions import ProcessingError, UnknownParameterError
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...utils import profiler
@@ -23,7 +23,21 @@ from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
 from extra_foam.algorithms import intersection, mask_image_data
 
 
-class _RoiProcessorBase:
+class _RoiProcessorBase(_BaseProcessor):
+    """Base ROI processor.
+
+    Attributes:
+        _fom_combo (RoiCombo): ROI combination when calculating FOM.
+        _fom_type (RoiFom): ROI FOM type.
+        _fom_norm (Normalizer): ROI FOM normalizer.
+        _hist_combo (RoiCombo): ROI combination when calculating histogram.
+        _hist_n_bins (int): number of bins for ROI histogram.
+        _hist_bin_range (tuple): bin range for ROI histogram.
+        _norm_combo (RoiCombo): ROI combination when calculating ROI
+            normalizer.
+        _norm_type (RoiFom): ROI normalizer type.
+    """
+
     _fom_handlers = {
         RoiFom.SUM: np.sum,
         RoiFom.MEAN: np.mean,
@@ -32,28 +46,8 @@ class _RoiProcessorBase:
         RoiFom.MIN: np.min
     }
 
-
-class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
-    """Pulse-resolved ROI processor.
-
-    Attributes:
-        _geom1, _geom2, _geom3, _geom4 (list): ROI geometries.
-        _fom_combo (RoiCombo): ROI combination when calculating FOM.
-        _fom_type (RoiFom): ROI FOM type.
-        _fom_norm (Normalizer): ROI FOM normalizer.
-        _hist_combo (RoiCombo): ROI combination when calculating histogram.
-        _norm_combo (RoiCombo): ROI combination when calculating ROI
-            normalizer.
-        _norm_type (RoiFom): ROI normalizer type.
-    """
-
     def __init__(self):
         super().__init__()
-
-        self._geom1 = RectRoiGeom.INVALID
-        self._geom2 = RectRoiGeom.INVALID
-        self._geom3 = RectRoiGeom.INVALID
-        self._geom4 = RectRoiGeom.INVALID
 
         self._fom_combo = RoiCombo.ROI1
         self._fom_type = RoiFom.SUM
@@ -67,13 +61,7 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         self._norm_type = RoiFom.SUM
 
     def update(self):
-        """Override."""
         cfg = self._meta.hget_all(mt.ROI_PROC)
-
-        self._geom1 = self.str2list(cfg[f'geom1'], handler=int)
-        self._geom2 = self.str2list(cfg[f'geom2'], handler=int)
-        self._geom3 = self.str2list(cfg[f'geom3'], handler=int)
-        self._geom4 = self.str2list(cfg[f'geom4'], handler=int)
 
         self._fom_combo = RoiCombo(int(cfg['fom:combo']))
         self._fom_type = RoiFom(int(cfg['fom:type']))
@@ -85,6 +73,80 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
 
         self._norm_combo = RoiCombo(int(cfg['norm:combo']))
         self._norm_type = RoiFom(int(cfg['norm:type']))
+
+        return cfg
+
+    @staticmethod
+    def _get_roi_combo(roi1, roi2, combo, topic):
+        """Calculate the combination of two ROIs.
+
+        The two ROIs must have the same shape.
+        """
+        if combo == RoiCombo.ROI1:
+            roi_combo = roi1
+        elif combo == RoiCombo.ROI2:
+            roi_combo = roi2
+        else:
+            if roi1 is None or roi2 is None:
+                return
+
+            if roi1.shape != roi2.shape:
+                raise ProcessingError(
+                    f"[ROI][{topic}] ROI1 and ROI2 must have the same shape")
+
+            if combo == RoiCombo.ROI1_SUB_ROI2:
+                roi_combo = roi1 - roi2
+            elif combo == RoiCombo.ROI1_ADD_ROI2:
+                roi_combo = roi1 + roi2
+            else:
+                raise UnknownParameterError(
+                    f"[ROI][histogram] Unknown ROI histogram combo: "
+                    f"{combo}")
+
+        return roi_combo
+
+    @staticmethod
+    def _compute_hist(roi, bin_range, n_bins):
+        # roi is guaranteed to be non-empty
+
+        # POI image has already been masked
+        v_min, v_max = find_actual_range(roi, bin_range)
+
+        # TODO: optimize the performance
+        filtered = roi[(roi >= v_min) & (roi <= v_max)]
+
+        hist, bin_edges = np.histogram(
+            filtered, range=(v_min, v_max), bins=n_bins)
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+
+        mean, median, std = compute_statistics(filtered)
+
+        return hist, bin_centers, mean, median, std
+
+
+class ImageRoiPulse(_RoiProcessorBase):
+    """Pulse-resolved ROI processor.
+
+    Attributes:
+        _geom1, _geom2, _geom3, _geom4 (list): ROI geometries.
+    """
+
+    def __init__(self):
+        super().__init__()
+
+        self._geom1 = RectRoiGeom.INVALID
+        self._geom2 = RectRoiGeom.INVALID
+        self._geom3 = RectRoiGeom.INVALID
+        self._geom4 = RectRoiGeom.INVALID
+
+    def update(self):
+        """Override."""
+        cfg = super().update()
+
+        self._geom1 = self.str2list(cfg[f'geom1'], handler=int)
+        self._geom2 = self.str2list(cfg[f'geom2'], handler=int)
+        self._geom3 = self.str2list(cfg[f'geom3'], handler=int)
+        self._geom4 = self.str2list(cfg[f'geom4'], handler=int)
 
     @profiler("ROI Processor (pulse)")
     def process(self, data):
@@ -124,23 +186,6 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
                         image_mask=image_mask,
                         threshold_mask=threshold_mask)
         return np.array([handler(roi)])
-
-    def _compute_hist(self, roi):
-        # TODO: optimize the performance
-
-        # POI image has already been masked
-        v_min, v_max = find_actual_range(roi, self._hist_bin_range)
-
-        filtered = roi[(roi >= v_min) & (roi <= v_max)]
-        hist, bin_edges = np.histogram(filtered,
-                                       range=(v_min, v_max),
-                                       bins=self._hist_n_bins)
-        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-
-        mean, median, std = \
-            np.mean(filtered), np.median(filtered), np.std(filtered)
-
-        return hist, bin_centers, mean, median, std
 
     def _process_norm(self, assembled, processed):
         """Calculate pulse-resolved ROI normalizers.
@@ -221,55 +266,37 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         # TODO: normalize
 
     def _process_hist(self, processed):
-        """Calculate pixel-wise histogram for POI pulses."""
+        """Calculate ROI histogram for POI pulses."""
         if self._hist_combo == RoiCombo.UNDEFINED:
             return
 
         roi_data = processed.roi
-
-        for idx in processed.image.poi_indices:
-            img = processed.image.images[idx]
+        image_data = processed.image
+        for idx in image_data.poi_indices:
+            img = image_data.images[idx]
             roi1 = roi_data.geom1.rect(img)
             roi2 = roi_data.geom2.rect(img)
-
-            if self._hist_combo == RoiCombo.ROI1:
-                roi = roi1
-            elif self._hist_combo == RoiCombo.ROI2:
-                roi = roi2
-            else:
-                if roi1 is None or roi2 is None:
-                    return
-
-                if roi1.shape != roi2.shape:
-                    logger.error(
-                        f"[ROI][histogram] ROI1 and ROI2 must have the same shape")
-                    return
-
-                if self._hist_combo == RoiCombo.ROI1_SUB_ROI2:
-                    roi = roi1 - roi2
-                elif self._hist_combo == RoiCombo.ROI1_ADD_ROI2:
-                    roi = roi1 + roi2
-                else:
-                    raise UnknownParameterError(
-                        f"[ROI][histogram] Unknown ROI histogram combo: "
-                        f"{self._hist_combo}")
+            try:
+                roi = self._get_roi_combo(roi1, roi2, self._hist_combo, "histogram")
+            except ProcessingError as e:
+                logger.error(str(e))
+                break
 
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = self._compute_hist(roi)
+            processed.pulse.roi.hist[idx] = self._compute_hist(
+                roi, self._hist_bin_range, self._hist_n_bins)
+
+            if image_data.poi_indices[1] == image_data.poi_indices[0]:
+                # skip the second one if two POIs have the same index
+                break
 
 
-class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
+class ImageRoiTrain(_RoiProcessorBase):
     """Train-resolved ROI processor.
 
     Attributes:
-        _fom_combo (RoiCombo): ROI combination when calculating FOM.
-        _fom_type (RoiFom): ROI FOM type.
-        _fom_norm (Normalizer): ROI FOM normalizer.
-        _norm_combo (RoiCombo): ROI combination when calculating ROI
-            normalizer.
-        _norm_type (RoiFom): ROI normalizer type.
         _proj_combo (RoiCombo): ROI combination when calculating ROI
             projection.
         _proj_direct (str): ROI projection direction.
@@ -299,13 +326,6 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
     def __init__(self):
         super().__init__()
 
-        self._fom_combo = RoiCombo.ROI1
-        self._fom_type = RoiFom.SUM
-        self._fom_norm = Normalizer.UNDEFINED
-
-        self._norm_combo = RoiCombo.ROI3
-        self._norm_type = RoiFom.SUM
-
         self._proj_combo = RoiCombo.ROI1
         self._proj_direct = 'x'
         self._proj_norm = Normalizer.UNDEFINED
@@ -319,14 +339,7 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
         g_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(g_cfg)
 
-        cfg = self._meta.hget_all(mt.ROI_PROC)
-
-        self._fom_combo = RoiCombo(int(cfg['fom:combo']))
-        self._fom_type = RoiFom(int(cfg['fom:type']))
-        self._fom_norm = Normalizer(int(cfg['fom:norm']))
-
-        self._norm_combo = RoiCombo(int(cfg['norm:combo']))
-        self._norm_type = RoiFom(int(cfg['norm:type']))
+        cfg = super().update()
 
         self._proj_combo = RoiCombo(int(cfg['proj:combo']))
         self._proj_direct = cfg['proj:direct']
@@ -390,6 +403,7 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
         self._roi3 = roi.geom3.rect(masked_mean)
         self._roi4 = roi.geom4.rect(masked_mean)
 
+        self._process_hist(processed)
         self._process_norm(processed)
         self._process_fom(processed)
         self._process_proj(processed)
@@ -427,6 +441,23 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
         except KeyError:
             raise UnknownParameterError(
                 f"[ROI][FOM] Unknown FOM type: {fom_type}")
+
+    def _process_hist(self, processed):
+        """Calculate ROI histogram."""
+        if self._hist_combo == RoiCombo.UNDEFINED:
+            return
+
+        try:
+            roi = self._get_roi_combo(
+                self._roi1, self._roi2, self._hist_combo, "histogram")
+        except ProcessingError as e:
+            logger.error(str(e))
+            return
+
+        if roi is not None:
+            hist = processed.roi.hist
+            hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
+                self._compute_hist(roi, self._hist_bin_range, self._hist_n_bins)
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""
@@ -558,35 +589,16 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
 
     def _process_proj(self, processed):
         """Calculate train-resolved ROI projection."""
-        roi = processed.roi
-
-        proj1 = self._compute_proj(self._roi1)
-        proj2 = self._compute_proj(self._roi2)
-
-        if self._proj_combo == RoiCombo.ROI1:
-            proj = proj1
-        elif self._proj_combo == RoiCombo.ROI2:
-            proj = proj2
-        else:
-            if proj1 is None or proj2 is None:
-                return
-
-            if self._roi1.shape != self._roi2.shape:
-                logger.error(
-                    f"[ROI][projection] ROI1 and ROI2 must have the same shape")
-                return
-
-            if self._proj_combo == RoiCombo.ROI1_SUB_ROI2:
-                proj = proj1 - proj2
-            elif self._proj_combo == RoiCombo.ROI1_ADD_ROI2:
-                proj = proj1 + proj2
-            else:
-                raise UnknownParameterError(
-                    f"[ROI][projection] Unknown ROI projection combo: "
-                    f"{self._proj_combo}")
-
-        if proj is None:
+        try:
+            roi_combo = self._get_roi_combo(
+                self._roi1, self._roi2, self._proj_combo, "projection")
+        except ProcessingError as e:
+            logger.error(str(e))
             return
+
+        if roi_combo is None:
+            return
+        proj = self._compute_proj(roi_combo)
 
         x = np.arange(len(proj))
 
@@ -594,6 +606,7 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
             processed, proj, self._proj_norm, x=x, auc_range=self._proj_auc_range)
         fom = np.sum(normalized_proj)
 
+        roi = processed.roi
         roi.proj.x = x
         roi.proj.y = normalized_proj
         roi.proj.fom = fom
@@ -602,39 +615,20 @@ class ImageRoiTrain(_BaseProcessor, _RoiProcessorBase):
         """Calculate train-resolved pump-probe ROI projections."""
         pp = processed.pp
 
-        proj1_on = self._compute_proj(self._roi1_on)
-        proj1_off = self._compute_proj(self._roi1_off)
-
-        proj2_on = self._compute_proj(self._roi2_on)
-        proj2_off = self._compute_proj(self._roi2_off)
-
-        if self._proj_combo == RoiCombo.ROI1:
-            y_on = proj1_on
-            y_off = proj1_off
-        elif self._proj_combo == RoiCombo.ROI2:
-            y_on = proj2_on
-            y_off = proj2_off
-        else:
-            if proj1_on is None or proj2_on is None:
-                return
-
-            if self._roi1.shape != self._roi2.shape:
-                # The error log is already published in '_process_proj'
-                return
-
-            if self._proj_combo == RoiCombo.ROI1_SUB_ROI2:
-                y_on = proj1_on - proj2_on
-                y_off = proj1_off - proj2_off
-            elif self._proj_combo == RoiCombo.ROI1_ADD_ROI2:
-                y_on = proj1_on + proj2_on
-                y_off = proj1_off + proj2_off
-            else:
-                raise UnknownParameterError(
-                    f"[ROI][projection] Unknown ROI projection combo: "
-                    f"{self._proj_combo}")
-
-        if y_on is None:
+        try:
+            roi_combo_on = self._get_roi_combo(
+                self._roi1_on, self._roi2_on, self._proj_combo, "projection")
+            roi_combo_off = self._get_roi_combo(
+                self._roi1_off, self._roi2_off, self._proj_combo, "projection")
+        except ProcessingError as e:
+            logger.error(str(e))
             return
+
+        if roi_combo_on is None:
+            return
+
+        y_on = self._compute_proj(roi_combo_on)
+        y_off = self._compute_proj(roi_combo_off)
 
         x = np.arange(len(y_on))
 

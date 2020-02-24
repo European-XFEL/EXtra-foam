@@ -301,19 +301,42 @@ class CircleRoiGeom(_RoiGeomBase):
         return f"{self.__class__.__name__}({self._x}, {self._y}, {self._r})"
 
 
-class RoiData(DataItem):
-    """RoiData class.
+class RoiDataPulse(DataItem):
+    """Pulse-resolved ROI data.
+
+    Attributes:
+        geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
+        norm (float): pulse-resolved ROI normalizer.
+        hist (HistogramDataPulse): pulse-resolved ROI histogram data
+            item. Currently, only ROI histogram of POI pulses will
+            be calculated.
+    """
+
+    N_ROIS = len(config['GUI_ROI_COLORS'])
+
+    __slots__ = ['norm', 'hist']
+
+    def __init__(self):
+        super().__init__()
+
+        self.norm = None
+        self.hist = HistogramDataPulse()
+
+
+class RoiDataTrain(DataItem):
+    """Train-resolved ROI data.
 
     Attributes:
         geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
         norm (float): ROI normalizer.
         proj (RoiProjData): ROI projection data item
+        hist (_HistogramDataItem): ROI histogram data item.
     """
 
     N_ROIS = len(config['GUI_ROI_COLORS'])
 
-    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj',
-                 'hist']
+    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4',
+                 'norm', 'proj', 'hist']
 
     def __init__(self):
         super().__init__()
@@ -324,11 +347,8 @@ class RoiData(DataItem):
         self.geom4 = RectRoiGeom()
 
         self.norm = None
-
-        # ROI projection
         self.proj = DataItem()
-
-        self.hist = HistogramDataPulse()
+        self.hist = _HistogramDataItem()
 
 
 class PumpProbeData(DataItem):
@@ -601,29 +621,27 @@ class CorrelationData(collections.abc.Mapping):
         return self._pp
 
 
-_StatisticsItem = namedtuple('_StatisticsItem',
-                             ['mean', 'median', 'std'], defaults=(None,) * 3)
+class _HistogramDataItem:
+
+    __slots__ = ['hist', 'bin_centers', 'mean', 'median', 'std']
+
+    def __init__(self):
+        self.hist = None
+        self.bin_centers = None
+        self.mean = None
+        self.median = None
+        self.std = None
 
 
-class HistogramDataItem:
-
-    __slots__ = ['hist', 'bin_centers', 'stats']
-
-    def __init__(self, hist=None, bin_centers=None, *args, **kwargs):
-        self.hist = hist
-        self.bin_centers = bin_centers
-
-        if kwargs:
-            self.stats = _StatisticsItem(**kwargs)
-        else:
-            self.stats = _StatisticsItem(*args)
+class HistogramDataTrain(_HistogramDataItem):
+    pass
 
 
 class HistogramDataPulse(collections.abc.MutableMapping):
     """Pulse-resolved histogram data model.
 
     Attributes:
-        pulse_foms (np.array): 1D array for pulse-resolved FOMs in a train.
+        pulse_foms (np.array): pulse-resolved FOMs in a train.
     """
 
     __slots__ = ['pulse_foms', '_data']
@@ -643,7 +661,9 @@ class HistogramDataPulse(collections.abc.MutableMapping):
         if not isinstance(key, int) or key < 0 or key >= max_k:
             raise KeyError("key must be an integer within [0, {max_k})!")
 
-        self._data[key] = HistogramDataItem(*v)
+        item = _HistogramDataItem()
+        item.hist, item.bin_centers, item.mean, item.median, item.std = v
+        self._data[key] = item
 
     def __delitem__(self, key):
         """Overload."""
@@ -828,7 +848,7 @@ class ProcessedData:
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
-            self.roi = RoiData()
+            self.roi = RoiDataPulse()
             self.xgm = XgmData()
             self.digitizer = DigitizerData()
             self.hist = HistogramDataPulse()
@@ -849,11 +869,11 @@ class ProcessedData:
 
         self.xgm = XgmData()
 
-        self.roi = RoiData()
+        self.roi = RoiDataTrain()
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
 
-        self.hist = HistogramDataItem()
+        self.hist = HistogramDataTrain()
         self.corr = CorrelationData()
         self.bin = BinData()
 

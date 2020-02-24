@@ -7,10 +7,12 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from string import Template
+
 from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
-from ..plot_widgets import PlotWidgetF, TimedPlotWidgetF
+from ..plot_widgets import HistMixin, PlotWidgetF, TimedPlotWidgetF
 from ...config import config
 
 
@@ -38,7 +40,7 @@ class InTrainFomPlot(PlotWidgetF):
             self._plot.setData(range(len(foms)), foms)
 
 
-class FomHist(TimedPlotWidgetF):
+class FomHist(HistMixin, TimedPlotWidgetF):
     """FomHist class
 
     Plot statistics of accumulated FOMs from different analysis.
@@ -46,10 +48,13 @@ class FomHist(TimedPlotWidgetF):
     def __init__(self, *, parent=None):
         super().__init__(parent=parent)
 
-        self.setTitle("FOM Histogram")
+        self._plot = self.plotBar()
+
+        self._title_template = Template(
+            f"FOM Histogram (mean: $mean, median: $median, std: $std)")
+        self.updateTitle()
         self.setLabel('left', 'Counts')
         self.setLabel('bottom', 'FOM')
-        self._plot = self.plotBar()
 
     def refresh(self):
         """Override."""
@@ -59,6 +64,7 @@ class FomHist(TimedPlotWidgetF):
             self.reset()
         else:
             self._plot.setData(bin_centers, hist.hist)
+            self.updateTitle(hist.mean, hist.median, hist.std)
 
 
 class HistogramWindow(_AbstractPlotWindow):

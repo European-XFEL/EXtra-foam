@@ -10,13 +10,13 @@ All rights reserved.
 import unittest
 from unittest.mock import patch, MagicMock
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.digitizer import DigitizerProcessor
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import UnknownParameterError
 
 
-class TestDigitizer(unittest.TestCase, _BaseProcessorTest):
+class TestDigitizer(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._channels = DigitizerProcessor._pulse_integral_channels.keys()

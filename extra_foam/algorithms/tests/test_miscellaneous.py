@@ -4,7 +4,9 @@ import math
 
 import numpy as np
 
-from extra_foam.algorithms import find_actual_range, normalize_auc
+from extra_foam.algorithms import (
+    compute_statistics, find_actual_range, normalize_auc
+)
 
 
 class TestMiscellaneous(unittest.TestCase):
@@ -72,3 +74,10 @@ class TestMiscellaneous(unittest.TestCase):
 
         arr = np.array([1, 2, 3, 4])
         self.assertTupleEqual((-1, 0), find_actual_range(arr, (-math.inf, 0)))
+
+    def testComputeStatistics(self):
+        arr = np.array([1, 1, 2, 1, 1])
+        for v in compute_statistics(arr[arr > 2]):
+            self.assertTrue(np.isnan(v))
+
+        self.assertTupleEqual((1.2, 1.0, 0.4), compute_statistics(arr))

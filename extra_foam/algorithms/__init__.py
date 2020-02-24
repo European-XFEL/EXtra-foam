@@ -7,7 +7,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .miscellaneous import find_actual_range, normalize_auc
+from .miscellaneous import (
+    compute_statistics, find_actual_range, normalize_auc
+)
 from .sampling import down_sample, quick_min_max, slice_curve, up_sample
 from .data_structures import OrderedSet, Stack
 from .azimuthal_integ import compute_q, energy2wavelength

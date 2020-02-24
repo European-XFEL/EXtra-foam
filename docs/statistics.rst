@@ -77,11 +77,14 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Analysis type*            | See :ref:`Analysis type`.                                          |
+| ``Analysis type``          | See :ref:`Analysis type`.                                          |
 +----------------------------+--------------------------------------------------------------------+
-| *# of bins*                | Number of bins of the histogram.                                   |
+| ``Bin range``              | Lower and upper boundaries of all the bins. In case of *+/- Inf*,  |
+|                            | the boundary will be calculated dynamically.                       |
 +----------------------------+--------------------------------------------------------------------+
-| *Reset*                    | Reset the histogram history.                                       |
+| ``# of bins``              | Number of bins of the histogram.                                   |
++----------------------------+--------------------------------------------------------------------+
+| ``Reset``                  | Reset the histogram history.                                       |
 +----------------------------+--------------------------------------------------------------------+
 
 
@@ -93,15 +96,15 @@ Setup the visualization of correlations of a given FOM with various slow data.
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| *Analysis type*            | See :ref:`Analysis type`.                                          |
+| ``Analysis type``          | See :ref:`Analysis type`.                                          |
 +----------------------------+--------------------------------------------------------------------+
-| *Category*                 | Category of the slow data.                                         |
+| ``Category``               | Category of the slow data.                                         |
 +----------------------------+--------------------------------------------------------------------+
-| *Karabo device ID*         | ID of the Karabo device which produces the slow data.              |
+| ``Karabo device ID``       | ID of the Karabo device which produces the slow data.              |
 +----------------------------+--------------------------------------------------------------------+
-| *Property name*            | Property name in the Karabo device.                                |
+| ``Property name``          | Property name in the Karabo device.                                |
 +----------------------------+--------------------------------------------------------------------+
-| *Resolution*               | 0 for scattering plot and any positive value for bar plot          |
+| ``Resolution``             | 0 for scattering plot and any positive value for bar plot          |
 +----------------------------+--------------------------------------------------------------------+
-| *Reset*                    | Reset the correlation history.                                     |
+| ``Reset``                  | Reset the correlation history.                                     |
 +----------------------------+--------------------------------------------------------------------+

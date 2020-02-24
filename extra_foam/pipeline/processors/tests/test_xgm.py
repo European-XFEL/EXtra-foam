@@ -10,13 +10,13 @@ All rights reserved.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.xgm import XgmProcessor
 from extra_foam.database import SourceItem
 from extra_foam.pipeline.exceptions import UnknownParameterError
 
 
-class TestXgmProcessor(unittest.TestCase, _BaseProcessorTest):
+class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
     def testGeneral(self):
         data, processed = self.simple_data(1234, (2, 2))
         meta = data['meta']

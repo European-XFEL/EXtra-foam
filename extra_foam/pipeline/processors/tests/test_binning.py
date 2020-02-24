@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import numpy as np
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.binning import _BinMixin, BinningProcessor
 from extra_foam.config import AnalysisType, BinMode
 
@@ -36,7 +36,7 @@ class TestBinMixin:
         assert 0 == proc.searchsorted([0, 1, 2, 3], 0)
 
 
-class TestBinningProcessor(_BaseProcessorTest):
+class TestBinningProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = BinningProcessor()
@@ -419,13 +419,31 @@ class TestBinningProcessor(_BaseProcessorTest):
         self._set_ret(processed, proc.analysis_type, fom_gt, None, None)
         proc.process(data)
         assert proc._auto_range1 == [True, True]
-        assert proc._actual_range1 == (0.1, 0.1)
+        assert proc._actual_range1 == (-0.4, 0.6)
 
         # second data point, actual range1 was updated
         data['raw'] = {'A ppt': 0.2, 'B ppt': 5}
         proc.process(data)
         assert proc._auto_range1 == [True, True]
         assert proc._actual_range1 == (0.1, 0.2)
+
+        # corner case 1
+        get_cfg.return_value.update({
+            'bin_range1': '(0.3, inf)',
+        })
+        proc.update()
+        proc.process(data)
+        assert proc._auto_range1 == [False, True]
+        assert proc._actual_range1 == (0.3, 1.3)
+
+        # corner case 2
+        get_cfg.return_value.update({
+            'bin_range1': '(-inf, 0.0)',
+        })
+        proc.update()
+        proc.process(data)
+        assert proc._auto_range1 == [True, False]
+        assert proc._actual_range1 == (-1.0, 0.0)
 
         # source 2 was set
         get_cfg.return_value.update({
@@ -436,7 +454,7 @@ class TestBinningProcessor(_BaseProcessorTest):
         proc.update()
         proc.process(data)
         assert proc._auto_range2 == [True, True]
-        assert proc._actual_range2 == (5.0, 5.0)
+        assert proc._actual_range2 == (4.5, 5.5)
 
         # bin range 2 was changed
         get_cfg.return_value.update({'bin_range2': '(-inf, 10)'})

@@ -15,7 +15,7 @@ import numpy as np
 from extra_foam.pipeline.processors import CorrelationProcessor
 from extra_foam.config import AnalysisType
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 
 
 _analysis_types = [AnalysisType.PUMP_PROBE,
@@ -24,7 +24,7 @@ _analysis_types = [AnalysisType.PUMP_PROBE,
                    AnalysisType.AZIMUTHAL_INTEG]
 
 
-class TestCorrelationProcessor(_BaseProcessorTest):
+class TestCorrelationProcessor(_TestDataMixin):
 
     def _set_fom(self, processed, analysis_type, fom):
         if analysis_type == AnalysisType.PUMP_PROBE:

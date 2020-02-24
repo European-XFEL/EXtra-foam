@@ -14,7 +14,7 @@ import numpy as np
 from extra_foam.pipeline.processors.pump_probe import PumpProbeProcessor
 from extra_foam.config import PumpProbeMode
 from extra_foam.pipeline.exceptions import DropAllPulsesError,PumpProbeIndexError
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 
 
 class _PumpProbeTestMixin:
@@ -39,7 +39,7 @@ class _PumpProbeTestMixin:
                          processed.pp.__dict__[onoff].digitizer_pulse_integral)
 
 
-class TestPumpProbeProcessorTr(unittest.TestCase, _PumpProbeTestMixin, _BaseProcessorTest):
+class TestPumpProbeProcessorTr(_PumpProbeTestMixin, _TestDataMixin, unittest.TestCase):
     """Test train-resolved ImageProcessor.
 
     For train-resolved data.
@@ -175,7 +175,7 @@ class TestPumpProbeProcessorTr(unittest.TestCase, _PumpProbeTestMixin, _BaseProc
         self._check_pp_params_in_data_model(processed)
 
 
-class TestPumpProbeProcessorPr(unittest.TestCase, _PumpProbeTestMixin, _BaseProcessorTest):
+class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.TestCase):
     """Test train-resolved PumpProbeProcessor.
 
     For pulse-resolved data.

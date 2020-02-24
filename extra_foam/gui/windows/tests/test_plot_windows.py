@@ -11,6 +11,7 @@ from extra_foam.gui.windows import (
 )
 from extra_foam.gui.plot_widgets import RoiImageView
 from extra_foam.pipeline.data_model import ProcessedData
+from extra_foam.pipeline.tests import _TestDataMixin
 
 app = mkQApp()
 
@@ -161,7 +162,7 @@ class testPumpProbeWidgets(unittest.TestCase):
         widget.refresh()
 
 
-class testPulseOfInterestWidgets(unittest.TestCase):
+class testPulseOfInterestWidgets(_TestDataMixin, unittest.TestCase):
     def testPoiImageView(self):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiImageView
 
@@ -173,14 +174,26 @@ class testPulseOfInterestWidgets(unittest.TestCase):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiFomHist
 
         widget = PoiFomHist(0)
+
+        # empty data
         widget._data = ProcessedData(1)
+        widget.refresh()
+
+        # non-empty data
+        widget._data = self.processed_data(1001, (4, 2, 2), histogram=True)
         widget.refresh()
 
     def testPoiRoiHist(self):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiRoiHist
 
         widget = PoiRoiHist(0)
+
+        # empty data
         data = ProcessedData(1)
+        widget.updateF(data)
+
+        # non-empty data
+        data = self.processed_data(1001, (4, 2, 2), histogram=True)
         widget.updateF(data)
 
 
@@ -219,12 +232,18 @@ class testCorrrelationWidgets(unittest.TestCase):
             widget.refresh()
 
 
-class testHistogramWidgets(unittest.TestCase):
+class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
     def testFomHist(self):
         from extra_foam.gui.windows.histogram_w import FomHist
 
         widget = FomHist()
+
+        # empty data
         widget._data = ProcessedData(1)
+        widget.refresh()
+
+        # non-empty data
+        widget._data = self.processed_data(1001, (4, 2, 2), histogram=True)
         widget.refresh()
 
     def testInTrainFomPlot(self):

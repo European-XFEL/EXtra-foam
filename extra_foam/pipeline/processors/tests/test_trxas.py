@@ -12,11 +12,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 import numpy as np
 
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.tr_xas import TrXasProcessor
 
 
-class TestTrXasProcessor(_BaseProcessorTest):
+class TestTrXasProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = TrXasProcessor()

@@ -411,13 +411,12 @@ class TestCorrelationData(unittest.TestCase):
 class TestHistogramData(unittest.TestCase):
 
     def testGeneral(self):
-        from extra_foam.pipeline.data_model import HistogramDataItem, HistogramDataPulse
+        from extra_foam.pipeline.data_model import _HistogramDataItem, HistogramDataPulse
 
         data = HistogramDataPulse()
-
-        # test mutable mapping
-        self.assertEqual(0, len(data))
         hist_gt, bin_centers_gt = np.arange(0, 10, 1), np.arange(0, 20, 2)
+
+        self.assertEqual(0, len(data))
 
         # __getitem__ and __setitem__
 
@@ -430,38 +429,21 @@ class TestHistogramData(unittest.TestCase):
         with self.assertRaises(KeyError):
             data[2700] = (hist_gt, bin_centers_gt)
 
-        data[0] = (hist_gt, bin_centers_gt)
-        np.testing.assert_array_equal(hist_gt, data[0].hist)
-        np.testing.assert_array_equal(bin_centers_gt, data[0].bin_centers)
-        self.assertIsNone(data[0].stats.mean)
-        self.assertIsNone(data[0].stats.median)
-        self.assertIsNone(data[0].stats.std)
-
-        data[100] = (2 * hist_gt, 2 * bin_centers_gt, 1, 2, 3)
-        np.testing.assert_array_equal(2 * hist_gt, data[100].hist)
-        np.testing.assert_array_equal(2 * bin_centers_gt, data[100].bin_centers)
-        self.assertEqual(1, data[100].stats.mean)
-        self.assertEqual(2, data[100].stats.median)
-        self.assertEqual(3, data[100].stats.std)
+        data[1] = (hist_gt, bin_centers_gt, 1, 2, 3)
+        data[100] = (hist_gt, bin_centers_gt, 1, 2, 3)
+        np.testing.assert_array_equal(hist_gt, data[100].hist)
+        np.testing.assert_array_equal(bin_centers_gt, data[100].bin_centers)
+        self.assertEqual(1, data[100].mean)
+        self.assertEqual(2, data[100].median)
+        self.assertEqual(3, data[100].std)
 
         # __iter__
         for _, item in data.items():
-            self.assertIsInstance(item, HistogramDataItem)
+            self.assertIsInstance(item, _HistogramDataItem)
 
         # __delitem__ and __len__
         self.assertEqual(2, len(data))
         del data[100]
         self.assertEqual(1, len(data))
-        del data[0]
+        del data[1]
         self.assertEqual(0, len(data))
-
-        # test keyword constructor of HistogramDataItem
-        item = HistogramDataItem(hist=[1, 2], bin_centers=[2, 3], mean=1, median=2)
-        self.assertListEqual([1, 2], item.hist)
-        self.assertListEqual([2, 3], item.bin_centers)
-        self.assertEqual(1, item.stats.mean)
-        self.assertEqual(2, item.stats.median)
-        self.assertIsNone(item.stats.std)
-
-        with self.assertRaises(TypeError):
-            HistogramDataItem(hist=[1, 2], bin_centers=[2, 3], mean=1, median=2, max=4)

@@ -15,16 +15,16 @@ import numpy as np
 from extra_foam.pipeline.data_model import ProcessedData
 from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.histogram import HistogramProcessor
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.config import AnalysisType
 
+np.warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 _analysis_types = {
     'ROI': AnalysisType.ROI_FOM
 }
 
-
-class TestHistogramProcessor(_BaseProcessorTest):
+class TestHistogramProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = HistogramProcessor()
@@ -70,6 +70,8 @@ class TestHistogramProcessor(_BaseProcessorTest):
 
         proc.process(data)
         error.assert_called_once()
+        assert "is not available" in error.call_args[0][0]
+        # It also test that the code can deal with empty FOM array
         error.reset_mock()
 
         fom_gt1 = [10, 20, 30, 40, 20]
@@ -125,6 +127,8 @@ class TestHistogramProcessor(_BaseProcessorTest):
 
         proc.process(data)
         error.assert_called_once()
+        assert "is not available" in error.call_args[0][0]
+        # It also test that the code can deal with empty FOM array
         error.reset_mock()
 
         fom_gt = [10, 20, 30, 40, 20, 30, 20, 10, 40, 10]

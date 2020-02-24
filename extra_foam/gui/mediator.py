@@ -254,6 +254,9 @@ class Mediator(QObject):
     def onHistAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.HISTOGRAM_PROC, "analysis_type", int(value))
 
+    def onHistBinRangeChange(self, value: tuple):
+        self._meta.hset(mt.HISTOGRAM_PROC, "bin_range", str(value))
+
     def onHistNumBinsChange(self, value: int):
         self._meta.hset(mt.HISTOGRAM_PROC, "n_bins", int(value))
 
