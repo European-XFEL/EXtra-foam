@@ -174,12 +174,12 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
 }
 
 /**
- * Inplace converting nan to zero for an image.
+ * Inplace converting nan to 0 for an image.
  *
  * @param src: image data. shape = (y, x)
  */
 template <typename E, EnableIf<E, IsImage> = false>
-inline void maskImageData(E& src)
+inline void maskZeroImageData(E& src)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -194,14 +194,23 @@ inline void maskImageData(E& src)
 }
 
 /**
- * Mask an image by threshold inplace.
+ * Maintain an identical API with maskZeroImageData.
+ *
+ * @param src: image data. shape = (y, x)
+ */
+template <typename E, EnableIf<E, IsImage> = false>
+inline void maskNanImageData(E& src) {}
+
+/**
+ * Inplace masking an image to 0 by threshold inplace. Nan pixels in
+ * the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
 template <typename E, typename T, EnableIf<E, IsImage> = false>
-inline void maskImageData(E& src, T lb, T ub)
+inline void maskZeroImageData(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -218,14 +227,41 @@ inline void maskImageData(E& src, T lb, T ub)
 }
 
 /**
- * Mask an image by an image mask inplace.
+ * Inplace masking an image to nan by threshold inplace.
+ *
+ * @param src: image data. shape = (y, x)
+ * @param lb: lower threshold
+ * @param ub: upper threshold
+ */
+template <typename E, typename T, EnableIf<E, IsImage> = false>
+inline void maskNanImageData(E& src, T lb, T ub)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      auto v = src(j, k);
+      if (std::isnan(v)) continue;
+      if (v < lb || v > ub) src(j, k) = nan;
+    }
+  }
+}
+
+
+/**
+ * Inplace masking an image to 0 by an image mask inplace. Nan pixels in
+ * the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
   EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
-inline void maskImageData(E& src, const M& mask)
+inline void maskZeroImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -248,7 +284,33 @@ inline void maskImageData(E& src, const M& mask)
 }
 
 /**
- * Mask an image by both threshold and an image mask inplace.
+ * Inplace masking an image to nan by an image mask inplace.
+ *
+ * @param src: image data. shape = (y, x)
+ * @param mask: image mask. shape = (y, x)
+ */
+template <typename E, typename M,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+inline void maskNanImageData(E& src, const M& mask)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+  if (shape != mask.shape())
+    throw std::invalid_argument("Image and mask have different shapes!");
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      if (mask(j, k)) src(j, k) = nan;
+    }
+  }
+}
+
+/**
+ * Inplace masking an image to 0 by both threshold and an image mask inplace.
+ * Nan pixels in the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
@@ -257,7 +319,7 @@ inline void maskImageData(E& src, const M& mask)
  */
 template <typename E, typename M, typename T,
   EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
-inline void maskImageData(E& src, const M& mask, T lb, T ub)
+inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -280,12 +342,45 @@ inline void maskImageData(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace converting nan to zero for an array of images.
+ * Inplace masking an image to nan by both threshold and an image mask inplace.
+ *
+ * @param src: image data. shape = (y, x)
+ * @param mask: image mask. shape = (y, x)
+ * @param lb: lower threshold
+ * @param ub: upper threshold
+ */
+template <typename E, typename M, typename T,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+  if (shape != mask.shape())
+    throw std::invalid_argument("Image and mask have different shapes!");
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      if (mask(j, k)) src(j, k) = nan;
+      else
+      {
+        auto v = src(j, k);
+        if (std::isnan(v)) continue;
+        if (v < lb || v > ub) src(j, k) = nan;
+      }
+    }
+  }
+}
+
+/**
+ * Inplace converting nan to 0 for an array of images.
  *
  * @param src: image data. shape = (indices, y, x)
  */
 template <typename E, EnableIf<E, IsImageArray> = false>
-inline void maskImageData(E& src)
+inline void maskZeroImageData(E& src)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -312,14 +407,23 @@ inline void maskImageData(E& src)
 }
 
 /**
- * Mask an array of images by threshold inplace.
+ * Maintain an identical API with maskZeroImageData.
+ *
+ * @param src: image data. shape = (indices, y, x)
+ */
+template <typename E, EnableIf<E, IsImageArray> = false>
+inline void maskNanImageData(E& src) {}
+
+/**
+ * Inplace masking an array of images by threshold inplace. Nan pixels in
+ * those images are also converted into 0.
  *
  * @param src: image data. shape = (slices, y, x)
  * @param lb: lower threshold
  * @param ub: upper threshold
  */
 template <typename E, typename T, EnableIf<E, IsImageArray> = false>
-inline void maskImageData(E& src, T lb, T ub)
+inline void maskZeroImageData(E& src, T lb, T ub)
 {
   using value_type = typename E::value_type;
 #if defined(FOAM_WITH_TBB)
@@ -348,14 +452,53 @@ inline void maskImageData(E& src, T lb, T ub)
 }
 
 /**
- * Mask an array of images by an image mask inplace.
+ * Inplace masking an array of images by threshold inplace.
+ *
+ * @param src: image data. shape = (slices, y, x)
+ * @param lb: lower threshold
+ * @param ub: upper threshold
+ */
+template <typename E, typename T, EnableIf<E, IsImageArray> = false>
+inline void maskNanImageData(E& src, T lb, T ub)
+{
+  using value_type = typename E::value_type;
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+#if defined(FOAM_WITH_TBB)
+  auto shape = src.shape();
+
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+            auto v = src(i, j, k);
+            if (std::isnan(v)) continue;
+            if (v < lb || v > ub) src(i, j, k) = nan;
+          }
+        }
+      }
+    }
+  );
+#else
+  xt::filter(src, src < lb | src > ub) = nan;
+#endif
+}
+
+/**
+ * Inplace masking an array of images to 0 by an image mask inplace. Nan pixels in
+ * those images are also converted into 0.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
   EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
-inline void maskImageData(E& src, const M& mask)
+inline void maskZeroImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -400,14 +543,62 @@ inline void maskImageData(E& src, const M& mask)
 }
 
 /**
- * Mask an array of images by an image mask inplace.
+ * Inplace masking an array of images to nan by an image mask inplace.
+ *
+ * @param src: image data. shape = (indices, y, x)
+ * @param mask: image mask. shape = (y, x)
+ */
+template <typename E, typename M,
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+inline void maskNanImageData(E& src, const M& mask)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+  auto msk_shape = mask.shape();
+  if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
+  {
+    throw std::invalid_argument("Image and mask have different shapes!");
+  }
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, &mask, nan] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+            if (mask(j, k)) src(i, j, k) = nan;
+          }
+        }
+      }
+#if defined(FOAM_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+ * Inplace masking an array of images to 0 by an image mask inplace. Nan pixels in
+ * those images are also converted into 0.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M, typename T,
   EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
-inline void maskImageData(E& src, const M& mask, T lb, T ub)
+inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
   auto shape = src.shape();
@@ -443,6 +634,61 @@ inline void maskImageData(E& src, const M& mask, T lb, T ub)
             {
               auto v = src(i, j, k);
               if (std::isnan(v) || v < lb || v > ub) src(i, j, k) = value_type(0);
+            }
+          }
+        }
+      }
+#if defined(FOAM_WITH_TBB)
+    }
+  );
+#endif
+}
+
+/**
+ * Inplace masking an array of images to nan by an image mask inplace.
+ *
+ * @param src: image data. shape = (indices, y, x)
+ * @param mask: image mask. shape = (y, x)
+ */
+template <typename E, typename M, typename T,
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+  auto msk_shape = mask.shape();
+  if (msk_shape[0] != shape[1] || msk_shape[1] != shape[2])
+  {
+    throw std::invalid_argument("Image and mask have different shapes!");
+  }
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range3d<int>(0, shape[0], 0, shape[1], 0, shape[2]),
+    [&src, &mask, lb, ub, nan] (const tbb::blocked_range3d<int> &block)
+    {
+      for(int i=block.pages().begin(); i != block.pages().end(); ++i)
+      {
+        for(int j=block.rows().begin(); j != block.rows().end(); ++j)
+        {
+          for(int k=block.cols().begin(); k != block.cols().end(); ++k)
+          {
+#else
+      for (size_t i = 0; i < shape[0]; ++i)
+      {
+        for (size_t j = 0; j < shape[1]; ++j)
+        {
+          for (size_t k = 0; k < shape[2]; ++k)
+          {
+#endif
+            if (mask(j, k))
+            {
+              src(i, j, k) = nan;
+            } else
+            {
+              auto v = src(i, j, k);
+              if (std::isnan(v)) continue;
+              if (v < lb || v > ub) src(i, j, k) = nan;
             }
           }
         }

@@ -17,7 +17,7 @@ from .azimuthal_integ import compute_q, energy2wavelength
 from .helpers import intersection
 
 from .imageproc import (
-    nanmeanImageArray, movingAvgImageData, maskImageData,
+    nanmeanImageArray, movingAvgImageData, maskNanImageData, maskZeroImageData,
     correctGain, correctOffset, correctGainOffset
 )
 
@@ -28,7 +28,7 @@ from .datamodel import (
 )
 
 
-def nanmean_image_data(data, kept=None):
+def nanmean_image_data(data, *, kept=None):
     """Compute nanmean of an array of images of a tuple/list of two images.
 
     :param tuple/list/numpy.array data: a tuple/list of two 2D arrays, or
@@ -68,23 +68,25 @@ def correct_image_data(data, *,
         correctGain(data, gain[slicer])
 
 
-def mask_image_data(image_data, *, image_mask=None, threshold_mask=None):
+def mask_image_data(image_data, *,
+                    image_mask=None, threshold_mask=None, keep_nan=False):
     """Mask image data by image mask and/or threshold mask.
-
-    The Nan pixel value will be set to 0.
-    The masked pixel value will be set to 0.
 
     :param numpy.ndarray image_data: image to be masked.
         Shape = (y, x) or (indices, y, x)
     :param numpy.ndarray/None image_mask: image mask, which has the same
         shape as the image.
     :param tuple/None threshold_mask: (min, max) of the threshold mask.
+    :param bool keep_nan: True for masking all pixels in nan and False for
+        masking all pixels to zero (including the existing nan).
     """
+    f = maskNanImageData if keep_nan else maskZeroImageData
+
     if image_mask is None and threshold_mask is None:
-        maskImageData(image_data)
+        f(image_data)
     elif image_mask is None:
-        maskImageData(image_data, *threshold_mask)
+        f(image_data, *threshold_mask)
     elif threshold_mask is None:
-        maskImageData(image_data, image_mask)
+        f(image_data, image_mask)
     else:
-        maskImageData(image_data, image_mask, *threshold_mask)
+        f(image_data, image_mask, *threshold_mask)

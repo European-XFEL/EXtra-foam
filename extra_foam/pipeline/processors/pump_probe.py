@@ -123,7 +123,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices:
                         raise DropAllPulsesError(
                             f"{tid}: all pulses were dropped")
-                    images_mean = nanmean_image_data(assembled, indices)
+                    images_mean = nanmean_image_data(assembled, kept=indices)
                 else:
                     # for performance
                     images_mean = nanmean_image_data(assembled)
@@ -188,7 +188,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices_on:
                         raise DropAllPulsesError(
                             f"{tid}: all on pulses were dropped")
-                    image_on = nanmean_image_data(assembled, indices_on)
+                    image_on = nanmean_image_data(assembled, kept=indices_on)
 
                     curr_indices.extend(indices_on)
                     curr_means.append(image_on)
@@ -219,7 +219,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if not indices_off:
                         raise DropAllPulsesError(
                             f"{tid}: all off pulses were dropped")
-                    image_off = nanmean_image_data(assembled, indices_off)
+                    image_off = nanmean_image_data(assembled, kept=indices_off)
                     curr_indices.extend(indices_off)
                     curr_means.append(image_off)
 
@@ -244,7 +244,7 @@ class PumpProbeProcessor(_BaseProcessor):
                             raise DropAllPulsesError(
                                 f"{tid}: all on pulses were dropped")
                         self._prev_unmasked_on = nanmean_image_data(
-                            assembled, indices_on)
+                            assembled, kept=indices_on)
                         curr_indices.extend(indices_on)
                         curr_means.append(self._prev_unmasked_on)
                     else:
@@ -267,7 +267,8 @@ class PumpProbeProcessor(_BaseProcessor):
                             if not indices_off:
                                 raise DropAllPulsesError(
                                     f"{tid}: all off pulses were dropped")
-                            image_off = nanmean_image_data(assembled, indices_off)
+                            image_off = nanmean_image_data(
+                                assembled, kept=indices_off)
                             curr_indices.extend(indices_off)
                             curr_means.append(image_off)
                         else:
