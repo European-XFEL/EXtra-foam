@@ -73,6 +73,11 @@ class GeomAssembler(IntEnum):
     EXTRA_GEOM = 2  # use Extra-geom geometry assembler
 
 
+class PipelineSlowPolicy(IntEnum):
+    DROP = 0
+    WAIT = 1
+
+
 def list_azimuthal_integ_methods(detector):
     """Return a list of available azimuthal integration methos.
 
@@ -185,7 +190,6 @@ class _Config(dict):
         "SAMPLE_DISTANCE": 1.0,
         # photon energy, in keV
         "PHOTON_ENERGY": 12.4,
-
         # -------------------------------------------------------------
         # Process
         # -------------------------------------------------------------
@@ -199,8 +203,11 @@ class _Config(dict):
         # maximum length of the queue in data pipeline (the smaller the queue
         # size, the smaller the latency)
         "PIPELINE_MAX_QUEUE_SIZE": 2,
-        # blocking time in get/put method of Queue, in second
-        "PIPELINE_TIMEOUT": 0.1,
+        "PIPELINE_SLOW_POLICY": PipelineSlowPolicy.DROP,
+        # timeout of the zmq bridge, in second
+        "BRIDGE_TIMEOUT": 0.1,
+        # maximum length of the cache used in data correlation by train ID
+        "CORRELATION_QUEUE_CACHE_SIZE": 20,
         # -------------------------------------------------------------
         # Source of data
         # -------------------------------------------------------------
@@ -274,6 +281,10 @@ class _Config(dict):
     _AreaDetectorConfig = namedtuple("_AreaDetectorConfig", [
         "REDIS_PORT", "PULSE_RESOLVED", "REQUIRE_GEOMETRY",
         "NUMBER_OF_MODULES", "MODULE_SHAPE", "PIXEL_SIZE"])
+
+    # "name" is only used for labeling, it is ignored in the pipeline code.
+    StreamerEndpointItem = namedtuple("StreamerEndpointItem",
+                                      ["name", "type", "address", "port"])
 
     for key in _AreaDetectorConfig._fields:
         assert key in _opts
@@ -354,6 +365,8 @@ class _Config(dict):
             }
         }
 
+        self.appendix_streamers = []
+
     @classmethod
     def topics(cls):
         return 'SPB', 'FXE', 'SCS', 'SQS', 'MID', 'HED'
@@ -374,7 +387,7 @@ class _Config(dict):
                 self._abs_dirpath, f"configs/{osp.basename(config_file)}"),
                 config_file)
 
-    def load(self, det, topic):
+    def load(self, det, topic, **kwargs):
         """Update configs from the config file.
 
         :param str det: detector name.
@@ -384,6 +397,11 @@ class _Config(dict):
 
         self.__setitem__("DETECTOR", det)
         self.__setitem__("TOPIC", topic)
+        for k, v in kwargs.items():
+            if k in self:
+                self.__setitem__(k, v)
+            else:
+                raise KeyError
 
         # update the configurations of the main detector
         for k, v in self._detector_config[det]._asdict().items():
@@ -429,21 +447,32 @@ class _Config(dict):
 
         # update data sources
         src_cfg = cfg.get("SOURCE", dict())
+        self["SOURCE_DEFAULT_TYPE"] = src_cfg["DEFAULT_TYPE"]
         for ctg, srcs in src_cfg.get("CATEGORY", dict()).items():
             # We assume the main detector type is exclusive, i.e., only one
             # of them will be needed.
             if ctg == detector or ctg not in self.detectors():
                 if ctg != detector and ctg not in self._misc_source_categories:
-                    raise ValueError(f"Invalid source category: {ctg}!\n"
-                                     f"The valid source categories are: "
-                                     f"{self._misc_source_categories + self.detectors()}")
+                    raise ValueError(
+                        f"Invalid source category: {ctg}!\n"
+                        f"The valid source categories are: "
+                        f"{self._misc_source_categories + self.detectors()}")
                 self.control_sources[ctg] = srcs.get("CONTROL", dict())
                 self.pipeline_sources[ctg] = srcs.get("PIPELINE", dict())
+
+        # update connection
+        con_cfg = cfg.get("STREAMER", dict())
+        stream_cfg = con_cfg.get("ZMQ", dict())
+        for name, opts in stream_cfg.items():
+            self.appendix_streamers.append(
+                self.StreamerEndpointItem(
+                    name, opts["DEFAULT_TYPE"], opts["ADDR"], opts["PORT"]))
 
 
 class ConfigWrapper(abc.Mapping):
     """Readonly config."""
     def __init__(self):
+        super().__init__()
         self._data = _Config()
 
     def __contains__(self, key):
@@ -462,8 +491,8 @@ class ConfigWrapper(abc.Mapping):
         """Override."""
         return self._data.__iter__()
 
-    def load(self, detector, topic):
-        self._data.load(detector, topic)
+    def load(self, detector, topic, **kwargs):
+        self._data.load(detector, topic, **kwargs)
 
     @property
     def detectors(self):
@@ -491,6 +520,10 @@ class ConfigWrapper(abc.Mapping):
     @property
     def meta_sources(self):
         return self._data.meta_sources
+
+    @property
+    def appendix_streamers(self):
+        return self._data.appendix_streamers
 
     @staticmethod
     def parse_detector_name(detector):

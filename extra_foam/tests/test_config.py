@@ -64,6 +64,17 @@ class TestConfig:
 
         os.remove(filepath)
 
+    def testLoadConfig(self):
+        cfg = self._cfg
+        # 'load' does not check whether the value is valid
+        cfg.load('DSSC', 'SCS', PIPELINE_SLOW_POLICY=100)
+        assert cfg["PIPELINE_SLOW_POLICY"] == 100
+
+        with pytest.raises(KeyError):
+            cfg.load('DSSC', 'SCS', PIPELINE_SLOW=100)
+
+        os.remove(cfg.config_file)
+
     def testLoadConfigFromFile(self):
         cfg = self._cfg
         cfg.load('DSSC', 'SCS')

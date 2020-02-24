@@ -15,19 +15,20 @@ import faulthandler
 import sys
 import traceback
 import itertools
+import multiprocessing as mp
 
 import psutil
 
 import redis
 
 from . import __version__
-from .config import AnalysisType, config
+from .config import AnalysisType, config, PipelineSlowPolicy
 from .database import Metadata as mt
 from .ipc import init_redis_connection
 from .logger import logger
 from .gui import MainGUI, mkQApp
 from .pipeline import PulseWorker, TrainWorker
-from .processes import ProcessInfo, register_foam_process
+from .processes import register_foam_process
 from .utils import check_system_resource, query_yes_no
 from .gui.windows import FileStreamControllerWindow
 
@@ -135,7 +136,7 @@ def start_redis_server(host='127.0.0.1', port=6379, *, password=None):
 
         logger.info(f"Redis server started at {host}:{port}")
 
-        register_foam_process(ProcessInfo(name="redis", process=process))
+        register_foam_process("redis", process)
 
         # subscribe List commands
         # client.config_set("notify-keyspace-events", "Kl")
@@ -268,11 +269,16 @@ class Foam:
         start_redis_server(host, port, password=password)
 
         try:
-            self.pulse_worker = PulseWorker()
-            self.train_worker = TrainWorker()
+            # The following two events controls the pause and close
+            # of all processes.
+            self._pause_ev = mp.Event()
+            self._close_ev = mp.Event()
+
+            self.pulse_worker = PulseWorker(self._pause_ev, self._close_ev)
+            self.train_worker = TrainWorker(self._pause_ev, self._close_ev)
             self.train_worker.input.connect(self.pulse_worker.output)
 
-            self._gui = MainGUI()
+            self._gui = MainGUI(self._pause_ev, self._close_ev)
             self._gui.input.connect(self.train_worker.output)
 
         except Exception as e:
@@ -284,27 +290,14 @@ class Foam:
     def init(self):
         logger.info(f"{_CPU_INFO}, {_GPU_INFO}, {_MEMORY_INFO}")
 
+        self._gui.start_sgn.connect(self._pause_ev.set)
+        self._gui.stop_sgn.connect(self._pause_ev.clear)
         self._gui.start()
-        self._gui.start_sgn.connect(self._resume)
-        self._gui.stop_sgn.connect(self._pause)
 
         self.pulse_worker.start()
-        register_foam_process(ProcessInfo(name=self.pulse_worker.name,
-                                          process=self.pulse_worker))
-
         self.train_worker.start()
-        register_foam_process(ProcessInfo(name=self.train_worker.name,
-                                          process=self.train_worker))
 
         return self
-
-    def _resume(self):
-        self.train_worker.resume()
-        self.pulse_worker.resume()
-
-    def _pause(self):
-        self.train_worker.pause()
-        self.pulse_worker.pause()
 
     def terminate(self):
         if self._gui is not None:
@@ -327,7 +320,15 @@ def application():
                         type=lambda s: s.upper())
     parser.add_argument('--debug', action='store_true',
                         help="Run in debug mode")
-    parser.add_argument("--redis_address", help="Address of the Redis server (optional)",
+    parser.add_argument("--pipeline_slow_policy",
+                        help="Pipeline policy when the processing rate is "
+                             "slower than the arrival rate (0 for always "
+                             "process the latest data and 1 for wait until "
+                             "processing of the current data finishes)",
+                        choices=[0, 1],
+                        default=1,
+                        type=int)
+    parser.add_argument("--redis_address", help="Address of the Redis server",
                         default="127.0.0.1",
                         type=lambda s: s.lower())
 
@@ -353,7 +354,8 @@ def application():
     )
 
     # update global configuration
-    config.load(detector, topic)
+    config.load(detector, topic,
+                PIPELINE_SLOW_POLICY=PipelineSlowPolicy(args.pipeline_slow_policy))
 
     foam = Foam(redis_address=redis_address).init()
 

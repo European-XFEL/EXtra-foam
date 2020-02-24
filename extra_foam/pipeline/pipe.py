@@ -8,14 +8,12 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from abc import ABC, abstractmethod
-import copy
 import multiprocessing as mp
-import threading
-from queue import Empty, Full, Queue
+from queue import Empty, Full
 import time
 
-from karabo_bridge import Client
-from .data_model import ProcessedData
+from .f_zmq import BridgeProxy
+from .f_queue import CorrelateQueue, SimpleQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
 from ..utils import profiler, run_in_thread
@@ -35,56 +33,57 @@ class _PipeBase(ABC):
     multi-threading queue and exchanges data within its own process via
     this Queue.
     """
+    _pipeline_dtype = ('catalog', 'meta', 'raw', 'processed')
 
-    def __init__(self, *, drop=False, final=False):
+    def __init__(self, update_ev, pause_ev, close_ev, *, final=False):
         """Initialization.
 
-        :param bool drop: True if data is allowed to be dropped.
         :param bool final: True if the pipe is the final one in the pipeline.
         """
-        self._drop = drop
+        super().__init__()
+
+        self._update_ev = update_ev
+        self._pause_ev = pause_ev
+        self._close_ev = close_ev
         self._final = final
 
-        self._data = Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
+        self._cache = SimpleQueue(maxsize=1)
 
         self._meta = MetaProxy()
         self._mon = MonProxy()
 
-        self._update_ev = threading.Event()
-
-    def update(self):
-        """Signal update."""
-        self._update_ev.set()
-
-    def start(self, close_ev):
+    def start(self):
         """Start to run pipe in a thread.
 
         For input pipe, it starts to receive data from the client and put it
         into the internal queue; for output pipe, it starts to get data from
         the internal queue and send it to the client.
         """
-        # clean the residual data
-        self.clean()
-        self.run(close_ev, self._update_ev)
+        self.clear()
+        self.run()
 
     @abstractmethod
-    def run(self, close_ev, update_ev):
-        """Target function for running in a thread.
-
-        :param multiprocessing.Event close_ev: if this event is set, the
-            target function running in a thread will be terminated.
-        :param multithreading.Event update_ev: if this event is set, the
-            pipe will update its state.
-        """
+    def run(self):
+        """Target function for running in a thread."""
         raise NotImplementedError
 
-    def clean(self):
-        """Empty the data queue."""
-        while not self._data.empty():
-            try:
-                self._data.get_nowait()
-            except Empty:
-                break
+    @property
+    def closing(self):
+        return self._close_ev.is_set()
+
+    @property
+    def running(self):
+        return self._pause_ev.is_set()
+
+    @property
+    def updating(self):
+        return self._update_ev.is_set()
+
+    def finish_updating(self):
+        self._update_ev.clear()
+
+    def clear(self):
+        self._cache.clear()
 
 
 class _PipeInBase(_PipeBase):
@@ -94,12 +93,8 @@ class _PipeInBase(_PipeBase):
         """Connect to specified output pipe."""
         pass
 
-    def get(self, timeout=None):
-        """Remove and return the first data item in the queue."""
-        return self._data.get(timeout=timeout)
-
-    def get_nowait(self):
-        return self._data.get_nowait()
+    def get(self):
+        return self._cache.get_nowait()
 
 
 class _PipeOutBase(_PipeBase):
@@ -109,25 +104,11 @@ class _PipeOutBase(_PipeBase):
         """Accept a connection."""
         pass
 
-    def put(self, item, timeout=None):
-        """Add a new data item into the queue."""
-        return self._data.put(item, timeout=timeout)
+    def put(self, item):
+        self._cache.put_nowait(item)
 
-    def put_nowait(self, item):
-        return self._data.put_nowait(item)
-
-    def put_pop(self, item, timeout=None):
-        """Add a new data item into the queue aggressively.
-
-        If the queue is full, the first item will be removed and the
-        new data item will be added again without blocking.
-        """
-        try:
-            self._data.put(item, timeout=timeout)
-        except Full:
-            self._data.get_nowait()
-            logger.warning(f"Data dropped due to slowness of the pipeline")
-            self._data.put_nowait(item)
+    def put_pop(self, item):
+        self._cache.put_pop(item)
 
 
 class KaraboBridge(_PipeInBase, _RedisParserMixin):
@@ -140,122 +121,108 @@ class KaraboBridge(_PipeInBase, _RedisParserMixin):
 
         self._catalog = SourceCatalog()
 
-        self._lock = threading.Lock()
+        # override SimpleQueue
+        self._cache = CorrelateQueue(self._catalog, maxsize=1)
 
-    def start(self, close_ev):
-        """Override."""
-        self.clean()
-        self.update_source_items()
-        self.run(close_ev, self._update_ev)
-
-    @run_in_thread(daemon=True)
-    def update_source_items(self):
+    def _update_source_items(self):
         """Updated requested source items."""
         sub = self._sub
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
+            if msg is None:
+                break
 
-            if msg is not None:
-                src = msg['data']
+            src = msg['data']
+            item = self._meta.hget_all(src)
+            if item:
+                # add a new source item
+                category = item['category']
+                modules = item['modules']
+                slicer = item['slicer']
+                vrange = item['vrange']
 
-                item = self._meta.hget_all(src)
-                with self._lock:
-                    if item:
-                        # add a new source item
-                        category = item['category']
-                        modules = item['modules']
-                        slicer = item['slicer']
-                        vrange = item['vrange']
+                self._catalog.add_item(SourceItem(
+                    category,
+                    item['name'],
+                    self.str2list(modules, handler=int)
+                    if modules else None,
+                    item['property'],
+                    self.str2slice(slicer) if slicer else None,
+                    self.str2tuple(vrange) if vrange else None))
+            else:
+                # remove a source item
+                if src not in self._catalog:
+                    # Raised when there were two checked items in
+                    # the data source tree with the same "device ID"
+                    # and "property". The item has already been
+                    # deleted when one of them was unchecked.
+                    logger.error("Duplicated data source items")
+                    continue
+                self._catalog.remove_item(src)
 
-                        self._catalog.add_item(SourceItem(
-                            category,
-                            item['name'],
-                            self.str2list(modules, handler=int)
-                            if modules else None,
-                            item['property'],
-                            self.str2slice(slicer) if slicer else None,
-                            self.str2tuple(vrange) if vrange else None))
-                    else:
-                        # remove a source item
-                        if src not in self._catalog:
-                            # Raised when there were two checked items in
-                            # the data source tree with the same "device ID"
-                            # and "property". The item has already been
-                            # deleted when one of them was unchecked.
-                            logger.error("Duplicated data source items")
-                            continue
-                        self._catalog.remove_item(src)
+    def _update_connection(self, proxy):
+        cons = self._meta.hget_all(mt.CONNECTION)
+        endpoints = list(cons.keys())
+        # cannot have different types for different endpoints
+        src_type = DataSource(int(list(cons.values())[0]))
 
-            time.sleep(0.001)
+        endpoint = endpoints
+        proxy.stop()
+        proxy.connect(endpoints)
+        logger.debug(f"Instantiate a bridge client connected to "
+                     f"{endpoint}")
+        proxy.start()
+        return proxy, src_type
 
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
-        timeout = config['PIPELINE_TIMEOUT']
+        data_in = None
+        again = False
+        proxy = BridgeProxy()
+        while not self.closing:
+            if self.updating:
+                client, src_type = self._update_connection(proxy)
 
-        # the time when the previous data was received
-        prev_data_arrival_time = None
-        # Karabo bridge client instance
-        client = None
-        while not close_ev.is_set():
-            if update_ev.is_set():
-                cfg = self._meta.hget_all(mt.CONNECTION)
-                endpoint = cfg['endpoint']
-                src_type = DataSource(int(cfg['source_type']))
+                data_in = None
+                self.clear()
+                self.finish_updating()
 
-                if client is None:
-                    # destroy the zmq socket
-                    del client
-                # instantiate a new client
-                client = Client(endpoint, timeout=timeout)
-                logger.debug(f"Instantiate a bridge client connected to "
-                             f"{endpoint}")
-                update_ev.clear()
+            # this cannot be in a thread since SourceCatalog is not thread-safe
+            self._update_source_items()
 
-            if client is None:
-                time.sleep(0.001)
-                continue
-
-            try:
-                raw, meta = self._recv_imp(client)
-                tid = next(iter(meta.values()))["timestamp.tid"]
-
-                self._update_available_sources(meta)
-
-                with self._lock:
-                    catalog = copy.deepcopy(self._catalog)
-
-                if not catalog.main_detector:
+            if self.running and proxy.client is not None:
+                if not self._catalog.main_detector:
                     # skip the pipeline if the main detector is not specified
-                    logger.error(f"Unspecified {config['DETECTOR']} source!")
+                    logger.error(f"{config['DETECTOR']} source unspecified!")
+                    time.sleep(1)  # sleep a little long
                     continue
 
-                # extract new raw and meta
-                new_raw, new_meta = DataTransformer.transform_euxfel(
-                    raw, meta, catalog=catalog, source_type=src_type)
-
-                if prev_data_arrival_time is not None:
-                    fps = 1.0 / (time.time() - prev_data_arrival_time)
-                    logger.debug(f"Bridge recv FPS: {fps:>4.1f} Hz")
-                prev_data_arrival_time = time.time()
-
-                # wait until data in the queue has been processed
-                # Note: if the queue is full, whether the data should be
-                #       dropped is determined by the main thread of its
-                #       owner process.
-                while not close_ev.is_set():
+                if data_in is None:
                     try:
-                        self._data.put({
-                            "catalog": catalog,
-                            "meta": new_meta,
-                            "raw": new_raw,
-                            "processed": ProcessedData(tid)}, timeout=timeout)
-                        break
-                    except Full:
-                        continue
+                        # always pull the latest data from the bridge
+                        raw, meta = self._recv_imp(proxy.client)
 
-            except TimeoutError:
-                pass
+                        self._update_available_sources(meta)
+
+                        # extract new raw and meta
+                        new_raw, new_meta, _ = DataTransformer.transform_euxfel(
+                            raw, meta, catalog=self._catalog, source_type=src_type)
+
+                        data_in = {"meta": new_meta, "raw": new_raw}
+                        again = False
+                    except TimeoutError:
+                        pass
+
+                if data_in is not None:
+                    try:
+                        self._cache.put(data_in, again=again)
+                        data_in = None
+                        again = False
+                    except Full:
+                        again = True
+
+            time.sleep(0.001)
 
     def _update_available_sources(self, meta):
         sources = {k: v["timestamp.tid"] for k, v in meta.items()}
@@ -278,22 +245,29 @@ class MpInQueue(_PipeInBase):
         self._client = mp.Queue(maxsize=config["PIPELINE_MAX_QUEUE_SIZE"])
 
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
-        timeout = config['PIPELINE_TIMEOUT']
+        data_in = None
+        while not self.closing:
+            if self.updating:
+                data_in = None
+                self.clear()
+                self.finish_updating()
 
-        while not close_ev.is_set():
-            try:
-                data = self._client.get(timeout=timeout)
-            except Empty:
-                continue
-
-            while not close_ev.is_set():
+            if data_in is None:
                 try:
-                    self._data.put(data, timeout=timeout)
-                    break
+                    data_in = self._client.get_nowait()
+                except Empty:
+                    pass
+
+            if data_in is not None:
+                try:
+                    self._cache.put_nowait(data_in)
+                    data_in = None
                 except Full:
-                    continue
+                    pass
+
+            time.sleep(0.001)
 
         self._client.cancel_join_thread()
 
@@ -313,48 +287,40 @@ class MpOutQueue(_PipeOutBase):
 
         self._client = None
 
-    def _put_pop_queue(self, item, timeout=None):
-        """Add a new data item into the multiprocessing queue aggressively.
-
-        If the queue is full, the first item will be removed and the
-        new data item will be added again without blocking.
-        """
-        try:
-            self._client.put(item, timeout=timeout)
-        except Full:
-            self._client.get_nowait()
-            self._client.put_nowait(item)
-
     @run_in_thread(daemon=True)
-    def run(self, close_ev, update_ev):
+    def run(self):
         """Override."""
-        timeout = config['PIPELINE_TIMEOUT']
+        data_out = None
+        while not self.closing:
+            if self.updating:
+                data_out = None
+                self.clear()
+                self.finish_updating()
 
-        while not close_ev.is_set():
-            try:
-                data = self._data.get(timeout=timeout)
-            except Empty:
-                continue
-
-            if self._final:
-                self._mon.add_tid_with_timestamp(data['processed'].tid)
-
-            if self._drop:
-                data_out = data['processed']
+            if data_out is None:
                 try:
-                    self._put_pop_queue(data_out, timeout=timeout)
-                except Empty:
-                    continue
-            else:
-                data_out = {key: data[key]
-                            for key in ['processed', 'catalog', 'meta', 'raw']}
+                    data = self._cache.get_nowait()
 
-                while not close_ev.is_set():
-                    try:
-                        self._client.put(data_out, timeout=timeout)
-                        break
-                    except Full:
-                        continue
+                    if self._final:
+                        data_out = data['processed']
+
+                        tid = data_out.tid
+                        self._mon.add_tid_with_timestamp(tid)
+                        logger.info(f"Train {tid} processed!")
+                    else:
+                        data_out = {key: data[key] for key
+                                    in self._pipeline_dtype}
+                except Empty:
+                    pass
+
+            if data_out is not None:
+                try:
+                    self._client.put_nowait(data_out)
+                    data_out = None
+                except Full:
+                    pass
+
+            time.sleep(0.001)
 
         self._client.cancel_join_thread()
 

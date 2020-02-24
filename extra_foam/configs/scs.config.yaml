@@ -84,3 +84,19 @@ DETECTOR:
         LOCAL_ADDR: 127.0.0.1
         LOCAL_PORT: 45459
         SAMPLE_DISTANCE: 1.0
+
+
+STREAMER:
+    ZMQ:
+        Control:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4600
+        Pipeline1:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4601
+        Pipeline2:
+            DEFAULT_TYPE: 1
+            ADDR: 127.0.0.1
+            PORT: 4602

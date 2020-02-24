@@ -19,7 +19,7 @@ from ..exceptions import (
 )
 from ...database import MetaProxy
 from ...algorithms import normalize_auc
-from ...config import AnalysisType, Normalizer
+from ...config import AnalysisType, config, Normalizer
 
 
 class State(ABC):
@@ -150,6 +150,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     """Data processor interface."""
 
     def __init__(self):
+        self._pulse_resolved = config["PULSE_RESOLVED"]
+
         self._meta = MetaProxy()
 
     def _update_analysis(self, analysis_type, *, register=True):

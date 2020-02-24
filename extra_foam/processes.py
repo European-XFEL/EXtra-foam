@@ -15,13 +15,6 @@ from psutil import NoSuchProcess
 
 from .config import config
 from .logger import logger
-from .pipeline.worker import ProcessWorker
-
-
-ProcessInfo = namedtuple("ProcessInfo", [
-    "name",
-    "process",
-])
 
 
 ProcessInfoList = namedtuple("ProcessInfoList", [
@@ -40,15 +33,12 @@ FoamProcesses = namedtuple("FoamProcesses", ['redis', 'pipeline'])
 _foam_processes = FoamProcesses({}, {})
 
 
-def register_foam_process(process_info):
+def register_foam_process(name, process):
     """Register a new process."""
-    proc = process_info.process
-    name = process_info.name
     if name.lower() == 'redis':
-        _foam_processes.redis[name] = proc
+        _foam_processes.redis[name] = process
     else:
-        assert isinstance(proc, ProcessWorker)
-        _foam_processes.pipeline[name] = proc
+        _foam_processes.pipeline[name] = process
 
 
 def list_foam_processes():
@@ -172,7 +162,6 @@ def shutdown_pipeline():
 
     for _, proc in _foam_processes.pipeline.items():
         if proc.is_alive():
-            proc.close()
             proc.join(timeout=0.5)
 
     for _, proc in _foam_processes.pipeline.items():

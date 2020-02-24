@@ -347,13 +347,10 @@ class ImageAssemblerFactory(ABC):
             """Override."""
             meta = data['meta']
             raw = data['raw']
+            catalog = data["catalog"]
 
-            src = data["catalog"].main_detector
-            if src not in meta:
-                raise AssemblingError(
-                    f"{config['DETECTOR']} source <{src}> not found!")
+            src = catalog.main_detector
             src_type = meta[src]['source_type']
-
             try:
                 if src_type == DataSource.FILE:
                     modules_data = self._get_modules_file(raw, src)

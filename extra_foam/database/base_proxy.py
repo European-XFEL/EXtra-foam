@@ -26,6 +26,9 @@ class _AbstractProxy:
         _AbstractProxy.__dict__["_db"].reset()
         _AbstractProxy.__dict__["_db_nodecode"].reset()
 
+    def pipeline(self):
+        return self._db.pipeline()
+
     @redis_except_handler
     def hset(self, name, key, value):
         """Set a key-value pair of a hash.

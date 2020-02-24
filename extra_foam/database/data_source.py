@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import abc, namedtuple
+import copy
 
 from ..algorithms import OrderedSet
 from ..config import config
@@ -29,6 +30,8 @@ class SourceCatalog(abc.Collection):
     Served as a catalog for searching data sources.
     """
     def __init__(self):
+        super().__init__()
+
         # key: source name, value: SourceItem
         self._items = dict()
         # key: data category, value: a OrderedSet of source name
@@ -48,6 +51,12 @@ class SourceCatalog(abc.Collection):
     def __iter__(self):
         """Override."""
         return self._items.__iter__()
+
+    def keys(self):
+        return self._items.keys()
+
+    def values(self):
+        return self._items.values()
 
     def items(self):
         return self._items.items()
@@ -104,6 +113,21 @@ class SourceCatalog(abc.Collection):
         self._categories.clear()
         self._main_detector = ''
 
+    def __copy__(self):
+        instance = self.__class__()
+        instance._items = copy.deepcopy(self._items)
+        instance._categories = copy.deepcopy(self._categories)
+        instance._main_detector_category = self._main_detector_category
+        instance._main_detector = self._main_detector
+        return instance
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
+
+    def __repr__(self):
+        return f'SourceCatalog(main_detector={self._main_detector}, ' \
+               f'n_items={self.__len__()})'
+
 
 class DataTransformer:
     """DataTransformer class.
@@ -121,14 +145,10 @@ class DataTransformer:
         :param DataSource source_type: the format of the main detector
             source.
 
-        FIXME: I hate weak language and use dictionary without
-               encapsulation to store these read-only data. This is
-               the source of imperceptible bugs.
-
         :raises: this method should not raise!!!
         """
         new_raw, new_meta = dict(), dict()
-        removed = []
+        not_found = []
         for src, item in catalog.items():
             ctg, src_name, modules, src_ppt = \
                 item.category, item.name, item.modules, item.property
@@ -148,7 +168,7 @@ class DataTransformer:
 
                 if n_found == 0:
                     # there is no module data
-                    removed.append(src)
+                    not_found.append(src)
                     continue
                 else:
                     new_meta[src] = {
@@ -164,7 +184,7 @@ class DataTransformer:
                         new_raw[src] = raw[src_name][f"{src_ppt}.value"]
                 except KeyError:
                     # if the requested source or property is not in the data
-                    removed.append(src)
+                    not_found.append(src)
                     continue
 
                 new_meta[src] = {
@@ -172,9 +192,8 @@ class DataTransformer:
                     'source_type': source_type,
                 }
 
-        for src in removed:
-            # It ensures that if the source can be found in categories,
-            # it must be able to be found in raw and meta.
-            catalog.remove_item(src)
+        # We keep the source item in catalog even if it was not found in
+        # the data since it is common when the data is arriving from different
+        # endpoints.
 
-        return new_raw, new_meta
+        return new_raw, new_meta, not_found

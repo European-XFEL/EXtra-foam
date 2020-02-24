@@ -99,9 +99,10 @@ class ImageRoiPulse(_BaseProcessor, _RoiProcessorBase):
         roi.geom3.geometry = intersection(self._geom3, img_geom)
         roi.geom4.geometry = intersection(self._geom4, img_geom)
 
-        self._process_norm(assembled, processed)
-        self._process_fom(assembled, processed)
-        self._process_hist(processed)
+        if self._pulse_resolved:
+            self._process_norm(assembled, processed)
+            self._process_fom(assembled, processed)
+            self._process_hist(processed)
 
     def _compute_fom(self, roi, fom_type, image_mask, threshold_mask):
         if roi is None:

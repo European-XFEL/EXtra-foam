@@ -41,8 +41,14 @@ More info on command line arguments can be obtained as
       -h, --help            show this help message and exit
       -V, --version         show program's version number and exit
       --debug               Run in debug mode
+      --pipeline_slow_policy {0,1}
+                            Pipeline policy when the processing rate is slower
+                            than the arrival rate (0 for always process the latest
+                            data and 1 for wait until processing of the current
+                            data finishes)
       --redis_address REDIS_ADDRESS
-                            Address of the Redis server (optional)
+                            Address of the Redis server
+
 
 .. note::
     It sometime takes a few minutes to start **EXtra-foam** for the first time! This

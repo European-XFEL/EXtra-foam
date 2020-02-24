@@ -15,7 +15,7 @@ from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (
     QComboBox, QGridLayout, QHeaderView, QLabel, QLineEdit, QListView,
     QSplitter, QStyledItemDelegate, QTableView, QTabWidget, QTreeView,
-    QVBoxLayout, QWidget
+    QVBoxLayout
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
@@ -30,7 +30,7 @@ from ...processes import list_foam_processes
 from ...logger import logger
 
 
-class _BaseItemDelegate(QStyledItemDelegate):
+class _BaseSmartEditItemDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -47,22 +47,96 @@ class _BaseItemDelegate(QStyledItemDelegate):
         editor.setGeometry(option.rect)
 
 
-class LineEditItemDelegate(_BaseItemDelegate):
+class LineEditItemDelegate(_BaseSmartEditItemDelegate):
+    def __init__(self, parent=None, *, validator=None):
+        super().__init__(parent=parent)
+        self._validator = validator
+
     def createEditor(self, parent, option, index):
         """Override."""
-        return SmartLineEdit(index.data(Qt.DisplayRole), parent)
+        value = index.data(Qt.DisplayRole)
+        if not value:
+            return
+
+        widget = SmartLineEdit(value, parent)
+        if self._validator is not None:
+            widget.setValidator(self._validator)
+        return widget
 
 
-class SliceItemDelegate(_BaseItemDelegate):
+class SliceItemDelegate(_BaseSmartEditItemDelegate):
     def createEditor(self, parent, option, index):
         """Override."""
-        return SmartSliceLineEdit(index.data(Qt.DisplayRole), parent)
+        value = index.data(Qt.DisplayRole)
+        if not value:
+            return
+        return SmartSliceLineEdit(value, parent)
 
 
-class BoundaryItemDelegate(_BaseItemDelegate):
+class BoundaryItemDelegate(_BaseSmartEditItemDelegate):
     def createEditor(self, parent, option, index):
         """Override."""
-        return SmartBoundaryLineEdit(index.data(Qt.DisplayRole), parent)
+        value = index.data(Qt.DisplayRole)
+        if not value:
+            return
+        return SmartBoundaryLineEdit(value, parent)
+
+
+class LineEditItemDelegateN(QStyledItemDelegate):
+    """The non-smart one."""
+    def __init__(self, parent=None, *, validator=None):
+        super().__init__(parent)
+        self._validator = validator
+
+    def setEditorData(self, editor, index):
+        """Override."""
+        editor.setText(index.data(Qt.DisplayRole))
+
+    def setModelData(self, editor, model, index):
+        """Override."""
+        model.setData(index, editor.text(), Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        """Override."""
+        editor.setGeometry(option.rect)
+
+    def createEditor(self, parent, option, index):
+        """Override."""
+        value = index.data(Qt.DisplayRole)
+        if not value:
+            return
+
+        widget = QLineEdit(value, parent)
+        if self._validator is not None:
+            widget.setValidator(self._validator)
+        return widget
+
+
+class ComboBoxDelegate(QStyledItemDelegate):
+    def __init__(self, items, parent=None):
+        super().__init__(parent)
+
+        self._items = items
+
+    def createEditor(self, parent, option, index):
+        """Override."""
+        cb = QComboBox(parent)
+        cb.addItems(self._items.keys())
+        cb.setCurrentText(index.model().data(index, Qt.DisplayRole))
+        return cb
+
+    def setEditorData(self, editor, index):
+        """Override."""
+        value = index.data(Qt.EditRole)
+        editor.setCurrentText(value)
+
+    def setModelData(self, editor, model, index):
+        """Override."""
+        model.setData(index, editor.currentText(), Qt.EditRole)
+
+    def updateEditorGeometry(self, editor, option, index):
+        """Override."""
+        editor.setGeometry(option.rect)
 
 
 class DataSourceTreeItem:
@@ -185,8 +259,8 @@ class DataSourceItemModel(QAbstractItemModel):
                             item_sb = index.sibling(i, 0).internalPointer()
                             if item_sb.isChecked():
                                 item_sb.setChecked(False)
-                                self.dataChanged.emit(index.sibling(i, 0),
-                                                      index.sibling(i, 0))
+                                self.dataChanged.emit(index.siblingAtRow(i),
+                                                      index.siblingAtRow(i))
                                 self.source_item_toggled_sgn.emit(
                                     False,
                                     SourceItem('',
@@ -224,6 +298,8 @@ class DataSourceItemModel(QAbstractItemModel):
                     item.data(1),
                     _parse_slice(item.data(2)),
                     _parse_boundary(item.data(3))))
+
+            self.dataChanged.emit(index, index)
             return True
         return False
 
@@ -231,7 +307,7 @@ class DataSourceItemModel(QAbstractItemModel):
         if not index.isValid():
             return Qt.NoItemFlags
 
-        flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        flags = Qt.ItemIsEnabled
 
         item = index.internalPointer()
         if item.rank() > 1:
@@ -368,7 +444,7 @@ class DataSourceListModel(QAbstractListModel):
 
     def data(self, index, role=None):
         """Override."""
-        if not index.isValid() or index.row() > len(self._sources):
+        if not index.isValid():
             return
 
         if role == Qt.DisplayRole:
@@ -398,16 +474,21 @@ class ProcessMonitorTableModel(QAbstractTableModel):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return self._headers[section]
 
+    def flags(self, index):
+        """Override."""
+        if not index.isValid():
+            return Qt.NoItemFlags
+        return Qt.ItemIsEnabled
+
     def data(self, index, role=None):
         """Override."""
-        row, col = index.row(), index.column()
-        if not index.isValid() \
-                or row > len(self._processes) or col > len(self._headers):
+        if not index.isValid():
             return
 
         if role == Qt.TextAlignmentRole:
             return Qt.AlignCenter
 
+        row, col = index.row(), index.column()
         if role == Qt.DisplayRole:
             return self._processes[row][col]
 
@@ -425,123 +506,173 @@ class ProcessMonitorTableModel(QAbstractTableModel):
         self.endResetModel()
 
 
-class ConnectionCtrlWidget(_AbstractCtrlWidget):
-    """Widget for setting up the TCP connection."""
+class ConnectionTableModel(QAbstractTableModel):
+    """Table model interface for connections management."""
+
+    def __init__(self, source_types, parent=None):
+        super().__init__(parent=parent)
+
+        self._source_types = source_types
+        self._connections = None
+        self._headers = ("Name", "Source type", "IP address", "Port")
+
+        connections = [[True, config["DETECTOR"], "", "", ""]]
+        for con in config.appendix_streamers:
+            connections.append([False,
+                                con.name,
+                                self._getSourceTypeString(con.type),
+                                con.address,
+                                str(con.port)])
+        self.setupModelData(connections)
+        # trigger initialization for addr and port
+        self.setData(self.index(0, 1),
+                     self._getSourceTypeString(config['SOURCE_DEFAULT_TYPE']),
+                     role=Qt.EditRole)
+
+    def _getSourceTypeString(self, src_type):
+        for k, v in self._source_types.items():
+            if v == src_type:
+                return k
+        raise ValueError(f"Unknown source type: {repr(src_type)}")
+
+    def headerData(self, section, orientation, role=None):
+        """Override."""
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
+
+    def flags(self, index):
+        """Override."""
+        if not index.isValid():
+            return Qt.NoItemFlags
+
+        flags = Qt.ItemIsEnabled
+        row, col = index.row(), index.column()
+        if col == 0:
+            if row == 0:
+                # Check state of the main detector is not allowed to be changed
+                return flags
+            return flags | Qt.ItemIsUserCheckable
+
+        if self._connections[row][0]:
+            return flags | Qt.ItemIsEditable
+
+        return Qt.NoItemFlags
+
+    def setData(self, index, value, role=None):
+        """Override."""
+        if not index.isValid():
+            return False
+
+        if role == Qt.CheckStateRole or role == Qt.EditRole:
+            row, col = index.row(), index.column()
+            if role == Qt.CheckStateRole:
+                self._connections[row][col] = value
+                self.dataChanged.emit(index.siblingAtColumn(0),
+                                      index.siblingAtColumn(1))
+            else:
+                self._connections[row][col+1] = value
+                if role == Qt.EditRole and row == 0 and col == 1:
+                    # only for the main detector
+                    assert len(self._source_types) == 2
+                    if self._source_types[value] == DataSource.BRIDGE:
+                        addr = config["BRIDGE_ADDR"]
+                        port = config["BRIDGE_PORT"]
+                    else:
+                        addr = config["LOCAL_ADDR"]
+                        port = config["LOCAL_PORT"]
+                    self._connections[row][col+2] = addr
+                    self._connections[row][col+3] = str(port)
+
+                self.dataChanged.emit(index, index)
+            return True
+        return False
+
+    def data(self, index, role=None):
+        """Override."""
+        if not index.isValid():
+            return
+
+        row, col = index.row(), index.column()
+
+        if role == Qt.TextAlignmentRole:
+            return Qt.AlignCenter
+
+        if role == Qt.CheckStateRole and col == 0:
+            return Qt.Checked if self._connections[row][0] else Qt.Unchecked
+
+        if role == Qt.DisplayRole:
+            return self._connections[row][col+1]
+
+    def rowCount(self, parent=None, *args, **kwargs):
+        """Override."""
+        return len(self._connections)
+
+    def columnCount(self, parent=None, *args, **kwargs):
+        """Override."""
+        return len(self._headers)
+
+    def setupModelData(self, connections):
+        self.beginResetModel()
+        self._connections = connections
+        self.endResetModel()
+
+    def connections(self):
+        endpoints = []
+        src_types = set()
+        cons = dict()
+        for checked, _, src_type, addr, port in self._connections:
+            if checked:
+                src_type = int(self._source_types[src_type])
+                endpoint = f"tcp://{addr}:{port}"
+                if endpoint in endpoints:
+                    raise ValueError(f"Duplicated endpoint: {endpoint}")
+                endpoints.append(endpoint)
+                src_types.add(src_type)
+                if len(src_types) > 1:
+                    raise ValueError(f"All endpoints must have the same "
+                                     f"source type!")
+                cons[endpoint] = src_type
+        return cons
+
+
+class DataSourceWidget(_AbstractCtrlWidget):
+    """DataSourceWidget class.
+
+    Widgets provide data source management and monitoring.
+    """
+
+    _source_types = {
+        "Run directory": DataSource.FILE,
+        "ZeroMQ bridge": DataSource.BRIDGE,
+    }
+
+    SPLITTER_HANDLE_WIDTH = 9
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._hostname_le = QLineEdit()
-        self._hostname_le.setMinimumWidth(150)
-        self._port_le = QLineEdit()
-        self._port_le.setValidator(QIntValidator(0, 65535))
+        self._con_view = QTableView()
+        self._con_model = ConnectionTableModel(self._source_types)
+        self._con_view.setModel(self._con_model)
+        self._con_src_type_delegate = ComboBoxDelegate(self._source_types)
+        self._con_addr_delegate = LineEditItemDelegateN(self)
+        self._con_port_delegate = LineEditItemDelegateN(
+            self, validator=QIntValidator(0, 65535))
+        self._con_view.setItemDelegateForColumn(1, self._con_src_type_delegate)
+        self._con_view.setItemDelegateForColumn(2, self._con_addr_delegate)
+        self._con_view.setItemDelegateForColumn(3, self._con_port_delegate)
 
-        self._source_type_cb = QComboBox()
-        self._source_type_cb.addItem("run directory", DataSource.FILE)
-        self._source_type_cb.addItem("ZeroMQ bridge", DataSource.BRIDGE)
-        self._source_type_cb.setCurrentIndex(
-            config['SOURCE_DEFAULT_TYPE'])
-        self._current_source_type = None
-
-        self._non_reconfigurable_widgets = [
-            self._source_type_cb,
-            self._hostname_le,
-            self._port_le,
-        ]
-
-        self.initUI()
-        self.initConnections()
-
-    def initUI(self):
-        layout = QVBoxLayout()
-        AR = Qt.AlignRight
-
-        src_layout = QGridLayout()
-        src_layout.addWidget(QLabel("Data streamed from: "), 0, 0, AR)
-        src_layout.addWidget(self._source_type_cb, 0, 1)
-        src_layout.addWidget(QLabel("Hostname: "), 1, 0, AR)
-        src_layout.addWidget(self._hostname_le, 1, 1)
-        src_layout.addWidget(QLabel("Port: "), 2, 0, AR)
-        src_layout.addWidget(self._port_le, 2, 1)
-
-        layout.addLayout(src_layout)
-        self.setLayout(layout)
-
-    def initConnections(self):
-        mediator = self._mediator
-
-        self._source_type_cb.currentIndexChanged.connect(
-            lambda x: self.onSourceTypeChange(
-                self._source_type_cb.itemData(x)))
-        self._source_type_cb.currentIndexChanged.connect(
-            lambda x: mediator.onSourceTypeChange(
-                self._source_type_cb.itemData(x)))
-
-        # Emit once to fill the QLineEdit
-        self._source_type_cb.currentIndexChanged.emit(
-            self._source_type_cb.currentIndex())
-
-        # Note: use textChanged signal for non-reconfigurable QLineEdit
-        self._hostname_le.textChanged.connect(self.onEndpointChange)
-        self._port_le.textChanged.connect(self.onEndpointChange)
-
-    def updateMetaData(self):
-        self._source_type_cb.currentIndexChanged.emit(
-            self._source_type_cb.currentIndex())
-
-        self._hostname_le.textChanged.emit(self._hostname_le.text())
-        self._port_le.textChanged.emit(self._port_le.text())
-
-        return True
-
-    @pyqtSlot()
-    def onEndpointChange(self):
-        endpoint = f"tcp://{self._hostname_le.text()}:{self._port_le.text()}"
-        self._mediator.onBridgeEndpointChange(endpoint)
-
-    @pyqtSlot(object)
-    def onSourceTypeChange(self, source_type):
-        if source_type == self._current_source_type:
-            return
-        self._current_source_type = source_type
-
-        if source_type == DataSource.BRIDGE:
-            hostname = config["BRIDGE_ADDR"]
-            port = config["BRIDGE_PORT"]
-        else:
-            hostname = config["LOCAL_ADDR"]
-            port = config["LOCAL_PORT"]
-
-        self._hostname_le.setText(hostname)
-        self._port_le.setText(str(port))
-
-
-class DataSourceWidget(QWidget):
-    """DataSourceWidget class.
-
-    A widget container which holds ConnectionCtrlWidget, DeviceListWidget
-    and DeviceTreeWidget.
-    """
-
-    SPLITTER_HANDLE_WIDTH = 9
-
-    def __init__(self, parent):
-        super().__init__(parent)
-
-        self._connection_ctrl_widget = parent.createCtrlWidget(
-            ConnectionCtrlWidget)
-
-        self._tree_view = QTreeView()
-        self._tree_model = DataSourceItemModel(self)
-        self._tree_device_delegate = LineEditItemDelegate(self)
-        self._tree_ppt_delegate = LineEditItemDelegate(self)
-        self._tree_slicer_delegate = SliceItemDelegate(self)
-        self._tree_boundary_delegate = BoundaryItemDelegate(self)
-        self._tree_view.setModel(self._tree_model)
-        self._tree_view.setItemDelegateForColumn(0, self._tree_device_delegate)
-        self._tree_view.setItemDelegateForColumn(1, self._tree_ppt_delegate)
-        self._tree_view.setItemDelegateForColumn(2, self._tree_slicer_delegate)
-        self._tree_view.setItemDelegateForColumn(3, self._tree_boundary_delegate)
+        self._src_view = QTreeView()
+        self._src_tree_model = DataSourceItemModel(self)
+        self._src_device_delegate = LineEditItemDelegate(self)
+        self._src_ppt_delegate = LineEditItemDelegate(self)
+        self._src_slicer_delegate = SliceItemDelegate(self)
+        self._src_boundary_delegate = BoundaryItemDelegate(self)
+        self._src_view.setModel(self._src_tree_model)
+        self._src_view.setItemDelegateForColumn(0, self._src_device_delegate)
+        self._src_view.setItemDelegateForColumn(1, self._src_ppt_delegate)
+        self._src_view.setItemDelegateForColumn(2, self._src_slicer_delegate)
+        self._src_view.setItemDelegateForColumn(3, self._src_boundary_delegate)
 
         self._monitor_tb = QTabWidget()
         self._avail_src_view = QListView()
@@ -554,6 +685,11 @@ class DataSourceWidget(QWidget):
             QHeaderView.Stretch)
 
         self.initUI()
+        self.initConnections()
+
+        self._non_reconfigurable_widgets = [
+            self._con_view,
+        ]
 
         self._mon = MonProxy()
 
@@ -566,6 +702,7 @@ class DataSourceWidget(QWidget):
         self._process_mon_timer.start(config["PROCESS_MONITOR_UPDATE_TIMER"])
 
     def initUI(self):
+        """Override."""
         self._monitor_tb.setTabPosition(QTabWidget.TabPosition.South)
         self._monitor_tb.addTab(self._avail_src_view, "Available sources")
         self._monitor_tb.addTab(self._process_mon_view, "Process monitor")
@@ -573,19 +710,38 @@ class DataSourceWidget(QWidget):
         splitter = QSplitter(Qt.Vertical)
         splitter.setHandleWidth(self.SPLITTER_HANDLE_WIDTH)
         splitter.setChildrenCollapsible(False)
-        splitter.addWidget(self._tree_view)
+        splitter.addWidget(self._con_view)
+        splitter.addWidget(self._src_view)
         splitter.addWidget(self._monitor_tb)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
-
-        self._tree_view.expandToDepth(1)
-        self._tree_view.resizeColumnToContents(0)
-        self._tree_view.resizeColumnToContents(1)
+        h = splitter.sizeHint().height()
+        splitter.setSizes([0.1 * h, 0.6 * h, 0.3 * h])
 
         layout = QVBoxLayout()
-        layout.addWidget(self._connection_ctrl_widget)
         layout.addWidget(splitter)
         self.setLayout(layout)
+
+        self._con_view.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch)
+
+        self._src_view.expandToDepth(1)
+        self._src_view.resizeColumnToContents(0)
+        self._src_view.resizeColumnToContents(1)
+
+    def initConnections(self):
+        """Override."""
+        pass
+
+    def updateMetaData(self):
+        """Override."""
+        try:
+            cons = self._con_model.connections()
+            self._mediator.onBridgeConnectionsChange(cons)
+        except ValueError as e:
+            logger.error(e)
+            return False
+        return True
 
     def updateSourceList(self):
         available_sources = self._mon.get_available_sources()
