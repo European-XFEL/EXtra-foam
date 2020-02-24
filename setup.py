@@ -286,6 +286,7 @@ setup(
             'gui/icons/*.png',
             'gui/icons/*.jpg',
             'geometries/*.h5',
+            'geometries/*.geom',
             'configs/*.yaml',
         ]
     },
