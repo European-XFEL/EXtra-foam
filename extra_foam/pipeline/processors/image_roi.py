@@ -92,7 +92,7 @@ class _RoiProcessorBase(_BaseProcessor):
 
             if roi1.shape != roi2.shape:
                 raise ProcessingError(
-                    f"[ROI]{[topic]} ROI1 and ROI2 must have the same shape")
+                    f"[ROI][{topic}] ROI1 and ROI2 must have the same shape")
 
             if combo == RoiCombo.ROI1_SUB_ROI2:
                 roi_combo = roi1 - roi2

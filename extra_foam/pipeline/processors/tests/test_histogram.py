@@ -70,6 +70,8 @@ class TestHistogramProcessor(_TestDataMixin):
 
         proc.process(data)
         error.assert_called_once()
+        assert "is not available" in error.call_args[0][0]
+        # It also test that the code can deal with empty FOM array
         error.reset_mock()
 
         fom_gt1 = [10, 20, 30, 40, 20]
@@ -125,6 +127,8 @@ class TestHistogramProcessor(_TestDataMixin):
 
         proc.process(data)
         error.assert_called_once()
+        assert "is not available" in error.call_args[0][0]
+        # It also test that the code can deal with empty FOM array
         error.reset_mock()
 
         fom_gt = [10, 20, 30, 40, 20, 30, 20, 10, 40, 10]

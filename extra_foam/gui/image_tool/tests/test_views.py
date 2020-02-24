@@ -26,21 +26,25 @@ class TestViews(_TestDataMixin, unittest.TestCase):
         cls.gui.close()
 
     def testCorrectedView(self):
-        from extra_foam.gui.image_tool.corrected_view import RoiHist, CorrectedView
-
-        empty_data = ProcessedData(1)
+        from extra_foam.gui.image_tool.corrected_view import CorrectedView
 
         # pulse-resolved
 
         view = CorrectedView(pulse_resolved=True, parent=self.gui)
-        self.assertIsInstance(view._roi_hist, RoiHist)
-        view._corrected.updateF(empty_data)
-        view._roi_hist.updateF(empty_data)
+        # empty data
+        data = ProcessedData(1)
+        view._corrected.updateF(data)
+        view._roi_hist.updateF(data)
+        # non-empty data
+        data = self.processed_data(1001, (2, 2), roi_histogram=True)
+        view._roi_hist.updateF(data)
 
         # train-resolved
 
         view = CorrectedView(pulse_resolved=False, parent=self.gui)
-        view._roi_hist.updateF(empty_data)
+        # empty data
+        data = ProcessedData(1)
+        view._roi_hist.updateF(data)
         # non-empty data
         data = self.processed_data(1001, (2, 2), roi_histogram=True)
         view._roi_hist.updateF(data)

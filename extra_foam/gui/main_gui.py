@@ -147,12 +147,12 @@ class MainGUI(QMainWindow):
         # *************************************************************
         # Menu bar
         # *************************************************************
-        self._menu_bar = self.menuBar()
-        file_menu = self._menu_bar.addMenu('&Config')
-        save_cfg = QAction('Save config', self)
-        file_menu.addAction(save_cfg)
-        load_cfg = QAction('Load config', self)
-        file_menu.addAction(load_cfg)
+        # self._menu_bar = self.menuBar()
+        # file_menu = self._menu_bar.addMenu('&Config')
+        # save_cfg = QAction('Save config', self)
+        # file_menu.addAction(save_cfg)
+        # load_cfg = QAction('Load config', self)
+        # file_menu.addAction(load_cfg)
 
         # *************************************************************
         # Tool bar

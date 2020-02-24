@@ -174,14 +174,26 @@ class testPulseOfInterestWidgets(_TestDataMixin, unittest.TestCase):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiFomHist
 
         widget = PoiFomHist(0)
+
+        # empty data
         widget._data = ProcessedData(1)
+        widget.refresh()
+
+        # non-empty data
+        widget._data = self.processed_data(1001, (4, 2, 2), histogram=True)
         widget.refresh()
 
     def testPoiRoiHist(self):
         from extra_foam.gui.windows.pulse_of_interest_w import PoiRoiHist
 
         widget = PoiRoiHist(0)
+
+        # empty data
         data = ProcessedData(1)
+        widget.updateF(data)
+
+        # non-empty data
+        data = self.processed_data(1001, (4, 2, 2), histogram=True)
         widget.updateF(data)
 
 

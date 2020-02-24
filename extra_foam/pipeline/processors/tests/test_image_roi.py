@@ -303,6 +303,52 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 assert fom1_gt + fom2_gt == processed.roi.fom
 
+    def testRoiHist(self):
+        proc = self._proc
+
+        mocked_return = 1, 1, 1, 1, 1
+        with patch.object(proc, "_compute_hist", return_value=mocked_return) as compute_hist:
+            for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
+                data, processed = self._get_data()
+                proc._hist_combo = combo
+                proc._hist_n_bins = 10
+                proc.process(data)
+
+                s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
+                compute_hist.assert_called()
+                # ROI of the second POI
+                roi_gt = processed.image.masked_mean[s[0], s[1]]
+                np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
+                compute_hist.reset_mock()
+
+                hist = processed.roi.hist
+
+            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+                data, processed = self._get_data()
+                proc._hist_combo = fom_combo
+                proc._hist_n_bins = 20
+                proc.process(data)
+
+                s1 = self._get_roi_slice(processed.roi.geom1.geometry)
+                # ROI of the second POI
+                roi1_gt = processed.image.masked_mean[s1[0], s1[1]]
+                s2 = self._get_roi_slice(processed.roi.geom2.geometry)
+                roi2_gt = processed.image.masked_mean[s2[0], s2[1]]
+                compute_hist.assert_called()
+                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                    np.testing.assert_array_equal(roi1_gt - roi2_gt, compute_hist.call_args[0][0])
+                else:
+                    np.testing.assert_array_equal(roi1_gt + roi2_gt, compute_hist.call_args[0][0])
+                compute_hist.reset_mock()
+
+                hist = processed.roi.hist
+
+            with patch('extra_foam.ipc.ProcessLogger.error') as error:
+                # test when ROI2 has different shape from ROI1
+                processed.roi.geom2.geometry = [1, 0, 1, 3]
+                proc.process(data)
+                error.assert_called_once()
+
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
     def testProjFom(self, direct, axis):
         proc = self._proc
@@ -496,11 +542,11 @@ class TestImageRoiTrain(_TestDataMixin):
             np.testing.assert_array_almost_equal(y_on_gt, processed.pp.y_on)
             np.testing.assert_array_almost_equal(y_off_gt, processed.pp.y_off)
             np.testing.assert_array_almost_equal(y_on_gt - y_off_gt, processed.pp.y)
-            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, abs=1e-6)
+            assert np.abs(y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-4)
             # test abs_difference == False
             processed.pp.abs_difference = False
             proc.process(data)
-            assert (y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, abs=1e-6)
+            assert (y_on_gt - y_off_gt).sum() == pytest.approx(processed.pp.fom, rel=1e-4)
             # test when ROI2 has different shape from ROI1
             processed.roi.geom2.geometry = [1, 0, 1, 3]
             with patch.object(proc, "_process_proj"):
