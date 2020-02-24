@@ -12,6 +12,10 @@ import multiprocessing as mp
 from queue import Empty, Full
 import time
 
+import numpy as np
+import zmq
+import msgpack
+
 from .f_zmq import BridgeProxy
 from .f_queue import CorrelateQueue, SimpleQueue
 from .processors.base_processor import _RedisParserMixin
@@ -327,3 +331,55 @@ class MpOutQueue(_PipeOutBase):
     def accept(self, connection):
         """Override."""
         self._client = connection
+
+
+class Extension(_PipeOutBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._ctx = zmq.Context()
+
+    @run_in_thread(daemon=True)
+    def run(self):
+        """Override."""
+        socket = self._ctx.socket(zmq.REP)
+        socket.setsockopt(zmq.RCVTIMEO, 100)
+        socket.bind("tcp://*:5555")
+
+        dumps = msgpack.Packer(use_bin_type=True).pack
+        data_out = None
+        while not self.closing:
+            if self.updating:
+                data_out = None
+                self.clear()
+                self.finish_updating()
+
+            if data_out is None:
+                try:
+                    data_out = self._cache.get_nowait()
+                except Empty:
+                    pass
+
+            if data_out is not None:
+                try:
+                    socket.recv()
+                    corr = data_out['processed'].corr[0]
+                    if corr.x is None:
+                        socket.send(b'')
+                    else:
+                        msg = []
+                        for dt in [corr.x, corr.y]:
+                            header = {
+                                'dtype': str(dt.dtype), 'shape': dt.shape
+                            }
+                            if not dt.flags['C_CONTIGUOUS']:
+                                dt = np.ascontiguousarray(dt)
+                            msg.extend([dumps(header), dt.data])
+
+                        socket.send_multipart(msg, copy=False)
+                    data_out = None
+                except zmq.error.Again:
+                    pass
+
+    def accept(self, connection):
+        pass

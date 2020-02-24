@@ -15,7 +15,7 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from .pipe import KaraboBridge, MpInQueue, MpOutQueue
+from .pipe import KaraboBridge, MpInQueue, MpOutQueue, Extension
 from .processors import (
     DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
@@ -54,6 +54,7 @@ class ProcessWorker(mp.Process):
 
         self._input = None  # pipe-in
         self._output = None  # pipe-out
+        self._extension = None
 
         self._tasks = []
 
@@ -84,6 +85,8 @@ class ProcessWorker(mp.Process):
         # start input and output pipes
         self._input.start()
         self._output.start()
+        if self._extension is not None:
+            self._extension.start()
 
         data_out = None
         while not self.closing:
@@ -110,16 +113,26 @@ class ProcessWorker(mp.Process):
                     pass
 
             if data_out is not None:
+                sent = False
                 # TODO: still put the data but signal the data has been dropped.
                 if self._slow_policy == PipelineSlowPolicy.WAIT:
                     try:
                         self._output.put(data_out)
-                        data_out = None
+                        sent = True
                     except Full:
                         pass
                 else:
                     # always keep the latest data in the cache
                     self._output.put_pop(data_out)
+                    sent = True
+
+                if self._extension is not None and sent:
+                    try:
+                        self._extension.put(data_out)
+                    except Full:
+                        pass
+
+                if sent:
                     data_out = None
 
             time.sleep(0.001)
@@ -214,6 +227,7 @@ class TrainWorker(ProcessWorker):
         self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
         self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev,
                                   final=True)
+        self._extension = Extension(self._output_update_ev, pause_ev, close_ev)
 
         self._image_roi = ImageRoiTrain()
         self._ai_proc = AzimuthalIntegProcessorTrain()

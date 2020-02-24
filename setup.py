@@ -270,7 +270,8 @@ setup(
             'extra-foam-kill=extra_foam.services:kill_application',
             'extra-foam-stream=extra_foam.services:stream_file',
             'extra-foam-redis-cli=extra_foam.services:start_redis_client',
-            'extra-foam-monitor=extra_foam.web.monitor:web_monitor'
+            'extra-foam-monitor=extra_foam.web.monitor:web_monitor',
+            'extra-foam-extension=extra_foam.gui.extensions.app:gui_extension'
         ],
     },
     ext_modules=ext_modules,
