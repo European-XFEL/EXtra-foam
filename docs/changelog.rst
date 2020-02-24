@@ -1,6 +1,57 @@
 CHANGELOG
 =========
 
+0.7.3 (24 February 2020)
+-----------------------
+
+- **Breaking change**
+
+    - In the terminal, "--topic" becomes a positional argument. #41
+
+- **Improvement**
+
+    - Reimplement Color classes. mkPen and mkBrush from pyqtgraph are not needed
+      anymore. #53
+    - Allow select pipeline policy (wait or drop) via commandline. The default is wait
+      since the data arrival speed is slower than the processing speed during online
+      analysis. #45
+    - Replace Python's build-in queue.Queue to speed up data transfer. #45
+    - Improve the visualization of heatmap. #44
+    - Allow starting instances with different detectors without warning message. #41
+    - Allow to shutdown others' Redis server to avoid zombie Redis server occupying
+      the port. #41
+    - Implement Fast assembling for LPD and DSSC in C++. #40
+    - Resign the config code. Now each instrument will has its own config file,
+      e.g. scs.config.yaml, fxe.config.yaml. All the instrument sources will be
+      set up in the config file. #38
+    - Implement streaming raw (AGIPD, LPD) data from files and also 'confirmed'
+      streaming raw (AGIPD, LPD) data online. #38
+
+- **New Feature**
+
+    - Allow specific bin range of histogram. #56
+    - Provide ROI histogram for train-resolved detectors; Provide ROI histogram for
+      the averaged image of pulse-resolved detectors. #56
+    - Display `mean`, `median` and `std` for all histogram plots. #56
+    - ROI histogram for pulse-resolved detectors. #55
+    - Double-y plot for 1D binning. #53
+    - Support normalizing by digitizer (TIM). #52
+    - Support multiple ZMQ endpoints connections. #45
+    - Automatically correlate data from the same/different endpoints with train ID. #45
+    - Allow automatically choosing bin range. #44
+    - Also add an option to stack the detectors (LPD and DSSC) without assembling. #40
+    - Control required sources in the DataSourceTree. #38
+    - Allow filtering by value for all non-detector data sources. #38
+    - Implement AdqDigitizer processor. #38
+
+- **Bug Fix**
+
+    - Fix default AGIPD geometry. #62
+    - Disable pulse slicer for train-resolved detectors in DataSourceTree and gain/offset
+      correction. #56
+    - Fix logger level. #41
+    - Fix extra-foam-kill. #41
+
 0.7.2 (16 January 2020)
 -----------------------
 
