@@ -17,7 +17,7 @@ from queue import Empty
 from weakref import WeakKeyDictionary
 import functools
 import itertools
-import multiprocessing as mp
+from threading import Event
 
 from PyQt5.QtCore import (
     pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
@@ -38,7 +38,7 @@ from .gui_helpers import create_icon_button
 from .misc_widgets import GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
-    BinningWindow, StatisticsWindow, PulseOfInterestWindow,
+    BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
     PumpProbeWindow, FileStreamControllerWindow, AboutWindow, TrXasWindow
 )
 from .. import __version__
@@ -59,7 +59,7 @@ class ThreadLoggerBridge(QObject):
     """
     log_msg_sgn = pyqtSignal(str, str)
 
-    __sub = RedisPSubscriber("log:*")
+    _sub = RedisPSubscriber("log:*")
 
     def __init__(self):
         super().__init__()
@@ -70,11 +70,9 @@ class ThreadLoggerBridge(QObject):
         self._running = True
         while self._running:
             try:
-                msg = self.__sub.get_message()
-                if msg:
-                    self.log_msg_sgn.emit(msg['channel'], msg['data'])
-
-            except (ConnectionError, RuntimeError, AttributeError, IndexError):
+                msg = self._sub.get_message(ignore_subscribe_messages=True)
+                self.log_msg_sgn.emit(msg['channel'], msg['data'])
+            except Exception:
                 pass
 
             time.sleep(0.001)
@@ -99,17 +97,19 @@ class MainGUI(QMainWindow):
 
     _SPECIAL_ANALYSIS_ICON_WIDTH = 100
 
-    _WIDTH, _HEIGHT = config['GUI']['MAIN_GUI_SIZE']
+    _WIDTH, _HEIGHT = config['GUI_MAIN_GUI_SIZE']
 
-    def __init__(self):
+    def __init__(self, pause_ev, close_ev):
         """Initialization."""
         super().__init__()
 
+        self._pause_ev = pause_ev
+        self._close_ev = close_ev
+        self._input_update_ev = Event()
+        self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
+
         self._pulse_resolved = config["PULSE_RESOLVED"]
         self._queue = deque(maxlen=1)
-
-        self._input = MpInQueue()
-        self._close_ev = mp.Event()
 
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -134,7 +134,7 @@ class MainGUI(QMainWindow):
         self._right_cw = QSplitter(Qt.Vertical)
         self._right_cw.setChildrenCollapsible(False)
 
-        self._source_cw = DataSourceWidget(self)
+        self._source_cw = self.createCtrlWidget(DataSourceWidget)
 
         self._ctrl_panel_cw = QTabWidget()
         self._analysis_cw = QWidget()
@@ -143,6 +143,16 @@ class MainGUI(QMainWindow):
 
         self._util_panel_container = QWidget()
         self._util_panel_cw = QTabWidget()
+
+        # *************************************************************
+        # Menu bar
+        # *************************************************************
+        # self._menu_bar = self.menuBar()
+        # file_menu = self._menu_bar.addMenu('&Config')
+        # save_cfg = QAction('Save config', self)
+        # file_menu.addAction(save_cfg)
+        # load_cfg = QAction('Load config', self)
+        # file_menu.addAction(load_cfg)
 
         # *************************************************************
         # Tool bar
@@ -176,11 +186,15 @@ class MainGUI(QMainWindow):
         pump_probe_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, PumpProbeWindow))
 
-        open_statistics_window_at = self.addAction("Statistics", "statistics.png")
+        open_statistics_window_at = self.addAction("Correlation", "correlation.png")
         open_statistics_window_at.triggered.connect(
-            functools.partial(self.onOpenPlotWindow, StatisticsWindow))
+            functools.partial(self.onOpenPlotWindow, CorrelationWindow))
 
-        open_bin2d_window_at = self.addAction("Binning", "heatmap.png")
+        open_statistics_window_at = self.addAction("Histogram", "histogram.png")
+        open_statistics_window_at.triggered.connect(
+            functools.partial(self.onOpenPlotWindow, HistogramWindow))
+
+        open_bin2d_window_at = self.addAction("Binning", "binning.png")
         open_bin2d_window_at.triggered.connect(
             functools.partial(self.onOpenPlotWindow, BinningWindow))
 
@@ -324,9 +338,9 @@ class MainGUI(QMainWindow):
 
     def initStatisticsAnalysisUI(self):
         layout = QVBoxLayout()
+        layout.addWidget(self.correlation_ctrl_widget)
         layout.addWidget(self.bin_ctrl_widget)
         layout.addWidget(self.histogram_ctrl_widget)
-        layout.addWidget(self.correlation_ctrl_widget)
         self._statistics_cw.setLayout(layout)
 
     def initSpecialAnalysisUI(self):
@@ -364,10 +378,8 @@ class MainGUI(QMainWindow):
             return
 
         try:
-            processed = self._input.get_nowait()
+            processed = self._input.get()
             self._queue.append(processed)
-
-            logger.info(f"[{processed.tid}] update plots")
         except Empty:
             return
 
@@ -392,20 +404,24 @@ class MainGUI(QMainWindow):
     def pingRedisServer(self):
         try:
             self._db.ping()
-            self.__redis_connection_fails = 0
+            if self.__redis_connection_fails > 0:
+                # Note: Indeed, we do not have mechanism to recover from
+                #       a Redis server crash. It is recommended to restart
+                #       Extra-foam if you encounter this situation.
+                logger.info("Reconnect to the Redis server!")
+                self.__redis_connection_fails = 0
         except ConnectionError:
             self.__redis_connection_fails += 1
-            rest_attempts = config["MAX_REDIS_PING_ATTEMPTS"] - \
+            rest_attempts = config["REDIS_MAX_PING_ATTEMPTS"] - \
                 self.__redis_connection_fails
 
             if rest_attempts > 0:
-                logger.warning(f"No response from the Redis server! Shutting "
+                logger.warning(f"No response from the Redis server! Shut "
                                f"down after {rest_attempts} attempts ...")
             else:
                 logger.warning(f"No response from the Redis server! "
                                f"Shutting down!")
                 self.close()
-            time.sleep(5)
 
     def addAction(self, description, filename):
         icon = QIcon(osp.join(self._root_dir, "icons/" + filename))
@@ -484,13 +500,14 @@ class MainGUI(QMainWindow):
         ProcessWorker interface.
         """
         self._thread_logger_t.start()
-        self._plot_timer.start(config["PLOT_UPDATE_INTERVAL"])
-        self._redis_timer.start(config["PROCESS_MONITOR_HEART_BEAT"])
-        self._input.start(self._close_ev)
+        self._plot_timer.start(config["GUI_PLOT_UPDATE_TIMER"])
+        self._redis_timer.start(config["REDIS_PING_ATTEMPT_INTERVAL"])
+        self._input.start()
 
     def onStart(self):
         if not self.updateMetaData():
             return
+
         self.start_sgn.emit()
 
         self._start_at.setEnabled(False)
@@ -501,6 +518,7 @@ class MainGUI(QMainWindow):
         self._image_tool.onStart()
 
         self._running = True  # starting to update plots
+        self._input_update_ev.set()  # notify update
 
     def onStop(self):
         """Actions taken before the end of a 'run'."""
@@ -544,7 +562,7 @@ class MainGUI(QMainWindow):
         # prevent from logging in the GUI when it has been closed
         logging.getLogger().removeHandler(self._logger)
 
-        # clean up the input queue
+        # tell all processes to close
         self._close_ev.set()
 
         # clean up the logger thread

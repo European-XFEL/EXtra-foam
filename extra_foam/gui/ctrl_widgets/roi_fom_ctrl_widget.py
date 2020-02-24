@@ -12,18 +12,15 @@ from collections import OrderedDict
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
-from ...config import Normalizer, RoiCombo, RoiFom
+from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
+from ...config import RoiCombo, RoiFom
 
 
 class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up ROI FOM analysis parameters."""
 
-    _available_norms = OrderedDict({
-        "": Normalizer.UNDEFINED,
-        "XGM": Normalizer.XGM,
-        "ROI": Normalizer.ROI,
-    })
+    _available_norms = _AbstractCtrlWidget._available_norms.copy()
+    del _available_norms["AUC"]
 
     _available_combos = OrderedDict({
         "ROI1": RoiCombo.ROI1,

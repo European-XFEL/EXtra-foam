@@ -5,9 +5,10 @@
 ###################################################################
 
 set(extra-foam_MODULE_FILES
-        helpers.cpp
-    image_proc.cpp
-    data_model.cpp
+        f_helpers.cpp
+        f_imageproc.cpp
+        f_datamodel.cpp
+        f_geometry.cpp
 )
 
 if(UNIX)
@@ -22,6 +23,7 @@ endif()
 
 foreach(filename IN LISTS extra-foam_MODULE_FILES)
     string(REPLACE ".cpp" "" modulename ${filename})
+    string(REGEX REPLACE "^f_" "" modulename ${modulename})
     # set(modulename _${modulename})
     pybind11_add_module(${modulename} ${filename})
     target_include_directories(${modulename} PRIVATE include)

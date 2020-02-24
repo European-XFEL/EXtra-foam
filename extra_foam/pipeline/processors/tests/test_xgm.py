@@ -8,136 +8,168 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import unittest
+from unittest.mock import MagicMock, patch
 
-from extra_foam.database import SourceItem
-from extra_foam.pipeline.exceptions import ProcessingError
-from extra_foam.pipeline.processors.tests import _BaseProcessorTest
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.xgm import XgmProcessor
+from extra_foam.database import SourceItem
+from extra_foam.pipeline.exceptions import UnknownParameterError
 
 
-class TestXgmProcessor(unittest.TestCase, _BaseProcessorTest):
+class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
     def testGeneral(self):
         data, processed = self.simple_data(1234, (2, 2))
+        meta = data['meta']
+        raw = data['raw']
+        catalog = data['catalog']
+
+        proc = XgmProcessor()
 
         # empty source
-        proc = XgmProcessor()
+        self.assertNotIn('XGM', catalog)
         proc.process(data)
 
-        # new instrument source
-        proc._sources = [SourceItem('XGM', 'xgm1', "pulseEnergy.photonFlux")]
-        with self.assertRaises(ProcessingError):
+        # invalid control source
+        item = SourceItem('XGM', 'xgm1', [], 'some_property', None, None)
+        catalog.add_item(item)
+        src = f"{item.name} {item.property}"
+        meta[src] = {'tid': 12346}
+        raw[src] = [100, 200, 300]
+        with self.assertRaises(UnknownParameterError):
             proc.process(data)
-        # set correct source
-        data['raw']['xgm1'] = {
-            "pulseEnergy.photonFlux": 0.02,
-            "beamPosition.ixPos": 1e-5,
-            "beamPosition.iyPos": -2e-5,
-        }
-        proc.process(data)
-        self.assertEqual(0.02, processed.xgm.intensity)
-        self.assertIsNone(processed.xgm.x)
-        self.assertIsNone(processed.pulse.xgm.intensity)
-        self._reset_processed(processed)
+        catalog.remove_item(src)
 
-        # one more instrument source
-        proc._sources.append(SourceItem('XGM', 'xgm1', "beamPosition.ixPos"))
+        # valid control sources
+        src_pf = 'xgm1 pulseEnergy.photonFlux'
+        src_bpx = 'xgm1 beamPosition.ixPos'
+        src_bpy = 'xgm1 beamPosition.iyPos'
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None))
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.ixPos', None, None))
+        catalog.add_item(SourceItem('XGM', 'xgm1', [], 'beamPosition.iyPos', None, None))
+
+        meta.update({src_pf: {'tid': 12345}, src_bpx: {'tid': 12345}, src_bpy: {'tid': 12345}})
+        raw.update({src_pf: 0.02, src_bpx: 1e-5, src_bpy: -2e-5})
         proc.process(data)
         self.assertEqual(0.02, processed.xgm.intensity)
         self.assertEqual(1e-5, processed.xgm.x)
+        self.assertEqual(-2e-5, processed.xgm.y)
         self.assertIsNone(processed.pulse.xgm.intensity)
         self._reset_processed(processed)
 
-        # new pipeline source
-        proc._sources.append(SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(None, None)))
-        with self.assertRaises(ProcessingError):
+        # invalid pipeline source
+        item = SourceItem('XGM', 'xgm1:output', [], 'some_property', None, None)
+        catalog.add_item(item)
+        src = f"{item.name} {item.property}"
+        meta[src] = {'tid': 12346}
+        raw[src] = [100, 200, 300]
+        with self.assertRaises(UnknownParameterError):
             proc.process(data)
-        # set correct source
-        data['raw']['xgm1:output'] = {
-            "data.intensityTD": [100, 200, 300]
-        }
+        catalog.remove_item(src)
+
+        # valid pipeline source
+        src_it = 'xgm1:output data.intensityTD'
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), (0, 1000)))
+        meta[src_it] = {'tid': 12346}
+        raw[src_it] = [100, 200, 300]
         proc.process(data)
-        self.assertEqual(0.02, processed.xgm.intensity)
-        self.assertEqual(1e-5, processed.xgm.x)
         self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # same pipeline source with a different slice
-        proc._sources.pop(-1)
-        proc._sources.append(SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(1, 3)))
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(1, 3), (0, 1000)))
         proc.process(data)
-        self.assertEqual(0.02, processed.xgm.intensity)
-        self.assertEqual(1e-5, processed.xgm.x)
         self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
+        self._reset_processed(processed)
+
+        # if the same source has different "intensity" properties, the value of
+        # the last one will finally be set in the processed data
+        src_it1 = 'xgm1:output data.intensitySa1TD'
+        src_it2 = 'xgm1:output data.intensitySa2TD'
+        src_it3 = 'xgm1:output data.intensitySa3TD'
+
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensitySa1TD', slice(None, None), (0, 1000)))
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensitySa2TD', slice(1, 4), (0, 100)))
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensitySa3TD', slice(2, 3), (0, 10)))
+
+        meta.update({
+            src_it1: {'tid': 54321}, src_it2: {'tid': 54321}, src_it3: {'tid': 54321}
+        })
+        raw.update({
+            src_it1: [10, 20, 30], src_it2: [1, 2, 3], src_it3: [1000, 2000, 3000],
+        })
+        with patch("extra_foam.pipeline.processors.xgm.logger.warning") as mocked_warning:
+            proc.process(data)
+            mocked_warning.assert_called()
+        self.assertListEqual([3000], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
         # remove instrument source
-        proc._sources.pop(0)
-        proc.process(data)
-        self.assertIsNone(processed.xgm.intensity)
-        self.assertEqual(1e-5, processed.xgm.x)
-        self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
-        self._reset_processed(processed)
-
-        # remove the other instrument source
-        proc._sources.pop(0)
-        proc.process(data)
+        catalog.remove_item(src_pf)
+        catalog.remove_item(src_bpx)
+        with patch("extra_foam.pipeline.processors.xgm.logger.warning") as mocked_warning:
+            proc.process(data)
+            mocked_warning.assert_called()
         self.assertIsNone(processed.xgm.intensity)
         self.assertIsNone(processed.xgm.x)
-        self.assertListEqual([200, 300], processed.pulse.xgm.intensity.tolist())
+        self.assertEqual(-2e-5, processed.xgm.y)
+        self.assertListEqual([3000], processed.pulse.xgm.intensity.tolist())
         self._reset_processed(processed)
 
-        # remove pipeline source
-        proc._sources.pop(0)
+        # remove one pipeline source
+        catalog.remove_item(src_it3)
+        with patch("extra_foam.pipeline.processors.xgm.logger.warning") as mocked_warning:
+            proc.process(data)
+            mocked_warning.assert_called()
+        # result from data.intensitySa2TD
+        self.assertListEqual([2, 3], processed.pulse.xgm.intensity.tolist())
+        self._reset_processed(processed)
+
+        # remove all pipeline sources
+        catalog.clear()
         proc.process(data)
-        self.assertIsNone(processed.xgm.intensity)
-        self.assertIsNone(processed.xgm.x)
         self.assertIsNone(processed.pulse.xgm.intensity)
         self._reset_processed(processed)
 
     def testMovingAverage(self):
         data, processed = self.simple_data(1234, (2, 2))
-        data['raw']['xgm1'] = {
-            "pulseEnergy.photonFlux": 0.02,
-            "beamPosition.ixPos": 1e-5,
-            "beamPosition.iyPos": -2e-5,
-        }
-        data['raw']['xgm1:output'] = {
-            "data.intensityTD": [100, 200, 300]
-        }
+        meta = data['meta']
+        raw = data['raw']
+        catalog = data['catalog']
+
+        src_pf = 'xgm1 pulseEnergy.photonFlux'
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1', [], 'pulseEnergy.photonFlux', None, None))
+        meta[src_pf] = {'tid': 12345}
+        raw[src_pf] = 0.02
+
+        src_it = 'xgm1:output data.intensityTD'
+        catalog.add_item(SourceItem(
+            'XGM', 'xgm1:output', [], 'data.intensityTD', slice(None, None), None))
+        meta[src_it] = {'tid': 12345}
+        raw[src_it] = [100, 200, 300]
 
         proc = XgmProcessor()
         proc._update_moving_average({
             'reset_ma_xgm': 1,
             'ma_window': 5
         })
-        proc._sources = [
-            SourceItem('XGM', 'xgm1', "pulseEnergy.photonFlux"),
-            SourceItem('XGM', 'xgm1', "beamPosition.ixPos"),
-            SourceItem('XGM', 'xgm1', "beamPosition.iyPos"),
-            SourceItem('XGM', 'xgm1:output', "data.intensityTD", slice(None, None)),
-        ]
 
         # 1st train
         proc.process(data)
         self.assertAlmostEqual(0.02, processed.xgm.intensity)
-        self.assertAlmostEqual(1e-5, processed.xgm.x)
-        self.assertAlmostEqual(-2e-5, processed.xgm.y)
         self.assertListEqual([100, 200, 300], processed.pulse.xgm.intensity.tolist())
 
-        data['raw']['xgm1'] = {
-            "pulseEnergy.photonFlux": 0.04,
-            "beamPosition.ixPos": 3e-5,
-            "beamPosition.iyPos": -4e-5,
-        }
-        data['raw']['xgm1:output'] = {
-            "data.intensityTD": [10, 20, 30]
-        }
+        data['raw'][src_pf] = 0.04
+        data['raw'][src_it] = [10, 20, 30]
 
         # 2nd train
         proc.process(data)
         self.assertAlmostEqual(0.03, processed.xgm.intensity)
-        self.assertAlmostEqual(2e-5, processed.xgm.x)
-        self.assertAlmostEqual(-3e-5, processed.xgm.y)
         self.assertListEqual([55, 110, 165], processed.pulse.xgm.intensity.tolist())
 
     def _reset_processed(self, processed):

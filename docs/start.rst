@@ -18,12 +18,8 @@ features than the **stable** version.
 
 .. code-block:: bash
 
-    module load exfel exfel_anaconda3/beta
-    extra-foam DETECTOR_NAME --topic TOPIC_NAME
-
-.. note::
-
-   *TOPIC_NAME* command line option is available after version 0.5.3
+    module load exfel EXtra-foam
+    extra-foam DETECTOR TOPIC
 
 More info on command line arguments can be obtained as
 
@@ -31,22 +27,31 @@ More info on command line arguments can be obtained as
 
    [user@exflonc12 ~]$ extra-foam --help
 
-   usage: extra-foam [-h] [-V] [--debug] [--topic {FXE,HED,MID,SCS,SPB,SQS}]
-                  {AGIPD,LPD,JUNGFRAU,FASTCCD,BASLERCAMERA,DSSC}
+    usage: extra-foam [-h] [-V] [--debug] [--redis_address REDIS_ADDRESS]
+                      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,BASLERCAMERA}
+                      {SPB,FXE,SCS,SQS,MID,HED}
 
-   positional arguments:
-      {AGIPD,LPD,JUNGFRAU,FASTCCD,BASLERCAMERA,DSSC}
-                          detector name (case insensitive)
+    positional arguments:
+      {AGIPD,LPD,DSSC,JUNGFRAUPR,JUNGFRAU,FASTCCD,BASLERCAMERA}
+                            detector name (case insensitive)
+      {SPB,FXE,SCS,SQS,MID,HED}
+                            Name of the instrument
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     -V, --version         show program's version number and exit
-     --debug               Run in debug mode
-     --topic {FXE,HED,MID,SCS,SPB,SQS}
-                           Name of the instrument
+    optional arguments:
+      -h, --help            show this help message and exit
+      -V, --version         show program's version number and exit
+      --debug               Run in debug mode
+      --pipeline_slow_policy {0,1}
+                            Pipeline policy when the processing rate is slower
+                            than the arrival rate (0 for always process the latest
+                            data and 1 for wait until processing of the current
+                            data finishes)
+      --redis_address REDIS_ADDRESS
+                            Address of the Redis server
+
 
 .. note::
-    It usually takes a few minutes to start **EXtra-foam** for the first time! This
+    It sometime takes a few minutes to start **EXtra-foam** for the first time! This
     is actually an issue related to the infrastructure and not because
     **EXtra-foam** is slow.
 
@@ -58,7 +63,9 @@ More info on command line arguments can be obtained as
     In order to have a better experience with **EXtra-foam** on the `Maxwell` cluster,
     you should need FastX2_ at max-display_. There is also a link for downloading
     the desktop client on the bottom-right corner when you opened max-display_. For
-    more details, please refer to the official website for FastX2_ at DESY.
+    more details, please refer to the official website for FastX2_ at DESY. Nevertheless,
+    it is not recommended to run **EXtra-foam** on the `Maxwell` cluster since streaming
+    data from files there is extremely slow.
 
 .. _FastX2: https://confluence.desy.de/display/IS/FastX2
 .. _max-display: https://max-display.desy.de:3443/
@@ -71,8 +78,8 @@ To start the **stable** version on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    module load exfel extra_foam
-    extra-foam DETECTOR_NAME --topic TOPIC_NAME
+    module load exfel EXtra-foam/beta
+    extra-foam DETECTOR TOPIC
 
 
 Data analysis in real time
@@ -94,41 +101,7 @@ a `Karabo` device (`PipeToZeroMQ`) running inside the control network.
 Data analysis with files
 ------------------------
 
-**EXtra-foam** can be used to replay experiments with files. Click on the
-*Offline* window on the tool bar that opens the following window.
-
-.. image:: images/file_stream_control.png
-
-The run folder is browsed through the ``Load Run Folder`` button. The corrected image
-data will be streamed from the run folder. If the run folder has path structure
-as on `Maxwell GPFS` (/gpfs/exfel/exp/instrument/cycle/proposal/proc/runnumber) then once
-the run folder is loaded, all the  slow/control sources available in the
-corresponding *raw* folder (or same data folder if no corresponding raw
-folder is found) are listed. Users can then choose slow data sources to stream
-along with the fast image data.
-
-The data is streamed from files after the ``Stream files`` button is clicked. The user
-is free to use any available ``port``. ``Hostname`` should be `localhost`.
-
-.. image:: images/data_source_from_file.png
-   :width: 500
-
-.. list-table:: Example files
-   :header-rows: 1
-
-   * - Detector
-     - File directory
-
-   * - AGIPD
-     - /gpfs/exfel/exp/XMPL/201750/p700000/proc/r0006
-   * - LPD
-     - /gpfs/exfel/exp/FXE/201701/p002026/proc/r0078
-   * - JungFrau
-     - /gpfs/exfel/exp/FXE/201930/p900063/proc/r1051
-   * - FastCCD
-     - /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141
-   * - DSSC
-     - /gpfs/exfel/exp/SCS/
+See :ref:`stream data from run directory`
 
 
 Trouble Shooting
@@ -136,7 +109,9 @@ Trouble Shooting
 
 Steps to follow in case you are facing issues operating **EXtra-foam**
 
-- While trying to run **EXtra-foam** remotely on the online cluster (exflonc12, etc), if you
+- **Could not connect to display**
+
+  While trying to run **EXtra-foam** remotely on the online cluster (exflonc12, etc), if you
   end up with error messages similar to,
 
   .. code-block:: console
@@ -150,73 +125,63 @@ Steps to follow in case you are facing issues operating **EXtra-foam**
   Using **EXtra-foam** on Maxwell cluster, it is better to use FastX2_ at max-display_ as
   explained in previous section.
 
-- If you are prompted to warnings like,
+- **Shut down the redis server?**
+
+  If you are prompted to warnings like,
 
   .. code-block:: console
 
-     [user@exflonc12 ~]$ extra-foam JUNGFRAU
+     [user@exflonc12 ~]$ extra-foam DSSC SCS
 
-     Warning: Found old extra-foam instance(s) running in this machine!!!
-     Running more than two extra-foam instances with the same
-     detector can result in undefined behavior. You can try to
-     kill the other instances if it is owned by you.
-     Note: you are not able to kill other users' instances!
-     Send SIGKILL? (y/n)
+     services.py - WARNING - Found Redis server for DSSC (started at 2020-02-06 12:50:03.906872)
+     already running on this machine using port 6380!
 
-  It is safe and encourage to select *y* since you cannot kill other users instance and
-  it helps you to kill zombie processes of **EXtra-foam**. However, there is a known bug
-  that if you have another instance with a different detector running, selecting *y* will kill
-  that instance which indeed has no conflict with the new instance. But be aware that,
-  if the other **EXtra-foam** instance is also running with the same detector argument
-  then this may cause an undefined behavior in the analysis since change of analysis
-  parameters by one user will be reflected in your instance too.
+     You can choose to shut down the Redis server. Please note that the owner of the Redis server
+     will be informed (your username and IP address).
 
-  **EXtra-foam** receive data from the **karabo bridge** (*PipeToZeroMQ*) device
-  and therefore running multiple instances may lead to data loss.
+     Shut down the existing Redis server? (y/n)
 
- .. note::
+  **EXtra-foam** uses `Redis` as broker to pass meta information between different processes. By
+  design, each type of detector has its unique `Redis` port so one can safely run more than one
+  **EXtra-foam** instances for different detectors on the same machine. However, it is not allowed
+  to run two instances with the same type of detector. Also, **EXtra-foam** receives data from
+  **karabo bridge** and thus there can be data loss if there is any instance secretly running
+  in the background, stealing the data.
 
-   It is therefore recommended not to run multiple instances of
-   **EXtra-foam** for the same detector argument on the same online cluster
+  In the instrument control room, there should be only one **EXtra-foam** instance for the detector
+  that is running. Therefore, it is safe to type "y" to shut down the existing *Redis* server.
+  However, if somebody wants to make a joke about you and did that remotely, you will get informed.
 
-- If you are prompted to warning like,
+- **Config file is invalid**
+
+  If you are prompted to warning like,
 
   .. code-block:: console
 
-     The following invalid keys were found in /home/user/.EXtra-foam/config.json:
+     Traceback (most recent call last):
+       File "/home/username/anaconda3/envs/foam/bin/extra-foam", line 11, in <module>
+         load_entry_point('EXtra-foam', 'console_scripts', 'extra-foam')()
+       File "/home/username/xfel-data-analyais/EXtra-foam/extra_foam/services.py", line 356, in application
+         config.load(detector, topic)
+       File "/home/username/xfel-data-analyais/EXtra-foam/extra_foam/config.py", line 456, in load
+         self._data.load(detector, topic)
+       File "/home/username/xfel-data-analyais/EXtra-foam/extra_foam/config.py", line 382, in load
+         self.from_file(det, topic)
+       File "/home/username/xfel-data-analyais/EXtra-foam/extra_foam/config.py", line 393, in from_file
+         raise OSError(msg)
+     OSError: Invalid config file: /home/username/.EXtra-foam/scs.config.yaml
+     ParserError('while parsing a block mapping', <yaml.error.Mark object at 0x7fcffbd84910>,
+     "expected <block end>, but found '<block mapping start>'", <yaml.error.Mark object at 0x7fcffbd84ed0>)
 
-     LPD.GEOMETRY_FIL1.
+  This error is triggered when the :ref:`config file` is not valid. Please correct it if you have modified
+  the default one. Alternatively, you can delete it and let the program generate a default one for you.
 
-     This could be caused by a version update.
-     Create a new config file? (y/n)
+- **No data is received**
 
-  This warning is triggered when the local config file `/home/user/.EXtra-foam/config.json`
-  was either created by an old version of **EXtra-foam** or some keys name were manually
-  changed by the user by mistake like in the above warning "GEOMETRY_FILE" key that 
-  is expected by **EXtra-foam** was manually changed to "GEOMETRY_FIL1" by the user in their
-  local config file.
-
- .. note::
-
-    It is recommended to say **y** (YES) and proceed and a new local config file will
-    be generated by **EXtra-foam** which user can edit later for convenience.
-
-- If **EXtra-foam** opens up fine and running it by clicking on *start* button does
+  If **EXtra-foam** opens up fine and running it by clicking on *start* button does
   nothing, please make sure that relevant **PipeToZeroMQ** device is properly
   configured, activated and its *data sent* property is updating. This device
-  can be configured only with the help of experts (CAS support and beamline scientists).
-
-- While performing correlation or binning analysis in **EXtra-foam**, if you are
-  prompted to error messages like,
-
-  .. code-block:: console
-
-     ERROR - ProcessingError("[Correlation] Device 'FXE_SMS_USR/MOTOR/UM02' is not in the data!",)
-
-  This can happen due to several reasons for.eg. Relevant **Data Correlator** (*DataCorrelator*)
-  device is not running, or the slow source was not added to the **Data Correlator**
-  device or **EXtra-foam** is not listening to the correct port where the **karabo bridge**
-  is sending the correlated data. 
+  can be configured only with the help of experts (data analysis support and beamline scientists).
 
  .. note::
 

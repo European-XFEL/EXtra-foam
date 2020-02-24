@@ -27,6 +27,8 @@ class Mediator(QObject):
     poi_index_change_sgn = pyqtSignal(int, int)
     poi_window_initialized_sgn = pyqtSignal()
 
+    bin_heatmap_autolevel_sgn = pyqtSignal()
+
     __instance = None
 
     _meta = MetaProxy()
@@ -52,13 +54,14 @@ class Mediator(QObject):
     def unregisterAnalysis(self, analysis_type):
         self._meta.unregister_analysis(analysis_type)
 
-    def onBridgeEndpointChange(self, value: str):
-        self._meta.hset(mt.CONNECTION, "endpoint", value)
+    def onBridgeConnectionsChange(self, connections: dict):
+        # key = endpoint, value = source type
+        pipe = self._meta.pipeline()
+        pipe.delete(mt.CONNECTION)
+        pipe.hmset(mt.CONNECTION, connections)
+        pipe.execute()
 
-    def onSourceTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.CONNECTION, "source_type", int(value))
-
-    def onDataSourceToggled(self, item, checked: bool):
+    def onSourceItemToggled(self, checked: bool, item: object):
         if checked:
             self._meta.add_data_source(item)
         else:
@@ -88,8 +91,11 @@ class Mediator(QObject):
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
 
-    def onGeomAssembleWithGeometryChange(self, value: bool):
-        self._meta.hset(mt.GEOMETRY_PROC, "with_geometry", str(value))
+    def onGeomStackOnlyChange(self, value: bool):
+        self._meta.hset(mt.GEOMETRY_PROC, "stack_only", str(value))
+
+    def onGeomAssemblerChange(self, value: IntEnum):
+        self._meta.hset(mt.GEOMETRY_PROC, "assembler", int(value))
 
     def onGeomFilenameChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)
@@ -111,10 +117,11 @@ class Mediator(QObject):
         self._meta.hset(mt.GLOBAL_PROC, "ma_window", value)
 
     def onResetMa(self):
-        self._meta.hmset(mt.GLOBAL_PROC,
-                         {"reset_ma_ai": 1,
-                          "reset_ma_roi": 1,
-                          "reset_ma_xgm": 1})
+        self._meta.hmset(mt.GLOBAL_PROC, {
+            "reset_ma_ai": 1,
+            "reset_ma_roi": 1,
+            "reset_ma_xgm": 1,
+            "reset_ma_digitizer": 1})
 
     def onAiPixelSizeXChange(self, value: int):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'pixel_size_x', value)
@@ -179,6 +186,15 @@ class Mediator(QObject):
     def onRoiFomNormChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, "fom:norm", int(value))
 
+    def onRoiHistComboChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, "hist:combo", int(value))
+
+    def onRoiHistNumBinsChange(self, value: int):
+        self._meta.hset(mt.ROI_PROC, "hist:n_bins", int(value))
+
+    def onRoiHistBinRangeChange(self, value: tuple):
+        self._meta.hset(mt.ROI_PROC, "hist:bin_range", str(value))
+
     def onRoiNormTypeChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'norm:type', int(value))
 
@@ -204,25 +220,27 @@ class Mediator(QObject):
         self._meta.hset(mt.CORRELATION_PROC, "analysis_type", int(value))
 
     def onCorrelationParamChange(self, value: tuple):
-        # index, device ID, property name, resolution
+        # index, source, resolution
         # index starts from 1
-        index, device_id, ppt, resolution = value
-        self._meta.hset(mt.CORRELATION_PROC, f'device_id{index}', device_id)
-        self._meta.hset(mt.CORRELATION_PROC, f'property{index}', ppt)
-        self._meta.hset(mt.CORRELATION_PROC, f'resolution{index}', resolution)
+        index, src, resolution = value
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.CORRELATION_PROC, f'source{index}', src)
+        pipe.hset(mt.CORRELATION_PROC, f'resolution{index}', resolution)
+        pipe.execute()
 
     def onCorrelationReset(self):
         self._meta.hset(mt.CORRELATION_PROC, "reset", 1)
 
-    def onBinGroupChange(self, value: tuple):
-        # index, device ID, property name, bin_range, number of bins,
+    def onBinParamChange(self, value: tuple):
+        # index, source, bin_range, number of bins,
         # where the index starts from 1
-        index, device_id, ppt, bin_range, n_bins = value
+        index, src, bin_range, n_bins = value
 
-        self._meta.hset(mt.BIN_PROC, f'device_id{index}', device_id)
-        self._meta.hset(mt.BIN_PROC, f'property{index}', ppt)
-        self._meta.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
-        self._meta.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
+        pipe = self._meta.pipeline()
+        pipe.hset(mt.BIN_PROC, f'source{index}', src)
+        pipe.hset(mt.BIN_PROC, f'bin_range{index}', str(bin_range))
+        pipe.hset(mt.BIN_PROC, f'n_bins{index}', n_bins)
+        pipe.execute()
 
     def onBinAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.BIN_PROC, "analysis_type", int(value))
@@ -235,6 +253,9 @@ class Mediator(QObject):
 
     def onHistAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.HISTOGRAM_PROC, "analysis_type", int(value))
+
+    def onHistBinRangeChange(self, value: tuple):
+        self._meta.hset(mt.HISTOGRAM_PROC, "bin_range", str(value))
 
     def onHistNumBinsChange(self, value: int):
         self._meta.hset(mt.HISTOGRAM_PROC, "n_bins", int(value))
@@ -257,17 +278,11 @@ class Mediator(QObject):
         else:
             self._meta.hdel(mt.TR_XAS_PROC, "analysis_type")
 
-    def onTrXasDelayDeviceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_device", value)
+    def onTrXasDelaySourceChange(self, value: str):
+        self._meta.hset(mt.TR_XAS_PROC, "delay_source", value)
 
-    def onTrXasDelayPropertyChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_property", value)
-
-    def onTrXasEnergyDeviceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_device", value)
-
-    def onTrXasEnergyPropertyChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_property", value)
+    def onTrXasEnergySourceChange(self, value: str):
+        self._meta.hset(mt.TR_XAS_PROC, "energy_source", value)
 
     def onTrXasNoDelayBinsChange(self, value: int):
         self._meta.hset(mt.TR_XAS_PROC, "n_delay_bins", value)

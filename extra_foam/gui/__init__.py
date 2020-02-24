@@ -2,12 +2,13 @@ from PyQt5.QtWidgets import QApplication
 
 from .pyqtgraph import setConfigOptions
 from .main_gui import MainGUI
+from ..config import config
 
 
 setConfigOptions(
     imageAxisOrder="row-major",
-    foreground="k",
-    background=(225, 225, 225, 255),
+    foreground=config["GUI_FOREGROUND_COLOR"],
+    background=config["GUI_BACKGROUND_COLOR"],
 )
 
 

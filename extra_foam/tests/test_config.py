@@ -3,184 +3,150 @@ from unittest import mock
 import os
 import os.path as osp
 import tempfile
-import json
+import yaml
+
+import pytest
 
 from extra_foam.config import ConfigWrapper, _Config
 from extra_foam.logger import logger
 
+logger.setLevel("CRITICAL")
 
-class TestLaserOnOffWindow(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.dir = tempfile.mkdtemp()
-        _Config._filename = osp.join(cls.dir, "config.json")
+_tmp_cfg_dir = tempfile.mkdtemp()
 
-        cls.expected_keys = set(_Config._system_readonly_config.keys()).union(
-            set(_Config._system_reconfigurable_config.keys())).union(
-            set(_Config._detector_readonly_config['DEFAULT'].keys())).union(
-            set(_Config._detector_reconfigurable_config['DEFAULT'].keys()))
 
-    def setUp(self):
+@mock.patch("extra_foam.config.ROOT_PATH", _tmp_cfg_dir)
+class TestConfig:
+    def teardown_class(self):
+        os.rmdir(_tmp_cfg_dir)
+
+    def setup_method(self):
         self._cfg = ConfigWrapper()
-
-    def tearDown(self):
-        os.remove(_Config._filename)
+        self.detectors = self._cfg.detectors
+        self.topics = self._cfg.topics
 
     def testGeneral(self):
         # test readonly
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             self._cfg['DETECTOR'] = "ABC"
 
-    def testNewFileGeneration(self):
-        with open(_Config._filename, 'r') as fp:
-            cfg = json.load(fp)
+        assert 'TOPIC' in self._cfg
+        assert 'REDIS_PORT' in self._cfg
+        assert 'SOURCE_DEFAULT_TYPE' in self._cfg
 
-        # check system configuration
-        self.assertEqual(set(cfg.keys()),
-                         set(_Config._system_reconfigurable_config.keys())
-                         .union(set(_Config.detectors)))
+    @pytest.mark.parametrize("detector, topic",
+                             [('AGIPD', 'SPB'), ('AGIPD', 'MID'),
+                              ('DSSC', 'SCS'),
+                              ('LPD', 'FXE'),
+                              ('JungFrau', 'FXE'),
+                              ('FastCCD', 'SCS'),
+                              ('BaslerCamera', 'SCS')])
+    def testFileGeneration(self, detector, topic):
+        # TODO: add SQS and HED tests when detectors are added
 
-        for key, value in _Config._system_reconfigurable_config.items():
-            if key not in _Config.detectors:
-                self.assertEqual(value, cfg[key])
+        # test load config from file
 
-        # check configuration for each detector
-        for det in _Config.detectors:
-            self.assertEqual(
-                set(cfg[det].keys()),
-                set(_Config._detector_reconfigurable_config['DEFAULT'].keys()))
-
-            for key, value in _Config._detector_reconfigurable_config[det].items():
-                self.assertEqual(value, cfg[det][key])
-
-    def testLoadLPD(self):
         cfg = self._cfg
+        cfg.load(detector, topic)
 
-        detector = "LPD"
-        cfg.load(detector)
+        # test config file generation and the correctness of the default
+        # config files
 
-        # test keys
-        self.assertEqual(self.expected_keys, set(cfg.keys()))
+        filepath = cfg.config_file
+        with open(filepath, 'r') as fp:
+            cfg_from_file = yaml.load(fp, Loader=yaml.Loader)
 
-        # test values
-        self.assertEqual(cfg["DETECTOR"], detector)
-        self.assertEqual(cfg["PULSE_RESOLVED"], True)
-        self.assertEqual(cfg["SOURCE_NAME_BRIDGE"],
-                         _Config._detector_reconfigurable_config[
-                             detector]["SOURCE_NAME_BRIDGE"])
-        self.assertEqual(cfg["SOURCE_NAME_FILE"],
-                         _Config._detector_reconfigurable_config[
-                             detector]["SOURCE_NAME_FILE"])
+        orig_filepath = osp.join(_Config._abs_dirpath, f'configs/{topic.lower()}.config.yaml')
+        assert orig_filepath != filepath
+        with open(orig_filepath, 'r') as fp:
+            cfg_gt = yaml.load(fp, Loader=yaml.Loader)
+        assert cfg_from_file == cfg_gt
 
-    def testLoadJungFrau(self):
+        os.remove(filepath)
+
+    def testLoadConfig(self):
         cfg = self._cfg
+        # 'load' does not check whether the value is valid
+        cfg.load('DSSC', 'SCS', PIPELINE_SLOW_POLICY=100)
+        assert cfg["PIPELINE_SLOW_POLICY"] == 100
 
-        detector = "JungFrau"
-        cfg.load(detector)
+        with pytest.raises(KeyError):
+            cfg.load('DSSC', 'SCS', PIPELINE_SLOW=100)
 
-        # test keys
-        self.assertEqual(self.expected_keys, set(cfg.keys()))
+        os.remove(cfg.config_file)
 
-        # test values
-        self.assertEqual(cfg["DETECTOR"], detector)
-        self.assertEqual(cfg["PULSE_RESOLVED"], False)
-        self.assertEqual(cfg["SERVER_ADDR"],
-                         _Config._detector_reconfigurable_config[
-                             detector]["SERVER_ADDR"])
-        self.assertEqual(cfg["SERVER_PORT"],
-                         _Config._detector_reconfigurable_config[
-                             detector]["SERVER_PORT"])
+    def testLoadConfigFromFile(self):
+        cfg = self._cfg
+        cfg.load('DSSC', 'SCS')
 
-    def testInvalidSysKeys(self):
-        # invalid keys in system config
-        with open(_Config._filename, 'r') as fp:
-            cfg = json.load(fp)
+        filepath = cfg.config_file
+        with open(filepath, 'r') as fp:
+            cfg_from_file = yaml.load(fp, Loader=yaml.Loader)
 
-        with open(_Config._filename, 'w') as fp:
-            cfg['UNKNOWN1'] = 1
-            cfg['UNKNOWN2'] = 2
-            json.dump(cfg, fp, indent=4)
+        # test only one "main detector" category will be loaded
+        assert "FastCCD" in cfg_from_file["SOURCE"]["CATEGORY"]
+        assert "FastCCD" not in cfg
 
-        detector = "LPD"
-        # test raise if the answer is 'no'
-        with mock.patch('builtins.input', return_value='n'):
-            with self.assertRaisesRegex(ValueError, 'UNKNOWN1, UNKNOWN2'):
-                self._cfg.load(detector)
+        # test main detector config were loaded
+        assert (128, 512) == cfg["MODULE_SHAPE"]
+        assert 16 == cfg["NUMBER_OF_MODULES"]
 
-        # test generating backup file if the answer is 'yes'
-        with mock.patch('builtins.input', return_value='y'):
-            self._cfg.load(detector)
+        # test source items were loaded
+        dssc_srcs = cfg_from_file["SOURCE"]["CATEGORY"]["DSSC"]["PIPELINE"]
+        for device_id, ppts in dssc_srcs.items():
+            assert cfg.pipeline_sources["DSSC"][device_id] == ppts
 
-        self.assertTrue(osp.exists(_Config._filename + '.bak'))
-        # check the content of the backup file
-        with open(_Config._filename + '.bak', 'r') as fp:
-            self.assertEqual(cfg, json.load(fp))
-        # nothing should happen since there is a valid config file
-        self._cfg.load(detector)
+        xgm_pipeline_srcs = cfg_from_file["SOURCE"]["CATEGORY"]["XGM"]["PIPELINE"]
+        for device_id, ppts in xgm_pipeline_srcs.items():
+            assert cfg.pipeline_sources["XGM"][device_id] == ppts
+        xgm_control_srcs = cfg_from_file["SOURCE"]["CATEGORY"]["XGM"]["CONTROL"]
+        for device_id, ppts in xgm_control_srcs.items():
+            assert cfg.control_sources["XGM"][device_id] == ppts
 
-        # mess up the new config file again
-        with open(_Config._filename, 'w') as fp:
-            cfg['UNKNOWN3'] = 1
-            json.dump(cfg, fp, indent=4)
+        os.remove(cfg.config_file)
 
-        with mock.patch('builtins.input', return_value='y'):
-            self._cfg.load(detector)
+    def testInvalidSourceCategory(self):
+        cfg = self._cfg
+        cfg.load('DSSC', 'SCS')
 
-        self.assertTrue(osp.exists(_Config._filename + '.bak'))
-        # check the content of the backup file
-        with open(_Config._filename + '.bak', 'r') as fp:
-            self.assertEqual(cfg, json.load(fp))
+        filepath = cfg.config_file
+        with open(filepath, 'r') as fp:
+            cfg_from_file = yaml.load(fp, Loader=yaml.Loader)
 
-        # test that the second level backup file was generated
-        self.assertTrue(osp.exists(_Config._filename + '.bak.bak'))
-        # check the content of the second level backup file
-        with open(_Config._filename + '.bak.bak', 'r') as fp:
-            del cfg['UNKNOWN3']
-            self.assertEqual(cfg, json.load(fp))
+        # test invalid source category
+        cfg_from_file["SOURCE"]["CATEGORY"]["XXGM"] = cfg_from_file["SOURCE"]["CATEGORY"]["XGM"]
+        with open(filepath, 'w') as fp:
+            yaml.dump(cfg_from_file, fp, Dumper=yaml.Dumper)
+        with pytest.raises(ValueError, match="Invalid source category"):
+            cfg.load('DSSC', 'SCS')
 
-    def testInvalidDetectorKeys(self):
-        # invalid keys in detector config
-        with open(_Config._filename, 'r') as fp:
-            cfg = json.load(fp)
+        os.remove(filepath)
 
-        detector = "LPD"
+    def testInvalidFileFormat(self):
+        cfg = self._cfg
+        cfg.load('DSSC', 'SCS')
 
-        with open(_Config._filename, 'w') as fp:
-            cfg[detector]['UNKNOWN'] = 1
-            cfg[detector]['TIMEOUT'] = 2
-            json.dump(cfg, fp, indent=4)
+        filepath = cfg.config_file
+        with open(filepath, 'r') as fp:
+            content = fp.read()
 
-        with mock.patch('builtins.input', return_value='n'):
-            with self.assertRaisesRegex(ValueError, 'LPD.UNKNOWN, LPD.TIMEOUT'):
-                self._cfg.load(detector)
+        with open(filepath, 'w') as fp:
+            # add a line at the end of the file to make it an invalid YAML
+            content += "\nABCDEFEA"
+            fp.write(content)
 
-    def testInvalidDetectors(self):
-        # detector config is missing in config
-        with open(_Config._filename, 'r') as fp:
-            cfg = json.load(fp)
+        with pytest.raises(IOError):
+            cfg.load('DSSC', 'SCS')
 
-        det = "LPD"
+        with open(filepath, 'w') as fp:
+            # make an empty config file
+            content = ""
+            fp.write(content)
 
-        del cfg[det]
-        with open(_Config._filename, 'w') as fp:
-            json.dump(cfg, fp, indent=4)
+        with pytest.raises(ValueError, match="empty"):
+            cfg.load('DSSC', 'SCS')
 
-        with mock.patch('builtins.input', return_value='n'):
-            # nothing will happen since the default configuration will be used
-            self._cfg.load(det)
-            self.assertFalse(osp.exists(_Config._filename + '.bak'))
-            # check the current config
-            self.assertEqual(_Config._detector_reconfigurable_config[det]['GEOMETRY_FILE'],
-                             self._cfg['GEOMETRY_FILE'])
-
-        with mock.patch('builtins.input', return_value='y'):
-            self._cfg.load(det)
-            # check the backup file has been generated
-            self.assertTrue(osp.exists(_Config._filename + '.bak'))
-            with open(_Config._filename, 'r') as fp:
-                cfg = json.load(fp)
-                # test the detector config is in the new config file
-                self.assertTrue(det in cfg)
+        os.remove(filepath)
 
 
 class TestPlotLabel(unittest.TestCase):

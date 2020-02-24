@@ -40,7 +40,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
     _root_dir = osp.dirname(osp.abspath(__file__))
 
-    _WIDTH, _HEIGHT = config['GUI']['IMAGE_TOOL_SIZE']
+    _WIDTH, _HEIGHT = config['GUI_IMAGE_TOOL_SIZE']
 
     class TabIndex(IntEnum):
         CORRECTED = 0

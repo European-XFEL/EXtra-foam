@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
-from .smart_widgets import SmartRangeLineEdit
+from .smart_widgets import SmartIdLineEdit
 from ...config import PumpProbeMode, AnalysisType
 
 
@@ -42,8 +42,8 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._mode_cb = QComboBox()
 
-        self._on_pulse_le = SmartRangeLineEdit(":")
-        self._off_pulse_le = SmartRangeLineEdit(":")
+        self._on_pulse_le = SmartIdLineEdit(":")
+        self._off_pulse_le = SmartIdLineEdit(":")
 
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:

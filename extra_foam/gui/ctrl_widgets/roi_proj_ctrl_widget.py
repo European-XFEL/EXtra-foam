@@ -12,20 +12,15 @@ from collections import OrderedDict
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import Normalizer, RoiCombo
+from ...config import RoiCombo
 
 
 class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up ROI 1D projection analysis parameters."""
 
-    _available_norms = OrderedDict({
-        "": Normalizer.UNDEFINED,
-        "AUC": Normalizer.AUC,
-        "XGM": Normalizer.XGM,
-        "ROI": Normalizer.ROI,
-    })
+    _available_norms = _AbstractCtrlWidget._available_norms
 
     _available_combos = OrderedDict({
         "ROI1": RoiCombo.ROI1,
@@ -65,20 +60,22 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         row = 0
         layout.addWidget(QLabel("Combo: "), row, 0, AR)
         layout.addWidget(self._combo_cb, row, 1)
-        layout.addWidget(QLabel("Direction: "), row, 2, AR)
-        layout.addWidget(self._direct_cb, row, 3)
+
+        row += 1
+        layout.addWidget(QLabel("Direction: "), row, 0, AR)
+        layout.addWidget(self._direct_cb, row, 1)
 
         row += 1
         layout.addWidget(QLabel("Norm: "), row, 0, AR)
-        layout.addWidget(self._norm_cb, row, 1, 1, 3)
+        layout.addWidget(self._norm_cb, row, 1)
 
         row += 1
         layout.addWidget(QLabel("AUC range: "), row, 0, AR)
-        layout.addWidget(self._auc_range_le, row, 1, 1, 3)
+        layout.addWidget(self._auc_range_le, row, 1)
 
         row += 1
         layout.addWidget(QLabel("FOM range: "), row, 0, AR)
-        layout.addWidget(self._fom_integ_range_le, row, 1, 1, 3)
+        layout.addWidget(self._fom_integ_range_le, row, 1)
 
         self.setLayout(layout)
 

@@ -301,18 +301,42 @@ class CircleRoiGeom(_RoiGeomBase):
         return f"{self.__class__.__name__}({self._x}, {self._y}, {self._r})"
 
 
-class RoiData(DataItem):
-    """RoiData class.
+class RoiDataPulse(DataItem):
+    """Pulse-resolved ROI data.
+
+    Attributes:
+        geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
+        norm (float): pulse-resolved ROI normalizer.
+        hist (HistogramDataPulse): pulse-resolved ROI histogram data
+            item. Currently, only ROI histogram of POI pulses will
+            be calculated.
+    """
+
+    N_ROIS = len(config['GUI_ROI_COLORS'])
+
+    __slots__ = ['norm', 'hist']
+
+    def __init__(self):
+        super().__init__()
+
+        self.norm = None
+        self.hist = HistogramDataPulse()
+
+
+class RoiDataTrain(DataItem):
+    """Train-resolved ROI data.
 
     Attributes:
         geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
         norm (float): ROI normalizer.
         proj (RoiProjData): ROI projection data item
+        hist (_HistogramDataItem): ROI histogram data item.
     """
 
-    N_ROIS = len(config['ROI_COLORS'])
+    N_ROIS = len(config['GUI_ROI_COLORS'])
 
-    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4', 'norm', 'proj']
+    __slots__ = ['geom1', 'geom2', 'geom3', 'geom4',
+                 'norm', 'proj', 'hist']
 
     def __init__(self):
         super().__init__()
@@ -323,13 +347,23 @@ class RoiData(DataItem):
         self.geom4 = RectRoiGeom()
 
         self.norm = None
-
-        # ROI projection
         self.proj = DataItem()
+        self.hist = _HistogramDataItem()
 
 
 class PumpProbeData(DataItem):
     """Pump-probe data."""
+
+    class OnOff:
+        """on/off quantity averaged over a train."""
+        __slots__ = ["roi_norm",
+                     "xgm_intensity",
+                     "digitizer_pulse_integral"]
+
+        def __init__(self):
+            self.roi_norm = None
+            self.xgm_intensity = None
+            self.digitizer_pulse_integral = None
 
     def __init__(self):
         super().__init__()
@@ -346,9 +380,10 @@ class PumpProbeData(DataItem):
         self.image_on = None
         self.image_off = None
 
-        # on/off ROI normalizer averaged over a train
-        self.roi_norm_on = None
-        self.roi_norm_off = None
+        # TODO: modify other attributes
+        # on/off normalizer averaged over a train
+        self.on = self.OnOff()
+        self.off = self.OnOff()
 
         # on/off normalized VFOM
         # Note: VFOM = normalized on-VFOM - normalized off-VFOM
@@ -436,7 +471,7 @@ class ImageData:
             raise ValueError(f"The shape of image data must be (y, x) or "
                              f"(n_pulses, y, x)!")
 
-        image_dtype = config['IMAGE_DTYPE']
+        image_dtype = config['SOURCE_PROC_IMAGE_DTYPE']
         if arr.dtype != image_dtype:
             arr = arr.astype(image_dtype)
 
@@ -471,6 +506,8 @@ class ImageData:
                                  "'sliced_indices'!")
             instance.sliced_indices = [0]  # be consistent
 
+        if poi_indices is None:
+            poi_indices = [0, 0]
         instance.poi_indices = poi_indices
 
         instance.masked_mean = instance.mean.copy()
@@ -493,41 +530,49 @@ class BinData(collections.abc.Mapping):
 
     class BinDataItem:
 
-        __slots__ = ['device_id', 'property',
-                     'centers', 'counts', 'stats', 'x', 'heat']
+        __slots__ = ['source', 'size', 'centers', 'counts', 'stats',
+                     'x', 'heat', 'x_range']
 
         def __init__(self):
-            self.device_id = ""
-            self.property = ""
+            self.source = ""
             self.centers = None
+            # bin size, needed when there is only one center
+            self.size = None
             self.counts = None
             self.stats = None
             self.x = None
             self.heat = None
+            self.x_range = None
 
     __slots__ = ['mode', '_common', 'heat', 'heat_count']
+
+    _N_BINS = 2
 
     def __init__(self):
         self.mode = None
 
         self._common = []
-        for i in range(2):
+        for i in range(self._N_BINS):
             self._common.append(self.BinDataItem())
 
         self.heat = None
         self.heat_count = None
 
+    def __contains__(self, idx):
+        """Override."""
+        return 0 <= idx < self._N_BINS
+
     def __getitem__(self, idx):
         """Overload."""
-        return self._common[idx]
+        return self._common.__getitem__(idx)
 
     def __iter__(self):
         """Overload."""
-        return iter(self._common)
+        return self._common.__iter__()
 
     def __len__(self):
         """overload."""
-        return len(self._common)
+        return self._N_BINS
 
 
 class CorrelationData(collections.abc.Mapping):
@@ -535,61 +580,74 @@ class CorrelationData(collections.abc.Mapping):
 
     class CorrelationDataItem:
 
-        __slots__ = ['x', 'y', 'device_id', 'property', 'resolution']
+        __slots__ = ['x', 'y', 'source', 'resolution']
 
         def __init__(self):
             self.x = None
             self.y = None  # FOM
-            self.device_id = ""
-            self.property = ""
+            self.source = ""
             self.resolution = 0.0
 
     __slots__ = ['_common', '_pp']
 
+    _N_CORRELATIONS = 2
+
     def __init__(self):
         self._common = []
-        for i in range(2):
+        for i in range(self._N_CORRELATIONS):
             self._common.append(self.CorrelationDataItem())
 
         # pump-probe data
         self._pp = self.CorrelationDataItem()
 
+    def __contains__(self, idx):
+        """Override."""
+        return 0 <= idx < self._N_CORRELATIONS
+
     def __getitem__(self, idx):
         """Overload."""
-        return self._common[idx]
+        return self._common.__getitem__(idx)
 
     def __iter__(self):
         """Overload."""
-        return iter(self._common)
+        return self._common.__iter__()
 
     def __len__(self):
         """overload."""
-        return len(self._common)
+        return self._N_CORRELATIONS
 
     @property
     def pp(self):
         return self._pp
 
 
-_HistogramDataItem = namedtuple('_HistogramDataItem', ['hist', 'bin_centers'])
+class _HistogramDataItem:
+
+    __slots__ = ['hist', 'bin_centers', 'mean', 'median', 'std']
+
+    def __init__(self):
+        self.hist = None
+        self.bin_centers = None
+        self.mean = None
+        self.median = None
+        self.std = None
 
 
-class HistogramData(collections.abc.MutableMapping):
-    """Histogram data model.
+class HistogramDataTrain(_HistogramDataItem):
+    pass
+
+
+class HistogramDataPulse(collections.abc.MutableMapping):
+    """Pulse-resolved histogram data model.
 
     Attributes:
-        pulse_foms (np.array): 1D array for pulse-resolved FOMs in a train.
-        hist (np.array): 1D array for counts of bins.
-        bin_centers (np.array): 1D array for centers of bins.
+        pulse_foms (np.array): pulse-resolved FOMs in a train.
     """
 
-    __slots__ = ['pulse_foms', 'hist', 'bin_centers', '_data']
+    __slots__ = ['pulse_foms', '_data']
 
     def __init__(self):
         self.pulse_foms = None
-
-        self.hist = None
-        self.bin_centers = None
 
         self._data = dict()
 
@@ -603,12 +661,9 @@ class HistogramData(collections.abc.MutableMapping):
         if not isinstance(key, int) or key < 0 or key >= max_k:
             raise KeyError("key must be an integer within [0, {max_k})!")
 
-        try:
-            hist, bin_centers = v
-        except (TypeError, ValueError) as e:
-            raise e
-
-        self._data[key] = _HistogramDataItem(hist, bin_centers)
+        item = _HistogramDataItem()
+        item.hist, item.bin_centers, item.mean, item.median, item.std = v
+        self._data[key] = item
 
     def __delitem__(self, key):
         """Overload."""
@@ -685,6 +740,8 @@ class _XgmDataItem:
     Store XGM pipeline data.
     """
 
+    __slots__ = ['intensity', 'x', 'y']
+
     def __init__(self):
         self.intensity = None  # FEL intensity
         self.x = None  # x position
@@ -696,11 +753,76 @@ class XgmData(_XgmDataItem):
 
     Store XGM pipeline data.
     """
+
+    __slots__ = []
+
     def __init__(self):
         super().__init__()
 
-        self.on = _XgmDataItem()
-        self.off = _XgmDataItem()
+
+class _DigitizerDataItem:
+    """_DigitizerDataItem class.
+
+    Store Digitizer pipeline data.
+    """
+
+    __slots__ = ['pulse_integral']
+
+    def __init__(self):
+        self.pulse_integral = None
+
+
+class _DigitizerChannelData(collections.abc.Mapping):
+    """_DigitizerDataItem class.
+
+    Store Digitizer pipeline data.
+    """
+
+    # For a Karabo device, we have maximum 4 boards and each
+    # board has 4 channels.
+    _CHANNEL_NAMES = ('A', 'B', 'C', 'D')
+
+    __slots__ = ['_pulse_integrals']
+
+    def __init__(self):
+        super().__init__()
+
+        self._pulse_integrals = dict()
+        for cn in self._CHANNEL_NAMES:
+            self._pulse_integrals[cn] = _DigitizerDataItem()
+
+    def __contains__(self, cn):
+        """Override."""
+        return self._CHANNEL_NAMES.__contains__(cn)
+
+    def __getitem__(self, cn):
+        """Overload."""
+        return self._pulse_integrals.__getitem__(cn)
+
+    def __iter__(self):
+        """Overload."""
+        return self._CHANNEL_NAMES.__iter__()
+
+    def __len__(self):
+        """overload."""
+        return len(self._CHANNEL_NAMES)
+
+    def items(self):
+        return self._pulse_integrals.items()
+
+
+class DigitizerData(_DigitizerChannelData):
+    """DigitizerData class.
+
+    Store Digitizer pipeline data.
+    """
+
+    __slots__ = ["ch_normalizer"]
+
+    def __init__(self):
+        super().__init__()
+        # name of the channel as a normalizer
+        self.ch_normalizer = self._CHANNEL_NAMES[0]
 
 
 class ProcessedData:
@@ -721,12 +843,15 @@ class ProcessedData:
     class PulseData:
         """Container for pulse-resolved data."""
 
-        __slots__ = ['ai', 'roi', 'xgm']
+        __slots__ = ['ai', 'roi', 'xgm', 'digitizer',
+                     'hist']
 
         def __init__(self):
             self.ai = AzimuthalIntegrationData()
-            self.roi = RoiData()
+            self.roi = RoiDataPulse()
             self.xgm = XgmData()
+            self.digitizer = DigitizerData()
+            self.hist = HistogramDataPulse()
 
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',
@@ -744,11 +869,11 @@ class ProcessedData:
 
         self.xgm = XgmData()
 
-        self.roi = RoiData()
+        self.roi = RoiDataTrain()
         self.ai = AzimuthalIntegrationData()
         self.pp = PumpProbeData()
 
-        self.hist = HistogramData()
+        self.hist = HistogramDataTrain()
         self.corr = CorrelationData()
         self.bin = BinData()
 

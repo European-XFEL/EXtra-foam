@@ -11,8 +11,8 @@ from PyQt5.QtCore import pyqtSignal, QRegExp, Qt
 from PyQt5.QtGui import QRegExpValidator, QValidator
 from PyQt5.QtWidgets import QLineEdit
 
-from ..misc_widgets import Colors
-from ..gui_helpers import parse_boundary, parse_ids, parse_slice
+from ..misc_widgets import FColor
+from ..gui_helpers import parse_boundary, parse_id, parse_slice
 
 
 class SmartLineEdit(QLineEdit):
@@ -39,7 +39,7 @@ class SmartLineEdit(QLineEdit):
     def onTextChanged(self):
         if not self._text_modified:
             self.setStyleSheet(
-                f"QLineEdit {{ background: rgb{Colors().o[:3]}}}")
+                f"QLineEdit {{ background: rgb{FColor.o}}}")
             self._text_modified = True
 
     def setText(self, text):
@@ -130,7 +130,7 @@ class SmartBoundaryLineEdit(SmartLineEdit):
         self.setValidator(self.Validator())
 
 
-class SmartRangeLineEdit(SmartLineEdit):
+class SmartIdLineEdit(SmartLineEdit):
 
     value_changed_sgn = pyqtSignal(object)
 
@@ -147,7 +147,7 @@ class SmartRangeLineEdit(SmartLineEdit):
 
         @staticmethod
         def parse(s):
-            return parse_ids(s)
+            return parse_id(s)
 
     def __init__(self, content, parent=None):
         super().__init__(content, parent=parent)

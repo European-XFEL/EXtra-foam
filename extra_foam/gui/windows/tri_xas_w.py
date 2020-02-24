@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractSpecialAnalysisWindow
 from ..plot_widgets import RoiImageView, TimedImageViewF, TimedPlotWidgetF
-from ..misc_widgets import make_pen
+from ..misc_widgets import FColor
 from ...config import config
 
 
@@ -21,7 +21,7 @@ class TrXasAbsorptionPlot(TimedPlotWidgetF):
 
     Display absorption(s) binned by time delay.
     """
-    def __init__(self, diff, *, parent=None):
+    def __init__(self, diff=False, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
@@ -32,11 +32,11 @@ class TrXasAbsorptionPlot(TimedPlotWidgetF):
         self.addLegend(offset=(-40, 20))
 
         if diff:
-            self._a21 = self.plotCurve(name="ROI2/ROI1", pen=make_pen("g"))
+            self._a21 = self.plotCurve(name="ROI2/ROI1", pen=FColor.mkPen("g"))
         else:
-            c = config['ROI_COLORS']
-            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=make_pen(c[0]))
-            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=make_pen(c[1]))
+            c = config['GUI_ROI_COLORS']
+            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=FColor.mkPen(c[0]))
+            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=FColor.mkPen(c[1]))
 
     def refresh(self):
         """Override."""
@@ -93,7 +93,7 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
     """TrXasWindow class."""
     _title = "Tr-XAS"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""
@@ -103,7 +103,7 @@ class TrXasWindow(_AbstractSpecialAnalysisWindow):
         self._roi2_image = RoiImageView(2, parent=self)
         self._roi3_image = RoiImageView(3, parent=self)
 
-        self._a13_a23 = TrXasAbsorptionPlot(False, parent=self)
+        self._a13_a23 = TrXasAbsorptionPlot(parent=self)
         self._a21 = TrXasAbsorptionPlot(True, parent=self)
         self._a21_heatmap = TrXasHeatmap(parent=self)
 

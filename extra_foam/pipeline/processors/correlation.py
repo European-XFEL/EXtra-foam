@@ -10,7 +10,7 @@ All rights reserved.
 from .base_processor import (
     _BaseProcessor, SimplePairSequence, OneWayAccuPairSequence
 )
-from ..exceptions import UnknownParameterError
+from ..exceptions import ProcessingError, UnknownParameterError
 from ...ipc import process_logger as logger
 from ...config import AnalysisType
 from ...database import Metadata as mt
@@ -27,8 +27,7 @@ class CorrelationProcessor(_BaseProcessor):
         _correlations (list): a list of pair sequences (SimplePairSequence,
             OneWayAccuPairSequence) for storing the history of
             (correlator, FOM).
-        _device_ids (list): a list of device ids for slow data correlators.
-        _properties (list): a list of properties for slow data correlators.
+        _sources (list): a list of sources for slow data correlators.
         _resolutions (list): a list of resolutions for correlations.
         _resets (list): reset flags for correlation data.
         _correlation_pp (SimplePairSequence): store the history of
@@ -51,8 +50,7 @@ class CorrelationProcessor(_BaseProcessor):
         for i in range(self._n_params):
             self._correlations.append(
                 SimplePairSequence(max_len=self._MAX_POINTS))
-        self._device_ids = [""] * self._n_params
-        self._properties = [""] * self._n_params
+        self._sources = [""] * self._n_params
         self._resolutions = [0.0] * self._n_params
         self._resets = [False] * self._n_params
 
@@ -68,14 +66,9 @@ class CorrelationProcessor(_BaseProcessor):
                 self._resets[i] = True
 
         for i in range(len(self._correlations)):
-            device_id = cfg[f'device_id{i+1}']
-            if self._device_ids[i] != device_id:
-                self._device_ids[i] = device_id
-                self._resets[i] = True
-
-            ppt = cfg[f'property{i+1}']
-            if self._properties[i] != ppt:
-                self._properties[i] = ppt
+            src = cfg[f'source{i+1}']
+            if self._sources[i] != src:
+                self._sources[i] = src
                 self._resets[i] = True
 
             resolution = float(cfg[f'resolution{i+1}'])
@@ -86,6 +79,8 @@ class CorrelationProcessor(_BaseProcessor):
                 self._correlations[i] = OneWayAccuPairSequence(
                     resolution, max_len=self._MAX_POINTS)
             elif self._resolutions[i] != resolution:
+                # In the above two cases, we do not need 'reset' since
+                # new Sequence object will be constructed.
                 self._resets[i] = True
             self._resolutions[i] = resolution
 
@@ -104,7 +99,7 @@ class CorrelationProcessor(_BaseProcessor):
         if self.analysis_type == AnalysisType.UNDEFINED:
             return
 
-        processed = data['processed']
+        processed, raw = data['processed'], data['raw']
 
         if self.analysis_type == AnalysisType.PUMP_PROBE:
             pp_analysis_type = processed.pp.analysis_type
@@ -118,55 +113,15 @@ class CorrelationProcessor(_BaseProcessor):
                 self._correlations[i].reset()
                 self._resets[i] = False
 
-        analysis_type = self.analysis_type
-        if analysis_type == AnalysisType.PUMP_PROBE:
-            fom = processed.pp.fom
-            if fom is None:
-                self._pp_fail_flag += 1
-                # if on/off pulses are in different trains, pump-probe FOM is
-                # only calculated every other train.
-                if self._pp_fail_flag == 2:
-                    logger.error(
-                        "[Correlation] Pump-probe FOM is not available")
-                    self._pp_fail_flag = 0
-            else:
-                self._pp_fail_flag = 0
-        elif analysis_type == AnalysisType.ROI_FOM:
-            fom = processed.roi.fom
-            if fom is None:
-                logger.error("[Correlation] ROI FOM is not available")
-        elif analysis_type == AnalysisType.ROI_PROJ:
-            fom = processed.roi.proj.fom
-            if fom is None:
-                logger.error(
-                    "[Correlation] ROI projection FOM is not available")
-        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
-            fom = processed.ai.fom
-            if fom is None:
-                logger.error("[Correlation] Azimuthal integration FOM is not "
-                             "available")
-        else:
-            raise UnknownParameterError(
-                f"[Correlation] Unknown analysis type: {self.analysis_type}")
-
-        if fom is not None:
-            for i in range(self._n_params):
-                v, err = self._fetch_property_data(
-                    processed.tid, data['raw'],
-                    self._device_ids[i], self._properties[i])
-
-                if err:
-                    logger.error(err)
-
-                if v is not None:
-                    self._correlations[i].append((v, fom))
+        try:
+            self._update_data_point(processed, raw)
+        except ProcessingError as e:
+            logger.error(f"[Correlation] {str(e)}!")
 
         for i in range(self._n_params):
             out = processed.corr[i]
-            c = self._correlations[i]
-            out.x, out.y = c.data()
-            out.device_id = self._device_ids[i]
-            out.property = self._properties[i]
+            out.x, out.y = self._correlations[i].data()
+            out.source = self._sources[i]
             out.resolution = self._resolutions[i]
 
     def _process_pump_probe(self, data):
@@ -188,3 +143,44 @@ class CorrelationProcessor(_BaseProcessor):
 
         c = processed.corr.pp
         c.x, c.y = self._correlation_pp.data()
+
+    def _update_data_point(self, processed, raw):
+        analysis_type = self.analysis_type
+        if analysis_type == AnalysisType.PUMP_PROBE:
+            fom = processed.pp.fom
+            if fom is None:
+                self._pp_fail_flag += 1
+                # if on/off pulses are in different trains, pump-probe FOM is
+                # only calculated every other train.
+                if self._pp_fail_flag == 2:
+                    self._pp_fail_flag = 0
+                    raise ProcessingError("Pump-probe FOM is not available")
+                return
+            else:
+                self._pp_fail_flag = 0
+        elif analysis_type == AnalysisType.ROI_FOM:
+            fom = processed.roi.fom
+            if fom is None:
+                raise ProcessingError("ROI FOM is not available")
+        elif analysis_type == AnalysisType.ROI_PROJ:
+            fom = processed.roi.proj.fom
+            if fom is None:
+                raise ProcessingError("ROI projection FOM is not available")
+        elif analysis_type == AnalysisType.AZIMUTHAL_INTEG:
+            fom = processed.ai.fom
+            if fom is None:
+                raise ProcessingError(
+                    "Azimuthal integration FOM is not available")
+        else:
+            raise UnknownParameterError(
+                f"[Correlation] Unknown analysis type: {self.analysis_type}")
+
+        for i in range(self._n_params):
+            v, err = self._fetch_property_data(
+                processed.tid, raw, self._sources[i])
+
+            if err:
+                logger.error(err)
+
+            if v is not None:
+                self._correlations[i].append((v, fom))

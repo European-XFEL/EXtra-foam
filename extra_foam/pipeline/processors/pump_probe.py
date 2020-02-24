@@ -10,9 +10,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import _BaseProcessor
-from ..exceptions import (
-    DropAllPulsesError, ProcessingError, PumpProbeIndexError
-)
+from ..exceptions import DropAllPulsesError, PumpProbeIndexError
 from ...config import AnalysisType, PumpProbeMode
 from ...database import Metadata as mt
 from ...utils import profiler
@@ -29,7 +27,8 @@ class PumpProbeProcessor(_BaseProcessor):
         _indices_on (list): a list of laser-on pulse indices.
         _indices_off (list): a list of laser-off pulse indices.
         _prev_unmasked_on (numpy.ndarray): the most recent on-pulse image.
-        _prev_xgm_on (double): the most recent xgm intensity.
+        _prev_xi_on (double): the most recent xgm on-intensity.
+        _prev_dpi_on (double): the most recent digitizer on-pulse-integral.
         _abs_difference (bool): True for calculating absolute different
             between on/off pulses.
     """
@@ -47,7 +46,8 @@ class PumpProbeProcessor(_BaseProcessor):
         self._abs_difference = False
 
         self._prev_unmasked_on = None
-        self._prev_xgm_on = None
+        self._prev_xi_on = None
+        self._prev_dpi_on = None
 
     def update(self):
         """Override."""
@@ -80,7 +80,7 @@ class PumpProbeProcessor(_BaseProcessor):
     @profiler("Pump-probe processor")
     def process(self, data):
         processed = data['processed']
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['sliced']
 
         pp = processed.pp
         pp.reset = self._reset
@@ -99,17 +99,16 @@ class PumpProbeProcessor(_BaseProcessor):
         threshold_mask = image_data.threshold_mask
         reference = image_data.reference
         n_images = image_data.n_images
-        xgm_intensity = processed.pulse.xgm.intensity
+        xi = processed.pulse.xgm.intensity
+        digitizer_ch_norm = processed.pulse.digitizer.ch_normalizer
+        dpi = processed.pulse.digitizer[digitizer_ch_norm].pulse_integral
 
         dropped_indices = processed.pidx.dropped_indices(n_images).tolist()
 
         # pump-probe means
-        image_on, image_off, on_intensity, off_intensity, curr_indices, curr_means = \
-            self._compute_on_off_data(tid,
-                                      assembled,
-                                      xgm_intensity,
-                                      dropped_indices,
-                                      reference=reference)
+        image_on, image_off, xi_on, xi_off, dpi_on, dpi_off, \
+        curr_indices, curr_means = self._compute_on_off_data(
+            tid, assembled, xi, dpi, dropped_indices, reference=reference)
 
         # avoid calculating nanmean more than once
         if curr_indices == list(range(n_images)):
@@ -156,21 +155,19 @@ class PumpProbeProcessor(_BaseProcessor):
             processed.pp.image_on = image_on
             processed.pp.image_off = image_off
 
-            processed.xgm.on.intensity = on_intensity
-            processed.xgm.off.intensity = off_intensity
+            processed.pp.on.xgm_intensity = xi_on
+            processed.pp.off.xgm_intensity = xi_off
 
-    def _compute_on_off_data(self,
-                             tid,
-                             assembled,
-                             xgm_intensity,
-                             dropped_indices, *,
+            processed.pp.on.digitizer_pulse_integral = dpi_on
+            processed.pp.off.digitizer_pulse_integral = dpi_off
+
+    def _compute_on_off_data(self, tid, assembled, xi, dpi, dropped_indices, *,
                              reference=None):
         curr_indices = []
         curr_means = []
-        image_on = None
-        image_off = None
-        on_intensity = None
-        off_intensity = None
+        image_on, image_off = None, None
+        xi_on, xi_off = None, None
+        dpi_on, dpi_off = None, None
 
         mode = self._mode
         if mode != PumpProbeMode.UNDEFINED:
@@ -198,12 +195,25 @@ class PumpProbeProcessor(_BaseProcessor):
                 else:
                     image_on = assembled.copy()
 
+                if xi is not None:
+                    xi_on = np.mean(xi[indices_on])
+
+                if dpi is not None:
+                    dpi_on = np.mean(dpi[indices_on])
+
                 if mode == PumpProbeMode.REFERENCE_AS_OFF:
                     if reference is None:
                         image_off = np.zeros_like(image_on)
                     else:
                         # do not operate on the original reference image
                         image_off = reference.copy()
+
+                    if xi is not None:
+                        xi_off = 1.
+
+                    if dpi is not None:
+                        dpi_off = 1.
+
                 else:
                     # train-resolved data does not have the mode 'SAME_TRAIN'
                     if not indices_off:
@@ -213,12 +223,11 @@ class PumpProbeProcessor(_BaseProcessor):
                     curr_indices.extend(indices_off)
                     curr_means.append(image_off)
 
-                if xgm_intensity is not None:
-                    try:
-                        on_intensity = np.mean(xgm_intensity[indices_on])
-                        off_intensity = np.mean(xgm_intensity[indices_off])
-                    except IndexError as e:
-                        raise ProcessingError(f"XGM intensity: {repr(e)}")
+                    if xi is not None:
+                        xi_off = np.mean(xi[indices_off])
+
+                    if dpi is not None:
+                        dpi_off = np.mean(dpi[indices_off])
 
             if mode in (PumpProbeMode.EVEN_TRAIN_ON,
                         PumpProbeMode.ODD_TRAIN_ON):
@@ -241,15 +250,17 @@ class PumpProbeProcessor(_BaseProcessor):
                     else:
                         self._prev_unmasked_on = assembled.copy()
 
-                    if xgm_intensity is not None:
-                        try:
-                            self._prev_xgm_on = np.mean(xgm_intensity[indices_on])
-                        except IndexError as e:
-                            raise ProcessingError(f"XGM intensity: {repr(e)}")
+                    if xi is not None:
+                        self._prev_xi_on = np.mean(xi[indices_on])
+
+                    if dpi is not None:
+                        self._prev_dpi_on = np.mean(dpi[indices_on])
+
                 else:
                     if self._prev_unmasked_on is not None:
                         image_on = self._prev_unmasked_on
-                        on_intensity = self._prev_xgm_on
+                        xi_on = self._prev_xi_on
+                        dpi_on = self._prev_dpi_on
                         self._prev_unmasked_on = None
                         # acknowledge off image only if on image has been received
                         if assembled.ndim == 3:
@@ -262,13 +273,13 @@ class PumpProbeProcessor(_BaseProcessor):
                         else:
                             image_off = assembled.copy()
 
-                        if xgm_intensity is not None:
-                            try:
-                                off_intensity = np.mean(xgm_intensity[indices_off])
-                            except IndexError as e:
-                                raise ProcessingError(f"XGM intensity: {repr(e)}")
+                        if xi is not None:
+                            xi_off = np.mean(xi[indices_off])
 
-        return (image_on, image_off, on_intensity, off_intensity,
+                        if dpi is not None:
+                            dpi_off = np.mean(dpi[indices_off])
+
+        return (image_on, image_off, xi_on, xi_off, dpi_on, dpi_off,
                 sorted(curr_indices), curr_means)
 
     def _parse_on_off_indices(self, shape):

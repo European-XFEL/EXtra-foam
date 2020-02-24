@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 
 from .base_processor import _BaseProcessor, SimpleSequence
-from .bin import _BinMixin
+from .binning import _BinMixin
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...utils import profiler
@@ -47,14 +47,8 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
             delay/energy bin.
         _a21_heatcount (numpy.array): count of data points in each
             delay/energy bin.
-        _delay_device (str): device ID of the device which provides time
-            delay data.
-        _delay_ppt (str): property of the delay device which provides time
-            delay data.
-        _energy_device (str): device ID of the device which provides photon
-            energy data.
-        _energy_ppt (str): property of the energy device which provides
-            photon energy data.
+        _delay_src (str): delay data source.
+        _energy_src (str): energy data source.
         _n_delay_bins (int): number of delay bins.
         _delay_range (tuple): (lower boundary, upper boundary) of energy bins.
         _n_energy_bins (int): number of energy bins.
@@ -89,10 +83,8 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
         self._a21_heat = None
         self._a21_heatcount = None
 
-        self._delay_device = ""
-        self._delay_ppt = ""
-        self._energy_device = ""
-        self._energy_ppt = ""
+        self._delay_src = ""
+        self._energy_src = ""
 
         self._n_delay_bins = None
         self._delay_range = None
@@ -115,11 +107,8 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
 
         # TODO: should we reset when device ID or property change
 
-        self._delay_device = cfg["delay_device"]
-        self._delay_ppt = cfg["delay_property"]
-
-        self._energy_device = cfg["energy_device"]
-        self._energy_ppt = cfg["energy_property"]
+        self._delay_src = cfg["delay_source"]
+        self._energy_src = cfg["energy_source"]
 
         n_delay_bins = int(cfg["n_delay_bins"])
         if n_delay_bins != self._n_delay_bins:
@@ -187,12 +176,12 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
 
         # update processed
         xas = processed.trxas
-        xas.delay_bin_centers = self.edges2centers(self._delay_bin_edges)
+        xas.delay_bin_centers, _ = self.edges2centers(self._delay_bin_edges)
         xas.delay_bin_counts = self._delay_bin_counts
         xas.a13_stats = self._a13_stats
         xas.a23_stats = self._a23_stats
         xas.a21_stats = self._a21_stats
-        xas.energy_bin_centers = self.edges2centers(self._energy_bin_edges)
+        xas.energy_bin_centers, _ = self.edges2centers(self._energy_bin_edges)
         xas.a21_heat = self._a21_heat
         xas.a21_heatcount = self._a21_heatcount
 
@@ -223,14 +212,12 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
         if sum3 <= 0:
             raise ProcessingError("ROI3 sum <= 0!")
 
-        delay, err = self._fetch_property_data(
-            tid, raw, self._delay_device, self._delay_ppt)
+        delay, err = self._fetch_property_data(tid, raw, self._delay_src)
         if err:
             raise ProcessingError(err)
 
         # fetch energy and delay
-        energy, err = self._fetch_property_data(
-            tid, raw, self._energy_device, self._energy_ppt)
+        energy, err = self._fetch_property_data(tid, raw, self._energy_src)
         if err:
             raise ProcessingError(err)
 

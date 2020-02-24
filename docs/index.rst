@@ -11,9 +11,13 @@ Contents:
    introduction
    installation
    start
+   config_file
    main_gui
    image_tool
-   plot_windows
+   pump_probe
+   statistics
+   special
+   stream_data
 
 .. toctree::
    :caption: Tutorials

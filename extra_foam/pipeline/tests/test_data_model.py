@@ -330,6 +330,36 @@ class TestRoiGeom(unittest.TestCase):
             np.testing.assert_array_equal(img[..., 2:2+2, 1:1+3], roi.rect(img))
 
 
+class TestXgmData(unittest.TestCase):
+
+    from extra_foam.pipeline.data_model import XgmData
+
+    def testGeneral(self):
+        data = self.XgmData()
+
+        data.intensity, data.x, data.y = 100., 0.1, -0.1
+        with self.assertRaises(AttributeError):
+            data.xx = 0.2
+
+
+class TestDigitizerData(unittest.TestCase):
+
+    from extra_foam.pipeline.data_model import (
+        _DigitizerDataItem, _DigitizerChannelData, DigitizerData)
+
+    def testGeneral(self):
+        data = self.DigitizerData()
+
+        self.assertIn('A', data)
+
+        for cn, item in data.items():
+            self.assertIsInstance(item, self._DigitizerDataItem)
+
+        data['D'].pulse_integral = [1, 2, 3]
+        with self.assertRaises(AttributeError):
+            data['D'].sample
+
+
 class TestBinData(unittest.TestCase):
 
     from extra_foam.pipeline.data_model import BinData
@@ -339,6 +369,10 @@ class TestBinData(unittest.TestCase):
 
         # test mapping
         self.assertEqual(2, len(data))
+        self.assertIn(0, data)
+        self.assertIn(1, data)
+        self.assertNotIn(2, data)
+
         for b in data:
             self.assertIsInstance(b, self.BinData.BinDataItem)
         with self.assertRaises(IndexError):
@@ -359,6 +393,10 @@ class TestCorrelationData(unittest.TestCase):
 
         # test mapping
         self.assertEqual(2, len(data))
+        self.assertIn(0, data)
+        self.assertIn(1, data)
+        self.assertNotIn(2, data)
+
         for c in data:
             self.assertIsInstance(c, data.CorrelationDataItem)
         with self.assertRaises(IndexError):
@@ -373,13 +411,12 @@ class TestCorrelationData(unittest.TestCase):
 class TestHistogramData(unittest.TestCase):
 
     def testGeneral(self):
-        from extra_foam.pipeline.data_model import HistogramData, _HistogramDataItem
+        from extra_foam.pipeline.data_model import _HistogramDataItem, HistogramDataPulse
 
-        data = HistogramData()
-
-        # test mutable mapping
-        self.assertEqual(0, len(data))
+        data = HistogramDataPulse()
         hist_gt, bin_centers_gt = np.arange(0, 10, 1), np.arange(0, 20, 2)
+
+        self.assertEqual(0, len(data))
 
         # __getitem__ and __setitem__
 
@@ -392,13 +429,13 @@ class TestHistogramData(unittest.TestCase):
         with self.assertRaises(KeyError):
             data[2700] = (hist_gt, bin_centers_gt)
 
-        data[0] = (hist_gt, bin_centers_gt)
-        np.testing.assert_array_equal(hist_gt, data[0][0])
-        np.testing.assert_array_equal(bin_centers_gt, data[0][1])
-
-        data[100] = (2 * hist_gt, 2 * bin_centers_gt)
-        np.testing.assert_array_equal(2 * hist_gt, data[100][0])
-        np.testing.assert_array_equal(2 * bin_centers_gt, data[100][1])
+        data[1] = (hist_gt, bin_centers_gt, 1, 2, 3)
+        data[100] = (hist_gt, bin_centers_gt, 1, 2, 3)
+        np.testing.assert_array_equal(hist_gt, data[100].hist)
+        np.testing.assert_array_equal(bin_centers_gt, data[100].bin_centers)
+        self.assertEqual(1, data[100].mean)
+        self.assertEqual(2, data[100].median)
+        self.assertEqual(3, data[100].std)
 
         # __iter__
         for _, item in data.items():
@@ -408,5 +445,5 @@ class TestHistogramData(unittest.TestCase):
         self.assertEqual(2, len(data))
         del data[100]
         self.assertEqual(1, len(data))
-        del data[0]
+        del data[1]
         self.assertEqual(0, len(data))

@@ -7,701 +7,819 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import copy
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+import copy
 import os
-import re
+import random
 import tempfile
+
+import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.processors.image_assembler import ImageAssemblerFactory
+from extra_foam.pipeline.processors.image_assembler import (
+    _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, ImageAssemblerFactory
+)
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.exceptions import AssemblingError
-from extra_foam.config import _Config, ConfigWrapper, config, DataSource
-from extra_foam.logger import logger
-
-logger.setLevel('CRITICAL')
+from extra_foam.config import GeomAssembler, config, DataSource
+from extra_foam.database import SourceCatalog, SourceItem
 
 
-class TestAgipdAssembler(unittest.TestCase):
+def _check_assembled_result(data, src):
+    # test the module keys have been deleted
+    assert data['raw'][src] is None
+
+    assembled = data['assembled']['data']
+    assert 3 == assembled.ndim
+    assembled_shape = assembled.shape
+    assert 4 == assembled_shape[0]
+    assert assembled_shape[1] >= 1024
+    assert assembled_shape[2] >= 1024
+
+
+_tmp_cfg_dir = tempfile.mkdtemp()
+
+
+def setup_module(module):
+    from extra_foam import config
+    module._backup_ROOT_PATH = config.ROOT_PATH
+    config.ROOT_PATH = _tmp_cfg_dir
+
+
+def teardown_module(module):
+    os.rmdir(_tmp_cfg_dir)
+    from extra_foam import config
+    config.ROOT_PATH = module._backup_ROOT_PATH
+
+
+class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('AGIPD')
+        config.load('AGIPD', random.choice(['SPB', 'MID']))
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
-    def testAssembleFile(self):
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None))
+        return src, catalog
+
+    def testGeneral(self):
+        # Note: this test does not need to repeat for each detector
         key_name = 'image.data'
+
+        # test required fields in metadata
+
+        src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/DET/*CH0:xtdf', key_name)
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                }
+            },
+            'raw': {
+                src: {
+                    'SPB_DET_AGIPD1M-1/DET/11CH0:xtdf':
+                        {key_name: np.ones((4, 512, 128), dtype=_IMAGE_DTYPE)}}
+            },
+        }
+
+        with self.assertRaisesRegex(KeyError, "source_type"):
+            self._assembler.process(copy.deepcopy(data))
+
+        data['meta'][src]["source_type"] = DataSource.FILE
+        self._assembler.process(data)
+        self.assertEqual(10001, data['raw']['META timestamp.tid'])
+        self.assertIsNone(data['raw'][src])
+
+    def testAssembleFileCal(self):
+        self._runAssembleFileTest((4, 512, 128), _IMAGE_DTYPE)
+
+    def testAssembleFileRaw(self):
+        self._runAssembleFileTest((4, 2, 512, 128), _RAW_IMAGE_DTYPE)
+
+    def _runAssembleFileTest(self, shape, dtype):
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/DET/*CH0:xtdf', key_name)
 
         data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
             'raw': {
-                # According to which criteria are the sample module #s chosen?
-                'SPB_DET_AGIPD1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 512, 128), dtype=np.float32)},
-                'SPB_DET_AGIPD1M-1/DET/7CH0:xtdf':
-                    {key_name: np.ones((4, 512, 128), dtype=np.float32)},
-                'SPB_DET_AGIPD1M-1/DET/8CH0:xtdf':
-                    {key_name: np.ones((4, 512, 128), dtype=np.float32)},
-                'SPB_DET_AGIPD1M-1/DET/3CH0:xtdf':
-                    {key_name: np.ones((4, 512, 128), dtype=np.float32)},
-                # Non detector data source included in streaming from files.
-                # To test stack_detector_data
-                'XGM': {"data.intensitySa1TD": np.ones(60)}
-                },
-            'source_type': DataSource.FILE,
+                src: {
+                    'SPB_DET_AGIPD1M-1/DET/11CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SPB_DET_AGIPD1M-1/DET/7CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SPB_DET_AGIPD1M-1/DET/8CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SPB_DET_AGIPD1M-1/DET/3CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
         }
-        with self.assertRaises(AssemblingError):
-            # no source name
-            self._assembler.process(data)
 
-        self._assembler._source_name = "AGIPD modules"
-        with self.assertRaises(AssemblingError):
-            # source name must end with 'xtdf'
-            self._assembler.process(data)
-
-        self._assembler._source_name = "SPB_DET_AGIPD1M-1/DET/*CH0:xtdf"
-        # Only AGIPD modules related keys
-        module_keys = [key for key in data['raw'].keys()
-                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(any([key in data['raw'] for key in module_keys]))
-
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
-
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
-                               "MODULE_SHAPE": [512, 128]})
-    def _check_result(self, data):
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
+        _check_assembled_result(data, src)
 
     def testAssembleBridge(self):
-        src_name = 'detector_data'
         key_name = 'image.data'
-        self._assembler._source_name = src_name
+        src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data = {
-                'raw': {
-                    src_name: {key_name: np.ones((4, 16, 100, 100), dtype=np.float32)}
+                'catalog': catalog,
+                'meta': {
+                    src: {
+                        'tid': 10001,
+                        'source_type': DataSource.BRIDGE,
+                    }
                 },
-                'source_type': DataSource.BRIDGE
+                'raw': {
+                    src: np.ones((4, 16, 100, 100), dtype=_IMAGE_DTYPE),
+                },
             }
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((4, 12, 512, 128), dtype=np.float32)}
-                },
-                'source_type': DataSource.BRIDGE
-            }
+            data['raw'][src] = np.ones((4, 12, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((0, 16, 512, 128), dtype=np.float32)}
-                },
-                'source_type': DataSource.BRIDGE
-            }
+            data['raw'][src] = np.ones((0, 16, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
         expected_shape = (4, 16, 512, 128)
         # (modules, fs, ss, memory cells)
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 128, 512, 4), dtype=np.float32)}
-            },
-            'source_type': DataSource.BRIDGE
-        }
+        data['raw'][src] = np.ones((16, 128, 512, 4), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
-        self._check_result(data)
+        _check_assembled_result(data, src)
 
         # (memory cells, modules, ss, fs)
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((4, 16, 512, 128), dtype=np.float32)}
-            },
-            'source_type': DataSource.BRIDGE
-        }
+        data['raw'][src] = np.ones((4, 16, 512, 128), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
-        self._check_result(data)
+        _check_assembled_result(data, src)
 
 
-class TestLpdAssembler(unittest.TestCase):
+class TestLpdAssembler:
     @classmethod
-    def setUpClass(cls):
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('LPD')
+    def setup_class(cls):
+        config.load('LPD', 'FXE')
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
-    def setUp(self):
+    @classmethod
+    def teardown_class(cls):
+        os.remove(config.config_file)
+
+    def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("LPD")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._load_geometry(GeomAssembler.EXTRA_GEOM)
 
-    def testAssembleFile(self):
-        key_name = 'image.data'
+    def _load_geometry(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
-        data = {
-            'raw': {
-                'FXE_DET_LPD1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 256, 256), dtype=np.float32)},
-                'FXE_DET_LPD1M-1/DET/7CH0:xtdf':
-                    {key_name: np.ones((4, 256, 256), dtype=np.float32)},
-                'FXE_DET_LPD1M-1/DET/8CH0:xtdf':
-                    {key_name: np.ones((4, 256, 256), dtype=np.float32)},
-                'FXE_DET_LPD1M-1/DET/3CH0:xtdf':
-                    {key_name: np.ones((4, 256, 256), dtype=np.float32)},
-                # Non detector data source included in streaming from files.
-                # To test stack_detector_data
-                'XGM': {"data.intensitySa1TD": np.ones(60)}
-            },
-            'source_type': DataSource.FILE
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('LPD', src_name, [], key_name, slice(None, None), None))
+        return src, catalog
+
+    @patch('extra_foam.ipc.ProcessLogger.info')
+    def testUpdate(self, info):
+        import json
+        from extra_foam.geometries import LPD_1MGeometryFast
+        from extra_geom import LPD_1MGeometry
+
+        # Note: this test does not need to repeat for each detector
+        proc = self._assembler
+        proc._meta.hget_all = MagicMock()
+        get_cfg = proc._meta.hget_all
+
+        get_cfg.return_value = {
+            'stack_only': False,
+            'assembler': '2',
+            'geometry_file': self._geom_file,
+            'quad_positions': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
         }
 
-        with self.assertRaises(AssemblingError):
-            # no source name
-            self._assembler.process(data)
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
 
-        self._assembler._source_name = "LPD modules"
-        with self.assertRaises(AssemblingError):
-            # source name must end with 'xtdf'
-            self._assembler.process(data)
+        # test assembler type is ignored if 'stack_only' is True
+        get_cfg.return_value.update({'stack_only': 'True'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
 
-        self._assembler._source_name = "FXE_DET_LPD1M-1/DET/*CH0:xtdf"
-        # Only LPD modules related keys
-        module_keys = [key for key in data['raw'].keys()
-                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
-        self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(any([key in data['raw'] for key in module_keys]))
+        # test assembler switching
+        get_cfg.return_value.update({'stack_only': 'False'})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometry)
+        get_cfg.return_value.update({'assembler': 1})
+        proc.update()
+        assert isinstance(proc._geom, LPD_1MGeometryFast)
 
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
+        # test file and quad position change
+        proc._load_geometry = MagicMock()
+        get_cfg.return_value.update({'geometry_file': '/New/File'})
+        proc.update()
+        proc._load_geometry.assert_called_once()
+        proc._load_geometry.reset_mock()
+        get_cfg.return_value.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
+        proc.update()
+        proc._load_geometry.assert_called_once()
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
-                               "MODULE_SHAPE": [256, 256]})
-    def testAssembleBridge(self):
-        src_name = 'lpd_modules'
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileCal(self, assembler_type):
+        self._load_geometry(assembler_type)
+        self._runAssembleFileTest((4, 256, 256), _IMAGE_DTYPE)
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileRaw(self, assembler_type):
+        self._load_geometry(assembler_type)
+        self._runAssembleFileTest((4, 1, 256, 256), _RAW_IMAGE_DTYPE)
+
+    def _runAssembleFileTest(self, shape, dtype):
         key_name = 'image.data'
-        self._assembler._source_name = src_name
+        src, catalog = self._create_catalog('FXE_DET_LPD1M-1/DET/*CH0:xtdf', key_name)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: {
+                    'FXE_DET_LPD1M-1/DET/11CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_DET_LPD1M-1/DET/7CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_DET_LPD1M-1/DET/8CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'FXE_DET_LPD1M-1/DET/3CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
+        }
+
+        self._assembler.process(data)
+        _check_assembled_result(data, src)
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleBridge(self, assembler_type):
+        self._load_geometry(assembler_type)
+
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
+
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}
+                'catalog': catalog,
+                'meta': {
+                    src: {
+                        'tid': 10001,
+                        'source_type': DataSource.BRIDGE,
+                    }
                 },
-                'source_type': DataSource.BRIDGE
+                'raw': {
+                    src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE)
+                },
             }
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((15, 256, 256, 4), dtype=np.float32)}
-                },
-                'source_type': DataSource.BRIDGE
-            }
+        with pytest.raises(AssemblingError, match='modules, but'):
+            data['raw'][src] = np.ones((15, 256, 256, 4), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 256, 256, 0), dtype=np.float32)}
-                },
-                'source_type': DataSource.BRIDGE
-            }
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
+            data['raw'][src] = np.ones((16, 256, 256, 0), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
         # (modules, x, y, memory cells)
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}
-            },
-            'source_type': DataSource.BRIDGE
-        }
+        data['raw'][src] = np.ones((16, 256, 256, 4), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
-        assembled = data['detector']['assembled']
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
+        _check_assembled_result(data, src)
 
-    def testOutArray(self):
-        src_name = 'lpd_modules'
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testOutArray(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
-        self._assembler._source_name = src_name
+        src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
         data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float32)}
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
             },
-            'source_type': DataSource.BRIDGE
+            'raw': {
+                src: np.ones((16, 256, 256, 4), dtype=_IMAGE_DTYPE)
+            },
         }
         self._assembler.process(data)
-        assembled_shape = data['detector']['assembled'].shape
 
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
-        self.assertEqual(config["IMAGE_DTYPE"], self._assembler._out_array.dtype)
+        assembled_shape = data['assembled']['data'].shape
+        assert self._assembler._out_array.shape == assembled_shape
+        assert _IMAGE_DTYPE == self._assembler._out_array.dtype
 
         # Test number of pulses change on the fly
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}
-            },
-            'source_type': DataSource.BRIDGE
-        }
+        data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        assembled_shape = data['assembled']['data'].shape
+        assert self._assembler._out_array.shape == assembled_shape
 
         # test quad_positions (geometry) change on the fly
-        quad_positions = copy.deepcopy(self._quad_positions)
+        quad_positions = [list(v) for v in self._quad_positions]
         quad_positions[0][1] += 2  # modify the quad positions
         quad_positions[3][0] -= 4
-        self._assembler.load_geometry(self._geom_file, quad_positions)
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 256, 256, 10), dtype=np.float32)}
-            },
-            'source_type': DataSource.BRIDGE
-        }
+        quad_positions = [tuple(v) for v in quad_positions]
+        self._assembler._load_geometry(self._geom_file, tuple(quad_positions))
+        data['raw'][src] = np.ones((16, 256, 256, 10), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         assembled_shape_old = assembled_shape
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertNotEqual(assembled_shape_old, assembled_shape)
-        self.assertTupleEqual(self._assembler._out_array.shape, assembled_shape)
-        self.assertTupleEqual(self._assembler._n_images, (assembled_shape[0],))
+        assembled_shape = data['assembled']['data'].shape
+        assert assembled_shape_old != assembled_shape
+        assert self._assembler._out_array.shape == assembled_shape
         # change the geometry back
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
-    def testAssembleDtype(self):
-        src_name = 'lpd_modules'
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleDtype(self, assembler_type):
+        self._load_geometry(assembler_type)
+
         key_name = 'image.data'
-        self._assembler._source_name = src_name
-        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
-        with self.assertRaises(TypeError):
+        src, catalog = self._create_catalog('FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((16, 256, 256, 4), dtype=np.float64)
+            },
+        }
+        # dtype conversion float64 -> float32 throws TypeError (extra_geom)
+        with pytest.raises(TypeError):
+            self._assembler.process(data)
+
+        data['raw'][src] = np.ones((16, 256, 256, 4), dtype=np.int16)
+        if assembler_type == GeomAssembler.EXTRA_GEOM:
+            self._assembler.process(data)
+
+            assembled_dtype = data['assembled']['data'].dtype
+            assert _IMAGE_DTYPE == assembled_dtype
+        else:
+            # C++ implementation does not allow any implicit type conversion
+            with pytest.raises(TypeError):
+                self._assembler.process(data)
+
+
+class TestDSSCAssembler:
+    @classmethod
+    def setup_class(cls):
+        config.load('DSSC', 'SCS')
+
+        cls._geom_file = config["GEOMETRY_FILE"]
+        cls._quad_positions = config["QUAD_POSITIONS"]
+
+    @classmethod
+    def teardown_class(cls):
+        os.remove(config.config_file)
+
+    def setup_method(self, method):
+        self._assembler = ImageAssemblerFactory.create("DSSC")
+        self._load_geometry(GeomAssembler.EXTRA_GEOM)
+
+    def _load_geometry(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        self._assembler._load_geometry(self._geom_file, self._quad_positions)
+
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('DSSC', src_name, [], key_name, slice(None, None), None))
+        return src, catalog
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileCal(self, assembler_type):
+        self._load_geometry(assembler_type)
+        self._runAssembleFileTest((4, 128, 512), _IMAGE_DTYPE)
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleFileRaw(self, assembler_type):
+        self._load_geometry(assembler_type)
+        self._runAssembleFileTest((4, 1, 128, 512), _RAW_IMAGE_DTYPE)
+
+    def _runAssembleFileTest(self, shape, dtype):
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('SCS_DET_DSSC1M-1/DET/*CH0:xtdf', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: {
+                    'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SCS_DET_DSSC1M-1/DET/7CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SCS_DET_DSSC1M-1/DET/8CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                    'SCS_DET_DSSC1M-1/DET/3CH0:xtdf':
+                        {key_name: np.ones(shape, dtype=dtype)},
+                }
+            },
+        }
+
+        self._assembler.process(data)
+        _check_assembled_result(data, src)
+
+        # test invalid data type
+        data['raw'][src] = np.ones((4, 1, 128, 512), dtype=np.float64)
+        with pytest.raises(AssemblingError):
+            self._assembler.process(data)
+
+        data['raw'][src] = np.ones((4, 1, 128, 512), dtype=np.int64)
+        with pytest.raises(AssemblingError):
+            self._assembler.process(data)
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testAssembleBridge(self, assembler_type):
+        self._load_geometry(assembler_type)
+
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
+
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.float64)}
+                'catalog': catalog,
+                'meta': {
+                    src: {
+                        'tid': 10001,
+                        'source_type': DataSource.BRIDGE,
+                    }
                 },
-                'source_type': DataSource.BRIDGE
+                'raw': {
+                    src: np.ones((16, 100, 100, 4), dtype=_IMAGE_DTYPE),
+                },
             }
             self._assembler.process(data)
 
+        with pytest.raises(AssemblingError, match='modules, but'):
+            data['raw'][src] = np.ones((15, 512, 128, 4), dtype=_IMAGE_DTYPE)
+            self._assembler.process(data)
+
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
+            data['raw'][src] = np.ones((16, 512, 128, 0), dtype=_IMAGE_DTYPE)
+            self._assembler.process(data)
+
+        # (modules, x, y, memory cells)
+        data['raw'][src] = np.ones((16, 512, 128, 4), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        _check_assembled_result(data, src)
+
+    def testOutArray(self):
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
+
         data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 256, 256, 4), dtype=np.int16)}
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
             },
-            'source_type': DataSource.BRIDGE
+            'raw': {
+                src: np.ones((16, 512, 128, 4), dtype=_IMAGE_DTYPE)
+            },
         }
         self._assembler.process(data)
-        assembled_dtype = data['detector']['assembled'].dtype
-        self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)
+        assembled_shape = data['assembled']['data'].shape
+        np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
+        assert _IMAGE_DTYPE == self._assembler._out_array.dtype
+
+        # Test output array shape change on the fly
+        data['raw'][src] = np.ones((16, 512, 128, 10), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        assembled_shape = data['assembled']['data'].shape
+        np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
+
+    def testAssembleDtype(self):
+        key_name = 'image.data'
+        src, catalog = self._create_catalog('SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((16, 512, 128, 4), dtype=np.float64)
+            },
+        }
+        # dtype conversion float64 -> float32 throws TypeError (extra_geom)
+        with pytest.raises(TypeError):
+            self._assembler.process(data)
+
+        data['raw'][src] = np.ones((16, 512, 128, 4), dtype=np.int16)
+        self._assembler.process(data)
+        assembled_dtype = data['assembled']['data'].dtype
+        assert _IMAGE_DTYPE == assembled_dtype
 
 
 class TestJungfrauAssembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('JungFrau', 'FXE')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrau")
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [512, 1024]})
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('JungFrau', src_name, [], key_name, None, None))
+        return src, catalog
+
     def testAssembleFile(self):
-        src_name = 'jungfrau_modules'
         key_name = 'data.adc'
-        self._assembler._source_name = src_name
+        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput', key_name)
 
-        data = {'raw': {src_name: {key_name: np.ones((1, 512, 1024))}},
-                'source_type': DataSource.FILE}
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones((1, 512, 1024))
+            },
+        }
+
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertIsNone(data['raw'][src])
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((1, 100, 100))}},
-                    'source_type': DataSource.FILE}
+            data['raw'][src] = np.ones((1, 100, 100))
             self._assembler.process(data)
 
         with self.assertRaises(NotImplementedError):
-            data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024))}},
-                    'source_type': DataSource.FILE}
+            data['raw'][src] = np.ones((2, 512, 1024))
             self._assembler.process(data)
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [512, 1024]})
     def testAssembleBridge(self):
-        src_name = 'jungfrau_modules'
         key_name = 'data.adc'
-        self._assembler._source_name = src_name
-        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}},
-                'source_type': DataSource.BRIDGE}
-        self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:display', key_name)
 
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((512, 1024, 1))
+            },
+        }
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        data['raw'][src] = np.ones((100, 100, 1))
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}},
-                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
+        data['raw'][src] = np.ones((512, 1024, 2))
         with self.assertRaises(NotImplementedError):
-            data = {'raw': {src_name: {key_name: np.ones((512, 1024, 2))}},
-                    'source_type': DataSource.BRIDGE}
             self._assembler.process(data)
 
 
 class TestJungfrauPulseResolvedAssembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('JungFrauPR', 'FXE')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
 
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("JungFrauPR")
 
-    @patch.dict(config._data, {"DETECTOR":"JungFrauPR",
-                               "NUMBER_OF_MODULES": 2,
-                               "MODULE_SHAPE": [512, 1024]})
-    def testAssembleBridge(self):
-        src_name = 'jungfrau_modules'
-        key_name = 'data.adc'
-        self._assembler._source_name = src_name
-        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 1))}},
-                'source_type': DataSource.BRIDGE}
-        self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('JungFrauPR', src_name, [], key_name, None, None))
+        return src, catalog
 
-        assembled = data['detector']['assembled']
+    def testAssembleBridge(self):
+        key_name = 'data.adc'
+        src, catalog = self._create_catalog('FXE_XAD_JF1M/DET/RECEIVER-1:display', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones((512, 1024, 1))
+            },
+        }
+
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (1, 512, 1024))
 
         # test multi-frame (16 here), single module JungFrau received
         # in the old array shape.
-        data = {'raw': {src_name: {key_name: np.ones((512, 1024, 16))}},
-                'source_type': DataSource.BRIDGE}
+        data['raw'][src] = np.ones((512, 1024, 16))
 
-        temp = self._assembler._get_modules_bridge(data['raw'], src_name)
+        temp = self._assembler._get_modules_bridge(data['raw'], src)
         self.assertTupleEqual(temp.shape, (16, 1, 512, 1024))
 
         self._assembler.process(data)
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 512, 1024))
 
         # test multi-frame (16 here), two-modules JungFrau in new array shape
-        data = {'raw': {src_name: {key_name: np.ones((2, 512, 1024, 16))}},
-                'source_type': DataSource.BRIDGE}
+        data['raw'][src] = np.ones((2, 512, 1024, 16))
 
-        temp = self._assembler._get_modules_bridge(data['raw'], src_name)
+        temp = self._assembler._get_modules_bridge(data['raw'], src)
         self.assertTupleEqual(temp.shape, (16, 2, 512, 1024))
 
         self._assembler.process(data)
-        assembled = data['detector']['assembled']
+        assembled = data['assembled']['data']
         self.assertTupleEqual(assembled.shape, (16, 1024, 1024))
 
         # test multi-frame, three-modules JungFrau
         with self.assertRaisesRegex(AssemblingError, 'Expected 1 or 2 module'):
-            data = {'raw': {src_name: {key_name: np.ones((3, 512, 1024, 16))}},
-                    'source_type': DataSource.BRIDGE}
+            data['raw'][src] = np.ones((3, 512, 1024, 16))
             self._assembler.process(data)
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((100, 100, 1))}},
-                    'source_type': DataSource.BRIDGE}
+            data['raw'][src] = np.ones((100, 100, 1))
             self._assembler.process(data)
 
-    @patch.dict(config._data, {"DETECTOR":"JungFrauPR",
-                               "NUMBER_OF_MODULES": 2,
-                               "MODULE_SHAPE": [512, 1024]})
     def testAssembleFile(self):
         pass
 
 
 class TestFastccdAssembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('FastCCD', 'SCS')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("FastCCD")
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [1934, 960]})
-    def testAssembleFile(self):
-        src_name = 'fastccd_module'
-        key_name = 'data.image.pixels'
-        self._assembler._source_name = src_name
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('FastCCD', src_name, [], key_name, None, None))
+        return src, catalog
 
-        data = {'raw': {src_name: {key_name: np.ones((1934, 960))}},
-                'source_type': DataSource.FILE}
+    def testAssembleFile(self):
+        key_name = 'data.image.pixels'
+        src, catalog = self._create_catalog('SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput', key_name)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones((1934, 960))
+            },
+        }
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertIsNone(data['raw'][src])
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src_name: {key_name: np.ones((100, 100))}},
-                    'source_type': DataSource.FILE}
+            data['raw'][src] = np.ones((100, 100))
             self._assembler.process(data)
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [1934, 960]})
     def testAssembleBridgeCal(self):
-        src_name = 'fastccd_module'
-        self._assembler._source_name = src_name
-        self._runAssembleBridgeTest(src_name, "data.image", (1934, 960, 1))
+        self._runAssembleBridgeTest((1934, 960, 1), _IMAGE_DTYPE, "data.image")
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [1934, 960]})
     def testAssembleBridgeRaw(self):
-        src_name = 'fastccd_module'
-        self._assembler._source_name = src_name
-        self._runAssembleBridgeTest(src_name, "data.image.data", (1934, 960))
+        self._runAssembleBridgeTest((1934, 960), _RAW_IMAGE_DTYPE, "data.image.data")
 
-    def _runAssembleBridgeTest(self, src, key, shape):
-        data = {'raw': {src: {key: np.ones(shape)}},
-                'source_type': DataSource.BRIDGE}
+    def _runAssembleBridgeTest(self, shape, dtype, key):
+        src, catalog = self._create_catalog('SCS_CDIDET_FCCD2M/DAQ/FCCD:display', key)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
+        self.assertIsNone(data['raw'][src])
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {'raw': {src: {key: np.ones((100, 100, 1))}},
-                    'source_type': DataSource.BRIDGE}
+            data['raw'][src] = np.ones((100, 100, 1), dtype=dtype)
             self._assembler.process(data)
 
 
 class TestBaslerCameraAssembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('BaslerCamera', 'SCS')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
     def setUp(self):
         self._assembler = ImageAssemblerFactory.create("BaslerCamera")
 
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 1,
-                               "MODULE_SHAPE": [-1, -1]})
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('BaslerCamera', src_name, [], key_name, None, None))
+        return src, catalog
+
     def testAssembleBridge(self):
-        src_name = 'baslercamera_module'
         key_name = 'data.image.data'
-        self._assembler._source_name = src_name
-        data = {'raw': {src_name: {key_name: np.ones((1024, 1024))}},
-                'source_type': DataSource.BRIDGE}
-        self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
-
-
-class TestDSSCAssembler(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()   # ensure file
-        config.load('DSSC')
-        config._data['REDIS_PORT'] = 6379
-
-        cls._geom_file = config["GEOMETRY_FILE"]
-        cls._quad_positions = config["QUAD_POSITIONS"]
-
-    def setUp(self):
-        self._assembler = ImageAssemblerFactory.create("DSSC")
-        self._assembler.load_geometry(self._geom_file, self._quad_positions)
-
-    def testAssembleFileCal(self):
-        key_name = 'image.data'
+        src, catalog = self._create_catalog("baslercamera_module", key_name)
 
         data = {
-            'raw': {
-                'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 128, 512), dtype=np.float32)},
-                'SCS_DET_DSSC1M-1/DET/7CH0:xtdf':
-                    {key_name: np.ones((4, 128, 512), dtype=np.float32)},
-                'SCS_DET_DSSC1M-1/DET/8CH0:xtdf':
-                    {key_name: np.ones((4, 128, 512), dtype=np.float32)},
-                'SCS_DET_DSSC1M-1/DET/3CH0:xtdf':
-                    {key_name: np.ones((4, 128, 512), dtype=np.float32)},
-                # Non detector data source included in streaming from files.
-                # To test stack_detector_data
-                'XGM': {"data.intensitySa3TD": np.ones(60)}
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
             },
-            'source_type': DataSource.FILE
-        }
-
-        self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
-        self._assembler.process(data)
-        # Only DSSC modules related keys
-        module_keys = [key for key in data['raw'].keys()
-                       if re.match(r"(.+)/DET/(.+):(.+)", key)]
-        # test the module keys have been deleted
-        self.assertFalse(any([key in data['raw'] for key in module_keys]))
-
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
-
-    def testAssembleFileRaw(self):
-        key_name = 'image.data'
-
-        data = {
             'raw': {
-                'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 1, 128, 512), dtype=np.uint16)},
+                src: np.ones((1024, 1024))
             },
-            'source_type': DataSource.FILE
         }
 
-        with self.assertRaises(AssemblingError):
-            # no source name
-            self._assembler.process(data)
-
-        self._assembler._source_name = "DSSC modules"
-        with self.assertRaises(AssemblingError):
-            # source name must end with 'xtdf'
-            self._assembler.process(data)
-
-        self._assembler._source_name = "SCS_DET_DSSC1M-1/DET/*CH0:xtdf"
         self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
-
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
-
-        # test invalid data type
-        data = {
-            'raw': {
-                'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 1, 128, 512), dtype=np.float64)},
-            },
-            'source_type': DataSource.FILE,
-        }
-        with self.assertRaises(AssemblingError):
-            self._assembler.process(data)
-
-        data = {
-            'raw': {
-                'SCS_DET_DSSC1M-1/DET/11CH0:xtdf':
-                    {key_name: np.ones((4, 1, 128, 512), dtype=np.int64)},
-            },
-            'source_type': DataSource.FILE,
-        }
-        with self.assertRaises(AssemblingError):
-            self._assembler.process(data)
-
-    @patch.dict(config._data, {"NUMBER_OF_MODULES": 16,
-                               "MODULE_SHAPE": [128, 512]})
-    def testAssembleBridge(self):
-        src_name = 'dssc_modules'
-        key_name = 'image.data'
-        self._assembler._source_name = src_name
-
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 100, 100, 4), dtype=np.float32)}},
-                'source_type': DataSource.BRIDGE,
-            }
-            self._assembler.process(data)
-
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((15, 512, 128, 4), dtype=np.float32)}},
-                'source_type': DataSource.BRIDGE,
-            }
-            self._assembler.process(data)
-
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 512, 128, 0), dtype=np.float32)}},
-                'source_type': DataSource.BRIDGE,
-            }
-            self._assembler.process(data)
-
-        # (modules, x, y, memory cells)
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}},
-            'source_type': DataSource.BRIDGE,
-        }
-        self._assembler.process(data)
-        # test the module keys have been deleted
-        self.assertFalse(bool(data['raw']))
-
-        self.assertEqual(3, data['detector']['assembled'].ndim)
-        assembled_shape = data['detector']['assembled'].shape
-        self.assertEqual(4, assembled_shape[0])
-        self.assertGreater(assembled_shape[1], 1024)
-        self.assertGreater(assembled_shape[2], 1024)
-
-    def testOutArray(self):
-        src_name = 'dssc_modules'
-        key_name = 'image.data'
-        self._assembler._source_name = src_name
-
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float32)}},
-            'source_type': DataSource.BRIDGE,
-        }
-        self._assembler.process(data)
-        assembled_shape = data['detector']['assembled'].shape
-
-        np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
-        self.assertEqual(config["IMAGE_DTYPE"], self._assembler._out_array.dtype)
-
-        # Test output array shape change on the fly
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 512, 128, 10), dtype=np.float32)}},
-            'source_type': DataSource.BRIDGE,
-        }
-        self._assembler.process(data)
-        assembled_shape = data['detector']['assembled'].shape
-        np.testing.assert_array_equal(self._assembler._out_array.shape, assembled_shape)
-        np.testing.assert_array_equal(self._assembler._n_images, assembled_shape[0])
-
-    def testAssembleDtype(self):
-        self._assembler._source_type = DataSource.BRIDGE
-        src_name = 'dssc_modules'
-        key_name = 'image.data'
-        self._assembler._source_name = src_name
-        # dtype conversion float64 -> float32 throws TypeError (karabo_data)
-        with self.assertRaises(TypeError):
-            data = {
-                'raw': {
-                    src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.float64)}},
-                'source_type': DataSource.BRIDGE,
-            }
-            self._assembler.process(data)
-
-        data = {
-            'raw': {
-                src_name: {key_name: np.ones((16, 512, 128, 4), dtype=np.int16)}},
-            'source_type': DataSource.BRIDGE,
-        }
-        self._assembler.process(data)
-        assembled_dtype = data['detector']['assembled'].dtype
-        self.assertEqual(config["IMAGE_DTYPE"], assembled_dtype)
+        self.assertIsNone(data['raw'][src])

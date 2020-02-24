@@ -7,10 +7,13 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import math
+
 import numpy as np
 
 from .base_processor import _BaseProcessor, SimpleSequence
 from ..exceptions import UnknownParameterError
+from ...algorithms import compute_statistics, find_actual_range
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType
@@ -27,6 +30,7 @@ class HistogramProcessor(_BaseProcessor):
         analysis_type (AnalysisType): binning analysis type.
         _fom (SimpleSequence): accumulative pulse-/train-resolved FOMs.
         _n_bins (int): number of bins for calculating histogram.
+        _bin_range (tuple): range of bins for calculating histogram.
         _pulse_resolved (bool): True for calculating pulse-resolved FOMs,
             otherwise train-resolved.
     """
@@ -39,6 +43,7 @@ class HistogramProcessor(_BaseProcessor):
         self.analysis_type = AnalysisType.UNDEFINED
         self._fom = SimpleSequence(max_len=self._MAX_POINTS)
         self._n_bins = None
+        self._bin_range = (-math.inf, math.inf)
         self._pulse_resolved = False
         self._reset = False
 
@@ -47,6 +52,7 @@ class HistogramProcessor(_BaseProcessor):
         cfg = self._meta.hget_all(mt.HISTOGRAM_PROC)
         self._pulse_resolved = cfg['pulse_resolved'] == 'True'
 
+        self._bin_range = self.str2tuple(cfg["bin_range"])
         self._n_bins = int(cfg['n_bins'])
 
         analysis_type = AnalysisType(int(cfg['analysis_type']))
@@ -78,7 +84,7 @@ class HistogramProcessor(_BaseProcessor):
                     logger.error(
                         "[Histogram] Pulse resolved ROI FOM is not available")
                 else:
-                    processed.hist.pulse_foms = \
+                    processed.pulse.hist.pulse_foms = \
                         fom if self._pulse_resolved else None
                     self._fom.extend(fom)
             else:
@@ -99,16 +105,39 @@ class HistogramProcessor(_BaseProcessor):
                     f"[Histogram] Unknown analysis type: {self.analysis_type}")
 
         # ought to calculate the histogram even if there is no new FOM coming
-        hist, bin_edges = np.histogram(self._fom.data(), bins=self._n_bins)
-        processed.hist.hist = hist
-        processed.hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+        data = self._fom.data()
+        if data.size != 0:
+            v_min, v_max = find_actual_range(data, self._bin_range)
+            filtered = data[(data >= v_min) & (data <= v_max)]
+            hist, bin_edges = np.histogram(
+                filtered, bins=self._n_bins, range=(v_min, v_max))
+            train_hist = processed.hist
+            train_hist.hist = hist
+            train_hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+            train_hist.mean, train_hist.median, train_hist.std = \
+                compute_statistics(filtered)
 
     def _process_poi(self, processed):
         """Calculate histograms of FOMs of POI pulses."""
         n_pulses = processed.n_pulses
-        for i in processed.image.poi_indices:
+        pulse_hist = processed.pulse.hist
+        image_data = processed.image
+        for i in image_data.poi_indices:
             if i >= n_pulses:
                 return
+
             poi_fom = self._fom.data()[i::n_pulses]
-            hist, bin_edges = np.histogram(poi_fom, bins=self._n_bins)
-            processed.hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0)
+            if poi_fom.size == 0:
+                continue
+
+            v_min, v_max = find_actual_range(poi_fom, self._bin_range)
+            filtered = poi_fom[(poi_fom >= v_min) & (poi_fom <= v_max)]
+            hist, bin_edges = np.histogram(
+                filtered, bins=self._n_bins, range=(v_min, v_max))
+            mean, median, std = compute_statistics(filtered)
+            pulse_hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0,
+                             mean, median, std)
+
+            if image_data.poi_indices[1] == image_data.poi_indices[0]:
+                # skip the second one if two POIs have the same index
+                break

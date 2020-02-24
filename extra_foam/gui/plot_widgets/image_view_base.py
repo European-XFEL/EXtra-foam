@@ -17,7 +17,7 @@ from .. import pyqtgraph as pg
 
 from .plot_widget_base import PlotWidgetF
 from .plot_items import RectROI
-from ..misc_widgets import colorMapFactory, make_pen
+from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
 from ...config import config
@@ -89,7 +89,7 @@ class ImageViewF(QWidget):
         self._hist_widget.setImageItem(self._image_item)
 
         if color_map is None:
-            self.setColorMap(colorMapFactory[config["GUI"]["COLOR_MAP"]])
+            self.setColorMap(colorMapFactory[config["GUI_COLOR_MAP"]])
         else:
             self.setColorMap(colorMapFactory["thermal"])
 
@@ -117,11 +117,11 @@ class ImageViewF(QWidget):
         pass
 
     def _initializeROIs(self):
-        for i, color in enumerate(config["ROI_COLORS"], 1):
+        for i, color in enumerate(config["GUI_ROI_COLORS"], 1):
             roi = RectROI(i,
                           pos=(self.ROI_X0 + 10*i, self.ROI_Y0 + 10*i),
                           size=self.ROI_SIZE0,
-                          pen=make_pen(color, width=2, style=Qt.SolidLine))
+                          pen=FColor.mkPen(color, width=2, style=Qt.SolidLine))
             roi.hide()
             self._rois.append(roi)
 
@@ -154,7 +154,7 @@ class ImageViewF(QWidget):
 
         :param np.ndarray img: the image to be displayed.
         :param bool auto_range: whether to scale/pan the view to fit
-            the image. defaut = False
+            the image. default = False
         :param bool auto_levels: whether to update the white/black levels
             to fit the image. default = False
         :param tuple/list pos: the origin of the displayed image in (x, y).
@@ -183,7 +183,7 @@ class ImageViewF(QWidget):
             self.setLevels(rgba=[self._image_levels])
 
         if auto_range:
-            self._plot_widget.plotItem.vb.autoRange()
+            self._plot_widget._plot_item.vb.autoRange()
 
     def clear(self):
         self._image = None
@@ -223,7 +223,7 @@ class ImageViewF(QWidget):
         self._plot_widget.setTitle(*args, **kwargs)
 
     def invertY(self, *args, **kwargs):
-        self._plot_widget.plotItem.invertY(*args, **kwargs)
+        self._plot_widget._plot_item.invertY(*args, **kwargs)
 
     def addItem(self, *args, **kwargs):
         self._plot_widget.addItem(*args, **kwargs)
@@ -245,7 +245,7 @@ class TimedImageViewF(ImageViewF):
 
         self._timer = QTimer()
         self._timer.timeout.connect(self._refresh_imp)
-        self._timer.start(config["ACCUMULATED_PLOT_UPDATE_INTERVAL"])
+        self._timer.start(config["GUI_PLOT_WITH_STATE_UPDATE_TIMER"])
 
     @abc.abstractmethod
     def refresh(self):

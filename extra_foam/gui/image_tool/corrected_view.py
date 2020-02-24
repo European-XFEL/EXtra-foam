@@ -7,6 +7,10 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from string import Template
+
+import numpy as np
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QVBoxLayout
@@ -14,12 +18,12 @@ from PyQt5.QtWidgets import (
 
 from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView
-from ..plot_widgets import ImageAnalysis, PlotWidgetF
+from ..plot_widgets import HistMixin, ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
     RoiProjCtrlWidget, RoiCtrlWidget, RoiFomCtrlWidget,
-    RoiNormCtrlWidget,
+    RoiNormCtrlWidget, RoiHistCtrlWidget
 )
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ...config import AnalysisType, plot_labels
 
 
@@ -37,7 +41,7 @@ class RoiProjPlot(PlotWidgetF):
         self.setLabel('left', y_label)
         self.setTitle('ROI projection (average over train)')
 
-        self._plot = self.plotCurve(pen=make_pen("p"))
+        self._plot = self.plotCurve(pen=FColor.mkPen("p"))
 
     def updateF(self, data):
         """Override."""
@@ -49,27 +53,31 @@ class RoiProjPlot(PlotWidgetF):
         self._plot.setData(x, y)
 
 
-class InTrainRoiFomPlot(PlotWidgetF):
-    """InTrainRoiFomPlot class.
+class RoiHist(HistMixin, PlotWidgetF):
+    """RoiHist class.
 
-    Widget for visualizing the pulse-resolved ROI FOM in a train.
+    Widget for visualizing the ROI histogram.
     """
     def __init__(self, *, parent=None):
         """Initialization."""
         super().__init__(parent=parent)
 
-        self.setLabel('bottom', "Pulse index")
-        self.setLabel('left', "ROI FOM")
-        self.setTitle('Pulse-resolved ROI FOMs (per train)')
+        self._plot = self.plotBar()
 
-        self._plot = self.plotScatter(brush=make_brush('b'))
+        self._title_template = Template(
+            f"ROI Histogram (mean: $mean, median: $median, std: $std)")
+        self.updateTitle()
+        self.setLabel('left', 'Counts')
+        self.setLabel('bottom', 'Pixel value')
 
     def updateF(self, data):
         """Override."""
-        fom = data.pulse.roi.fom
-        if fom is None:
-            return
-        self._plot.setData(range(len(fom)), fom)
+        hist = data.roi.hist
+        if hist.hist is None:
+            self.reset()
+        else:
+            self._plot.setData(hist.bin_centers, hist.hist)
+            self.updateTitle(hist.mean, hist.median, hist.std)
 
 
 class CorrectedView(_AbstractImageToolView):
@@ -84,12 +92,14 @@ class CorrectedView(_AbstractImageToolView):
 
         self._corrected = ImageAnalysis(hide_axis=False)
         self._roi_proj_plot = RoiProjPlot()
-        self._roi_fom_plot = InTrainRoiFomPlot()
+        self._roi_hist = RoiHist()
 
         self._roi_ctrl_widget = self.parent().createCtrlWidget(
             RoiCtrlWidget, self._corrected.rois)
         self._roi_fom_ctrl_widget = self.parent().createCtrlWidget(
             RoiFomCtrlWidget)
+        self._roi_hist_ctrl_widget = self.parent().createCtrlWidget(
+            RoiHistCtrlWidget)
         self._roi_norm_ctrl_widget = self.parent().createCtrlWidget(
             RoiNormCtrlWidget)
         self._roi_proj_ctrl_widget = self.parent().createCtrlWidget(
@@ -101,16 +111,18 @@ class CorrectedView(_AbstractImageToolView):
     def initUI(self):
         """Override."""
         ctrl_layout = QHBoxLayout()
+        AT = Qt.AlignTop
         ctrl_layout.addWidget(self._roi_ctrl_widget)
-        ctrl_layout.addWidget(self._roi_fom_ctrl_widget, alignment=Qt.AlignTop)
-        ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=Qt.AlignTop)
-        ctrl_layout.addWidget(self._roi_proj_ctrl_widget)
+        ctrl_layout.addWidget(self._roi_fom_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
+        ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
 
         subview_splitter = QSplitter(Qt.Vertical)
         subview_splitter.setHandleWidth(9)
         subview_splitter.setChildrenCollapsible(False)
         subview_splitter.addWidget(self._roi_proj_plot)
-        subview_splitter.addWidget(self._roi_fom_plot)
+        subview_splitter.addWidget(self._roi_hist)
 
         view_splitter = QSplitter(Qt.Horizontal)
         view_splitter.setHandleWidth(9)
@@ -129,10 +141,10 @@ class CorrectedView(_AbstractImageToolView):
 
     def updateF(self, data, auto_update):
         """Override."""
-        if auto_update or self._image_view.image is None:
+        if auto_update or self._corrected.image is None:
             self._corrected.setImageData(_SimpleImageData(data.image))
             self._roi_proj_plot.updateF(data)
-            self._roi_fom_plot.updateF(data)
+            self._roi_hist.updateF(data)
 
     @property
     def imageView(self):

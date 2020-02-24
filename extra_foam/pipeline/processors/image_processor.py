@@ -123,12 +123,21 @@ class ImageProcessor(_BaseProcessor):
     @profiler("Image Processor (pulse)")
     def process(self, data):
         image_data = data['processed'].image
-        assembled = data['detector']['assembled']
-        n_total = assembled.shape[0] if assembled.ndim == 3 else 1
-        pulse_slicer = data['detector']['pulse_slicer']
-        sliced_assembled = assembled[pulse_slicer]
-        sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
-        n_sliced = len(sliced_indices)
+        assembled = data['assembled']['data']
+        catalog = data['catalog']
+        det = catalog.main_detector
+        pulse_slicer = catalog.get_slicer(det)
+
+        if assembled.ndim == 3:
+            n_total = assembled.shape[0]
+            sliced_assembled = assembled[pulse_slicer]
+            sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
+            n_sliced = len(sliced_indices)
+        else:
+            n_total = 1
+            sliced_assembled = assembled
+            sliced_indices = [0]
+            n_sliced = 1
 
         if self._recording_dark:
             self._record_dark(assembled)
@@ -142,7 +151,7 @@ class ImageProcessor(_BaseProcessor):
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
         #       based on the sliced data.
-        data['detector']['assembled'] = sliced_assembled
+        data['assembled']['sliced'] = sliced_assembled
 
         image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
@@ -167,8 +176,7 @@ class ImageProcessor(_BaseProcessor):
     def _record_dark(self, assembled):
         if self._dark is None:
             # _dark should not share the memory with
-            # data['detector']['assembled'] since the latter will
-            # be dark subtracted.
+            # data[src] since the latter will be dark subtracted.
             self._dark = assembled.copy()
         else:
             # moving average (it reset the current moving average if the
@@ -273,7 +281,7 @@ class ImageProcessor(_BaseProcessor):
             return
 
         n_images = image_data.n_images
-        out_of_bound_poi_indices = []
+        out_of_bound_indices = []
         # only keep POI in 'images'
         for i in image_data.poi_indices:
             if i < n_images:
@@ -282,11 +290,15 @@ class ImageProcessor(_BaseProcessor):
                                 image_mask=self._image_mask,
                                 threshold_mask=self._threshold_mask)
             else:
-                out_of_bound_poi_indices.append(i)
+                out_of_bound_indices.append(i)
 
-        if out_of_bound_poi_indices:
+            if image_data.poi_indices[1] == image_data.poi_indices[0]:
+                # skip the second one if two POIs have the same index
+                break
+
+        if out_of_bound_indices:
             # This is still ProcessingError since it is not fatal and should
             # not stop the pipeline.
             raise ProcessingError(
-                f"[Image processor] POI indices {out_of_bound_poi_indices[0]} "
+                f"[Image processor] POI indices {out_of_bound_indices[0]} "
                 f"is out of bound (0 - {n_images-1}")

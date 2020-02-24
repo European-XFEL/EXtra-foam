@@ -13,8 +13,8 @@ from multiprocessing import Process
 import re
 from time import time
 
-from karabo_data import RunDirectory
-from karabo_data.export import ZMQStreamer
+from extra_data import RunDirectory
+from extra_data.export import ZMQStreamer
 
 from ..config import config
 from ..utils import profiler
@@ -92,7 +92,7 @@ def gather_sources(path):
     if osp.isdir(path):
         try:
             # This will work in case users are using data stored
-            # in /gpfs/exfel/exp/INSTRUMENT/cycle/proposal/proc/runumber
+            # in /gpfs/exfel/exp/<INSTRUMENT>/cycle/proposal/proc/runumber
             # or they have raw folder with same path instead of 'proc'
             # in it in the end.
             run = RunDirectory(path.replace('/proc/', '/raw/'))

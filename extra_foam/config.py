@@ -7,18 +7,19 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import copy
 from enum import IntEnum
-import json
 import os.path as osp
 import shutil
 from collections import abc, namedtuple
+
+import yaml
+from yaml.scanner import ScannerError
+from yaml.parser import ParserError
 
 import numpy as np
 
 from . import ROOT_PATH
 from .logger import logger
-from .utils import query_yes_no
 
 
 class DataSource(IntEnum):
@@ -35,6 +36,7 @@ class PumpProbeMode(IntEnum):
 
 
 class RoiCombo(IntEnum):
+    UNDEFINED = 0
     ROI1 = 1
     ROI2 = 2
     ROI1_SUB_ROI2 = 3
@@ -66,6 +68,28 @@ class AnalysisType(IntEnum):
     AZIMUTHAL_INTEG_PULSE = 2741
 
 
+class GeomAssembler(IntEnum):
+    OWN = 1  # use Extra-foam own geometry assembler
+    EXTRA_GEOM = 2  # use Extra-geom geometry assembler
+
+
+class PipelineSlowPolicy(IntEnum):
+    DROP = 0
+    WAIT = 1
+
+
+def list_azimuthal_integ_methods(detector):
+    """Return a list of available azimuthal integration methos.
+
+    :param str detector: detector name
+    """
+    if detector in ['AGIPD', 'DSSC', 'LPD']:
+        return ['BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
+                'lut', 'lut_ocl']
+    return ['nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel',
+            'lut', 'lut_ocl']
+
+
 _PlotLabelItem = namedtuple("_PlotLabel", ['x', 'y'])
 
 
@@ -84,13 +108,20 @@ class PlotLabel(abc.Mapping):
             if item not in self._labels:
                 self._labels[item] = _PlotLabelItem("", "")
 
-    def __getitem__(self, item):
-        return self._labels[item]
+    def __contains__(self, analysis_type):
+        """Override."""
+        return analysis_type in self._labels
+
+    def __getitem__(self, analysis_type):
+        """Override."""
+        return self._labels[analysis_type]
 
     def __iter__(self):
+        """Override."""
         return iter(self._labels)
 
     def __len__(self):
+        """Override."""
         return len(self._labels)
 
 
@@ -106,7 +137,8 @@ class Normalizer(IntEnum):
     UNDEFINED = 0
     AUC = 1  # area under curve
     XGM = 2
-    ROI = 3
+    DIGITIZER = 3
+    ROI = 4
 
 
 # a simple class saves the trouble when the attribute needs to be read/write
@@ -120,459 +152,378 @@ class MaskState:
 class _Config(dict):
     """Config implementation."""
 
-    _system_readonly_config = {
-        # detector name, leave it empty
-        "DETECTOR": "",
-        # Instrument name
+    _abs_dirpath = osp.abspath(osp.dirname(__file__))
+
+    _opts = {
+        # instrument name
         "TOPIC": "",
-        # QTimer interval for updating plots, in milliseconds
-        "PLOT_UPDATE_INTERVAL": 10,
-        # Update interval for updating accumulated data, e.g. correlation,
-        # heatmap, in milliseconds
-        "ACCUMULATED_PLOT_UPDATE_INTERVAL": 1000,
-        # QTimer interval for monitoring processes, in milliseconds
-        "PROCESS_MONITOR_HEART_BEAT": 5000,
-        # QTimer interval for updating available sources, in milliseconds
-        "SOURCES_UPDATE_INTERVAL": 1000,
-        # After how long the available sources key expires, in milliseconds
-        "SOURCES_EXPIRATION_TIME": 2000,
-        # Maximum attempts to ping the Redis server before shutting down GUI
-        "MAX_REDIS_PING_ATTEMPTS": 10,
+        # -------------------------------------------------------------
+        # Main detector
+        # -------------------------------------------------------------
+        # main detector name
+        "DETECTOR": "",
+        # Whether pulse-resolved analysis setup is used
+        "PULSE_RESOLVED": False,
+        # whether a geometry is required to assemble the detector modules
+        "REQUIRE_GEOMETRY": False,
+        # absolute path of geometry file
+        "GEOMETRY_FILE": "",
+        # quadrant coordinates for assembling detector modules,
+        # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
+        "QUAD_POSITIONS": ((0, 0), (0, 0), (0, 0), (0, 0)),
+        # number of modules
+        "NUMBER_OF_MODULES": 1,
+        # shape of a single module
+        "MODULE_SHAPE": (-1, -1),
+        # detector pixel size, in meter
+        "PIXEL_SIZE": 1.e-3,
+        # Default TCP address of the online ZMQ bridge
+        "BRIDGE_ADDR": "127.0.0.1",
+        # Default TCP port of the online ZMQ bridge
+        "BRIDGE_PORT": 45454,
+        # Default TCP address of the file streamer
+        "LOCAL_ADDR": "127.0.0.1",
+        # Default TCP port of the file streamer
+        "LOCAL_PORT": 45454,
+        # distance from sample to detector plan (orthogonal distance,
+        # not along the beam), in meter
+        "SAMPLE_DISTANCE": 1.0,
+        # photon energy, in keV
+        "PHOTON_ENERGY": 12.4,
+        # -------------------------------------------------------------
+        # Process
+        # -------------------------------------------------------------
         # timeout when cleaning up remnant processes, in second
         "PROCESS_CLEANUP_TIMEOUT": 1,
-        # max number of pulses per pulse train
-        "MAX_N_PULSES_PER_TRAIN": 2700,
-        # maximum length of a queue in data pipeline (the smaller the queue size,
-        # the smaller the latency)
-        "MAX_QUEUE_SIZE": 2,
-        # blocking time (s) in get/put method of Queue
-        "TIMEOUT": 0.1,
-        # colors of for ROI 1 to 4
-        "ROI_COLORS": ['b', 'r', 'g', 'o'],
-        # colors for correlation parameters 1 to 4
-        "CORRELATION_COLORS": ['b', 'o', 'g', 'r'],
-        # color of the bounding box used in masking and unmasking
-        "MASK_BOUNDING_BOX_COLOR": 'b',
-        # full path of the Redis server executable
-        "REDIS_EXECUTABLE": osp.join(osp.abspath(
-            osp.dirname(__file__)), "thirdparty/bin/redis-server"),
-        # default REDIS port used in testing. Each detector has its
-        # dedicated REDIS port.
+        # interval for updating the status of all processes, in milliseconds
+        "PROCESS_MONITOR_UPDATE_TIMER": 5000,
+        # -------------------------------------------------------------
+        # Pipeline
+        # -------------------------------------------------------------
+        # maximum length of the queue in data pipeline (the smaller the queue
+        # size, the smaller the latency)
+        "PIPELINE_MAX_QUEUE_SIZE": 2,
+        "PIPELINE_SLOW_POLICY": PipelineSlowPolicy.DROP,
+        # timeout of the zmq bridge, in second
+        "BRIDGE_TIMEOUT": 0.1,
+        # maximum length of the cache used in data correlation by train ID
+        "CORRELATION_QUEUE_CACHE_SIZE": 20,
+        # -------------------------------------------------------------
+        # Source of data
+        # -------------------------------------------------------------
+        # default source type: online or from file
+        "SOURCE_DEFAULT_TYPE": int(DataSource.BRIDGE),
+        # dtype of the processed image data
+        # Note: the cpp code must have the corresponding overload!!!
+        #       np.float32 -> float
+        #       np.float64 -> double
+        "SOURCE_PROC_IMAGE_DTYPE": np.float32,
+        # dtype of the raw image data
+        "SOURCE_RAW_IMAGE_DTYPE": np.uint16,
+        # interval for updating available data sources, in milliseconds
+        "SOURCE_AVAIL_UPDATE_TIMER": 1000,
+        # After how long the available sources key expires, in milliseconds
+        "SOURCE_EXPIRATION_TIMER": 2000,
+        "SOURCE_USER_DEFINED_CATEGORY": "User-defined",
+        # -------------------------------------------------------------
+        # REDIS
+        # -------------------------------------------------------------
+        # absolute path of the Redis server executable
+        "REDIS_EXECUTABLE": osp.join(_abs_dirpath, "thirdparty/bin/redis-server"),
+        # default Redis port used in testing. Each detector has its
+        # dedicated Redis port.
         "REDIS_PORT": 6379,
+        # maximum attempts to ping the Redis server before shutting down the app
+        "REDIS_MAX_PING_ATTEMPTS": 3,
+        # interval for pinging the Redis server from the main GUI, in milliseconds
+        "REDIS_PING_ATTEMPT_INTERVAL": 5000,
         # If the path is given, redis-py will use UnixDomainSocketConnection.
         # Otherwise, normal TCP socket connection.
-        "UNIX_DOMAIN_SOCKET_PATH": "",
+        "REDIS_UNIX_DOMAIN_SOCKET_PATH": "",
         # maximum allowed REDIS memory (fraction of system memory)
         "REDIS_MAX_MEMORY_FRAC": 0.2,  # must <= 0.5
         # password to access the Redis server
         "REDIS_PASSWORD": "karaboFAI",  # FIXME
-        "REDIS_LOGFILE": osp.join(ROOT_PATH, "redis.log")
+        "REDIS_LOGFILE": osp.join(ROOT_PATH, "redis.log"),
+        # -------------------------------------------------------------
+        # GUI
+        # -------------------------------------------------------------
+        # interval for polling new processed data, in milliseconds
+        "GUI_PLOT_UPDATE_TIMER": 10,
+        # interval for updating plots with state, in milliseconds
+        # (for example, correlation, heatmap, etc.)
+        "GUI_PLOT_WITH_STATE_UPDATE_TIMER": 1000,
+        # initial (width, height) of the main GUI window
+        "GUI_MAIN_GUI_SIZE": (1680, 1080),
+        # initial (width, height) of the image tool window
+        "GUI_IMAGE_TOOL_SIZE": (1680, 1080),
+        # initial (width, height) of a large plot window
+        "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
+        # color map in contour plots, valid options are: thermal, flame,
+        # yellowy, bipolar, spectrum, cyclic, greyclip, grey
+        "GUI_COLOR_MAP": 'thermal',
+        # foreground/background color (r, g, b, alpha)
+        "GUI_FOREGROUND_COLOR": (0, 0, 0, 255),
+        "GUI_BACKGROUND_COLOR": (225, 225, 225, 255),
+        # colors of for ROI bounding boxes 1 to 4
+        "GUI_ROI_COLORS": ('b', 'r', 'g', 'o'),
+        # colors for correlation plots 1 to 4
+        "GUI_CORRELATION_COLORS": ('b', 'o', 'g', 'r'),
+        # color of the image mask bounding box while drawing
+        "GUI_MASK_BOUNDING_BOX_COLOR": 'b',
+        # -------------------------------------------------------------
+        # Misc
+        # -------------------------------------------------------------
+        # max number of pulses per pulse train
+        "MAX_N_PULSES_PER_TRAIN": 2700,
     }
 
-    # system configurations which will appear in the config file so that
-    # users can modify them
-    _system_reconfigurable_config = {
-        # Source of data: FILES or BRIDGE
-        "DEFAULT_SOURCE_TYPE": DataSource.BRIDGE,
-        # host name if source is FILES
-        "LOCAL_HOST": "localhost",
-        # port number if source is FILES
-        "LOCAL_PORT": 45454,
-        "GUI": {
-            # color map in contour plots, valid options are: thermal, flame,
-            # yellowy, bipolar, spectrum, cyclic, greyclip, grey
-            "COLOR_MAP": 'thermal',
-            # initial (width, height) of the main GUI
-            "MAIN_GUI_SIZE": [1680, 1080],
-            # initial (width, height) of the image tool
-            "IMAGE_TOOL_SIZE": [1680, 1080],
-            # initial (width, height) of a large plot window
-            "PLOT_WINDOW_SIZE": [1440, 1080],
-        }
-    }
+    _AreaDetectorConfig = namedtuple("_AreaDetectorConfig", [
+        "REDIS_PORT", "PULSE_RESOLVED", "REQUIRE_GEOMETRY",
+        "NUMBER_OF_MODULES", "MODULE_SHAPE", "PIXEL_SIZE"])
 
-    _detector_readonly_config = {
-        # set all default value to None
-        "DEFAULT": {
-            # image data dtype
-            # Note: the cpp code must have the corresponding overload!!!
-            #       np.float32 -> float
-            #       np.float64 -> double
-            "IMAGE_DTYPE": np.float32,
-            # whether the data is pulse resolved
-            "PULSE_RESOLVED": None,
-            # whether geometry is required to assemble the detector
-            "REQUIRE_GEOMETRY": None,
-            # number of modules
-            "NUMBER_OF_MODULES": None,
-            # shape of a single module
-            "MODULE_SHAPE": [None, None],
-            # detector pixel size, in meter
-            "PIXEL_SIZE": None,
-        },
-        "AGIPD": {
-            "REDIS_PORT": 6378,
-            "PULSE_RESOLVED": True,
-            "REQUIRE_GEOMETRY": True,
-            "NUMBER_OF_MODULES": 16,
-            "MODULE_SHAPE": [512, 128],
-            "PIXEL_SIZE": 0.2e-3,
-        },
-        "LPD": {
-            "REDIS_PORT": 6379,
-            "PULSE_RESOLVED": True,
-            "REQUIRE_GEOMETRY": True,
-            "NUMBER_OF_MODULES": 16,
-            "MODULE_SHAPE": [256, 256],
-            "PIXEL_SIZE": 0.5e-3,
-        },
-        "JungFrauPR": {
-            "REDIS_PORT": 6383,
-            "PULSE_RESOLVED": True,
-            "REQUIRE_GEOMETRY": False,
-            "NUMBER_OF_MODULES": 2,
-            "MODULE_SHAPE": [512, 1024],
-            "PIXEL_SIZE": 0.075e-3,
-        },
-        "JungFrau": {
-            "REDIS_PORT": 6380,
-            "PULSE_RESOLVED": False,
-            "REQUIRE_GEOMETRY": False,
-            "NUMBER_OF_MODULES": 1,
-            "MODULE_SHAPE": [512, 1024],
-            "PIXEL_SIZE": 0.075e-3,
-        },
-        "FastCCD": {
-            "REDIS_PORT": 6381,
-            "PULSE_RESOLVED": False,
-            "REQUIRE_GEOMETRY": False,
-            "NUMBER_OF_MODULES": 1,
-            "MODULE_SHAPE": [1934, 960],
-            "PIXEL_SIZE": 0.030e-3,
-        },
-        "BaslerCamera": {
-            "REDIS_PORT": 6390,
-            "PULSE_RESOLVED": False,
-            "REQUIRE_GEOMETRY": False,
-            "NUMBER_OF_MODULES": 1,
+    # "name" is only used for labeling, it is ignored in the pipeline code.
+    StreamerEndpointItem = namedtuple("StreamerEndpointItem",
+                                      ["name", "type", "address", "port"])
+
+    for key in _AreaDetectorConfig._fields:
+        assert key in _opts
+
+    _detector_config = {
+        "AGIPD": _AreaDetectorConfig(
+            REDIS_PORT=6378,
+            PULSE_RESOLVED=True,
+            REQUIRE_GEOMETRY=True,
+            NUMBER_OF_MODULES=16,
+            MODULE_SHAPE=(512, 128),
+            PIXEL_SIZE=0.2e-3),
+        "LPD": _AreaDetectorConfig(
+            REDIS_PORT=6379,
+            PULSE_RESOLVED=True,
+            REQUIRE_GEOMETRY=True,
+            NUMBER_OF_MODULES=16,
+            MODULE_SHAPE=(256, 256),
+            PIXEL_SIZE=0.5e-3),
+        # DSSC has hexagonal pixels:
+        # 236 μm step in fast-scan axis, 204 μm in slow-scan
+        "DSSC": _AreaDetectorConfig(
+            REDIS_PORT=6380,
+            PULSE_RESOLVED=True,
+            REQUIRE_GEOMETRY=True,
+            NUMBER_OF_MODULES=16,
+            MODULE_SHAPE=(128, 512),
+            PIXEL_SIZE=0.22e-3),
+        "JungFrauPR": _AreaDetectorConfig(
+            REDIS_PORT=6381,
+            PULSE_RESOLVED=True,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=2,
+            MODULE_SHAPE=(512, 1024),
+            PIXEL_SIZE=0.075e-3),
+        "JungFrau": _AreaDetectorConfig(
+            REDIS_PORT=6382,
+            PULSE_RESOLVED=False,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=1,
+            MODULE_SHAPE=(512, 1024),
+            PIXEL_SIZE=0.075e-3),
+        "FastCCD": _AreaDetectorConfig(
+            REDIS_PORT=6383,
+            PULSE_RESOLVED=False,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=1,
+            MODULE_SHAPE=(1934, 960),
+            PIXEL_SIZE=0.030e-3),
+        "BaslerCamera": _AreaDetectorConfig(
+            REDIS_PORT=6389,
+            PULSE_RESOLVED=False,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=1,
             # BaslerCamera has quite a few different models with different
-            # module shapes and pixel sizes. Therefore, we do not apply the
-            # module shape check.
-            "MODULE_SHAPE": [-1, -1],
-            "PIXEL_SIZE": 0.0022e-3,
-        },
-        "DSSC": {
-            "REDIS_PORT": 6382,
-            "PULSE_RESOLVED": True,
-            "REQUIRE_GEOMETRY": True,
-            "NUMBER_OF_MODULES": 16,
-            "MODULE_SHAPE": [128, 512],
-            # Hexagonal pixels, 236 μm step in fast-scan axis, 204 μm in slow-scan
-            "PIXEL_SIZE": 0.22e-3,
-        },
-
+            # module shapes and pixel sizes.
+            MODULE_SHAPE=(-1, -1),
+            PIXEL_SIZE=0.0022e-3),
     }
 
-    _detector_reconfigurable_config = {
-        "DEFAULT": {
-            # TCP address of the ZMQ bridge
-            "SERVER_ADDR": "",
-            # TCP port of the ZMQ bridge
-            "SERVER_PORT": 0,
-            # Karabo device ID + output channel name
-            "SOURCE_NAME_BRIDGE": ["", ],
-            # instrument source name in HDF5 files
-            "SOURCE_NAME_FILE": ["", ],
-            # path of the geometry file
-            "GEOMETRY_FILE": "",
-            # quadrant coordinates for assembling detector modules,
-            # ((x1, y1), (x2, y2), (x3, y3), (x4, y4))
-            "QUAD_POSITIONS": [[0, 0], [0, 0], [0, 0], [0, 0]],
-            # distance from sample to detector plan (orthogonal distance,
-            # not along the beam), in meter
-            "SAMPLE_DISTANCE": 1.0,
-            # azimuthal integration methods supported in pyFAI
-            "AZIMUTHAL_INTEG_METHODS": [
-                'nosplit_csr', 'csr_ocl', 'csr', 'BBox', 'splitpixel', 'lut',
-                'lut_ocl'
-            ],
-            # pixels with values outside the (lower, upper) range will be masked
-            "MASK_RANGE": [-1e5, 1e5],
-            # photon energy, in keV
-            "PHOTON_ENERGY": 12.4,
-        },
-        "AGIPD": {
-            "SERVER_ADDR": '10.253.0.51',
-            "SERVER_PORT": 45012,
-            "SOURCE_NAME_BRIDGE": [
-                'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
-                'MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
-            "SOURCE_NAME_FILE": [
-                'SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED',
-                'MID_DET_AGIPD1M-1/CAL/APPEND_CORRECTED'],
-            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
-                                      'geometries/agipd_mar18_v11.geom'),
-            "QUAD_POSITIONS": [[-526, 630],
-                               [-549, -4],
-                               [522, -157],
-                               [543, 477]],
-            "AZIMUTHAL_INTEG_METHODS": [
-                'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
-                'lut',
-                'lut_ocl'
-            ],
-            "SAMPLE_DISTANCE": 5.5,
-            "PHOTON_ENERGY": 9.3,
-        },
-        "LPD": {
-            "SERVER_ADDR": "10.253.0.53",
-            "SERVER_PORT": 4501,
-            "SOURCE_NAME_BRIDGE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
-            "SOURCE_NAME_FILE": ["FXE_DET_LPD1M-1/CAL/APPEND_CORRECTED"],
-            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
-                                      'geometries/lpd_mar_18_axesfixed.h5'),
-            # For lpd_mar_18.h5 and LPDGeometry in karabo_data
-            # "QUAD_POSITIONS": [[-13.0, -299.0],
-            #                    [11.0, -8.0],
-            #                    [-254.0, 16.0],
-            #                    [-278.0, -275.0]],
-            # For lpd_mar18_axesfixed.h5 and LPD_1MGeometry in karabo_data
-            # The geometry uses XFEL standard coordinate directions.
-            "QUAD_POSITIONS": [[11.4, 299],
-                               [-11.5, 8],
-                               [254.5, -16],
-                               [278.5, 275]],
-            "AZIMUTHAL_INTEG_METHODS": [
-                'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
-                'lut',
-                'lut_ocl'
-            ],
-            "SAMPLE_DISTANCE": 0.4,
-            "PHOTON_ENERGY": 9.3,
-        },
-        "JungFrauPR": {
-            "SERVER_ADDR": "10.253.0.53",
-            "SERVER_PORT": 4501,
-            # Source name from bridge not yet known.
-            "SOURCE_NAME_BRIDGE": [
-                "FXE_XAD_JF1M/CAL/APPEND",
-                "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
-                "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
-                "FXE_XAD_JF500K/DET/RECEIVER:display",
-            ],
-            # Source name from files not yet known.
-            "SOURCE_NAME_FILE": [
-                "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
-                "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
-            ],
-            "SAMPLE_DISTANCE": 2.0,
-            "PHOTON_ENERGY": 9.3,
-        },
-        "JungFrau": {
-            "SERVER_ADDR": "10.253.0.53",
-            "SERVER_PORT": 4501,
-            "SOURCE_NAME_BRIDGE": [
-                "FXE_XAD_JF1M/DET/RECEIVER-1:display",
-                "FXE_XAD_JF1M/DET/RECEIVER-2:display",
-            ],
-            "SOURCE_NAME_FILE": [
-                "FXE_XAD_JF1M/DET/RECEIVER-1:daqOutput",
-                "FXE_XAD_JF1M/DET/RECEIVER-2:daqOutput",
-                "FXE_XAD_JF500K/DET/RECEIVER:daqOutput",
-                "FXE_XAD_JF1M1/DET/RECEIVER:daqOutput",
-            ],
-            "SAMPLE_DISTANCE": 2.0,
-            "PHOTON_ENERGY": 9.3,
-        },
-        "FastCCD": {
-            "SERVER_ADDR": "10.253.0.140",
-            "SERVER_PORT": 4502,
-            "SOURCE_NAME_BRIDGE": [
-                "SCS_CDIDET_FCCD2M/DAQ/FCCD:output",
-            ],
-            "SOURCE_NAME_FILE": [
-                "SCS_CDIDET_FCCD2M/DAQ/FCCD:daqOutput",
-            ],
-            "SAMPLE_DISTANCE": 0.6,
-            "PHOTON_ENERGY": 0.780,
-        },
-        "BaslerCamera": {
-            "SERVER_ADDR": "localhost",
-            "SERVER_PORT": 45454,
-            "SAMPLE_DISTANCE": 1.0,
-        },
-        "DSSC": {
-            "SERVER_ADDR": '10.253.0.140',
-            "SERVER_PORT": 4511,
-            "SOURCE_NAME_BRIDGE": [
-                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED',
-                'SCS_CDIDET_DSSC/CAL/APPEND_RAW',
-            ],
-            "SOURCE_NAME_FILE": [
-                'SCS_CDIDET_DSSC/CAL/APPEND_CORRECTED',
-                'SCS_CDIDET_DSSC/CAL/APPEND_RAW',
-            ],
-            "GEOMETRY_FILE": osp.join(osp.dirname(osp.abspath(__file__)),
-                                      'geometries/dssc_geo_june19.h5'),
-            "QUAD_POSITIONS": [[-124.100,    3.112],
-                               [-133.068, -110.604],
-                               [   0.988, -125.236],
-                               [   4.528,   -4.912]],
-            "AZIMUTHAL_INTEG_METHODS": [
-                'BBox', 'splitpixel', 'csr', 'nosplit_csr', 'csr_ocl',
-                'lut',
-                'lut_ocl'
-            ],
-            "SAMPLE_DISTANCE": 0.6,
-            "PHOTON_ENERGY": 0.780,
-        },
-    }
-
-    _filename = osp.join(ROOT_PATH, "config.json")
-
-    detectors = list(_detector_readonly_config.keys())
-    detectors.remove('DEFAULT')
+    _misc_source_categories = (
+        'XGM', 'Digitizer', 'Magnet', 'Motor', 'Monochromator')
 
     def __init__(self):
         super().__init__()
 
-        self.update(self._system_readonly_config)
-        self.update(self._system_reconfigurable_config)
-        # to allow unittest without specifying detector
-        self.update(self._detector_readonly_config['DEFAULT'])
-        self.update(self._detector_reconfigurable_config['DEFAULT'])
+        self.update(self._opts)
 
-        self.ensure_file()
+        # ctrl data sources listed in the DataSourceWidget
+        self.control_sources = dict()
+        # pipeline data sources listed in the DataSourceWidget
+        self.pipeline_sources = dict()
+        # meta data sources which is not listed in the DataSourceWidget but
+        # is used in statistics analysis
+        self.meta_sources = {
+            "Metadata": {
+                "META": ["timestamp.tid"],
+            }
+        }
 
-    def ensure_file(self):
+        self.appendix_streamers = []
+
+    @classmethod
+    def topics(cls):
+        return 'SPB', 'FXE', 'SCS', 'SQS', 'MID', 'HED'
+
+    @classmethod
+    def detectors(cls):
+        return tuple(cls._detector_config.keys())
+
+    @classmethod
+    def config_file(cls, topic):
+        return osp.join(ROOT_PATH, f"{topic.lower()}.config.yaml")
+
+    def ensure_file(self, topic):
         """Generate the config file if it does not exist."""
-        if not osp.isfile(self._filename):
-            cfg = copy.deepcopy(self._system_reconfigurable_config)
+        config_file = self.config_file(topic)
+        if not osp.isfile(config_file):
+            shutil.copyfile(osp.join(
+                self._abs_dirpath, f"configs/{osp.basename(config_file)}"),
+                config_file)
 
-            for det in self.detectors:
-                cfg[det] = copy.deepcopy(
-                    self._detector_reconfigurable_config['DEFAULT'])
-                cfg[det].update(self._detector_reconfigurable_config[det])
-            with open(self._filename, 'w') as fp:
-                json.dump(cfg, fp, indent=4)
+    def load(self, det, topic, **kwargs):
+        """Update configs from the config file.
 
-    def load(self, detector):
-        """Update the config from the config file.
-
-        :param str detector: detector name.
+        :param str det: detector name.
+        :param str topic: topic name
         """
-        self.__setitem__("DETECTOR", detector)
-        # config (self) does not have a detector hierarchy!
-        self.update(self._detector_readonly_config[detector])
-        self.update(self._detector_reconfigurable_config[detector])
-        self.from_file(detector)
+        self.ensure_file(topic)
 
-    def set_topic(self, topic):
-        """Set the topic key in system read only config
-
-        :param str topic: topic name.
-        """
+        self.__setitem__("DETECTOR", det)
         self.__setitem__("TOPIC", topic)
+        for k, v in kwargs.items():
+            if k in self:
+                self.__setitem__(k, v)
+            else:
+                raise KeyError
 
-    def from_file(self, detector):
-        """Update the config dictionary from the config file."""
-        with open(self._filename, 'r') as fp:
+        # update the configurations of the main detector
+        for k, v in self._detector_config[det]._asdict().items():
+            self[k] = v
+
+        self.from_file(det, topic)
+
+    def from_file(self, detector, topic):
+        """Read configs from the config file."""
+        config_file = self.config_file(topic)
+        with open(config_file, 'r') as fp:
             try:
-                # FIXME: what if the file is wrong formatted
-                config_from_file = json.load(fp)
-            except json.decoder.JSONDecodeError as e:
-                logger.error(f"Invalid config file: {self._filename}")
-                raise
+                cfg = yaml.load(fp, Loader=yaml.Loader)
+            except (ScannerError, ParserError) as e:
+                msg = f"Invalid config file: {config_file}\n{repr(e)}"
+                logger.error(msg)
+                raise OSError(msg)
 
-        # check system configuration
-        invalid_keys = []
-        for key in config_from_file:
-            if key not in self.detectors and \
-                    key not in self._system_reconfigurable_config:
-                invalid_keys.append(key)
+        if cfg is None:
+            raise ValueError(f"Config file {config_file} is empty: "
+                             f"returned 'None' from the loader!")
 
-        # check detector configuration
-        if detector not in config_from_file:
-            msg = f"\nThe detector config cannot be found in the config " \
-                  f"file:\n\n{self._filename}.\n\nThis could be caused by a " \
-                  f"version update.\nCreate a new config file? The default " \
-                  f"config will be used otherwise."
+        # update the main detector config
+        det_cfg = cfg.get("DETECTOR", dict()).get(detector, dict())
+        for key in ["GEOMETRY_FILE", "QUAD_POSITIONS", "BRIDGE_ADDR",
+                    "BRIDGE_PORT", "LOCAL_ADDR", "LOCAL_PORT",
+                    "SAMPLE_DISTANCE", "PHOTON_ENERGY"]:
+            if key in det_cfg:
+                # convert 'GEOMETRY_FILE' to absolute path if it is not
+                if key == "GEOMETRY_FILE":
+                    geom_path = det_cfg[key]
+                    if not osp.isabs(geom_path):
+                        det_cfg[key] = osp.join(
+                            self._abs_dirpath, 'geometries', geom_path)
+                elif key == "QUAD_POSITIONS":
+                    pos = det_cfg[key]
+                    det_cfg[key] = ((pos['x1'], pos['y1']),
+                                    (pos['x2'], pos['y2']),
+                                    (pos['x3'], pos['y3']),
+                                    (pos['x4'], pos['y4']))
 
-            if query_yes_no(msg):
-                self._generate_new_config_file()
-                with open(self._filename, 'r') as fp:
-                    config_from_file = json.load(fp)
+                self[key] = det_cfg[key]
 
-            # Whether the new config file is generated or not, the default
-            # configuration has already been applied.
-            return
+        # update data sources
+        src_cfg = cfg.get("SOURCE", dict())
+        self["SOURCE_DEFAULT_TYPE"] = src_cfg["DEFAULT_TYPE"]
+        for ctg, srcs in src_cfg.get("CATEGORY", dict()).items():
+            # We assume the main detector type is exclusive, i.e., only one
+            # of them will be needed.
+            if ctg == detector or ctg not in self.detectors():
+                if ctg != detector and ctg not in self._misc_source_categories:
+                    raise ValueError(
+                        f"Invalid source category: {ctg}!\n"
+                        f"The valid source categories are: "
+                        f"{self._misc_source_categories + self.detectors()}")
+                self.control_sources[ctg] = srcs.get("CONTROL", dict())
+                self.pipeline_sources[ctg] = srcs.get("PIPELINE", dict())
 
-        # validate keys in config file
-        for key in config_from_file[detector]:
-            if key not in self._detector_reconfigurable_config['DEFAULT']:
-                invalid_keys.append(f"{detector}.{key}")
-
-        if invalid_keys:
-            msg = f"\nThe following invalid keys were found in " \
-                f"{self._filename}:\n\n{', '.join(invalid_keys)}.\n\n" \
-                f"This could be caused by a version update.\n" \
-                f"Create a new config file?"
-
-            if not query_yes_no(msg):
-                raise ValueError(
-                    f"Invalid config keys: {', '.join(invalid_keys)}")
-
-            self._generate_new_config_file()
-
-            # We use the default configuration and there is no need to read
-            # the newly generated config file.
-            return
-
-        # update system configuration
-        for key in self._system_reconfigurable_config:
-            if key in config_from_file:
-                self.__setitem__(key, config_from_file[key])
-
-        # update detector configuration
-        if detector in config_from_file:
-            self.update(config_from_file[detector])
-
-    def _generate_new_config_file(self):
-        backup_file = self._filename + ".bak"
-        if not osp.exists(backup_file):
-            shutil.move(self._filename, backup_file)
-        else:
-            # up to two backup files
-            shutil.move(backup_file, backup_file + '.bak')
-            shutil.move(self._filename, backup_file)
-
-        # generate a new config file
-        self.ensure_file()
+        # update connection
+        con_cfg = cfg.get("STREAMER", dict())
+        stream_cfg = con_cfg.get("ZMQ", dict())
+        for name, opts in stream_cfg.items():
+            self.appendix_streamers.append(
+                self.StreamerEndpointItem(
+                    name, opts["DEFAULT_TYPE"], opts["ADDR"], opts["PORT"]))
 
 
 class ConfigWrapper(abc.Mapping):
     """Readonly config."""
     def __init__(self):
+        super().__init__()
         self._data = _Config()
 
+    def __contains__(self, key):
+        """Override."""
+        return self._data.__contains__(key)
+
     def __getitem__(self, key):
-        return self._data[key]
+        """Override."""
+        return self._data.__getitem__(key)
 
     def __len__(self):
-        return len(self._data)
+        """Override."""
+        return self._data.__len__()
 
     def __iter__(self):
-        return iter(self._data)
+        """Override."""
+        return self._data.__iter__()
 
-    def load(self, detector):
-        self._data.load(detector)
-
-    def set_topic(self, topic):
-        self._data.set_topic(topic)
+    def load(self, detector, topic, **kwargs):
+        self._data.load(detector, topic, **kwargs)
 
     @property
     def detectors(self):
-        return _Config.detectors
+        return _Config.detectors()
+
+    @property
+    def topics(self):
+        return _Config.topics()
+
+    @property
+    def config_file(self):
+        topic = self._data['TOPIC']
+        if topic:
+            return _Config.config_file(topic)
+        raise ValueError("TOPIC is not specified!")
+
+    @property
+    def control_sources(self):
+        return self._data.control_sources
+
+    @property
+    def pipeline_sources(self):
+        return self._data.pipeline_sources
+
+    @property
+    def meta_sources(self):
+        return self._data.meta_sources
+
+    @property
+    def appendix_streamers(self):
+        return self._data.appendix_streamers
 
     @staticmethod
     def parse_detector_name(detector):

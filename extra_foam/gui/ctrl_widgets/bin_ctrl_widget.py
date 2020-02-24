@@ -22,9 +22,9 @@ from ...config import AnalysisType, BinMode, config
 
 
 _N_PARAMS = 2
-_DEFAULT_BIN_RANGE = "0, 1e9"
-_DEFAULT_N_BINS = "10"
-_MAX_N_BINS = 9999
+_DEFAULT_N_BINS = 10
+_DEFAULT_BIN_RANGE = "-inf, inf"
+_MAX_N_BINS = 999
 
 
 class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -43,6 +43,8 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "accumulcate": BinMode.ACCUMULATE,
     })
 
+    _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
+
     def __init__(self, *args, **kwargs):
         super().__init__("Binning setup", *args, **kwargs)
 
@@ -55,6 +57,11 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._mode_cb = QComboBox()
         self._mode_cb.addItems(list(self._bin_modes.keys()))
+
+        self._auto_level_btn = QPushButton("Auto level")
+
+        self._src_instrument = config.control_sources
+        self._src_metadata = config.meta_sources
 
         self.initUI()
         self.initConnections()
@@ -72,6 +79,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(self._mode_cb, 0, 3)
         layout.addWidget(self._reset_btn, 0, 4, 1, 2, AR)
         layout.addWidget(self._table, 2, 0, 1, 6)
+        layout.addWidget(self._auto_level_btn, 3, 0)
 
         self.setLayout(layout)
 
@@ -90,6 +98,9 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._mode_cb.currentTextChanged.connect(
             lambda x: mediator.onBinModeChange(self._bin_modes[x]))
 
+        self._auto_level_btn.clicked.connect(
+            mediator.bin_heatmap_autolevel_sgn)
+
     def initParamTable(self):
         """Initialize the correlation parameter table widget."""
         table = self._table
@@ -100,36 +111,45 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         table.setColumnCount(n_col)
         table.setRowCount(n_row)
         table.setHorizontalHeaderLabels([
-            'Category',
-            'Karabo Device ID',
-            'Property Name',
-            'Value range',
-            '# of bins'
+            'Category', 'Karabo Device ID', 'Property Name',
+            'Bin range', '# of bins'
         ])
-        table.setVerticalHeaderLabels(['1', '2'])
+        table.setVerticalHeaderLabels([str(i+1) for i in range(n_row)])
+
+        # loop over bin parameters
         for i_row in range(n_row):
-            combo = QComboBox()
-            for t in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]].keys():
-                combo.addItem(t)
-            table.setCellWidget(i_row, 0, combo)
-            combo.currentTextChanged.connect(
+            category_cb = QComboBox()
+            category_cb.addItem('')  # default is empty
+            for k, v in self._src_metadata.items():
+                if v:
+                    category_cb.addItem(k)
+            for k, v in self._src_instrument.items():
+                if v:
+                    category_cb.addItem(k)
+            category_cb.addItem(self._user_defined_key)
+            table.setCellWidget(i_row, 0, category_cb)
+            category_cb.currentTextChanged.connect(
                 functools.partial(self.onCategoryChange, i_row))
 
-            for i_col in range(1, 3):
+            # Set up "device id" and "property" cells for category ''
+            for i_col in [1, 2]:
                 widget = SmartLineEdit()
                 table.setCellWidget(i_row, i_col, widget)
                 widget.setReadOnly(True)
 
-            widget = self._get_default_bin_range_widget()
+            # Set up "value range" and "# of bins" cell for category ''
+            widget = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
+            widget.setReadOnly(True)
             table.setCellWidget(i_row, 3, widget)
-
-            widget = self._get_default_n_bins_widget()
+            widget = SmartLineEdit(str(_DEFAULT_N_BINS))
+            widget.setReadOnly(True)
             table.setCellWidget(i_row, 4, widget)
 
         header = table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
 
         header = table.verticalHeader()
         for i in range(n_row):
@@ -140,99 +160,96 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._table.setMaximumHeight(header_height * 4.5)
 
     @pyqtSlot(str)
-    def onCategoryChange(self, i_row, text):
-        range_le = self._get_default_bin_range_widget()
-        n_bins_le = self._get_default_n_bins_widget()
+    def onCategoryChange(self, i_row, category):
+        bin_range_le = SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
+
+        n_bins_le = SmartLineEdit(str(_DEFAULT_N_BINS))
+        n_bins_le.setValidator(QIntValidator(1, _MAX_N_BINS))
 
         # i_row is the row number in the QTableWidget
-        if not text or text == "User defined":
-            # '' or 'User defined'
+        if not category or category == self._user_defined_key:
             device_id_le = SmartLineEdit()
             property_le = SmartLineEdit()
 
-            if not text:
+            if not category:
                 device_id_le.setReadOnly(True)
                 property_le.setReadOnly(True)
+                bin_range_le.setReadOnly(True)
+                n_bins_le.setReadOnly(True)
             else:
                 device_id_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeLe, i_row))
+                    self.onBinParamChangeLe, i_row))
                 property_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeLe, i_row))
-                range_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeLe, i_row))
+                    self.onBinParamChangeLe, i_row))
+                bin_range_le.returnPressed.connect(functools.partial(
+                    self.onBinParamChangeLe, i_row))
                 n_bins_le.returnPressed.connect(functools.partial(
-                    self.onBinGroupChangeLe, i_row))
+                    self.onBinParamChangeLe, i_row))
 
             self._table.setCellWidget(i_row, 1, device_id_le)
             self._table.setCellWidget(i_row, 2, property_le)
-            self._table.setCellWidget(i_row, 3, range_le)
+            self._table.setCellWidget(i_row, 3, bin_range_le)
             self._table.setCellWidget(i_row, 4, n_bins_le)
 
-            self.onBinGroupChangeLe(i_row)
+            self.onBinParamChangeLe(i_row)
         else:
-            combo_device_ids = QComboBox()
-            for device_id in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].device_ids:
-                combo_device_ids.addItem(device_id)
-            combo_device_ids.currentTextChanged.connect(functools.partial(
-                self.onBinGroupChangeCb, i_row))
-            self._table.setCellWidget(i_row, 1, combo_device_ids)
+            srcs = self._src_metadata if category in config.meta_sources \
+                else self._src_instrument
+            category_srcs = srcs.get(category, dict())
+            device_id_cb = QComboBox()
+            property_cb = QComboBox()
+            for device_id in category_srcs:
+                device_id_cb.addItem(device_id)
+                for ppt in category_srcs[device_id]:
+                    property_cb.addItem(ppt)
 
-            combo_properties = QComboBox()
-            for ppt in self._TOPIC_DATA_CATEGORIES[config["TOPIC"]][text].properties:
-                combo_properties.addItem(ppt)
-            combo_properties.currentTextChanged.connect(functools.partial(
-                self.onBinGroupChangeCb, i_row))
-            self._table.setCellWidget(i_row, 2, combo_properties)
-
-            range_le.returnPressed.connect(functools.partial(
-                self.onBinGroupChangeCb, i_row))
-            self._table.setCellWidget(i_row, 3, range_le)
-
+            device_id_cb.currentTextChanged.connect(functools.partial(
+                self.onBinParamChangeCb, i_row))
+            property_cb.currentTextChanged.connect(functools.partial(
+                self.onBinParamChangeCb, i_row))
+            bin_range_le.returnPressed.connect(functools.partial(
+                self.onBinParamChangeCb, i_row))
             n_bins_le.returnPressed.connect(functools.partial(
-                self.onBinGroupChangeCb, i_row))
+                self.onBinParamChangeCb, i_row))
+
+            self._table.setCellWidget(i_row, 1, device_id_cb)
+            self._table.setCellWidget(i_row, 2, property_cb)
+            self._table.setCellWidget(i_row, 3, bin_range_le)
             self._table.setCellWidget(i_row, 4, n_bins_le)
 
-            self.onBinGroupChangeCb(i_row)
+            self.onBinParamChangeCb(i_row)
 
     @pyqtSlot()
-    def onBinGroupChangeLe(self, i_row):
+    def onBinParamChangeLe(self, i_row):
         device_id = self._table.cellWidget(i_row, 1).text()
         ppt = self._table.cellWidget(i_row, 2).text()
         bin_range = self._table.cellWidget(i_row, 3).value()
         n_bins = int(self._table.cellWidget(i_row, 4).text())
 
-        self._mediator.onBinGroupChange(
-            (i_row+1, device_id, ppt, bin_range, n_bins))
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onBinParamChange((i_row+1, src, bin_range, n_bins))
 
     @pyqtSlot(str)
-    def onBinGroupChangeCb(self, i_row):
+    def onBinParamChangeCb(self, i_row):
         device_id = self._table.cellWidget(i_row, 1).currentText()
         ppt = self._table.cellWidget(i_row, 2).currentText()
         bin_range = self._table.cellWidget(i_row, 3).value()
         n_bins = int(self._table.cellWidget(i_row, 4).text())
 
-        self._mediator.onBinGroupChange(
-            (i_row+1, device_id, ppt, bin_range, n_bins))
+        src = f"{device_id} {ppt}" if device_id and ppt else ""
+        self._mediator.onBinParamChange((i_row+1, src, bin_range, n_bins))
 
     def updateMetaData(self):
-        """Overload."""
+        """Override."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())
 
         for i_row in range(_N_PARAMS):
             category = self._table.cellWidget(i_row, 0).currentText()
-            if not category or category == "User defined":
-                self.onBinGroupChangeLe(i_row)
+            if not category or category == self._user_defined_key:
+                self.onBinParamChangeLe(i_row)
             else:
-                self.onBinGroupChangeCb(i_row)
+                self.onBinParamChangeCb(i_row)
 
         return True
-
-    def _get_default_bin_range_widget(self):
-        return SmartBoundaryLineEdit(_DEFAULT_BIN_RANGE)
-
-    def _get_default_n_bins_widget(self):
-        widget = SmartLineEdit(_DEFAULT_N_BINS)
-        widget.setValidator(QIntValidator(1, _MAX_N_BINS))
-        return widget

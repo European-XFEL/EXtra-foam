@@ -245,7 +245,8 @@ class BenchmarkCommand(Command):
         pass
 
     def run(self):
-        self.spawn(['python', 'benchmarks/benchmark_image_proc.py'])
+        self.spawn(['python', 'benchmarks/benchmark_imageproc.py'])
+        self.spawn(['python', 'benchmarks/benchmark_geometry.py'])
 
 
 class BinaryDistribution(Distribution):
@@ -284,7 +285,9 @@ setup(
         'extra_foam': [
             'gui/icons/*.png',
             'gui/icons/*.jpg',
-            'geometries/*.h5'
+            'geometries/*.h5',
+            'geometries/*.geom',
+            'configs/*.yaml',
         ]
     },
     install_requires=[
@@ -295,7 +298,8 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
-        'karabo-data>=0.6.2',
+        'EXtra-data>=0.8.0',
+        'EXtra-geom>=0.8.0',
         'karabo-bridge>=0.3.0',
         'toolz>=0.9.0',
         'silx>=0.9.0',
@@ -303,6 +307,7 @@ setup(
         'redis>=3.3.11',
         'psutil>=5.6.2',
         'imageio>=2.5.0',
+        'pyyaml>=5.2',
     ],
     extras_require={
         'docs': [

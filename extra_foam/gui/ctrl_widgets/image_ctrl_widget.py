@@ -17,7 +17,6 @@ from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
-from ...config import config
 
 
 class ImageCtrlWidget(_AbstractCtrlWidget):
@@ -37,8 +36,7 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         self.moving_avg_le.setMinimumWidth(60)
         self.moving_avg_le.setEnabled(False)
 
-        self.threshold_mask_le = SmartBoundaryLineEdit(
-            ', '.join([str(v) for v in config["MASK_RANGE"]]))
+        self.threshold_mask_le = SmartBoundaryLineEdit('-1e5, 1e5')
         # avoid collapse on online and maxwell clusters
         self.threshold_mask_le.setMinimumWidth(160)
 

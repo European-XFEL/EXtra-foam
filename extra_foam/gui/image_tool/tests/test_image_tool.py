@@ -11,30 +11,41 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, _Config, ConfigWrapper, Normalizer, RoiCombo, RoiFom
+    AnalysisType, config, Normalizer, RoiCombo, RoiFom
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
+from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
-from extra_foam.database import MetaProxy
+from extra_foam.database import Metadata, MetaProxy
 
 app = mkQApp()
 
 logger.setLevel('CRITICAL')
 
+_tmp_cfg_dir = tempfile.mkdtemp()
 
-class TestImageTool(unittest.TestCase):
+
+def setup_module(module):
+    from extra_foam import config
+    module._backup_ROOT_PATH = config.ROOT_PATH
+    config.ROOT_PATH = _tmp_cfg_dir
+
+
+def teardown_module(module):
+    os.rmdir(_tmp_cfg_dir)
+    from extra_foam import config
+    config.ROOT_PATH = module._backup_ROOT_PATH
+
+
+class TestImageTool(unittest.TestCase, _TestDataMixin):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
-        config.load('LPD')
-        config.set_topic("FXE")
+        config.load('LPD', 'FXE')
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
@@ -53,6 +64,8 @@ class TestImageTool(unittest.TestCase):
 
         wait_until_redis_shutdown()
 
+        os.remove(config.config_file)
+
     def setUp(self):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
@@ -64,14 +77,8 @@ class TestImageTool(unittest.TestCase):
         self.view.setImageData(None)
         self.view._image = None
 
-    def _get_data(self):
-        return {'detector': {
-                    'assembled': np.ones((4, 10, 10), np.float32),
-                    'pulse_slicer': slice(None, None)},
-                'processed': ProcessedData(1001)}
-
     def testGeneral(self):
-        self.assertEqual(9, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(10, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
 
@@ -99,7 +106,7 @@ class TestImageTool(unittest.TestCase):
 
     def testRoiCtrlWidget(self):
         roi_ctrls = self.image_tool._corrected_view._roi_ctrl_widget._roi_ctrls
-        proc = self.pulse_worker._roi_proc
+        proc = self.pulse_worker._image_roi
         self.assertEqual(4, len(roi_ctrls))
 
         proc.update()
@@ -207,7 +214,7 @@ class TestImageTool(unittest.TestCase):
         corrected = self.image_tool._reference_view._corrected
         proc = self.pulse_worker._image_proc
 
-        data = self._get_data()
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # test setting reference (no image)
         QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
@@ -268,13 +275,13 @@ class TestImageTool(unittest.TestCase):
 
         pub = ImageMaskPub()
         proc = self.pulse_worker._image_proc
-        data = self._get_data()
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # trigger the lazily evaluated subscriber
         proc.process(data)
         self.assertIsNone(proc._image_mask)
 
-        mask_gt = np.zeros(data['detector']['assembled'].shape[-2:], dtype=np.bool)
+        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
 
         pub.add((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
@@ -503,7 +510,7 @@ class TestImageTool(unittest.TestCase):
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -522,12 +529,34 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual(RoiFom.MEDIAN, proc._fom_type)
         self.assertEqual(Normalizer.ROI, proc._fom_norm)
 
+    def testRoiHistCtrl(self):
+        widget = self.image_tool._corrected_view._roi_hist_ctrl_widget
+        avail_combos = {value: key for key, value in widget._available_combos.items()}
+
+        proc = self.pulse_worker._image_roi
+        proc.update()
+
+        # test default reconfigurable values
+        self.assertEqual(RoiCombo.UNDEFINED, proc._hist_combo)
+        self.assertEqual(10, proc._hist_n_bins)
+        self.assertTupleEqual((0.001, math.inf), proc._hist_bin_range)
+
+        # test setting new values
+        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
+        widget._n_bins_le.setText("100")
+        widget._bin_range_le.setText("-1.0, 10.0")
+        proc.update()
+
+        self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._hist_combo)
+        self.assertEqual(100, proc._hist_n_bins)
+        self.assertEqual((-1.0, 10.0), proc._hist_bin_range)
+
     def testRoiNormCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_norm_ctrl_widget
         avail_combos = {value: key for key, value in widget._available_combos.items()}
         avail_types = {value: key for key, value in widget._available_types.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -548,7 +577,7 @@ class TestImageTool(unittest.TestCase):
         avail_norms = {value: key for key, value in widget._available_norms.items()}
         avail_combos = {value: key for key, value in widget._available_combos.items()}
 
-        proc = self.train_worker._roi_proc
+        proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
@@ -572,24 +601,40 @@ class TestImageTool(unittest.TestCase):
         self.assertEqual((30, 40), proc._proj_auc_range)
 
     def testGeometryCtrlWidget(self):
-        from karabo_data.geometry2 import LPD_1MGeometry
+        from extra_geom import LPD_1MGeometry as LPD_1MGeometry
+        from extra_foam.geometries import LPD_1MGeometryFast
+        from extra_foam.config import GeomAssembler
 
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
 
-        pulse_worker = self.pulse_worker
+        proc = self.pulse_worker._assembler
 
-        widget._geom_file_le.setText(config["GEOMETRY_FILE"])
+        # test default
         self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsInstance(pulse_worker._assembler._geom, LPD_1MGeometry)
+        proc.update()
+        self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
+        self.assertFalse(proc._stack_only)
+        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
 
-        widget._with_geometry_cb.setChecked(False)
-        self.assertTrue(widget.updateMetaData())
-        pulse_worker._assembler.update()
-        self.assertIsNone(pulse_worker._assembler._geom)
+        # test assembler
+        avail_assemblers = {value: key for key, value in widget._assemblers.items()}
+        widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
+        proc.update()
+        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
+
+        # test stack only
+        widget._stack_only_cb.setChecked(True)
+        proc.update()
+        self.assertTrue(proc._stack_only)
+        # when "stack only" is checked, "assembler type" setup will be ignored
+        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
+
+        # test geometry file
+        widget._geom_file_le.setText("/geometry/file/")
+        self.assertFalse(widget.updateMetaData())
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
@@ -611,10 +656,10 @@ class TestImageTool(unittest.TestCase):
         self.assertFalse(record_btn.isChecked())
 
         # switch to "azimuthal integration 1D"
-        self.assertEqual('0', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('0', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
         tab.tabBarClicked.emit(TabIndex.AZIMUTHAL_INTEG_1D)
         tab.setCurrentIndex(TabIndex.AZIMUTHAL_INTEG_1D)
-        self.assertEqual('1', self._meta.hget(self._meta.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
+        self.assertEqual('1', self._meta.hget(Metadata.ANALYSIS_TYPE, AnalysisType.AZIMUTHAL_INTEG))
 
         # switch to "geometry"
         tab.tabBarClicked.emit(TabIndex.GEOMETRY)
@@ -624,11 +669,7 @@ class TestImageTool(unittest.TestCase):
 class TestImageToolTs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # do not use the config file in the current computer
-        _Config._filename = os.path.join(tempfile.mkdtemp(), "config.json")
-        ConfigWrapper()  # ensure file
-        config.load('JungFrau')
-        config.set_topic("FXE")
+        config.load('JungFrau', 'FXE')
 
         cls.foam = Foam().init()
         cls.gui = cls.foam._gui
@@ -643,6 +684,8 @@ class TestImageToolTs(unittest.TestCase):
         cls.foam.terminate()
 
         wait_until_redis_shutdown()
+
+        os.remove(config.config_file)
 
     def setUp(self):
         # construct a fresh ImageToolWindow for each test
@@ -666,6 +709,10 @@ class TestImageToolTs(unittest.TestCase):
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
 
+    def testCalibrationCtrlWidget(self):
+        widget = self.image_tool._gain_offset_view._ctrl_widget
+        self.assertFalse(widget._gain_slicer_le.isEnabled())
+        self.assertFalse(widget._offset_slicer_le.isEnabled())
 
 if __name__ == '__main__':
     unittest.main()

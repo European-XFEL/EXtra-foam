@@ -205,7 +205,7 @@ class FileStreamControllerWindow(_AbstractSatelliteWindow):
         else:
             cfg = self._meta.hget_all(mt.CONNECTION)
             try:
-                port = cfg['endpoint'].split(':')[-1]
+                port = list(cfg.keys())[0].split(':')[-1]
             except KeyError as e:
                 logger.error(repr(e))
                 return

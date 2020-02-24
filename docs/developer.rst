@@ -23,30 +23,40 @@ or
 
 .. code-block:: bash
 
-    $ python setup.py build_ext --inplace
+    $ python setup.py build_ext --with-tests --inplace
 
-Then, run the Python unittest:
+Then, run the both C++ and Python unittests:
+
+.. code-block:: bash
+
+    $ python setup.py test
+
+To only run the Python unittest:
 
 .. code-block:: bash
 
     $ python -m pytest extra_foam -v -s
 
-
-To build and run the c++ unittest (we use GoogleTest_):
+To build and run the c++ unittest only (we use GoogleTest_):
 
 .. code-block:: bash
 
     $ mkdir build && cd build
     $ cmake -DBUILD_FOAM_TESTS .. && make ftest
 
+To run the Python benchmark:
+
+.. code-block:: bash
+
+    $ python setup.py benchmark
 
 
 Release **EXtra-foam**
 """"""""""""""""""""""
 
-- Update the **ChangeLog** in the `documentation` branch;
-- Update the version number in `docs/conf.py` and `extra_foam/__init__.py`;
-- Merge the `documentation` branch into the `dev` branch;
+- Update the **changeLog**;
+- Update the version number in `extra_foam/__init__.py`;
+- Merge the above change into the `dev` branch;
 - Merge the `dev` branch into the `master` branch;
 - Tag the `master` branch.
 
@@ -65,13 +75,10 @@ versions of **EXtra-foam**
      - Deployment environment
 
    * - Latest
-     - exfel_anaconda3/beta.
+     - EXtra-foam/beta
 
    * - Stable
-     - extra_foam
-
-   * - some-feature-branch (only for developers to test new features)
-     - extra_foam/beta
+     - EXtra-foam
 
 
 .. code-block:: console

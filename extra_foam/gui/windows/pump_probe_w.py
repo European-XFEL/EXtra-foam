@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QSplitter
 
 from .base_window import _AbstractPlotWindow
 from ..plot_widgets import ImageViewF, PlotWidgetF, TimedPlotWidgetF
-from ..misc_widgets import make_brush, make_pen
+from ..misc_widgets import FColor
 from ...config import config, AnalysisType, plot_labels
 
 
@@ -76,10 +76,10 @@ class PumpProbeVFomPlot(PlotWidgetF):
 
         self._is_diff = diff
         if diff:
-            self._on_off_pulse = self.plotCurve(name="On - Off", pen=make_pen("p"))
+            self._on_off_pulse = self.plotCurve(name="On - Off", pen=FColor.mkPen("p"))
         else:
-            self._on_pulse = self.plotCurve(name="On", pen=make_pen("r"))
-            self._off_pulse = self.plotCurve(name="Off", pen=make_pen("b"))
+            self._on_pulse = self.plotCurve(name="On", pen=FColor.mkPen("r"))
+            self._off_pulse = self.plotCurve(name="Off", pen=FColor.mkPen("b"))
 
     def updateF(self, data):
         """Override."""
@@ -118,7 +118,7 @@ class PumpProbeFomPlot(TimedPlotWidgetF):
         self.setLabel('left', "FOM (arb. u.)")
         self.setTitle('FOM correlation')
 
-        self._plot = self.plotScatter(brush=make_brush('g'))
+        self._plot = self.plotScatter()
 
     def refresh(self):
         """Override."""
@@ -131,7 +131,7 @@ class PumpProbeWindow(_AbstractPlotWindow):
     """PumpProbeWindow class."""
     _title = "Pump-probe"
 
-    _TOTAL_W, _TOTAL_H = config['GUI']['PLOT_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = config['GUI_PLOT_WINDOW_SIZE']
 
     def __init__(self, *args, **kwargs):
         """Initialization."""

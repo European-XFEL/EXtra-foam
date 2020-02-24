@@ -33,7 +33,7 @@ def compute_q(dist, x, e):
     :param float dist: distance from the sample to the detector plane
                        (orthogonal distance, not along the beam), in meter.
     :param float x: distance to the azimuthal integration center, in meter.
-    :param float energy: photon energy in eV.
+    :param float e: photon energy in eV.
 
     :return: momentum transfer in 1/m.
     """

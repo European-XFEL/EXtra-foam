@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+from collections.abc import MutableSet
 
 
 class Stack:
@@ -34,3 +36,38 @@ class Stack:
 
     def __len__(self):
         return len(self.__items)
+
+
+class OrderedSet(MutableSet):
+    def __init__(self, sequence=None):
+        super().__init__()
+
+        if sequence is None:
+            self._data = OrderedDict()
+        else:
+            kwargs = {v: 1 for v in sequence}
+            self._data = OrderedDict(**kwargs)
+
+    def __contains__(self, item):
+        """Override."""
+        return self._data.__contains__(item)
+
+    def __iter__(self):
+        """Override."""
+        return self._data.__iter__()
+
+    def __len__(self):
+        """Override."""
+        return self._data.__len__()
+
+    def add(self, item):
+        """Override."""
+        self._data.__setitem__(item, 1)
+
+    def discard(self, item):
+        """Override."""
+        if item in self._data:
+            self._data.__delitem__(item)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({list(self._data.keys())})"

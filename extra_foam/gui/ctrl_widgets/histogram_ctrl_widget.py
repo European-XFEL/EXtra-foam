@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
-from .smart_widgets import SmartLineEdit
+from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ...config import AnalysisType
 
 
@@ -35,10 +35,16 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._analysis_type_cb.addItems(self._analysis_types.keys())
 
         self._pulse_resolved_cb = QCheckBox("Pulse resolved")
-        self._pulse_resolved_cb.setChecked(True)
+        if self._pulse_resolved:
+            self._pulse_resolved_cb.setChecked(True)
+        else:
+            self._pulse_resolved_cb.setChecked(False)
+            self._pulse_resolved_cb.setEnabled(False)
 
         self._n_bins_le = SmartLineEdit("10")
-        self._n_bins_le.setValidator(QIntValidator(1, 10000))
+        self._n_bins_le.setValidator(QIntValidator(1, 999))
+
+        self._bin_range_le = SmartBoundaryLineEdit("-Inf, Inf")
 
         self._reset_btn = QPushButton("Reset")
 
@@ -52,16 +58,16 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout = QGridLayout()
         AR = Qt.AlignRight
 
-        layout.addWidget(QLabel("Analysis type: "), 0, 0, AR)
-        layout.addWidget(self._analysis_type_cb, 0, 1)
-        layout.addWidget(QLabel("# of bins: "), 0, 2, AR)
-        layout.addWidget(self._n_bins_le, 0, 3)
         layout.addWidget(self._pulse_resolved_cb, 0, 4, AR)
-        if not self._pulse_resolved:
-            self._pulse_resolved_cb.setChecked(False)
-            self._pulse_resolved_cb.setEnabled(False)
-
         layout.addWidget(self._reset_btn, 0, 5, AR)
+
+        layout.addWidget(QLabel("Analysis type: "), 1, 0, AR)
+        layout.addWidget(self._analysis_type_cb, 1, 1)
+        layout.addWidget(QLabel("Bin range: "), 1, 2, AR)
+        layout.addWidget(self._bin_range_le, 1, 3)
+        layout.addWidget(QLabel("# of bins: "), 1, 4, AR)
+        layout.addWidget(self._n_bins_le, 1, 5)
+
         self.setLayout(layout)
 
     def initConnections(self):
@@ -71,6 +77,8 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._analysis_type_cb.currentTextChanged.connect(
             lambda x: mediator.onHistAnalysisTypeChange(
                 self._analysis_types[x]))
+        self._bin_range_le.value_changed_sgn.connect(
+            mediator.onHistBinRangeChange)
         self._n_bins_le.returnPressed.connect(
             lambda: mediator.onHistNumBinsChange(self._n_bins_le.text()))
         self._pulse_resolved_cb.toggled.connect(
@@ -82,8 +90,8 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
+        self._bin_range_le.returnPressed.emit()
         self._n_bins_le.returnPressed.emit()
         self._pulse_resolved_cb.toggled.emit(
             self._pulse_resolved_cb.isChecked())
-
         return True

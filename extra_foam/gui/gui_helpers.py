@@ -45,7 +45,7 @@ def parse_boundary(text):
     return ret[0], ret[1]
 
 
-def parse_ids(text):
+def parse_id(text):
     """Parse a string into a list of integers.
 
     :param str text: the input string.
@@ -58,23 +58,23 @@ def parse_ids(text):
 
     Input IDs separated by comma:
 
-    parse_ids("1, 2, 3") == [1, 2, 3]
-    parse_ids("1, 2, ,3") == [1, 2, 3]
-    parse_ids("1, 1, ,1") == [1]
+    parse_id("1, 2, 3") == [1, 2, 3]
+    parse_id("1, 2, ,3") == [1, 2, 3]
+    parse_id("1, 1, ,1") == [1]
 
     Range-based input:
 
-    parse_ids("0:5") == [0, 1, 2, 3, 4]
-    parse_ids("0:5:2") == [0, 2, 4]
+    parse_id("0:5") == [0, 1, 2, 3, 4]
+    parse_id("0:5:2") == [0, 2, 4]
 
     Combination of the above two styles:
 
-    parse_ids("1:3, 5") == [1, 2, 5]
+    parse_id("1:3, 5") == [1, 2, 5]
 
     ":" means all the pulses in a train. The indices list will be generated
     after data is received.
 
-    parse_ids(":") == [-1]
+    parse_id(":") == [-1]
     """
     def parse_item(v):
         if not v:

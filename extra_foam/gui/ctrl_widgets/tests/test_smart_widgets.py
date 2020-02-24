@@ -5,7 +5,7 @@ from PyQt5.QtCore import Qt
 
 from extra_foam.gui import mkQApp
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
-    SmartLineEdit, SmartBoundaryLineEdit, SmartRangeLineEdit,
+    SmartLineEdit, SmartBoundaryLineEdit, SmartIdLineEdit,
     SmartSliceLineEdit, SmartStringLineEdit
 )
 from extra_foam.logger import logger
@@ -101,13 +101,13 @@ class TestSmartLineEdit(unittest.TestCase):
         self.assertEqual("0, 2", widget._cached)
         self.assertEqual(2, len(spy))
 
-    def testSmartRangeLineEdit(self):
+    def testSmartIdLineEdit(self):
         # test initialization with invalid content
         with self.assertRaises(ValueError):
-            SmartRangeLineEdit("0:10:")
+            SmartIdLineEdit("0:10:")
 
         # test initialization
-        widget = SmartRangeLineEdit("0:10:1")
+        widget = SmartIdLineEdit("0:10:1")
         self.assertEqual("0:10:1", widget._cached)
         spy = QSignalSpy(widget.value_changed_sgn)
         self.assertEqual(0, len(spy))
@@ -141,7 +141,7 @@ class TestSmartLineEdit(unittest.TestCase):
             SmartSliceLineEdit("")
 
         # test initialization
-        widget = SmartRangeLineEdit("0:10:1")
+        widget = SmartIdLineEdit("0:10:1")
         self.assertEqual("0:10:1", widget._cached)
         spy = QSignalSpy(widget.value_changed_sgn)
         self.assertEqual(0, len(spy))

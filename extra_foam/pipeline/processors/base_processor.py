@@ -10,13 +10,16 @@ All rights reserved.
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from collections.abc import Sequence
+import math
 
 import numpy as np
 
-from ..exceptions import ProcessingError
+from ..exceptions import (
+    ProcessingError, SkipTrainError, UnknownParameterError
+)
 from ...database import MetaProxy
 from ...algorithms import normalize_auc
-from ...config import AnalysisType, Normalizer
+from ...config import AnalysisType, config, Normalizer
 
 
 class State(ABC):
@@ -147,6 +150,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
     """Data processor interface."""
 
     def __init__(self):
+        self._pulse_resolved = config["PULSE_RESOLVED"]
+
         self._meta = MetaProxy()
 
     def _update_analysis(self, analysis_type, *, register=True):
@@ -158,7 +163,7 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
         :return: True if the analysis type has changed and False for not.
         """
         if not isinstance(analysis_type, AnalysisType):
-            raise ProcessingError(
+            raise UnknownParameterError(
                 f"Unknown analysis type: {str(analysis_type)}")
 
         if analysis_type != self.analysis_type:
@@ -222,6 +227,18 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 raise ProcessingError("XGM normalizer is zero!")
 
             normalized = y / denominator
+        elif normalizer == Normalizer.DIGITIZER:
+            # normalized by DIGITIZER
+            channel = processed.pulse.digitizer.ch_normalizer
+            pulse_integral = processed.pulse.digitizer[channel].pulse_integral
+            if pulse_integral is None:
+                raise ProcessingError("Digitizer normalizer is not available!")
+            denominator = np.mean(pulse_integral)
+
+            if denominator == 0:
+                raise ProcessingError("Digitizer normalizer is zero!")
+
+            normalized = y / denominator
         elif normalizer == Normalizer.ROI:
             # normalized by ROI
             denominator = processed.roi.norm
@@ -235,7 +252,8 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized = y / denominator
 
         else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            raise UnknownParameterError(
+                f"Unknown normalizer: {repr(normalizer)}")
 
         return normalized
 
@@ -255,13 +273,14 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             return y_on, y_off
 
         if normalizer == Normalizer.AUC:
-            # normalized by area under curve (AUC)
+            # normalized by AUC
             normalized_on = normalize_auc(y_on, x, auc_range)
             normalized_off = normalize_auc(y_off, x, auc_range)
+
         elif normalizer == Normalizer.XGM:
             # normalized by XGM
-            denominator_on = processed.xgm.on.intensity
-            denominator_off = processed.xgm.off.intensity
+            denominator_on = processed.pp.on.xgm_intensity
+            denominator_off = processed.pp.off.xgm_intensity
 
             if denominator_on is None or denominator_off is None:
                 raise ProcessingError("XGM normalizer is not available!")
@@ -275,10 +294,27 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized_on = y_on / denominator_on
             normalized_off = y_off / denominator_off
 
+        elif normalizer == Normalizer.DIGITIZER:
+            # normalized by Digitizer
+            denominator_on = processed.pp.on.digitizer_pulse_integral
+            denominator_off = processed.pp.off.digitizer_pulse_integral
+
+            if denominator_on is None or denominator_off is None:
+                raise ProcessingError("Digitizer normalizer is not available!")
+
+            if denominator_on == 0:
+                raise ProcessingError("Digitizer normalizer (on) is zero!")
+
+            if denominator_off == 0:
+                raise ProcessingError("Digitizer normalizer (off) is zero!")
+
+            normalized_on = y_on / denominator_on
+            normalized_off = y_off / denominator_off
+
         elif normalizer == Normalizer.ROI:
             # normalized by ROI
-            denominator_on = processed.pp.roi_norm_on
-            denominator_off = processed.pp.roi_norm_off
+            denominator_on = processed.pp.on.roi_norm
+            denominator_off = processed.pp.off.roi_norm
 
             if denominator_on is None:
                 raise ProcessingError("ROI normalizer (on) is not available!")
@@ -296,42 +332,71 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             normalized_off = y_off / denominator_off
 
         else:
-            raise ProcessingError(f"Unknown normalizer: {repr(normalizer)}")
+            raise UnknownParameterError(
+                f"Unknown normalizer: {repr(normalizer)}")
 
         return normalized_on, normalized_off
 
     @staticmethod
-    def _fetch_property_data(tid, raw, src_name, ppt):
+    def _fetch_property_data(tid, raw, src):
         """Fetch property data from raw data.
 
         :param int tid: train ID.
         :param dict raw: raw data.
-        :param str src_name: device ID.
-        :param str ppt: property name.
+        :param str src: source.
 
         :returns (value, error str)
         """
-        if not src_name or not ppt:
+        if not src:
             # not activated is not an error
             return None, ""
 
-        if src_name == "Any":
-            return tid, ""
-        else:
-            try:
-                device_data = raw[src_name]
-            except KeyError:
-                return None, f"[{tid}] source '{src_name}' is not in the data!"
+        try:
+            return raw[src], ""
+        except KeyError:
+            return None, f"[{tid}] '{src}' not found!"
 
-            ppt_orig = ppt
-            try:
-                if ppt not in device_data:
-                    # instrument data from file
-                    ppt += '.value'
-                return device_data[ppt], ""
-            except KeyError:
-                return None, f"[{tid}] '{src_name}' does not contain " \
-                             f"property '{ppt_orig}'"
+    @staticmethod
+    def filter_train_by_vrange(v, src, catalog):
+        """Filter a train by train-resolved value.
+
+        :param float v: value of a control data.
+        :param str src: data source.
+        :param SourceCatalog catalog: source catalog.
+        """
+        vrange = catalog.get_vrange(src)
+        if vrange is not None:
+            lb, ub = vrange
+            if v > ub or v < lb:
+                raise SkipTrainError(f"<{src}> value {v:.4e} is "
+                                     f"out of range [{lb}, {ub}]")
+
+    @staticmethod
+    def filter_pulse_by_vrange(arr, src, index_mask, catalog):
+        """Filter pulses in a train by pulse-resolved value.
+
+        :param numpy.array arr: pulse-resolved values of control data
+            in a train.
+        :param str src: data source.
+        :param PulseIndexMask index_mask: pulse index msk
+        :param SourceCatalog catalog: source catalog.
+        """
+        vrange = catalog.get_vrange(src)
+        if vrange is not None:
+            lb, ub = vrange
+
+            if not math.isinf(lb) and not math.isinf(ub):
+                for i, v in enumerate(arr):
+                    if v > ub or v < lb:
+                        index_mask.mask(i)
+            elif not math.isinf(lb):
+                for i, v in enumerate(arr):
+                    if v < lb:
+                        index_mask.mask(i)
+            elif not math.isinf(ub):
+                for i, v in enumerate(arr):
+                    if v > ub:
+                        index_mask.mask(i)
 
 
 class _AbstractSequence(Sequence):
