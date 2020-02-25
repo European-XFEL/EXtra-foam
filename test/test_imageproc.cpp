@@ -81,7 +81,7 @@ TEST(TestMaskImageData, Test2DRaw)
   testMaskImageData(maskNanImageData<xt::xtensor<float, 2>>, nan);
 }
 
-TEST(TestMaskZeroImageData, Test2DThresholdMask)
+TEST(TestMaskImageData, Test2DThresholdMask)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
 
@@ -97,7 +97,7 @@ TEST(TestMaskZeroImageData, Test2DThresholdMask)
   testMaskImageData(maskNanImageData<xt::xtensor<float, 2>, float>, nan);
 }
 
-TEST(TestMaskZeroImageData, Test2DImageMask)
+TEST(TestMaskImageData, Test2DImageMask)
 {
   auto nan = std::numeric_limits<float>::quiet_NaN();
 
@@ -143,6 +143,38 @@ TEST(TestMaskImageData, Test2DBothMask)
 
   testMaskImageData(maskZeroImageData<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, 0.0);
   testMaskImageData(maskNanImageData<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, nan);
+}
+
+TEST(TestMaskImageDataAndReturnMask, TestWithoutThreshold)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
+
+  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+  EXPECT_THROW(maskImageData(img, mask_w), std::invalid_argument);
+
+  xt::xtensor<bool, 2> mask {{false, true, true}, {false, true, false}};
+  maskImageData(img, mask);
+  EXPECT_THAT(img, ElementsAre(1.f, nan_mt, nan_mt, 4.f, nan_mt, nan_mt));
+  EXPECT_THAT(mask, ElementsAre(false, true, true, false, true, true));
+}
+
+TEST(TestMaskImageDataAndReturnMask, TestWithThreshold)
+{
+  auto nan = std::numeric_limits<float>::quiet_NaN();
+  auto nan_mt = NanSensitiveFloatEq(nan);
+
+  xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
+
+  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+  EXPECT_THROW(maskImageData(img, mask_w, 2, 4), std::invalid_argument);
+
+  xt::xtensor<bool, 2> mask {{false, true, true}, {false, true, false}};
+  maskImageData(img, mask, 2, 4);
+  EXPECT_THAT(img, ElementsAre(nan_mt, nan_mt, nan_mt, 4.f, nan_mt, nan_mt));
+  EXPECT_THAT(mask, ElementsAre(true, true, true, false, true, true));
 }
 
 TEST(TestMaskImageData, Test3DRaw)

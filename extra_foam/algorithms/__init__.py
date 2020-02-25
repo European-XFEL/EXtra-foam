@@ -7,6 +7,8 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import numpy as np
+
 from .miscellaneous import (
     compute_statistics, find_actual_range, normalize_auc
 )
@@ -17,7 +19,8 @@ from .azimuthal_integ import compute_q, energy2wavelength
 from .helpers import intersection
 
 from .imageproc import (
-    nanmeanImageArray, movingAvgImageData, maskNanImageData, maskZeroImageData,
+    nanmeanImageArray, movingAvgImageData,
+    maskImageData, maskNanImageData, maskZeroImageData,
     correctGain, correctOffset, correctGainOffset
 )
 
@@ -90,3 +93,31 @@ def mask_image_data(image_data, *,
         f(image_data, image_mask)
     else:
         f(image_data, image_mask, *threshold_mask)
+
+
+def image_with_mask(image_data, mask=None, *, threshold_mask=None):
+    """Mask both image data and mask.
+
+    :param numpy.ndarray image_data: image to be masked.
+        Shape = (y, x) or (indices, y, x)
+    :param numpy.ndarray/None mask: image mask, which has the same
+        shape as the image. If image mask is given, it will be modified
+        inplace.
+    :param tuple/None threshold_mask: (min, max) of the threshold mask.
+    """
+    if mask is None and threshold_mask is None:
+        mask = np.zeros_like(image_data, dtype=np.bool)
+        maskImageData(image_data, mask)
+        return mask
+
+    if threshold_mask is None:
+        maskImageData(image_data, mask)
+        return mask
+
+    if mask is None:
+        mask = np.zeros_like(image_data, dtype=np.bool)
+        maskImageData(image_data, mask, *threshold_mask)
+        return mask
+
+    maskImageData(image_data, mask, *threshold_mask)
+    return mask

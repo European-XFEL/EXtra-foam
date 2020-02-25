@@ -109,6 +109,20 @@ PYBIND11_MODULE(imageproc, m)
                              &maskZeroImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
                              py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
 
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, xt::pytensor<bool, 2>&))
+                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert());
+
+  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, xt::pytensor<bool, 2>&, double, double))
+                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, xt::pytensor<bool, 2>&, float, float))
+                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
+                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+
   m.def("maskNanImageData", &maskNanImageData<xt::pytensor<double, 2>>, py::arg("src").noconvert());
   m.def("maskNanImageData", &maskNanImageData<xt::pytensor<float, 2>>, py::arg("src").noconvert());
 

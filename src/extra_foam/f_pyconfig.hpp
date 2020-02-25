@@ -16,6 +16,9 @@ namespace foam
 template<typename T, xt::layout_type L>
 struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
 
+template<xt::layout_type L>
+struct IsImageMask<xt::pytensor<bool, 2, L>> : std::true_type {};
+
 template<typename T, xt::layout_type L>
 struct IsImageArray<xt::pytensor<T, 3, L>> : std::true_type {};
 

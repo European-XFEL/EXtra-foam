@@ -174,7 +174,7 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
 }
 
 /**
- * Inplace converting nan to 0 for an image.
+ * Inplace convert nan to 0 in an image.
  *
  * @param src: image data. shape = (y, x)
  */
@@ -202,7 +202,7 @@ template <typename E, EnableIf<E, IsImage> = false>
 inline void maskNanImageData(E& src) {}
 
 /**
- * Inplace masking an image to 0 by threshold inplace. Nan pixels in
+ * Inplace mask an image to 0 using threshold. Nan pixels in
  * the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
@@ -227,7 +227,7 @@ inline void maskZeroImageData(E& src, T lb, T ub)
 }
 
 /**
- * Inplace masking an image to nan by threshold inplace.
+ * Inplace mask an image to nan using threshold.
  *
  * @param src: image data. shape = (y, x)
  * @param lb: lower threshold
@@ -251,16 +251,15 @@ inline void maskNanImageData(E& src, T lb, T ub)
   }
 }
 
-
 /**
- * Inplace masking an image to 0 by an image mask inplace. Nan pixels in
+ * Inplace mask an image to 0 using an image mask. Nan pixels in
  * the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
-  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
 inline void maskZeroImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -284,13 +283,13 @@ inline void maskZeroImageData(E& src, const M& mask)
 }
 
 /**
- * Inplace masking an image to nan by an image mask inplace.
+ * Inplace mask an image to nan using an image mask.
  *
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
-  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
 inline void maskNanImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -309,7 +308,7 @@ inline void maskNanImageData(E& src, const M& mask)
 }
 
 /**
- * Inplace masking an image to 0 by both threshold and an image mask inplace.
+ * Inplace mask an image to 0 using both threshold and an image mask.
  * Nan pixels in the image are also converted into 0.
  *
  * @param src: image data. shape = (y, x)
@@ -318,7 +317,7 @@ inline void maskNanImageData(E& src, const M& mask)
  * @param ub: upper threshold
  */
 template <typename E, typename M, typename T,
-  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
 inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -342,7 +341,7 @@ inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace masking an image to nan by both threshold and an image mask inplace.
+ * Inplace mask an image to nan by both threshold and an image mask.
  *
  * @param src: image data. shape = (y, x)
  * @param mask: image mask. shape = (y, x)
@@ -350,7 +349,7 @@ inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
  * @param ub: upper threshold
  */
 template <typename E, typename M, typename T,
-  EnableIf<E, IsImage> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
 inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -375,7 +374,7 @@ inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace converting nan to 0 for an array of images.
+ * Inplace convert nan to 0 in an array of images.
  *
  * @param src: image data. shape = (indices, y, x)
  */
@@ -415,7 +414,7 @@ template <typename E, EnableIf<E, IsImageArray> = false>
 inline void maskNanImageData(E& src) {}
 
 /**
- * Inplace masking an array of images by threshold inplace. Nan pixels in
+ * Inplace mask an array of images using threshold. Nan pixels in
  * those images are also converted into 0.
  *
  * @param src: image data. shape = (slices, y, x)
@@ -452,7 +451,7 @@ inline void maskZeroImageData(E& src, T lb, T ub)
 }
 
 /**
- * Inplace masking an array of images by threshold inplace.
+ * Inplace mask an array of images using threshold.
  *
  * @param src: image data. shape = (slices, y, x)
  * @param lb: lower threshold
@@ -490,14 +489,14 @@ inline void maskNanImageData(E& src, T lb, T ub)
 }
 
 /**
- * Inplace masking an array of images to 0 by an image mask inplace. Nan pixels in
+ * Inplace mask an array of images to 0 using an image mask. Nan pixels in
  * those images are also converted into 0.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
-  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImageMask> = false>
 inline void maskZeroImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -543,13 +542,13 @@ inline void maskZeroImageData(E& src, const M& mask)
 }
 
 /**
- * Inplace masking an array of images to nan by an image mask inplace.
+ * Inplace mask an array of images to nan using an image mask.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M,
-  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImageMask> = false>
 inline void maskNanImageData(E& src, const M& mask)
 {
   using value_type = typename E::value_type;
@@ -590,14 +589,14 @@ inline void maskNanImageData(E& src, const M& mask)
 }
 
 /**
- * Inplace masking an array of images to 0 by an image mask inplace. Nan pixels in
- * those images are also converted into 0.
+ * Inplace mask an array of images to 0 using both threshold and an image mask.
+ * Nan pixels in those images are also converted into 0.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M, typename T,
-  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImageMask> = false>
 inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -645,13 +644,13 @@ inline void maskZeroImageData(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace masking an array of images to nan by an image mask inplace.
+ * Inplace mask an array of images to nan using both threshold and an image mask.
  *
  * @param src: image data. shape = (indices, y, x)
  * @param mask: image mask. shape = (y, x)
  */
 template <typename E, typename M, typename T,
-  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImage> = false>
+  EnableIf<E, IsImageArray> = false, EnableIf<M, IsImageMask> = false>
 inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
 {
   using value_type = typename E::value_type;
@@ -700,7 +699,85 @@ inline void maskNanImageData(E& src, const M& mask, T lb, T ub)
 }
 
 /**
- * Inplace moving average of an image
+ * Inplace mask an image to nan using an image mask. The corresponding pixel
+ * in the given mask will be marked with true.
+ *
+ * This function is used to generate a mask at the same time when masking
+ * an image.
+ *
+ * @param src: image data. shape = (y, x)
+ */
+template <typename E, typename M,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
+inline void maskImageData(E& src, M& mask)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+
+  if (shape != mask.shape())
+    throw std::invalid_argument("Image and mask have different shapes!");
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      if (std::isnan(src(j, k)))
+      {
+        mask(j, k) = true;
+      } else if (mask(j, k))
+      {
+        src(j, k) = nan;
+      }
+    }
+  }
+}
+
+/**
+ * Inplace mask an image to nan using both threshold and an image mask.
+ * In the meanwhile, the corresponding pixel in the given image mask will
+ * be marked with true.
+ *
+ * This function is used to generate a mask at the same time when masking
+ * an image.
+ *
+ * @param src: image data. shape = (y, x)
+ * @param lb: lower threshold
+ * @param ub: upper threshold
+ */
+template <typename E, typename M, typename T,
+  EnableIf<E, IsImage> = false, EnableIf<M, IsImageMask> = false>
+inline void maskImageData(E& src, M& mask, T lb, T ub)
+{
+  using value_type = typename E::value_type;
+  auto shape = src.shape();
+
+  if (shape != mask.shape())
+    throw std::invalid_argument("Image and mask have different shapes!");
+
+  auto nan = std::numeric_limits<value_type>::quiet_NaN();
+  for (size_t j = 0; j < shape[0]; ++j)
+  {
+    for (size_t k = 0; k < shape[1]; ++k)
+    {
+      auto v = src(j, k);
+      if (mask(j, k))
+      {
+        src(j, k) = nan;
+      } else if (std::isnan(v))
+      {
+        mask(j, k) = true;
+      } else if (v < lb || v > ub)
+      {
+        mask(j, k) = true;
+        src(j, k) = nan;
+      }
+    }
+  }
+}
+
+/**
+ * Inplace apply moving average for an image
  *
  * @param src: moving average of image data. shape = (y, x)
  * @param data: new image data. shape = (y, x)
@@ -726,7 +803,7 @@ inline void movingAvgImageData(E& src, const E& data, size_t count)
 }
 
 /**
- * Inplace moving average of an array of images.
+ * Inplace apply moving average for an array of images.
  *
  * @param src: moving average of image data. shape = (indices, y, x)
  * @param data: new image data. shape = (indices, y, x)

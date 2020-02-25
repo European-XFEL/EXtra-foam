@@ -5,7 +5,8 @@ import pytest
 import numpy as np
 
 from extra_foam.algorithms import (
-    correct_image_data, mask_image_data, movingAvgImageData, nanmean_image_data
+    correct_image_data, image_with_mask, mask_image_data,
+    movingAvgImageData, nanmean_image_data
 )
 
 
@@ -304,6 +305,13 @@ class TestMaskImageData:
         np.testing.assert_array_equal(
             np.array([[mt, mt, mt], [mt, 4, mt]], dtype=np.float32), img)
 
+        # both masks
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, threshold_mask=(2, 3), keep_nan=keep_nan)
+        np.testing.assert_array_equal(
+            np.array([[mt, mt, mt], [mt, mt, mt]], dtype=np.float32), img)
+
         # ------------
         # train images
         # ------------
@@ -333,3 +341,63 @@ class TestMaskImageData:
         np.testing.assert_array_equal(np.array([[[mt, mt, 3], [mt, mt, mt]],
                                                 [[mt, mt, 3], [mt, mt, mt]]],
                                                dtype=np.float32), img)
+
+        # both masks
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 6], [3, np.nan, np.nan]]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, threshold_mask=(2, 4), keep_nan=keep_nan)
+        np.testing.assert_array_equal(np.array([[[mt, mt, 3], [mt, mt, mt]],
+                                                [[mt, mt, mt], [mt, mt, mt]]],
+                                               dtype=np.float32), img)
+
+    def testImageWithMask(self):
+        arr1d = np.ones(2, dtype=np.float32)
+        arr2d = np.ones((2, 2), dtype=np.float32)
+        arr3d = np.ones((2, 2, 2), dtype=np.float32)
+
+        with pytest.raises(TypeError):
+            image_with_mask(arr1d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr3d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr2d, mask=arr3d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr2d, mask=arr1d)
+
+        # raw
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask = image_with_mask(img)
+        np.testing.assert_array_equal(
+            np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[False, False, True], [False, False, False]], dtype=np.bool), mask)
+
+        # threshold mask
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask = image_with_mask(img, threshold_mask=(2, 3))
+        np.testing.assert_array_equal(
+            np.array([[np.nan, 2, np.nan], [3, np.nan, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, False, True], [False, True, True]], dtype=np.bool), mask)
+
+        # image mask
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask = image_with_mask(img, mask=img_mask)
+        np.testing.assert_array_equal(
+            np.array([[np.nan, np.nan, np.nan], [np.nan, 4, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, True, True], [True, False, True]], dtype=np.bool), mask)
+        assert img_mask is mask
+
+        # both masks
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 0, 0], [1, 0, 0]], dtype=np.bool)
+        mask = image_with_mask(img, mask=img_mask, threshold_mask=(2, 3))
+        np.testing.assert_array_equal(
+            np.array([[np.nan, 2, np.nan], [np.nan, np.nan, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, False, True], [True, True, True]], dtype=np.bool), mask)
+        assert img_mask is mask
