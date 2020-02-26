@@ -38,7 +38,8 @@ class PlotWidgetF(pg.GraphicsView):
     sigRangeChanged = pyqtSignal(object, object)
     sigTransformChanged = pyqtSignal(object)
 
-    def __init__(self, parent=None, background='default', **kargs):
+    def __init__(self, parent=None, *,
+                 background='default', show_indicator=False, **kargs):
         """Initialization."""
         super().__init__(parent, background=background)
         try:
@@ -49,9 +50,31 @@ class PlotWidgetF(pg.GraphicsView):
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
+
+        # pg.PlotItem is a QGraphicsWidget
         self._plot_item = pg.PlotItem(**kargs)
-        self._vb2 = None  # ViewBox for y2 axis
+        # set 'centralWidget' for GraphicsView and add the item to
+        # GraphicsScene
         self.setCentralItem(self._plot_item)
+
+        self._show_indicator = show_indicator
+        if show_indicator:
+            self._v_line = pg.InfiniteLine(angle=90, movable=False)
+            self._h_line = pg.InfiniteLine(angle=0, movable=False)
+            self._indicator = pg.TextItem(color=FColor.k)
+            self._v_line.hide()
+            self._h_line.hide()
+            self._indicator.hide()
+            self._plot_item.addItem(self._v_line, ignoreBounds=True)
+            self._plot_item.addItem(self._h_line, ignoreBounds=True)
+            self._plot_item.scene().addItem(self._indicator)
+
+            # rateLimit should be fast enough to be able to capture
+            # the leaveEvent
+            self._proxy = pg.SignalProxy(self._plot_item.scene().sigMouseMoved,
+                                         rateLimit=60, slot=self.onMouseMoved)
+
+        self._vb2 = None  # ViewBox for y2 axis
 
         self._plot_item.sigRangeChanged.connect(self.viewRangeChanged)
 
@@ -64,7 +87,11 @@ class PlotWidgetF(pg.GraphicsView):
     def reset(self):
         """Clear the data of all the items in the PlotItem object."""
         for item in self._plot_item.items:
-            item.setData([], [])
+            try:
+                item.setData([], [])
+            except TypeError:
+                # FIXME: better solution
+                pass
 
     @abc.abstractmethod
     def updateF(self, data):
@@ -179,6 +206,32 @@ class PlotWidgetF(pg.GraphicsView):
 
     def restoreState(self, state):
         return self._plot_item.restoreState(state)
+
+    def onMouseMoved(self, ev):
+        pos = ev[0]
+        y_shift = 45  # move text to the top of the mouse cursor
+        self._indicator.setPos(pos.x(), pos.y() - y_shift)
+
+        m_pos = self._plot_item.vb.mapSceneToView(pos)
+        x, y = m_pos.x(), m_pos.y()
+        self._v_line.setPos(x)
+        self._h_line.setPos(y)
+
+        self._indicator.setText(f"x={x}\ny={y}")
+
+    def enterEvent(self, ev):
+        """Override."""
+        if self._show_indicator:
+            self._v_line.show()
+            self._h_line.show()
+            self._indicator.show()
+
+    def leaveEvent(self, ev):
+        """Override."""
+        if self._show_indicator:
+            self._v_line.hide()
+            self._h_line.hide()
+            self._indicator.hide()
 
     def closeEvent(self, QCloseEvent):
         parent = self.parent()
