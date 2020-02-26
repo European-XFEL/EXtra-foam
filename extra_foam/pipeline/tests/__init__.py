@@ -4,6 +4,8 @@ import numpy as np
 
 from extra_foam.database import SourceCatalog, SourceItem
 from extra_foam.pipeline.data_model import ImageData, ProcessedData
+from extra_foam.pipeline.processors.base_processor import (
+    SimplePairSequence, OneWayAccuPairSequence)
 from extra_foam.config import config, DataSource
 
 
@@ -121,7 +123,20 @@ class _TestDataMixin:
             hist.mean, hist.median, hist.std = 1., 0, 0.1
 
         if correlation:
-            pass
+            corr_resolution = 2
+            for i in range(2):
+                corr = processed.corr[i]
+                if i == 0:
+                    data = SimplePairSequence()
+                else:
+                    data = OneWayAccuPairSequence(corr_resolution)
+
+                for j in range(5):
+                    data.append((j, 5 * j))
+
+                corr.x, corr.y = data.data()
+                corr.source = f"abc - {i}"
+                corr.resolution = 0 if i == 0 else corr_resolution
 
         if binning:
             pass

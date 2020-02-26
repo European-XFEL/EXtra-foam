@@ -65,7 +65,7 @@ class PumpProbeVFomPlot(PlotWidgetF):
         :param bool diff: True for displaying on-off while False for
             displaying on and off
         """
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, show_indicator=True)
 
         self._analysis_type = AnalysisType.UNDEFINED
         x_label, y_label = plot_labels[self._analysis_type]
@@ -112,7 +112,7 @@ class PumpProbeFomPlot(TimedPlotWidgetF):
 
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, show_indicator=True)
 
         self.setLabel('bottom', "Train ID")
         self.setLabel('left', "FOM (arb. u.)")
