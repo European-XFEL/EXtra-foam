@@ -16,7 +16,7 @@ import numpy as np
 from ..config import config, AnalysisType, PumpProbeMode
 
 from extra_foam.algorithms import (
-    intersection, mask_image_data, movingAvgImageData, nanmean_image_data
+    intersection, movingAvgImageData, mask_image_data, nanmean_image_data
 )
 
 
@@ -356,11 +356,13 @@ class PumpProbeData(DataItem):
 
     class OnOff:
         """on/off quantity averaged over a train."""
-        __slots__ = ["roi_norm",
+        __slots__ = ["mask",
+                     "roi_norm",
                      "xgm_intensity",
                      "digitizer_pulse_integral"]
 
         def __init__(self):
+            self.mask = None
             self.roi_norm = None
             self.xgm_intensity = None
             self.digitizer_pulse_integral = None
@@ -415,11 +417,17 @@ class ImageData:
             the dark run. Shape = (y, x)
         n_dark_pulses (int): number of dark pulses in a dark train.
         dark_count (int): count of collected dark trains.
-        image_mask (numpy.ndarray): image mask with dtype=np.bool.
-        threshold_mask (tuple): (lower, upper) boundaries of the
-            threshold mask.
+        image_mask (numpy.ndarray): image mask. For pulse-resolved detectors,
+            this image mask is shared by all the pulses in a train. However,
+            their overall mask could still be different after applying the
+            threshold mask. Shape = (y, x), dtype = np.bool
+        threshold_mask (tuple): (lower, upper) of the threshold.
+            It should be noted that a pixel with value outside of the boundary
+            will be masked as Nan/0, depending on the masking policy.
         reference (numpy.ndarray): reference image.
         mean (numpy.ndarray): average image over the train.
+        mask (numpy.ndarray): overall mask for the average image.
+            Shape = (y, x), dtype = np.bool
         masked_mean (numpy.ndarray): average image over the train with
             threshold mask applied.
     """
@@ -444,6 +452,7 @@ class ImageData:
         self.reference = None
 
         self.mean = None
+        self.mask = None
         self.masked_mean = None
 
     @property
@@ -513,7 +522,8 @@ class ImageData:
         instance.masked_mean = instance.mean.copy()
         mask_image_data(instance.masked_mean,
                         image_mask=image_mask,
-                        threshold_mask=threshold_mask)
+                        threshold_mask=threshold_mask,
+                        keep_nan=True)
         instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
 

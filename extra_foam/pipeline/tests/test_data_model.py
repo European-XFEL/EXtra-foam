@@ -261,7 +261,7 @@ class TestImageData(unittest.TestCase):
 
         np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
                                       image_data.mean)
-        np.testing.assert_array_equal(np.array([[0., 0.], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[np.nan, np.nan], [1., 1.]]),
                                       image_data.masked_mean)
 
         self.assertIsNone(image_data.gain_mean)
@@ -283,7 +283,7 @@ class TestImageData(unittest.TestCase):
 
         np.testing.assert_array_equal(np.array([[2., 1.], [1., 1.]]),
                                       image_data.mean)
-        np.testing.assert_array_equal(np.array([[0., 1.], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[np.nan, 1.], [1., 1.]]),
                                       image_data.masked_mean)
 
         self.assertEqual((0, 1), image_data.threshold_mask)

@@ -20,11 +20,11 @@ from extra_foam.pipeline.tests import _TestDataMixin
 
 
 _handlers = {
-    RoiFom.SUM: np.sum,
-    RoiFom.MEAN: np.mean,
-    RoiFom.MEDIAN: np.median,
-    RoiFom.MAX: np.max,
-    RoiFom.MIN: np.min,
+    RoiFom.SUM: np.nansum,
+    RoiFom.MEAN: np.nanmean,
+    RoiFom.MEDIAN: np.nanmedian,
+    RoiFom.MAX: np.nanmax,
+    RoiFom.MIN: np.nanmin,
 }
 
 
@@ -117,40 +117,12 @@ class TestImageRoiPulse(_TestDataMixin):
             else:
                 np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
 
-    def testComputeHist(self):
-        proc = self._proc
-
-        # case 1
-        roi = np.array([[1, 2], [3, 6]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1, 3), 4)
-        np.testing.assert_array_equal([1, 0, 1, 1], hist)
-        np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
-        arr_gt = [1, 2, 3]
-        assert np.mean(arr_gt) == mean
-        assert np.median(arr_gt) == median
-        assert np.std(arr_gt) == pytest.approx(std)
-
-        # case 2 (the actual array is empty after filtering)
-        roi = np.array([[0, 0], [0, 0]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1, 3), 4)
-        np.testing.assert_array_equal([0, 0, 0, 0], hist)
-        assert np.isnan(mean)
-        assert np.isnan(median)
-        assert np.isnan(std)
-
-        # case 3 (elements in the actual array have the same value)
-        roi = np.array([[1, 0], [1, 0]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = proc._compute_hist(roi, (1e-6, 3), 4)
-        np.testing.assert_array_equal([0, 2, 0, 0], hist)
-        assert 1 == mean
-        assert 1 == median
-        assert 0 == std
-
     def testRoiHist(self):
         proc = self._proc
 
         mocked_return = 1, 1, 1, 1, 1
-        with patch.object(proc, "_compute_hist", return_value=mocked_return) as compute_hist:
+        with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
+                   return_value=mocked_return) as compute_hist:
             for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
                 data, processed = self._get_data(poi_indices=[0, 2])
                 proc._hist_combo = combo
@@ -307,7 +279,8 @@ class TestImageRoiTrain(_TestDataMixin):
         proc = self._proc
 
         mocked_return = 1, 1, 1, 1, 1
-        with patch.object(proc, "_compute_hist", return_value=mocked_return) as compute_hist:
+        with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
+                   return_value=mocked_return) as compute_hist:
             for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
                 data, processed = self._get_data()
                 proc._hist_combo = combo
@@ -360,7 +333,7 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_norm = Normalizer.UNDEFINED
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            y_gt = processed.image.masked_mean[s[0], s[1]].sum(axis=axis)
+            y_gt = np.nansum(processed.image.masked_mean[s[0], s[1]], axis=axis)
             np.testing.assert_array_equal(np.arange(len(y_gt)), processed.roi.proj.x)
             np.testing.assert_array_equal(y_gt, processed.roi.proj.y)
             assert np.sum(y_gt) == processed.roi.proj.fom
@@ -372,13 +345,14 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_norm = Normalizer.UNDEFINED
             proc.process(data)
             s1 = self._get_roi_slice(processed.roi.geom1.geometry)
-            y1_gt = processed.image.masked_mean[s1[0], s1[1]].sum(axis=axis)
+            roi1_gt = processed.image.masked_mean[s1[0], s1[1]]
             s2 = self._get_roi_slice(processed.roi.geom2.geometry)
-            y2_gt = processed.image.masked_mean[s2[0], s2[1]].sum(axis=axis)
+            roi2_gt = processed.image.masked_mean[s2[0], s2[1]]
             if proj_combo == RoiCombo.ROI1_SUB_ROI2:
-                y_gt = y1_gt - y2_gt
+                roi_gt = roi1_gt - roi2_gt
             else:
-                y_gt = y1_gt + y2_gt
+                roi_gt = roi1_gt + roi2_gt
+            y_gt = np.nansum(roi_gt, axis=axis)
             np.testing.assert_array_equal(np.arange(len(y_gt)), processed.roi.proj.x)
             np.testing.assert_array_almost_equal(y_gt, processed.roi.proj.y)
             np.testing.assert_array_almost_equal(np.sum(y_gt), processed.roi.proj.fom)
