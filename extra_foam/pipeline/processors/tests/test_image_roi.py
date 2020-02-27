@@ -137,8 +137,8 @@ class TestImageRoiPulse(_TestDataMixin):
 
         mocked_return = 1, 1, 1, 1, 1
         with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: True):
-            with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
-                       return_value=mocked_return) as compute_hist:
+            with patch("extra_foam.pipeline.processors.image_roi.nanhist_with_stats",
+                       return_value=mocked_return) as hist_with_stats:
                 for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2],
                                        ['_geom1', '_geom2']):
                     data, processed = self._get_data(poi_indices=[0, 2])
@@ -147,11 +147,11 @@ class TestImageRoiPulse(_TestDataMixin):
                     proc.process(data)
 
                     s = self._get_roi_slice(getattr(proc, geom))
-                    compute_hist.assert_called()
+                    hist_with_stats.assert_called()
                     # ROI of the second POI
                     roi_gt = data['assembled']['sliced'][2, s[0], s[1]]
-                    np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
-                    compute_hist.reset_mock()
+                    np.testing.assert_array_equal(roi_gt, hist_with_stats.call_args[0][0])
+                    hist_with_stats.reset_mock()
 
                     hist = processed.pulse.roi.hist
                     with pytest.raises(KeyError):
@@ -170,14 +170,14 @@ class TestImageRoiPulse(_TestDataMixin):
                     roi1_gt = data['assembled']['sliced'][2, s1[0], s1[1]]
                     s2 = self._get_roi_slice(proc._geom2)
                     roi2_gt = data['assembled']['sliced'][2, s2[0], s2[1]]
-                    compute_hist.assert_called()
+                    hist_with_stats.assert_called()
                     if fom_combo == RoiCombo.ROI1_SUB_ROI2:
                         np.testing.assert_array_equal(roi1_gt - roi2_gt,
-                                                      compute_hist.call_args[0][0])
+                                                      hist_with_stats.call_args[0][0])
                     else:
                         np.testing.assert_array_equal(roi1_gt + roi2_gt,
-                                                      compute_hist.call_args[0][0])
-                    compute_hist.reset_mock()
+                                                      hist_with_stats.call_args[0][0])
+                    hist_with_stats.reset_mock()
 
                     hist = processed.pulse.roi.hist
                     with pytest.raises(KeyError):
@@ -298,8 +298,8 @@ class TestImageRoiTrain(_TestDataMixin):
         proc = self._proc
 
         mocked_return = 1, 1, 1, 1, 1
-        with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
-                   return_value=mocked_return) as compute_hist:
+        with patch("extra_foam.pipeline.processors.image_roi.nanhist_with_stats",
+                   return_value=mocked_return) as hist_with_stats:
             for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
                 data, processed = self._get_data()
                 proc._hist_combo = combo
@@ -307,11 +307,11 @@ class TestImageRoiTrain(_TestDataMixin):
                 proc.process(data)
 
                 s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-                compute_hist.assert_called()
+                hist_with_stats.assert_called()
                 # ROI of the second POI
                 roi_gt = processed.image.masked_mean[s[0], s[1]]
-                np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
-                compute_hist.reset_mock()
+                np.testing.assert_array_equal(roi_gt, hist_with_stats.call_args[0][0])
+                hist_with_stats.reset_mock()
 
                 hist = processed.roi.hist
 
@@ -326,12 +326,12 @@ class TestImageRoiTrain(_TestDataMixin):
                 roi1_gt = processed.image.masked_mean[s1[0], s1[1]]
                 s2 = self._get_roi_slice(processed.roi.geom2.geometry)
                 roi2_gt = processed.image.masked_mean[s2[0], s2[1]]
-                compute_hist.assert_called()
+                hist_with_stats.assert_called()
                 if fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                    np.testing.assert_array_equal(roi1_gt - roi2_gt, compute_hist.call_args[0][0])
+                    np.testing.assert_array_equal(roi1_gt - roi2_gt, hist_with_stats.call_args[0][0])
                 else:
-                    np.testing.assert_array_equal(roi1_gt + roi2_gt, compute_hist.call_args[0][0])
-                compute_hist.reset_mock()
+                    np.testing.assert_array_equal(roi1_gt + roi2_gt, hist_with_stats.call_args[0][0])
+                hist_with_stats.reset_mock()
 
                 hist = processed.roi.hist
 

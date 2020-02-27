@@ -7,8 +7,9 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from .statistics import (
-    compute_roi_hist, compute_statistics, find_actual_range
+from .statistics_py import (
+    hist_with_stats, nanhist_with_stats, compute_statistics, find_actual_range,
+    nanmean, nansum
 )
 
 from .miscellaneous import (

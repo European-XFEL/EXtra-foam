@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from ...algorithms import compute_roi_hist, slice_curve
+from ...algorithms import nanhist_with_stats, slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
 from ..exceptions import ProcessingError, UnknownParameterError
@@ -269,7 +269,7 @@ class ImageRoiPulse(_RoiProcessorBase):
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = compute_roi_hist(
+            processed.pulse.roi.hist[idx] = nanhist_with_stats(
                 roi, self._hist_bin_range, self._hist_n_bins)
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
@@ -441,7 +441,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         if roi is not None:
             hist = processed.roi.hist
             hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
-                compute_roi_hist(roi, self._hist_bin_range, self._hist_n_bins)
+                nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""

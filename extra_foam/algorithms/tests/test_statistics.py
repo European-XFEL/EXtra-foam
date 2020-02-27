@@ -5,16 +5,17 @@ import math
 import numpy as np
 
 from extra_foam.algorithms import (
-    compute_roi_hist, compute_statistics, find_actual_range
+    hist_with_stats, nanhist_with_stats, compute_statistics, find_actual_range,
+    nanmean, nansum
 )
 
 
 class TestMiscellaneous:
 
-    def testComputeRoiHist(self):
+    def testNanhistWithStats(self):
         # case 1
         roi = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = compute_roi_hist(roi, (1, 3), 4)
+        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (1, 3), 4)
         np.testing.assert_array_equal([1, 0, 1, 1], hist)
         np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
         arr_gt = [1, 2, 3]
@@ -24,7 +25,7 @@ class TestMiscellaneous:
 
         # case 2 (the actual array is empty after filtering)
         roi = np.array([[np.nan, 0, 0], [0, 0, np.nan]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = compute_roi_hist(roi, (1, 3), 4)
+        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (1, 3), 4)
         np.testing.assert_array_equal([0, 0, 0, 0], hist)
         assert np.isnan(mean)
         assert np.isnan(median)
@@ -32,8 +33,47 @@ class TestMiscellaneous:
 
         # case 3 (elements in the actual array have the same value)
         roi = np.array([[1, 0, np.nan], [1, np.nan, 0]], dtype=np.float32)
-        hist, bin_centers, mean, median, std = compute_roi_hist(roi, (1e-6, 3), 4)
+        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (1e-6, 3), 4)
         np.testing.assert_array_equal([0, 2, 0, 0], hist)
+        assert 1 == mean
+        assert 1 == median
+        assert 0 == std
+
+        # case 4 (3D input)
+        roi = np.array([[[np.nan, 1, 2], [3, 6, np.nan]],
+                        [[np.nan, 0, 1], [2, 5, np.nan]]], dtype=np.float32)
+        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (1, 3), 4)
+        np.testing.assert_array_equal([2, 0, 2, 1], hist)
+        np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
+        arr_gt = [1, 1, 2, 2, 3]
+        assert np.mean(arr_gt) == pytest.approx(mean)
+        assert np.median(arr_gt) == median
+        assert np.std(arr_gt) == pytest.approx(std)
+
+    def testHistWithStats(self):
+        data = np.array([0, 1, 2, 3, 6, 0], dtype=np.float32)  # 1D
+        hist, bin_centers, mean, median, std = hist_with_stats(data, (1, 3), 4)
+        np.testing.assert_array_equal([1, 0, 1, 1], hist)
+        np.testing.assert_array_equal([1.25, 1.75, 2.25, 2.75], bin_centers)
+        arr_gt = [1, 2, 3]
+        assert np.mean(arr_gt) == mean
+        assert np.median(arr_gt) == median
+        assert np.std(arr_gt) == pytest.approx(std)
+
+        # case 2 (empty input)
+        data = np.array([[[]]], dtype=np.float32)  # 3D
+        hist, bin_centers, mean, median, std = hist_with_stats(data, (1, 3), 2)
+        np.testing.assert_array_equal([0, 0], hist)
+        np.testing.assert_array_equal([1.5, 2.5], bin_centers)
+        assert np.isnan(mean)
+        assert np.isnan(median)
+        assert np.isnan(std)
+
+        # case 3 (elements have the same value)
+        roi = np.array([[1, 1, 1], [1, 1, 1]], dtype=np.float32)  # 2D
+        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (0, 3), 4)
+        np.testing.assert_array_equal([0, 6, 0, 0], hist)
+        np.testing.assert_array_equal([0.375, 1.125, 1.875, 2.625], bin_centers)
         assert 1 == mean
         assert 1 == median
         assert 0 == std

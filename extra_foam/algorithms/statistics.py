@@ -63,17 +63,6 @@ def compute_statistics(data):
     """Compute statistics of an array.
 
     :param numpy.ndarray data: input array.
-
-    Note: the input data is assume to be non-free. Since the nan functions
-          in numpy is 5-8 slower than the non-nan counterpart, it is always
-          faster to remove nan first, which results in a copy, and then
-          calculate the statistics.
-
-    :TODO: optimize the performance
-
-    A possible way to further improve the performance is to use a
-    pre-allocated array with specified length L, then we can simply do
-    data[:L].
     """
     if len(data) == 0:
         # suppress runtime warning
@@ -81,14 +70,16 @@ def compute_statistics(data):
     return np.mean(data), np.median(data), np.std(data)
 
 
-def compute_roi_hist(roi, bin_range=(-np.inf, np.inf), n_bins=10):
-    """Compute histogram of image ROI pixel values.
+def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
+    """Compute nan-histogram and nan-statistics of an array.
 
     :param numpy.ndarray roi: image ROI.
     :param tuple bin_range: (lb, ub) of histogram.
     :param int n_bins: number of bins of histogram.
     """
-    # roi is guaranteed to be non-empty but normally contains nan
+    # Note: Since the nan functions in numpy is typically 5-8 slower
+    # than the non-nan counterpart, it is always faster to remove nan
+    # first, which results in a copy, and then calculate the statistics.
 
     # TODO: the following three steps can be merged into one to improve
     #       the performance.
@@ -98,6 +89,24 @@ def compute_roi_hist(roi, bin_range=(-np.inf, np.inf), n_bins=10):
 
     actual_range = find_actual_range(filtered, bin_range)
     hist, bin_edges = np.histogram(filtered, range=actual_range, bins=n_bins)
+    bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
+    mean, median, std = compute_statistics(filtered)
+
+    return hist, bin_centers, mean, median, std
+
+
+def hist_with_stats(data, bin_range=(-np.inf, np.inf), n_bins=10):
+    """Compute histogram and statistics of an array.
+
+    :param numpy.ndarray data: input data.
+    :param tuple bin_range: (lb, ub) of histogram.
+    :param int n_bins: number of bins of histogram.
+    """
+    v_min, v_max = find_actual_range(data, bin_range)
+
+    filtered = data[(data >= v_min) & (data <= v_max)]
+    hist, bin_edges = np.histogram(
+        filtered, bins=n_bins, range=(v_min, v_max))
     bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
     mean, median, std = compute_statistics(filtered)
 
