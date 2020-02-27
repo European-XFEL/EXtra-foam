@@ -230,21 +230,26 @@ class TestImageData(unittest.TestCase):
         with self.assertRaises(ValueError):
             ImageData.from_array(np.ones((2, 2, 2, 2)))
 
-    @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
-    def testInitWithSpecifiedParameters(self):
+        image_data = ImageData.from_array(np.ones((2, 2, 3)))
+        self.assertEqual((2, 3), image_data.mask.shape)
 
-        # ---------------------
-        # pulse-resolved data
-        # ---------------------
+        image_data = ImageData.from_array(np.ones((3, 2)))
+        self.assertEqual((3, 2), image_data.mask.shape)
+
+    @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
+    def testInitWithSpecifiedParametersPS(self):
         with self.assertRaises(ValueError):
             ImageData.from_array(np.ones((2, 2, 2)), sliced_indices=[0, 1, 2])
 
         with self.assertRaises(ValueError):
             ImageData.from_array(np.ones((2, 2, 2)), sliced_indices=[1, 1, 1])
 
-        imgs = np.ones((3, 2, 2))
+        imgs = np.ones((3, 2, 3))
         imgs[:, 0, :] = 2
+        image_mask = np.zeros((2, 3), dtype=np.bool)
+        image_mask[::2, ::2] = True
         image_data = ImageData.from_array(imgs,
+                                          image_mask=image_mask,
                                           threshold_mask=(0, 1),
                                           poi_indices=[0, 1])
 
@@ -253,24 +258,23 @@ class TestImageData(unittest.TestCase):
         self.assertEqual(3, image_data.n_images)
 
         self.assertListEqual([0, 1, 2], image_data.sliced_indices)
-        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[np.nan, np.nan, np.nan], [1., 1., 1.]]),
                                       image_data.images[0])
-        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[np.nan, np.nan, np.nan], [1., 1., 1.]]),
                                       image_data.images[1])
         self.assertIsNone(image_data.images[2])
 
-        np.testing.assert_array_equal(np.array([[2., 2.], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[2., 2., 2.], [1., 1., 1.]]),
                                       image_data.mean)
-        np.testing.assert_array_equal(np.array([[np.nan, np.nan], [1., 1.]]),
+        np.testing.assert_array_equal(np.array([[np.nan, np.nan, np.nan], [1., 1., 1.]]),
                                       image_data.masked_mean)
 
         self.assertIsNone(image_data.gain_mean)
         self.assertIsNone(image_data.offset_mean)
         self.assertEqual((0, 1), image_data.threshold_mask)
 
-        # ---------------------
-        # train-resolved data
-        # ---------------------
+    @patch.dict(config._data, {'PIXEL_SIZE': 2e-3})
+    def testInitWithSpecifiedParametersTS(self):
         with self.assertRaises(ValueError):
             ImageData.from_array(np.ones((2, 2)), sliced_indices=[0])
 

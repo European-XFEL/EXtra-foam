@@ -17,7 +17,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import slice_curve
-from ...config import Normalizer, AnalysisType
+from ...config import AnalysisType, Normalizer, list_azimuthal_integ_methods
 from ...database import Metadata as mt
 from ...utils import profiler
 
@@ -70,9 +70,9 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._integ_range = None
         self._integ_points = None
 
-        self._normalizer = None
-        self._auc_range = None
-        self._fom_integ_range = None
+        self._normalizer = Normalizer.UNDEFINED
+        self._auc_range = (-np.inf, np.inf)
+        self._fom_integ_range = (-np.inf, np.inf)
 
         self._integrator = None
         self._q_map = None
@@ -248,7 +248,6 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
             intensity = self._normalize_fom(
                 processed, mean_ret.intensity, self._normalizer,
                 x=momentum, auc_range=self._auc_range)
-
             self._intensity_ma = intensity
 
             fom = slice_curve(self._intensity_ma, momentum, *self._fom_integ_range)[0]

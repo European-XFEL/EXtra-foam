@@ -393,7 +393,7 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         self.assertIsNone(processed.pp.image_off)
         self.check_other_none(processed)
         np.testing.assert_array_almost_equal(
-            np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.nanmean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
         prev_unmasked_on = proc._prev_unmasked_on
         # XGM and digitizer
         self.assertEqual(np.mean(processed.pulse.xgm.intensity[::2]), proc._prev_xi_on)
@@ -482,7 +482,7 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         self.assertIsNone(processed.pp.image_off)
         self.check_other_none(processed)
         np.testing.assert_array_almost_equal(
-            np.mean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
+            np.nanmean(data['assembled']['sliced'][::2, :, :], axis=0), proc._prev_unmasked_on)
         # XGM and digitizer
         prev_unmasked_on = proc._prev_unmasked_on
         self.assertEqual(np.mean(processed.pulse.xgm.intensity[::2]), proc._prev_xi_on)
