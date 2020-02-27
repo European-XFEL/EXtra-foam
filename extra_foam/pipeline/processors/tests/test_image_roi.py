@@ -53,7 +53,8 @@ class TestImageRoiPulse(_TestDataMixin):
         proc = self._proc
 
         data, processed = self._get_data()
-        proc.process(data)
+        with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: True):
+            proc.process(data)
 
         roi = processed.roi
         assert list(roi.geom1.geometry) == proc._geom1
@@ -65,111 +66,129 @@ class TestImageRoiPulse(_TestDataMixin):
     def testRoiNorm(self, norm_type, fom_handler):
         proc = self._proc
 
-        for combo, geom in zip([RoiCombo.ROI3, RoiCombo.ROI4], ['_geom3', '_geom4']):
-            data, processed = self._get_data()
-            proc._norm_combo = combo
-            proc._norm_type = norm_type
-            proc.process(data)
-            s = self._get_roi_slice(getattr(proc, geom))
-            fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
-            np.testing.assert_array_equal(fom_gt, processed.pulse.roi.norm)
+        with patch.object(proc._meta, 'has_analysis',
+                          side_effect=lambda x: True if x == AnalysisType.ROI_NORM_PULSE else False):
+            for combo, geom in zip([RoiCombo.ROI3, RoiCombo.ROI4], ['_geom3', '_geom4']):
+                data, processed = self._get_data()
+                proc._norm_combo = combo
+                proc._norm_type = norm_type
+                proc.process(data)
+                s = self._get_roi_slice(getattr(proc, geom))
+                fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
+                np.testing.assert_array_equal(fom_gt, processed.pulse.roi.norm)
 
-        for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
+            for norm_combo in [RoiCombo.ROI3_SUB_ROI4, RoiCombo.ROI3_ADD_ROI4]:
+                data, processed = self._get_data()
+                proc._norm_combo = norm_combo
+                proc._norm_type = norm_type
+                proc.process(data)
+                s3 = self._get_roi_slice(proc._geom3)
+                fom3_gt = fom_handler(data['assembled']['sliced'][:, s3[0], s3[1]], axis=(-1, -2))
+                s4 = self._get_roi_slice(proc._geom4)
+                fom4_gt = fom_handler(data['assembled']['sliced'][:, s4[0], s4[1]], axis=(-1, -2))
+                if norm_combo == RoiCombo.ROI3_SUB_ROI4:
+                    np.testing.assert_array_equal(fom3_gt - fom4_gt, processed.pulse.roi.norm)
+                else:
+                    np.testing.assert_array_equal(fom3_gt + fom4_gt, processed.pulse.roi.norm)
+
+        with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: False):
             data, processed = self._get_data()
-            proc._norm_combo = norm_combo
-            proc._norm_type = norm_type
             proc.process(data)
-            s3 = self._get_roi_slice(proc._geom3)
-            fom3_gt = fom_handler(data['assembled']['sliced'][:, s3[0], s3[1]], axis=(-1, -2))
-            s4 = self._get_roi_slice(proc._geom4)
-            fom4_gt = fom_handler(data['assembled']['sliced'][:, s4[0], s4[1]], axis=(-1, -2))
-            if norm_combo == RoiCombo.ROI3_SUB_ROI4:
-                np.testing.assert_array_equal(fom3_gt - fom4_gt, processed.pulse.roi.norm)
-            else:
-                np.testing.assert_array_equal(fom3_gt + fom4_gt, processed.pulse.roi.norm)
+            assert processed.pulse.roi.norm is None
 
     @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _handlers.items()])
     def testRoiFom(self, fom_type, fom_handler):
         proc = self._proc
 
-        for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
-            data, processed = self._get_data()
-            proc._fom_combo = combo
-            proc._fom_type = fom_type
-            proc._fom_norm = Normalizer.UNDEFINED
-            proc.process(data)
-            s = self._get_roi_slice(getattr(proc, geom))
-            fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
-            np.testing.assert_array_equal(fom_gt, processed.pulse.roi.fom)
+        with patch.object(proc._meta, 'has_analysis',
+                          side_effect=lambda x: True if x == AnalysisType.ROI_FOM_PULSE else False):
+            for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
+                data, processed = self._get_data()
+                proc._fom_combo = combo
+                proc._fom_type = fom_type
+                proc._fom_norm = Normalizer.UNDEFINED
+                proc.process(data)
+                s = self._get_roi_slice(getattr(proc, geom))
+                fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
+                np.testing.assert_array_equal(fom_gt, processed.pulse.roi.fom)
 
-        for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+                data, processed = self._get_data()
+                proc._fom_combo = fom_combo
+                proc._fom_type = fom_type
+                proc._fom_norm = Normalizer.UNDEFINED
+                proc.process(data)
+                s1 = self._get_roi_slice(proc._geom1)
+                fom1_gt = fom_handler(data['assembled']['sliced'][:, s1[0], s1[1]], axis=(-1, -2))
+                s2 = self._get_roi_slice(proc._geom2)
+                fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
+                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                    np.testing.assert_array_equal(fom1_gt - fom2_gt, processed.pulse.roi.fom)
+                else:
+                    np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
+
+        with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: False):
             data, processed = self._get_data()
-            proc._fom_combo = fom_combo
-            proc._fom_type = fom_type
-            proc._fom_norm = Normalizer.UNDEFINED
             proc.process(data)
-            s1 = self._get_roi_slice(proc._geom1)
-            fom1_gt = fom_handler(data['assembled']['sliced'][:, s1[0], s1[1]], axis=(-1, -2))
-            s2 = self._get_roi_slice(proc._geom2)
-            fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
-            if fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                np.testing.assert_array_equal(fom1_gt - fom2_gt, processed.pulse.roi.fom)
-            else:
-                np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
+            assert processed.pulse.roi.fom is None
 
     def testRoiHist(self):
         proc = self._proc
 
         mocked_return = 1, 1, 1, 1, 1
-        with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
-                   return_value=mocked_return) as compute_hist:
-            for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
-                data, processed = self._get_data(poi_indices=[0, 2])
-                proc._hist_combo = combo
-                proc._hist_n_bins = 10
-                proc.process(data)
+        with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: True):
+            with patch("extra_foam.pipeline.processors.image_roi.compute_roi_hist",
+                       return_value=mocked_return) as compute_hist:
+                for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2],
+                                       ['_geom1', '_geom2']):
+                    data, processed = self._get_data(poi_indices=[0, 2])
+                    proc._hist_combo = combo
+                    proc._hist_n_bins = 10
+                    proc.process(data)
 
-                s = self._get_roi_slice(getattr(proc, geom))
-                compute_hist.assert_called()
-                # ROI of the second POI
-                roi_gt = data['assembled']['sliced'][2, s[0], s[1]]
-                np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
-                compute_hist.reset_mock()
+                    s = self._get_roi_slice(getattr(proc, geom))
+                    compute_hist.assert_called()
+                    # ROI of the second POI
+                    roi_gt = data['assembled']['sliced'][2, s[0], s[1]]
+                    np.testing.assert_array_equal(roi_gt, compute_hist.call_args[0][0])
+                    compute_hist.reset_mock()
 
-                hist = processed.pulse.roi.hist
-                with pytest.raises(KeyError):
-                    hist[1]
-                with pytest.raises(KeyError):
-                    hist[3]
+                    hist = processed.pulse.roi.hist
+                    with pytest.raises(KeyError):
+                        hist[1]
+                    with pytest.raises(KeyError):
+                        hist[3]
 
-            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
-                data, processed = self._get_data(poi_indices=[1, 2])
-                proc._hist_combo = fom_combo
-                proc._hist_n_bins = 20
-                proc.process(data)
+                for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+                    data, processed = self._get_data(poi_indices=[1, 2])
+                    proc._hist_combo = fom_combo
+                    proc._hist_n_bins = 20
+                    proc.process(data)
 
-                s1 = self._get_roi_slice(proc._geom1)
-                # ROI of the second POI
-                roi1_gt = data['assembled']['sliced'][2, s1[0], s1[1]]
-                s2 = self._get_roi_slice(proc._geom2)
-                roi2_gt = data['assembled']['sliced'][2, s2[0], s2[1]]
-                compute_hist.assert_called()
-                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                    np.testing.assert_array_equal(roi1_gt - roi2_gt, compute_hist.call_args[0][0])
-                else:
-                    np.testing.assert_array_equal(roi1_gt + roi2_gt, compute_hist.call_args[0][0])
-                compute_hist.reset_mock()
+                    s1 = self._get_roi_slice(proc._geom1)
+                    # ROI of the second POI
+                    roi1_gt = data['assembled']['sliced'][2, s1[0], s1[1]]
+                    s2 = self._get_roi_slice(proc._geom2)
+                    roi2_gt = data['assembled']['sliced'][2, s2[0], s2[1]]
+                    compute_hist.assert_called()
+                    if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                        np.testing.assert_array_equal(roi1_gt - roi2_gt,
+                                                      compute_hist.call_args[0][0])
+                    else:
+                        np.testing.assert_array_equal(roi1_gt + roi2_gt,
+                                                      compute_hist.call_args[0][0])
+                    compute_hist.reset_mock()
 
-                hist = processed.pulse.roi.hist
-                with pytest.raises(KeyError):
-                    hist[0]
-                with pytest.raises(KeyError):
-                    hist[3]
+                    hist = processed.pulse.roi.hist
+                    with pytest.raises(KeyError):
+                        hist[0]
+                    with pytest.raises(KeyError):
+                        hist[3]
 
-            with patch('extra_foam.ipc.ProcessLogger.error') as error:
-                proc._geom2 = [1, 0, 1, 3]
-                proc.process(data)
-                error.assert_called_once()
+                with patch('extra_foam.ipc.ProcessLogger.error') as error:
+                    proc._geom2 = [1, 0, 1, 3]
+                    proc.process(data)
+                    error.assert_called_once()
 
     def testOnTrainResolvedDetector(self):
         proc = self._proc

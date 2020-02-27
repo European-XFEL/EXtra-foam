@@ -169,6 +169,9 @@ class ImageRoiPulse(_RoiProcessorBase):
 
         Always calculate.
         """
+        if not self._meta.has_analysis(AnalysisType.ROI_NORM_PULSE):
+            return
+
         threshold_mask = processed.image.threshold_mask
         image_mask = processed.image.image_mask
 
@@ -210,6 +213,9 @@ class ImageRoiPulse(_RoiProcessorBase):
 
         Always calculate.
         """
+        if not self._meta.has_analysis(AnalysisType.ROI_FOM_PULSE):
+            return
+
         threshold_mask = processed.image.threshold_mask
         image_mask = processed.image.image_mask
 
@@ -254,7 +260,8 @@ class ImageRoiPulse(_RoiProcessorBase):
             roi1 = roi_data.geom1.rect(img)
             roi2 = roi_data.geom2.rect(img)
             try:
-                roi = self._get_roi_combo(roi1, roi2, self._hist_combo, "histogram")
+                roi = self._get_roi_combo(
+                    roi1, roi2, self._hist_combo, "histogram")
             except ProcessingError as e:
                 logger.error(str(e))
                 break
