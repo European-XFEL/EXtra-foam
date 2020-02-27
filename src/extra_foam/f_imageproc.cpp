@@ -24,7 +24,7 @@ PYBIND11_MODULE(imageproc, m)
 
   using namespace foam;
 
-  m.doc() = "Calculate the mean of images, ignoring NaNs.";
+  m.doc() = "A collection of image processing functions.";
 
   m.def("nanmeanImageArray", [] (const xt::pytensor<double, 3>& src)
     { return nanmeanImageArray(src); },

@@ -247,6 +247,7 @@ class BenchmarkCommand(Command):
     def run(self):
         self.spawn(['python', 'benchmarks/benchmark_imageproc.py'])
         self.spawn(['python', 'benchmarks/benchmark_geometry.py'])
+        self.spawn(['python', 'benchmarks/benchmark_statistics.py'])
 
 
 class BinaryDistribution(Distribution):

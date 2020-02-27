@@ -10,6 +10,7 @@ All rights reserved.
 import numpy as np
 
 from .imageproc_py import mask_image_data
+from .statistics import nanmean, nansum
 
 
 def find_actual_range(arr, range):

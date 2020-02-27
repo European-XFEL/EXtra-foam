@@ -10,7 +10,15 @@ from extra_foam.algorithms import (
 )
 
 
-class TestMiscellaneous:
+class TestStatistics:
+
+    def testNanmean(self):
+        roi = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=np.float32)
+        assert 3 == nanmean(roi)
+
+    def testNansum(self):
+        roi = np.array([[np.nan, 1, 2], [3, 6, np.nan]], dtype=np.float32)
+        assert 12 == nansum(roi)
 
     def testNanhistWithStats(self):
         # case 1
