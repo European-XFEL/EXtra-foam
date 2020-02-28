@@ -309,6 +309,11 @@ class ImageAssemblerFactory(ABC):
             """
             image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
             if self._geom is not None:
+                n_modules = modules.shape[1]
+                if n_modules == 1:
+                    # single module operation
+                    return modules.astype(image_dtype).squeeze(axis=1)
+
                 n_pulses = modules.shape[0]
                 if self._out_array is None or self._out_array.shape[0] != n_pulses:
                     self._out_array = self._geom.output_array_for_position_fast(
@@ -380,12 +385,15 @@ class ImageAssemblerFactory(ABC):
 
                 # check number of modules
                 if ndim >= 3 and shape[-3] != n_modules:
+                    n_modules_actual = shape[-3]
                     if config["DETECTOR"] != "JungFrauPR":
-                        raise ValueError(f"Expected {n_modules} modules, but get "
-                                         f"{shape[0]} instead!")
-                    elif shape[-3] > 2:
+                        # allow single module operation
+                        if n_modules_actual != 1:
+                            raise ValueError(f"Expected {n_modules} modules, but get "
+                                             f"{n_modules_actual} instead!")
+                    elif n_modules_actual > 2:
                         raise ValueError(f"Expected 1 or 2 modules, but get "
-                                         f"{shape[0]} instead!")
+                                         f"{n_modules_actual} instead!")
 
                 # check number of memory cells
                 if ndim == 4 and not shape[0]:
