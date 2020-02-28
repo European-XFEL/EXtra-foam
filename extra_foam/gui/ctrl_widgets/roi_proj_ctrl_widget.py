@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import RoiCombo
+from ...config import RoiCombo, RoiProjType
 
 
 class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -29,12 +29,21 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI1 + ROI2": RoiCombo.ROI1_ADD_ROI2,
     })
 
+    _available_types = OrderedDict({
+        "SUM": RoiProjType.SUM,
+        "MEAN": RoiProjType.MEAN,
+    })
+
     def __init__(self, *args, **kwargs):
         super().__init__("ROI projection setup", *args, **kwargs)
 
         self._combo_cb = QComboBox()
         for v in self._available_combos:
             self._combo_cb.addItem(v)
+
+        self._type_cb = QComboBox()
+        for v in self._available_types:
+            self._type_cb.addItem(v)
 
         self._direct_cb = QComboBox()
         for v in ['x', 'y']:
@@ -62,6 +71,10 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(self._combo_cb, row, 1)
 
         row += 1
+        layout.addWidget(QLabel("Type: "), row, 0, AR)
+        layout.addWidget(self._type_cb, row, 1)
+
+        row += 1
         layout.addWidget(QLabel("Direction: "), row, 0, AR)
         layout.addWidget(self._direct_cb, row, 1)
 
@@ -86,6 +99,9 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._combo_cb.currentTextChanged.connect(
             lambda x: mediator.onRoiProjComboChange(self._available_combos[x]))
 
+        self._type_cb.currentTextChanged.connect(
+            lambda x: mediator.onRoiProjTypeChange(self._available_types[x]))
+
         self._direct_cb.currentTextChanged.connect(
             mediator.onRoiProjDirectChange)
 
@@ -101,6 +117,7 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
     def updateMetaData(self):
         """Overload."""
         self._combo_cb.currentTextChanged.emit(self._combo_cb.currentText())
+        self._type_cb.currentTextChanged.emit(self._type_cb.currentText())
         self._direct_cb.currentTextChanged.emit(self._direct_cb.currentText())
         self._norm_cb.currentTextChanged.emit(self._norm_cb.currentText())
         self._auc_range_le.returnPressed.emit()

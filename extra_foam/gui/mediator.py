@@ -204,6 +204,9 @@ class Mediator(QObject):
     def onRoiProjComboChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'proj:combo', int(value))
 
+    def onRoiProjTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'proj:type', int(value))
+
     def onRoiProjDirectChange(self, value: str):
         self._meta.hset(mt.ROI_PROC, 'proj:direct', value)
 

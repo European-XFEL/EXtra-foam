@@ -55,6 +55,11 @@ class RoiFom(IntEnum):
     MIN = 5
 
 
+class RoiProjType(IntEnum):
+    SUM = 1
+    MEAN = 2
+
+
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
