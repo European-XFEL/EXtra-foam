@@ -39,7 +39,6 @@ class _TestDataMixin:
                             src_type=DataSource.BRIDGE,
                             dtype=config['SOURCE_PROC_IMAGE_DTYPE'],
                             gen='random',
-                            with_image_mask=False,
                             slicer=None,
                             with_xgm=False,
                             with_digitizer=False,
@@ -47,11 +46,8 @@ class _TestDataMixin:
         imgs = cls._gen_images(gen, shape, dtype)
 
         processed = ProcessedData(tid)
+
         processed.image = ImageData.from_array(imgs, **kwargs)
-        if with_image_mask:
-            image_mask = np.zeros(shape[-2:], dtype=np.bool)
-            image_mask[::2, ::2] = True
-            processed.image.image_mask = image_mask
 
         slicer = slice(None, None) if slicer is None else slicer
         src_list = [('Foo', 'oof'), ('Bar', 'rab'), ('karaboFAI', 'extra_foam')]

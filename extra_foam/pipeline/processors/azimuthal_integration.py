@@ -17,11 +17,11 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import slice_curve
-from ...config import Normalizer, AnalysisType
+from ...config import AnalysisType, Normalizer, list_azimuthal_integ_methods
 from ...database import Metadata as mt
 from ...utils import profiler
 
-from extra_foam.algorithms import energy2wavelength, mask_image_data
+from extra_foam.algorithms import energy2wavelength, image_with_mask
 
 
 class _AzimuthalIntegProcessorBase(_BaseProcessor):
@@ -70,9 +70,9 @@ class _AzimuthalIntegProcessorBase(_BaseProcessor):
         self._integ_range = None
         self._integ_points = None
 
-        self._normalizer = None
-        self._auc_range = None
-        self._fom_integ_range = None
+        self._normalizer = Normalizer.UNDEFINED
+        self._auc_range = (-np.inf, np.inf)
+        self._fom_integ_range = (-np.inf, np.inf)
 
         self._integrator = None
         self._q_map = None
@@ -158,11 +158,13 @@ class AzimuthalIntegProcessorPulse(_AzimuthalIntegProcessorBase):
         integ_points = self._integ_points
 
         threshold_mask = processed.image.threshold_mask
+        image_mask = processed.image.image_mask
 
         def _integrate1d_imp(i):
             masked = assembled[i].copy()
-            mask_image_data(masked, threshold_mask=threshold_mask)
-            return integ1d(masked, integ_points)
+            mask = image_mask.copy()
+            image_with_mask(masked, mask, threshold_mask=threshold_mask)
+            return integ1d(masked, integ_points, mask=mask)
 
         intensities = []  # pulsed A.I.
         with ThreadPoolExecutor(max_workers=4) as executor:
@@ -184,8 +186,7 @@ class AzimuthalIntegProcessorPulse(_AzimuthalIntegProcessorBase):
         # calculate the figure of merit for each pulse
         foms = []
         for diff in diffs:
-            fom = slice_curve(
-                diff, momentum, *self._fom_integ_range)[0]
+            fom = slice_curve(diff, momentum, *self._fom_integ_range)[0]
             foms.append(np.sum(np.abs(fom)))
 
         ai = processed.pulse.ai
@@ -240,13 +241,13 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         integ_points = self._integ_points
 
         if self._meta.has_analysis(AnalysisType.AZIMUTHAL_INTEG):
-            mean_ret = integ1d(processed.image.masked_mean, integ_points)
+            mask = processed.image.mask
+            mean_ret = integ1d(processed.image.masked_mean, integ_points, mask=mask)
 
             momentum = mean_ret.radial
             intensity = self._normalize_fom(
                 processed, mean_ret.intensity, self._normalizer,
                 x=momentum, auc_range=self._auc_range)
-
             self._intensity_ma = intensity
 
             fom = slice_curve(self._intensity_ma, momentum, *self._fom_integ_range)[0]
@@ -265,14 +266,19 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
         if processed.pp.analysis_type == AnalysisType.AZIMUTHAL_INTEG:
             pp = processed.pp
 
-            on_image = pp.image_on
-            off_image = pp.image_off
+            image_on = pp.image_on
+            image_off = pp.image_off
+            mask_on = pp.on.mask
+            mask_off = pp.off.mask
 
-            if on_image is not None and off_image is not None:
+            if image_on is not None and image_off is not None:
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     on_off_rets = executor.map(
-                        lambda x: integ1d(*x), ((on_image, integ_points),
-                                                (off_image, integ_points)))
+                        lambda img, npts, msk: integ1d(img, npts, mask=msk),
+                        (image_on, image_off),
+                        (integ_points, integ_points),
+                        (mask_on, mask_off)
+                    )
                 on_ret, off_ret = on_off_rets
 
                 momentum = on_ret.radial

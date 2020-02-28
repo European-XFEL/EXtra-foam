@@ -279,10 +279,13 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # trigger the lazily evaluated subscriber
         proc.process(data)
-        self.assertIsNone(proc._image_mask)
 
         mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
 
+        # test default
+        np.testing.assert_array_equal(proc._image_mask, mask_gt)
+
+        # test changing mask
         pub.add((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
 
@@ -314,7 +317,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         action = self.image_tool._tool_bar.actions()[2]
         action.trigger()
         proc.process(data)
-        self.assertIsNone(proc._image_mask)
+        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
 
         # test set mask
         pub.set(mask_gt)
@@ -539,7 +542,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test default reconfigurable values
         self.assertEqual(RoiCombo.UNDEFINED, proc._hist_combo)
         self.assertEqual(10, proc._hist_n_bins)
-        self.assertTupleEqual((0.001, math.inf), proc._hist_bin_range)
+        self.assertTupleEqual((-math.inf, math.inf), proc._hist_bin_range)
 
         # test setting new values
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])

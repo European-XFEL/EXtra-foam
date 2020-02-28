@@ -1,9 +1,12 @@
 import unittest
 
+import pytest
+
 import numpy as np
 
 from extra_foam.algorithms import (
-    correct_image_data, mask_image_data, movingAvgImageData, nanmean_image_data
+    correct_image_data, image_with_mask, mask_image_data,
+    movingAvgImageData, nanmean_image_data
 )
 
 
@@ -22,7 +25,7 @@ class TestImageProc(unittest.TestCase):
 
         # kept is an empty list
         with self.assertRaises(ValueError):
-            nanmean_image_data(arr3d, [])
+            nanmean_image_data(arr3d, kept=[])
 
         # test two images have different shapes
         with self.assertRaises(ValueError):
@@ -31,6 +34,10 @@ class TestImageProc(unittest.TestCase):
         # test two images have different dtype
         with self.assertRaises(TypeError):
             nanmean_image_data([arr2d, np.ones((2, 3), dtype=np.float64)])
+
+        # invalid input
+        with self.assertRaises(TypeError):
+            nanmean_image_data(arr2d, arr2d)
 
         # input is a 2D array
         data = np.random.randn(2, 2)
@@ -53,11 +60,11 @@ class TestImageProc(unittest.TestCase):
 
             # test nanmean on the sliced array
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3, ...], axis=0),
-                                                 nanmean_image_data(data, [0, 1, 2]))
+                                                 nanmean_image_data(data, kept=[0, 1, 2]))
             np.testing.assert_array_almost_equal(np.nanmean(data[1:2, ...], axis=0),
-                                                 nanmean_image_data(data, [1]))
+                                                 nanmean_image_data(data, kept=[1]))
             np.testing.assert_array_almost_equal(np.nanmean(data[0:3:2, ...], axis=0),
-                                                 nanmean_image_data(data, [0, 2]))
+                                                 nanmean_image_data(data, kept=[0, 2]))
 
         # input are a list/tuple of two images
         img1 = np.array([[1, 1, 2], [np.inf, np.nan, 0]], dtype=np.float32)
@@ -151,75 +158,6 @@ class TestImageProc(unittest.TestCase):
 
         np.testing.assert_array_equal(ma_gt, imgs1)
 
-    def testMaskImageData(self):
-        arr1d = np.ones(2, dtype=np.float32)
-        arr2d = np.ones((2, 2), dtype=np.float32)
-        arr3d = np.ones((2, 2, 2), dtype=np.float32)
-        arr4d = np.ones((2, 2, 2, 2), dtype=np.float32)
-
-        # test invalid input
-        with self.assertRaises(TypeError):
-            mask_image_data()
-        with self.assertRaises(TypeError):
-            mask_image_data(arr1d, threshold_mask=(1, 2))
-        with self.assertRaises(TypeError):
-            mask_image_data(arr4d, threshold_mask=(1, 2))
-
-        # test inconsistent shape
-        with self.assertRaises(TypeError):
-            mask_image_data(arr2d, image_mask=arr3d, threshold_mask=(1, 2))
-        with self.assertRaises(TypeError):
-            mask_image_data(arr3d, image_mask=arr2d, threshold_mask=(1, 2))
-        with self.assertRaises(TypeError):
-            mask_image_data(arr3d, image_mask=arr3d, threshold_mask=(1, 2))
-        with self.assertRaises(ValueError):
-            mask_image_data(arr3d, image_mask=np.ones((3, 2), dtype=bool))
-        with self.assertRaises(ValueError):
-            mask_image_data(arr2d, image_mask=np.ones((3, 2), dtype=bool))
-
-        # test inconsistent dtype
-        with self.assertRaises(TypeError):
-            mask_image_data(arr3d, image_mask=np.ones((2, 2), dtype=int))
-
-        # ------------
-        # single image
-        # ------------
-
-        # threshold mask
-        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
-        mask_image_data(img, threshold_mask=(2, 3))
-        np.testing.assert_array_equal(
-            np.array([[0, 2, 0], [3, 0, 0]], dtype=np.float32), img)
-
-        # image mask
-        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
-        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        mask_image_data(img, image_mask=img_mask)
-        np.testing.assert_array_equal(
-            np.array([[0, 0, 0], [0, 4, 0]], dtype=np.float32), img)
-
-        # ------------
-        # train images
-        # ------------
-
-        # threshold mask
-        img = np.array([[[1, 2, 3], [3, np.nan, 5]],
-                        [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
-        mask_image_data(img, threshold_mask=(2, 3))
-        np.testing.assert_array_equal(np.array([[[0, 2, 3], [3, 0, 0]],
-                                                [[0, 2, 3], [3, 0, 0]]],
-                                               dtype=np.float32), img)
-
-        # image mask
-        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
-                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
-        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
-        mask_image_data(img, image_mask=img_mask)
-        np.testing.assert_array_equal(np.array([[[0, 0, 3], [0, 0, 0]],
-                                                [[0, 0, 3], [0, 0, 0]]],
-                                               dtype=np.float32), img)
-
     def testCorrectImageData(self):
         arr1d = np.ones(2, dtype=np.float32)
         arr2d = np.ones((2, 2), dtype=np.float32)
@@ -310,3 +248,156 @@ class TestImageProc(unittest.TestCase):
         np.testing.assert_array_equal(np.array([[[0, 0, 2], [0, np.nan, np.nan]],
                                                 [[-2, 1, 2], [2, np.nan, np.nan]]],
                                                dtype=np.float32), img)
+
+
+class TestMaskImageData:
+    @pytest.mark.parametrize("keep_nan, mt", [(False, 0), (True, np.nan)])
+    def testMaskImageData(self, keep_nan, mt):
+        arr1d = np.ones(2, dtype=np.float32)
+        arr2d = np.ones((2, 2), dtype=np.float32)
+        arr3d = np.ones((2, 2, 2), dtype=np.float32)
+        arr4d = np.ones((2, 2, 2, 2), dtype=np.float32)
+
+        # test invalid input
+        with pytest.raises(TypeError):
+            mask_image_data(keep_nan=keep_nan)
+        with pytest.raises(TypeError):
+            mask_image_data(arr1d, threshold_mask=(1, 2), keep_nan=keep_nan)
+        with pytest.raises(TypeError):
+            mask_image_data(arr4d, threshold_mask=(1, 2), keep_nan=keep_nan)
+
+        # test inconsistent shape
+        with pytest.raises(TypeError):
+            mask_image_data(arr2d, image_mask=arr3d, threshold_mask=(1, 2), keep_nan=keep_nan)
+        with pytest.raises(TypeError):
+            mask_image_data(arr3d, image_mask=arr2d, threshold_mask=(1, 2), keep_nan=keep_nan)
+        with pytest.raises(TypeError):
+            mask_image_data(arr3d, image_mask=arr3d, threshold_mask=(1, 2), keep_nan=keep_nan)
+        with pytest.raises(ValueError):
+            mask_image_data(arr3d, image_mask=np.ones((3, 2), dtype=bool), keep_nan=keep_nan)
+        with pytest.raises(ValueError):
+            mask_image_data(arr2d, image_mask=np.ones((3, 2), dtype=bool), keep_nan=keep_nan)
+
+        # test inconsistent dtype
+        with pytest.raises(TypeError):
+            mask_image_data(arr3d, image_mask=np.ones((2, 2), dtype=int), keep_nan=keep_nan)
+
+        # ------------
+        # single image
+        # ------------
+
+        # raw
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask_image_data(img, keep_nan=keep_nan)
+        np.testing.assert_array_equal(
+            np.array([[1, 2, mt], [3, 4, 5]], dtype=np.float32), img)
+
+        # threshold mask
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask_image_data(img, threshold_mask=(2, 3), keep_nan=keep_nan)
+        np.testing.assert_array_equal(
+            np.array([[mt, 2, mt], [3, mt, mt]], dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, keep_nan=keep_nan)
+        np.testing.assert_array_equal(
+            np.array([[mt, mt, mt], [mt, 4, mt]], dtype=np.float32), img)
+
+        # both masks
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, threshold_mask=(2, 3), keep_nan=keep_nan)
+        np.testing.assert_array_equal(
+            np.array([[mt, mt, mt], [mt, mt, mt]], dtype=np.float32), img)
+
+        # ------------
+        # train images
+        # ------------
+
+        # raw
+        img = np.array([[[1, 2, 3], [3, np.nan, 5]],
+                        [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
+        mask_image_data(img, keep_nan=keep_nan)
+        np.testing.assert_array_equal(np.array([[[1, 2, 3], [3, mt, 5]],
+                                                [[1, 2, 3], [3, mt, 5]]],
+                                               dtype=np.float32), img)
+
+        # threshold mask
+        img = np.array([[[1, 2, 3], [3, np.nan, 5]],
+                        [[1, 2, 3], [3, np.nan, 5]]], dtype=np.float32)
+        mask_image_data(img, threshold_mask=(2, 3), keep_nan=keep_nan)
+        np.testing.assert_array_equal(np.array([[[mt, 2, 3], [3, mt, mt]],
+                                                [[mt, 2, 3], [3, mt, mt]]],
+                                               dtype=np.float32), img)
+
+        # image mask
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 3], [3, np.nan, np.nan]]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, keep_nan=keep_nan)
+        np.testing.assert_array_equal(np.array([[[mt, mt, 3], [mt, mt, mt]],
+                                                [[mt, mt, 3], [mt, mt, mt]]],
+                                               dtype=np.float32), img)
+
+        # both masks
+        img = np.array([[[1, 2, 3], [3, np.nan, np.nan]],
+                        [[1, 2, 6], [3, np.nan, np.nan]]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask_image_data(img, image_mask=img_mask, threshold_mask=(2, 4), keep_nan=keep_nan)
+        np.testing.assert_array_equal(np.array([[[mt, mt, 3], [mt, mt, mt]],
+                                                [[mt, mt, mt], [mt, mt, mt]]],
+                                               dtype=np.float32), img)
+
+    def testImageWithMask(self):
+        arr1d = np.ones(2, dtype=np.float32)
+        arr2d = np.ones((2, 2), dtype=np.float32)
+        arr3d = np.ones((2, 2, 2), dtype=np.float32)
+
+        with pytest.raises(TypeError):
+            image_with_mask(arr1d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr3d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr2d, mask=arr3d)
+        with pytest.raises(TypeError):
+            image_with_mask(arr2d, mask=arr1d)
+
+        # raw
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask = image_with_mask(img)
+        np.testing.assert_array_equal(
+            np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[False, False, True], [False, False, False]], dtype=np.bool), mask)
+
+        # threshold mask
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        mask = image_with_mask(img, threshold_mask=(2, 3))
+        np.testing.assert_array_equal(
+            np.array([[np.nan, 2, np.nan], [3, np.nan, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, False, True], [False, True, True]], dtype=np.bool), mask)
+
+        # image mask
+        img = np.array([[1, np.nan, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 1, 0], [1, 0, 1]], dtype=np.bool)
+        mask = image_with_mask(img, mask=img_mask)
+        np.testing.assert_array_equal(
+            np.array([[np.nan, np.nan, np.nan], [np.nan, 4, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, True, True], [True, False, True]], dtype=np.bool), mask)
+        assert img_mask is mask
+
+        # both masks
+        img = np.array([[1, 2, np.nan], [3, 4, 5]], dtype=np.float32)
+        img_mask = np.array([[1, 0, 0], [1, 0, 0]], dtype=np.bool)
+        mask = image_with_mask(img, mask=img_mask, threshold_mask=(2, 3))
+        np.testing.assert_array_equal(
+            np.array([[np.nan, 2, np.nan], [np.nan, np.nan, np.nan]], dtype=np.float32), img)
+        np.testing.assert_array_equal(
+            np.array([[True, False, True], [True, True, True]], dtype=np.bool), mask)
+        assert img_mask is mask

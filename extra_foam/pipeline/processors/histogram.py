@@ -13,7 +13,7 @@ import numpy as np
 
 from .base_processor import _BaseProcessor, SimpleSequence
 from ..exceptions import UnknownParameterError
-from ...algorithms import compute_statistics, find_actual_range
+from ...algorithms import hist_with_stats, find_actual_range
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType
@@ -107,36 +107,22 @@ class HistogramProcessor(_BaseProcessor):
         # ought to calculate the histogram even if there is no new FOM coming
         data = self._fom.data()
         if data.size != 0:
-            v_min, v_max = find_actual_range(data, self._bin_range)
-            filtered = data[(data >= v_min) & (data <= v_max)]
-            hist, bin_edges = np.histogram(
-                filtered, bins=self._n_bins, range=(v_min, v_max))
-            train_hist = processed.hist
-            train_hist.hist = hist
-            train_hist.bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-            train_hist.mean, train_hist.median, train_hist.std = \
-                compute_statistics(filtered)
+            th = processed.hist
+            th.hist, th.bin_centers, th.mean, th.median, th.std = \
+                hist_with_stats(data, self._bin_range, self._n_bins)
 
     def _process_poi(self, processed):
         """Calculate histograms of FOMs of POI pulses."""
         n_pulses = processed.n_pulses
-        pulse_hist = processed.pulse.hist
         image_data = processed.image
         for i in image_data.poi_indices:
             if i >= n_pulses:
                 return
 
             poi_fom = self._fom.data()[i::n_pulses]
-            if poi_fom.size == 0:
-                continue
-
-            v_min, v_max = find_actual_range(poi_fom, self._bin_range)
-            filtered = poi_fom[(poi_fom >= v_min) & (poi_fom <= v_max)]
-            hist, bin_edges = np.histogram(
-                filtered, bins=self._n_bins, range=(v_min, v_max))
-            mean, median, std = compute_statistics(filtered)
-            pulse_hist[i] = (hist, (bin_edges[1:] + bin_edges[:-1]) / 2.0,
-                             mean, median, std)
+            if poi_fom.size != 0:
+                processed.pulse.hist[i] = hist_with_stats(
+                    poi_fom, self._bin_range, self._n_bins)
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
                 # skip the second one if two POIs have the same index

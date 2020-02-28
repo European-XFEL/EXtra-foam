@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from ...algorithms import compute_statistics, find_actual_range, slice_curve
+from ...algorithms import nanhist_with_stats, slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
 from ..exceptions import ProcessingError, UnknownParameterError
@@ -20,7 +20,9 @@ from ...database import Metadata as mt
 from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
 
-from extra_foam.algorithms import intersection, mask_image_data
+from extra_foam.algorithms import (
+    intersection, mask_image_data
+)
 
 
 class _RoiProcessorBase(_BaseProcessor):
@@ -39,11 +41,11 @@ class _RoiProcessorBase(_BaseProcessor):
     """
 
     _fom_handlers = {
-        RoiFom.SUM: np.sum,
-        RoiFom.MEAN: np.mean,
-        RoiFom.MEDIAN: np.median,
-        RoiFom.MAX: np.max,
-        RoiFom.MIN: np.min
+        RoiFom.SUM: np.nansum,
+        RoiFom.MEAN: np.nanmean,
+        RoiFom.MEDIAN: np.nanmedian,
+        RoiFom.MAX: np.nanmax,
+        RoiFom.MIN: np.nanmin
     }
 
     def __init__(self):
@@ -105,24 +107,6 @@ class _RoiProcessorBase(_BaseProcessor):
 
         return roi_combo
 
-    @staticmethod
-    def _compute_hist(roi, bin_range, n_bins):
-        # roi is guaranteed to be non-empty
-
-        # POI image has already been masked
-        v_min, v_max = find_actual_range(roi, bin_range)
-
-        # TODO: optimize the performance
-        filtered = roi[(roi >= v_min) & (roi <= v_max)]
-
-        hist, bin_edges = np.histogram(
-            filtered, range=(v_min, v_max), bins=n_bins)
-        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
-
-        mean, median, std = compute_statistics(filtered)
-
-        return hist, bin_centers, mean, median, std
-
 
 class ImageRoiPulse(_RoiProcessorBase):
     """Pulse-resolved ROI processor.
@@ -176,22 +160,20 @@ class ImageRoiPulse(_RoiProcessorBase):
             raise UnknownParameterError(
                 f"[ROI][FOM] Unknown FOM type: {fom_type}")
 
-        if roi.ndim == 3:
-            mask_image_data(roi,
-                            image_mask=image_mask,
-                            threshold_mask=threshold_mask)
-            return handler(roi, axis=(-1, -2))
-
         mask_image_data(roi,
                         image_mask=image_mask,
-                        threshold_mask=threshold_mask)
-        return np.array([handler(roi)])
+                        threshold_mask=threshold_mask,
+                        keep_nan=True)
+        return handler(roi, axis=(-1, -2))
 
     def _process_norm(self, assembled, processed):
         """Calculate pulse-resolved ROI normalizers.
 
         Always calculate.
         """
+        if not self._meta.has_analysis(AnalysisType.ROI_NORM_PULSE):
+            return
+
         threshold_mask = processed.image.threshold_mask
         image_mask = processed.image.image_mask
 
@@ -233,6 +215,9 @@ class ImageRoiPulse(_RoiProcessorBase):
 
         Always calculate.
         """
+        if not self._meta.has_analysis(AnalysisType.ROI_FOM_PULSE):
+            return
+
         threshold_mask = processed.image.threshold_mask
         image_mask = processed.image.image_mask
 
@@ -277,7 +262,8 @@ class ImageRoiPulse(_RoiProcessorBase):
             roi1 = roi_data.geom1.rect(img)
             roi2 = roi_data.geom2.rect(img)
             try:
-                roi = self._get_roi_combo(roi1, roi2, self._hist_combo, "histogram")
+                roi = self._get_roi_combo(
+                    roi1, roi2, self._hist_combo, "histogram")
             except ProcessingError as e:
                 logger.error(str(e))
                 break
@@ -285,7 +271,7 @@ class ImageRoiPulse(_RoiProcessorBase):
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = self._compute_hist(
+            processed.pulse.roi.hist[idx] = nanhist_with_stats(
                 roi, self._hist_bin_range, self._hist_n_bins)
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
@@ -457,7 +443,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         if roi is not None:
             hist = processed.roi.hist
             hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
-                self._compute_hist(roi, self._hist_bin_range, self._hist_n_bins)
+                nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""
@@ -579,9 +565,9 @@ class ImageRoiTrain(_RoiProcessorBase):
             return
 
         if self._proj_direct == "x":
-            return np.sum(roi, axis=-2)
+            return np.nansum(roi, axis=-2)
         elif self._proj_direct == "y":
-            return np.sum(roi, axis=-1)
+            return np.nansum(roi, axis=-1)
         else:
             raise UnknownParameterError(
                 f"[ROI][projection] Unknown projection direction: "

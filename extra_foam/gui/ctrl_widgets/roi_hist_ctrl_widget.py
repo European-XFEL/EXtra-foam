@@ -39,7 +39,7 @@ class RoiHistCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._n_bins_le = SmartLineEdit("10")
         self._n_bins_le.setValidator(QIntValidator(1, 999))
 
-        self._bin_range_le = SmartBoundaryLineEdit("0.001, Inf")
+        self._bin_range_le = SmartBoundaryLineEdit("-Inf, Inf")
 
         self.initUI()
         self.initConnections()

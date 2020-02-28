@@ -68,6 +68,8 @@ PYBIND11_MODULE(geometry, m)
 {
   xt::import_numpy();
 
+  m.doc() = "Detector geometry.";
+
   declare_1MGeometry<foam::LPD_1MGeometry>(m, "LPD");
 
   declare_1MGeometry<foam::DSSC_1MGeometry>(m, "DSSC");
