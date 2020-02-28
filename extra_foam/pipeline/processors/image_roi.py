@@ -18,7 +18,7 @@ from ..exceptions import ProcessingError, UnknownParameterError
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...utils import profiler
-from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom
+from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom, RoiProjType
 
 from extra_foam.algorithms import (
     intersection, mask_image_data
@@ -285,6 +285,7 @@ class ImageRoiTrain(_RoiProcessorBase):
     Attributes:
         _proj_combo (RoiCombo): ROI combination when calculating ROI
             projection.
+        _proj_type (RoiProjType): ROI projection type.
         _proj_direct (str): ROI projection direction.
         _proj_norm (Normalizer): normalizer type for calculating
             FOM from 1D projection result.
@@ -293,6 +294,11 @@ class ImageRoiTrain(_RoiProcessorBase):
             FOM from the normalized projection.
         _ma_window (int): moving average window size.
     """
+
+    _proj_handlers = {
+        RoiProjType.SUM: np.nansum,
+        RoiProjType.MEAN: np.nanmean,
+    }
 
     _roi1 = MovingAverageArray()
     _roi2 = MovingAverageArray()
@@ -313,6 +319,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         super().__init__()
 
         self._proj_combo = RoiCombo.ROI1
+        self._proj_type = RoiProjType.SUM
         self._proj_direct = 'x'
         self._proj_norm = Normalizer.UNDEFINED
         self._proj_auc_range = (0, math.inf)
@@ -328,6 +335,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         cfg = super().update()
 
         self._proj_combo = RoiCombo(int(cfg['proj:combo']))
+        self._proj_type = RoiProjType(int(cfg['proj:type']))
         self._proj_direct = cfg['proj:direct']
         self._proj_norm = Normalizer(int(cfg['proj:norm']))
         self._proj_auc_range = self.str2tuple((cfg['proj:auc_range']))
@@ -564,10 +572,11 @@ class ImageRoiTrain(_RoiProcessorBase):
         if roi is None:
             return
 
+        handler = self._proj_handlers[self._proj_type]
         if self._proj_direct == "x":
-            return np.nansum(roi, axis=-2)
+            return handler(roi, axis=-2)
         elif self._proj_direct == "y":
-            return np.nansum(roi, axis=-1)
+            return handler(roi, axis=-1)
         else:
             raise UnknownParameterError(
                 f"[ROI][projection] Unknown projection direction: "

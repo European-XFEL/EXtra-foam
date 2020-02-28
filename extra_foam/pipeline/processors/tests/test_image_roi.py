@@ -15,16 +15,21 @@ import pytest
 import numpy as np
 
 from extra_foam.pipeline.processors import ImageRoiTrain, ImageRoiPulse
-from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom
+from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom, RoiProjType
 from extra_foam.pipeline.tests import _TestDataMixin
 
 
-_handlers = {
+_roi_fom_handlers = {
     RoiFom.SUM: np.nansum,
     RoiFom.MEAN: np.nanmean,
     RoiFom.MEDIAN: np.nanmedian,
     RoiFom.MAX: np.nanmax,
     RoiFom.MIN: np.nanmin,
+}
+
+_roi_proj_handlers = {
+    RoiProjType.SUM: np.nansum,
+    RoiProjType.MEAN: np.nanmean
 }
 
 
@@ -62,7 +67,7 @@ class TestImageRoiPulse(_TestDataMixin):
         assert list(roi.geom3.geometry) == proc._geom3
         assert list(roi.geom4.geometry) == proc._geom4
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -96,7 +101,7 @@ class TestImageRoiPulse(_TestDataMixin):
             proc.process(data)
             assert processed.pulse.roi.norm is None
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFom(self, fom_type, fom_handler):
         proc = self._proc
 
@@ -238,7 +243,7 @@ class TestImageRoiTrain(_TestDataMixin):
     def _get_roi_slice(self, geom):
         return slice(geom[1], geom[1] + geom[3]), slice(geom[0], geom[0] + geom[2])
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -264,7 +269,7 @@ class TestImageRoiTrain(_TestDataMixin):
             else:
                 assert fom3_gt + fom4_gt == processed.roi.norm
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFom(self, fom_type, fom_handler):
         proc = self._proc
 
@@ -341,8 +346,10 @@ class TestImageRoiTrain(_TestDataMixin):
                 proc.process(data)
                 error.assert_called_once()
 
+    @pytest.mark.parametrize("proj_type, proj_handler",
+                             [(k, v) for k, v in _roi_proj_handlers.items()])
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
-    def testProjFom(self, direct, axis):
+    def testProjFom(self, proj_type, proj_handler, direct, axis):
         proc = self._proc
 
         for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
@@ -350,9 +357,10 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_combo = combo
             proc._proj_direct = direct
             proc._proj_norm = Normalizer.UNDEFINED
+            proc._proj_type = proj_type
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            y_gt = np.nansum(processed.image.masked_mean[s[0], s[1]], axis=axis)
+            y_gt = proj_handler(processed.image.masked_mean[s[0], s[1]], axis=axis)
             np.testing.assert_array_equal(np.arange(len(y_gt)), processed.roi.proj.x)
             np.testing.assert_array_equal(y_gt, processed.roi.proj.y)
             assert np.sum(y_gt) == processed.roi.proj.fom
@@ -362,6 +370,7 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_combo = proj_combo
             proc._proj_direct = direct
             proc._proj_norm = Normalizer.UNDEFINED
+            proc._proj_type = proj_type
             proc.process(data)
             s1 = self._get_roi_slice(processed.roi.geom1.geometry)
             roi1_gt = processed.image.masked_mean[s1[0], s1[1]]
@@ -371,7 +380,7 @@ class TestImageRoiTrain(_TestDataMixin):
                 roi_gt = roi1_gt - roi2_gt
             else:
                 roi_gt = roi1_gt + roi2_gt
-            y_gt = np.nansum(roi_gt, axis=axis)
+            y_gt = proj_handler(roi_gt, axis=axis)
             np.testing.assert_array_equal(np.arange(len(y_gt)), processed.roi.proj.x)
             np.testing.assert_array_almost_equal(y_gt, processed.roi.proj.y)
             np.testing.assert_array_almost_equal(np.sum(y_gt), processed.roi.proj.fom)
@@ -417,7 +426,7 @@ class TestImageRoiTrain(_TestDataMixin):
         proc._process_fom_pump_probe.assert_not_called()
         proc._process_proj_pump_probe.assert_not_called()
 
-    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNormPumpProbe(self, norm_type, fom_handler):
         proc = self._proc
 
@@ -452,7 +461,7 @@ class TestImageRoiTrain(_TestDataMixin):
             assert fom_on_gt == processed.pp.on.roi_norm
             assert fom_off_gt == processed.pp.off.roi_norm
 
-    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _handlers.items()])
+    @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFomPumpProbe(self, fom_type, fom_handler):
         proc = self._proc
 
@@ -488,8 +497,10 @@ class TestImageRoiTrain(_TestDataMixin):
             assert fom_on_gt - fom_off_gt == processed.pp.fom
 
     @patch('extra_foam.ipc.ProcessLogger.error')
+    @pytest.mark.parametrize("proj_type, proj_handler",
+                             [(k, v) for k, v in _roi_proj_handlers.items()])
     @pytest.mark.parametrize("direct, axis", [('x', -2), ('y', -1)])
-    def testRoiProjPumpProbe(self, error, direct, axis):
+    def testRoiProjPumpProbe(self, error, proj_type, proj_handler, direct, axis):
         proc = self._proc
 
         for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
@@ -498,11 +509,12 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_combo = combo
             proc._proj_direct = direct
             proc._proj_norm = Normalizer.UNDEFINED
+            proc._proj_type = proj_type
             processed.pp.abs_difference = True
             proc.process(data)
             s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            y_on_gt = processed.pp.image_on[s[0], s[1]].sum(axis=axis)
-            y_off_gt = processed.pp.image_off[s[0], s[1]].sum(axis=axis)
+            y_on_gt = proj_handler(processed.pp.image_on[s[0], s[1]], axis=axis)
+            y_off_gt = proj_handler(processed.pp.image_off[s[0], s[1]], axis=axis)
             np.testing.assert_array_equal(y_on_gt, processed.pp.y_on)
             np.testing.assert_array_equal(y_off_gt, processed.pp.y_off)
             np.testing.assert_array_equal(y_on_gt - y_off_gt, processed.pp.y)
@@ -518,14 +530,15 @@ class TestImageRoiTrain(_TestDataMixin):
             proc._proj_combo = proj_combo
             proc._proj_direct = direct
             proc._proj_norm = Normalizer.UNDEFINED
+            proc._proj_type = proj_type
             processed.pp.abs_difference = True
             proc.process(data)
             s1 = self._get_roi_slice(processed.roi.geom1.geometry)
-            y1_on_gt = processed.pp.image_on[s1[0], s1[1]].sum(axis=axis)
-            y1_off_gt = processed.pp.image_off[s1[0], s1[1]].sum(axis=axis)
+            y1_on_gt = proj_handler(processed.pp.image_on[s1[0], s1[1]], axis=axis)
+            y1_off_gt = proj_handler(processed.pp.image_off[s1[0], s1[1]], axis=axis)
             s2 = self._get_roi_slice(processed.roi.geom2.geometry)
-            y2_on_gt = processed.pp.image_on[s2[0], s2[1]].sum(axis=axis)
-            y2_off_gt = processed.pp.image_off[s2[0], s2[1]].sum(axis=axis)
+            y2_on_gt = proj_handler(processed.pp.image_on[s2[0], s2[1]], axis=axis)
+            y2_off_gt = proj_handler(processed.pp.image_off[s2[0], s2[1]], axis=axis)
             if proj_combo == RoiCombo.ROI1_SUB_ROI2:
                 y_on_gt = y1_on_gt - y2_on_gt
                 y_off_gt = y1_off_gt - y2_off_gt

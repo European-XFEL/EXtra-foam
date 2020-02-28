@@ -11,7 +11,7 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, Normalizer, RoiCombo, RoiFom
+    AnalysisType, config, Normalizer, RoiCombo, RoiFom, RoiProjType
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
@@ -579,12 +579,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget = self.image_tool._corrected_view._roi_proj_ctrl_widget
         avail_norms = {value: key for key, value in widget._available_norms.items()}
         avail_combos = {value: key for key, value in widget._available_combos.items()}
+        avail_types = {value: key for key, value in widget._available_types.items()}
 
         proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
         self.assertEqual(RoiCombo.ROI1, proc._proj_combo)
+        self.assertEqual(RoiProjType.SUM, proc._proj_type)
         self.assertEqual('x', proc._proj_direct)
         self.assertEqual(Normalizer.UNDEFINED, proc._proj_norm)
         self.assertEqual((0, math.inf), proc._proj_fom_integ_range)
@@ -592,12 +594,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test setting new values
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
+        widget._type_cb.setCurrentText(avail_types[RoiProjType.MEAN])
         widget._direct_cb.setCurrentText('y')
         widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
         self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._proj_combo)
+        self.assertEqual(RoiProjType.MEAN, proc._proj_type)
         self.assertEqual('y', proc._proj_direct)
         self.assertEqual(Normalizer.ROI, proc._proj_norm)
         self.assertEqual((10, 20), proc._proj_fom_integ_range)
