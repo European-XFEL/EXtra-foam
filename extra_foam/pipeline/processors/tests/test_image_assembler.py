@@ -39,6 +39,17 @@ def _check_assembled_result(data, src):
     assert assembled_shape[2] >= 1024
 
 
+def _check_single_module_result(data, src, module_shape):
+    # test the module keys have been deleted
+    assert data['raw'][src] is None
+
+    assembled = data['assembled']['data']
+    assert 3 == assembled.ndim
+    assembled_shape = assembled.shape
+    assert 4 == assembled_shape[0]
+    assert assembled_shape[-2:] == module_shape
+
+
 _tmp_cfg_dir = tempfile.mkdtemp()
 
 
@@ -167,7 +178,6 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
             data['raw'][src] = np.ones((0, 16, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        expected_shape = (4, 16, 512, 128)
         # (modules, fs, ss, memory cells)
         data['raw'][src] = np.ones((16, 128, 512, 4), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
@@ -177,6 +187,18 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
         data['raw'][src] = np.ones((4, 16, 512, 128), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         _check_assembled_result(data, src)
+
+        # test single module
+
+        # (modules, fs, ss, memory cells)
+        data['raw'][src] = np.ones((1, 128, 512, 4), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        _check_single_module_result(data, src, config["MODULE_SHAPE"])
+
+        # (memory cells, modules, ss, fs)
+        data['raw'][src] = np.ones((4, 1, 512, 128), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
 
 class TestLpdAssembler:
@@ -322,6 +344,11 @@ class TestLpdAssembler:
         data['raw'][src] = np.ones((16, 256, 256, 4), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         _check_assembled_result(data, src)
+
+        # test single module
+        data['raw'][src] = np.ones((1, 256, 256, 4), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testOutArray(self, assembler_type):
@@ -512,6 +539,11 @@ class TestDSSCAssembler:
         data['raw'][src] = np.ones((16, 512, 128, 4), dtype=_IMAGE_DTYPE)
         self._assembler.process(data)
         _check_assembled_result(data, src)
+
+        # test single module
+        data['raw'][src] = np.ones((1, 512, 128, 4), dtype=_IMAGE_DTYPE)
+        self._assembler.process(data)
+        _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
     def testOutArray(self):
         key_name = 'image.data'
