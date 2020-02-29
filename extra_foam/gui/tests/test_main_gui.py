@@ -190,22 +190,43 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget = self.gui._source_cw
         self.assertIsInstance(widget, DataSourceWidget)
 
-    def testPulseFilterCtrlWidget(self):
-        widget = self.gui.pulse_filter_ctrl_widget
-        pulse_worker = self.pulse_worker
-        post_pulse_filter = pulse_worker._post_pulse_filter
+    def testFomFilterCtrlWidget(self):
+        widget = self.gui.fom_filter_ctrl_widget
+        filter_pulse = self.pulse_worker._filter
+        filter_train = self.train_worker._filter
 
-        analysis_types = {value: key for key, value in
-                          widget._analysis_types.items()}
-        post_pulse_filter.update()
-        self.assertEqual(AnalysisType.UNDEFINED, post_pulse_filter.analysis_type)
-        self.assertTupleEqual((-np.inf, np.inf), post_pulse_filter._fom_range)
+        analysis_types = {value: key for key, value in widget._analysis_types.items()}
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM_PULSE])
+        # test default
+
+        self.assertTrue(widget._pulse_resolved_cb.isChecked())
+
+        filter_pulse.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), filter_pulse._fom_range)
+        filter_train.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), filter_pulse._fom_range)
+
+        # test set new
+
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
         widget._fom_range_le.setText("-1, 1")
-        post_pulse_filter.update()
-        self.assertEqual(AnalysisType.ROI_FOM_PULSE, post_pulse_filter.analysis_type)
-        self.assertEqual((-1, 1), post_pulse_filter._fom_range)
+        filter_pulse.update()
+        self.assertEqual(AnalysisType.ROI_FOM_PULSE, filter_pulse.analysis_type)
+        self.assertEqual((-1, 1), filter_pulse._fom_range)
+        filter_train.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_train.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), filter_train._fom_range)
+
+        widget._fom_range_le.setText("-2, 2")
+        widget._pulse_resolved_cb.setChecked(False)
+        filter_pulse.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertEqual((-1, 1), filter_pulse._fom_range)
+        filter_train.update()
+        self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
+        self.assertTupleEqual((-2, 2), filter_train._fom_range)
 
     def testCorrelationCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -663,6 +684,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         cls.gui = cls.foam._gui
         cls.pulse_worker = cls.foam.pulse_worker
+        cls.train_worker = cls.foam.train_worker
 
     @classmethod
     def tearDownClass(cls):
@@ -720,6 +742,35 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         # PumpProbeMode.SAME_TRAIN is not available
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         self.assertEqual(2, len(spy))
+
+    def testFomFilterCtrlWidget(self):
+        widget = self.gui.fom_filter_ctrl_widget
+        filter_pulse = self.pulse_worker._filter
+        filter_train = self.train_worker._filter
+
+        analysis_types = {value: key for key, value in widget._analysis_types.items()}
+
+        # test default
+
+        self.assertFalse(widget._pulse_resolved_cb.isChecked())
+
+        filter_pulse.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), filter_pulse._fom_range)
+        filter_train.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertTupleEqual((-np.inf, np.inf), filter_pulse._fom_range)
+
+        # test set new
+
+        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
+        widget._fom_range_le.setText("-2, 2")
+        filter_pulse.update()
+        self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
+        self.assertEqual((-np.inf, np.inf), filter_pulse._fom_range)
+        filter_train.update()
+        self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
+        self.assertTupleEqual((-2, 2), filter_train._fom_range)
 
     def testHistogramCtrlWidget(self):
         # TODO

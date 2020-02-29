@@ -39,4 +39,5 @@ class CtrlDataProcessor(_BaseProcessor):
             # process control data
             for src in srcs:
                 v = raw[src]
-                self.filter_train_by_vrange(v, src, catalog)
+                self.filter_train_by_vrange(
+                    v, catalog.get_vrange(src), src)

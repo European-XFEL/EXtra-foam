@@ -15,5 +15,5 @@ from .control_data import CtrlDataProcessor
 from .pump_probe import PumpProbeProcessor
 from .xgm import XgmProcessor
 from .histogram import HistogramProcessor
-from .pulse_filter import PostPulseFilter
+from .fom_filter import FomPulseFilter, FomTrainFilter
 from .tr_xas import TrXasProcessor

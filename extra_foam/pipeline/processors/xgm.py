@@ -101,7 +101,7 @@ class XgmProcessor(_BaseProcessor):
             else:
                 raise UnknownParameterError(f'[XGM] Unknown property: {ppt}')
 
-            self.filter_train_by_vrange(v, src, catalog)
+            self.filter_train_by_vrange(v, catalog.get_vrange(src), src)
 
         # process pipeline data
         pipeline_src_tracker = dict()
@@ -130,5 +130,7 @@ class XgmProcessor(_BaseProcessor):
                 raise UnknownParameterError(f'[XGM] Unknown property: {ppt}')
 
             # apply pulse filter
-            self.filter_pulse_by_vrange(
-                self._pulse_intensity_ma, src, processed.pidx, catalog)
+            self.filter_pulse_by_vrange(self._pulse_intensity_ma,
+                                        catalog.get_vrange(src),
+                                        processed.pidx,
+                                        src)

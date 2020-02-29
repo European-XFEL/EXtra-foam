@@ -10,27 +10,34 @@ All rights reserved.
 from collections import OrderedDict
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
 from ...config import AnalysisType
 
 
-class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
+class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up pulse-resolved filter parameters."""
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
-        "ROI FOM": AnalysisType.ROI_FOM_PULSE,
+        "ROI FOM": AnalysisType.ROI_FOM,
     })
 
     def __init__(self, *args, **kwargs):
-        super().__init__("Pulse filter setup", *args, **kwargs)
+        super().__init__("FOM filter setup", *args, **kwargs)
 
         self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(self._analysis_types.keys())
         self._fom_range_le = SmartBoundaryLineEdit("-Inf, Inf")
+
+        self._pulse_resolved_cb = QCheckBox("Pulse resolved")
+        if self._pulse_resolved:
+            self._pulse_resolved_cb.setChecked(True)
+        else:
+            self._pulse_resolved_cb.setChecked(False)
+            self._pulse_resolved_cb.setEnabled(False)
 
         self.initUI()
         self.initConnections()
@@ -46,26 +53,27 @@ class PulseFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(self._analysis_type_cb, 0, 1)
         layout.addWidget(QLabel("Fom range: "), 0, 2, AR)
         layout.addWidget(self._fom_range_le, 0, 3)
+        layout.addWidget(self._pulse_resolved_cb, 0, 4)
 
         self.setLayout(layout)
-
-        if not self._pulse_resolved:
-            self.setEnabled(False)
 
     def initConnections(self):
         """Overload."""
         mediator = self._mediator
 
         self._analysis_type_cb.currentTextChanged.connect(
-            lambda x: mediator.onPfAnalysisTypeChange(
+            lambda x: mediator.onFomFilterAnalysisTypeChange(
                 self._analysis_types[x]))
         self._fom_range_le.value_changed_sgn.connect(
-            mediator.onPfFomRangeChange)
+            mediator.onFomFilterRangeChange)
+        self._pulse_resolved_cb.toggled.connect(
+            mediator.onFomFilterPulseResolvedChange)
 
     def updateMetaData(self):
         """Overload."""
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
         self._fom_range_le.returnPressed.emit()
-
+        self._pulse_resolved_cb.toggled.emit(
+            self._pulse_resolved_cb.isChecked())
         return True
