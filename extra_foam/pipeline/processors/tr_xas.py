@@ -12,6 +12,7 @@ from scipy import stats
 
 from .base_processor import _BaseProcessor, SimpleSequence
 from .binning import _BinMixin
+from ...algorithms import nansum
 from ..exceptions import ProcessingError
 from ...config import AnalysisType
 from ...utils import profiler
@@ -202,13 +203,13 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
             raise ProcessingError("ROI3 is not available!")
 
         # get sums of the three ROIs
-        sum1 = np.sum(roi1)
+        sum1 = nansum(roi1)
         if sum1 <= 0:
             raise ProcessingError("ROI1 sum <= 0!")
-        sum2 = np.sum(roi2)
+        sum2 = nansum(roi2)
         if sum2 <= 0:
             raise ProcessingError("ROI2 sum <= 0!")
-        sum3 = np.sum(roi3)
+        sum3 = nansum(roi3)
         if sum3 <= 0:
             raise ProcessingError("ROI3 sum <= 0!")
 
