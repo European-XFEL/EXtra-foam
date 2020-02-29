@@ -36,6 +36,7 @@ from ..config import config, PipelineSlowPolicy
 from ..ipc import RedisConnection
 from ..ipc import process_logger as logger
 from ..processes import register_foam_process
+from ..database import MonProxy
 
 
 class ProcessWorker(mp.Process):
@@ -63,6 +64,8 @@ class ProcessWorker(mp.Process):
 
         # the time when the previous data processing was finished
         self._prev_processed_time = None
+
+        self._mon = MonProxy()
 
     @property
     def name(self):
@@ -98,6 +101,9 @@ class ProcessWorker(mp.Process):
                     try:
                         self._run_tasks(data_out)
                     except StopPipelineError:
+                        tid = data_out["processed"].tid
+                        self._mon.add_tid_with_timestamp(tid, dropped=True)
+                        logger.info(f"Train {tid} dropped!")
                         data_out = None
 
                 except Empty:
