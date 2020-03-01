@@ -48,11 +48,9 @@ class MonProxy(_AbstractProxy):
     @redis_except_handler
     def get_process_count(self):
         """Get the latest train ID and the process counts."""
-        pipe = self._db.pipeline()
-        pipe.execute_command("GET", self.MON_LATEST_TID)
-        pipe.execute_command("GET", self.MON_N_PROCESSED)
-        pipe.execute_command("GET", self.MON_N_DROPPED)
-        return pipe.execute()
+        return self._db.execute_command("MGET", self.MON_LATEST_TID,
+                                                self.MON_N_PROCESSED,
+                                                self.MON_N_DROPPED)
 
     @redis_except_handler
     def reset_process_count(self):
