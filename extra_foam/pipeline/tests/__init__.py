@@ -49,7 +49,7 @@ class _TestDataMixin:
 
         processed.image = ImageData.from_array(imgs, **kwargs)
 
-        if len(shape) == 2:
+        if imgs.ndim == 2:
             slicer = None
         else:
             slicer = slice(None, None) if slicer is None else slicer
@@ -93,9 +93,12 @@ class _TestDataMixin:
             },
             'assembled': {
                 'data': imgs,
-                'sliced': imgs[slicer]
             }
         }
+        if imgs.ndim == 2:
+            data['assembled']['sliced'] = imgs
+        else:
+            data['assembled']['sliced'] = imgs[slicer]
 
         return data, processed
 
