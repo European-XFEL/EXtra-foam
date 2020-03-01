@@ -104,9 +104,9 @@ class TestTrXasProcessor(_TestDataMixin):
     @patch('extra_foam.ipc.ProcessLogger.error')
     def testProcess(self, error):
         proc = self._proc
+        proc._meta.has_analysis = MagicMock(return_value=True)
         data, processed = self.simple_data(1001, (4, 2, 2))
 
-        proc._meta.has_analysis = MagicMock(return_value=True)
         proc._n_delay_bins = 4
         proc._delay_range = [-1, 1]
         proc._n_energy_bins = 2
