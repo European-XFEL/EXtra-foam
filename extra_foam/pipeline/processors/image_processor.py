@@ -68,8 +68,8 @@ class ImageProcessor(_BaseProcessor):
         self._correct_offset = True
         self._gain = None
         self._offset = None
-        self._gain_slicer = None
-        self._offset_slicer = None
+        self._gain_slicer = slice(None, None)
+        self._offset_slicer = slice(None, None)
         self._compute_gain_mean = False
         self._compute_offset_mean = False
         self._gain_mean = None
@@ -243,11 +243,6 @@ class ImageProcessor(_BaseProcessor):
         if self._correct_gain:
             if gain is not None:
                 sliced_gain = gain[self._gain_slicer]
-                if sliced_gain.shape != expected_shape:
-                    raise ImageProcessingError(
-                        f"[Image processor] Shape of the gain constant "
-                        f"{sliced_gain.shape} is different from the data "
-                        f"{expected_shape}")
                 if self._compute_gain_mean:
                     # For visualization of the gain
                     self._gain_mean = nanmean_image_data(sliced_gain)
@@ -256,6 +251,13 @@ class ImageProcessor(_BaseProcessor):
                 if self._compute_gain_mean:
                     self._gain_mean = None
                     self._compute_gain_mean = False
+
+            if sliced_gain is not None and \
+                    sliced_gain.shape != expected_shape:
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the gain constant "
+                    f"{sliced_gain.shape} is different from the data "
+                    f"{expected_shape}")
 
         sliced_offset = None
         if self._correct_offset:

@@ -18,6 +18,7 @@ from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
+from extra_foam.pipeline.processors import ImageProcessor, ImageRoiPulse
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
@@ -76,6 +77,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.view = self.image_tool._corrected_view.imageView
         self.view.setImageData(None)
         self.view._image = None
+
+        self.pulse_worker._image_proc = ImageProcessor()
+        self.pulse_worker._image_roi = ImageRoiPulse()
 
     def testGeneral(self):
         self.assertEqual(10, len(self.image_tool._ctrl_widgets))
@@ -275,6 +279,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         pub = ImageMaskPub()
         proc = self.pulse_worker._image_proc
+
         data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # trigger the lazily evaluated subscriber
@@ -353,22 +358,22 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc = self.pulse_worker._image_proc
 
         proc.update()
-        self.assertTrue(proc._correct_gain)
-        self.assertTrue(proc._correct_offset)
+        self.assertFalse(proc._correct_gain)
+        self.assertFalse(proc._correct_offset)
         self.assertEqual(slice(None), proc._gain_slicer)
         self.assertEqual(slice(None), proc._offset_slicer)
         self.assertTrue(proc._dark_as_offset)
         self.assertFalse(proc._recording_dark)
 
-        widget._correct_gain_cb.setChecked(False)
-        widget._correct_offset_cb.setChecked(False)
+        widget._correct_gain_cb.setChecked(True)
+        widget._correct_offset_cb.setChecked(True)
         widget._gain_slicer_le.setText(":70")
         widget._offset_slicer_le.setText("2:120:4")
         widget._dark_as_offset_cb.setChecked(False)
         QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
         proc.update()
-        self.assertFalse(proc._correct_gain)
-        self.assertFalse(proc._correct_offset)
+        self.assertTrue(proc._correct_gain)
+        self.assertTrue(proc._correct_offset)
         self.assertEqual(slice(None, 70), proc._gain_slicer)
         self.assertEqual(slice(2, 120, 4), proc._offset_slicer)
         self.assertFalse(proc._dark_as_offset)

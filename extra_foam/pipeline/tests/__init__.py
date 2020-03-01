@@ -49,7 +49,11 @@ class _TestDataMixin:
 
         processed.image = ImageData.from_array(imgs, **kwargs)
 
-        slicer = slice(None, None) if slicer is None else slicer
+        if len(shape) == 2:
+            slicer = None
+        else:
+            slicer = slice(None, None) if slicer is None else slicer
+
         src_list = [('Foo', 'oof'), ('Bar', 'rab'), ('karaboFAI', 'extra_foam')]
         src_name, key_name = random.choice(src_list)
 
