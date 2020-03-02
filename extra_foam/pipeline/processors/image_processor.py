@@ -46,9 +46,13 @@ class ImageProcessor(_BaseProcessor):
         _recording_dark (bool): whether a dark run is being recorded.
         _dark_mean (bool): average of recorded dark trains over memory
             cell. Shape = (y, x)
-        _image_mask (numpy.ndarray): image mask array. Shape = (y, x),
-            dtype=np.bool
-        _threshold_mask (tuple): threshold mask.
+        _image_mask (numpy.ndarray): image mask. For pulse-resolved detectors,
+            this image mask is shared by all the pulses in a train. However,
+            their overall mask could still be different after applying the
+            threshold mask. Shape = (y, x), dtype = np.bool
+        _threshold_mask (tuple):  (lower, upper) of the threshold.
+            It should be noted that a pixel with value outside of the boundary
+            will be masked as Nan/0, depending on the masking policy.
         _reference (numpy.ndarray): reference image.
         _poi_indices (list): indices of POI pulses.
     """
@@ -64,8 +68,8 @@ class ImageProcessor(_BaseProcessor):
         self._correct_offset = True
         self._gain = None
         self._offset = None
-        self._gain_slicer = None
-        self._offset_slicer = None
+        self._gain_slicer = slice(None, None)
+        self._offset_slicer = slice(None, None)
         self._compute_gain_mean = False
         self._compute_offset_mean = False
         self._gain_mean = None
@@ -129,12 +133,11 @@ class ImageProcessor(_BaseProcessor):
         pulse_slicer = catalog.get_slicer(det)
 
         if assembled.ndim == 3:
-            n_total = assembled.shape[0]
             sliced_assembled = assembled[pulse_slicer]
-            sliced_indices = list(range(*(pulse_slicer.indices(n_total))))
+            sliced_indices = list(range(
+                *(pulse_slicer.indices(assembled.shape[0]))))
             n_sliced = len(sliced_indices)
         else:
-            n_total = 1
             sliced_assembled = assembled
             sliced_indices = [0]
             n_sliced = 1
@@ -199,6 +202,9 @@ class ImageProcessor(_BaseProcessor):
                 f"{image_mask.shape} is different from the shape of the image "
                 f"{image_shape}!")
 
+        elif image_mask is None:
+            image_mask = np.zeros(image_shape, dtype=np.bool)
+
         self._image_mask = image_mask
 
     def _update_reference(self, image_shape):
@@ -237,11 +243,6 @@ class ImageProcessor(_BaseProcessor):
         if self._correct_gain:
             if gain is not None:
                 sliced_gain = gain[self._gain_slicer]
-                if sliced_gain.shape != expected_shape:
-                    raise ImageProcessingError(
-                        f"[Image processor] Shape of the gain constant "
-                        f"{sliced_gain.shape} is different from the data "
-                        f"{expected_shape}")
                 if self._compute_gain_mean:
                     # For visualization of the gain
                     self._gain_mean = nanmean_image_data(sliced_gain)
@@ -250,6 +251,13 @@ class ImageProcessor(_BaseProcessor):
                 if self._compute_gain_mean:
                     self._gain_mean = None
                     self._compute_gain_mean = False
+
+            if sliced_gain is not None and \
+                    sliced_gain.shape != expected_shape:
+                raise ImageProcessingError(
+                    f"[Image processor] Shape of the gain constant "
+                    f"{sliced_gain.shape} is different from the data "
+                    f"{expected_shape}")
 
         sliced_offset = None
         if self._correct_offset:
@@ -288,7 +296,8 @@ class ImageProcessor(_BaseProcessor):
                 image_data.images[i] = assembled[i].copy()
                 mask_image_data(image_data.images[i],
                                 image_mask=self._image_mask,
-                                threshold_mask=self._threshold_mask)
+                                threshold_mask=self._threshold_mask,
+                                keep_nan=True)
             else:
                 out_of_bound_indices.append(i)
 

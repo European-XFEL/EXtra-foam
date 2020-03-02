@@ -10,6 +10,8 @@ All rights reserved.
 import unittest
 from unittest.mock import patch, MagicMock
 
+import numpy as np
+
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.digitizer import DigitizerProcessor
 from extra_foam.database import SourceItem
@@ -49,18 +51,29 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
 
         # pipeline source with valid property
 
+        integral_vrange = (-1.0, 1.0)
+        n_pulses = 5
         for ch in self._channels:
             item = SourceItem(category, 'digitizer1:network', [],
                               f'digitizers.channel_1_{ch}.apd.pulseIntegral',
-                              slice(None, None), (0, 1000))
+                              slice(None, None), integral_vrange)
+            catalog.clear()
+
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
             meta[src] = {'tid': 12346}
-            raw[src] = [100, 200, 300]
+            pulse_integral_gt = np.random.randn(n_pulses)
+            raw[src] = pulse_integral_gt
             proc.process(data)
-            self.assertListEqual([100, 200, 300],
-                                 processed.pulse.digitizer[ch].pulse_integral.tolist())
+            np.testing.assert_array_almost_equal(
+                pulse_integral_gt, processed.pulse.digitizer[ch].pulse_integral)
             self.assertEqual(ch, processed.pulse.digitizer.ch_normalizer)
+
+            # test pulse filter
+            np.testing.assert_array_equal(
+                ((integral_vrange[0] <= pulse_integral_gt) & (pulse_integral_gt <= integral_vrange[1])).nonzero()[0],
+                processed.pidx.kept_indices(n_pulses))
+
             self._reset_processed(processed)
 
             # test moving average
@@ -88,3 +101,4 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
     def _reset_processed(self, processed):
         for ch in self._channels:
             processed.pulse.digitizer[ch].pulse_integral = None
+        processed.pidx.reset()

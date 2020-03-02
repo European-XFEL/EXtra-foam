@@ -204,6 +204,9 @@ class Mediator(QObject):
     def onRoiProjComboChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'proj:combo', int(value))
 
+    def onRoiProjTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.ROI_PROC, 'proj:type', int(value))
+
     def onRoiProjDirectChange(self, value: str):
         self._meta.hset(mt.ROI_PROC, 'proj:direct', value)
 
@@ -266,11 +269,14 @@ class Mediator(QObject):
     def onHistReset(self):
         self._meta.hset(mt.HISTOGRAM_PROC, "reset", 1)
 
-    def onPfAnalysisTypeChange(self, value: IntEnum):
-        self._meta.hset(mt.PULSE_FILTER_PROC, "analysis_type", int(value))
+    def onFomFilterAnalysisTypeChange(self, value: IntEnum):
+        self._meta.hset(mt.FOM_FILTER_PROC, "analysis_type", int(value))
 
-    def onPfFomRangeChange(self, value: tuple):
-        self._meta.hset(mt.PULSE_FILTER_PROC, "fom_range", str(value))
+    def onFomFilterRangeChange(self, value: tuple):
+        self._meta.hset(mt.FOM_FILTER_PROC, "fom_range", str(value))
+
+    def onFomFilterPulseResolvedChange(self, value: bool):
+        self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
 
     def onTrXasScanStateToggled(self, value: IntEnum, state: bool):
         if state:

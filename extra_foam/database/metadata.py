@@ -44,7 +44,7 @@ class Metadata(metaclass=MetaMetadata):
     CORRELATION_PROC = "meta:proc:correlation"
     BIN_PROC = "meta:proc:bin"
     HISTOGRAM_PROC = "meta:proc:histogram"
-    PULSE_FILTER_PROC = "meta:proc:pulse_filter"
+    FOM_FILTER_PROC = "meta:proc:fom_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
     TR_XAS_PROC = "meta:proc:tr_xas"
 

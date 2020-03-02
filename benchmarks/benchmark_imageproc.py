@@ -17,42 +17,42 @@ from extra_foam.algorithms import (
 )
 
 
-def _run_nanmean_image_array(data_type):
-    # image array
-    data = np.ones((64, 1024, 512), dtype=data_type)
-    data[::2, ::2, ::2] = np.nan
+def _run_nanmean_image_array(data, data_type):
+    data = data.astype(data_type)
 
     t0 = time.perf_counter()
-    nanmean_image_data(data)
+    data_cpp = nanmean_image_data(data)
     dt_cpp = time.perf_counter() - t0
 
     t0 = time.perf_counter()
-    np.nanmean(data, axis=0)
+    data_py = np.nanmean(data, axis=0)
     dt_py = time.perf_counter() - t0
+
+    np.testing.assert_array_equal(data_cpp, data_py)
 
     # selected indices from an image array
     selected = [v for v in range(len(data)) if v not in [1, 11, 22]]
 
     t0 = time.perf_counter()
-    nanmean_image_data(data, selected)
+    data_cpp = nanmean_image_data(data, kept=selected)
     dt_cpp_sliced = time.perf_counter() - t0
 
     t0 = time.perf_counter()
-    np.nanmean(data[selected], axis=0)
+    data_py = np.nanmean(data[selected], axis=0)
     dt_py_sliced = time.perf_counter() - t0
 
-    # two images
-    img = np.ones((1024, 512), dtype=data_type)
-    img[::2, ::2] = np.nan
+    np.testing.assert_array_equal(data_cpp, data_py)
 
+    # two images
     t0 = time.perf_counter()
-    nanmean_image_data(img, img)
+    data_cpp = nanmean_image_data((data[0, ...], data[1, ...]))
     dt_cpp_two = time.perf_counter() - t0
 
-    np.warnings.simplefilter("ignore", category=RuntimeWarning)
     t0 = time.perf_counter()
-    np.nanmean([img, img], axis=0)
+    data_py = np.nanmean(np.stack([data[0, ...], data[1, ...]]), axis=0)
     dt_py_two = time.perf_counter() - t0
+
+    np.testing.assert_array_equal(data_cpp, data_py)
 
     print(f"\nnanmean_image_data with {data_type} - \n"
           f"dt (cpp para): {dt_cpp:.4f}, "
@@ -63,76 +63,93 @@ def _run_nanmean_image_array(data_type):
           f"dt (numpy) two images: {dt_py_two:.4f}.")
 
 
-def bench_nanmean_image_array():
-    _run_nanmean_image_array(np.float32)
-    _run_nanmean_image_array(np.float64)
+def bench_nanmean_image_array(shape):
+    data = np.random.rand(*shape)
+    data[::2, ::2, ::2] = np.nan
+
+    _run_nanmean_image_array(data, np.float32)
+    _run_nanmean_image_array(data, np.float64)
 
 
-def _run_moving_average_image_array(data_type):
-    imgs = np.ones((64, 1024, 512), dtype=data_type)
+def _run_moving_average_image_array(data, new_data, data_type):
+    data = data.astype(data_type)
+    new_data = new_data.astype(data_type)
 
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    movingAvgImageData(imgs, imgs, 5)
+    movingAvgImageData(data_cpp, new_data, 5)
     dt_cpp = time.perf_counter() - t0
 
+    data_py = data.copy()
     t0 = time.perf_counter()
-    imgs + (imgs - imgs) / 5
+    data_py += (new_data - data_py) / 5
     dt_py = time.perf_counter() - t0
+
+    np.testing.assert_array_equal(data_cpp, data_py)
 
     print(f"\nmoving average with {data_type} - "
           f"dt (cpp para): {dt_cpp:.4f}, dt (numpy): {dt_py:.4f}")
 
 
-def bench_moving_average_image_array():
-    _run_moving_average_image_array(np.float32)
-    _run_moving_average_image_array(np.float64)
+def bench_moving_average_image_array(shape):
+    data = np.random.rand(*shape)
+    new_data = np.random.rand(*shape)
+
+    _run_moving_average_image_array(data, new_data, np.float32)
+    _run_moving_average_image_array(data, new_data, np.float64)
 
 
-def _run_mask_image_array(data_type):
-    def prepare_data():
-        dt = np.ones((64, 1024, 512), dtype=data_type)
-        dt[::2, ::2, ::2] = np.nan
-        return dt
+def _run_mask_image_array(data, mask, data_type, keep_nan=False):
+    lb, ub = 0.2, 0.8
+    data = data.astype(data_type)
 
     # mask nan
-    data = prepare_data()
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    mask_image_data(data)
+    mask_image_data(data_cpp, keep_nan=keep_nan)
     dt_cpp_raw = time.perf_counter() - t0
 
-    data = prepare_data()
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data[np.isnan(data)] = 0
+    if not keep_nan:
+        data_py[np.isnan(data_py)] = 0
     dt_py_raw = time.perf_counter() - t0
 
+    np.testing.assert_array_equal(data_cpp, data_py)
+
     # mask by threshold
-    data = prepare_data()
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    mask_image_data(data, threshold_mask=(2., 3.))
+    mask_image_data(data_cpp, threshold_mask=(lb, ub), keep_nan=keep_nan)
     dt_cpp_th = time.perf_counter() - t0
 
-    data = prepare_data()
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data[np.isnan(data)] = 0
-    data[(data > 3) | (data < 2)] = 0
+    if not keep_nan:
+        data_py[np.isnan(data_py) | (data_py > ub) | (data_py < lb)] = 0
+    else:
+        data_py[(data_py > ub) | (data_py < lb)] = np.nan
     dt_py_th = time.perf_counter() - t0
 
-    # mask by both image and threshold
-    mask = np.ones((1024, 512), dtype=np.bool)
+    np.testing.assert_array_equal(data_cpp, data_py)
 
-    data = prepare_data()
+    # mask by both image and threshold
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    mask_image_data(data, image_mask=mask, threshold_mask=(2., 3.))
+    mask_image_data(data_cpp, image_mask=mask, threshold_mask=(lb, ub), keep_nan=keep_nan)
     dt_cpp = time.perf_counter() - t0
 
-    data = prepare_data()
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data[np.isnan(data)] = 0
-    data[:, mask] = 0
-    data[(data > 3) | (data < 2)] = 0
+    if not keep_nan:
+        data_py[np.isnan(data_py) | mask | (data_py > ub) | (data_py < lb)] = 0
+    else:
+        data_py[mask | (data_py > ub) | (data_py < lb)] = np.nan
     dt_py = time.perf_counter() - t0
 
-    print(f"\nmask_image_data with {data_type} - \n"
+    np.testing.assert_array_equal(data_cpp, data_py)
+
+    print(f"\nmask_image_data (keep_nan = {keep_nan}) with {data_type} - \n"
           f"dt (cpp para) raw: {dt_cpp_raw:.4f}, "
           f"dt (numpy) raw: {dt_py_raw:.4f}, \n"
           f"dt (cpp para) threshold: {dt_cpp_th:.4f}, "
@@ -141,51 +158,61 @@ def _run_mask_image_array(data_type):
           f"dt (numpy) threshold and image: {dt_py:.4f}")
 
 
-def bench_mask_image_array():
-    _run_mask_image_array(np.float32)
-    _run_mask_image_array(np.float64)
+def bench_mask_image_array(shape):
+    data = np.random.rand(*shape)
+    data[::4, ::4, ::4] = np.nan
+    mask = np.zeros(shape[-2:], dtype=np.bool)
+    mask[::10, ::10] = True
+
+    _run_mask_image_array(data, mask, np.float32, keep_nan=False)
+    _run_mask_image_array(data, mask, np.float64, keep_nan=False)
+    _run_mask_image_array(data, mask, np.float32, keep_nan=True)
+    _run_mask_image_array(data, mask, np.float64, keep_nan=True)
 
 
-def _run_correct_image_array(data_type, gain, offset):
+def _run_correct_image_array(data, data_type, gain, offset):
     gain = gain.astype(data_type)
     offset = offset.astype(data_type)
+    data = data.astype(data_type)
 
     # offset only
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    correct_image_data(data, offset=offset)
+    correct_image_data(data_cpp, offset=offset)
     dt_cpp_offset = time.perf_counter() - t0
 
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data -= offset
+    data_py -= offset
     dt_py_offset = time.perf_counter() - t0
 
+    np.testing.assert_array_almost_equal(data_cpp, data_py)
+
     # gain only
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    correct_image_data(data, gain=gain)
+    correct_image_data(data_cpp, gain=gain)
     dt_cpp_gain = time.perf_counter() - t0
 
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data *= gain
+    data_py *= gain
     dt_py_gain = time.perf_counter() - t0
 
-    gain = gain.astype(data_type)
-    offset = offset.astype(data_type)
+    np.testing.assert_array_almost_equal(data_cpp, data_py)
 
     # gain and offset
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_cpp = data.copy()
     t0 = time.perf_counter()
-    correct_image_data(data, gain=gain, offset=offset)
+    correct_image_data(data_cpp, gain=gain, offset=offset)
     dt_cpp_both = time.perf_counter() - t0
 
-    data = 2. * np.ones((64, 1024, 512), dtype=data_type)
+    data_py = data.copy()
     t0 = time.perf_counter()
-    data -= offset
-    data *= gain
+    data_py = (data_py - offset) * gain
     dt_py_both = time.perf_counter() - t0
+
+    np.testing.assert_array_almost_equal(data_cpp, data_py)
 
     print(f"\ncorrect_image_data (offset) with {data_type} - \n"
           f"dt (cpp para) offset: {dt_cpp_offset:.4f}, "
@@ -196,11 +223,13 @@ def _run_correct_image_array(data_type, gain, offset):
           f"dt (numpy) gain and offset: {dt_py_both:.4f}")
 
 
-def bench_correct_gain_offset():
-    gain = np.random.randn(64, 1024, 512)
-    offset = np.random.randn(64, 1024, 512)
-    _run_correct_image_array(np.float32, gain, offset)
-    _run_correct_image_array(np.float64, gain, offset)
+def bench_correct_gain_offset(shape):
+    gain = np.random.randn(*shape)
+    offset = np.random.randn(*shape)
+    data = np.random.rand(*shape)
+
+    _run_correct_image_array(data, np.float32, gain, offset)
+    _run_correct_image_array(data, np.float64, gain, offset)
 
 
 if __name__ == "__main__":
@@ -208,7 +237,12 @@ if __name__ == "__main__":
     print("Benchmark image processing")
     print("*" * 80)
 
-    bench_nanmean_image_array()
-    bench_moving_average_image_array()
-    bench_mask_image_array()
-    bench_correct_gain_offset()
+    s = (32, 1096, 1120)
+
+    with np.warnings.catch_warnings():
+        np.warnings.simplefilter("ignore", category=RuntimeWarning)
+
+        bench_nanmean_image_array(s)
+        bench_moving_average_image_array(s)
+        bench_mask_image_array(s)
+        bench_correct_gain_offset(s)

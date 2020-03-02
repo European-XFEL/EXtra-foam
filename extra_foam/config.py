@@ -55,15 +55,22 @@ class RoiFom(IntEnum):
     MIN = 5
 
 
+class RoiProjType(IntEnum):
+    SUM = 1
+    MEAN = 2
+
+
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
     TR_XAS = 2
     ROI_FOM = 11
+    ROI_NORM = 12
     ROI_PROJ = 21
     AZIMUTHAL_INTEG = 41
     PULSE = 2700
     ROI_FOM_PULSE = 2711
+    ROI_NORM_PULSE = 2712
     ROI_PROJ_PULSE = 2721
     AZIMUTHAL_INTEG_PULSE = 2741
 

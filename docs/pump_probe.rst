@@ -6,6 +6,10 @@ PUMP-PROBE ANALYSIS
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
 
+.. image:: images/pump_probe_pattern.png
+   :width: 800
+
+
 In the *pump-probe* analysis, the average (nanmean_) images of the on- and off- pulses are
 calculated by
 
@@ -60,5 +64,5 @@ analysis is given by VFOM (on) - VFOM (off).
 |                              | moving average count.                                              |
 +------------------------------+--------------------------------------------------------------------+
 
-.. image:: images/pump-probe_window.png
+.. image:: images/pump_probe_window.png
    :width: 800

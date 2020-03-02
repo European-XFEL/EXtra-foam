@@ -4,10 +4,11 @@ import time
 
 from PyQt5 import QtTest
 from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import Qt
 
 from extra_foam.logger import logger
 from extra_foam.gui import mkQApp
-from extra_foam.config import config
+from extra_foam.config import config, ConfigWrapper
 from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
 from extra_foam.services import start_redis_server
 from extra_foam.processes import ProcessInfoList, wait_until_redis_shutdown
@@ -144,8 +145,161 @@ class TestDataSourceWidget(unittest.TestCase):
             self.assertIn(addr, cons)
             self.assertEqual(tp, cons[addr])
 
-    def testDataSourceTreeItem(self):
-        pass
+    @patch.dict(config._data, {"PULSE_RESOLVED": True})
+    @patch.object(ConfigWrapper, "pipeline_sources", new_callable=PropertyMock)
+    @patch.object(ConfigWrapper, "control_sources", new_callable=PropertyMock)
+    def testDataSourceTreeModelPs(self, control_sources, pipeline_sources):
+        from PyQt5.QtCore import QModelIndex
 
-    def testDataSourceTreeModel(self):
-        pass
+        pipeline_sources.return_value = {
+            'DSSC': {"A": ['a'], 'B': ['b']},
+            'XGM': {"XA": ['intensity']},
+        }
+
+        control_sources.return_value = {
+            'XGM': {"XA": ['flux', 'xpos']},
+            'MONOCHROMATOR': {"MONO": ['e']},
+            'MOTOR': {"MA": ['p'], "MB": ['p'], "MC": ['p']}
+        }
+
+        widget = DataSourceWidget(parent=self._dummy)
+        model = widget._src_tree_model
+
+        # ---------
+        # test root
+        # ---------
+        self.assertEqual('DSSC', model.index(0, 0, QModelIndex()).data())
+        self.assertEqual('XGM', model.index(1, 0, QModelIndex()).data())
+        self.assertEqual('MONOCHROMATOR', model.index(2, 0, QModelIndex()).data())
+        self.assertEqual('MOTOR', model.index(3, 0, QModelIndex()).data())
+        self.assertEqual(config["SOURCE_USER_DEFINED_CATEGORY"],
+                         model.index(4, 0, QModelIndex()).data())
+        self.assertFalse(model.index(5, 0, QModelIndex()).isValid())
+        self.assertEqual(5, model.rowCount(QModelIndex()))
+        self.assertEqual(4, model.columnCount(QModelIndex()))
+
+        # -----------------------
+        # test exclusive category
+        # -----------------------
+
+        dssc_ctg = model.index(0, 0, QModelIndex())
+        self.assertEqual('A', model.index(0, 0, dssc_ctg).data())
+        self.assertEqual('a', model.index(0, 1, dssc_ctg).data())
+        self.assertEqual(':', model.index(0, 2, dssc_ctg).data())
+        self.assertEqual('', model.index(0, 3, dssc_ctg).data())
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # first check since it is not allowed to modify in unchecked state
+        model.setData(model.index(0, 0, dssc_ctg), True, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # change device ID
+        model.setData(model.index(0, 0, dssc_ctg), 'A+', Qt.EditRole)
+        self.assertEqual(2, len(spy))
+        # delete old source
+        self.assertFalse(spy[0][0])
+        self.assertEqual('A', spy[0][1].name)
+        # add new source
+        self.assertTrue(spy[1][0])
+        self.assertEqual('A+', spy[1][1].name)
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # change property
+        model.setData(model.index(0, 1, dssc_ctg), 'a-', Qt.EditRole)
+        self.assertEqual(2, len(spy))
+        # delete old source
+        self.assertFalse(spy[0][0])
+        self.assertEqual('a', spy[0][1].property)
+        # add new source
+        self.assertTrue(spy[1][0])
+        self.assertEqual('a-', spy[1][1].property)
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # change slicer
+        model.setData(model.index(0, 2, dssc_ctg), '::2', Qt.EditRole)
+        self.assertEqual(2, len(spy))
+        # delete old source
+        self.assertFalse(spy[0][0])
+        # deleting does not check slicer
+        # add new source
+        self.assertTrue(spy[1][0])
+        self.assertEqual('[None, None, 2]', spy[1][1].slicer)
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # change a DSSC source
+        model.setData(model.index(1, 0, dssc_ctg), True, Qt.CheckStateRole)
+        self.assertEqual(2, len(spy))
+        # delete old source ('DSSC' is an exclusive category)
+        self.assertFalse(spy[0][0])
+        self.assertEqual('A+', spy[0][1].name)
+        # add new source
+        self.assertTrue(spy[1][0])
+        self.assertEqual('B', spy[1][1].name)
+
+        # ---------------------
+        # test mixed category
+        # ---------------------
+        xgm_ctg = model.index(1, 0, QModelIndex())
+        self.assertEqual('XA', model.index(0, 0, xgm_ctg).data())
+        self.assertEqual('intensity', model.index(0, 1, xgm_ctg).data())
+        self.assertEqual(':', model.index(0, 2, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(0, 3, xgm_ctg).data())
+        self.assertEqual('XA', model.index(1, 0, xgm_ctg).data())
+        self.assertEqual('flux', model.index(1, 1, xgm_ctg).data())
+        self.assertEqual('', model.index(1, 2, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(1, 3, xgm_ctg).data())
+        self.assertEqual('XA', model.index(2, 0, xgm_ctg).data())
+        self.assertEqual('xpos', model.index(2, 1, xgm_ctg).data())
+        self.assertEqual('', model.index(2, 2, xgm_ctg).data())
+        self.assertEqual('-inf, inf', model.index(2, 3, xgm_ctg).data())
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        model.setData(model.index(2, 0, xgm_ctg), True, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        model.setData(model.index(1, 0, xgm_ctg), True, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        model.setData(model.index(0, 0, xgm_ctg), True, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        model.setData(model.index(0, 0, xgm_ctg), False, Qt.CheckStateRole)
+        self.assertEqual(1, len(spy))
+
+        spy = QtTest.QSignalSpy(model.source_item_toggled_sgn)
+        # change slicer
+        model.setData(model.index(1, 3, xgm_ctg), '-1, 1', Qt.EditRole)
+        self.assertEqual(2, len(spy))
+        # delete old source
+        self.assertFalse(spy[0][0])
+        # deleting does not check range
+        # add new source
+        self.assertTrue(spy[1][0])
+        self.assertEqual('(-1.0, 1.0)', spy[1][1].vrange)
+
+    @patch.dict(config._data, {"PULSE_RESOLVED": False})
+    @patch.object(ConfigWrapper, "pipeline_sources", new_callable=PropertyMock)
+    @patch.object(ConfigWrapper, "control_sources", new_callable=PropertyMock)
+    def testDataSourceTreeModelTs(self, control_sources, pipeline_sources):
+        from PyQt5.QtCore import QModelIndex
+
+        pipeline_sources.return_value = {
+            'JungFrau': {"A": ['a'], 'B': ['b']},
+        }
+
+        control_sources.return_value = {
+            'MOTOR': {"MA": ['p'], "MB": ['p'], "MC": ['p']}
+        }
+
+        widget = DataSourceWidget(parent=self._dummy)
+        model = widget._src_tree_model
+
+        jf_ctg = model.index(0, 0, QModelIndex())
+        self.assertEqual('A', model.index(0, 0, jf_ctg).data())
+        self.assertEqual('a', model.index(0, 1, jf_ctg).data())
+        # no slicer for train-resolved detectors
+        self.assertEqual('', model.index(0, 2, jf_ctg).data())
+        self.assertEqual('', model.index(0, 3, jf_ctg).data())

@@ -11,13 +11,14 @@ from PyQt5.QtTest import QTest, QSignalSpy
 from PyQt5.QtCore import Qt, QPoint
 
 from extra_foam.config import (
-    AnalysisType, config, Normalizer, RoiCombo, RoiFom
+    AnalysisType, config, Normalizer, RoiCombo, RoiFom, RoiProjType
 )
 from extra_foam.gui import mkQApp
 from extra_foam.gui.image_tool import ImageToolWindow
 from extra_foam.logger import logger
 from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.pipeline.exceptions import ImageProcessingError
+from extra_foam.pipeline.processors import ImageProcessor, ImageRoiPulse
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import Foam
@@ -76,6 +77,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.view = self.image_tool._corrected_view.imageView
         self.view.setImageData(None)
         self.view._image = None
+
+        self.pulse_worker._image_proc = ImageProcessor()
+        self.pulse_worker._image_roi = ImageRoiPulse()
 
     def testGeneral(self):
         self.assertEqual(10, len(self.image_tool._ctrl_widgets))
@@ -275,14 +279,18 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         pub = ImageMaskPub()
         proc = self.pulse_worker._image_proc
+
         data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # trigger the lazily evaluated subscriber
         proc.process(data)
-        self.assertIsNone(proc._image_mask)
 
         mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
 
+        # test default
+        np.testing.assert_array_equal(proc._image_mask, mask_gt)
+
+        # test changing mask
         pub.add((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
 
@@ -314,7 +322,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         action = self.image_tool._tool_bar.actions()[2]
         action.trigger()
         proc.process(data)
-        self.assertIsNone(proc._image_mask)
+        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
 
         # test set mask
         pub.set(mask_gt)
@@ -338,11 +346,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.image_tool.updateWidgetsF()
 
         view = self.image_tool._bulletin_view
-        self.assertEqual(1357, int(view._latest_tid.intValue()))
+        self.assertEqual(1357, int(view._displayed_tid.intValue()))
         self.assertEqual(10, int(view._n_total_pulses.intValue()))
         self.assertEqual(6, int(view._n_kept_pulses.intValue()))
         self.assertEqual(99, int(view._dark_train_counter.intValue()))
         self.assertEqual(10, int(view._n_dark_pulses.intValue()))
+
+        with patch.object(view._mon, "reset_process_count") as reset:
+            view._reset_process_count_btn.clicked.emit()
+            reset.assert_called_once()
 
     def testCalibrationCtrlWidget(self):
         widget = self.image_tool._gain_offset_view._ctrl_widget
@@ -350,22 +362,22 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc = self.pulse_worker._image_proc
 
         proc.update()
-        self.assertTrue(proc._correct_gain)
-        self.assertTrue(proc._correct_offset)
+        self.assertFalse(proc._correct_gain)
+        self.assertFalse(proc._correct_offset)
         self.assertEqual(slice(None), proc._gain_slicer)
         self.assertEqual(slice(None), proc._offset_slicer)
         self.assertTrue(proc._dark_as_offset)
         self.assertFalse(proc._recording_dark)
 
-        widget._correct_gain_cb.setChecked(False)
-        widget._correct_offset_cb.setChecked(False)
+        widget._correct_gain_cb.setChecked(True)
+        widget._correct_offset_cb.setChecked(True)
         widget._gain_slicer_le.setText(":70")
         widget._offset_slicer_le.setText("2:120:4")
         widget._dark_as_offset_cb.setChecked(False)
         QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
         proc.update()
-        self.assertFalse(proc._correct_gain)
-        self.assertFalse(proc._correct_offset)
+        self.assertTrue(proc._correct_gain)
+        self.assertTrue(proc._correct_offset)
         self.assertEqual(slice(None, 70), proc._gain_slicer)
         self.assertEqual(slice(2, 120, 4), proc._offset_slicer)
         self.assertFalse(proc._dark_as_offset)
@@ -539,7 +551,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test default reconfigurable values
         self.assertEqual(RoiCombo.UNDEFINED, proc._hist_combo)
         self.assertEqual(10, proc._hist_n_bins)
-        self.assertTupleEqual((0.001, math.inf), proc._hist_bin_range)
+        self.assertTupleEqual((-math.inf, math.inf), proc._hist_bin_range)
 
         # test setting new values
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
@@ -576,12 +588,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget = self.image_tool._corrected_view._roi_proj_ctrl_widget
         avail_norms = {value: key for key, value in widget._available_norms.items()}
         avail_combos = {value: key for key, value in widget._available_combos.items()}
+        avail_types = {value: key for key, value in widget._available_types.items()}
 
         proc = self.train_worker._image_roi
         proc.update()
 
         # test default reconfigurable values
         self.assertEqual(RoiCombo.ROI1, proc._proj_combo)
+        self.assertEqual(RoiProjType.SUM, proc._proj_type)
         self.assertEqual('x', proc._proj_direct)
         self.assertEqual(Normalizer.UNDEFINED, proc._proj_norm)
         self.assertEqual((0, math.inf), proc._proj_fom_integ_range)
@@ -589,12 +603,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test setting new values
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
+        widget._type_cb.setCurrentText(avail_types[RoiProjType.MEAN])
         widget._direct_cb.setCurrentText('y')
         widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
         self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._proj_combo)
+        self.assertEqual(RoiProjType.MEAN, proc._proj_type)
         self.assertEqual('y', proc._proj_direct)
         self.assertEqual(Normalizer.ROI, proc._proj_norm)
         self.assertEqual((10, 20), proc._proj_fom_integ_range)

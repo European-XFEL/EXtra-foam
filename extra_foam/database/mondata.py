@@ -21,13 +21,44 @@ MAX_PERFORMANCE_MONITOR_POINTS = 10 * 60 * 5  # 5 minutes at 10 Hz
 class MonProxy(_AbstractProxy):
     """Proxy for adding and retrieving runtime information to redis."""
 
+    MON_LATEST_TID = "mon:latest_tid"
+    MON_N_PROCESSED = "mon:n_processed"
+    MON_N_DROPPED = "mon:n_dropped"
     MON_PERFORMANCE = "mon:train_id"
     MON_AVAILABLE_SOURCES = "mon:available_sources"
 
     @redis_except_handler
-    def add_tid_with_timestamp(self, tid):
-        """Add the current timestamp ranked by the given train ID."""
-        return self._db.zadd(self.MON_PERFORMANCE, {time.time(): tid})
+    def add_tid_with_timestamp(self, tid, dropped=False):
+        """Add the current timestamp ranked by the given train ID.
+
+        Also increase the count of # of processed or # of dropped
+        depend on the flag.
+
+        :param bool dropped: whether the train is dropped or not.
+        """
+        pipe = self._db.pipeline()
+        pipe.zadd(self.MON_PERFORMANCE, {time.time(): tid})
+        pipe.execute_command("SET", self.MON_LATEST_TID, tid)
+        if dropped:
+            pipe.execute_command("INCR", self.MON_N_DROPPED)
+        else:
+            pipe.execute_command("INCR", self.MON_N_PROCESSED)
+        return pipe.execute()
+
+    @redis_except_handler
+    def get_process_count(self):
+        """Get the latest train ID and the process counts."""
+        return self._db.execute_command("MGET", self.MON_LATEST_TID,
+                                                self.MON_N_PROCESSED,
+                                                self.MON_N_DROPPED)
+
+    @redis_except_handler
+    def reset_process_count(self):
+        """Set the process counts to zero."""
+        pipe = self._db.pipeline()
+        pipe.execute_command("SET", self.MON_N_PROCESSED, 0)
+        pipe.execute_command("SET", self.MON_N_DROPPED, 0)
+        return pipe.execute()
 
     @redis_except_handler
     def get_latest_tids(self, num=MAX_PERFORMANCE_MONITOR_POINTS):

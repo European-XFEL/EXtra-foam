@@ -15,9 +15,9 @@ import redis
 def redis_except_handler(func):
     """Handler ConnectionError from Redis."""
     @functools.wraps(func)
-    def catched_f(*args):
+    def catched_f(*args, **kwargs):
         try:
-            return func(*args)
+            return func(*args, **kwargs)
         except redis.exceptions.ConnectionError:
             # return None if ConnectionError was raised
             return

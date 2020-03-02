@@ -88,9 +88,17 @@ Galleries
 .. image:: images/ImageTool.png
    :width: 800
 
-.. image:: images/pump-probe_window.png
+.. image:: images/pump_probe_window.png
    :width: 800
 
-.. image:: images/1D_binning_window.png
+.. image:: images/correlation_window.png
    :width: 800
 
+.. image:: images/histogram_window.png
+   :width: 800
+
+.. image:: images/binning_window.png
+   :width: 800
+
+.. image:: images/poi_window.png
+   :width: 800

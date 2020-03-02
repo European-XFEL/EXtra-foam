@@ -273,13 +273,13 @@ class DataSourceItemModel(QAbstractItemModel):
 
                 item.setChecked(value)
             else:  # role == Qt.EditRole
+                old_device_id = item.data(0)
                 old_ppt = item.data(1)
                 item.setData(value, index.column())
-                if index.column() >= 1:
-                    # remove registered item with the old property
-                    self.source_item_toggled_sgn.emit(
-                        False,
-                        SourceItem('', item.data(0), [], old_ppt, '', ''))
+                # remove registered item with the old device ID and property
+                self.source_item_toggled_sgn.emit(
+                    False,
+                    SourceItem('', old_device_id, [], old_ppt, '', ''))
 
             ctg = item.parent().data(0)
             src_name = item.data(0)
@@ -372,7 +372,6 @@ class DataSourceItemModel(QAbstractItemModel):
     def setupModelData(self):
         """Setup the data for the whole tree."""
         src_categories = dict()
-
         for ctg, srcs in config.pipeline_sources.items():
             ctg_item = DataSourceTreeItem(
                 [ctg, "", "", "", ""], exclusive=False, parent=self._root)

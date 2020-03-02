@@ -23,7 +23,7 @@ class Bin1dHist(TimedPlotWidgetF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, show_indicator=True)
 
         self._default_x_label = "Bin center (arb. u.)"
 

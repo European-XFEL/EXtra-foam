@@ -4,6 +4,8 @@ import numpy as np
 
 from extra_foam.database import SourceCatalog, SourceItem
 from extra_foam.pipeline.data_model import ImageData, ProcessedData
+from extra_foam.pipeline.processors.base_processor import (
+    SimplePairSequence, OneWayAccuPairSequence)
 from extra_foam.config import config, DataSource
 
 
@@ -37,7 +39,6 @@ class _TestDataMixin:
                             src_type=DataSource.BRIDGE,
                             dtype=config['SOURCE_PROC_IMAGE_DTYPE'],
                             gen='random',
-                            with_image_mask=False,
                             slicer=None,
                             with_xgm=False,
                             with_digitizer=False,
@@ -45,13 +46,14 @@ class _TestDataMixin:
         imgs = cls._gen_images(gen, shape, dtype)
 
         processed = ProcessedData(tid)
-        processed.image = ImageData.from_array(imgs, **kwargs)
-        if with_image_mask:
-            image_mask = np.zeros(shape[-2:], dtype=np.bool)
-            image_mask[::2, ::2] = True
-            processed.image.image_mask = image_mask
 
-        slicer = slice(None, None) if slicer is None else slicer
+        processed.image = ImageData.from_array(imgs, **kwargs)
+
+        if imgs.ndim == 2:
+            slicer = None
+        else:
+            slicer = slice(None, None) if slicer is None else slicer
+
         src_list = [('Foo', 'oof'), ('Bar', 'rab'), ('karaboFAI', 'extra_foam')]
         src_name, key_name = random.choice(src_list)
 
@@ -91,9 +93,12 @@ class _TestDataMixin:
             },
             'assembled': {
                 'data': imgs,
-                'sliced': imgs[slicer]
             }
         }
+        if imgs.ndim == 2:
+            data['assembled']['sliced'] = imgs
+        else:
+            data['assembled']['sliced'] = imgs[slicer]
 
         return data, processed
 
@@ -121,7 +126,20 @@ class _TestDataMixin:
             hist.mean, hist.median, hist.std = 1., 0, 0.1
 
         if correlation:
-            pass
+            corr_resolution = 2
+            for i in range(2):
+                corr = processed.corr[i]
+                if i == 0:
+                    data = SimplePairSequence()
+                else:
+                    data = OneWayAccuPairSequence(corr_resolution)
+
+                for j in range(5):
+                    data.append((j, 5 * j))
+
+                corr.x, corr.y = data.data()
+                corr.source = f"abc - {i}"
+                corr.resolution = 0 if i == 0 else corr_resolution
 
         if binning:
             pass

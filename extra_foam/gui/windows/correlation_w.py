@@ -28,7 +28,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, show_indicator=True)
 
         self._idx = idx
 
@@ -41,7 +41,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
         self.updateLabel()
 
-        self._newScatterPlot()
+        self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
     def refresh(self):
         """Override."""
@@ -79,11 +79,11 @@ class CorrelationPlot(TimedPlotWidgetF):
         self.setLabel('left', self._default_y_label)
 
     def _newScatterPlot(self):
-        self.clear()
+        self.removeItem(self._plot)
         self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
 
     def _newStatisticsBarPlot(self, resolution):
-        self.clear()
+        self.removeItem(self._plot)
         self._plot = self.plotStatisticsBar(beam=resolution,
                                             pen=self._pens[self._idx-1])
 

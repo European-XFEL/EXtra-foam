@@ -25,6 +25,12 @@ template<typename T, xt::layout_type L>
 struct IsImage<xt::xtensor<T, 2, L>> : std::true_type {};
 
 template<typename T>
+struct IsImageMask : std::false_type {};
+
+template<xt::layout_type L>
+struct IsImageMask<xt::xtensor<bool, 2, L>> : std::true_type {};
+
+template<typename T>
 struct IsImageArray : std::false_type {};
 
 template<typename T, xt::layout_type L>

@@ -30,9 +30,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         super().__init__(*args, **kwargs)
 
         self._correct_gain_cb = QCheckBox()
-        self._correct_gain_cb.setChecked(True)
         self._correct_offset_cb = QCheckBox()
-        self._correct_offset_cb.setChecked(True)
 
         self._load_gain_btn = QPushButton("Load constants from file")
         self._load_offset_btn = QPushButton("Load constants from file")

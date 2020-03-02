@@ -228,7 +228,7 @@ class TestBinningProcessor(_TestDataMixin):
         processed.pp.analysis_type = AnalysisType.AZIMUTHAL_INTEG
         with patch.object(proc, "_clear_history") as mk:
             proc.process(data)
-            mk.asssert_called_once()
+            mk.assert_called_once()
 
     def _set_ret(self, processed, analysis_type, fom, vfom, vfom_x):
         if analysis_type == AnalysisType.PUMP_PROBE:
