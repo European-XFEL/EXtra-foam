@@ -346,11 +346,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.image_tool.updateWidgetsF()
 
         view = self.image_tool._bulletin_view
-        self.assertEqual(1357, int(view._latest_tid.intValue()))
+        self.assertEqual(1357, int(view._displayed_tid.intValue()))
         self.assertEqual(10, int(view._n_total_pulses.intValue()))
         self.assertEqual(6, int(view._n_kept_pulses.intValue()))
         self.assertEqual(99, int(view._dark_train_counter.intValue()))
         self.assertEqual(10, int(view._n_dark_pulses.intValue()))
+
+        with patch.object(view._mon, "reset_process_count") as reset:
+            view._reset_process_count_btn.clicked.emit()
+            reset.assert_called_once()
 
     def testCalibrationCtrlWidget(self):
         widget = self.image_tool._gain_offset_view._ctrl_widget
