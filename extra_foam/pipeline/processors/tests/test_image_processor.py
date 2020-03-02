@@ -27,32 +27,60 @@ class TestImageProcessorTr(_TestDataMixin, unittest.TestCase):
         self._proc._ref_sub.update = MagicMock(side_effect=lambda x: x)   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda x, y: (False, x, False, y))   # no redis server
+        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
 
         self._proc._threshold_mask = (-100, 100)
 
         del self._proc._dark
 
     def testPulseSlice(self):
-        # The sliced_indices for train-resolved data should always be [0]
-
         data, processed = self.data_with_assembled(1, (2, 2))
-
         self._proc.process(data)
-        # FIXME
-        # np.testing.assert_array_equal(data['assembled']['data'], processed.image.images)
-        self.assertIsInstance(processed.image.images, list)
+        self.assertListEqual([None], processed.image.images)
         self.assertListEqual([0], processed.image.sliced_indices)
 
-        # set a slicer
-        self._proc._pulse_slicer = slice(0, 2)
-        self._proc.process(data)
-        # FIXME
-        # np.testing.assert_array_equal(data['assembled']['data'], processed.image.images)
-        self.assertListEqual([0], processed.image.sliced_indices)
+    def testGainOffsetCorrection(self):
+        proc = self._proc
 
-    def testDarkRecordingAndSubtraction(self):
-        # TODO: add tests
-        pass
+        # -------------------------
+        # test not apply correction
+        # -------------------------
+
+        proc._correct_gain = False
+        proc._correct_offset = False
+        data, processed = self.data_with_assembled(1, (2, 2))
+        assembled_gt = data['assembled']['data'].copy()
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(data['assembled']['data'], assembled_gt)
+
+        # ---------------------------------
+        # test apply offset correction only
+        # ---------------------------------
+
+        proc._correct_offset = True
+        proc._dark_as_offset = False
+        data, processed = self.data_with_assembled(1, (2, 2))
+        assembled_gt = data['assembled']['data'].copy()
+        offset_gt = np.random.randn(2, 2).astype(np.float32)
+        proc._offset = offset_gt
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(
+            data['assembled']['data'], assembled_gt - offset_gt)
+
+        # ------------------------------------------
+        # test apply both gain and offset correction
+        # ------------------------------------------
+
+        proc._correct_gain = True
+        proc._dark_as_offset = True
+        data, processed = self.data_with_assembled(1, (2, 2))
+        assembled_gt = data['assembled']['data'].copy()
+        proc._dark = data['assembled']['data'] / 2.0
+        gain_gt = np.random.randn(2, 2).astype(np.float32)
+        proc._gain = gain_gt
+        self._proc.process(data)
+        np.testing.assert_array_almost_equal(
+            data['assembled']['data'], gain_gt * (assembled_gt - proc._dark))
 
     def testImageShapeChangeOnTheFly(self):
         proc = self._proc
@@ -92,6 +120,7 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
         self._proc._ref_sub.update = MagicMock(side_effect=lambda x: x)   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda x, y: (False, x, False, y))   # no redis server
+        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
 
         del self._proc._dark
 
@@ -255,6 +284,50 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
             data['assembled']['sliced'], assembled_gt - self._proc._dark[slicer])
         proc._recording = False
 
+    def testGainOffsetUpdate(self):
+        proc = self._proc
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+
+        # test gain with wrong shape
+        with self.assertRaises(ImageProcessingError):
+            gain = np.random.randn(3, 2, 2).astype(np.float32)
+            proc._cal_sub.update = MagicMock(return_value=(True, gain, False, None))
+            proc.process(data)
+        np.testing.assert_array_equal(gain, proc._gain)
+        np.testing.assert_array_almost_equal(np.mean(gain, axis=0), proc._gain_mean)
+
+        # test offset with wrong shape
+        proc._dark_as_offset = False
+        with self.assertRaises(ImageProcessingError):
+            offset = np.random.randn(3, 2, 2).astype(np.float32)
+            proc._cal_sub.update = MagicMock(return_value=(False, None, True, offset))
+            proc.process(data)
+        np.testing.assert_array_equal(offset, proc._offset)
+        np.testing.assert_array_almost_equal(np.mean(offset, axis=0), proc._offset_mean)
+
+        # test offset with wrong shape but "dark as offset" is set
+        proc._dark_as_offset = True
+        proc._dark_mean = np.random.randn(2, 2).astype(np.float32)
+        offset = np.random.randn(3, 2, 2).astype(np.float32)
+        proc._cal_sub.update = MagicMock(return_value=(False, None, True, offset))
+        proc.process(data)  # not raise
+        np.testing.assert_array_equal(offset, proc._offset)  # offset will not change
+        np.testing.assert_array_almost_equal(proc._dark_mean, proc._offset_mean)
+
+    def testMaskUpdate(self):
+        proc = self._proc
+
+        data, processed = self.data_with_assembled(1, (4, 2, 2))
+
+        # test setting mask but the mask shape is different
+        # from the image shape
+        with self.assertRaises(ImageProcessingError):
+            image_mask = np.ones([3, 2, 2])
+            proc._mask_sub.update = MagicMock(return_value=image_mask)
+            proc.process(data)
+        self.assertIsNone(proc._image_mask)
+
     def testReferenceUpdate(self):
         proc = self._proc
 
@@ -266,8 +339,8 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
             ref_gt = np.ones([3, 2, 2])
             proc._ref_sub.update = MagicMock(return_value=ref_gt)
             proc.process(data)
-            # test the reference is set even if the shape is not correct
-            np.testing.assert_array_equal(ref_gt, proc._reference)
+        # test the reference is set even if the shape is not correct
+        np.testing.assert_array_equal(ref_gt, proc._reference)
 
     def testPOI(self):
         proc = self._proc

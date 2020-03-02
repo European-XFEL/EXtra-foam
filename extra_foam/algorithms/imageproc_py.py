@@ -36,9 +36,7 @@ def nanmean_image_data(data, *, kept=None):
 
 
 def correct_image_data(data, *,
-                       gain=None,
-                       offset=None,
-                       slicer=slice(None, None)):
+                       gain=None, offset=None, slicer=slice(None, None)):
     """Apply gain and/or offset correct to image data.
 
     :param numpy.array data: image data, Shape = (y, x) or (indices, y, x)
@@ -46,14 +44,23 @@ def correct_image_data(data, *,
         shape as the image data.
     :param None/numpy.array offset: offset constants, which has the same
         shape as the image data.
-    :param slice slicer: gain and offset slicer.
+    :param slice slicer: gain and offset slicer, which is used only for
+        an array of images. It is ignored for if data is a single image.
     """
-    if gain is not None and offset is not None:
-        correctGainOffset(data, gain[slicer], offset[slicer])
-    elif offset is not None:
-        correctOffset(data, offset[slicer])
-    elif gain is not None:
-        correctGain(data, gain[slicer])
+    if data.ndim == 3:
+        if gain is not None and offset is not None:
+            correctGainOffset(data, gain[slicer], offset[slicer])
+        elif offset is not None:
+            correctOffset(data, offset[slicer])
+        elif gain is not None:
+            correctGain(data, gain[slicer])
+    else:
+        if gain is not None and offset is not None:
+            correctGainOffset(data, gain, offset)
+        elif offset is not None:
+            correctOffset(data, offset)
+        elif gain is not None:
+            correctGain(data, gain)
 
 
 def mask_image_data(image_data, *,
