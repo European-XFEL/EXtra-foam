@@ -80,10 +80,8 @@ class DigitizerProcessor(_BaseProcessor):
         for src in digitizer_srcs:
             arr = raw[src]
             device_id, ppt = src.split(' ')
-
             if ppt in self._integ_channels:
                 channel = self._integ_channels[ppt]
-
                 attr_name = self._pulse_integral_channels[channel]
                 self.__class__.__dict__[attr_name].__set__(self, np.array(
                     arr[catalog.get_slicer(src)], dtype=np.float32))
@@ -93,12 +91,12 @@ class DigitizerProcessor(_BaseProcessor):
                         self, self.__class__)
 
                 # apply pulse filter
-                # FIXME:
-                # self.__class__.__dict__[attr_name]
-                self.filter_pulse_by_vrange(self._pulse_integral_a_ma,
-                                            catalog.get_vrange(src),
-                                            processed.pidx,
-                                            src)
+                self.filter_pulse_by_vrange(
+                    self.__class__.__dict__[attr_name].__get__(
+                        self, self.__class__),
+                    catalog.get_vrange(src),
+                    processed.pidx,
+                    src)
 
                 # It is allowed to select only one digitizer channel
                 processed.pulse.digitizer.ch_normalizer = channel

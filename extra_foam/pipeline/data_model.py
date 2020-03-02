@@ -737,6 +737,9 @@ class PulseIndexMask:
         """
         return np.where(self._indices[:n])[0]
 
+    def reset(self):
+        self._indices = np.array([True] * self.LENGTH)
+
 
 class XasData:
 
