@@ -311,6 +311,9 @@ class TestIndexMask(unittest.TestCase):
             self.assertNotIn(i, mask.kept_indices(100))
             self.assertNotIn(i, mask.kept_indices(6))
 
+        mask.reset()
+        self.assertEqual(10, mask.n_kept(10))
+
 
 class TestRoiGeom(unittest.TestCase):
     def setUp(self):
