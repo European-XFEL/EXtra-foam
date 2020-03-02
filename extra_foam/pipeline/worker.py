@@ -25,7 +25,7 @@ from .processors import (
     ImageAssemblerFactory,
     ImageProcessor,
     CtrlDataProcessor,
-    PostPulseFilter,
+    FomPulseFilter, FomTrainFilter,
     PumpProbeProcessor,
     ImageRoiPulse, ImageRoiTrain,
     HistogramProcessor,
@@ -176,14 +176,19 @@ class PulseWorker(ProcessWorker):
         self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev)
 
         self._broker = Broker()
-        self._ctrl_data_proc = CtrlDataProcessor()
+
         self._xgm_proc = XgmProcessor()
         self._digitizer_proc = DigitizerProcessor()
+        self._ctrl_data_proc = CtrlDataProcessor()
+
         self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
         self._image_proc = ImageProcessor()
+
         self._image_roi = ImageRoiPulse()
         self._ai_proc = AzimuthalIntegProcessorPulse()
-        self._post_pulse_filter = PostPulseFilter()
+
+        self._filter = FomPulseFilter()
+
         self._pp_proc = PumpProbeProcessor()
 
         self._tasks = [
@@ -195,7 +200,7 @@ class PulseWorker(ProcessWorker):
             self._image_proc,
             self._image_roi,
             self._ai_proc,
-            self._post_pulse_filter,
+            self._filter,
             self._pp_proc,
         ]
 
@@ -213,6 +218,8 @@ class TrainWorker(ProcessWorker):
         self._image_roi = ImageRoiTrain()
         self._ai_proc = AzimuthalIntegProcessorTrain()
 
+        self._filter = FomTrainFilter()
+
         self._histogram = HistogramProcessor()
         self._correlation_proc = CorrelationProcessor()
         self._binning_proc = BinningProcessor()
@@ -222,6 +229,7 @@ class TrainWorker(ProcessWorker):
         self._tasks = [
             self._image_roi,
             self._ai_proc,
+            self._filter,
             self._histogram,
             self._correlation_proc,
             self._binning_proc,

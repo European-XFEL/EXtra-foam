@@ -9,7 +9,7 @@ from .geometry_ctrl_widget import GeometryCtrlWidget
 from .image_ctrl_widget import ImageCtrlWidget
 from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .histogram_ctrl_widget import HistogramCtrlWidget
-from .pulse_filter_ctrl_widget import PulseFilterCtrlWidget
+from .filter_ctrl_widget import FomFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from .trxas_ctrl_widget import TrXasCtrlWidget
@@ -32,7 +32,7 @@ __all__ = [
     "DataSourceWidget",
     "GeometryCtrlWidget",
     "ImageCtrlWidget",
-    "PulseFilterCtrlWidget",
+    "FomFilterCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",
     "RoiFomCtrlWidget",

@@ -357,14 +357,13 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
             return None, f"[{tid}] '{src}' not found!"
 
     @staticmethod
-    def filter_train_by_vrange(v, src, catalog):
+    def filter_train_by_vrange(v, vrange, src):
         """Filter a train by train-resolved value.
 
         :param float v: value of a control data.
+        :param tuple vrange: value range.
         :param str src: data source.
-        :param SourceCatalog catalog: source catalog.
         """
-        vrange = catalog.get_vrange(src)
         if vrange is not None:
             lb, ub = vrange
             if v > ub or v < lb:
@@ -372,16 +371,15 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                                      f"out of range [{lb}, {ub}]")
 
     @staticmethod
-    def filter_pulse_by_vrange(arr, src, index_mask, catalog):
+    def filter_pulse_by_vrange(arr, vrange, index_mask, src):
         """Filter pulses in a train by pulse-resolved value.
 
         :param numpy.array arr: pulse-resolved values of control data
             in a train.
-        :param str src: data source.
+        :param tuple vrange: value range.
         :param PulseIndexMask index_mask: pulse index msk
-        :param SourceCatalog catalog: source catalog.
+        :param str src: data source.
         """
-        vrange = catalog.get_vrange(src)
         if vrange is not None:
             lb, ub = vrange
 

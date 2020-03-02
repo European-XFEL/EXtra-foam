@@ -93,8 +93,12 @@ class DigitizerProcessor(_BaseProcessor):
                         self, self.__class__)
 
                 # apply pulse filter
-                self.filter_pulse_by_vrange(
-                    self._pulse_integral_a_ma, src, processed.pidx, catalog)
+                # FIXME:
+                # self.__class__.__dict__[attr_name]
+                self.filter_pulse_by_vrange(self._pulse_integral_a_ma,
+                                            catalog.get_vrange(src),
+                                            processed.pidx,
+                                            src)
 
                 # It is allowed to select only one digitizer channel
                 processed.pulse.digitizer.ch_normalizer = channel

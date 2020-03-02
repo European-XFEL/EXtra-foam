@@ -208,7 +208,7 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
                                         with_xgm=with_xgm,
                                         with_digitizer=with_digitizer)
 
-    def testPulseFilter(self):
+    def testFomPulseFilter(self):
         proc = self._proc
 
         data, processed = self._gen_data(1001)

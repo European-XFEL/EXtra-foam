@@ -31,7 +31,7 @@ from redis import ConnectionError
 
 from .ctrl_widgets import (
     AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, PulseFilterCtrlWidget, DataSourceWidget,
+    CorrelationCtrlWidget, FomFilterCtrlWidget, DataSourceWidget,
     HistogramCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
 )
 from .gui_helpers import create_icon_button
@@ -254,7 +254,7 @@ class MainGUI(QMainWindow):
         # analysis control widgets
         self.analysis_ctrl_widget = self.createCtrlWidget(AnalysisCtrlWidget)
         self.pump_probe_ctrl_widget = self.createCtrlWidget(PumpProbeCtrlWidget)
-        self.pulse_filter_ctrl_widget = self.createCtrlWidget(PulseFilterCtrlWidget)
+        self.fom_filter_ctrl_widget = self.createCtrlWidget(FomFilterCtrlWidget)
 
         # statistics control widgets
         self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
@@ -333,7 +333,7 @@ class MainGUI(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(self.analysis_ctrl_widget)
         layout.addWidget(self.pump_probe_ctrl_widget)
-        layout.addWidget(self.pulse_filter_ctrl_widget)
+        layout.addWidget(self.fom_filter_ctrl_widget)
         self._analysis_cw.setLayout(layout)
 
     def initStatisticsAnalysisUI(self):
