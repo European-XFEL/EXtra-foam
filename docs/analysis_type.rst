@@ -3,10 +3,25 @@
 Analysis type
 =============
 
-Each analysis type starts from an (ROI) image and will generate a FOM (figure-of-merit) and a VFOM
-(vector figure-of-merit). Take the analysis type *ROI (proj)* for example, it starts from the image
-which is the subtraction of ROI1 and ROI2. The VFOM is the projection of this image in the x or y
-direction, and the FOM the sum of the absolute VFOM.
+Each analysis will generate a FOM (figure-of-merit) and possibly also a VFOM (vector figure-of-merit),
+which are typically used in :ref:`statistics analysis`.
+
+**FOM**
+
+A scalar which is used to characterize the performance of an analysis in a train/pulse.
+For instance:
+
+- (Sum, median, mean) of an ROI;
+- (Absolute) sum of (part of) the difference curve in a pump-probe analysis;
+- Absorption coefficient.
+
+**VFOM**
+
+An array of scalars  which is used to characterize the performance of an analysis in a train/pulse.
+For instance:
+
+- Scattering curve from azimuthal integration;
+- The difference curve in a pump-probe analysis;
 
 .. list-table::
    :header-rows: 1

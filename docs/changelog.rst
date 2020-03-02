@@ -1,8 +1,36 @@
 CHANGELOG
 =========
 
+0.8.0 (2 March 2020)
+------------------------
+
+- **Improvement**
+
+    - Get rid of the artifact induced by masking pixel to zero when calculating
+      statistics, e.g. mean, median, std.
+    - Provide a mask to pyFAI to perform azimuthal integration. #61
+    - New C++ implementation to mask pixel in Nan and/or return a boolean mask. #61
+    - ROI pulse FOM and NORM will only be calculated after registration. #61
+
+- **New Feature**
+
+    - Enable train-resolved FOM filter. #78
+    - Display numbers of processed and dropped trains. #77
+    - Support online single module data from a modular detector. #72
+    - Allow type selection for 1D projection (sum or mean). #71
+    - Implement mouse cursor value indicator for PlotWidgetF. #66
+    - Preliminary implementation of nanmean and nansum in C++. #61
+
+- **Bug Fix**
+
+    - Fix pulse-filter in digitizer. #80
+    - Fix gain/offset slicer for train-resolved detectors. #76
+    - Use nansum in Tr-XAS analysis. #75
+    - Fix typo in unittest. #74
+    - Fix changing device ID in data source on the fly. #69
+
 0.7.3 (24 February 2020)
------------------------
+------------------------
 
 - **Breaking change**
 

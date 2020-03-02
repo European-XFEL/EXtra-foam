@@ -65,12 +65,15 @@ themselves to click the reset button.
     1 ms with a predefined bin range. However, the cost could increase to a few tens of ms with
     a dynamic bin range!
 
-.. image:: images/1D_binning_window.png
+.. image:: images/binning_window.png
    :width: 800
 
 
 Histogram
 ---------
+
+.. image:: images/histogram_setup.png
+   :width: 640
 
 Setup the visualization of pulse- / train- resolved statistics analysis.
 
@@ -78,6 +81,10 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 | Input                      | Description                                                        |
 +============================+====================================================================+
 | ``Analysis type``          | See :ref:`Analysis type`.                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``pulse resolved``         | This checkbox is only enabled for the pulse-resolved detectors.    |
+|                            | When it is checked, the histogram is pulse-wise. Otherwise, the    |
+|                            | histogram is train-wise.                                           |
 +----------------------------+--------------------------------------------------------------------+
 | ``Bin range``              | Lower and upper boundaries of all the bins. In case of *+/- Inf*,  |
 |                            | the boundary will be calculated dynamically.                       |
@@ -87,9 +94,14 @@ Setup the visualization of pulse- / train- resolved statistics analysis.
 | ``Reset``                  | Reset the histogram history.                                       |
 +----------------------------+--------------------------------------------------------------------+
 
+.. image:: images/histogram_window.png
+   :width: 800
 
 Correlation
 -----------
+
+.. image:: images/correlation_setup.png
+   :width: 640
 
 Setup the visualization of correlations of a given FOM with various slow data.
 
@@ -108,3 +120,6 @@ Setup the visualization of correlations of a given FOM with various slow data.
 +----------------------------+--------------------------------------------------------------------+
 | ``Reset``                  | Reset the correlation history.                                     |
 +----------------------------+--------------------------------------------------------------------+
+
+.. image:: images/correlation_window.png
+   :width: 800
