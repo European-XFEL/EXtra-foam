@@ -68,25 +68,25 @@ class Mediator(QObject):
             self._meta.remove_data_source(item)
 
     def onCalGainCorrection(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "correct gain", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "correct_gain", str(value))
 
     def onCalOffsetCorrection(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "correct offset", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "correct_offset", str(value))
 
     def onCalGainSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "gain slicer", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "gain_slicer", str(value))
 
     def onCalOffsetSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "offset slicer", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "offset_slicer", str(value))
 
     def onCalDarkAsOffset(self, value:bool):
-        self._meta.hset(mt.IMAGE_PROC, "dark as offset", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "dark_as_offset", str(value))
 
     def onCalDarkRecording(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "recording dark", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "recording_dark", str(value))
 
     def onCalDarkRemove(self):
-        self._meta.hset(mt.IMAGE_PROC, "remove dark", 1)
+        self._meta.hset(mt.IMAGE_PROC, "remove_dark", 1)
 
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
@@ -144,10 +144,10 @@ class Mediator(QObject):
     def onAiIntegRangeChange(self, value: tuple):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'integ_range', str(value))
 
-    def onCurveNormalizerChange(self, value: IntEnum):
+    def onAiNormChange(self, value: IntEnum):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'normalizer', int(value))
 
-    def onAiAucChangeChange(self, value: tuple):
+    def onAiAucRangeChange(self, value: tuple):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'auc_range', str(value))
 
     def onAiFomIntegRangeChange(self, value: tuple):

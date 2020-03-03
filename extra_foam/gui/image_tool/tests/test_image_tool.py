@@ -199,15 +199,21 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
     @patch("extra_foam.gui.plot_widgets.image_views.ImageAnalysis."
            "onThresholdMaskChange")
-    @patch("extra_foam.gui.mediator.Mediator.onImageThresholdMaskChange")
-    def testThresholdMask(self, on_mask_mediator, on_mask):
+    def testThresholdMask(self, on_mask):
         widget = self.image_tool._image_ctrl_widget
 
-        widget.threshold_mask_le.clear()
-        QTest.keyClicks(widget.threshold_mask_le, "1, 10")
-        QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
-        on_mask.assert_called_once_with((1, 10))
-        on_mask_mediator.assert_called_once_with((1, 10))
+        with patch.object(widget._mediator, "onImageThresholdMaskChange") as patched:
+            widget.threshold_mask_le.clear()
+            QTest.keyClicks(widget.threshold_mask_le, "1, 10")
+            QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
+            on_mask.assert_called_once_with((1, 10))
+            patched.assert_called_once_with((1, 10))
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onImageThresholdMaskChange((-100, 10000))
+        widget.loadMetaData()
+        self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
 
     def testAutoLevel(self):
         widget = self.image_tool._image_ctrl_widget
@@ -470,6 +476,20 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 self.assertTrue(new_offset)
                 self.assertIsNone(offset)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onCalDarkAsOffset(True)
+        mediator.onCalGainCorrection(False)
+        mediator.onCalOffsetCorrection(False)
+        mediator.onCalGainSlicerChange([0, None, 2])
+        mediator.onCalOffsetSlicerChange([0, None, 4])
+        widget.loadMetaData()
+        self.assertEqual(True, widget._dark_as_offset_cb.isChecked())
+        self.assertEqual(False, widget._correct_gain_cb.isChecked())
+        self.assertEqual(False, widget._correct_offset_cb.isChecked())
+        self.assertEqual("0::2", widget._gain_slicer_le.text())
+        self.assertEqual("0::4", widget._offset_slicer_le.text())
+
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
         from extra_foam.gui.ctrl_widgets.azimuthal_integ_ctrl_widget import \
@@ -482,6 +502,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         proc.update()
 
+        # test default
         self.assertAlmostEqual(config['SAMPLE_DISTANCE'], proc._sample_dist)
         self.assertAlmostEqual(0.001 * energy2wavelength(config['PHOTON_ENERGY']), proc._wavelength)
         self.assertEqual(AnalysisType.UNDEFINED, proc.analysis_type)
@@ -498,6 +519,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(0, proc._poni1)
         self.assertEqual(0, proc._poni2)
 
+        # test setting new values
         widget._photon_energy_le.setText("12.4")
         widget._sample_dist_le.setText("0.3")
         widget._integ_method_cb.setCurrentText('nosplit_csr')
@@ -523,6 +545,34 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(0.000002, proc._pixel1)
         self.assertEqual(-1000 * 0.000001, proc._poni2)
         self.assertEqual(1000 * 0.000002, proc._poni1)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onPhotonEnergyChange("2.0")
+        mediator.onSampleDistanceChange("0.2")
+        mediator.onAiIntegMethodChange("BBox")
+        mediator.onAiNormChange(Normalizer.XGM)
+        mediator.onAiIntegPointsChange(512)
+        mediator.onAiIntegRangeChange((1, 2))
+        mediator.onAiAucRangeChange((2, 3))
+        mediator.onAiFomIntegRangeChange((3, 4))
+        mediator.onAiPixelSizeXChange(0.001)
+        mediator.onAiPixelSizeYChange(0.002)
+        mediator.onAiIntegCenterXChange(1)
+        mediator.onAiIntegCenterYChange(2)
+        widget.loadMetaData()
+        self.assertEqual("2.0", widget._photon_energy_le.text())
+        self.assertEqual("0.2", widget._sample_dist_le.text())
+        self.assertEqual("BBox", widget._integ_method_cb.currentText())
+        self.assertEqual("XGM", widget._norm_cb.currentText())
+        self.assertEqual("512", widget._integ_pts_le.text())
+        self.assertEqual("1, 2", widget._integ_range_le.text())
+        self.assertEqual("2, 3", widget._auc_range_le.text())
+        self.assertEqual("3, 4", widget._fom_integ_range_le.text())
+        self.assertEqual("0.001", widget._px_le.text())
+        self.assertEqual("0.002", widget._py_le.text())
+        self.assertEqual("1", widget._cx_le.text())
+        self.assertEqual("2", widget._cy_le.text())
 
     def testRoiFomCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_fom_ctrl_widget
@@ -557,6 +607,18 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._master_slave_cb.setChecked(False)
         self.assertTrue(widget._combo_cb.isEnabled())
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onRoiFomComboChange(RoiCombo.ROI2)
+        mediator.onRoiFomTypeChange(RoiFom.MEAN)
+        mediator.onRoiFomNormChange(Normalizer.XGM)
+        mediator.onRoiFomMasterSlaveModeChange(False)
+        widget.loadMetaData()
+        self.assertEqual("ROI2", widget._combo_cb.currentText())
+        self.assertEqual("MEAN", widget._type_cb.currentText())
+        self.assertEqual("XGM", widget._norm_cb.currentText())
+        self.assertFalse(widget._master_slave_cb.isChecked())
+
     def testRoiHistCtrl(self):
         widget = self.image_tool._corrected_view._roi_hist_ctrl_widget
         avail_combos = {value: key for key, value in widget._available_combos.items()}
@@ -574,10 +636,18 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._n_bins_le.setText("100")
         widget._bin_range_le.setText("-1.0, 10.0")
         proc.update()
-
         self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._hist_combo)
         self.assertEqual(100, proc._hist_n_bins)
         self.assertEqual((-1.0, 10.0), proc._hist_bin_range)
+
+        mediator = widget._mediator
+        mediator.onRoiHistComboChange(RoiCombo.ROI2)
+        mediator.onRoiHistNumBinsChange(10)
+        mediator.onRoiHistBinRangeChange((-3, 3))
+        widget.loadMetaData()
+        self.assertEqual("ROI2", widget._combo_cb.currentText())
+        self.assertEqual("10", widget._n_bins_le.text())
+        self.assertEqual("-3, 3", widget._bin_range_le.text())
 
     def testRoiNormCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_norm_ctrl_widget
@@ -594,17 +664,23 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test setting new values
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI3_ADD_ROI4])
         widget._type_cb.setCurrentText(avail_types[RoiFom.MEDIAN])
-
         proc.update()
-
         self.assertEqual(RoiCombo.ROI3_ADD_ROI4, proc._norm_combo)
         self.assertEqual(RoiFom.MEDIAN, proc._norm_type)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onRoiNormComboChange(RoiCombo.ROI3_SUB_ROI4)
+        mediator.onRoiNormTypeChange(RoiProjType.SUM)
+        widget.loadMetaData()
+        self.assertEqual("ROI3 - ROI4", widget._combo_cb.currentText())
+        self.assertEqual("SUM", widget._type_cb.currentText())
+
     def testRoiProjCtrlWidget(self):
         widget = self.image_tool._corrected_view._roi_proj_ctrl_widget
-        avail_norms = {value: key for key, value in widget._available_norms.items()}
-        avail_combos = {value: key for key, value in widget._available_combos.items()}
-        avail_types = {value: key for key, value in widget._available_types.items()}
+        avail_norms_inv = widget._available_norms_inv
+        avail_combos_inv = widget._available_combos_inv
+        avail_types_inv = widget._available_types_inv
 
         proc = self.train_worker._image_roi
         proc.update()
@@ -618,10 +694,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual((0, math.inf), proc._proj_auc_range)
 
         # test setting new values
-        widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
-        widget._type_cb.setCurrentText(avail_types[RoiProjType.MEAN])
+        widget._combo_cb.setCurrentText(avail_combos_inv[RoiCombo.ROI1_SUB_ROI2])
+        widget._type_cb.setCurrentText(avail_types_inv[RoiProjType.MEAN])
         widget._direct_cb.setCurrentText('y')
-        widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
+        widget._norm_cb.setCurrentText(avail_norms_inv[Normalizer.ROI])
         widget._fom_integ_range_le.setText("10, 20")
         widget._auc_range_le.setText("30, 40")
         proc.update()
@@ -632,10 +708,27 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual((10, 20), proc._proj_fom_integ_range)
         self.assertEqual((30, 40), proc._proj_auc_range)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onRoiProjComboChange(RoiCombo.ROI1_ADD_ROI2)
+        mediator.onRoiProjTypeChange(RoiProjType.SUM)
+        mediator.onRoiProjDirectChange('x')
+        mediator.onRoiProjNormChange(Normalizer.XGM)
+        mediator.onRoiProjAucRangeChange((1, 2))
+        mediator.onRoiProjFomIntegRangeChange((-5, 5))
+        widget.loadMetaData()
+        self.assertEqual("ROI1 + ROI2", widget._combo_cb.currentText())
+        self.assertEqual("SUM", widget._type_cb.currentText())
+        self.assertEqual("x", widget._direct_cb.currentText())
+        self.assertEqual("XGM", widget._norm_cb.currentText())
+        self.assertEqual("1, 2", widget._auc_range_le.text())
+        self.assertEqual("-5, 5", widget._fom_integ_range_le.text())
+
     def testGeometryCtrlWidget(self):
         from extra_geom import LPD_1MGeometry as LPD_1MGeometry
         from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.config import GeomAssembler
+        from extra_foam.gui.gui_helpers import parse_table_widget
 
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
@@ -667,6 +760,19 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # test geometry file
         widget._geom_file_le.setText("/geometry/file/")
         self.assertFalse(widget.updateMetaData())
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onGeomAssemblerChange(GeomAssembler.EXTRA_GEOM)
+        mediator.onGeomFilenameChange('geometry/new_file')
+        mediator.onGeomStackOnlyChange(False)
+        quad_positions = [[1., 2.], [3., 4.], [5., 6.], [7., 8.]]
+        mediator.onGeomQuadPositionsChange(quad_positions)
+        widget.loadMetaData()
+        self.assertEqual("EXtra-geom", widget._assembler_cb.currentText())
+        self.assertEqual('geometry/new_file', widget._geom_file_le.text())
+        self.assertFalse(widget._stack_only_cb.isChecked())
+        self.assertListEqual(quad_positions, parse_table_widget((widget._quad_positions_tb)))
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
@@ -745,6 +851,15 @@ class TestImageToolTs(unittest.TestCase):
         widget = self.image_tool._gain_offset_view._ctrl_widget
         self.assertFalse(widget._gain_slicer_le.isEnabled())
         self.assertFalse(widget._offset_slicer_le.isEnabled())
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onCalGainSlicerChange([0, None, 2])
+        mediator.onCalOffsetSlicerChange([0, None, 2])
+        widget.loadMetaData()
+        self.assertEqual(":", widget._gain_slicer_le.text())
+        self.assertEqual(":", widget._offset_slicer_le.text())
 
 
 if __name__ == '__main__':

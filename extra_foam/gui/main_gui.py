@@ -35,7 +35,7 @@ from .ctrl_widgets import (
     HistogramCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
 )
 from .gui_helpers import create_icon_button
-from .misc_widgets import GuiLogger
+from .misc_widgets import Configurator, GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
@@ -145,16 +145,6 @@ class MainGUI(QMainWindow):
         self._util_panel_cw = QTabWidget()
 
         # *************************************************************
-        # Menu bar
-        # *************************************************************
-        # self._menu_bar = self.menuBar()
-        # file_menu = self._menu_bar.addMenu('&Config')
-        # save_cfg = QAction('Save config', self)
-        # file_menu.addAction(save_cfg)
-        # load_cfg = QAction('Load config', self)
-        # file_menu.addAction(load_cfg)
-
-        # *************************************************************
         # Tool bar
         # Note: the order of 'addAction` affect the unittest!!!
         # *************************************************************
@@ -227,6 +217,8 @@ class MainGUI(QMainWindow):
         self._logger = GuiLogger(parent=self)
         logging.getLogger().addHandler(self._logger)
 
+        self._configurator = Configurator()
+
         self._thread_logger = ThreadLoggerBridge()
         self.quit_sgn.connect(self._thread_logger.stop)
         self._thread_logger_t = QThread()
@@ -281,6 +273,7 @@ class MainGUI(QMainWindow):
         self.initUI()
         self.initConnections()
         self.updateMetaData()
+        self._configurator.onInit()
 
         self.setMinimumSize(640, 480)
         self.resize(self._WIDTH, self._HEIGHT)
@@ -359,6 +352,7 @@ class MainGUI(QMainWindow):
 
     def initUtilUI(self):
         self._util_panel_cw.addTab(self._logger.widget, "Logger")
+        self._util_panel_cw.addTab(self._configurator, "Configurator")
         self._util_panel_cw.setTabPosition(QTabWidget.TabPosition.South)
 
         layout = QVBoxLayout()
@@ -366,7 +360,7 @@ class MainGUI(QMainWindow):
         self._util_panel_container.setLayout(layout)
 
     def initConnections(self):
-        pass
+        self._configurator.load_metadata_sgn.connect(self.loadMetaData)
 
     def connect_input_to_output(self, output):
         self._input.connect(output)
@@ -516,6 +510,7 @@ class MainGUI(QMainWindow):
         for widget in self._ctrl_widgets:
             widget.onStart()
         self._image_tool.onStart()
+        self._configurator.onStart()
 
         self._running = True  # starting to update plots
         self._input_update_ev.set()  # notify update
@@ -534,6 +529,7 @@ class MainGUI(QMainWindow):
         for widget in self._ctrl_widgets:
             widget.onStop()
         self._image_tool.onStop()
+        self._configurator.onStop()
 
     def updateMetaData(self):
         """Update metadata from all the ctrl widgets.
@@ -546,6 +542,12 @@ class MainGUI(QMainWindow):
             if not succeeded:
                 return False
         return self._image_tool.updateMetaData()
+
+    def loadMetaData(self):
+        """Load metadata from Redis and set child control widgets."""
+        for widget in self._ctrl_widgets:
+            widget.loadMetaData()
+        return self._image_tool.loadMetaData()
 
     @pyqtSlot(str, str)
     def onLogMsgReceived(self, ch, msg):

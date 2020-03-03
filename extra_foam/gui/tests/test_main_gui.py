@@ -122,6 +122,16 @@ class TestMainGuiCtrl(unittest.TestCase):
             self.assertEqual(index, win._poi_roi_hists[i]._index)
         win.close()
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onMaWindowChange(111)
+        mediator.onPoiIndexChange(0, 22)
+        mediator.onPoiIndexChange(1, 33)
+        widget.loadMetaData()
+        self.assertEqual("111", widget._ma_window_le.text())
+        self.assertEqual("22", widget._poi_index_les[0].text())
+        self.assertEqual("33", widget._poi_index_les[1].text())
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -184,6 +194,16 @@ class TestMainGuiCtrl(unittest.TestCase):
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
+        mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
+        mediator.onPpAbsDifferenceChange(True)
+        widget.loadMetaData()
+        self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
+        self.assertEqual("odd/even train", widget._mode_cb.currentText())
+        self.assertEqual(True, widget._abs_difference_cb.isChecked())
+
     def testDataSourceWidget(self):
         from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
 
@@ -227,6 +247,16 @@ class TestMainGuiCtrl(unittest.TestCase):
         filter_train.update()
         self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
         self.assertTupleEqual((-2, 2), filter_train._fom_range)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onFomFilterAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onFomFilterRangeChange((-10, 10))
+        mediator.onFomFilterPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("-10, 10", widget._fom_range_le.text())
+        self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
     def testCorrelationCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -456,6 +486,18 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onHistAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onHistBinRangeChange((-10, 10))
+        mediator.onHistNumBinsChange(55)
+        mediator.onHistPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("-10, 10", widget._bin_range_le.text())
+        self.assertEqual("55", widget._n_bins_le.text())
+        self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
@@ -708,6 +750,15 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
             self.assertFalse(widget._poi_index_les[i].isEnabled())
             self.assertEqual(0, idx)  # test default values
 
+        # test loading meta data
+        # Test if the meta data is invalid.
+        mediator = widget._mediator
+        mediator.onPoiIndexChange(0, 22)
+        mediator.onPoiIndexChange(1, 33)
+        widget.loadMetaData()
+        self.assertEqual("0", widget._poi_index_les[0].text())
+        self.assertEqual("0", widget._poi_index_les[1].text())
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -745,16 +796,20 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         self.assertEqual(2, len(spy))
 
+        mediator = widget._mediator
+        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
+        widget.loadMetaData()
+        self.assertEqual("", widget._mode_cb.currentText())
+
     def testFomFilterCtrlWidget(self):
         widget = self.gui.fom_filter_ctrl_widget
         filter_pulse = self.pulse_worker._filter
         filter_train = self.train_worker._filter
 
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
-
         # test default
 
         self.assertFalse(widget._pulse_resolved_cb.isChecked())
+        self.assertFalse(widget._pulse_resolved_cb.isEnabled())
 
         filter_pulse.update()
         self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
@@ -765,7 +820,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         # test set new
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
+        widget._analysis_type_cb.setCurrentText(widget._analysis_types_inv[AnalysisType.ROI_FOM])
         widget._fom_range_le.setText("-2, 2")
         filter_pulse.update()
         self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
@@ -774,6 +829,24 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
         self.assertTupleEqual((-2, 2), filter_train._fom_range)
 
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onFomFilterPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual(False, widget._pulse_resolved_cb.isChecked())
+
     def testHistogramCtrlWidget(self):
-        # TODO
-        pass
+        widget = self.gui.histogram_ctrl_widget
+
+        # test default
+
+        self.assertFalse(widget._pulse_resolved_cb.isChecked())
+        self.assertFalse(widget._pulse_resolved_cb.isEnabled())
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onHistPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual(False, widget._pulse_resolved_cb.isChecked())

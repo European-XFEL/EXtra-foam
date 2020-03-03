@@ -17,7 +17,9 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ..gui_helpers import invert_dict
 from ...config import AnalysisType
+from ...database import Metadata as mt
 
 
 class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -27,6 +29,7 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "": AnalysisType.UNDEFINED,
         "ROI FOM": AnalysisType.ROI_FOM,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Histogram setup", *args, **kwargs)
@@ -95,3 +98,13 @@ class HistogramCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._pulse_resolved_cb.toggled.emit(
             self._pulse_resolved_cb.isChecked())
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.HISTOGRAM_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+        self._bin_range_le.setText(cfg["bin_range"][1:-1])
+        self._n_bins_le.setText(cfg['n_bins'])
+        if self._pulse_resolved:
+            self._pulse_resolved_cb.setChecked(cfg["pulse_resolved"] == 'True')

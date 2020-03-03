@@ -1,12 +1,23 @@
 import unittest
+from unittest.mock import MagicMock, patch
+import os
+import tempfile
 
-from extra_foam.config import AnalysisType
+from extra_foam.config import AnalysisType, config
 from extra_foam.database.metadata import Metadata, MetaMetadata
 from extra_foam.database import MetaProxy, MonProxy
 from extra_foam.processes import wait_until_redis_shutdown
 from extra_foam.services import start_redis_server
+from extra_foam.gui.misc_widgets.configurator import Configurator
+
+LAST_SAVED = Configurator.LAST_SAVED
+DEFAULT = Configurator.DEFAULT
+
+_tmp_cfg_dir = tempfile.mkdtemp()
 
 
+@patch("extra_foam.config.ROOT_PATH", _tmp_cfg_dir)
+@patch.dict(config._data, {"DETECTOR": "DSSC"})
 class TestDataProxy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -15,6 +26,8 @@ class TestDataProxy(unittest.TestCase):
         cls._meta = MetaProxy()
         cls._mon = MonProxy()
 
+        cls._meta.error = MagicMock()
+
     @classmethod
     def tearDownClass(cls):
         wait_until_redis_shutdown()
@@ -22,6 +35,8 @@ class TestDataProxy(unittest.TestCase):
         # test 'reset' method
         cls._meta.reset()
         cls._mon.reset()
+
+        os.rmdir(_tmp_cfg_dir)
 
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
@@ -61,3 +76,100 @@ class TestDataProxy(unittest.TestCase):
             GEOMETRY_PROC = "meta:proc:geometry"
 
         self.assertListEqual(['global', 'image', 'geometry'], Dummy.processors)
+        self.assertListEqual([Dummy.GLOBAL_PROC,
+                              Dummy.IMAGE_PROC,
+                              Dummy.GEOMETRY_PROC], Dummy.processor_keys)
+
+    def testSnapshotOperation(self):
+        data = {
+            Metadata.IMAGE_PROC: {"aaa": '1', "bbb": "(-1, 1)", "ccc": "sea"},
+            Metadata.GLOBAL_PROC: {"a1": '10', "b1": 'True'}
+        }
+
+        def _write_to_redis(name=None):
+            for k, v in data.items():
+                kk = k if name is None else f"{k}:{name}"
+                self._meta.hmset(kk, v)
+
+        def _assert_data(meta, name=None):
+            for k, v in data.items():
+                kk = k if name is None else f"{k}:{name}"
+                self.assertDictEqual(v, meta.hget_all(kk))
+
+        def _assert_empty_data(meta, name=None):
+            for k in data:
+                kk = k if name is None else f"{k}:{name}"
+                self.assertDictEqual({}, meta.hget_all(kk))
+
+        # test take snapshot
+        self._meta.take_snapshot(DEFAULT)
+        _assert_empty_data(self._meta, DEFAULT)
+        _write_to_redis()
+
+        _assert_empty_data(self._meta, DEFAULT)
+        name, timestamp, description = self._meta.take_snapshot(LAST_SAVED)
+        self.assertEqual(LAST_SAVED, name)
+        self.assertEqual("", description)
+        _assert_data(self._meta, LAST_SAVED)
+
+        # test copy snapshot
+        self._meta.copy_snapshot(LAST_SAVED, "abc")
+        _assert_data(self._meta, LAST_SAVED)
+        _assert_data(self._meta, "abc")
+
+        # test load snapshot
+        self._meta.load_snapshot(DEFAULT)
+        _assert_empty_data(self._meta)
+        self._meta.load_snapshot("abc")
+        _assert_data(self._meta, "abc")
+
+        # test rename snapshot
+        self._meta.rename_snapshot("abc", "efg")
+        _assert_empty_data(self._meta, "abc")
+        _assert_data(self._meta, "efg")
+
+        # test remove snapshot
+        self._meta.remove_snapshot("efg")
+        _assert_empty_data(self._meta, "efg")
+
+    def testDumpLoadConfigurations(self):
+        filepath = config.setup_file
+
+        image_proc_data = {"aaa": '1', "bbb": "(-1, 1)", "ccc": "sea"}
+        self._meta.hmset(f"{Metadata.IMAGE_PROC}:Last saved", image_proc_data)
+        self._meta.hmset(f"{Metadata.META_PROC}:Last saved", {
+            "timestamp": "2020-03-03 03:03:03",
+            "description": ""
+        })
+
+        self._meta.hmset(f"{Metadata.IMAGE_PROC}:abc", image_proc_data)
+        # no 'description'
+        self._meta.hmset(f"{Metadata.META_PROC}:abc", {
+            "timestamp": "2020-03-04 03:03:03",
+        })
+
+        # no 'timestamp'
+        self._meta.hmset(f"{Metadata.IMAGE_PROC}:efg", image_proc_data)
+
+        try:
+            self._meta.dump_configurations([("Last saved", ''), ("abc", "abc setup"), ("efg", "efg setup")])
+
+            self._meta.remove_snapshot("Last saved")
+            self._meta.remove_snapshot("abc")
+            self._meta.remove_snapshot("efg")
+            self.assertDictEqual({}, self._meta.hget_all(f"{Metadata.IMAGE_PROC}:Last saved"))
+
+            lst = self._meta.load_configurations()
+
+            self._meta.error.assert_called_once()
+            self.assertListEqual([('Last saved', '2020-03-03 03:03:03', ''),
+                                  ('abc', '2020-03-04 03:03:03', 'abc setup')], lst)
+
+            self.assertDictEqual(image_proc_data, self._meta.hget_all(f"{Metadata.IMAGE_PROC}:Last saved"))
+            self.assertDictEqual(image_proc_data, self._meta.hget_all(f"{Metadata.IMAGE_PROC}:abc"))
+
+        finally:
+            os.remove(filepath)
+            self._meta.remove_snapshot("Last saved")
+            self._meta.remove_snapshot("abc")
+            self._meta.remove_snapshot("efg")

@@ -14,6 +14,7 @@ from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtWidgets import (
     QComboBox, QGridLayout, QHeaderView, QLabel, QPushButton, QTableWidget,
+    QTableWidgetItem
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget

@@ -17,6 +17,7 @@ from ..mediator import Mediator
 from ..plot_widgets.plot_items import RectROI
 from ..ctrl_widgets import _AbstractCtrlWidget, SmartLineEdit
 from ..misc_widgets import FColor
+from ...database import Metadata as mt
 from ...config import config
 
 
@@ -166,6 +167,17 @@ class _SingleRoiCtrlWidget(QWidget):
         # fill the QLineEdit(s) and Redis
         self._roi.sigRegionChangeFinished.emit(self._roi)
 
+    def reloadRoiParams(self, cfg):
+        state, _, x, y, w, h = [v.strip() for v in cfg.split(',')]
+
+        self.roi_geometry_change_sgn.disconnect()
+        self._px_le.setText(x)
+        self._py_le.setText(y)
+        self._width_le.setText(w)
+        self._height_le.setText(h)
+        self.roi_geometry_change_sgn.connect(Mediator().onRoiGeometryChange)
+        self._activate_cb.setChecked(bool(int(state)))
+
     def updateParameters(self, x, y, w, h):
         self.roi_geometry_change_sgn.disconnect()
         self._px_le.setText(str(x))
@@ -223,6 +235,12 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
 
     def updateMetaData(self):
         """Override."""
-        for i, widget in enumerate(self._roi_ctrls, 1):
+        for _, widget in enumerate(self._roi_ctrls, 1):
             widget.notifyRoiParams()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.ROI_PROC)
+        for i, widget in enumerate(self._roi_ctrls, 1):
+            widget.reloadRoiParams(cfg[f"geom{i}"][1:-1])

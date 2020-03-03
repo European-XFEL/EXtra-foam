@@ -208,3 +208,11 @@ def create_icon_button(filename, size):
     btn.setIconSize(QSize(size, size))
     btn.setFixedSize(btn.minimumSizeHint())
     return btn
+
+
+def invert_dict(mapping):
+    """Return a dictionary with key and value swapped."""
+    ret = dict()
+    for k, v in mapping.items():
+        ret[v] = k
+    return ret

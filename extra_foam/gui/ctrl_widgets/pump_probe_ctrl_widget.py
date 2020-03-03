@@ -16,7 +16,9 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartIdLineEdit
+from ..gui_helpers import invert_dict
 from ...config import PumpProbeMode, AnalysisType
+from ...database import Metadata as mt
 
 
 class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -29,6 +31,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
         "odd/even train": PumpProbeMode.ODD_TRAIN_ON
     })
+    _available_modes_inv = invert_dict(_available_modes)
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -36,6 +39,7 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI proj": AnalysisType.ROI_PROJ,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe setup", *args, **kwargs)
@@ -101,7 +105,6 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._mode_cb.currentTextChanged.connect(
             lambda x: mediator.onPpModeChange(self._available_modes[x]))
-
         self._mode_cb.currentTextChanged.connect(
             lambda x: self.onPpModeChange(self._available_modes[x]))
 
@@ -113,19 +116,36 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
     def updateMetaData(self):
         """Override"""
-        self._abs_difference_cb.toggled.emit(
-            self._abs_difference_cb.isChecked())
-
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
 
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())
 
         self._on_pulse_le.returnPressed.emit()
-
         self._off_pulse_le.returnPressed.emit()
 
+        self._abs_difference_cb.toggled.emit(
+            self._abs_difference_cb.isChecked())
+
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+
+        i_mode = int(cfg["mode"])
+        if i_mode == PumpProbeMode.SAME_TRAIN:
+            self._mode_cb.setCurrentText("")
+        else:
+            self._mode_cb.setCurrentText(
+                self._available_modes_inv[int(cfg["mode"])])
+
+        self._abs_difference_cb.setChecked(cfg["abs_difference"] == 'True')
+        # FIXME:
+        # self._on_pulse_le.setText(cfg["on_pulse_indices"])
+        # self._off_pulse_le.setText(cfg["on_pulse_indices"])
 
     def onPpModeChange(self, pp_mode):
         if not self._pulse_resolved:

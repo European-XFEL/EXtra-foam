@@ -7,15 +7,18 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+from collections import OrderedDict
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ..gui_helpers import invert_dict
 from ...algorithms import compute_q
-from ...config import config, list_azimuthal_integ_methods
-
+from ...config import config, list_azimuthal_integ_methods, Normalizer
+from ...database import Metadata as mt
 
 _DEFAULT_AZIMUTHAL_INTEG_POINTS = 512
 
@@ -30,6 +33,15 @@ def _estimate_q_range():
 
 class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
     """Widget for setting up azimuthal integration parameters."""
+
+    _available_norms = OrderedDict({
+        "": Normalizer.UNDEFINED,
+        "AUC": Normalizer.AUC,
+        "XGM": Normalizer.XGM,
+        "DIGITIZER": Normalizer.DIGITIZER,
+        "ROI": Normalizer.ROI,
+    })
+    _available_norms_inv = invert_dict(_available_norms)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -152,8 +164,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             mediator.onAiIntegMethodChange)
 
         self._norm_cb.currentTextChanged.connect(
-            lambda x: mediator.onCurveNormalizerChange(
-                self._available_norms[x]))
+            lambda x: mediator.onAiNormChange(self._available_norms[x]))
 
         self._integ_range_le.value_changed_sgn.connect(
             mediator.onAiIntegRangeChange)
@@ -162,7 +173,7 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
             lambda x: mediator.onAiIntegPointsChange(int(x)))
 
         self._auc_range_le.value_changed_sgn.connect(
-            mediator.onAiAucChangeChange)
+            mediator.onAiAucRangeChange)
 
         self._fom_integ_range_le.value_changed_sgn.connect(
             mediator.onAiFomIntegRangeChange)
@@ -193,3 +204,22 @@ class AzimuthalIntegCtrlWidget(_AbstractCtrlWidget):
         self._fom_integ_range_le.returnPressed.emit()
 
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        self._photon_energy_le.setText(cfg["photon_energy"])
+        self._sample_dist_le.setText(cfg["sample_distance"])
+
+        cfg = self._meta.hget_all(mt.AZIMUTHAL_INTEG_PROC)
+        self._px_le.setText(cfg['pixel_size_x'])
+        self._py_le.setText(cfg['pixel_size_y'])
+        self._cx_le.setText(cfg['integ_center_x'])
+        self._cy_le.setText(cfg['integ_center_y'])
+        self._integ_method_cb.setCurrentText(cfg['integ_method'])
+        self._integ_range_le.setText(cfg['integ_range'][1:-1])
+        self._integ_pts_le.setText(cfg['integ_points'])
+        self._norm_cb.setCurrentText(
+            self._available_norms_inv[int(cfg['normalizer'])])
+        self._auc_range_le.setText(cfg['auc_range'][1:-1])
+        self._fom_integ_range_le.setText(cfg['fom_integ_range'][1:-1])

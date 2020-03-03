@@ -525,6 +525,11 @@ class ConfigWrapper(abc.Mapping):
         raise ValueError("TOPIC is not specified!")
 
     @property
+    def setup_file(self):
+        detector = self._data['DETECTOR']
+        return osp.join(ROOT_PATH, f".{detector.lower()}.setup.yaml")
+
+    @property
     def control_sources(self):
         return self._data.control_sources
 

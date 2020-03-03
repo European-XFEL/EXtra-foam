@@ -10,6 +10,8 @@ All rights reserved.
 import os.path as osp
 from collections import OrderedDict
 
+import json
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGridLayout, QHeaderView, QHBoxLayout,
@@ -18,8 +20,9 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
-from ..gui_helpers import parse_table_widget
+from ..gui_helpers import invert_dict, parse_table_widget
 from ...config import config, GeomAssembler
+from ...database import Metadata as mt
 from ...logger import logger
 
 
@@ -30,6 +33,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         "EXtra-foam": GeomAssembler.OWN,
         "EXtra-geom": GeomAssembler.EXTRA_GEOM,
     })
+    _assemblers_inv = invert_dict(_assemblers)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -142,6 +146,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._assembler_cb.currentTextChanged.emit(
             self._assembler_cb.currentText())
 
+        # FIXME
+
         geom_file = self._geom_file_le.text()
         if not osp.isfile(geom_file):
             logger.error(f"<Geometry file>: {geom_file} is not a valid file")
@@ -157,3 +163,23 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._mediator.onGeomQuadPositionsChange(quad_positions)
 
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        if not config['REQUIRE_GEOMETRY']:
+            return
+
+        cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
+
+        self._assembler_cb.setCurrentText(
+            self._assemblers_inv[int(cfg["assembler"])])
+        self._stack_only_cb.setChecked(cfg["stack_only"] == 'True')
+        self._geom_file_le.setText(cfg["geometry_file"])
+        quad_positions = json.loads(cfg["quad_positions"], encoding='utf8')
+
+        table = self._quad_positions_tb
+        n_rows = table.rowCount()
+        n_cols = table.columnCount()
+        for j in range(n_cols):
+            for i in range(n_rows):
+                table.item(i, j).setText(str(quad_positions[j][i]))

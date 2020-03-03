@@ -15,7 +15,9 @@ from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ..gui_helpers import invert_dict
 from ...config import RoiCombo
+from ...database import Metadata as mt
 
 
 class RoiHistCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -28,6 +30,7 @@ class RoiHistCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI1 - ROI2": RoiCombo.ROI1_SUB_ROI2,
         "ROI1 + ROI2": RoiCombo.ROI1_ADD_ROI2,
     })
+    _available_combos_inv = invert_dict(_available_combos)
 
     def __init__(self, *args, **kwargs):
         super().__init__("ROI histogram setup", *args, **kwargs)
@@ -84,3 +87,11 @@ class RoiHistCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._n_bins_le.returnPressed.emit()
         self._bin_range_le.returnPressed.emit()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.ROI_PROC)
+        self._combo_cb.setCurrentText(
+            self._available_combos_inv[int(cfg["hist:combo"])])
+        self._n_bins_le.setText(cfg["hist:n_bins"])
+        self._bin_range_le.setText(cfg["hist:bin_range"][1:-1])

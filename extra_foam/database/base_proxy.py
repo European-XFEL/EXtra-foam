@@ -8,10 +8,10 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .db_utils import redis_except_handler
-from ..ipc import RedisConnection
+from ..ipc import ProcessLogger, RedisConnection
 
 
-class _AbstractProxy:
+class _AbstractProxy(ProcessLogger):
     """_AbstractProxy.
 
     Base class for communicate with Redis server.
