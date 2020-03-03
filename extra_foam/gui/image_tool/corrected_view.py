@@ -13,7 +13,7 @@ import numpy as np
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QHBoxLayout, QSplitter, QVBoxLayout
+    QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 )
 
 from .simple_image_data import _SimpleImageData
@@ -110,6 +110,7 @@ class CorrectedView(_AbstractImageToolView):
 
     def initUI(self):
         """Override."""
+        ctrl_widget = QWidget()
         ctrl_layout = QHBoxLayout()
         AT = Qt.AlignTop
         ctrl_layout.addWidget(self._roi_ctrl_widget)
@@ -117,6 +118,9 @@ class CorrectedView(_AbstractImageToolView):
         ctrl_layout.addWidget(self._roi_hist_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_norm_ctrl_widget, alignment=AT)
         ctrl_layout.addWidget(self._roi_proj_ctrl_widget, alignment=AT)
+        ctrl_widget.setLayout(ctrl_layout)
+        ctrl_widget.setFixedHeight(
+            self._roi_proj_ctrl_widget.minimumSizeHint().height())
 
         subview_splitter = QSplitter(Qt.Vertical)
         subview_splitter.setHandleWidth(9)
@@ -132,7 +136,7 @@ class CorrectedView(_AbstractImageToolView):
 
         layout = QVBoxLayout()
         layout.addWidget(view_splitter)
-        layout.addLayout(ctrl_layout)
+        layout.addWidget(ctrl_widget)
         self.setLayout(layout)
 
     def initConnections(self):
