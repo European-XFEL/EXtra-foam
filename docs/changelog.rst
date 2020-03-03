@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+0.8.0.1 (3 March 2020)
+------------------------
+
+- **Bug Fix**
+
+    - Fix display bug in ImageTool #85
+
+
 0.8.0 (2 March 2020)
 ------------------------
 
