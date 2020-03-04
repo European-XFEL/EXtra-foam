@@ -265,6 +265,180 @@ void Detector1MGeometryBase<G>::positionModule(M&& src, N& dst, T&& pos) const
 }
 
 /**
+ * AGIPD-1M geometry
+ *
+ *
+ * Layout of AGIPD-1M:              Tile layout for each module:
+ * (looking along the beam)
+ *
+ *     Q4M1    |    Q1M1            Q1 and Q2: T8 T7 T6 T5 T4 T3 T2 T1
+ *     Q4M2    |    Q1M2            Q3 and q4: T1 T2 T3 T4 T5 T6 T7 T8
+ *     Q4M3    |    Q1M3
+ *     Q4M4    |    Q1M4
+ *  -----------------------
+ *     Q3M1    |    Q2M1
+ *     Q3M2    |    Q2M2
+ *     Q3M3    |    Q2M3
+ *     Q3M4    |    Q2M4
+ *
+ * The quadrant positions refer to the first pixel
+ * (top-right corners for Q1, Q2 and bottom-left corners for Q3, Q4)
+ * of the first module in each quadrant.
+ *
+ * For details, please see
+ * https://extra-geom.readthedocs.io/en/latest/geometry.html#agipd-1m
+ *
+ */
+class AGIPD_1MGeometry : public Detector1MGeometryBase<AGIPD_1MGeometry>
+{
+public:
+
+  static const shapeType module_shape;
+  static const shapeType tile_shape;
+  static const size_t n_tiles_per_module = 8; // number of tiles per module
+  static const quadOrientType quad_orientations;
+private:
+
+  xt::xtensor_fixed<double, xt::xshape<n_modules, n_tiles_per_module, 2, 3>> corner_pos_;
+
+  friend Detector1MGeometryBase<AGIPD_1MGeometry>;
+
+  template<typename M, typename N, typename T>
+  void positionModuleImp(M&& src, N& dst, T&& pos) const;
+
+public:
+
+  static const vectorType& pixelSize()
+  {
+    static const vectorType pixel_size {2e-4, 2e-4, 1.};
+    return pixel_size;
+  }
+
+  AGIPD_1MGeometry();
+
+  explicit
+  AGIPD_1MGeometry(const std::array<std::array<std::array<double, 3>, n_tiles_per_module>, n_modules>& positions);
+
+  ~AGIPD_1MGeometry() = default;
+};
+
+// (ss/x, fs/y) This should be called 'data_shape' instead of 'module_shape'
+const AGIPD_1MGeometry::shapeType AGIPD_1MGeometry::module_shape {512, 128};
+// (fs/y, ss/x)
+const AGIPD_1MGeometry::shapeType AGIPD_1MGeometry::tile_shape {128, 64};
+constexpr size_t AGIPD_1MGeometry::n_tiles_per_module;
+const AGIPD_1MGeometry::quadOrientType AGIPD_1MGeometry::quad_orientations {
+  std::array<int, 2>{1, -1},
+  std::array<int, 2>{1, -1},
+  std::array<int, 2>{-1, 1},
+  std::array<int, 2>{-1, 1}
+};
+
+AGIPD_1MGeometry::AGIPD_1MGeometry()
+{
+  // first pixel position of each module
+  // (upper-right for Q1 and Q2, lower-left for Q3 and Q4) positions
+  xt::xtensor_fixed<double, xt::xshape<n_modules, 3>> m_pos {
+    { -512,  512, 0},
+    { -512,  384, 0},
+    { -512,  256, 0},
+    { -512,  128, 0},
+    { -512,    0, 0},
+    { -512, -128, 0},
+    { -512, -256, 0},
+    { -512, -384, 0},
+    {  512, -128, 0},
+    {  512, -256, 0},
+    {  512, -384, 0},
+    {  512, -512, 0},
+    {  512,  384, 0},
+    {  512,  256, 0},
+    {  512,  128, 0},
+    {  512,    0, 0}
+  };
+
+  xt::xtensor_fixed<double, xt::xshape<n_modules, n_tiles_per_module, 3>> positions;
+  auto ht = static_cast<double>(tile_shape[0]);
+  auto wt = static_cast<double>(tile_shape[1]);
+  for (int im = 0; im < n_modules; ++im)
+  {
+    auto orient = quad_orientations[im / 4];
+    for (int it = 0; it < n_tiles_per_module; ++it)
+    {
+      positions(im, it, 0) = m_pos(im, 0) + orient[0] * it * wt;
+      positions(im, it, 1) = m_pos(im, 1);
+      positions(im, it, 2) = m_pos(im, 2);
+    }
+  }
+
+  positions *= pixelSize();
+
+  for (int im = 0; im < n_modules; ++im)
+  {
+    auto orient = quad_orientations[im / 4];
+    for (int it = 0; it < n_tiles_per_module; ++it)
+    {
+      for (int j = 0; j < 3; ++j) corner_pos_(im, it, 0, j) = positions(im, it, j);
+      // calculate the position of the diagonal corner
+      corner_pos_(im, it, 1, 0) = positions(im, it, 0) + orient[0] * wt * pixelSize()(0);
+      corner_pos_(im, it, 1, 1) = positions(im, it, 1) + orient[1] * ht * pixelSize()(1);
+      corner_pos_(im, it, 1, 2) = 0.0;
+    }
+  }
+}
+
+AGIPD_1MGeometry::AGIPD_1MGeometry(
+  const std::array<std::array<std::array<double, 3>, n_tiles_per_module>, n_modules>& positions)
+{
+  auto ht = static_cast<double>(tile_shape[0]);
+  auto wt = static_cast<double>(tile_shape[1]);
+  for (int im = 0; im < n_modules; ++im)
+  {
+    auto orient = quad_orientations[im / 4];
+
+    for (int it = 0; it < n_tiles_per_module; ++it)
+    {
+      for (int j = 0; j < 3; ++j) corner_pos_(im, it, 0, j) = positions[im][it][j];
+      // calculate the position of the diagonal corner
+      corner_pos_(im, it, 1, 0) = positions[im][it][0] + orient[0] * wt * pixelSize()(0);
+      corner_pos_(im, it, 1, 1) = positions[im][it][1] + orient[1] * ht * pixelSize()(1);
+      corner_pos_(im, it, 1, 2) = 0.0;
+    }
+  }
+}
+
+template<typename M, typename N, typename T>
+void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
+{
+  auto center = assembledDim().second;
+  auto shape = src.shape(); // caveat: shape has layout (y, x)
+  size_t n_tiles = n_tiles_per_module;
+  size_t wt = tile_shape[1];
+  size_t ht = tile_shape[0];
+  for (int it = 0; it < n_tiles; ++it)
+  {
+    auto x0 = pos(it, 0, 0);
+    auto y0 = pos(it, 0, 1);
+
+    int ix_dir = (pos(it, 1, 0) - x0 > 0) ? 1 : -1;
+    int iy_dir = (pos(it, 1, 1) - y0 > 0) ? 1 : -1;
+
+    size_t ix0 = it * wt;
+    size_t iy0 = 0;
+
+    size_t ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
+    size_t iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
+    for (size_t iy = iy0, iy_dst = iy0_dst; iy < iy0 + ht; ++iy, iy_dst += iy_dir)
+    {
+      for (size_t ix = ix0, ix_dst = ix0_dst; ix < ix0 + wt; ++ix, ix_dst += ix_dir)
+      {
+        dst(iy_dst, ix_dst) = src(ix, iy); // (fs/y, ss/x)
+      }
+    }
+  }
+}
+
+/**
  * LPD-1M geometry
  *
  *
@@ -329,7 +503,10 @@ const LPD_1MGeometry::shapeType LPD_1MGeometry::module_shape {256, 256};
 const LPD_1MGeometry::shapeType LPD_1MGeometry::tile_shape {32, 128};
 constexpr size_t LPD_1MGeometry::n_tiles_per_module;
 const LPD_1MGeometry::quadOrientType LPD_1MGeometry::quad_orientations {
-  std::array<int, 2>{1, 1}, std::array<int, 2>{1, 1}, std::array<int, 2>{1, 1}, std::array<int, 2>{1, 1}
+  std::array<int, 2>{1, 1},
+  std::array<int, 2>{1, 1},
+  std::array<int, 2>{1, 1},
+  std::array<int, 2>{1, 1}
 };
 
 LPD_1MGeometry::LPD_1MGeometry()
@@ -359,7 +536,7 @@ LPD_1MGeometry::LPD_1MGeometry()
   auto wt = static_cast<double>(tile_shape[1]);
   for (size_t im = 0; im < n_modules; ++im)
   {
-    for (size_t it = 0; it < 16; ++it)
+    for (size_t it = 0; it < n_tiles_per_module; ++it)
     {
       positions(im, it, 0) = m_pos(im, 0) - (1 - it / 8) * wt;
       positions(im, it, 1) = m_pos(im, 1) - (it < 8 ? (it % 8) * ht : (7 - it % 8) * ht);
@@ -498,7 +675,10 @@ const DSSC_1MGeometry::shapeType DSSC_1MGeometry::module_shape {128, 512};
 const DSSC_1MGeometry::shapeType DSSC_1MGeometry::tile_shape {128, 256};
 constexpr size_t DSSC_1MGeometry::n_tiles_per_module;
 const DSSC_1MGeometry::quadOrientType DSSC_1MGeometry::quad_orientations {
-  std::array<int, 2>{-1, 1}, std::array<int, 2>{-1, 1}, std::array<int, 2>{1, -1}, std::array<int, 2>{1, -1}
+  std::array<int, 2>{-1, 1},
+  std::array<int, 2>{-1, 1},
+  std::array<int, 2>{1, -1},
+  std::array<int, 2>{1, -1}
 };
 
 DSSC_1MGeometry::DSSC_1MGeometry()

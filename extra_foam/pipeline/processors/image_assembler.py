@@ -458,7 +458,16 @@ class ImageAssemblerFactory(ABC):
         def _load_geometry(self, filename, quad_positions):
             """Override."""
             if self._assembler_type == GeomAssembler.OWN or self._stack_only:
-                raise AssemblingError("Not implemented!")
+                from ...geometries import AGIPD_1MGeometryFast
+
+                if self._stack_only:
+                    self._geom = AGIPD_1MGeometryFast()
+                else:
+                    try:
+                        self._geom = AGIPD_1MGeometryFast.from_crystfel_geom(
+                            filename)
+                    except (ImportError, ModuleNotFoundError, OSError) as e:
+                        raise AssemblingError(e)
             else:
                 from extra_geom import AGIPD_1MGeometry
 

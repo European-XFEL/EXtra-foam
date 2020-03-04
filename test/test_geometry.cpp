@@ -39,7 +39,7 @@ protected:
 
 
 
-using Geometry1MTypes = ::testing::Types<DSSC_1MGeometry, LPD_1MGeometry>;
+using Geometry1MTypes = ::testing::Types<DSSC_1MGeometry, LPD_1MGeometry, AGIPD_1MGeometry>;
 TYPED_TEST_CASE(Test1MGeometry, Geometry1MTypes);
 
 

@@ -5,7 +5,9 @@ import pytest
 import numpy as np
 
 from extra_foam.pipeline.processors.image_assembler import StackView
-from extra_foam.geometries import DSSC_1MGeometryFast, LPD_1MGeometryFast
+from extra_foam.geometries import (
+    DSSC_1MGeometryFast, LPD_1MGeometryFast, AGIPD_1MGeometryFast
+)
 import extra_geom as eg
 from extra_foam.config import config
 
@@ -60,7 +62,7 @@ class _Test1MGeometryMixin:
         # FIXME
         for i in range(2):
             assert abs(out_fast.shape[i] - out_gt.shape[i]) <= 1
-        # np.testing.assert_equal(out_fast, out)
+        # np.testing.assert_equal(out_fast, out_gt)
 
 
 class TestDSSC_1MGeometryFast(_Test1MGeometryMixin):
@@ -120,3 +122,17 @@ class TestLPD_1MGeometryFast(_Test1MGeometryMixin):
         cls.n_pulses = 2
         cls.n_modules = LPD_1MGeometryFast.n_modules
         cls.module_shape = LPD_1MGeometryFast.module_shape
+
+
+class TestAGIPD_1MGeometryFast(_Test1MGeometryMixin):
+    @classmethod
+    def setup_class(cls):
+        geom_file = osp.join(_geom_path, "agipd_mar18_v11.geom")
+
+        cls.geom_stack = AGIPD_1MGeometryFast()
+        cls.geom_fast = AGIPD_1MGeometryFast.from_crystfel_geom(geom_file)
+        cls.geom = eg.AGIPD_1MGeometry.from_crystfel_geom(geom_file)
+
+        cls.n_pulses = 2
+        cls.n_modules = AGIPD_1MGeometryFast.n_modules
+        cls.module_shape = AGIPD_1MGeometryFast.module_shape

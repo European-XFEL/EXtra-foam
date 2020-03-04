@@ -41,12 +41,10 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._stack_only_cb = QCheckBox("Stack only")
         self._stack_only_cb.setChecked(False)
 
-        if config["DETECTOR"] == "AGIPD":
-            # FIXME: native AGIPD geometry is not implemented yet
-            self._assembler_cb.removeItem(0)
-            self._stack_only_cb.setEnabled(False)
-
         self._quad_positions_tb = QTableWidget()
+        if config["DETECTOR"] == "AGIPD":
+            self._quad_positions_tb.setEnabled(False)
+            self._assembler_cb.setCurrentText("EXtra-geom")
 
         self._geom_file_le = QLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
@@ -105,8 +103,11 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         try:
             for i in range(n_row):
                 for j in range(n_col):
-                    widget.setItem(i, j, QTableWidgetItem(
-                        str(config["QUAD_POSITIONS"][j][i])))
+                    if config["DETECTOR"] in ["LPD", "DSSC"]:
+                        widget.setItem(i, j, QTableWidgetItem(
+                            str(config["QUAD_POSITIONS"][j][i])))
+                    else:
+                        widget.setItem(i, j, QTableWidgetItem('0'))
         except IndexError:
             pass
 
