@@ -11,8 +11,8 @@ from .pump_probe_ctrl_widget import PumpProbeCtrlWidget
 from .histogram_ctrl_widget import HistogramCtrlWidget
 from .filter_ctrl_widget import FomFilterCtrlWidget
 from .data_source_widget import DataSourceWidget
+from .extension_ctrl_widget import ExtensionCtrlWidget
 from .smart_widgets import SmartLineEdit, SmartStringLineEdit
-from .trxas_ctrl_widget import TrXasCtrlWidget
 from .roi_ctrl_widget import RoiCtrlWidget
 from .roi_fom_ctrl_widget import RoiFomCtrlWidget
 from .roi_hist_ctrl_widget import RoiHistCtrlWidget
@@ -32,6 +32,7 @@ __all__ = [
     "DataSourceWidget",
     "GeometryCtrlWidget",
     "ImageCtrlWidget",
+    "ExtensionCtrlWidget",
     "FomFilterCtrlWidget",
     "PumpProbeCtrlWidget",
     "RoiCtrlWidget",
@@ -42,5 +43,4 @@ __all__ = [
     "SmartLineEdit",
     "SmartStringLineEdit",
     "HistogramCtrlWidget",
-    "TrXasCtrlWidget",
 ]

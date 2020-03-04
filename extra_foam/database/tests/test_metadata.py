@@ -41,7 +41,7 @@ class TestDataProxy(unittest.TestCase):
     def testAnalysisType(self):
         type1 = AnalysisType.AZIMUTHAL_INTEG
         type2 = AnalysisType.PUMP_PROBE
-        type3 = AnalysisType.TR_XAS
+        type3 = AnalysisType.ROI_FOM
 
         # register a analysis type
         self._meta.register_analysis(type1)

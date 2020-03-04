@@ -630,44 +630,6 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertFalse(self.train_worker.running)
         self.assertFalse(self.pulse_worker.running)
 
-    def testTrXasCtrl(self):
-        from extra_foam.gui.ctrl_widgets.trxas_ctrl_widget import (
-            _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE,
-        )
-        default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
-
-        widget = self.gui._trxas_ctrl_widget
-        proc = self.train_worker._tr_xas
-
-        # test default values
-        proc.update()
-        self.assertTupleEqual(default_bin_range, proc._delay_range)
-        self.assertTupleEqual(default_bin_range, proc._energy_range)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_delay_bins)
-        self.assertEqual(int(_DEFAULT_N_BINS), proc._n_energy_bins)
-
-        widget._energy_device_le.setText("new/mono")
-        widget._energy_ppt_le.setText("new/mono/ppt")
-        widget._delay_device_le.setText("new/phase/shifter")
-        widget._delay_ppt_le.setText("new/phase/shifter/ppt")
-        widget._delay_range_le.setText("-1, 1")
-        widget._energy_range_le.setText("-1.0, 1.0")
-        widget._n_delay_bins_le.setText("100")
-        widget._n_energy_bins_le.setText("1000")
-        proc.update()
-        self.assertEqual("new/mono new/mono/ppt", proc._energy_src)
-        self.assertEqual("new/phase/shifter new/phase/shifter/ppt", proc._delay_src)
-        self.assertTupleEqual((-1, 1), proc._delay_range)
-        self.assertTupleEqual((-1.0, 1.0), proc._energy_range)
-        self.assertEqual(100, proc._n_delay_bins)
-        self.assertEqual(1000, proc._n_energy_bins)
-
-        # test reset button
-        proc._reset = False
-        widget._scan_btn_set.reset_sgn.emit()
-        proc.update()
-        self.assertTrue(proc._reset)
-
     def testOpenCloseWindows(self):
         actions = self.gui._tool_bar.actions()
 

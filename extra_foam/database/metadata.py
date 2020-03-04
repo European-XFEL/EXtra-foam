@@ -43,6 +43,7 @@ class Metadata(metaclass=MetaMetadata):
     SESSION = "meta:session"
 
     CONNECTION = "meta:connection"
+    EXTENSION = "meta:extension"
 
     ANALYSIS_TYPE = "meta:analysis_type"
 
@@ -59,7 +60,6 @@ class Metadata(metaclass=MetaMetadata):
     HISTOGRAM_PROC = "meta:proc:histogram"
     FOM_FILTER_PROC = "meta:proc:fom_filter"
     DARK_RUN_PROC = "meta:proc:dark_run"
-    TR_XAS_PROC = "meta:proc:tr_xas"
 
     # The real key depends on the category of the data source. For example,
     # 'XGM' has the key 'meta:sources:XGM' and 'DSSC' has the key

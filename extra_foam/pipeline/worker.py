@@ -15,7 +15,7 @@ import traceback
 import time
 
 from .exceptions import StopPipelineError, ProcessingError
-from .pipe import KaraboBridge, MpInQueue, MpOutQueue
+from .pipe import KaraboBridge, MpInQueue, MpOutQueue, ZmqOutQueue
 from .processors import (
     DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
@@ -30,7 +30,6 @@ from .processors import (
     ImageRoiPulse, ImageRoiTrain,
     HistogramProcessor,
     XgmProcessor,
-    TrXasProcessor,
 )
 from ..config import config, PipelineSlowPolicy
 from ..ipc import RedisConnection
@@ -54,6 +53,9 @@ class ProcessWorker(mp.Process):
 
         self._input = None  # pipe-in
         self._output = None  # pipe-out
+        # pipeline extension for special suite, jupyter notebook and
+        # other plugins
+        self._extension = None
 
         self._tasks = []
 
@@ -61,6 +63,7 @@ class ProcessWorker(mp.Process):
         self._close_ev = close_ev
         self._input_update_ev = Event()
         self._output_update_ev = Event()
+        self._extension_update_ev = Event()
 
         # the time when the previous data processing was finished
         self._prev_processed_time = None
@@ -84,6 +87,8 @@ class ProcessWorker(mp.Process):
         # start input and output pipes
         self._input.start()
         self._output.start()
+        if self._extension is not None:
+            self._extension.start()
 
         data_out = None
         while not self.closing:
@@ -110,16 +115,26 @@ class ProcessWorker(mp.Process):
                     pass
 
             if data_out is not None:
+                sent = False
                 # TODO: still put the data but signal the data has been dropped.
                 if self._slow_policy == PipelineSlowPolicy.WAIT:
                     try:
                         self._output.put(data_out)
-                        data_out = None
+                        sent = True
                     except Full:
                         pass
                 else:
                     # always keep the latest data in the cache
                     self._output.put_pop(data_out)
+                    sent = True
+
+                if self._extension is not None and sent:
+                    try:
+                        self._extension.put(data_out)
+                    except Full:
+                        pass
+
+                if sent:
                     data_out = None
 
             time.sleep(0.001)
@@ -164,6 +179,7 @@ class ProcessWorker(mp.Process):
     def notify_update(self):
         self._input_update_ev.set()
         self._output_update_ev.set()
+        self._extension_update_ev.set()
 
 
 class PulseWorker(ProcessWorker):
@@ -214,6 +230,8 @@ class TrainWorker(ProcessWorker):
         self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
         self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev,
                                   final=True)
+        self._extension = ZmqOutQueue(
+            self._extension_update_ev, pause_ev, close_ev)
 
         self._image_roi = ImageRoiTrain()
         self._ai_proc = AzimuthalIntegProcessorTrain()
@@ -225,8 +243,6 @@ class TrainWorker(ProcessWorker):
         self._correlation2_proc = CorrelationProcessor(2)
         self._binning_proc = BinningProcessor()
 
-        self._tr_xas = TrXasProcessor()
-
         self._tasks = [
             self._image_roi,
             self._ai_proc,
@@ -235,5 +251,4 @@ class TrainWorker(ProcessWorker):
             self._correlation1_proc,
             self._correlation2_proc,
             self._binning_proc,
-            self._tr_xas,
         ]

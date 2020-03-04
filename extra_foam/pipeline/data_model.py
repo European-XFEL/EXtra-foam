@@ -749,23 +749,6 @@ class PulseIndexMask:
         self._indices = np.array([True] * self.LENGTH)
 
 
-class XasData:
-
-    __slots__ = ['delay_bin_centers', 'delay_bin_counts',
-                 'a13_stats', 'a23_stats', 'a21_stats',
-                 'energy_bin_centers', 'a21_heat', 'a21_heatcount']
-
-    def __init__(self):
-        self.delay_bin_centers = None
-        self.delay_bin_counts = None
-        self.a13_stats = None
-        self.a23_stats = None
-        self.a21_stats = None
-        self.energy_bin_centers = None
-        self.a21_heat = None
-        self.a21_heatcount = None
-
-
 class _XgmDataItem:
     """_XgmDataItem class.
 
@@ -890,7 +873,6 @@ class ProcessedData:
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',
                  'hist', 'corr', 'bin',
-                 'trxas',
                  'pulse']
 
     def __init__(self, tid):
@@ -910,8 +892,6 @@ class ProcessedData:
         self.hist = HistogramDataTrain()
         self.corr = CorrelationData()
         self.bin = BinData()
-
-        self.trxas = XasData()
 
         self.pulse = self.PulseData()
 

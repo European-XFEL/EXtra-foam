@@ -12,7 +12,7 @@ import multiprocessing as mp
 from queue import Empty, Full
 import time
 
-from .f_zmq import BridgeProxy
+from .f_zmq import BridgeProxy, FoamZmqServer
 from .f_queue import CorrelateQueue, SimpleQueue
 from .processors.base_processor import _RedisParserMixin
 from ..config import config, DataSource
@@ -327,3 +327,53 @@ class MpOutQueue(_PipeOutBase):
     def accept(self, connection):
         """Override."""
         self._client = connection
+
+
+class ZmqOutQueue(_PipeOutBase):
+    """A pipe which uses ZeroMQ to dispatch data."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._server = None
+
+    def _update_server(self):
+        if self._server is None:
+            self._server = FoamZmqServer()
+
+        cfg = self._meta.hget_all(mt.EXTENSION)
+        endpoint = cfg["endpoint"]
+
+        self._server.stop()
+        self._server.bind(endpoint)
+        logger.debug(f"Instantiate an extension server bound to "
+                     f"{endpoint}")
+
+    @run_in_thread(daemon=True)
+    def run(self):
+        """Override."""
+        self._update_server()
+        data_out = None
+        while not self.closing:
+            if self.updating:
+                self._update_server()
+                data_out = None
+                self.clear()
+                self.finish_updating()
+
+            if data_out is None:
+                try:
+                    data_out = self._cache.get_nowait()
+                except Empty:
+                    pass
+
+            if data_out is not None:
+                try:
+                    self._server.send(data_out)
+                    data_out = None
+                except TimeoutError:
+                    pass
+
+            time.sleep(0.001)
+
+    def accept(self, connection):
+        pass
