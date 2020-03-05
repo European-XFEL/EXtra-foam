@@ -51,7 +51,7 @@ install:
   - python --version
   - which pip
   - pip --version
-  # QT_DEBUG_PLUGINS
+  # QT_DEBUG_PLUGINS 
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       sudo apt install -y libxkbcommon-x11-0;
       pip install -e .[test];
