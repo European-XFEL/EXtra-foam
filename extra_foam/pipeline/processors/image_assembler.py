@@ -639,6 +639,35 @@ class ImageAssemblerFactory(ABC):
             # return modules_data
             raise NotImplementedError
 
+    class EPix100ImageAssembler(BaseAssembler):
+        def _get_modules_bridge(self, data, src):
+            """Override.
+
+            - calibrated, "data.image", (y, x, 1)
+            - raw, "data.image.data", (1, y, x)
+            -> (y, x)
+            """
+            img_data = data[src]
+            dtype = img_data.dtype
+
+            if dtype == _IMAGE_DTYPE:
+                return img_data.squeeze(axis=-1)
+
+            # raw data of ePix100 has an unexpected dtype int16
+            if dtype == np.int16:
+                return img_data.squeeze(axis=0)
+
+            raise AssemblingError(f"Unknown detector data type: {dtype}!")
+
+        def _get_modules_file(self, data, src):
+            """Override.
+
+            - calibrated, "data.image.pixels", (y, x)
+            - raw, "data.image.pixels", (y, x)
+            -> (y, x)
+            """
+            return data[src]
+
     class FastCCDImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):
             """Override.
@@ -702,6 +731,9 @@ class ImageAssemblerFactory(ABC):
 
         if detector == 'FastCCD':
             return cls.FastCCDImageAssembler()
+
+        if detector == 'ePix100':
+            return cls.EPix100ImageAssembler()
 
         if detector == 'BaslerCamera':
             return cls.BaslerCameraImageAssembler()

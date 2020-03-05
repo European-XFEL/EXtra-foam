@@ -341,6 +341,13 @@ class _Config(dict):
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(1934, 960),
             PIXEL_SIZE=0.030e-3),
+        "ePix100": _AreaDetectorConfig(
+            REDIS_PORT=6384,
+            PULSE_RESOLVED=False,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=1,
+            MODULE_SHAPE=(708, 768),
+            PIXEL_SIZE=0.110e-3),
         "BaslerCamera": _AreaDetectorConfig(
             REDIS_PORT=6389,
             PULSE_RESOLVED=False,
@@ -545,6 +552,9 @@ class ConfigWrapper(abc.Mapping):
 
         if detector == 'JUNGFRAUPR':
             return 'JungFrauPR'
+
+        if detector == 'EPIX100':
+            return 'ePix100'
 
         return detector.upper()
 

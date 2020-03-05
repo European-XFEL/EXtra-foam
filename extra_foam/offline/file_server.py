@@ -225,8 +225,10 @@ class FileServer(Process):
             fast_devices = [("*DET/*CH0:xtdf", "image.data")]
         elif detector == "JungFrau":
             fast_devices = [("*/DET/*:daqOutput", "data.adc")]
-        elif detector == "FastCCD":
+        elif detector in ["FastCCD"]:
             fast_devices = [("*/DAQ/*:daqOutput", "data.image.pixels")]
+        elif detector in ["ePix100"]:
+            fast_devices = [("*/DET/*:daqOutput", "data.image.pixels")]
         else:
             raise NotImplementedError(f"Unknown Detector: {detector}")
 
