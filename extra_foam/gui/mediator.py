@@ -174,8 +174,9 @@ class Mediator(QObject):
         self.onResetMa()
 
     def onRoiGeometryChange(self, value: tuple):
-        idx, x, y, w, h = value
-        self._meta.hset(mt.ROI_PROC, f'geom{idx}', str((x, y, w, h)))
+        idx, activated, locked, x, y, w, h = value
+        self._meta.hset(mt.ROI_PROC, f'geom{idx}',
+                        str((int(activated), int(locked), x, y, w, h)))
 
     def onRoiFomTypeChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'fom:type', int(value))

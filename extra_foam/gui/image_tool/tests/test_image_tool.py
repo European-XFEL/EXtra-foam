@@ -113,6 +113,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         proc = self.pulse_worker._image_roi
         self.assertEqual(4, len(roi_ctrls))
 
+        # test default
+
         proc.update()
 
         for i, ctrl in enumerate(roi_ctrls, 1):
@@ -121,7 +123,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                                  list(ctrl._roi.pos()))
             self.assertListEqual([int(ctrl._width_le.text()), int(ctrl._height_le.text())],
                                  list(ctrl._roi.size()))
-            # test default values
             self.assertListEqual(RectRoiGeom.INVALID, getattr(proc, f"_geom{i}"))
 
         for ctrl in roi_ctrls:
@@ -132,61 +133,63 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             self.assertFalse(ctrl._px_le.isEnabled())
             self.assertFalse(ctrl._py_le.isEnabled())
 
-        roi1_ctrl = roi_ctrls[0]
-        roi1 = self.view._rois[0]
-        self.assertIs(roi1_ctrl._roi, roi1)
+        # test activating ROI
 
-        # activate ROI1 ctrl
-        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
-        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
-        proc.update()
+        for i, item in enumerate(zip(roi_ctrls, self.view._rois), 1):
+            ctrl, roi = item
+            self.assertIs(ctrl._roi, roi)
 
-        self.assertTupleEqual((int(roi1_ctrl._width_le.text()), int(roi1_ctrl._height_le.text())),
-                              tuple(roi1.size()))
-        self.assertTupleEqual((int(roi1_ctrl._px_le.text()), int(roi1_ctrl._py_le.text())),
-                              tuple(roi1.pos()))
+            QTest.mouseClick(ctrl._activate_cb, Qt.LeftButton,
+                             pos=QPoint(2, ctrl._activate_cb.height()/2))
+            self.assertTrue(ctrl._activate_cb.isChecked())
+            proc.update()
+            w_gt, h_gt = int(ctrl._width_le.text()), int(ctrl._height_le.text())
+            self.assertTupleEqual((w_gt, h_gt), tuple(roi.size()))
+            x_gt, y_gt = int(ctrl._px_le.text()), int(ctrl._py_le.text())
+            self.assertTupleEqual((x_gt, y_gt), tuple(roi.pos()))
+            self.assertListEqual([x_gt, y_gt, w_gt, h_gt], getattr(proc, f"_geom{i}"))
 
-        # use keyClicks to test that the QLineEdit is enabled
-        roi1_ctrl._width_le.clear()
-        QTest.keyClicks(roi1_ctrl._width_le, "10")
-        QTest.keyPress(roi1_ctrl._width_le, Qt.Key_Enter)
-        roi1_ctrl._height_le.clear()
-        QTest.keyClicks(roi1_ctrl._height_le, "30")
-        QTest.keyPress(roi1_ctrl._height_le, Qt.Key_Enter)
-        self.assertTupleEqual((10, 30), tuple(roi1.size()))
+            # use keyClicks to test that the QLineEdit is enabled
+            ctrl._width_le.clear()
+            QTest.keyClicks(ctrl._width_le, "10")
+            QTest.keyPress(ctrl._width_le, Qt.Key_Enter)
+            ctrl._height_le.clear()
+            QTest.keyClicks(ctrl._height_le, "30")
+            QTest.keyPress(ctrl._height_le, Qt.Key_Enter)
+            self.assertTupleEqual((10, 30), tuple(roi.size()))
 
-        # ROI can be outside of the image
-        roi1_ctrl._px_le.clear()
-        QTest.keyClicks(roi1_ctrl._px_le, "-1")
-        QTest.keyPress(roi1_ctrl._px_le, Qt.Key_Enter)
-        roi1_ctrl._py_le.clear()
-        QTest.keyClicks(roi1_ctrl._py_le, "-3")
-        QTest.keyPress(roi1_ctrl._py_le, Qt.Key_Enter)
-        self.assertTupleEqual((-1, -3), tuple(roi1.pos()))
+            # ROI can be outside of the image
+            ctrl._px_le.clear()
+            QTest.keyClicks(ctrl._px_le, "-1")
+            QTest.keyPress(ctrl._px_le, Qt.Key_Enter)
+            ctrl._py_le.clear()
+            QTest.keyClicks(ctrl._py_le, "-3")
+            QTest.keyPress(ctrl._py_le, Qt.Key_Enter)
+            self.assertTupleEqual((-1, -3), tuple(roi.pos()))
+            proc.update()
+            self.assertListEqual([-1, -3, 10, 30], getattr(proc, f"_geom{i}"))
 
-        proc.update()
-        self.assertListEqual([-1, -3, 10, 30], proc._geom1)
+            # lock ROI ctrl
+            QTest.mouseClick(ctrl._lock_cb, Qt.LeftButton,
+                             pos=QPoint(2, ctrl._lock_cb.height()/2))
+            self.assertTrue(ctrl._activate_cb.isChecked())
+            self.assertTrue(ctrl._lock_cb.isChecked())
+            self.assertFalse(ctrl._width_le.isEnabled())
+            self.assertFalse(ctrl._height_le.isEnabled())
+            self.assertFalse(ctrl._px_le.isEnabled())
+            self.assertFalse(ctrl._py_le.isEnabled())
 
-        # lock ROI ctrl
-        QTest.mouseClick(roi1_ctrl._lock_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl._lock_cb.height()/2))
-        self.assertTrue(roi1_ctrl._activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
-        self.assertFalse(roi1_ctrl._width_le.isEnabled())
-        self.assertFalse(roi1_ctrl._height_le.isEnabled())
-        self.assertFalse(roi1_ctrl._px_le.isEnabled())
-        self.assertFalse(roi1_ctrl._py_le.isEnabled())
-
-        # deactivate ROI ctrl
-        QTest.mouseClick(roi1_ctrl._activate_cb, Qt.LeftButton,
-                         pos=QPoint(2, roi1_ctrl._activate_cb.height()/2))
-        self.assertFalse(roi1_ctrl._activate_cb.isChecked())
-        self.assertTrue(roi1_ctrl._lock_cb.isChecked())
-        self.assertFalse(roi1_ctrl._width_le.isEnabled())
-        self.assertFalse(roi1_ctrl._height_le.isEnabled())
-        self.assertFalse(roi1_ctrl._px_le.isEnabled())
-        self.assertFalse(roi1_ctrl._py_le.isEnabled())
+            # deactivate ROI ctrl
+            QTest.mouseClick(ctrl._activate_cb, Qt.LeftButton,
+                             pos=QPoint(2, ctrl._activate_cb.height()/2))
+            self.assertFalse(ctrl._activate_cb.isChecked())
+            self.assertTrue(ctrl._lock_cb.isChecked())
+            self.assertFalse(ctrl._width_le.isEnabled())
+            self.assertFalse(ctrl._height_le.isEnabled())
+            self.assertFalse(ctrl._px_le.isEnabled())
+            self.assertFalse(ctrl._py_le.isEnabled())
+            proc.update()
+            self.assertListEqual(RectRoiGeom.INVALID, getattr(proc, f"_geom{i}"))
 
     def testMovingAverageQLineEdit(self):
         # TODO: remove it in the future
