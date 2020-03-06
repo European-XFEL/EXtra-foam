@@ -249,74 +249,76 @@ class TestMainGuiCtrl(unittest.TestCase):
                                  combo_lst)
 
         train_worker = self.train_worker
-        proc = train_worker._correlation_proc
-
-        proc.update()
+        processors = [train_worker._correlation1_proc, train_worker._correlation2_proc]
 
         # test default
-        self.assertEqual(AnalysisType(0), proc.analysis_type)
-        self.assertEqual([""] * _N_PARAMS, proc._sources)
-        self.assertEqual([_DEFAULT_RESOLUTION] * _N_PARAMS, proc._resolutions)
+        for proc in processors:
+            proc.update()
+            self.assertEqual(AnalysisType(0), proc.analysis_type)
+            self.assertEqual("", proc._source)
+            self.assertEqual(_DEFAULT_RESOLUTION, proc._resolution)
 
         # set new FOM
-        proc._resets = [False] * _N_PARAMS
         widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_PROJ])
-        proc.update()
-        self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
-        self.assertTrue(all(proc._resets))
+        for proc in processors:
+            proc._reset = False
+            proc.update()
+            self.assertEqual(AnalysisType.ROI_PROJ, proc.analysis_type)
+            self.assertTrue(proc._reset)
 
-        # change source
-        for i in range(_N_PARAMS):
-            proc._resets[i] = False
+        for idx, proc in enumerate(processors):
+            # change source
+            proc._reset = False
             ctg, device_id, ppt = 'Metadata', "META", "timestamp.tid"
-            widget._table.cellWidget(i, 0).setCurrentText(ctg)
-            self.assertEqual(device_id, widget._table.cellWidget(i, 1).currentText())
-            self.assertEqual(ppt, widget._table.cellWidget(i, 2).currentText())
+            widget._table.cellWidget(idx, 0).setCurrentText(ctg)
+            self.assertEqual(device_id, widget._table.cellWidget(idx, 1).currentText())
+            self.assertEqual(ppt, widget._table.cellWidget(idx, 2).currentText())
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, proc._sources[i])
-            self.assertTrue(proc._resets[i])
+            self.assertEqual(src, proc._source)
+            self.assertTrue(proc._reset)
 
             # just test we can set a motor source
-            proc._resets[i] = False
-            widget._table.cellWidget(i, 0).setCurrentText("Motor")
+            proc._reset = False
+            widget._table.cellWidget(idx, 0).setCurrentText("Motor")
             proc.update()
-            self.assertTrue(proc._resets[i])
+            self.assertTrue(proc._reset)
 
-            proc._resets[i] = False
+            proc._reset = False
             ctg, device_id, ppt = USER_DEFINED_KEY, "ABC", "efg"
-            widget._table.cellWidget(i, 0).setCurrentText(ctg)
-            self.assertEqual('', widget._table.cellWidget(i, 1).text())
-            self.assertEqual('', widget._table.cellWidget(i, 2).text())
-            widget._table.cellWidget(i, 1).setText(device_id)
-            widget._table.cellWidget(i, 2).setText(ppt)
+            widget._table.cellWidget(idx, 0).setCurrentText(ctg)
+            self.assertEqual('', widget._table.cellWidget(idx, 1).text())
+            self.assertEqual('', widget._table.cellWidget(idx, 2).text())
+            widget._table.cellWidget(idx, 1).setText(device_id)
+            widget._table.cellWidget(idx, 2).setText(ppt)
             self.assertEqual(device_id, widget._table.cellWidget(0, 1).text())
             self.assertEqual(ppt, widget._table.cellWidget(0, 2).text())
             proc.update()
             src = f"{device_id} {ppt}" if device_id and ppt else ""
-            self.assertEqual(src, proc._sources[i])
-            self.assertTrue(proc._resets[i])
+            self.assertEqual(src, proc._source)
+            self.assertTrue(proc._reset)
 
-        # change resolution
-        proc._resets = [False] * _N_PARAMS
-        for i in range(_N_PARAMS):
-            self.assertIsInstance(proc._correlations[i], SimplePairSequence)
-            widget._table.cellWidget(i, 3).setText(str(1.0))
+            # change resolution
+            proc._reset = False
+            self.assertIsInstance(proc._correlation, SimplePairSequence)
+            self.assertIsInstance(proc._correlation_slave, SimplePairSequence)
+            widget._table.cellWidget(idx, 3).setText(str(1.0))
             proc.update()
-            self.assertEqual(1.0, proc._resolutions[i])
-            self.assertIsInstance(proc._correlations[i], OneWayAccuPairSequence)
+            self.assertEqual(1.0, proc._resolution)
+            self.assertIsInstance(proc._correlation, OneWayAccuPairSequence)
+            self.assertIsInstance(proc._correlation_slave, OneWayAccuPairSequence)
             # sequence type change will not have 'reset'
-            self.assertFalse(proc._resets[i])
-            widget._table.cellWidget(i, 3).setText(str(2.0))
+            self.assertFalse(proc._reset)
+            widget._table.cellWidget(idx, 3).setText(str(2.0))
             proc.update()
-            self.assertEqual(2.0, proc._resolutions[i])
-            self.assertTrue(proc._resets[i])
+            self.assertEqual(2.0, proc._resolution)
+            self.assertTrue(proc._reset)
 
-        # test reset button
-        proc._resets = [False] * _N_PARAMS
-        widget._reset_btn.clicked.emit()
-        proc.update()
-        self.assertTrue(all(proc._resets))
+            # test reset button
+            proc._reset = False
+            widget._reset_btn.clicked.emit()
+            proc.update()
+            self.assertTrue(proc._reset)
 
     def testBinCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (

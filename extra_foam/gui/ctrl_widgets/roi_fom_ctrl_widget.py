@@ -10,7 +10,7 @@ All rights reserved.
 from collections import OrderedDict
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
 from ...config import RoiCombo, RoiFom
@@ -54,6 +54,8 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         # TODO: implement
         self._norm_cb.setDisabled(True)
 
+        self._master_slave_cb = QCheckBox("Master-slave")
+
         self.initUI()
         self.initConnections()
 
@@ -76,6 +78,9 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         layout.addWidget(QLabel("Norm: "), row, 0, AR)
         layout.addWidget(self._norm_cb, row, 1)
 
+        row += 1
+        layout.addWidget(self._master_slave_cb, row, 1)
+
         self.setLayout(layout)
 
     def initConnections(self):
@@ -91,9 +96,22 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._norm_cb.currentTextChanged.connect(
             lambda x: mediator.onRoiFomNormChange(self._available_norms[x]))
 
+        self._master_slave_cb.toggled.connect(
+            mediator.onRoiFomMasterSlaveModeChange)
+        self._master_slave_cb.toggled.connect(self.onMasterSlaveModeToggled)
+
     def updateMetaData(self):
         """Overload."""
         self._combo_cb.currentTextChanged.emit(self._combo_cb.currentText())
         self._type_cb.currentTextChanged.emit(self._type_cb.currentText())
         self._norm_cb.currentTextChanged.emit(self._norm_cb.currentText())
+        self._master_slave_cb.toggled.emit(
+            self._master_slave_cb.isChecked())
         return True
+
+    def onMasterSlaveModeToggled(self, state):
+        if state:
+            self._combo_cb.setCurrentText("ROI1")
+            self._combo_cb.setEnabled(False)
+        else:
+            self._combo_cb.setEnabled(True)

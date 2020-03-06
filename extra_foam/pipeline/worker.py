@@ -221,7 +221,8 @@ class TrainWorker(ProcessWorker):
         self._filter = FomTrainFilter()
 
         self._histogram = HistogramProcessor()
-        self._correlation_proc = CorrelationProcessor()
+        self._correlation1_proc = CorrelationProcessor(1)
+        self._correlation2_proc = CorrelationProcessor(2)
         self._binning_proc = BinningProcessor()
 
         self._tr_xas = TrXasProcessor()
@@ -231,7 +232,8 @@ class TrainWorker(ProcessWorker):
             self._ai_proc,
             self._filter,
             self._histogram,
-            self._correlation_proc,
+            self._correlation1_proc,
+            self._correlation2_proc,
             self._binning_proc,
             self._tr_xas,
         ]

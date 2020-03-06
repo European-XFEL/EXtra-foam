@@ -274,8 +274,8 @@ class _Config(dict):
         "GUI_BACKGROUND_COLOR": (225, 225, 225, 255),
         # colors of for ROI bounding boxes 1 to 4
         "GUI_ROI_COLORS": ('b', 'r', 'g', 'o'),
-        # colors for correlation plots 1 to 4
-        "GUI_CORRELATION_COLORS": ('b', 'o', 'g', 'r'),
+        # colors (master, slave) for correlation plots 1 and 2
+        "GUI_CORRELATION_COLORS": (('b', 'r'), ('g', 'p')),
         # color of the image mask bounding box while drawing
         "GUI_MASK_BOUNDING_BOX_COLOR": 'b',
         # -------------------------------------------------------------

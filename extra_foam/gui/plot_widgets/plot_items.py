@@ -423,6 +423,9 @@ class StatisticsBarItem(pg.GraphicsObject):
         self.update()
         self.informViewBoundsChanged()
 
+    def isEmptyGraph(self):
+        return not bool(len(self._x))
+
     def preparePath(self):
         p = QPainterPath()
 

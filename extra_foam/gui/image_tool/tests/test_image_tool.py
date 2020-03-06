@@ -534,12 +534,20 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._combo_cb.setCurrentText(avail_combos[RoiCombo.ROI1_SUB_ROI2])
         widget._type_cb.setCurrentText(avail_types[RoiFom.MEDIAN])
         widget._norm_cb.setCurrentText(avail_norms[Normalizer.ROI])
-
         proc.update()
-
         self.assertEqual(RoiCombo.ROI1_SUB_ROI2, proc._fom_combo)
         self.assertEqual(RoiFom.MEDIAN, proc._fom_type)
         self.assertEqual(Normalizer.ROI, proc._fom_norm)
+
+        # test activate/deactivate master-slave mode
+        self.assertFalse(widget._master_slave_cb.isChecked())
+        widget._master_slave_cb.setChecked(True)
+        proc.update()
+        self.assertTrue(proc._roi_fom_master_slave)
+        self.assertFalse(widget._combo_cb.isEnabled())
+        self.assertEqual("ROI1", widget._combo_cb.currentText())
+        widget._master_slave_cb.setChecked(False)
+        self.assertTrue(widget._combo_cb.isEnabled())
 
     def testRoiHistCtrl(self):
         widget = self.image_tool._corrected_view._roi_hist_ctrl_widget
@@ -729,6 +737,7 @@ class TestImageToolTs(unittest.TestCase):
         widget = self.image_tool._gain_offset_view._ctrl_widget
         self.assertFalse(widget._gain_slicer_le.isEnabled())
         self.assertFalse(widget._offset_slicer_le.isEnabled())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -186,6 +186,9 @@ class Mediator(QObject):
     def onRoiFomNormChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, "fom:norm", int(value))
 
+    def onRoiFomMasterSlaveModeChange(self, value: bool):
+        self._meta.hset(mt.ROI_PROC, "fom:master_slave", str(value))
+
     def onRoiHistComboChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, "hist:combo", int(value))
 
@@ -232,7 +235,8 @@ class Mediator(QObject):
         pipe.execute()
 
     def onCorrelationReset(self):
-        self._meta.hset(mt.CORRELATION_PROC, "reset", 1)
+        self._meta.hset(mt.CORRELATION_PROC, "reset1", 1)
+        self._meta.hset(mt.CORRELATION_PROC, "reset2", 1)
 
     def onBinParamChange(self, value: tuple):
         # index, source, bin_range, number of bins,

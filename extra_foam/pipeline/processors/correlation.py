@@ -21,15 +21,18 @@ class CorrelationProcessor(_BaseProcessor):
     """Add correlation information into processed data.
 
     Attributes:
+        _idx (int): Index of correlation starting from 1.
         analysis_type (AnalysisType): analysis type.
         _pp_analysis_type (AnalysisType): pump-probe analysis type.
-        _n_params (int): number of correlators.
-        _correlations (list): a list of pair sequences (SimplePairSequence,
+        _correlation (Sequence): pair sequences (SimplePairSequence,
             OneWayAccuPairSequence) for storing the history of
             (correlator, FOM).
-        _sources (list): a list of sources for slow data correlators.
-        _resolutions (list): a list of resolutions for correlations.
-        _resets (list): reset flags for correlation data.
+        _correlation_slave (Sequence): pair sequences (SimplePairSequence,
+            OneWayAccuPairSequence) for storing the history of
+            (correlator, FOM slave).
+        _source: source of slow data.
+        _resolution: resolution of correlation.
+        _reset: reset flag for correlation data.
         _correlation_pp (SimplePairSequence): store the history of
             (correlator, FOM) which is displayed in PumpProbeWindow.
         _pp_fail_flag (int): a flag used to check whether pump-probe FOM is
@@ -39,61 +42,65 @@ class CorrelationProcessor(_BaseProcessor):
     # 10 pulses/train * 60 seconds * 5 minutes = 3000
     _MAX_POINTS = 10 * 60 * 5
 
-    def __init__(self):
+    def __init__(self, index):
         super().__init__()
+
+        self._idx = index
 
         self.analysis_type = AnalysisType.UNDEFINED
         self._pp_analysis_type = AnalysisType.UNDEFINED
 
-        self._n_params = 2
-        self._correlations = []
-        for i in range(self._n_params):
-            self._correlations.append(
-                SimplePairSequence(max_len=self._MAX_POINTS))
-        self._sources = [""] * self._n_params
-        self._resolutions = [0.0] * self._n_params
-        self._resets = [False] * self._n_params
+        self._correlation = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._correlation_slave = SimplePairSequence(max_len=self._MAX_POINTS)
+        self._source = ""
+        self._resolution = 0.0
+        self._reset = False
 
         self._correlation_pp = SimplePairSequence(max_len=self._MAX_POINTS)
         self._pp_fail_flag = 0
 
     def update(self):
         """Override."""
+        idx = self._idx
         cfg = self._meta.hget_all(mt.CORRELATION_PROC)
 
         if self._update_analysis(AnalysisType(int(cfg['analysis_type']))):
-            for i in range(self._n_params):
-                self._resets[i] = True
+            self._reset = True
 
-        for i in range(len(self._correlations)):
-            src = cfg[f'source{i+1}']
-            if self._sources[i] != src:
-                self._sources[i] = src
-                self._resets[i] = True
+        src = cfg[f'source{idx}']
+        if self._source != src:
+            self._source = src
+            self._reset = True
 
-            resolution = float(cfg[f'resolution{i+1}'])
-            if self._resolutions[i] != 0 and resolution == 0:
-                self._correlations[i] = SimplePairSequence(
-                    max_len=self._MAX_POINTS)
-            elif self._resolutions[i] == 0 and resolution != 0:
-                self._correlations[i] = OneWayAccuPairSequence(
-                    resolution, max_len=self._MAX_POINTS)
-            elif self._resolutions[i] != resolution:
-                # In the above two cases, we do not need 'reset' since
-                # new Sequence object will be constructed.
-                self._resets[i] = True
-            self._resolutions[i] = resolution
+        resolution = float(cfg[f'resolution{idx}'])
+        if self._resolution != 0 and resolution == 0:
+            self._correlation = SimplePairSequence(
+                max_len=self._MAX_POINTS)
+            self._correlation_slave = SimplePairSequence(
+                max_len=self._MAX_POINTS)
+        elif self._resolution == 0 and resolution != 0:
+            self._correlation = OneWayAccuPairSequence(
+                resolution, max_len=self._MAX_POINTS)
+            self._correlation_slave = OneWayAccuPairSequence(
+                resolution, max_len=self._MAX_POINTS)
+        elif self._resolution != resolution:
+            # In the above two cases, we do not need 'reset' since
+            # new Sequence object will be constructed.
+            self._reset = True
+        self._resolution = resolution
 
-        if 'reset' in cfg:
-            self._meta.hdel(mt.CORRELATION_PROC, 'reset')
-            for i in range(self._n_params):
-                self._resets[i] = True
+        reset_key = f'reset{idx}'
+        if reset_key in cfg:
+            self._meta.hdel(mt.CORRELATION_PROC, reset_key)
+            self._reset = True
 
     @profiler("Correlation Processor")
     def process(self, data):
         """Override."""
         self._process_general(data)
-        self._process_pump_probe(data)
+        if self._idx == 1:
+            # process only once
+            self._process_pump_probe(data)
 
     def _process_general(self, data):
         if self.analysis_type == AnalysisType.UNDEFINED:
@@ -104,25 +111,25 @@ class CorrelationProcessor(_BaseProcessor):
         if self.analysis_type == AnalysisType.PUMP_PROBE:
             pp_analysis_type = processed.pp.analysis_type
             if self._pp_analysis_type != pp_analysis_type:
-                for i in range(self._n_params):
-                    self._resets[i] = True
+                # reset if pump-pobe analysis type changes
+                self._reset = True
                 self._pp_analysis_type = pp_analysis_type
 
-        for i in range(self._n_params):
-            if self._resets[i]:
-                self._correlations[i].reset()
-                self._resets[i] = False
+        if self._reset:
+            self._correlation.reset()
+            self._correlation_slave.reset()
+            self._reset = False
 
         try:
             self._update_data_point(processed, raw)
         except ProcessingError as e:
             logger.error(f"[Correlation] {str(e)}!")
 
-        for i in range(self._n_params):
-            out = processed.corr[i]
-            out.x, out.y = self._correlations[i].data()
-            out.source = self._sources[i]
-            out.resolution = self._resolutions[i]
+        out = processed.corr[self._idx - 1]
+        out.x, out.y = self._correlation.data()
+        out.x_slave, out.y_slave = self._correlation_slave.data()
+        out.source = self._source
+        out.resolution = self._resolution
 
     def _process_pump_probe(self, data):
         """Process the correlation in pump-probe analysis.
@@ -146,6 +153,7 @@ class CorrelationProcessor(_BaseProcessor):
 
     def _update_data_point(self, processed, raw):
         analysis_type = self.analysis_type
+        fom_slave = None
         if analysis_type == AnalysisType.PUMP_PROBE:
             fom = processed.pp.fom
             if fom is None:
@@ -160,6 +168,7 @@ class CorrelationProcessor(_BaseProcessor):
                 self._pp_fail_flag = 0
         elif analysis_type == AnalysisType.ROI_FOM:
             fom = processed.roi.fom
+            fom_slave = processed.roi.fom_slave
             if fom is None:
                 raise ProcessingError("ROI FOM is not available")
         elif analysis_type == AnalysisType.ROI_PROJ:
@@ -175,12 +184,12 @@ class CorrelationProcessor(_BaseProcessor):
             raise UnknownParameterError(
                 f"[Correlation] Unknown analysis type: {self.analysis_type}")
 
-        for i in range(self._n_params):
-            v, err = self._fetch_property_data(
-                processed.tid, raw, self._sources[i])
+        v, err = self._fetch_property_data(processed.tid, raw, self._source)
 
-            if err:
-                logger.error(err)
+        if err:
+            logger.error(err)
 
-            if v is not None:
-                self._correlations[i].append((v, fom))
+        if v is not None:
+            self._correlation.append((v, fom))
+            if fom_slave is not None:
+                self._correlation_slave.append((v, fom_slave))

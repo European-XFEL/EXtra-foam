@@ -283,6 +283,8 @@ class ImageRoiTrain(_RoiProcessorBase):
     """Train-resolved ROI processor.
 
     Attributes:
+        _roi_fom_master_slave (bool): True for activating the ROI FOM
+            master-slave mode.
         _proj_combo (RoiCombo): ROI combination when calculating ROI
             projection.
         _proj_type (RoiProjType): ROI projection type.
@@ -318,6 +320,8 @@ class ImageRoiTrain(_RoiProcessorBase):
     def __init__(self):
         super().__init__()
 
+        self._roi_fom_master_slave = False
+
         self._proj_combo = RoiCombo.ROI1
         self._proj_type = RoiProjType.SUM
         self._proj_direct = 'x'
@@ -333,6 +337,8 @@ class ImageRoiTrain(_RoiProcessorBase):
         self._update_moving_average(g_cfg)
 
         cfg = super().update()
+
+        self._roi_fom_master_slave = cfg['fom:master_slave'] == 'True'
 
         self._proj_combo = RoiCombo(int(cfg['proj:combo']))
         self._proj_type = RoiProjType(int(cfg['proj:type']))
@@ -498,6 +504,9 @@ class ImageRoiTrain(_RoiProcessorBase):
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
+
+        if self._roi_fom_master_slave:
+            roi.fom_slave = fom2
 
         # TODO: normalize
 

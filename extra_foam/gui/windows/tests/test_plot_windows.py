@@ -235,24 +235,30 @@ class testCorrrelationWidgets(_TestDataMixin, unittest.TestCase):
         from extra_foam.gui.windows.correlation_w import CorrelationPlot
         from extra_foam.gui.plot_widgets.plot_items import StatisticsBarItem, pg
 
+        # resolution1 = 0.0 and resolution2 > 0.0
         data = self.processed_data(1001, (4, 2, 2), correlation=True)
 
         widget = CorrelationPlot(0)
         widget._data = data
         widget.refresh()
-        plot_item = widget._plot
+        plot_item, plot_item_slave = widget._plot, widget._plot_slave
         self.assertIsInstance(plot_item, pg.ScatterPlotItem)
+        self.assertIsInstance(plot_item_slave, pg.ScatterPlotItem)
 
         widget._idx = 1  # a trick
         widget.refresh()
         self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        plot_item = widget._plot
+        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
+        plot_item, plot_item_slave = widget._plot, widget._plot_slave
         self.assertIsInstance(plot_item, StatisticsBarItem)
+        self.assertIsInstance(plot_item_slave, StatisticsBarItem)
 
         widget._idx = 0  # a trick
         widget.refresh()
         self.assertNotIn(plot_item, widget._plot_item.items)  # being deleted
-        self.assertIsInstance(widget._plot,  pg.ScatterPlotItem)
+        self.assertNotIn(plot_item_slave, widget._plot_item.items)  # being deleted
+        self.assertIsInstance(widget._plot, pg.ScatterPlotItem)
+        self.assertIsInstance(widget._plot_slave, pg.ScatterPlotItem)
 
 
 class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
