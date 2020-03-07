@@ -195,6 +195,46 @@ def parse_slice(text):
         raise ValueError(err_msg)
 
 
+def parse_slice_inv(text):
+    """Parse a string into a slice notation.
+
+    This function inverts the result from 'parse_slice'.
+
+    :param str text: the input string.
+
+    :return str: the slice notation.
+
+    :raise ValueError
+
+    Examples:
+
+    parse_slice_inv('[None, None]') == ":"
+    parse_slice_inv('[1, 2]') == "1:2"
+    parse_slice_inv('[0, 10, 2]') == "0:10:2"
+    """
+    err_msg = f"Failed to convert '{text}' to a slice notation."
+
+    if len(text) > 1:
+        try:
+            parts = [None if v.strip() == 'None' else int(v)
+                     for v in text[1:-1].split(',')]
+        except ValueError:
+            raise ValueError(err_msg)
+
+        if len(parts) == 2:
+            s0 = '' if parts[0] is None else str(parts[0])
+            s1 = '' if parts[1] is None else str(parts[1])
+            return f"{s0}:{s1}"
+
+        if len(parts) == 3:
+            s0 = '' if parts[0] is None else str(parts[0])
+            s1 = '' if parts[1] is None else str(parts[1])
+            s2 = '' if parts[2] is None else str(parts[2])
+            return f"{s0}:{s1}:{s2}"
+
+    raise ValueError(err_msg)
+
+
 def create_icon_button(filename, size):
     """Create a QPushButton with icon.
 

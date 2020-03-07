@@ -15,8 +15,8 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
-from .smart_widgets import SmartIdLineEdit
-from ..gui_helpers import invert_dict
+from .smart_widgets import SmartSliceLineEdit
+from ..gui_helpers import invert_dict, parse_slice_inv
 from ...config import PumpProbeMode, AnalysisType
 from ...database import Metadata as mt
 
@@ -46,8 +46,8 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._mode_cb = QComboBox()
 
-        self._on_pulse_le = SmartIdLineEdit(":")
-        self._off_pulse_le = SmartIdLineEdit(":")
+        self._on_pulse_le = SmartSliceLineEdit(":")
+        self._off_pulse_le = SmartSliceLineEdit(":")
 
         all_keys = list(self._available_modes.keys())
         if self._pulse_resolved:
@@ -109,10 +109,9 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
             lambda x: self.onPpModeChange(self._available_modes[x]))
 
         self._on_pulse_le.value_changed_sgn.connect(
-            mediator.onPpOnPulseIdsChange)
-
+            mediator.onPpOnPulseSlicerChange)
         self._off_pulse_le.value_changed_sgn.connect(
-            mediator.onPpOffPulseIdsChange)
+            mediator.onPpOffPulseSlicerChange)
 
     def updateMetaData(self):
         """Override"""
@@ -143,9 +142,12 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
                 self._available_modes_inv[int(cfg["mode"])])
 
         self._abs_difference_cb.setChecked(cfg["abs_difference"] == 'True')
-        # FIXME:
-        # self._on_pulse_le.setText(cfg["on_pulse_indices"])
-        # self._off_pulse_le.setText(cfg["on_pulse_indices"])
+
+        if self._pulse_resolved:
+            self._on_pulse_le.setText(
+                parse_slice_inv(cfg["on_pulse_slicer"]))
+            self._off_pulse_le.setText(
+                parse_slice_inv(cfg["off_pulse_slicer"]))
 
     def onPpModeChange(self, pp_mode):
         if not self._pulse_resolved:

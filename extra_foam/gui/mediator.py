@@ -156,11 +156,11 @@ class Mediator(QObject):
     def onPpModeChange(self, value: IntEnum):
         self._meta.hset(mt.PUMP_PROBE_PROC, 'mode', int(value))
 
-    def onPpOnPulseIdsChange(self, value: list):
-        self._meta.hset(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
+    def onPpOnPulseSlicerChange(self, value: list):
+        self._meta.hset(mt.PUMP_PROBE_PROC, 'on_pulse_slicer', str(value))
 
-    def onPpOffPulseIdsChange(self, value: list):
-        self._meta.hset(mt.PUMP_PROBE_PROC, 'off_pulse_indices', str(value))
+    def onPpOffPulseSlicerChange(self, value: list):
+        self._meta.hset(mt.PUMP_PROBE_PROC, 'off_pulse_slicer', str(value))
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))

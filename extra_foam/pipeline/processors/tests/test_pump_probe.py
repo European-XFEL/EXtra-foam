@@ -20,8 +20,8 @@ from extra_foam.pipeline.tests import _TestDataMixin
 class _PumpProbeTestMixin:
     def _check_pp_params_in_data_model(self, data):
         self.assertEqual(self._proc._mode, data.pp.mode)
-        self.assertListEqual(self._proc._indices_on, data.pp.indices_on)
-        self.assertListEqual(self._proc._indices_off, data.pp.indices_off)
+        self.assertEqual(self._proc._indices_on, data.pp.indices_on)
+        self.assertEqual(self._proc._indices_off, data.pp.indices_off)
 
     def check_other_none(self, processed):
         pp = processed.pp
@@ -46,8 +46,8 @@ class TestPumpProbeProcessorTr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     """
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc._indices_on = [0]
-        self._proc._indices_off = [0]
+        self._proc._indices_on = slice(None, None)
+        self._proc._indices_off = slice(None, None)
 
     def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         shape = (3, 2)
@@ -194,8 +194,8 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     """
     def setUp(self):
         self._proc = PumpProbeProcessor()
-        self._proc._indices_on = [0]
-        self._proc._indices_off = [0]
+        self._proc._indices_on = slice(0, 1, 1)
+        self._proc._indices_off = slice(0, 1, 1)
 
     def _gen_data(self, tid, with_xgm=True, with_digitizer=True):
         shape = (3, 2)
@@ -223,42 +223,20 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
 
     def testInvalidPulseIndices(self):
         proc = self._proc
-        proc._indices_on = [0, 1, 5]
-        proc._indices_off = [1]
-
-        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
-        with self.assertRaises(PumpProbeIndexError):
-            # the maximum index is 4
-            data, _ = self._gen_data(1001)
-            proc.process(data)
-
-        proc._indices_on = [0, 1, 5]
-        proc._indices_off = [1, 3]
-        proc._mode = PumpProbeMode.EVEN_TRAIN_ON
-        with self.assertRaises(PumpProbeIndexError):
-            data, _ = self._gen_data(1001)
-            proc.process(data)
 
         # raises when the same pulse index was found in both
         # on- and off- indices
-        proc._indices_on = [0, 1]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(None, None)
+        proc._indices_off = slice(None, None)
         proc._mode = PumpProbeMode.SAME_TRAIN
         with self.assertRaises(PumpProbeIndexError):
             data, _ = self._gen_data(1001)
             proc.process(data)
 
-        # off-indices check is not trigger in REFERENCE_AS_OFF mode
-        proc._indices_on = [0, 1]
-        proc._indices_off = [5]
-        proc._mode = PumpProbeMode.REFERENCE_AS_OFF
-        data, _ = self._gen_data(1001)
-        proc.process(data)
-
     def testUndefined(self):
         proc = self._proc
-        proc._indices_on = [0, 2]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(0, None, 2)
+        proc._indices_off = slice(1, None, 2)
         proc._threshold_mask = (-np.inf, np.inf)
 
         proc._mode = PumpProbeMode.UNDEFINED
@@ -273,8 +251,8 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     def testPredefinedOff(self):
         proc = self._proc
         proc._mode = PumpProbeMode.REFERENCE_AS_OFF
-        proc._indices_on = [0, 2]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(0, None, 2)
+        proc._indices_off = slice(1, None, 2)
 
         data, processed = self._gen_data(1001)
         proc.process(data)
@@ -322,8 +300,8 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     def testSameTrain(self):
         proc = self._proc
         proc._mode = PumpProbeMode.SAME_TRAIN
-        proc._indices_on = [0, 2]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(0, None, 2)
+        proc._indices_off = slice(1, None, 2)
 
         data, processed = self._gen_data(1001)
         proc.process(data)
@@ -377,8 +355,8 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     def testEvenOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.EVEN_TRAIN_ON
-        proc._indices_on = [0, 2]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(0, None, 2)
+        proc._indices_off = slice(1, None, 2)
 
         # test off will not be acknowledged without on
         data, processed = self._gen_data(1001)  # off
@@ -466,8 +444,8 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
     def testOddOn(self):
         proc = self._proc
         proc._mode = PumpProbeMode.ODD_TRAIN_ON
-        proc._indices_on = [0, 2]
-        proc._indices_off = [1, 3]
+        proc._indices_on = slice(0, None, 2)
+        proc._indices_off = slice(1, None, 2)
 
         # test off will not be acknowledged without on
         data, processed = self._gen_data(1002)  # off

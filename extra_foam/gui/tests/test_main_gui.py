@@ -146,10 +146,8 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertIsInstance(pp_proc._indices_on[0], int)
-        self.assertListEqual([-1], pp_proc._indices_off)
-        self.assertIsInstance(pp_proc._indices_off[0], int)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         # change analysis type
         pp_proc._reset = False
@@ -185,8 +183,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._off_pulse_le.setText('1:10:2')
         pp_proc.update()
         self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
-        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._indices_on)
-        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._indices_off)
+        self.assertEqual(slice(0, 10, 2), pp_proc._indices_on)
+        self.assertEqual(slice(1, 10, 2), pp_proc._indices_off)
 
         # test reset button
         pp_proc._reset = False
@@ -198,11 +196,15 @@ class TestMainGuiCtrl(unittest.TestCase):
         mediator = widget._mediator
         mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
         mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([1, None, 2])
         mediator.onPpAbsDifferenceChange(True)
         widget.loadMetaData()
         self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
         self.assertEqual("odd/even train", widget._mode_cb.currentText())
         self.assertEqual(True, widget._abs_difference_cb.isChecked())
+        self.assertEqual("0::2", widget._on_pulse_le.text())
+        self.assertEqual("1::2", widget._off_pulse_le.text())
 
     def testDataSourceWidget(self):
         from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
@@ -773,8 +775,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertListEqual([-1], pp_proc._indices_off)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -783,8 +785,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertListEqual([-1], pp_proc._indices_off)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
         self.assertEqual(2, len(spy))
@@ -796,10 +798,16 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
         self.assertEqual(2, len(spy))
 
+        # test loading meta data
+        # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([0, None, 2])
         widget.loadMetaData()
         self.assertEqual("", widget._mode_cb.currentText())
+        self.assertEqual(":", widget._on_pulse_le.text())
+        self.assertEqual(":", widget._off_pulse_le.text())
 
     def testFomFilterCtrlWidget(self):
         widget = self.gui.fom_filter_ctrl_widget
