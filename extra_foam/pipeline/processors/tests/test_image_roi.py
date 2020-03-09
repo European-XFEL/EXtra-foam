@@ -104,30 +104,28 @@ class TestImageRoiPulse(_TestDataMixin):
     @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiFom(self, fom_type, fom_handler):
         proc = self._proc
+        proc._fom_norm = Normalizer.UNDEFINED
+        proc._fom_type = fom_type
 
         with patch.object(proc._meta, 'has_analysis',
                           side_effect=lambda x: True if x == AnalysisType.ROI_FOM_PULSE else False):
             for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['_geom1', '_geom2']):
                 data, processed = self._get_data()
                 proc._fom_combo = combo
-                proc._fom_type = fom_type
-                proc._fom_norm = Normalizer.UNDEFINED
                 proc.process(data)
                 s = self._get_roi_slice(getattr(proc, geom))
                 fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
                 np.testing.assert_array_equal(fom_gt, processed.pulse.roi.fom)
 
-            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+            for combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
                 data, processed = self._get_data()
-                proc._fom_combo = fom_combo
-                proc._fom_type = fom_type
-                proc._fom_norm = Normalizer.UNDEFINED
+                proc._fom_combo = combo
                 proc.process(data)
                 s1 = self._get_roi_slice(proc._geom1)
                 fom1_gt = fom_handler(data['assembled']['sliced'][:, s1[0], s1[1]], axis=(-1, -2))
                 s2 = self._get_roi_slice(proc._geom2)
                 fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
-                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                if combo == RoiCombo.ROI1_SUB_ROI2:
                     np.testing.assert_array_equal(fom1_gt - fom2_gt, processed.pulse.roi.fom)
                 else:
                     np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
@@ -270,34 +268,45 @@ class TestImageRoiTrain(_TestDataMixin):
                 assert fom3_gt + fom4_gt == processed.roi.norm
 
     @pytest.mark.parametrize("fom_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
-    def testRoiFom(self, fom_type, fom_handler):
+    @pytest.mark.parametrize("normalizer, norm", [(Normalizer.UNDEFINED, 1),
+                                                  (Normalizer.ROI, 2.),
+                                                  (Normalizer.XGM, 4.),
+                                                  (Normalizer.DIGITIZER, 8.)])
+    def testRoiFom(self, fom_type, fom_handler, normalizer, norm):
+        def mocked_process_norm(p_data):
+            if normalizer == Normalizer.ROI:
+                p_data.roi.norm = 2.0
+            elif normalizer == Normalizer.XGM:
+                p_data.pulse.xgm.intensity = np.array([4., 4., 4., 4.])  # mean = 4.0
+            elif normalizer == Normalizer.DIGITIZER:
+                p_data.pulse.digitizer.ch_normalizer = 'A'
+                p_data.pulse.digitizer['A'].pulse_integral = np.array([8., 8., 8., 8.])  # mean = 8.0
+
         proc = self._proc
+        proc._fom_type = fom_type
+        proc._fom_norm = normalizer
 
         # We do not test all the combinations of parameters.
+        with patch.object(proc, "_process_norm", side_effect=mocked_process_norm):
+            for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
+                data, processed = self._get_data()
+                proc._fom_combo = combo
+                proc.process(data)
+                s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
+                assert fom_handler(processed.image.masked_mean[s[0], s[1]])/norm == processed.roi.fom
 
-        for combo, geom in zip([RoiCombo.ROI1, RoiCombo.ROI2], ['geom1', 'geom2']):
-            data, processed = self._get_data()
-            proc._fom_combo = combo
-            proc._fom_type = fom_type
-            proc._fom_norm = Normalizer.UNDEFINED
-            proc.process(data)
-            s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
-            assert fom_handler(processed.image.masked_mean[s[0], s[1]]) == processed.roi.fom
-
-        for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
-            data, processed = self._get_data()
-            proc._fom_combo = fom_combo
-            proc._fom_type = fom_type
-            proc._fom_norm = Normalizer.UNDEFINED
-            proc.process(data)
-            s1 = self._get_roi_slice(processed.roi.geom1.geometry)
-            fom1_gt = fom_handler(processed.image.masked_mean[s1[0], s1[1]])
-            s2 = self._get_roi_slice(processed.roi.geom2.geometry)
-            fom2_gt = fom_handler(processed.image.masked_mean[s2[0], s2[1]])
-            if fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                assert fom1_gt - fom2_gt == processed.roi.fom
-            else:
-                assert fom1_gt + fom2_gt == processed.roi.fom
+            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+                data, processed = self._get_data()
+                proc._fom_combo = fom_combo
+                proc.process(data)
+                s1 = self._get_roi_slice(processed.roi.geom1.geometry)
+                fom1_gt = fom_handler(processed.image.masked_mean[s1[0], s1[1]])
+                s2 = self._get_roi_slice(processed.roi.geom2.geometry)
+                fom2_gt = fom_handler(processed.image.masked_mean[s2[0], s2[1]])
+                if fom_combo == RoiCombo.ROI1_SUB_ROI2:
+                    assert (fom1_gt - fom2_gt)/norm == processed.roi.fom
+                else:
+                    assert (fom1_gt + fom2_gt)/norm == processed.roi.fom
 
     def testRoiHist(self):
         proc = self._proc

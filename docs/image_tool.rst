@@ -78,6 +78,9 @@ ROI FOM setup
 +----------------------------+--------------------------------------------------------------------+
 | ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
 +----------------------------+--------------------------------------------------------------------+
+| ``Norm``                   | Normalizer of ROI FOM. *Only applicable for train-resolved and     |
+|                            | pump-probe analysis*.                                              |
++----------------------------+--------------------------------------------------------------------+
 | ``Master-slave``           | Check to activate the *master-slave* model. This model is used     |
 |                            | exclusively in correlation plots (see :ref:`statistics analysis`). |
 |                            | When it is activated, FOMs of ROI1 (master) and ROI2 (slave) will  |
@@ -124,7 +127,8 @@ Define the 1D projection of ROI (region of interest) analysis setup.
 +----------------------------+--------------------------------------------------------------------+
 | ``Direction``              | Direction of 1D projection (x or y).                               |
 +----------------------------+--------------------------------------------------------------------+
-| ``Norm``                   | Normalizer of the 1D-projection VFOM.                              |
+| ``Norm``                   | Normalizer of the 1D-projection VFOM. *Only applicable for         |
+|                            | train-resolved and pump-probe analysis*.                           |
 +----------------------------+--------------------------------------------------------------------+
 | ``AUC range``              | AUC (area under a curve) integration range.                        |
 +----------------------------+--------------------------------------------------------------------+
@@ -245,7 +249,8 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 | ``Integ range (1/A)``      | Azimuthal integration range.                                       |
 +----------------------------+--------------------------------------------------------------------+
-| ``Norm``                   | Normalizer of the azimuthal integration result.                    |
+| ``Norm``                   | Normalizer of the scattering curve. *Only applicable for           |
+|                            | train-resolved and pump-probe analysis*.                           |
 +----------------------------+--------------------------------------------------------------------+
 | ``AUC range (1/A)``        | AUC (area under curve) range.                                      |
 +----------------------------+--------------------------------------------------------------------+

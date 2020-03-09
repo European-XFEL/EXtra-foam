@@ -490,25 +490,25 @@ class ImageRoiTrain(_RoiProcessorBase):
         fom2 = self._compute_fom(self._roi2, self._fom_type)
 
         if self._fom_combo == RoiCombo.ROI1:
-            roi.fom = fom1
+            fom = fom1
         elif self._fom_combo == RoiCombo.ROI2:
-            roi.fom = fom2
+            fom = fom2
         else:
             if fom1 is None or fom2 is None:
                 return
 
             if self._fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                roi.fom = fom1 - fom2
+                fom = fom1 - fom2
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
-                roi.fom = fom1 + fom2
+                fom = fom1 + fom2
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
-        if self._roi_fom_master_slave:
-            roi.fom_slave = fom2
-
-        # TODO: normalize
+        if fom is not None:
+            roi.fom = self._normalize_fom(processed, fom, self._fom_norm)
+        if self._roi_fom_master_slave and fom2 is not None:
+            roi.fom_slave = self._normalize_fom(processed, fom2, self._fom_norm)
 
     def _process_norm_pump_probe(self, processed):
         """Calculate train-resolved pump-probe ROI normalizers."""
@@ -573,9 +573,10 @@ class ImageRoiTrain(_RoiProcessorBase):
         if fom_on is None:
             return
 
-        # TODO: normalize
+        normalized_on, normalized_off = self._normalize_fom_pp(
+            processed, fom_on, fom_off, self._fom_norm)
 
-        pp.fom = fom_on - fom_off
+        pp.fom = normalized_on - normalized_off
 
     def _compute_proj(self, roi):
         if roi is None:
