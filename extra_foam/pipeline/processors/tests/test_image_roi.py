@@ -14,6 +14,7 @@ import pytest
 
 import numpy as np
 
+from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors import ImageRoiTrain, ImageRoiPulse
 from extra_foam.config import AnalysisType, config, Normalizer, RoiCombo, RoiFom, RoiProjType
 from extra_foam.pipeline.tests import _TestDataMixin
@@ -240,6 +241,29 @@ class TestImageRoiTrain(_TestDataMixin):
 
     def _get_roi_slice(self, geom):
         return slice(geom[1], geom[1] + geom[3]), slice(geom[0], geom[0] + geom[2])
+
+    @patch('extra_foam.ipc.ProcessLogger.error')
+    def testNormalizationError(self, error):
+        def side_effect(*args, **kwargs):
+            raise ProcessingError
+
+        proc = self._proc
+
+        with patch.object(proc, "_normalize_fom", side_effect=side_effect):
+            # let "_process_fom" raise
+            with patch.object(proc, "_process_proj") as mocked_p_proj:
+                data, processed = self._get_data()
+                proc.process(data)
+                mocked_p_proj.assert_called_once()
+
+        with patch.object(proc, "_process_fom"):
+            # let "_process_proj" raise
+            with patch.object(proc, "_normalize_fom", side_effect=side_effect):
+                with patch.object(proc, "_process_norm_pump_probe") as mocked_p_norm_pp:
+                    data, processed = self._get_data()
+                    processed.pp.analysis_type = AnalysisType.ROI_PROJ
+                    proc.process(data)
+                    mocked_p_norm_pp.assert_called_once()
 
     @pytest.mark.parametrize("norm_type, fom_handler", [(k, v) for k, v in _roi_fom_handlers.items()])
     def testRoiNorm(self, norm_type, fom_handler):
