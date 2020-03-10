@@ -1,0 +1,87 @@
+Bootstrap: library
+From: centos:7.6.1810
+
+%help
+  EXtra-foam (previously known as karaboFAI) is an application that provides
+  super fast on-line (real-time) and off-line data analysis and visualization
+  for experiments at European XFEL that using 2D detectors, namely AGIPD, DSSC,
+  LPD, FastCCD, JungFrau, etc., together with other 1D detectors (e.g. XGM,
+  digitizer, etc.) and various control data.
+
+  GitHub: https://github.com/European-XFEL/EXtra-foam
+  Docs: https://extra-foam.readthedocs.io/en/latest/
+
+%environment
+  __conda_setup="$('/usr/local/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+  if [ $? -eq 0 ]; then
+      eval "$__conda_setup"
+  else
+      if [ -f "/usr/local/etc/profile.d/conda.sh" ]; then
+          . "/usr/local/etc/profile.d/conda.sh"
+      else
+          export PATH="/usr/local/bin:$PATH"
+      fi
+  fi
+  unset __conda_setup
+
+  conda activate base
+
+%runscript
+  extra-foam "$@"
+
+%post
+  export logpath=/.singularity.d/logs/
+  mkdir -p $logpath
+
+  #  Set default python version if missing
+  PYTHON_VERSION="${PYTHON_VERSION:-3.7.5}"
+  echo "Building for python version: $PYTHON_VERSION"
+
+  #  Basic yum dependencies
+  ##  Install and update
+  yum update -y | tee $logpath/00-yum-update.log
+  yum install -y epel-release | tee $logpath/01-yum-epel-release.log
+  yum groupinstall -y 'Development Tools' | tee $logpath/02-yum-dev-tools.log
+  yum install -y      \
+    nano              \
+    curl              \
+    wget              \
+    tar               \
+    bzip2             \
+    git               \
+    e4fsprogs         \
+    xeyes             \
+    mesa-libGL        \
+    qt5-qtbase        \
+    libxkbcommon-x11  \
+  | tee $logpath/03-yum-install.log
+
+  ##  Log yum packages
+  yum list installed | tee $logpath/04-yum-list-installed.log
+
+  #  Install and setup miniconda
+  ##  Download and install minconda
+  curl -sSL http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
+  chmod +x /tmp/miniconda.sh
+  /tmp/miniconda.sh -bfp /usr/local/
+  rm -f /tmp/miniconda.sh
+  source /usr/local/bin/activate
+
+  ##  Install python dependencies
+  conda install -y python=$PYTHON_VERSION
+  conda install -y -c anaconda cmake numpy
+  conda install -y -c omgarcia gcc-6
+
+  ##  Download EXtra-foam source
+  mkdir -p /usr/local/src/
+  cd /usr/local/src/
+  git clone https://github.com/European-XFEL/EXtra-foam
+  cd EXtra-foam
+  git checkout $GIT_COMMIT_HASH
+  git submodule update --init | tee -a $logpath/05-extra-foam-submodules.log
+  git log -n 1 | tee -a $logpath/06-extra-foam-clone.log
+
+  pip install .
+
+  ##  Export environment to concretise
+  conda env export -n base -f /.singularity.d/logs/07-conda-env-export.log
