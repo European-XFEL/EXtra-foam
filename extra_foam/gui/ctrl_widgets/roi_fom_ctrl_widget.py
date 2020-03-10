@@ -51,8 +51,6 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._norm_cb = QComboBox()
         for v in self._available_norms:
             self._norm_cb.addItem(v)
-        # TODO: implement
-        self._norm_cb.setDisabled(True)
 
         self._master_slave_cb = QCheckBox("Master-slave")
 
