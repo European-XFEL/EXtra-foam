@@ -22,9 +22,9 @@ class CorrelationPlot(TimedPlotWidgetF):
     Widget for displaying correlations between FOM and different parameters.
     """
     _colors = config["GUI_CORRELATION_COLORS"]
-    _pens = [FColor.mkPen(color) for color in _colors]
-    _brushes = [FColor.mkBrush(color, alpha=120) for color in _colors]
-    _opaque_brushes = [FColor.mkBrush(color) for color in _colors]
+    _pens = [(FColor.mkPen(pair[0]), FColor.mkPen(pair[1])) for pair in _colors]
+    _brushes = [(FColor.mkBrush(pair[0], alpha=120),
+                 FColor.mkBrush(pair[1], alpha=120)) for pair in _colors]
 
     def __init__(self, idx, *, parent=None):
         """Initialization."""
@@ -41,7 +41,9 @@ class CorrelationPlot(TimedPlotWidgetF):
 
         self.updateLabel()
 
-        self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
+        brush_pair = self._brushes[self._idx]
+        self._plot = self.plotScatter(brush=brush_pair[0])
+        self._plot_slave = self.plotScatter(brush=brush_pair[1])
 
     def refresh(self):
         """Override."""
@@ -54,6 +56,7 @@ class CorrelationPlot(TimedPlotWidgetF):
 
         resolution = item.resolution
         y = item.y
+        y_slave = item.y_slave
         if resolution == 0:
             # SimplePairSequence
             if self._resolution != 0:
@@ -61,12 +64,18 @@ class CorrelationPlot(TimedPlotWidgetF):
                 self._resolution = 0
 
             self._plot.setData(item.x, y)
+            if y_slave is not None:
+                self._plot_slave.setData(item.x_slave, y_slave)
         else:
             # OneWayAccuPairSequence
             if self._resolution == 0:
                 self._newStatisticsBarPlot(resolution)
                 self._resolution = resolution
             self._plot.setData(item.x, y.avg, y_min=y.min, y_max=y.max)
+            if y_slave is not None:
+                self._plot_slave.setData(
+                    item.x_slave, y_slave.avg,
+                    y_min=y_slave.min, y_max=y_slave.max)
 
     def updateLabel(self):
         src = self._source
@@ -80,12 +89,20 @@ class CorrelationPlot(TimedPlotWidgetF):
 
     def _newScatterPlot(self):
         self.removeItem(self._plot)
-        self._plot = self.plotScatter(brush=self._brushes[self._idx-1])
+        self.removeItem(self._plot_slave)
+
+        brush_pair = self._brushes[self._idx]
+        self._plot = self.plotScatter(brush=brush_pair[0])
+        self._plot_slave = self.plotScatter(brush=brush_pair[1])
 
     def _newStatisticsBarPlot(self, resolution):
         self.removeItem(self._plot)
-        self._plot = self.plotStatisticsBar(beam=resolution,
-                                            pen=self._pens[self._idx-1])
+        self.removeItem(self._plot_slave)
+
+        pen_pair = self._pens[self._idx]
+        self._plot = self.plotStatisticsBar(beam=resolution, pen=pen_pair[0])
+        self._plot_slave = self.plotStatisticsBar(beam=resolution,
+                                                  pen=pen_pair[1])
 
 
 class CorrelationWindow(_AbstractPlotWindow):
