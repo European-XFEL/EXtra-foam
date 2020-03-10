@@ -105,11 +105,8 @@ inline auto nanmeanImageArray(E&& src, const std::vector<size_t>& keep)
   return detail::nanmeanImageArrayImp(std::forward<E>(src), keep);
 #else
   using value_type = typename std::decay_t<E>::value_type;
-  // FIXME: bug in xtensor, very slow with two steps
   auto&& sliced(xt::view(std::forward<E>(src), xt::keep(keep), xt::all(), xt::all()));
-  return xt::nanmean<value_type>(sliced,
-                                 0,
-                                 xt::evaluation_strategy::immediate);
+  return xt::eval(xt::nanmean<value_type>(sliced, 0));
 #endif
 }
 
@@ -120,7 +117,7 @@ inline auto nanmeanImageArray(E&& src)
   return detail::nanmeanImageArrayImp(std::forward<E>(src));
 #else
   using value_type = typename std::decay_t<E>::value_type;
-  return xt::nanmean<value_type>(std::forward<E>(src), 0, xt::evaluation_strategy::immediate);
+  return xt::eval(xt::nanmean<value_type>(std::forward<E>(src), 0));
 #endif
 }
 
@@ -165,11 +162,8 @@ inline auto nanmeanImageArray(E&& src1, E&& src2)
 
   return mean;
 #else
-  // FIXME: bug in xtensor, very slow with two steps
   auto&& stacked = xt::stack(xt::xtuple(std::forward<E>(src1), std::forward<E>(src2)));
-  return xt::nanmean<value_type>(stacked,
-                                 0,
-                                 xt::evaluation_strategy::immediate);
+  return xt::eval(xt::nanmean<value_type>(stacked, 0));
 #endif
 }
 
