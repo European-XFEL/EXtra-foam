@@ -8,6 +8,17 @@ SOURCE:
                     - image.data
                 MID_DET_AGIPD1M-1/DET/*CH0:xtdf:
                     - image.data
+        ePix100:
+            PIPELINE:
+                # the property name for the raw data is 'data.image.data'
+                MID_EXP_EPIX-1/DET/RECEIVER:output:
+                    - data.image
+                MID_EXP_EPIX-2/DET/RECEIVER:output:
+                    - data.image
+                MID_EXP_EPIX-1/DET/RECEIVER:daqOutput:
+                    - data.image.pixels
+                MID_EXP_EPIX-2/DET/RECEIVER:daqOutput:
+                    - data.image.pixels
 
 DETECTOR:
     AGIPD:

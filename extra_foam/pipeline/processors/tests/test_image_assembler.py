@@ -818,6 +818,85 @@ class TestFastccdAssembler(unittest.TestCase):
             self._assembler.process(data)
 
 
+class TestEPix100Assembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('ePix100', 'MID')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
+    def setUp(self):
+        self._assembler = ImageAssemblerFactory.create("ePix100")
+
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('ePix100', src_name, [], key_name, None, None))
+        return src, catalog
+
+    def testAssembleFileCal(self):
+        self._runAssembleFileTest((708, 768), _IMAGE_DTYPE, 'data.image.pixels')
+
+    def testAssembleFileRaw(self):
+        self._runAssembleFileTest((708, 768), np.int16, 'data.image.pixels')
+
+    def _runAssembleFileTest(self, shape, dtype, key):
+        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data['raw'][src] = np.ones((100, 100))
+            self._assembler.process(data)
+
+    def testAssembleBridgeCal(self):
+        self._runAssembleBridgeTest((708, 768, 1), _IMAGE_DTYPE, "data.image")
+
+    def testAssembleBridgeRaw(self):
+        self._runAssembleBridgeTest((1, 708, 768), np.int16, "data.image.data")
+
+    def _runAssembleBridgeTest(self, shape, dtype, key):
+        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            if dtype == _IMAGE_DTYPE:
+                data['raw'][src] = np.ones((100, 100, 1), dtype=dtype)
+            else:
+                data['raw'][src] = np.ones((1, 100, 100), dtype=np.int16)
+            self._assembler.process(data)
+
+
 class TestBaslerCameraAssembler(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
