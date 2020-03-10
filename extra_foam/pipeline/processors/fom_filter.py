@@ -53,11 +53,11 @@ class FomPulseFilter(_BaseProcessor):
         if self.analysis_type == AnalysisType.ROI_FOM_PULSE:
             fom = processed.pulse.roi.fom
             if fom is None:
-                raise ProcessingError(f"[tag] ROI FOM is not available")
+                raise ProcessingError(f"[{tag}] ROI FOM is not available")
 
         else:
             raise UnknownParameterError(
-                f"[tag] Unknown analysis type: {self.analysis_type}")
+                f"[{tag}] Unknown analysis type: {self.analysis_type}")
 
         self.filter_pulse_by_vrange(fom, self._fom_range, processed.pidx, tag)
 
@@ -98,9 +98,9 @@ class FomTrainFilter(_BaseProcessor):
         if self.analysis_type == AnalysisType.ROI_FOM:
             fom = processed.roi.fom
             if fom is None:
-                raise ProcessingError(f"[tag] ROI FOM is not available")
+                raise ProcessingError(f"[{tag}] ROI FOM is not available")
         else:
             raise UnknownParameterError(
-                f"[tag] Unknown analysis type: {self.analysis_type}")
+                f"[{tag}] Unknown analysis type: {self.analysis_type}")
 
         self.filter_train_by_vrange(fom, self._fom_range, tag)

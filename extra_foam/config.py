@@ -41,6 +41,7 @@ class RoiCombo(IntEnum):
     ROI2 = 2
     ROI1_SUB_ROI2 = 3
     ROI1_ADD_ROI2 = 4
+    ROI1_DIV_ROI2 = 5
     ROI3 = 11
     ROI4 = 12
     ROI3_SUB_ROI4 = 13
