@@ -9,21 +9,24 @@ All rights reserved.
 """
 import unittest
 from unittest.mock import patch, MagicMock
+import itertools
 
 import numpy as np
 
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.digitizer import DigitizerProcessor
 from extra_foam.database import SourceItem
-from extra_foam.pipeline.exceptions import UnknownParameterError
+from extra_foam.pipeline.exceptions import ProcessingError
 
 
 class TestDigitizer(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls._channels = DigitizerProcessor._pulse_integral_channels.keys()
+        cls._adq_channels = list(DigitizerProcessor._pulse_integral_channels.keys())
+        cls._adq_channels.remove("ADC")
+        cls._fastadc_channels = ["ADC"]
 
-    def testGeneral(self):
+    def testPulseIntegral(self):
         data, processed = self.simple_data(1234, (2, 2))
         meta = data['meta']
         raw = data['raw']
@@ -45,7 +48,7 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
         src = f"{item.name} {item.property}"
         meta[src] = {'tid': 12346}
         raw[src] = [100, 200, 300]
-        with self.assertRaises(UnknownParameterError):
+        with self.assertRaises(ProcessingError):
             proc.process(data)
         catalog.remove_item(src)
 
@@ -53,10 +56,15 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
 
         integral_vrange = (-1.0, 1.0)
         n_pulses = 5
-        for ch in self._channels:
-            item = SourceItem(category, 'digitizer1:network', [],
-                              f'digitizers.channel_1_{ch}.apd.pulseIntegral',
-                              slice(None, None), integral_vrange)
+        for ch in itertools.chain(self._adq_channels, self._fastadc_channels):
+            if ch in self._adq_channels:
+                item = SourceItem(category, 'digitizer1:network', [],
+                                  f'digitizers.channel_1_{ch}.apd.pulseIntegral',
+                                  slice(None, None), integral_vrange)
+            else:
+                item = SourceItem(category, 'digitizer1:channel_2.output', [],
+                                  f'data.peaks',
+                                  slice(None, None), integral_vrange)
             catalog.clear()
 
             catalog.add_item(item)
@@ -99,6 +107,8 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
             self._reset_processed(processed)
 
     def _reset_processed(self, processed):
-        for ch in self._channels:
+        for ch in self._adq_channels:
+            processed.pulse.digitizer[ch].pulse_integral = None
+        for ch in self._fastadc_channels:
             processed.pulse.digitizer[ch].pulse_integral = None
         processed.pidx.reset()
