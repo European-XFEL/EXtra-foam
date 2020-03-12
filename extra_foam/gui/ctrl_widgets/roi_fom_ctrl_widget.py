@@ -27,6 +27,7 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI2": RoiCombo.ROI2,
         "ROI1 - ROI2": RoiCombo.ROI1_SUB_ROI2,
         "ROI1 + ROI2": RoiCombo.ROI1_ADD_ROI2,
+        "ROI1 / ROI2": RoiCombo.ROI1_DIV_ROI2,
     })
 
     _available_types = OrderedDict({

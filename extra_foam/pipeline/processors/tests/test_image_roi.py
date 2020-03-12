@@ -118,7 +118,7 @@ class TestImageRoiPulse(_TestDataMixin):
                 fom_gt = fom_handler(data['assembled']['sliced'][:, s[0], s[1]], axis=(-1, -2))
                 np.testing.assert_array_equal(fom_gt, processed.pulse.roi.fom)
 
-            for combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+            for combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
                 data, processed = self._get_data()
                 proc._fom_combo = combo
                 proc.process(data)
@@ -128,8 +128,34 @@ class TestImageRoiPulse(_TestDataMixin):
                 fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
                 if combo == RoiCombo.ROI1_SUB_ROI2:
                     np.testing.assert_array_equal(fom1_gt - fom2_gt, processed.pulse.roi.fom)
-                else:
+                elif combo == RoiCombo.ROI1_ADD_ROI2:
                     np.testing.assert_array_equal(fom1_gt + fom2_gt, processed.pulse.roi.fom)
+                else:
+                    np.testing.assert_array_equal(fom1_gt / fom2_gt, processed.pulse.roi.fom)
+
+            if combo == RoiCombo.ROI1_DIV_ROI2:
+                with np.warnings.catch_warnings():
+                    np.warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                    # test some of ROI2 FOM are nan
+                    data, processed = self._get_data()
+                    data['assembled']['sliced'][:2, :, :] = np.nan
+                    proc.process(data)
+                    s1 = self._get_roi_slice(proc._geom1)
+                    fom1_gt = fom_handler(data['assembled']['sliced'][:, s1[0], s1[1]], axis=(-1, -2))
+                    s2 = self._get_roi_slice(proc._geom2)
+                    fom2_gt = fom_handler(data['assembled']['sliced'][:, s2[0], s2[1]], axis=(-1, -2))
+                    assert np.count_nonzero(~np.isnan(fom1_gt / fom2_gt)) > 0
+                    np.testing.assert_array_equal(fom1_gt / fom2_gt, processed.pulse.roi.fom)
+
+                    # test all of ROI2 FOM are nan
+                    data, processed = self._get_data()
+                    processed.image.image_mask[s2[0], s2[1]] = True
+                    proc.process(data)
+                    if fom_type == RoiFom.SUM:
+                        assert np.count_nonzero(~np.isinf(processed.pulse.roi.fom)) == 0
+                    else:
+                        assert np.count_nonzero(~np.isnan(processed.pulse.roi.fom)) == 0
 
         with patch.object(proc._meta, 'has_analysis', side_effect=lambda x: False):
             data, processed = self._get_data()
@@ -229,7 +255,8 @@ class TestImageRoiTrain(_TestDataMixin):
         data, processed = self.data_with_assembled(1001, shape)
         proc = ImageRoiPulse()
         proc._geom1 = [0, 1, 2, 3]
-        proc._geom2 = [1, 0, 2, 3]
+        # In order to pass the test, ROI1 and ROI2 cannot have overlap.
+        proc._geom2 = [5, 6, 2, 3]
         proc._geom3 = [1, 2, 2, 3]
         proc._geom4 = [3, 2, 3, 4]
         # set processed.roi.geom{1, 2, 3, 4}
@@ -319,7 +346,7 @@ class TestImageRoiTrain(_TestDataMixin):
                 s = self._get_roi_slice(getattr(processed.roi, geom).geometry)
                 assert fom_handler(processed.image.masked_mean[s[0], s[1]])/norm == processed.roi.fom
 
-            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+            for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
                 data, processed = self._get_data()
                 proc._fom_combo = fom_combo
                 proc.process(data)
@@ -328,9 +355,27 @@ class TestImageRoiTrain(_TestDataMixin):
                 s2 = self._get_roi_slice(processed.roi.geom2.geometry)
                 fom2_gt = fom_handler(processed.image.masked_mean[s2[0], s2[1]])
                 if fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                    assert (fom1_gt - fom2_gt)/norm == processed.roi.fom
+                    assert (fom1_gt - fom2_gt) / norm == processed.roi.fom
+                elif fom_combo == RoiCombo.ROI1_ADD_ROI2:
+                    assert (fom1_gt + fom2_gt) / norm == processed.roi.fom
                 else:
-                    assert (fom1_gt + fom2_gt)/norm == processed.roi.fom
+                    assert (fom1_gt / fom2_gt) / norm == processed.roi.fom
+
+                if fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                    with np.warnings.catch_warnings():
+                        np.warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                        # test ROI1 FOM is a number and ROI2 FOM equals to 0, which produces inf
+                        s2 = self._get_roi_slice(processed.roi.geom2.geometry)
+                        processed.image.masked_mean[s2[0], s2[1]] = 0
+                        proc.process(data)
+                        assert np.isinf(processed.roi.fom)
+
+                        # both ROI1 FOM and ROI2 FOM are nan
+                        data, processed = self._get_data()
+                        processed.image.masked_mean[:] = np.nan
+                        proc.process(data)
+                        assert np.isnan(processed.roi.fom)
 
     def testRoiHist(self):
         proc = self._proc
@@ -509,7 +554,7 @@ class TestImageRoiTrain(_TestDataMixin):
             fom_off_gt = fom_handler(processed.pp.image_off[s[0], s[1]])
             assert fom_on_gt - fom_off_gt == processed.pp.fom
 
-        for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2]:
+        for fom_combo in [RoiCombo.ROI1_SUB_ROI2, RoiCombo.ROI1_ADD_ROI2, RoiCombo.ROI1_DIV_ROI2]:
             data, processed = self._get_data()
             processed.pp.analysis_type = AnalysisType.ROI_FOM
             proc._fom_combo = fom_combo
@@ -524,10 +569,31 @@ class TestImageRoiTrain(_TestDataMixin):
             if fom_combo == RoiCombo.ROI1_SUB_ROI2:
                 fom_on_gt = fom1_on_gt - fom2_on_gt
                 fom_off_gt = fom1_off_gt - fom2_off_gt
-            else:
+            elif fom_combo == RoiCombo.ROI1_ADD_ROI2:
                 fom_on_gt = fom1_on_gt + fom2_on_gt
                 fom_off_gt = fom1_off_gt + fom2_off_gt
+            else:
+                fom_on_gt = fom1_on_gt / fom2_on_gt
+                fom_off_gt = fom1_off_gt / fom2_off_gt
             assert fom_on_gt - fom_off_gt == processed.pp.fom
+
+            if fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                with np.warnings.catch_warnings():
+                    np.warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                    # test ROI1 FOM is a number and ROI2 FOM equals to 0, which produces inf
+                    s2 = self._get_roi_slice(processed.roi.geom2.geometry)
+                    processed.pp.image_on[s2[0], s2[1]] = 0
+                    proc.process(data)
+                    assert np.isinf(processed.pp.fom)
+
+                    # both ROI1 FOM and ROI2 FOM are nan
+                    data, processed = self._get_data()
+                    processed.pp.analysis_type = AnalysisType.ROI_FOM
+                    processed.pp.image_on[:] = np.nan
+                    processed.pp.image_off[:] = np.nan
+                    proc.process(data)
+                    assert np.isnan(processed.pp.fom)
 
     @patch('extra_foam.ipc.ProcessLogger.error')
     @pytest.mark.parametrize("proj_type, proj_handler",

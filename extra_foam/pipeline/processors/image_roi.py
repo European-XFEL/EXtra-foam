@@ -244,6 +244,9 @@ class ImageRoiPulse(_RoiProcessorBase):
                     processed.pulse.roi.fom = fom1 - fom2
                 elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                     processed.pulse.roi.fom = fom1 + fom2
+                elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                    # nan and inf will propagate downstream
+                    processed.pulse.roi.fom = fom1 / fom2
                 else:
                     raise UnknownParameterError(
                         f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
@@ -271,8 +274,11 @@ class ImageRoiPulse(_RoiProcessorBase):
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = nanhist_with_stats(
-                roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                processed.pulse.roi.hist[idx] = nanhist_with_stats(
+                    roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
                 # skip the second one if two POIs have the same index
@@ -456,8 +462,11 @@ class ImageRoiTrain(_RoiProcessorBase):
 
         if roi is not None:
             hist = processed.roi.hist
-            hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
-                nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
+                    nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""
@@ -501,6 +510,9 @@ class ImageRoiTrain(_RoiProcessorBase):
                 fom = fom1 - fom2
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                 fom = fom1 + fom2
+            elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                # nan and inf will propagate downstream
+                fom = np.divide(fom1, fom2)
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
@@ -569,6 +581,10 @@ class ImageRoiTrain(_RoiProcessorBase):
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                 fom_on = fom1_on + fom2_on
                 fom_off = fom1_off + fom2_off
+            elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                # nan and inf will propagate downstream
+                fom_on = np.divide(fom1_on, fom2_on)
+                fom_off = np.divide(fom1_off, fom2_off)
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
