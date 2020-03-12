@@ -129,35 +129,6 @@ def parse_id(text):
     return sorted(ret)
 
 
-def parse_table_widget(widget):
-    """Parse a table widget to a list of list.
-
-    The inner list represents a row of the table.
-
-    :param QTableWidget widget: a table widget.
-
-    :return list: a list of table elements.
-
-    Examples:
-
-    For the following table,
-
-         col1 col2
-    row1   1   2
-    row2   3   4
-    row3   5   6
-
-    The return value is [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]].
-
-    TODO: add test
-    """
-    n_row, n_col = widget.rowCount(), widget.columnCount()
-    ret = []
-    for i in range(n_col):
-        ret.append([float(widget.item(j, i).text()) for j in range(n_row)])
-    return ret
-
-
 def parse_slice(text):
     """Parse a string into list which can be converted into a slice object.
 

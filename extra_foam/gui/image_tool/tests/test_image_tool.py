@@ -728,7 +728,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         from extra_geom import LPD_1MGeometry as LPD_1MGeometry
         from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.config import GeomAssembler
-        from extra_foam.gui.gui_helpers import parse_table_widget
+        from extra_foam.gui.ctrl_widgets.geometry_ctrl_widget import _parse_table_widget
 
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
@@ -743,28 +743,32 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
         self.assertFalse(proc._stack_only)
         self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
+        self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], proc._quad_position)
 
-        # test assembler
+        # test setting new values
         avail_assemblers = {value: key for key, value in widget._assemblers.items()}
         widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
-        proc.update()
-        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
-
-        # test stack only
         widget._stack_only_cb.setChecked(True)
+        widget._geom_file_le.setText("/geometry/file/")
+        for i in range(4):
+            for j in range(2):
+                widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
         proc.update()
         self.assertTrue(proc._stack_only)
         # when "stack only" is checked, "assembler type" setup will be ignored
         self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
+        self.assertEqual("/geometry/file/", proc._geom_file)
+        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
 
-        # test geometry file
-        widget._geom_file_le.setText("/geometry/file/")
-        self.assertFalse(widget.updateMetaData())
+        widget._stack_only_cb.setChecked(False)
+        with patch.object(proc, "_load_geometry"):
+            proc.update()
+        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
 
         # test loading meta data
         mediator = widget._mediator
         mediator.onGeomAssemblerChange(GeomAssembler.EXTRA_GEOM)
-        mediator.onGeomFilenameChange('geometry/new_file')
+        mediator.onGeomFileChange('geometry/new_file')
         mediator.onGeomStackOnlyChange(False)
         quad_positions = [[1., 2.], [3., 4.], [5., 6.], [7., 8.]]
         mediator.onGeomQuadPositionsChange(quad_positions)
@@ -772,7 +776,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("EXtra-geom", widget._assembler_cb.currentText())
         self.assertEqual('geometry/new_file', widget._geom_file_le.text())
         self.assertFalse(widget._stack_only_cb.isChecked())
-        self.assertListEqual(quad_positions, parse_table_widget((widget._quad_positions_tb)))
+        self.assertListEqual(quad_positions, _parse_table_widget((widget._quad_positions_tb)))
 
     def testViewTabSwitching(self):
         tab = self.image_tool._views_tab
