@@ -193,16 +193,20 @@ class ImageProcessor(_BaseProcessor):
     def _update_image_mask(self, image_shape):
         image_mask = self._mask_sub.update(self._image_mask, image_shape)
         if image_mask is not None and image_mask.shape != image_shape:
-            # This could only happen when the mask is loaded from the files
-            # and the image shapes in the ImageTool is different from the
-            # shape of the live images.
-            # The original image mask remains the same.
-            raise ImageProcessingError(
-                f"[Image processor] The shape of the image mask "
-                f"{image_mask.shape} is different from the shape of the image "
-                f"{image_shape}!")
+            if np.sum(image_mask) == 0:
+                # reset the empty image mask automatically
+                image_mask = None
+            else:
+                # This could only happen when the mask is loaded from the files
+                # and the image shapes in the ImageTool is different from the
+                # shape of the live images.
+                # The original image mask remains the same.
+                raise ImageProcessingError(
+                    f"[Image processor] The shape of the image mask "
+                    f"{image_mask.shape} is different from the shape of the image "
+                    f"{image_shape}!")
 
-        elif image_mask is None:
+        if image_mask is None:
             image_mask = np.zeros(image_shape, dtype=np.bool)
 
         self._image_mask = image_mask

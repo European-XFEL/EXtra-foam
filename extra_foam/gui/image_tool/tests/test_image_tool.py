@@ -330,10 +330,15 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         np.testing.assert_array_equal(mask_gt, proc._image_mask)
 
         # test set a mask which has a different shape from the image
-        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        mask_gt = np.ones((2, 2), dtype=np.bool)
         pub.set(mask_gt)
         with self.assertRaises(ImageProcessingError):
             proc.process(data)
+        # an empty image mask with a different shape will be automatically reset
+        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
 
     def testBulletinView(self):
         processed = ProcessedData(1357)
