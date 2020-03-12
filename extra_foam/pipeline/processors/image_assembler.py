@@ -546,11 +546,6 @@ class ImageAssemblerFactory(ABC):
         def _get_modules_bridge(self, data, src):
             """Override.
 
-            In the file, the data is separated into arrays of different
-            modules. The layout of data for each module is:
-            - calibrated, (memory cells, x, y)
-            - raw, (memory cells, 1, x, y)
-
             - calibrated, "image.data", (modules, x, y, memory cells)
             - raw, "image.data", (modules, x, y, memory cells)
             -> (memory cells, modules, y, x)
@@ -559,6 +554,11 @@ class ImageAssemblerFactory(ABC):
 
         def _get_modules_file(self, data, src):
             """Override.
+
+            In the file, the data is separated into arrays of different
+            modules. The layout of data for each module is:
+            - calibrated, (memory cells, x, y)
+            - raw, (memory cells, 1, x, y)
 
             - calibrated, "image.data", (memory cells, modules, y, x)
             - raw, "image.data", (memory cell, 1, modules, y, x)
@@ -633,16 +633,24 @@ class ImageAssemblerFactory(ABC):
 
             Calibrated data only.
 
-            - calibrated, "data.adc", TODO
-            - raw, "data.adc", TODO
+            - calibrated, "data.adc", (y, x, memory cells)
+            - raw, "data.adc", (memory cells, y, x)
             -> (memory cells, modules, y, x)
             """
             modules_data = data[src]
             shape = modules_data.shape
+            dtype = modules_data.dtype
+
             ndim = len(shape)
             if ndim == 3:
-                # (y, x, memory cells) -> (memory cells, 1 module, y, x)
-                return np.moveaxis(modules_data, -1, 0)[:, np.newaxis, ...]
+                if dtype == _IMAGE_DTYPE:
+                    # (y, x, memory cells) -> (memory cells, 1 module, y, x)
+                    return np.moveaxis(modules_data, -1, 0)[:, np.newaxis, ...]
+
+                if dtype == _RAW_IMAGE_DTYPE:
+                    # (memory cells, y, x) -> (memory cells, 1 module, y, x)
+                    return modules_data[:, np.newaxis, ...]
+
             # (modules, y, x, memory cells) -> (memory cells, modules, y, x)
             return np.moveaxis(modules_data, -1, 0)
 
