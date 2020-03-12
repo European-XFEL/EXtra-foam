@@ -31,9 +31,10 @@ with open(osp.join(osp.abspath(osp.dirname(__file__)), 'README.md')) as f:
 def find_version():
     with open(osp.join('extra_foam', '__init__.py')) as fp:
         for line in fp:
-            # FIXME: a better version parser
-            # m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
-            m = re.search(r'^__version__ = "*([\d.]+)"', line, re.M)
+            m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
+            if m is None:
+                # could be a hotfix
+                m = re.search(r'^__version__ = "(\d.){3}\d"', line, re.M)
             if m is not None:
                 return m.group(1)
         raise RuntimeError("Unable to find version string.")
