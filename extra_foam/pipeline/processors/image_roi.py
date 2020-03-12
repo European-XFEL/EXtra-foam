@@ -274,8 +274,11 @@ class ImageRoiPulse(_RoiProcessorBase):
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = nanhist_with_stats(
-                roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                processed.pulse.roi.hist[idx] = nanhist_with_stats(
+                    roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
                 # skip the second one if two POIs have the same index
@@ -459,8 +462,11 @@ class ImageRoiTrain(_RoiProcessorBase):
 
         if roi is not None:
             hist = processed.roi.hist
-            hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
-                nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
+                    nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""

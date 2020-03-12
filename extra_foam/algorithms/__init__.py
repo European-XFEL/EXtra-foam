@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from .statistics_py import (
-    hist_with_stats, nanhist_with_stats, compute_statistics, find_actual_range,
+    hist_with_stats, nanhist_with_stats, compute_statistics,
     nanmean, nansum
 )
 

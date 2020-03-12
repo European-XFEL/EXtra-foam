@@ -13,19 +13,20 @@ from .imageproc_py import mask_image_data
 from .statistics import nanmean, nansum
 
 
-def find_actual_range(arr, range):
-    """Find the actual range for an array of data.
+def _get_outer_edges(arr, range):
+    """Determine the outer bin edges to use.
 
-    This is a helper function to find the non-infinite range (lb, ub) as
-    input for some other functions.
+    From both the data and the range argument.
 
     :param numpy.ndarray arr: data.
-    :param tuple range: desired range.
+    :param tuple range: desired range (min, max).
 
-    :return tuple: actual range.
+    :return tuple: outer edges (min, max).
 
-    Note: the input data is assume to be non-free.
-
+    Note: the input array is assumed to be nan-free but could contain +-inf.
+          The returned outer edges could be inf or -inf if both the min/max
+          value of array and the corresponding boundary of the range argument
+          are inf or -inf.
     """
     v_min, v_max = range
     assert v_min < v_max
@@ -77,6 +78,8 @@ def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
     :param numpy.ndarray roi: image ROI.
     :param tuple bin_range: (lb, ub) of histogram.
     :param int n_bins: number of bins of histogram.
+
+    :raise ValueError: if finite outer edges cannot be found.
     """
     # Note: Since the nan functions in numpy is typically 5-8 slower
     # than the non-nan counterpart, it is always faster to remove nan
@@ -88,8 +91,8 @@ def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
     mask_image_data(filtered, threshold_mask=bin_range, keep_nan=True)
     filtered = filtered[~np.isnan(filtered)]
 
-    actual_range = find_actual_range(filtered, bin_range)
-    hist, bin_edges = np.histogram(filtered, range=actual_range, bins=n_bins)
+    outer_edges = _get_outer_edges(filtered, bin_range)
+    hist, bin_edges = np.histogram(filtered, range=outer_edges, bins=n_bins)
     bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.0
     mean, median, std = compute_statistics(filtered)
 
@@ -102,8 +105,10 @@ def hist_with_stats(data, bin_range=(-np.inf, np.inf), n_bins=10):
     :param numpy.ndarray data: input data.
     :param tuple bin_range: (lb, ub) of histogram.
     :param int n_bins: number of bins of histogram.
+
+    :raise ValueError: if finite outer edges cannot be found.
     """
-    v_min, v_max = find_actual_range(data, bin_range)
+    v_min, v_max = _get_outer_edges(data, bin_range)
 
     filtered = data[(data >= v_min) & (data <= v_max)]
     hist, bin_edges = np.histogram(
