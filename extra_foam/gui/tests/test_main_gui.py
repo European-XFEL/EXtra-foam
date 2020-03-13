@@ -352,6 +352,32 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             self.assertTrue(proc._reset)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onCorrelationAnalysisTypeChange(AnalysisType.UNDEFINED)
+        if config["TOPIC"] == "FXE":
+            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
+        else:
+            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
+        mediator.onCorrelationParamChange((1, f'{motor_id} actualPosition', 0.0))
+        mediator.onCorrelationParamChange((2, 'ABC abc', 2.0))
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
+        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
+        self.assertEqual('0.0', widget._table.cellWidget(0, 3).text())
+        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
+        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
+        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
+        self.assertEqual('2.0', widget._table.cellWidget(1, 3).text())
+
+        mediator.onCorrelationParamChange((1, f'', 0.0))
+        widget.loadMetaData()
+        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual('', widget._table.cellWidget(0, 1).text())
+        self.assertEqual('', widget._table.cellWidget(0, 2).text())
+
     def testBinCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
             _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
@@ -361,8 +387,8 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         widget = self.gui.bin_ctrl_widget
 
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
-        bin_modes = {value: key for key, value in widget._bin_modes.items()}
+        analysis_types_inv = widget._analysis_types_inv
+        bin_modes_inv = widget._bin_modes_inv
 
         for i in range(_N_PARAMS):
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
@@ -387,8 +413,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
 
         # test analysis type and mode change
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.PUMP_PROBE])
-        widget._mode_cb.setCurrentText(bin_modes[BinMode.ACCUMULATE])
+        widget._analysis_type_cb.setCurrentText(analysis_types_inv[AnalysisType.PUMP_PROBE])
+        widget._mode_cb.setCurrentText(bin_modes_inv[BinMode.ACCUMULATE])
         proc.update()
         self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
         self.assertEqual(BinMode.ACCUMULATE, proc._mode)
@@ -451,6 +477,36 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertTrue(win._bin2d_value._auto_level)
         self.assertTrue(win._bin2d_count._auto_level)
         win.close()
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onBinAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onBinModeChange(BinMode.AVERAGE)
+        if config["TOPIC"] == "FXE":
+            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
+        else:
+            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
+        mediator.onBinParamChange((1, f'{motor_id} actualPosition', (-9, 9), 5))
+        mediator.onBinParamChange((2, 'ABC abc', (-19, 19), 15))
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("average", widget._mode_cb.currentText())
+        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
+        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
+        self.assertEqual('-9, 9', widget._table.cellWidget(0, 3).text())
+        self.assertEqual('5', widget._table.cellWidget(0, 4).text())
+        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
+        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
+        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
+        self.assertEqual('-19, 19', widget._table.cellWidget(1, 3).text())
+        self.assertEqual('15', widget._table.cellWidget(1, 4).text())
+
+        mediator.onBinParamChange((1, f'', (-9, 9), 5))
+        widget.loadMetaData()
+        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual('', widget._table.cellWidget(0, 1).text())
+        self.assertEqual('', widget._table.cellWidget(0, 2).text())
 
     def testHistogramCtrlWidget(self):
         widget = self.gui.histogram_ctrl_widget

@@ -18,7 +18,9 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ..gui_helpers import invert_dict
 from ...config import AnalysisType, BinMode, config
+from ...database import Metadata as mt
 
 
 _N_PARAMS = 2
@@ -37,13 +39,17 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI proj": AnalysisType.ROI_PROJ,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     _bin_modes = OrderedDict({
         "average": BinMode. AVERAGE,
         "accumulcate": BinMode.ACCUMULATE,
     })
+    _bin_modes_inv = invert_dict(_bin_modes)
 
     _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
+
+    _UNDEFINED_CATEGORY = ''
 
     def __init__(self, *args, **kwargs):
         super().__init__("Binning setup", *args, **kwargs)
@@ -119,7 +125,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         # loop over bin parameters
         for i_row in range(n_row):
             category_cb = QComboBox()
-            category_cb.addItem('')  # default is empty
+            category_cb.addItem(self._UNDEFINED_CATEGORY)
             for k, v in self._src_metadata.items():
                 if v:
                     category_cb.addItem(k)
@@ -253,3 +259,47 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
                 self.onBinParamChangeCb(i_row)
 
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.BIN_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+
+        self._mode_cb.setCurrentText(self._bin_modes_inv[int(cfg["mode"])])
+
+        for i in range(_N_PARAMS):
+            src = cfg[f'source{i+1}']
+            if not src:
+                self._table.cellWidget(i, 0).setCurrentText(
+                    self._UNDEFINED_CATEGORY)
+                self.onCategoryChange(i, self._UNDEFINED_CATEGORY)
+            else:
+                device_id, ppt = src.split(' ')
+                bin_range = cfg[f'bin_range{i+1}'][1:-1]
+                n_bins = cfg[f'n_bins{i+1}']
+                ctg = self._find_category(device_id, ppt)
+
+                self._table.cellWidget(i, 0).setCurrentText(ctg)
+                self.onCategoryChange(i, ctg)
+                if ctg == self._user_defined_key:
+                    self._table.cellWidget(i, 1).setText(device_id)
+                    self._table.cellWidget(i, 2).setText(ppt)
+                else:
+                    self._table.cellWidget(i, 1).setCurrentText(device_id)
+                    self._table.cellWidget(i, 2).setCurrentText(ppt)
+                self._table.cellWidget(i, 3).setText(bin_range)
+                self._table.cellWidget(i, 4).setText(n_bins)
+
+    def _find_category(self, device_id, ppt):
+        for ctg in self._src_instrument:
+            ctg_srcs = self._src_instrument[ctg]
+            if device_id in ctg_srcs and ppt in ctg_srcs[device_id]:
+                return ctg
+
+        for ctg in self._src_metadata:
+            ctg_srcs = self._src_metadata[ctg]
+            if device_id in ctg_srcs and ppt in ctg_srcs[device_id]:
+                return ctg
+
+        return self._user_defined_key

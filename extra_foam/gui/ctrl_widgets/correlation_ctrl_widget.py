@@ -19,7 +19,9 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
+from ..gui_helpers import invert_dict
 from ...config import AnalysisType, config
+from ...database import Metadata as mt
 
 _N_PARAMS = 2  # maximum number of correlated parameters
 _DEFAULT_RESOLUTION = 0.0
@@ -35,8 +37,11 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI proj": AnalysisType.ROI_PROJ,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
+
+    _UNDEFINED_CATEGORY = ''
 
     def __init__(self, *args, **kwargs):
         super().__init__("Correlation setup", *args, **kwargs)
@@ -96,7 +101,7 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         for i_row in range(_N_PARAMS):
             category_cb = QComboBox()
-            category_cb.addItem('')  # default is empty
+            category_cb.addItem(self._UNDEFINED_CATEGORY)
             for k, v in self._src_metadata.items():
                 if v:
                     category_cb.addItem(k)
@@ -213,3 +218,43 @@ class CorrelationCtrlWidget(_AbstractGroupBoxCtrlWidget):
             else:
                 self.onCorrelationParamChangeCb(i_row)
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.CORRELATION_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+
+        for i in range(_N_PARAMS):
+            src = cfg[f'source{i+1}']
+            if not src:
+                self._table.cellWidget(i, 0).setCurrentText(
+                    self._UNDEFINED_CATEGORY)
+                self.onCategoryChange(i, self._UNDEFINED_CATEGORY)
+            else:
+                device_id, ppt = src.split(' ')
+                resolution = cfg[f'resolution{i+1}']
+                ctg = self._find_category(device_id, ppt)
+
+                self._table.cellWidget(i, 0).setCurrentText(ctg)
+                self.onCategoryChange(i, ctg)
+                if ctg == self._user_defined_key:
+                    self._table.cellWidget(i, 1).setText(device_id)
+                    self._table.cellWidget(i, 2).setText(ppt)
+                else:
+                    self._table.cellWidget(i, 1).setCurrentText(device_id)
+                    self._table.cellWidget(i, 2).setCurrentText(ppt)
+                self._table.cellWidget(i, 3).setText(resolution)
+
+    def _find_category(self, device_id, ppt):
+        for ctg in self._src_instrument:
+            ctg_srcs = self._src_instrument[ctg]
+            if device_id in ctg_srcs and ppt in ctg_srcs[device_id]:
+                return ctg
+
+        for ctg in self._src_metadata:
+            ctg_srcs = self._src_metadata[ctg]
+            if device_id in ctg_srcs and ppt in ctg_srcs[device_id]:
+                return ctg
+
+        return self._user_defined_key
