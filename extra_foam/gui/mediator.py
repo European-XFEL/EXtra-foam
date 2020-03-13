@@ -26,6 +26,8 @@ class Mediator(QObject):
     # POI index, pulse index
     poi_index_change_sgn = pyqtSignal(int, int)
     poi_window_initialized_sgn = pyqtSignal()
+    # geometry assembler
+    assembler_change_sgn = pyqtSignal(object)
 
     bin_heatmap_autolevel_sgn = pyqtSignal()
 
@@ -91,11 +93,15 @@ class Mediator(QObject):
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
 
+    def onImageMaskTileEdgeChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "mask_tile", str(value))
+
     def onGeomStackOnlyChange(self, value: bool):
         self._meta.hset(mt.GEOMETRY_PROC, "stack_only", str(value))
 
     def onGeomAssemblerChange(self, value: IntEnum):
         self._meta.hset(mt.GEOMETRY_PROC, "assembler", int(value))
+        self.assembler_change_sgn.emit(value)
 
     def onGeomFileChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)

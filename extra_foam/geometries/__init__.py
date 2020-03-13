@@ -12,6 +12,10 @@ from itertools import product
 import numpy as np
 import h5py
 
+from extra_geom import AGIPD_1MGeometry as _geom_AGIPD_1MGeometry
+from extra_geom import LPD_1MGeometry as _geom_LPD_1MGeometry
+from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
+
 from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
 from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
 from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
@@ -23,15 +27,21 @@ class _1MGeometryPyMixin:
         shape = extra_shape + tuple(self.assembledShape())
         return np.full(shape, np.nan, dtype=dtype)
 
-    def position_all_modules(self, modules, out):
-        """Match the EXtra-geom signature."""
+    def position_all_modules(self, modules, out, *, ignore_tile_edge=False):
+        """Match the EXtra-geom signature.
+
+        :param ignore_tile_edge: True for ignoring the pixels at the edges
+            of tiles. If 'out' is pre-filled with nan, it it equivalent to
+            masking the tile edges. This is an extra feature which does not
+            exist in EXtra-geom.
+        """
         if isinstance(modules, np.ndarray):
-            self.positionAllModules(modules, out)
+            self.positionAllModules(modules, out, ignore_tile_edge)
         else:  # extra_data.StackView
             ml = []
             for i in range(self.n_modules):
                 ml.append(modules[:, i, ...])
-            self.positionAllModules(ml, out)
+            self.positionAllModules(ml, out, ignore_tile_edge)
 
 
 class DSSC_1MGeometryFast(_DSSC_1MGeometry, _1MGeometryPyMixin):
@@ -128,3 +138,19 @@ class AGIPD_1MGeometryFast(_AGIPD_1MGeometry, _1MGeometryPyMixin):
                 tiles.append(GeometryFragment.from_panel_dict(d).corner_pos)
 
         return cls(modules)
+
+# patches for geometry classes from EXtra-geom
+
+class AGIPD_1MGeometry(_geom_AGIPD_1MGeometry):
+    def position_all_modules(self, modules, out, *args, **kwargs):
+        super().position_all_modules(modules, out)
+
+
+class LPD_1MGeometry(_geom_LPD_1MGeometry):
+    def position_all_modules(self, modules, out, *args, **kwargs):
+        super().position_all_modules(modules, out)
+
+
+class DSSC_1MGeometry(_geom_DSSC_1MGeometry):
+    def position_all_modules(self, modules, out, *args, **kwargs):
+        super().position_all_modules(modules, out)

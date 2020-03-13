@@ -49,17 +49,21 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         AZIMUTHAL_INTEG_1D = 3
         GEOMETRY = 4
 
-    def __init__(self, queue, *, pulse_resolved=True, parent=None):
+    def __init__(self, queue, *,
+                 pulse_resolved=True, require_geometry=True, parent=None):
         """Initialization.
 
         :param deque queue: data queue.
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
+        :param bool require_geometry: whether the detector requires a
+            geometry to assemble its modules.
         """
         super().__init__(parent=parent)
 
         self._queue = queue
         self._pulse_resolved = pulse_resolved
+        self._require_geometry = require_geometry
 
         self._mediator = Mediator()
 
@@ -136,7 +140,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
         geom_tab_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
-        if not config['REQUIRE_GEOMETRY']:
+        if not self._require_geometry:
             self._views_tab.setTabEnabled(geom_tab_idx, False)
 
         assert(corrected_tab_idx == self.TabIndex.CORRECTED)
@@ -192,8 +196,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # use lambda here to facilitate unittest of slot call
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
-        self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
-            lambda x: mediator.onImageThresholdMaskChange(x))
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
@@ -216,7 +218,10 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         Ctrl widgets reside in (views of) ImageToolWindow should explicitly
         call this method to be registered.
         """
-        widget = widget_class(*args, pulse_resolved=self._pulse_resolved, **kwargs)
+        widget = widget_class(*args,
+                              pulse_resolved=self._pulse_resolved,
+                              require_geometry=self._require_geometry,
+                              **kwargs)
         self._ctrl_widgets.append(widget)
         return widget
 

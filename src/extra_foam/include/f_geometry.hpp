@@ -56,20 +56,24 @@ public:
    *
    * @param src: multi-pulse, multiple-module data. shape=(memory cells, modules, y, x)
    * @param dst: assembled data. shape=(memory cells, y, x)
+   * @param ignore_tile_edge: true for ignoring the pixels at the edges of tiles. If dst
+   *    is pre-filled with nan, it it equivalent to masking the tile edges.
    */
   template<typename M, typename E,
     EnableIf<std::decay_t<M>, IsModulesArray> = false, EnableIf<E, IsImageArray> = false>
-  void positionAllModules(M&& src, E& dst) const;
+  void positionAllModules(M&& src, E& dst, bool ignore_tile_edge=false) const;
 
   /**
    * Position all the modules at the correct area of the given assembled image.
    *
    * @param src: a vector of module data, which has a shape of (modules, y, x)
    * @param dst: assembled data. shape=(memory cells, y, x)
+   * @param ignore_tile_edge: true for ignoring the pixels at the edges of tiles. If dst
+   *    is pre-filled with nan, it it equivalent to masking the tile edges.
    */
   template<typename M, typename E,
     EnableIf<std::decay_t<M>, IsModulesVector> = false, EnableIf<E, IsImageArray> = false>
-  void positionAllModules(M&& src, E& dst) const;
+  void positionAllModules(M&& src, E& dst, bool ignore_tile_edge=false) const;
 
   /**
    * Return the shape (y, x) of the assembled image.
@@ -106,7 +110,7 @@ protected:
    * @param pos: two diagonal corner positions of each tile. shape=(tiles, 2, 3)
    */
   template<typename M, typename N, typename T>
-  void positionModule(M&& src, N& dst, T&& pos) const;
+  void positionModule(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const;
 };
 
 template<typename G>
@@ -118,7 +122,7 @@ constexpr size_t Detector1MGeometryBase<G>::n_modules;
 
 template<typename G>
 template<typename M, typename E, EnableIf<std::decay_t<M>, IsModulesArray>, EnableIf<E, IsImageArray>>
-void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
+void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_tile_edge) const
 {
   auto ss = src.shape();
   auto ds = dst.shape();
@@ -128,7 +132,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
 #if defined(FOAM_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
-    [&src, &dst, &norm_pos, this] (const tbb::blocked_range2d<int> &block)
+    [&src, &dst, &norm_pos, ignore_tile_edge, this] (const tbb::blocked_range2d<int> &block)
     {
       for(int im=block.rows().begin(); im != block.rows().end(); ++im)
       {
@@ -144,7 +148,8 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
           positionModule(
             xt::view(src, ip, im, xt::all(), xt::all()),
             dst_view,
-            xt::view(norm_pos, im, xt::all(), xt::all(), xt::all())
+            xt::view(norm_pos, im, xt::all(), xt::all(), xt::all()),
+            ignore_tile_edge
           );
         }
       }
@@ -156,7 +161,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
 
 template<typename G>
 template<typename M, typename E, EnableIf<std::decay_t<M>, IsModulesVector>, EnableIf<E, IsImageArray>>
-void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
+void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_tile_edge) const
 {
   auto ms = src[0].shape();
   auto ss = std::array<size_t, 4> {static_cast<size_t>(ms[0]),
@@ -170,7 +175,7 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
 #if defined(FOAM_WITH_TBB)
   tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
-    [&src, &dst, &norm_pos, this] (const tbb::blocked_range2d<int> &block)
+    [&src, &dst, &norm_pos, ignore_tile_edge, this] (const tbb::blocked_range2d<int> &block)
     {
       for(int im=block.rows().begin(); im != block.rows().end(); ++im)
       {
@@ -186,7 +191,8 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst) const
           positionModule(
             xt::view(src[im], ip, xt::all(), xt::all()),
             dst_view,
-            xt::view(norm_pos, im, xt::all(), xt::all(), xt::all())
+            xt::view(norm_pos, im, xt::all(), xt::all(), xt::all()),
+            ignore_tile_edge
           );
         }
       }
@@ -259,9 +265,9 @@ void Detector1MGeometryBase<G>::checkShape(const SrcShape& ss, const DstShape& d
 
 template<typename G>
 template<typename M, typename N, typename T>
-void Detector1MGeometryBase<G>::positionModule(M&& src, N& dst, T&& pos) const
+void Detector1MGeometryBase<G>::positionModule(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
-  static_cast<const G*>(this)->positionModuleImp(std::forward<M>(src), dst, std::forward<T>(pos));
+  static_cast<const G*>(this)->positionModuleImp(std::forward<M>(src), dst, std::forward<T>(pos), ignore_tile_edge);
 }
 
 /**
@@ -304,7 +310,7 @@ private:
   friend Detector1MGeometryBase<AGIPD_1MGeometry>;
 
   template<typename M, typename N, typename T>
-  void positionModuleImp(M&& src, N& dst, T&& pos) const;
+  void positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const;
 
 public:
 
@@ -408,13 +414,17 @@ AGIPD_1MGeometry::AGIPD_1MGeometry(
 }
 
 template<typename M, typename N, typename T>
-void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
+void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
   auto center = assembledDim().second;
   auto shape = src.shape(); // caveat: shape has layout (y, x)
   size_t n_tiles = n_tiles_per_module;
   size_t wt = tile_shape[1];
   size_t ht = tile_shape[0];
+
+  int edge = 0;
+  if (ignore_tile_edge) edge = 1;
+
   for (int it = 0; it < n_tiles; ++it)
   {
     auto x0 = pos(it, 0, 0);
@@ -428,9 +438,9 @@ void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
 
     size_t ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
     size_t iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
-    for (size_t iy = iy0, iy_dst = iy0_dst; iy < iy0 + ht; ++iy, iy_dst += iy_dir)
+    for (size_t iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
-      for (size_t ix = ix0, ix_dst = ix0_dst; ix < ix0 + wt; ++ix, ix_dst += ix_dir)
+      for (size_t ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
       {
         dst(iy_dst, ix_dst) = src(ix, iy); // (fs/y, ss/x)
       }
@@ -479,7 +489,7 @@ private:
   friend Detector1MGeometryBase<LPD_1MGeometry>;
 
   template<typename M, typename N, typename T>
-  void positionModuleImp(M&& src, N& dst, T&& pos) const;
+  void positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const;
 
 public:
 
@@ -578,13 +588,17 @@ LPD_1MGeometry::LPD_1MGeometry(
 }
 
 template<typename M, typename N, typename T>
-void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
+void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
   auto center = assembledDim().second;
   auto shape = src.shape(); // caveat: shape has layout (y, x)
   size_t n_tiles = n_tiles_per_module;
   size_t wt = tile_shape[1];
   size_t ht = tile_shape[0];
+
+  int edge = 0;
+  if (ignore_tile_edge) edge = 1;
+
   for (size_t it = 0; it < n_tiles; ++it)
   {
     auto x0 = pos(it, 0, 0);
@@ -597,9 +611,9 @@ void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
     size_t iy0 = it < 8 ? (7 - it % 8) * ht : (it % 8) * ht;
     size_t ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
     size_t iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
-    for (size_t iy = iy0, iy_dst = iy0_dst; iy < iy0 + ht; ++iy, iy_dst += iy_dir)
+    for (size_t iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
-      for (size_t ix = ix0, ix_dst = ix0_dst; ix < ix0 + wt; ++ix, ix_dst += ix_dir)
+      for (size_t ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
       {
         dst(iy_dst, ix_dst) = src(iy, ix);
       }
@@ -644,7 +658,7 @@ private:
   friend Detector1MGeometryBase<DSSC_1MGeometry>;
 
   template<typename M, typename N, typename T>
-  void positionModuleImp(M&& src, N& dst, T&& pos) const;
+  void positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const;
 
 public:
 
@@ -743,12 +757,16 @@ DSSC_1MGeometry::DSSC_1MGeometry(
 }
 
 template<typename M, typename N, typename T>
-void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
+void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_tile_edge) const
 {
   auto center = assembledDim().second;
   size_t n_tiles = n_tiles_per_module;
   size_t wt = tile_shape[1];
   size_t ht = tile_shape[0];
+
+  int edge = 0;
+  if (ignore_tile_edge) edge = 1;
+
   for (size_t it = 0; it < n_tiles; ++it)
   {
     auto x0 = pos(it, 0, 0);
@@ -761,9 +779,9 @@ void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos) const
     size_t iy0 = 0;
     size_t ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
     size_t iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
-    for (size_t iy = iy0, iy_dst = iy0_dst; iy < ht; ++iy, iy_dst += iy_dir)
+    for (size_t iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < ht - edge; ++iy, iy_dst += iy_dir)
     {
-      for (size_t ix = ix0, ix_dst = ix0_dst; ix < ix0 + wt; ++ix, ix_dst += ix_dir)
+      for (size_t ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
       {
         dst(iy_dst, ix_dst) = src(iy, ix);
       }
