@@ -18,7 +18,7 @@ _data_sources = [(np.uint16, 'raw'), (np.float32, 'calibrated')]
 _geom_path = osp.join(osp.dirname(osp.abspath(__file__)), "../extra_foam/geometries")
 
 
-def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions):
+def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions=None):
 
     for from_dtype, from_str in _data_sources:
         n_pulses = 64
@@ -37,7 +37,10 @@ def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions):
 
         # assemble with geometry and quad position
 
-        geom = geom_fast_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
+        if quad_positions is not None:
+            geom = geom_fast_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
+        else:
+            geom = geom_fast_cls.from_crystfel_geom(geom_file)
         out = np.full((n_pulses, *geom.assembledShape()), np.nan, dtype=np.float32)
         t0 = time.perf_counter()
         geom.position_all_modules(modules, out)
@@ -45,8 +48,10 @@ def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions):
 
         # assemble with geometry and quad position in EXtra-geom
 
-        geom = geom_cls.from_h5_file_and_quad_positions(
-            geom_file, quad_positions)
+        if quad_positions is not None:
+            geom = geom_cls.from_h5_file_and_quad_positions(geom_file, quad_positions)
+        else:
+            geom = geom_cls.from_crystfel_geom(geom_file)
         out = geom.output_array_for_position_fast((n_pulses,))
         t0 = time.perf_counter()
         geom.position_all_modules(modules, out=out)
@@ -87,6 +92,15 @@ def benchmark_lpd_1m():
     _benchmark_1m_imp(LPD_1MGeometryFast, LPD_1MGeometry, geom_file, quad_positions)
 
 
+def benchmark_agipd_1m():
+    from extra_foam.geometries import AGIPD_1MGeometryFast
+    from extra_geom import AGIPD_1MGeometry
+
+    geom_file = osp.join(_geom_path, "agipd_mar18_v11.geom")
+
+    _benchmark_1m_imp(AGIPD_1MGeometryFast, AGIPD_1MGeometry, geom_file)
+
+
 if __name__ == "__main__":
     print("*" * 80)
     print("Benchmark geometry")
@@ -95,3 +109,5 @@ if __name__ == "__main__":
     benchmark_dssc_1m()
 
     benchmark_lpd_1m()
+
+    benchmark_agipd_1m()

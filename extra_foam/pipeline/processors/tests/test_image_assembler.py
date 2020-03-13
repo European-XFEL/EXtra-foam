@@ -65,19 +65,19 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
+class TestAgipdAssembler:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         config.load('AGIPD', random.choice(['SPB', 'MID']))
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         os.remove(config.config_file)
 
-    def setUp(self):
+    def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
         self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
@@ -108,13 +108,13 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
             },
         }
 
-        with self.assertRaisesRegex(KeyError, "source_type"):
+        with pytest.raises(KeyError, match="source_type"):
             self._assembler.process(copy.deepcopy(data))
 
         data['meta'][src]["source_type"] = DataSource.FILE
         self._assembler.process(data)
-        self.assertEqual(10001, data['raw']['META timestamp.tid'])
-        self.assertIsNone(data['raw'][src])
+        assert 10001 == data['raw']['META timestamp.tid']
+        assert data['raw'][src] is None
 
     def testAssembleFileCal(self):
         self._runAssembleFileTest((4, 512, 128), _IMAGE_DTYPE)
@@ -155,7 +155,7 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
         key_name = 'image.data'
         src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
                 'catalog': catalog,
                 'meta': {
@@ -170,11 +170,11 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
             }
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
+        with pytest.raises(AssemblingError, match='modules, but'):
             data['raw'][src] = np.ones((4, 12, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
             data['raw'][src] = np.ones((0, 16, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 

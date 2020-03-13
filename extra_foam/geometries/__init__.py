@@ -12,6 +12,7 @@ from itertools import product
 import numpy as np
 import h5py
 
+from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
 from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
 from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
 
@@ -103,5 +104,27 @@ class LPD_1MGeometryFast(_LPD_1MGeometry, _1MGeometryPyMixin):
 
                     tiles.append(list(first_pixel_pos))
                 modules.append(tiles)
+
+        return cls(modules)
+
+
+class AGIPD_1MGeometryFast(_AGIPD_1MGeometry, _1MGeometryPyMixin):
+    """AGIPD_1MGeometryFast.
+
+    Extend the functionality of AGIPD_1MGeometry implementation in C++.
+    """
+    @classmethod
+    def from_crystfel_geom(cls, filename):
+        from cfelpyutils.crystfel_utils import load_crystfel_geometry
+        from extra_geom.detectors import GeometryFragment
+
+        geom_dict = load_crystfel_geometry(filename)
+        modules = []
+        for p in range(cls.n_modules):
+            tiles = []
+            modules.append(tiles)
+            for a in range(cls.n_tiles_per_module):
+                d = geom_dict['panels']['p{}a{}'.format(p, a)]
+                tiles.append(GeometryFragment.from_panel_dict(d).corner_pos)
 
         return cls(modules)
