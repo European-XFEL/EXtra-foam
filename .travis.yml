@@ -7,7 +7,6 @@ stages:
     if: branch = master
   - name: singularity build push
     if: branch = master OR tag IS present
-    allow_failures: true
 
 env:
   global:
@@ -17,6 +16,8 @@ services:
   - xvfb
 
 jobs:
+  allow_failures:
+    - stage: singularity build push
   include:
     - stage: basic
       env: PYTHON_VERSION="3.7.5" COMPILER="gcc" GCCv="7"
