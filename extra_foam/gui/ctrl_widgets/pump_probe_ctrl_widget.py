@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import OrderedDict
+import copy
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -24,14 +25,13 @@ from ...database import Metadata as mt
 class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up pump-probe analysis parameters."""
 
-    _available_modes = OrderedDict({
+    __available_modes = OrderedDict({
         "": PumpProbeMode.UNDEFINED,
         "reference as off": PumpProbeMode.REFERENCE_AS_OFF,
-        "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
-        "odd/even train": PumpProbeMode.ODD_TRAIN_ON
+        "odd/even train": PumpProbeMode.ODD_TRAIN_ON,
+        "same train": PumpProbeMode.SAME_TRAIN,
     })
-    _available_modes_inv = invert_dict(_available_modes)
 
     _analysis_types = OrderedDict({
         "": AnalysisType.UNDEFINED,
@@ -49,14 +49,14 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._on_pulse_le = SmartSliceLineEdit(":")
         self._off_pulse_le = SmartSliceLineEdit(":")
 
-        all_keys = list(self._available_modes.keys())
-        if self._pulse_resolved:
-            self._mode_cb.addItems(all_keys)
-        else:
-            all_keys.remove("same train")
-            self._mode_cb.addItems(all_keys)
+        self._available_modes = copy.copy(self.__available_modes)
+        self._available_modes_inv = invert_dict(self._available_modes)
+        if not self._pulse_resolved:
+            del self._available_modes["same train"]
+            del self._available_modes_inv[PumpProbeMode.SAME_TRAIN]
             self._on_pulse_le.setEnabled(False)
             self._off_pulse_le.setEnabled(False)
+        self._mode_cb.addItems(list(self._available_modes.keys()))
 
         self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
@@ -134,12 +134,8 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._analysis_type_cb.setCurrentText(
             self._analysis_types_inv[int(cfg["analysis_type"])])
 
-        i_mode = int(cfg["mode"])
-        if i_mode == PumpProbeMode.SAME_TRAIN:
-            self._mode_cb.setCurrentText("")
-        else:
-            self._mode_cb.setCurrentText(
-                self._available_modes_inv[int(cfg["mode"])])
+        self._mode_cb.setCurrentText(
+            self._available_modes_inv[int(cfg["mode"])])
 
         self._abs_difference_cb.setChecked(cfg["abs_difference"] == 'True')
 

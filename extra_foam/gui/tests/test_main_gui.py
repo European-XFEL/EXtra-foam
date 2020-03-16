@@ -824,8 +824,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
 
-        all_modes = {value: key for key, value in
-                     widget._available_modes.items()}
+        all_modes = widget._available_modes_inv
 
         # we only test train-resolved detector specific configuration
 
@@ -851,19 +850,20 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget._on_pulse_le.isEnabled())
 
         # PumpProbeMode.SAME_TRAIN is not available
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
-        self.assertEqual(2, len(spy))
+        self.assertNotIn(PumpProbeMode.SAME_TRAIN, all_modes)
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
-        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
         mediator.onPpOnPulseSlicerChange([0, None, 2])
         mediator.onPpOffPulseSlicerChange([0, None, 2])
         widget.loadMetaData()
-        self.assertEqual("", widget._mode_cb.currentText())
         self.assertEqual(":", widget._on_pulse_le.text())
         self.assertEqual(":", widget._off_pulse_le.text())
+
+        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
+        with self.assertRaises(KeyError):
+            widget.loadMetaData()
 
     def testFomFilterCtrlWidget(self):
         widget = self.gui.fom_filter_ctrl_widget
