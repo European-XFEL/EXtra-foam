@@ -74,7 +74,8 @@ ROI FOM setup
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
+| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*,|
+|                            | and *ROI1 / ROI2*.                                                 |
 +----------------------------+--------------------------------------------------------------------+
 | ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
 +----------------------------+--------------------------------------------------------------------+
@@ -143,9 +144,10 @@ Gain / offset
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
 Apply pixel-wised gain and offset correction, where
+
 .. math::
 
-   A_{corrected} = (A_{raw} - I_{offset}) * I_{gain}
+   A_{corrected} = (A_{raw} - I_{offset}) \cdot I_{gain}
 
 Users can record a "dark run" whenever data is available. The dark run consists of a number
 of trains. The moving average of the each "dark pulse" in the train will be calculated,
@@ -279,8 +281,7 @@ about geometries of those detectors, please refer to the
 |                            | corresponding to data channels 0, 4, 8 and 12.                     |
 +----------------------------+--------------------------------------------------------------------+
 | ``Load geometry file``     | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system. For LPD and DSSC, *Extra-foam* provides a       |
-|                            | default geometry file.                                             |
+|                            | local file system.                                                 |
 +----------------------------+--------------------------------------------------------------------+
 | ``Assembler``              | There are two assemblers available in *EXtra-foam*. One is         |
 |                            | EXtra-geom_ implemented in Python and the other is the local C++   |
@@ -293,7 +294,3 @@ about geometries of those detectors, please refer to the
 |                            | be faster than assembling with a geometry. It simply provides an   |
 |                            | alternative to check the data from different modules.              |
 +----------------------------+--------------------------------------------------------------------+
-
-.. Note::
-
-    The C++ implementation for *AGIPD* is still ongoing.

@@ -82,6 +82,20 @@ To start the **stable** version on online or `Maxwell` clusters:
     extra-foam DETECTOR TOPIC
 
 
+III. Test version
+++++++++++++++++++
+
+To start the **test** version on online or `Maxwell` clusters:
+
+.. code-block:: bash
+
+    module load exfel EXtra-foam/alpha
+    extra-foam DETECTOR TOPIC
+
+.. note::
+    **test** version is not covered by OCD!
+
+
 Data analysis in real time
 --------------------------
 

@@ -80,6 +80,8 @@ versions of **EXtra-foam**
    * - Stable
      - EXtra-foam
 
+   * - Test
+     - EXtra-foam/alpha
 
 .. code-block:: console
 
