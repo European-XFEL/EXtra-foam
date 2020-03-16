@@ -263,11 +263,14 @@ class ImageAssemblerFactory(ABC):
 
                     self._stack_only = stack_only
                     self._assembler_type = assembler_type
-                    self._geom_file = geom_file
                     self._quad_position = quad_positions
 
                     self._geom = None  # reset first
                     self._load_geometry(geom_file, quad_positions)
+                    # caveat: if _load_geometry raises, _geom_file will not
+                    #         be set. Therefore, _load_geometry will raise
+                    #         AssemblingError in the next train.
+                    self._geom_file = geom_file
 
                     if not stack_only:
                         logger.info(f"Loaded geometry from {geom_file} with "
@@ -464,16 +467,20 @@ class ImageAssemblerFactory(ABC):
                     self._geom = AGIPD_1MGeometryFast()
                 else:
                     try:
+                        # catch any exceptions here since it loads the CFEL
+                        # geometry file with a CFEL function
                         self._geom = AGIPD_1MGeometryFast.from_crystfel_geom(
                             filename)
-                    except (ImportError, ModuleNotFoundError, OSError) as e:
+                    except Exception as e:
                         raise AssemblingError(e)
             else:
                 from extra_geom import AGIPD_1MGeometry
 
                 try:
+                    # catch any exceptions here since it loads the CFEL
+                    # geometry file with a CFEL function
                     self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
-                except (ImportError, ModuleNotFoundError, OSError) as e:
+                except Exception as e:
                     raise AssemblingError(e)
 
     class LpdImageAssembler(BaseAssembler):
@@ -520,16 +527,19 @@ class ImageAssemblerFactory(ABC):
                 if self._stack_only:
                     self._geom = LPD_1MGeometryFast()
                 else:
-                    self._geom = LPD_1MGeometryFast.from_h5_file_and_quad_positions(
-                        filename, quad_positions)
+                    try:
+                        self._geom = LPD_1MGeometryFast.from_h5_file_and_quad_positions(
+                            filename, quad_positions)
+                    except (OSError, KeyError) as e:
+                        raise AssemblingError(f"[Geometry] {e}")
             else:
                 from extra_geom import LPD_1MGeometry
 
                 try:
                     self._geom = LPD_1MGeometry.from_h5_file_and_quad_positions(
                         filename, quad_positions)
-                except OSError as e:
-                    raise AssemblingError(e)
+                except (OSError, KeyError) as e:
+                    raise AssemblingError(f"[Geometry] {e}")
 
     class DsscImageAssembler(BaseAssembler):
 
@@ -574,16 +584,19 @@ class ImageAssemblerFactory(ABC):
                 if self._stack_only:
                     self._geom = DSSC_1MGeometryFast()
                 else:
-                    self._geom = DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
-                        filename, quad_positions)
+                    try:
+                        self._geom = DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
+                            filename, quad_positions)
+                    except (OSError, KeyError) as e:
+                        raise AssemblingError(f"[Geometry] {e}")
             else:
                 from extra_geom import DSSC_1MGeometry
 
                 try:
                     self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
                         filename, quad_positions)
-                except OSError as e:
-                    raise AssemblingError(e)
+                except (OSError, KeyError) as e:
+                    raise AssemblingError(f"[Geometry] {e}")
 
     class JungFrauImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):

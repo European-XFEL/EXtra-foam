@@ -16,7 +16,8 @@ from PyQt5.QtWidgets import (
 
 from .base_ctrl_widgets import _AbstractCtrlWidget
 from .smart_widgets import SmartSliceLineEdit
-from ..gui_helpers import create_icon_button
+from ..gui_helpers import create_icon_button, parse_slice_inv
+from ...database import Metadata as mt
 from ...ipc import CalConstantsPub
 
 
@@ -127,6 +128,20 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._gain_slicer_le.returnPressed.emit()
         self._offset_slicer_le.returnPressed.emit()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.IMAGE_PROC)
+
+        self._correct_gain_cb.setChecked(cfg["correct_gain"] == 'True')
+        self._correct_offset_cb.setChecked(cfg["correct_offset"] == 'True')
+        self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
+
+        if self._pulse_resolved:
+            self._gain_slicer_le.setText(
+                parse_slice_inv(cfg["gain_slicer"]))
+            self._offset_slicer_le.setText(
+                parse_slice_inv(cfg["offset_slicer"]))
 
     @pyqtSlot()
     def _loadGainConst(self):

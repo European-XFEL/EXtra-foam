@@ -68,25 +68,25 @@ class Mediator(QObject):
             self._meta.remove_data_source(item)
 
     def onCalGainCorrection(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "correct gain", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "correct_gain", str(value))
 
     def onCalOffsetCorrection(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "correct offset", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "correct_offset", str(value))
 
     def onCalGainSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "gain slicer", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "gain_slicer", str(value))
 
     def onCalOffsetSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "offset slicer", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "offset_slicer", str(value))
 
     def onCalDarkAsOffset(self, value:bool):
-        self._meta.hset(mt.IMAGE_PROC, "dark as offset", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "dark_as_offset", str(value))
 
     def onCalDarkRecording(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "recording dark", str(value))
+        self._meta.hset(mt.IMAGE_PROC, "recording_dark", str(value))
 
     def onCalDarkRemove(self):
-        self._meta.hset(mt.IMAGE_PROC, "remove dark", 1)
+        self._meta.hset(mt.IMAGE_PROC, "remove_dark", 1)
 
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
@@ -97,7 +97,7 @@ class Mediator(QObject):
     def onGeomAssemblerChange(self, value: IntEnum):
         self._meta.hset(mt.GEOMETRY_PROC, "assembler", int(value))
 
-    def onGeomFilenameChange(self, value: str):
+    def onGeomFileChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)
 
     def onGeomQuadPositionsChange(self, value: str):
@@ -144,10 +144,10 @@ class Mediator(QObject):
     def onAiIntegRangeChange(self, value: tuple):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'integ_range', str(value))
 
-    def onCurveNormalizerChange(self, value: IntEnum):
+    def onAiNormChange(self, value: IntEnum):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'normalizer', int(value))
 
-    def onAiAucChangeChange(self, value: tuple):
+    def onAiAucRangeChange(self, value: tuple):
         self._meta.hset(mt.AZIMUTHAL_INTEG_PROC, 'auc_range', str(value))
 
     def onAiFomIntegRangeChange(self, value: tuple):
@@ -156,11 +156,11 @@ class Mediator(QObject):
     def onPpModeChange(self, value: IntEnum):
         self._meta.hset(mt.PUMP_PROBE_PROC, 'mode', int(value))
 
-    def onPpOnPulseIdsChange(self, value: list):
-        self._meta.hset(mt.PUMP_PROBE_PROC, 'on_pulse_indices', str(value))
+    def onPpOnPulseSlicerChange(self, value: list):
+        self._meta.hset(mt.PUMP_PROBE_PROC, 'on_pulse_slicer', str(value))
 
-    def onPpOffPulseIdsChange(self, value: list):
-        self._meta.hset(mt.PUMP_PROBE_PROC, 'off_pulse_indices', str(value))
+    def onPpOffPulseSlicerChange(self, value: list):
+        self._meta.hset(mt.PUMP_PROBE_PROC, 'off_pulse_slicer', str(value))
 
     def onPpAnalysisTypeChange(self, value: IntEnum):
         self._meta.hset(mt.PUMP_PROBE_PROC, 'analysis_type', int(value))
@@ -174,8 +174,9 @@ class Mediator(QObject):
         self.onResetMa()
 
     def onRoiGeometryChange(self, value: tuple):
-        idx, x, y, w, h = value
-        self._meta.hset(mt.ROI_PROC, f'geom{idx}', str((x, y, w, h)))
+        idx, activated, locked, x, y, w, h = value
+        self._meta.hset(mt.ROI_PROC, f'geom{idx}',
+                        str((int(activated), int(locked), x, y, w, h)))
 
     def onRoiFomTypeChange(self, value: IntEnum):
         self._meta.hset(mt.ROI_PROC, 'fom:type', int(value))

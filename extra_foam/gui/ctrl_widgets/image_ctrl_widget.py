@@ -17,6 +17,7 @@ from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import (
     SmartLineEdit, SmartBoundaryLineEdit
 )
+from ...database import Metadata as mt
 
 
 class ImageCtrlWidget(_AbstractCtrlWidget):
@@ -82,3 +83,8 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         self.threshold_mask_le.returnPressed.emit()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.IMAGE_PROC)
+        self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])

@@ -127,10 +127,14 @@ class ImageRoiPulse(_RoiProcessorBase):
         """Override."""
         cfg = super().update()
 
-        self._geom1 = self.str2list(cfg[f'geom1'], handler=int)
-        self._geom2 = self.str2list(cfg[f'geom2'], handler=int)
-        self._geom3 = self.str2list(cfg[f'geom3'], handler=int)
-        self._geom4 = self.str2list(cfg[f'geom4'], handler=int)
+        geom1 = self.str2list(cfg[f'geom1'], handler=int)
+        self._geom1 = RectRoiGeom.INVALID if geom1[0] == 0 else geom1[2:]
+        geom2 = self.str2list(cfg[f'geom2'], handler=int)
+        self._geom2 = RectRoiGeom.INVALID if geom2[0] == 0 else geom2[2:]
+        geom3 = self.str2list(cfg[f'geom3'], handler=int)
+        self._geom3 = RectRoiGeom.INVALID if geom3[0] == 0 else geom3[2:]
+        geom4 = self.str2list(cfg[f'geom4'], handler=int)
+        self._geom4 = RectRoiGeom.INVALID if geom4[0] == 0 else geom4[2:]
 
     @profiler("ROI Processor (pulse)")
     def process(self, data):

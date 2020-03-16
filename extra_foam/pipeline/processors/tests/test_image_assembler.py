@@ -21,7 +21,6 @@ import numpy as np
 from extra_foam.pipeline.processors.image_assembler import (
     _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, ImageAssemblerFactory
 )
-from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.exceptions import AssemblingError
 from extra_foam.config import GeomAssembler, config, DataSource
 from extra_foam.database import SourceCatalog, SourceItem
@@ -86,6 +85,18 @@ class TestAgipdAssembler:
         src = f'{src_name} {key_name}'
         catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions)
+
+        # test invalid file
+        with tempfile.NamedTemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions)
 
     def testGeneral(self):
         # Note: this test does not need to repeat for each detector
@@ -201,7 +212,29 @@ class TestAgipdAssembler:
         _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
 
-class TestLpdAssembler:
+class _AssemblerGeometryTest:
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        import h5py
+
+        self._assembler._assembler_type = assembler_type
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions)
+
+        # test invalid file (file signature not found)
+        with tempfile.TemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp, self._quad_positions)
+
+        # test invalid h5 file (component not found)
+        with tempfile.NamedTemporaryFile() as fp:
+            fph5 = h5py.File(fp.name, 'r+')
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions)
+
+
+class TestLpdAssembler(_AssemblerGeometryTest):
     @classmethod
     def setup_class(cls):
         config.load('LPD', 'FXE')
@@ -431,7 +464,7 @@ class TestLpdAssembler:
                 self._assembler.process(data)
 
 
-class TestDSSCAssembler:
+class TestDSSCAssembler(_AssemblerGeometryTest):
     @classmethod
     def setup_class(cls):
         config.load('DSSC', 'SCS')

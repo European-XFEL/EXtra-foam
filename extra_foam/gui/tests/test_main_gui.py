@@ -122,6 +122,16 @@ class TestMainGuiCtrl(unittest.TestCase):
             self.assertEqual(index, win._poi_roi_hists[i]._index)
         win.close()
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onMaWindowChange(111)
+        mediator.onPoiIndexChange(0, 22)
+        mediator.onPoiIndexChange(1, 33)
+        widget.loadMetaData()
+        self.assertEqual("111", widget._ma_window_le.text())
+        self.assertEqual("22", widget._poi_index_les[0].text())
+        self.assertEqual("33", widget._poi_index_les[1].text())
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -136,10 +146,8 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertIsInstance(pp_proc._indices_on[0], int)
-        self.assertListEqual([-1], pp_proc._indices_off)
-        self.assertIsInstance(pp_proc._indices_off[0], int)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         # change analysis type
         pp_proc._reset = False
@@ -175,14 +183,28 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._off_pulse_le.setText('1:10:2')
         pp_proc.update()
         self.assertEqual(PumpProbeMode.EVEN_TRAIN_ON, pp_proc._mode)
-        self.assertListEqual([0, 2, 4, 6, 8], pp_proc._indices_on)
-        self.assertListEqual([1, 3, 5, 7, 9], pp_proc._indices_off)
+        self.assertEqual(slice(0, 10, 2), pp_proc._indices_on)
+        self.assertEqual(slice(1, 10, 2), pp_proc._indices_off)
 
         # test reset button
         pp_proc._reset = False
         widget._reset_btn.clicked.emit()
         pp_proc.update()
         self.assertTrue(pp_proc._reset)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onPpAnalysisTypeChange(AnalysisType.AZIMUTHAL_INTEG)
+        mediator.onPpModeChange(PumpProbeMode.ODD_TRAIN_ON)
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([1, None, 2])
+        mediator.onPpAbsDifferenceChange(True)
+        widget.loadMetaData()
+        self.assertEqual("azimuthal integ", widget._analysis_type_cb.currentText())
+        self.assertEqual("odd/even train", widget._mode_cb.currentText())
+        self.assertEqual(True, widget._abs_difference_cb.isChecked())
+        self.assertEqual("0::2", widget._on_pulse_le.text())
+        self.assertEqual("1::2", widget._off_pulse_le.text())
 
     def testDataSourceWidget(self):
         from extra_foam.gui.ctrl_widgets.data_source_widget import DataSourceWidget
@@ -227,6 +249,16 @@ class TestMainGuiCtrl(unittest.TestCase):
         filter_train.update()
         self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
         self.assertTupleEqual((-2, 2), filter_train._fom_range)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onFomFilterAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onFomFilterRangeChange((-10, 10))
+        mediator.onFomFilterPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("-10, 10", widget._fom_range_le.text())
+        self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
     def testCorrelationCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.correlation_ctrl_widget import (
@@ -320,6 +352,32 @@ class TestMainGuiCtrl(unittest.TestCase):
             proc.update()
             self.assertTrue(proc._reset)
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onCorrelationAnalysisTypeChange(AnalysisType.UNDEFINED)
+        if config["TOPIC"] == "FXE":
+            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
+        else:
+            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
+        mediator.onCorrelationParamChange((1, f'{motor_id} actualPosition', 0.0))
+        mediator.onCorrelationParamChange((2, 'ABC abc', 2.0))
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
+        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
+        self.assertEqual('0.0', widget._table.cellWidget(0, 3).text())
+        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
+        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
+        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
+        self.assertEqual('2.0', widget._table.cellWidget(1, 3).text())
+
+        mediator.onCorrelationParamChange((1, f'', 0.0))
+        widget.loadMetaData()
+        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual('', widget._table.cellWidget(0, 1).text())
+        self.assertEqual('', widget._table.cellWidget(0, 2).text())
+
     def testBinCtrlWidget(self):
         from extra_foam.gui.ctrl_widgets.bin_ctrl_widget import (
             _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE, _N_PARAMS
@@ -329,8 +387,8 @@ class TestMainGuiCtrl(unittest.TestCase):
 
         widget = self.gui.bin_ctrl_widget
 
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
-        bin_modes = {value: key for key, value in widget._bin_modes.items()}
+        analysis_types_inv = widget._analysis_types_inv
+        bin_modes_inv = widget._bin_modes_inv
 
         for i in range(_N_PARAMS):
             combo_lst = [widget._table.cellWidget(i, 0).itemText(j)
@@ -355,8 +413,8 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertEqual(int(_DEFAULT_N_BINS), proc._n_bins2)
 
         # test analysis type and mode change
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.PUMP_PROBE])
-        widget._mode_cb.setCurrentText(bin_modes[BinMode.ACCUMULATE])
+        widget._analysis_type_cb.setCurrentText(analysis_types_inv[AnalysisType.PUMP_PROBE])
+        widget._mode_cb.setCurrentText(bin_modes_inv[BinMode.ACCUMULATE])
         proc.update()
         self.assertEqual(AnalysisType.PUMP_PROBE, proc.analysis_type)
         self.assertEqual(BinMode.ACCUMULATE, proc._mode)
@@ -420,6 +478,36 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertTrue(win._bin2d_count._auto_level)
         win.close()
 
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onBinAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onBinModeChange(BinMode.AVERAGE)
+        if config["TOPIC"] == "FXE":
+            motor_id = 'FXE_SMS_USR/MOTOR/UM01'
+        else:
+            motor_id = 'SCS_ILH_LAS/MOTOR/LT3'
+        mediator.onBinParamChange((1, f'{motor_id} actualPosition', (-9, 9), 5))
+        mediator.onBinParamChange((2, 'ABC abc', (-19, 19), 15))
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("average", widget._mode_cb.currentText())
+        self.assertEqual('Motor', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual(motor_id, widget._table.cellWidget(0, 1).currentText())
+        self.assertEqual('actualPosition', widget._table.cellWidget(0, 2).currentText())
+        self.assertEqual('-9, 9', widget._table.cellWidget(0, 3).text())
+        self.assertEqual('5', widget._table.cellWidget(0, 4).text())
+        self.assertEqual(widget._user_defined_key, widget._table.cellWidget(1, 0).currentText())
+        self.assertEqual('ABC', widget._table.cellWidget(1, 1).text())
+        self.assertEqual('abc', widget._table.cellWidget(1, 2).text())
+        self.assertEqual('-19, 19', widget._table.cellWidget(1, 3).text())
+        self.assertEqual('15', widget._table.cellWidget(1, 4).text())
+
+        mediator.onBinParamChange((1, f'', (-9, 9), 5))
+        widget.loadMetaData()
+        self.assertEqual('', widget._table.cellWidget(0, 0).currentText())
+        self.assertEqual('', widget._table.cellWidget(0, 1).text())
+        self.assertEqual('', widget._table.cellWidget(0, 2).text())
+
     def testHistogramCtrlWidget(self):
         widget = self.gui.histogram_ctrl_widget
         train_worker = self.train_worker
@@ -456,6 +544,18 @@ class TestMainGuiCtrl(unittest.TestCase):
         widget._reset_btn.clicked.emit()
         proc.update()
         self.assertTrue(proc._reset)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onHistAnalysisTypeChange(AnalysisType.UNDEFINED)
+        mediator.onHistBinRangeChange((-10, 10))
+        mediator.onHistNumBinsChange(55)
+        mediator.onHistPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual("", widget._analysis_type_cb.currentText())
+        self.assertEqual("-10, 10", widget._bin_range_le.text())
+        self.assertEqual("55", widget._n_bins_le.text())
+        self.assertEqual(True, widget._pulse_resolved_cb.isChecked())
 
     @patch('extra_foam.gui.ctrl_widgets.PumpProbeCtrlWidget.'
            'updateMetaData', MagicMock(return_value=True))
@@ -708,6 +808,15 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
             self.assertFalse(widget._poi_index_les[i].isEnabled())
             self.assertEqual(0, idx)  # test default values
 
+        # test loading meta data
+        # Test if the meta data is invalid.
+        mediator = widget._mediator
+        mediator.onPoiIndexChange(0, 22)
+        mediator.onPoiIndexChange(1, 33)
+        widget.loadMetaData()
+        self.assertEqual("0", widget._poi_index_les[0].text())
+        self.assertEqual("0", widget._poi_index_les[1].text())
+
     def testPumpProbeCtrlWidget(self):
         widget = self.gui.pump_probe_ctrl_widget
         pp_proc = self.pulse_worker._pp_proc
@@ -715,15 +824,14 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget._on_pulse_le.isEnabled())
         self.assertFalse(widget._off_pulse_le.isEnabled())
 
-        all_modes = {value: key for key, value in
-                     widget._available_modes.items()}
+        all_modes = widget._available_modes_inv
 
         # we only test train-resolved detector specific configuration
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode.UNDEFINED, pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertListEqual([-1], pp_proc._indices_off)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         spy = QSignalSpy(widget._mode_cb.currentTextChanged)
 
@@ -732,8 +840,8 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         pp_proc.update()
         self.assertEqual(PumpProbeMode(PumpProbeMode.EVEN_TRAIN_ON), pp_proc._mode)
-        self.assertListEqual([-1], pp_proc._indices_on)
-        self.assertListEqual([-1], pp_proc._indices_off)
+        self.assertEqual(slice(None, None), pp_proc._indices_on)
+        self.assertEqual(slice(None, None), pp_proc._indices_off)
 
         widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.REFERENCE_AS_OFF])
         self.assertEqual(2, len(spy))
@@ -742,19 +850,30 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertFalse(widget._on_pulse_le.isEnabled())
 
         # PumpProbeMode.SAME_TRAIN is not available
-        widget._mode_cb.setCurrentText(all_modes[PumpProbeMode.SAME_TRAIN])
-        self.assertEqual(2, len(spy))
+        self.assertNotIn(PumpProbeMode.SAME_TRAIN, all_modes)
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onPpOnPulseSlicerChange([0, None, 2])
+        mediator.onPpOffPulseSlicerChange([0, None, 2])
+        widget.loadMetaData()
+        self.assertEqual(":", widget._on_pulse_le.text())
+        self.assertEqual(":", widget._off_pulse_le.text())
+
+        mediator.onPpModeChange(PumpProbeMode.SAME_TRAIN)
+        with self.assertRaises(KeyError):
+            widget.loadMetaData()
 
     def testFomFilterCtrlWidget(self):
         widget = self.gui.fom_filter_ctrl_widget
         filter_pulse = self.pulse_worker._filter
         filter_train = self.train_worker._filter
 
-        analysis_types = {value: key for key, value in widget._analysis_types.items()}
-
         # test default
 
         self.assertFalse(widget._pulse_resolved_cb.isChecked())
+        self.assertFalse(widget._pulse_resolved_cb.isEnabled())
 
         filter_pulse.update()
         self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
@@ -765,7 +884,7 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
 
         # test set new
 
-        widget._analysis_type_cb.setCurrentText(analysis_types[AnalysisType.ROI_FOM])
+        widget._analysis_type_cb.setCurrentText(widget._analysis_types_inv[AnalysisType.ROI_FOM])
         widget._fom_range_le.setText("-2, 2")
         filter_pulse.update()
         self.assertEqual(AnalysisType.UNDEFINED, filter_pulse.analysis_type)
@@ -774,6 +893,24 @@ class TestJungFrauMainGuiCtrl(unittest.TestCase):
         self.assertEqual(AnalysisType.ROI_FOM, filter_train.analysis_type)
         self.assertTupleEqual((-2, 2), filter_train._fom_range)
 
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onFomFilterPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual(False, widget._pulse_resolved_cb.isChecked())
+
     def testHistogramCtrlWidget(self):
-        # TODO
-        pass
+        widget = self.gui.histogram_ctrl_widget
+
+        # test default
+
+        self.assertFalse(widget._pulse_resolved_cb.isChecked())
+        self.assertFalse(widget._pulse_resolved_cb.isEnabled())
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onHistPulseResolvedChange(True)
+        widget.loadMetaData()
+        self.assertEqual(False, widget._pulse_resolved_cb.isChecked())

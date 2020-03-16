@@ -12,15 +12,24 @@ from collections import OrderedDict
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
-from .base_ctrl_widgets import _AbstractCtrlWidget, _AbstractGroupBoxCtrlWidget
+from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
-from ...config import RoiCombo, RoiProjType
+from ..gui_helpers import invert_dict
+from ...database import Metadata as mt
+from ...config import Normalizer, RoiCombo, RoiProjType
 
 
 class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up ROI 1D projection analysis parameters."""
 
-    _available_norms = _AbstractCtrlWidget._available_norms
+    _available_norms = OrderedDict({
+        "": Normalizer.UNDEFINED,
+        "AUC": Normalizer.AUC,
+        "XGM": Normalizer.XGM,
+        "DIGITIZER": Normalizer.DIGITIZER,
+        "ROI": Normalizer.ROI,
+    })
+    _available_norms_inv = invert_dict(_available_norms)
 
     _available_combos = OrderedDict({
         "ROI1": RoiCombo.ROI1,
@@ -28,11 +37,13 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI1 - ROI2": RoiCombo.ROI1_SUB_ROI2,
         "ROI1 + ROI2": RoiCombo.ROI1_ADD_ROI2,
     })
+    _available_combos_inv = invert_dict(_available_combos)
 
     _available_types = OrderedDict({
         "SUM": RoiProjType.SUM,
         "MEAN": RoiProjType.MEAN,
     })
+    _available_types_inv = invert_dict(_available_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("ROI projection setup", *args, **kwargs)
@@ -123,3 +134,16 @@ class RoiProjCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._auc_range_le.returnPressed.emit()
         self._fom_integ_range_le.returnPressed.emit()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.ROI_PROC)
+        self._combo_cb.setCurrentText(
+            self._available_combos_inv[int(cfg["proj:combo"])])
+        self._type_cb.setCurrentText(
+            self._available_types_inv[int(cfg["proj:type"])])
+        self._direct_cb.setCurrentText(cfg["proj:direct"])
+        self._norm_cb.setCurrentText(
+            self._available_norms_inv[int(cfg["proj:norm"])])
+        self._auc_range_le.setText(cfg["proj:auc_range"][1:-1])
+        self._fom_integ_range_le.setText(cfg["proj:fom_integ_range"][1:-1])
