@@ -127,10 +127,14 @@ class ImageRoiPulse(_RoiProcessorBase):
         """Override."""
         cfg = super().update()
 
-        self._geom1 = self.str2list(cfg[f'geom1'], handler=int)
-        self._geom2 = self.str2list(cfg[f'geom2'], handler=int)
-        self._geom3 = self.str2list(cfg[f'geom3'], handler=int)
-        self._geom4 = self.str2list(cfg[f'geom4'], handler=int)
+        geom1 = self.str2list(cfg[f'geom1'], handler=int)
+        self._geom1 = RectRoiGeom.INVALID if geom1[0] == 0 else geom1[2:]
+        geom2 = self.str2list(cfg[f'geom2'], handler=int)
+        self._geom2 = RectRoiGeom.INVALID if geom2[0] == 0 else geom2[2:]
+        geom3 = self.str2list(cfg[f'geom3'], handler=int)
+        self._geom3 = RectRoiGeom.INVALID if geom3[0] == 0 else geom3[2:]
+        geom4 = self.str2list(cfg[f'geom4'], handler=int)
+        self._geom4 = RectRoiGeom.INVALID if geom4[0] == 0 else geom4[2:]
 
     @profiler("ROI Processor (pulse)")
     def process(self, data):
@@ -244,6 +248,9 @@ class ImageRoiPulse(_RoiProcessorBase):
                     processed.pulse.roi.fom = fom1 - fom2
                 elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                     processed.pulse.roi.fom = fom1 + fom2
+                elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                    # nan and inf will propagate downstream
+                    processed.pulse.roi.fom = fom1 / fom2
                 else:
                     raise UnknownParameterError(
                         f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
@@ -271,8 +278,11 @@ class ImageRoiPulse(_RoiProcessorBase):
             if roi is None:
                 continue
 
-            processed.pulse.roi.hist[idx] = nanhist_with_stats(
-                roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                processed.pulse.roi.hist[idx] = nanhist_with_stats(
+                    roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
                 # skip the second one if two POIs have the same index
@@ -283,6 +293,8 @@ class ImageRoiTrain(_RoiProcessorBase):
     """Train-resolved ROI processor.
 
     Attributes:
+        _roi_fom_master_slave (bool): True for activating the ROI FOM
+            master-slave mode.
         _proj_combo (RoiCombo): ROI combination when calculating ROI
             projection.
         _proj_type (RoiProjType): ROI projection type.
@@ -318,6 +330,8 @@ class ImageRoiTrain(_RoiProcessorBase):
     def __init__(self):
         super().__init__()
 
+        self._roi_fom_master_slave = False
+
         self._proj_combo = RoiCombo.ROI1
         self._proj_type = RoiProjType.SUM
         self._proj_direct = 'x'
@@ -333,6 +347,8 @@ class ImageRoiTrain(_RoiProcessorBase):
         self._update_moving_average(g_cfg)
 
         cfg = super().update()
+
+        self._roi_fom_master_slave = cfg['fom:master_slave'] == 'True'
 
         self._proj_combo = RoiCombo(int(cfg['proj:combo']))
         self._proj_type = RoiProjType(int(cfg['proj:type']))
@@ -450,8 +466,11 @@ class ImageRoiTrain(_RoiProcessorBase):
 
         if roi is not None:
             hist = processed.roi.hist
-            hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
-                nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            try:
+                hist.hist, hist.bin_centers, hist.mean, hist.median, hist.std = \
+                    nanhist_with_stats(roi, self._hist_bin_range, self._hist_n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[ROI][histogram] {str(e)}")
 
     def _process_norm(self, processed):
         """Calculate train-resolved ROI normalizer."""
@@ -484,22 +503,31 @@ class ImageRoiTrain(_RoiProcessorBase):
         fom2 = self._compute_fom(self._roi2, self._fom_type)
 
         if self._fom_combo == RoiCombo.ROI1:
-            roi.fom = fom1
+            fom = fom1
         elif self._fom_combo == RoiCombo.ROI2:
-            roi.fom = fom2
+            fom = fom2
         else:
             if fom1 is None or fom2 is None:
                 return
 
             if self._fom_combo == RoiCombo.ROI1_SUB_ROI2:
-                roi.fom = fom1 - fom2
+                fom = fom1 - fom2
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
-                roi.fom = fom1 + fom2
+                fom = fom1 + fom2
+            elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                # nan and inf will propagate downstream
+                fom = np.divide(fom1, fom2)
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
 
-        # TODO: normalize
+        try:
+            if fom is not None:
+                roi.fom = self._normalize_fom(processed, fom, self._fom_norm)
+            if self._roi_fom_master_slave and fom2 is not None:
+                roi.fom_slave = self._normalize_fom(processed, fom2, self._fom_norm)
+        except ProcessingError as e:
+            logger.error(repr(e))
 
     def _process_norm_pump_probe(self, processed):
         """Calculate train-resolved pump-probe ROI normalizers."""
@@ -557,6 +585,10 @@ class ImageRoiTrain(_RoiProcessorBase):
             elif self._fom_combo == RoiCombo.ROI1_ADD_ROI2:
                 fom_on = fom1_on + fom2_on
                 fom_off = fom1_off + fom2_off
+            elif self._fom_combo == RoiCombo.ROI1_DIV_ROI2:
+                # nan and inf will propagate downstream
+                fom_on = np.divide(fom1_on, fom2_on)
+                fom_off = np.divide(fom1_off, fom2_off)
             else:
                 raise UnknownParameterError(
                     f"[ROI][FOM] Unknown ROI combo: {self._fom_combo}")
@@ -564,9 +596,12 @@ class ImageRoiTrain(_RoiProcessorBase):
         if fom_on is None:
             return
 
-        # TODO: normalize
-
-        pp.fom = fom_on - fom_off
+        try:
+            normalized_on, normalized_off = self._normalize_fom_pp(
+                processed, fom_on, fom_off, self._fom_norm)
+            pp.fom = normalized_on - normalized_off
+        except ProcessingError as e:
+            logger.error(repr(e))
 
     def _compute_proj(self, roi):
         if roi is None:
@@ -597,14 +632,17 @@ class ImageRoiTrain(_RoiProcessorBase):
 
         x = np.arange(len(proj))
 
-        normalized_proj = self._normalize_fom(
-            processed, proj, self._proj_norm, x=x, auc_range=self._proj_auc_range)
-        fom = np.sum(normalized_proj)
+        try:
+            normalized_proj = self._normalize_fom(
+                processed, proj, self._proj_norm, x=x, auc_range=self._proj_auc_range)
+            fom = np.sum(normalized_proj)
 
-        roi = processed.roi
-        roi.proj.x = x
-        roi.proj.y = normalized_proj
-        roi.proj.fom = fom
+            roi = processed.roi
+            roi.proj.x = x
+            roi.proj.y = normalized_proj
+            roi.proj.fom = fom
+        except ProcessingError as e:
+            logger.error(repr(e))
 
     def _process_proj_pump_probe(self, processed):
         """Calculate train-resolved pump-probe ROI projections."""
@@ -627,20 +665,23 @@ class ImageRoiTrain(_RoiProcessorBase):
 
         x = np.arange(len(y_on))
 
-        normalized_y_on, normalized_y_off = self._normalize_fom_pp(
-            processed, y_on, y_off, self._proj_norm,
-            x=x, auc_range=self._proj_auc_range)
+        try:
+            normalized_y_on, normalized_y_off = self._normalize_fom_pp(
+                processed, y_on, y_off, self._proj_norm,
+                x=x, auc_range=self._proj_auc_range)
 
-        normalized_y = normalized_y_on - normalized_y_off
+            normalized_y = normalized_y_on - normalized_y_off
 
-        sliced = slice_curve(normalized_y, x, *self._proj_fom_integ_range)[0]
-        if pp.abs_difference:
-            fom = np.sum(np.abs(sliced))
-        else:
-            fom = np.sum(sliced)
+            sliced = slice_curve(normalized_y, x, *self._proj_fom_integ_range)[0]
+            if pp.abs_difference:
+                fom = np.sum(np.abs(sliced))
+            else:
+                fom = np.sum(sliced)
 
-        pp.y_on = normalized_y_on
-        pp.y_off = normalized_y_off
-        pp.x = x
-        pp.y = normalized_y
-        pp.fom = fom
+            pp.y_on = normalized_y_on
+            pp.y_off = normalized_y_off
+            pp.x = x
+            pp.y = normalized_y
+            pp.fom = fom
+        except ProcessingError as e:
+            logger.error(repr(e))

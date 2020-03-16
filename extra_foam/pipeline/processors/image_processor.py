@@ -93,26 +93,26 @@ class ImageProcessor(_BaseProcessor):
         # image
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
 
-        self._correct_gain = cfg['correct gain'] == 'True'
-        self._correct_offset = cfg['correct offset'] == 'True'
+        self._correct_gain = cfg['correct_gain'] == 'True'
+        self._correct_offset = cfg['correct_offset'] == 'True'
 
-        gain_slicer = self.str2slice(cfg['gain slicer'])
+        gain_slicer = self.str2slice(cfg['gain_slicer'])
         if gain_slicer != self._gain_slicer:
             self._compute_gain_mean = True
             self._gain_slicer = gain_slicer
-        offset_slicer = self.str2slice(cfg['offset slicer'])
+        offset_slicer = self.str2slice(cfg['offset_slicer'])
         if offset_slicer != self._offset_slicer:
             self._compute_offset_mean = True
             self._offset_slicer = offset_slicer
 
-        dark_as_offset = cfg['dark as offset'] == 'True'
+        dark_as_offset = cfg['dark_as_offset'] == 'True'
         if dark_as_offset != self._dark_as_offset:
             self._compute_offset_mean = True
             self._dark_as_offset = dark_as_offset
 
-        self._recording_dark = cfg['recording dark'] == 'True'
-        if 'remove dark' in cfg:
-            self._meta.hdel(mt.IMAGE_PROC, 'remove dark')
+        self._recording_dark = cfg['recording_dark'] == 'True'
+        if 'remove_dark' in cfg:
+            self._meta.hdel(mt.IMAGE_PROC, 'remove_dark')
             del self._dark
             self._dark_mean = None
 
@@ -193,16 +193,20 @@ class ImageProcessor(_BaseProcessor):
     def _update_image_mask(self, image_shape):
         image_mask = self._mask_sub.update(self._image_mask, image_shape)
         if image_mask is not None and image_mask.shape != image_shape:
-            # This could only happen when the mask is loaded from the files
-            # and the image shapes in the ImageTool is different from the
-            # shape of the live images.
-            # The original image mask remains the same.
-            raise ImageProcessingError(
-                f"[Image processor] The shape of the image mask "
-                f"{image_mask.shape} is different from the shape of the image "
-                f"{image_shape}!")
+            if np.sum(image_mask) == 0:
+                # reset the empty image mask automatically
+                image_mask = None
+            else:
+                # This could only happen when the mask is loaded from the files
+                # and the image shapes in the ImageTool is different from the
+                # shape of the live images.
+                # The original image mask remains the same.
+                raise ImageProcessingError(
+                    f"[Image processor] The shape of the image mask "
+                    f"{image_mask.shape} is different from the shape of the image "
+                    f"{image_shape}!")
 
-        elif image_mask is None:
+        if image_mask is None:
             image_mask = np.zeros(image_shape, dtype=np.bool)
 
         self._image_mask = image_mask

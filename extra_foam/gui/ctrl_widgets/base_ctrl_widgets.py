@@ -8,12 +8,11 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 import abc
-from collections import OrderedDict
 
 from PyQt5.QtWidgets import QFrame, QGroupBox
 
 from ..mediator import Mediator
-from ...config import Normalizer
+from ...database import MetaProxy
 
 
 class _AbstractCtrlWidgetMixin:
@@ -37,6 +36,12 @@ class _AbstractCtrlWidgetMixin:
         raise NotImplementedError
 
     @abc.abstractmethod
+    def loadMetaData(self):
+        """Load metadata from Redis and set this control widget."""
+        # raise NotImplementedError
+        pass
+
+    @abc.abstractmethod
     def onStart(self):
         raise NotImplementedError
 
@@ -47,14 +52,6 @@ class _AbstractCtrlWidgetMixin:
 
 class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
 
-    _available_norms = OrderedDict({
-        "": Normalizer.UNDEFINED,
-        "AUC": Normalizer.AUC,
-        "XGM": Normalizer.XGM,
-        "DIGITIZER": Normalizer.DIGITIZER,
-        "ROI": Normalizer.ROI,
-    })
-
     def __init__(self, *, pulse_resolved=True, parent=None):
         """Initialization.
 
@@ -64,6 +61,7 @@ class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
         super().__init__(parent=parent)
 
         self._mediator = Mediator()
+        self._meta = MetaProxy()
 
         # widgets whose values are not allowed to change after the "run"
         # button is clicked
@@ -103,6 +101,7 @@ class _AbstractGroupBoxCtrlWidget(QGroupBox, _AbstractCtrlWidgetMixin):
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
 
         self._mediator = Mediator()
+        self._meta = MetaProxy()
 
         # widgets whose values are not allowed to change after the "run"
         # button is clicked

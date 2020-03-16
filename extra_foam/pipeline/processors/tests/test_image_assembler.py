@@ -21,7 +21,6 @@ import numpy as np
 from extra_foam.pipeline.processors.image_assembler import (
     _IMAGE_DTYPE, _RAW_IMAGE_DTYPE, ImageAssemblerFactory
 )
-from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.exceptions import AssemblingError
 from extra_foam.config import GeomAssembler, config, DataSource
 from extra_foam.database import SourceCatalog, SourceItem
@@ -65,19 +64,19 @@ def teardown_module(module):
     config.ROOT_PATH = module._backup_ROOT_PATH
 
 
-class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
+class TestAgipdAssembler:
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         config.load('AGIPD', random.choice(['SPB', 'MID']))
 
         cls._geom_file = config["GEOMETRY_FILE"]
         cls._quad_positions = config["QUAD_POSITIONS"]
 
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         os.remove(config.config_file)
 
-    def setUp(self):
+    def setup_method(self, method):
         self._assembler = ImageAssemblerFactory.create("AGIPD")
         self._assembler._load_geometry(self._geom_file, self._quad_positions)
 
@@ -86,6 +85,18 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
         src = f'{src_name} {key_name}'
         catalog.add_item(SourceItem('AGIPD', src_name, [], key_name, slice(None, None), None))
         return src, catalog
+
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        self._assembler._assembler_type = assembler_type
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions)
+
+        # test invalid file
+        with tempfile.NamedTemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions)
 
     def testGeneral(self):
         # Note: this test does not need to repeat for each detector
@@ -108,13 +119,13 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
             },
         }
 
-        with self.assertRaisesRegex(KeyError, "source_type"):
+        with pytest.raises(KeyError, match="source_type"):
             self._assembler.process(copy.deepcopy(data))
 
         data['meta'][src]["source_type"] = DataSource.FILE
         self._assembler.process(data)
-        self.assertEqual(10001, data['raw']['META timestamp.tid'])
-        self.assertIsNone(data['raw'][src])
+        assert 10001 == data['raw']['META timestamp.tid']
+        assert data['raw'][src] is None
 
     def testAssembleFileCal(self):
         self._runAssembleFileTest((4, 512, 128), _IMAGE_DTYPE)
@@ -155,7 +166,7 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
         key_name = 'image.data'
         src, catalog = self._create_catalog('SPB_DET_AGIPD1M-1/CAL/APPEND_CORRECTED', key_name)
 
-        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+        with pytest.raises(AssemblingError, match='Expected module shape'):
             data = {
                 'catalog': catalog,
                 'meta': {
@@ -170,11 +181,11 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
             }
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'modules, but'):
+        with pytest.raises(AssemblingError, match='modules, but'):
             data['raw'][src] = np.ones((4, 12, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
-        with self.assertRaisesRegex(AssemblingError, 'Number of memory cells'):
+        with pytest.raises(AssemblingError, match='Number of memory cells'):
             data['raw'][src] = np.ones((0, 16, 512, 128), dtype=_IMAGE_DTYPE)
             self._assembler.process(data)
 
@@ -201,7 +212,29 @@ class TestAgipdAssembler(_TestDataMixin, unittest.TestCase):
         _check_single_module_result(data, src, config["MODULE_SHAPE"])
 
 
-class TestLpdAssembler:
+class _AssemblerGeometryTest:
+    @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
+    def testInvalidGeometryFile(self, assembler_type):
+        import h5py
+
+        self._assembler._assembler_type = assembler_type
+        # test file does not exist
+        with pytest.raises(AssemblingError):
+            self._assembler._load_geometry("abc", self._quad_positions)
+
+        # test invalid file (file signature not found)
+        with tempfile.TemporaryFile() as fp:
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp, self._quad_positions)
+
+        # test invalid h5 file (component not found)
+        with tempfile.NamedTemporaryFile() as fp:
+            fph5 = h5py.File(fp.name, 'r+')
+            with pytest.raises(AssemblingError):
+                self._assembler._load_geometry(fp.name, self._quad_positions)
+
+
+class TestLpdAssembler(_AssemblerGeometryTest):
     @classmethod
     def setup_class(cls):
         config.load('LPD', 'FXE')
@@ -431,7 +464,7 @@ class TestLpdAssembler:
                 self._assembler.process(data)
 
 
-class TestDSSCAssembler:
+class TestDSSCAssembler(_AssemblerGeometryTest):
     @classmethod
     def setup_class(cls):
         config.load('DSSC', 'SCS')
@@ -815,6 +848,85 @@ class TestFastccdAssembler(unittest.TestCase):
 
         with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
             data['raw'][src] = np.ones((100, 100, 1), dtype=dtype)
+            self._assembler.process(data)
+
+
+class TestEPix100Assembler(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        config.load('ePix100', 'MID')
+
+    @classmethod
+    def tearDownClass(cls):
+        os.remove(config.config_file)
+
+    def setUp(self):
+        self._assembler = ImageAssemblerFactory.create("ePix100")
+
+    def _create_catalog(self, src_name, key_name):
+        catalog = SourceCatalog()
+        src = f'{src_name} {key_name}'
+        catalog.add_item(SourceItem('ePix100', src_name, [], key_name, None, None))
+        return src, catalog
+
+    def testAssembleFileCal(self):
+        self._runAssembleFileTest((708, 768), _IMAGE_DTYPE, 'data.image.pixels')
+
+    def testAssembleFileRaw(self):
+        self._runAssembleFileTest((708, 768), np.int16, 'data.image.pixels')
+
+    def _runAssembleFileTest(self, shape, dtype, key):
+        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.FILE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            data['raw'][src] = np.ones((100, 100))
+            self._assembler.process(data)
+
+    def testAssembleBridgeCal(self):
+        self._runAssembleBridgeTest((708, 768, 1), _IMAGE_DTYPE, "data.image")
+
+    def testAssembleBridgeRaw(self):
+        self._runAssembleBridgeTest((1, 708, 768), np.int16, "data.image.data")
+
+    def _runAssembleBridgeTest(self, shape, dtype, key):
+        src, catalog = self._create_catalog('MID_EXP_EPIX-1/DET/RECEIVER:daqOutput', key)
+
+        data = {
+            'catalog': catalog,
+            'meta': {
+                src: {
+                    'tid': 10001,
+                    'source_type': DataSource.BRIDGE,
+                }
+            },
+            'raw': {
+                src: np.ones(shape, dtype=dtype)
+            },
+        }
+
+        self._assembler.process(data)
+        self.assertIsNone(data['raw'][src])
+
+        with self.assertRaisesRegex(AssemblingError, 'Expected module shape'):
+            if dtype == _IMAGE_DTYPE:
+                data['raw'][src] = np.ones((100, 100, 1), dtype=dtype)
+            else:
+                data['raw'][src] = np.ones((1, 100, 100), dtype=np.int16)
             self._assembler.process(data)
 
 

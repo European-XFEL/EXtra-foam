@@ -1285,7 +1285,15 @@ class ViewBox(GraphicsWidget):
         
             useX = True
             useY = True
-            
+
+            # FIXME: patch in EXtra-foam
+            try:
+                if item.isEmptyGraph():
+                    continue
+            except AttributeError:
+                pass
+            # FIXME
+
             if hasattr(item, 'dataBounds'):
                 if frac is None:
                     frac = (1.0, 1.0)

@@ -13,7 +13,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
+from ..gui_helpers import invert_dict
 from ...config import RoiCombo, RoiFom
+from ...database import Metadata as mt
 
 
 class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -25,6 +27,7 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI3 - ROI4": RoiCombo.ROI3_SUB_ROI4,
         "ROI3 + ROI4": RoiCombo.ROI3_ADD_ROI4,
     })
+    _available_combos_inv = invert_dict(_available_combos)
 
     _available_types = OrderedDict({
         "SUM": RoiFom.SUM,
@@ -33,6 +36,7 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "MAX": RoiFom.MAX,
         "MIN": RoiFom.MIN,
     })
+    _available_types_inv = invert_dict(_available_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("ROI normalizer setup", *args, **kwargs)
@@ -80,3 +84,11 @@ class RoiNormCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._combo_cb.currentTextChanged.emit(self._combo_cb.currentText())
         self._type_cb.currentTextChanged.emit(self._type_cb.currentText())
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.ROI_PROC)
+        self._combo_cb.setCurrentText(
+            self._available_combos_inv[int(cfg["norm:combo"])])
+        self._type_cb.setCurrentText(
+            self._available_types_inv[int(cfg["norm:type"])])

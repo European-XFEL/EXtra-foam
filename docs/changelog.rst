@@ -1,6 +1,31 @@
 CHANGELOG
 =========
 
+0.8.1 (16 March 2020)
+------------------------
+
+- **Improvement**
+
+    - Automatically reset empty image mask with inconsistent shape. #104
+
+- **New Feature**
+
+    - Implement AGIPD 1M geometry in C++. #102
+    - Add ROI1_DIV_ROI2 as an option for ROI FOM. #103
+    - Implement normalization for ROI FOM. #96
+    - Implement ROI FOM master-slave scan. #93
+    - Add branch-based CI and Singularity image deployment. #92
+    - Add support for ePix100 detector. #90
+    - Implement save and load metadata. #87
+
+0.8.0.1 (3 March 2020)
+------------------------
+
+- **Bug Fix**
+
+    - Fix display bug in ImageTool #85
+
+
 0.8.0 (2 March 2020)
 ------------------------
 

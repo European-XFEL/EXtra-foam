@@ -14,7 +14,9 @@ from PyQt5.QtWidgets import QCheckBox, QComboBox, QGridLayout, QLabel
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartBoundaryLineEdit
+from ..gui_helpers import invert_dict
 from ...config import AnalysisType
+from ...database import Metadata as mt
 
 
 class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -24,6 +26,7 @@ class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "": AnalysisType.UNDEFINED,
         "ROI FOM": AnalysisType.ROI_FOM,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("FOM filter setup", *args, **kwargs)
@@ -77,3 +80,12 @@ class FomFilterCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._pulse_resolved_cb.toggled.emit(
             self._pulse_resolved_cb.isChecked())
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.FOM_FILTER_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+        self._fom_range_le.setText(cfg["fom_range"][1:-1])
+        if self._pulse_resolved:
+            self._pulse_resolved_cb.setChecked(cfg["pulse_resolved"] == 'True')

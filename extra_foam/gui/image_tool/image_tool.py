@@ -232,6 +232,11 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
                 return False
         return True
 
+    def loadMetaData(self):
+        """Load metadata from Redis and set child control widgets."""
+        for widget in self._ctrl_widgets:
+            widget.loadMetaData()
+
     def reset(self):
         """Override."""
         pass

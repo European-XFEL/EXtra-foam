@@ -8,6 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import OrderedDict
+import copy
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -15,19 +16,21 @@ from PyQt5.QtWidgets import (
 )
 
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
-from .smart_widgets import SmartIdLineEdit
+from .smart_widgets import SmartSliceLineEdit
+from ..gui_helpers import invert_dict, parse_slice_inv
 from ...config import PumpProbeMode, AnalysisType
+from ...database import Metadata as mt
 
 
 class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
     """Widget for setting up pump-probe analysis parameters."""
 
-    _available_modes = OrderedDict({
+    __available_modes = OrderedDict({
         "": PumpProbeMode.UNDEFINED,
         "reference as off": PumpProbeMode.REFERENCE_AS_OFF,
-        "same train": PumpProbeMode.SAME_TRAIN,
         "even/odd train": PumpProbeMode.EVEN_TRAIN_ON,
-        "odd/even train": PumpProbeMode.ODD_TRAIN_ON
+        "odd/even train": PumpProbeMode.ODD_TRAIN_ON,
+        "same train": PumpProbeMode.SAME_TRAIN,
     })
 
     _analysis_types = OrderedDict({
@@ -36,23 +39,24 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "ROI proj": AnalysisType.ROI_PROJ,
         "azimuthal integ": AnalysisType.AZIMUTHAL_INTEG,
     })
+    _analysis_types_inv = invert_dict(_analysis_types)
 
     def __init__(self, *args, **kwargs):
         super().__init__("Pump-probe setup", *args, **kwargs)
 
         self._mode_cb = QComboBox()
 
-        self._on_pulse_le = SmartIdLineEdit(":")
-        self._off_pulse_le = SmartIdLineEdit(":")
+        self._on_pulse_le = SmartSliceLineEdit(":")
+        self._off_pulse_le = SmartSliceLineEdit(":")
 
-        all_keys = list(self._available_modes.keys())
-        if self._pulse_resolved:
-            self._mode_cb.addItems(all_keys)
-        else:
-            all_keys.remove("same train")
-            self._mode_cb.addItems(all_keys)
+        self._available_modes = copy.copy(self.__available_modes)
+        self._available_modes_inv = invert_dict(self._available_modes)
+        if not self._pulse_resolved:
+            del self._available_modes["same train"]
+            del self._available_modes_inv[PumpProbeMode.SAME_TRAIN]
             self._on_pulse_le.setEnabled(False)
             self._off_pulse_le.setEnabled(False)
+        self._mode_cb.addItems(list(self._available_modes.keys()))
 
         self._analysis_type_cb = QComboBox()
         self._analysis_type_cb.addItems(list(self._analysis_types.keys()))
@@ -101,31 +105,45 @@ class PumpProbeCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
         self._mode_cb.currentTextChanged.connect(
             lambda x: mediator.onPpModeChange(self._available_modes[x]))
-
         self._mode_cb.currentTextChanged.connect(
             lambda x: self.onPpModeChange(self._available_modes[x]))
 
         self._on_pulse_le.value_changed_sgn.connect(
-            mediator.onPpOnPulseIdsChange)
-
+            mediator.onPpOnPulseSlicerChange)
         self._off_pulse_le.value_changed_sgn.connect(
-            mediator.onPpOffPulseIdsChange)
+            mediator.onPpOffPulseSlicerChange)
 
     def updateMetaData(self):
         """Override"""
-        self._abs_difference_cb.toggled.emit(
-            self._abs_difference_cb.isChecked())
-
         self._analysis_type_cb.currentTextChanged.emit(
             self._analysis_type_cb.currentText())
 
         self._mode_cb.currentTextChanged.emit(self._mode_cb.currentText())
 
         self._on_pulse_le.returnPressed.emit()
-
         self._off_pulse_le.returnPressed.emit()
 
+        self._abs_difference_cb.toggled.emit(
+            self._abs_difference_cb.isChecked())
+
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.PUMP_PROBE_PROC)
+        self._analysis_type_cb.setCurrentText(
+            self._analysis_types_inv[int(cfg["analysis_type"])])
+
+        self._mode_cb.setCurrentText(
+            self._available_modes_inv[int(cfg["mode"])])
+
+        self._abs_difference_cb.setChecked(cfg["abs_difference"] == 'True')
+
+        if self._pulse_resolved:
+            self._on_pulse_le.setText(
+                parse_slice_inv(cfg["on_pulse_slicer"]))
+            self._off_pulse_le.setText(
+                parse_slice_inv(cfg["off_pulse_slicer"]))
 
     def onPpModeChange(self, pp_mode):
         if not self._pulse_resolved:

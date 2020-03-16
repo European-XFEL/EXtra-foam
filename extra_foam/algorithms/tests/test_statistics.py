@@ -4,8 +4,8 @@ import math
 
 import numpy as np
 
-from extra_foam.algorithms import (
-    hist_with_stats, nanhist_with_stats, compute_statistics, find_actual_range,
+from extra_foam.algorithms.statistics_py import (
+    hist_with_stats, nanhist_with_stats, compute_statistics, _get_outer_edges,
     nanmean, nansum
 )
 
@@ -58,6 +58,11 @@ class TestStatistics:
         assert np.median(arr_gt) == median
         assert np.std(arr_gt) == pytest.approx(std)
 
+        # case 5 (finite outer edges cannot be found)
+        roi = np.array([[-np.inf, np.nan, 3], [np.nan, 5, 6]], dtype=np.float32)
+        with pytest.raises(ValueError):
+            nanhist_with_stats(roi, (-np.inf, np.inf), 4)
+
     def testHistWithStats(self):
         data = np.array([0, 1, 2, 3, 6, 0], dtype=np.float32)  # 1D
         hist, bin_centers, mean, median, std = hist_with_stats(data, (1, 3), 4)
@@ -79,40 +84,54 @@ class TestStatistics:
 
         # case 3 (elements have the same value)
         roi = np.array([[1, 1, 1], [1, 1, 1]], dtype=np.float32)  # 2D
-        hist, bin_centers, mean, median, std = nanhist_with_stats(roi, (0, 3), 4)
+        hist, bin_centers, mean, median, std = hist_with_stats(roi, (0, 3), 4)
         np.testing.assert_array_equal([0, 6, 0, 0], hist)
         np.testing.assert_array_equal([0.375, 1.125, 1.875, 2.625], bin_centers)
         assert 1 == mean
         assert 1 == median
         assert 0 == std
 
+        # case 4 (finite outer edges cannot be found)
+        roi = np.array([[np.inf, 2, 3], [4, 5, 6]], dtype=np.float32)
+        with pytest.raises(ValueError):
+            hist_with_stats(roi, (-np.inf, np.inf), 4)
+
     def testFindActualRange(self):
         arr = np.array([1, 2, 3, 4])
-        assert (-1.5, 2.5) == find_actual_range(arr, (-1.5, 2.5))
+        assert (-1.5, 2.5) == _get_outer_edges(arr, (-1.5, 2.5))
 
         arr = np.array([1, 2, 3, 4])
-        assert (1, 4) == find_actual_range(arr, (-math.inf, math.inf))
+        assert (1, 4) == _get_outer_edges(arr, (-math.inf, math.inf))
 
         arr = np.array([1, 1, 1, 1])
-        assert (0.5, 1.5) == find_actual_range(arr, (-math.inf, math.inf))
+        assert (0.5, 1.5) == _get_outer_edges(arr, (-math.inf, math.inf))
 
         arr = np.array([1, 2, 3, 4])
-        assert (3, 4) == find_actual_range(arr, (3, math.inf))
+        assert (3, 4) == _get_outer_edges(arr, (3, math.inf))
 
         arr = np.array([1, 2, 3, 4])
-        assert (4, 5) == find_actual_range(arr, (4, math.inf))
+        assert (4, 5) == _get_outer_edges(arr, (4, math.inf))
 
         arr = np.array([1, 2, 3, 4])
-        assert (5, 6) == find_actual_range(arr, (5, math.inf))
+        assert (5, 6) == _get_outer_edges(arr, (5, math.inf))
 
         arr = np.array([1, 2, 3, 4])
-        assert (0, 1) == find_actual_range(arr, (-math.inf, 1))
+        assert (0, 1) == _get_outer_edges(arr, (-math.inf, 1))
 
         arr = np.array([1, 2, 3, 4])
-        assert (-1, 0) == find_actual_range(arr, (-math.inf, 0))
+        assert (-1, 0) == _get_outer_edges(arr, (-math.inf, 0))
 
         arr = np.array([1, 2, 3, 4])
-        assert (-1, 0) == find_actual_range(arr, (-math.inf, 0))
+        assert (-1, 0) == _get_outer_edges(arr, (-math.inf, 0))
+
+        arr = np.array([1, 2, 3, -np.inf])
+        assert (-np.inf, 0) == _get_outer_edges(arr, (-math.inf, 0))
+
+        arr = np.array([1, 2, 3, np.inf])
+        assert (0, np.inf) == _get_outer_edges(arr, (0, math.inf))
+
+        arr = np.array([1, -np.inf, 3, np.inf])
+        assert (-np.inf, np.inf) == _get_outer_edges(arr, (-math.inf, math.inf))
 
     def testComputeStatistics(self):
         with np.warnings.catch_warnings():

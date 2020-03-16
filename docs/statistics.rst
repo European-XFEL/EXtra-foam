@@ -123,3 +123,6 @@ Setup the visualization of correlations of a given FOM with various slow data.
 
 .. image:: images/correlation_window.png
    :width: 800
+
+One can also plot FOMs of ROI1 and ROI2 together when the *master-slave* mode is activated in
+:ref:`ROI FOM setup`.

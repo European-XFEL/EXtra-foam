@@ -8,19 +8,22 @@ SOURCE:
                     - image.data
                 MID_DET_AGIPD1M-1/DET/*CH0:xtdf:
                     - image.data
+        ePix100:
+            PIPELINE:
+                # the property name for the raw data is 'data.image.data'
+                MID_EXP_EPIX-1/DET/RECEIVER:output:
+                    - data.image
+                MID_EXP_EPIX-2/DET/RECEIVER:output:
+                    - data.image
+                MID_EXP_EPIX-1/DET/RECEIVER:daqOutput:
+                    - data.image.pixels
+                MID_EXP_EPIX-2/DET/RECEIVER:daqOutput:
+                    - data.image.pixels
 
 DETECTOR:
     AGIPD:
+        # AGIPD uses the CFEL geometry format
         GEOMETRY_FILE: agipd_mar18_v11.geom
-        QUAD_POSITIONS:
-            x1: -526
-            y1:  630
-            x2: -549
-            y2:   -4
-            x3:  522
-            y3: -157
-            x4:  543
-            y4:  477
         BRIDGE_ADDR: 10.253.0.51
         BRIDGE_PORT:  45012
         LOCAL_ADDR: 127.0.0.1

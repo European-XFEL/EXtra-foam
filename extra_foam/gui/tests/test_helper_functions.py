@@ -3,7 +3,9 @@ import math
 
 import numpy as np
 
-from extra_foam.gui.gui_helpers import parse_boundary, parse_id, parse_slice
+from extra_foam.gui.gui_helpers import (
+    parse_boundary, parse_id, parse_slice, parse_slice_inv
+)
 
 
 class TestGUI(unittest.TestCase):
@@ -62,24 +64,39 @@ class TestGUI(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_slice("1:5:2:1")
 
-        self.assertEqual(slice(2), slice(*parse_slice('2')))
-        self.assertEqual(slice(2, 3), slice(*parse_slice('2:3')))
-        self.assertEqual(slice(-3, -1), slice(*parse_slice('-3:-1')))
-        self.assertEqual(slice(None), slice(*parse_slice(":")))
-        self.assertEqual(slice(2, None), slice(*parse_slice("2:")))
-        self.assertEqual(slice(None, 3), slice(*parse_slice(':3')))
-        self.assertEqual(slice(1, 4, 2), slice(*parse_slice('1:4:2')))
+        self.assertListEqual([None, 2], parse_slice('2'))
+        self.assertListEqual([None, 2], parse_slice(':2'))
+        self.assertListEqual([2, 3], parse_slice('2:3'))
+        self.assertListEqual([-3, -1], parse_slice('-3:-1'))
+        self.assertListEqual([None, None], parse_slice(":"))
+        self.assertListEqual([2, None], parse_slice("2:"))
+        self.assertListEqual([None, 3], parse_slice(':3'))
+        self.assertListEqual([1, 4, 2], parse_slice('1:4:2'))
         # input with space in between
-        self.assertEqual(slice(1, 4, 2), slice(*parse_slice(' 1 :  4 : 2   ')))
-        self.assertEqual(slice(1, -4, 2), slice(*parse_slice('1:-4:2')))
-        self.assertEqual(slice(2, None, 4), slice(*parse_slice('2::4')))
-        self.assertEqual(slice(1, 3, None), slice(*parse_slice('1:3:')))
-        self.assertEqual(slice(None, None, 4), slice(*parse_slice('::4')))
-        self.assertEqual(slice(2, None, None), slice(*parse_slice('2::')))
-        self.assertEqual(slice(None, None), slice(*parse_slice('::')))
+        self.assertListEqual([1, 4, 2], parse_slice(' 1 :  4 : 2   '))
+        self.assertListEqual([1, -4, 2], parse_slice('1:-4:2'))
+        self.assertListEqual([2, None, 4], parse_slice('2::4'))
+        self.assertListEqual([1, 3, None], parse_slice('1:3:'))
+        self.assertListEqual([None, None, 4], parse_slice('::4'))
+        self.assertListEqual([2, None, None], parse_slice('2::'))
+        self.assertListEqual([None, None, None], parse_slice('::'))
 
         with self.assertRaises(ValueError):
             parse_slice('2.0')
 
         with self.assertRaises(ValueError):
             parse_slice('2:3.0:2.0')
+
+    def testParseSliceInv(self):
+        with self.assertRaises(ValueError):
+            parse_slice_inv("")
+
+        with self.assertRaises(ValueError):
+            parse_slice_inv(":::")
+
+        with self.assertRaises(ValueError):
+            parse_slice_inv("1:a")
+
+        for s in [':2', '2:3', '-3:-1', ":", "2:", ':3', '1:4:2',
+                  '1:-4:2', '2::4', '1:3:', '::4', '2::', '::']:
+            self.assertEqual(s, parse_slice_inv(str(parse_slice(s))))

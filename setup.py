@@ -32,6 +32,9 @@ def find_version():
     with open(osp.join('extra_foam', '__init__.py')) as fp:
         for line in fp:
             m = re.search(r'^__version__ = "(\d+\.\d+\.\d[a-z]*\d*)"', line, re.M)
+            if m is None:
+                # could be a hotfix
+                m = re.search(r'^__version__ = "(\d.){3}\d"', line, re.M)
             if m is not None:
                 return m.group(1)
         raise RuntimeError("Unable to find version string.")

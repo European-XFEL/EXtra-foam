@@ -24,8 +24,8 @@ class PumpProbeProcessor(_BaseProcessor):
     Attributes:
         analysis_type (AnalysisType): pump-probe analysis type.
         _mode (PumpProbeMode): pump-probe analysis mode.
-        _indices_on (list): a list of laser-on pulse indices.
-        _indices_off (list): a list of laser-off pulse indices.
+        _indices_on (slice): a slicer for laser-on pulse indices.
+        _indices_off (slice): a slicer of laser-off pulse indices.
         _prev_unmasked_on (numpy.ndarray): the most recent on-pulse image.
         _prev_xi_on (double): the most recent xgm on-intensity.
         _prev_dpi_on (double): the most recent digitizer on-pulse-integral.
@@ -39,8 +39,8 @@ class PumpProbeProcessor(_BaseProcessor):
         self.analysis_type = AnalysisType.UNDEFINED
 
         self._mode = PumpProbeMode.UNDEFINED
-        self._indices_on = []
-        self._indices_off = []
+        self._indices_on = slice(None, None)
+        self._indices_off = slice(None, None)
 
         self._reset = False
         self._abs_difference = False
@@ -72,10 +72,8 @@ class PumpProbeProcessor(_BaseProcessor):
             # reset when commanded by the GUI
             self._reset = True
 
-        self._indices_on = self.str2list(
-            cfg['on_pulse_indices'], handler=int)
-        self._indices_off = self.str2list(
-            cfg['off_pulse_indices'], handler=int)
+        self._indices_on = self.str2slice(cfg['on_pulse_slicer'])
+        self._indices_off = self.str2slice(cfg['off_pulse_slicer'])
 
     @profiler("Pump-probe processor")
     def process(self, data):
@@ -173,13 +171,13 @@ class PumpProbeProcessor(_BaseProcessor):
         mode = self._mode
         if mode != PumpProbeMode.UNDEFINED:
 
-            self._parse_on_off_indices(assembled.shape)
+            indices_on, indices_off = self._parse_on_off_indices(assembled.shape)
 
             if assembled.ndim == 3:
-                self._validate_on_off_indices(assembled.shape[0])
+                self._validate_on_off_indices(indices_on, indices_off)
 
-            indices_on = list(set(self._indices_on) - set(dropped_indices))
-            indices_off = list(set(self._indices_off) - set(dropped_indices))
+            indices_on = list(set(indices_on) - set(dropped_indices))
+            indices_off = list(set(indices_off) - set(dropped_indices))
 
             # on and off are not from different trains
             if mode in (PumpProbeMode.REFERENCE_AS_OFF,
@@ -286,37 +284,18 @@ class PumpProbeProcessor(_BaseProcessor):
 
     def _parse_on_off_indices(self, shape):
         if len(shape) == 3:
-            # pulse-resolved
-            all_indices = list(range(shape[0]))
+            n_pulses = shape[0]
         else:
-            # train-resolved (indeed not used)
-            all_indices = [0]
+            n_pulses = 1
 
-        # convert [-1] to a list of indices
-        if self._indices_on[0] == -1:
-            self._indices_on = all_indices
-        if self._indices_off[0] == -1:
-            self._indices_off = all_indices
+        return (list(range(*self._indices_on.indices(n_pulses))),
+                list(range(*self._indices_off.indices(n_pulses))))
 
-    def _validate_on_off_indices(self, n_pulses):
-        """Check pulse index when on/off pulses in the same train.
-
-        Note: We can not check it in the GUI side since we do not know
-              how many pulses are there in the train.
-        """
-        # check index range
-        if self._mode == PumpProbeMode.REFERENCE_AS_OFF:
-            max_index = max(self._indices_on)
-        else:
-            max_index = max(max(self._indices_on), max(self._indices_off))
-
-        if max_index >= n_pulses:
-            raise PumpProbeIndexError(f"Index {max_index} is out of range for"
-                                      f" a train with {n_pulses} pulses!")
-
+    def _validate_on_off_indices(self, indices_on, indices_off):
+        """Check pulse index when on/off pulses in the same train."""
         if self._mode == PumpProbeMode.SAME_TRAIN:
             # check pulse index overlap in on- and off- indices
-            common = set(self._indices_on).intersection(self._indices_off)
+            common = set(indices_on).intersection(indices_off)
             if common:
                 raise PumpProbeIndexError(
                     "Pulse indices {} are found in both on- and off- pulses.".

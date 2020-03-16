@@ -12,8 +12,8 @@ import math
 import numpy as np
 
 from .base_processor import _BaseProcessor, SimpleSequence
-from ..exceptions import UnknownParameterError
-from ...algorithms import hist_with_stats, find_actual_range
+from ..exceptions import ProcessingError, UnknownParameterError
+from ...algorithms import hist_with_stats
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...config import AnalysisType
@@ -108,8 +108,11 @@ class HistogramProcessor(_BaseProcessor):
         data = self._fom.data()
         if data.size != 0:
             th = processed.hist
-            th.hist, th.bin_centers, th.mean, th.median, th.std = \
-                hist_with_stats(data, self._bin_range, self._n_bins)
+            try:
+                th.hist, th.bin_centers, th.mean, th.median, th.std = \
+                    hist_with_stats(data, self._bin_range, self._n_bins)
+            except ValueError as e:
+                raise ProcessingError(f"[Histogram] {str(e)}")
 
     def _process_poi(self, processed):
         """Calculate histograms of FOMs of POI pulses."""
@@ -121,8 +124,11 @@ class HistogramProcessor(_BaseProcessor):
 
             poi_fom = self._fom.data()[i::n_pulses]
             if poi_fom.size != 0:
-                processed.pulse.hist[i] = hist_with_stats(
-                    poi_fom, self._bin_range, self._n_bins)
+                try:
+                    processed.pulse.hist[i] = hist_with_stats(
+                        poi_fom, self._bin_range, self._n_bins)
+                except ValueError as e:
+                    raise ProcessingError(f"[Histogram] {str(e)}")
 
             if image_data.poi_indices[1] == image_data.poi_indices[0]:
                 # skip the second one if two POIs have the same index

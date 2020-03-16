@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton, QWidget
 from .base_ctrl_widgets import _AbstractGroupBoxCtrlWidget
 from .smart_widgets import SmartLineEdit
 from ...config import config
+from ...database import Metadata as mt
 
 
 class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
@@ -80,3 +81,11 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
             w.returnPressed.emit()
         self._ma_window_le.returnPressed.emit()
         return True
+
+    def loadMetaData(self):
+        """Override."""
+        cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+        self._ma_window_le.setText(cfg["ma_window"])
+        if self._pulse_resolved:
+            self._poi_index_les[0].setText(cfg["poi1_index"])
+            self._poi_index_les[1].setText(cfg["poi2_index"])

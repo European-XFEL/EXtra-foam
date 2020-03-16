@@ -43,7 +43,7 @@ class SmartLineEdit(QLineEdit):
             self._text_modified = True
 
     def setText(self, text):
-        """'Press enter' after setText.
+        """'Press enter after setText.
 
         This will remove the background color used when modified.
         """

@@ -41,6 +41,7 @@ class RoiCombo(IntEnum):
     ROI2 = 2
     ROI1_SUB_ROI2 = 3
     ROI1_ADD_ROI2 = 4
+    ROI1_DIV_ROI2 = 5
     ROI3 = 11
     ROI4 = 12
     ROI3_SUB_ROI4 = 13
@@ -274,8 +275,8 @@ class _Config(dict):
         "GUI_BACKGROUND_COLOR": (225, 225, 225, 255),
         # colors of for ROI bounding boxes 1 to 4
         "GUI_ROI_COLORS": ('b', 'r', 'g', 'o'),
-        # colors for correlation plots 1 to 4
-        "GUI_CORRELATION_COLORS": ('b', 'o', 'g', 'r'),
+        # colors (master, slave) for correlation plots 1 and 2
+        "GUI_CORRELATION_COLORS": (('b', 'r'), ('g', 'p')),
         # color of the image mask bounding box while drawing
         "GUI_MASK_BOUNDING_BOX_COLOR": 'b',
         # -------------------------------------------------------------
@@ -341,6 +342,13 @@ class _Config(dict):
             NUMBER_OF_MODULES=1,
             MODULE_SHAPE=(1934, 960),
             PIXEL_SIZE=0.030e-3),
+        "ePix100": _AreaDetectorConfig(
+            REDIS_PORT=6384,
+            PULSE_RESOLVED=False,
+            REQUIRE_GEOMETRY=False,
+            NUMBER_OF_MODULES=1,
+            MODULE_SHAPE=(708, 768),
+            PIXEL_SIZE=0.110e-3),
         "BaslerCamera": _AreaDetectorConfig(
             REDIS_PORT=6389,
             PULSE_RESOLVED=False,
@@ -517,6 +525,11 @@ class ConfigWrapper(abc.Mapping):
         raise ValueError("TOPIC is not specified!")
 
     @property
+    def setup_file(self):
+        detector = self._data['DETECTOR']
+        return osp.join(ROOT_PATH, f".{detector.lower()}.setup.yaml")
+
+    @property
     def control_sources(self):
         return self._data.control_sources
 
@@ -545,6 +558,9 @@ class ConfigWrapper(abc.Mapping):
 
         if detector == 'JUNGFRAUPR':
             return 'JungFrauPR'
+
+        if detector == 'EPIX100':
+            return 'ePix100'
 
         return detector.upper()
 

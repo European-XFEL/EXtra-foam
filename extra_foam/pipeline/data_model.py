@@ -329,6 +329,7 @@ class RoiDataTrain(DataItem):
 
     Attributes:
         geom1, geom2, geom3, geom4 (RectRoiGeom): ROI geometry.
+        fom_slave (float): ROI slave FOM.
         norm (float): ROI normalizer.
         proj (RoiProjData): ROI projection data item
         hist (_HistogramDataItem): ROI histogram data item.
@@ -337,7 +338,7 @@ class RoiDataTrain(DataItem):
     N_ROIS = len(config['GUI_ROI_COLORS'])
 
     __slots__ = ['geom1', 'geom2', 'geom3', 'geom4',
-                 'norm', 'proj', 'hist']
+                 'fom_slave', 'norm', 'proj', 'hist']
 
     def __init__(self):
         super().__init__()
@@ -346,6 +347,8 @@ class RoiDataTrain(DataItem):
         self.geom2 = RectRoiGeom()
         self.geom3 = RectRoiGeom()
         self.geom4 = RectRoiGeom()
+
+        self.fom_slave = None
 
         self.norm = None
         self.proj = DataItem()
@@ -601,11 +604,13 @@ class CorrelationData(collections.abc.Mapping):
 
     class CorrelationDataItem:
 
-        __slots__ = ['x', 'y', 'source', 'resolution']
+        __slots__ = ['x', 'y', 'x_slave', 'y_slave', 'source', 'resolution']
 
         def __init__(self):
             self.x = None
             self.y = None  # FOM
+            self.x_slave = None
+            self.y_slave = None  # FOM slave
             self.source = ""
             self.resolution = 0.0
 

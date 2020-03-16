@@ -24,6 +24,7 @@ _analysis_types = {
     'ROI': AnalysisType.ROI_FOM
 }
 
+
 class TestHistogramProcessor(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):

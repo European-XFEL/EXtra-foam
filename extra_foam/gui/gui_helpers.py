@@ -129,35 +129,6 @@ def parse_id(text):
     return sorted(ret)
 
 
-def parse_table_widget(widget):
-    """Parse a table widget to a list of list.
-
-    The inner list represents a row of the table.
-
-    :param QTableWidget widget: a table widget.
-
-    :return list: a list of table elements.
-
-    Examples:
-
-    For the following table,
-
-         col1 col2
-    row1   1   2
-    row2   3   4
-    row3   5   6
-
-    The return value is [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]].
-
-    TODO: add test
-    """
-    n_row, n_col = widget.rowCount(), widget.columnCount()
-    ret = []
-    for i in range(n_col):
-        ret.append([float(widget.item(j, i).text()) for j in range(n_row)])
-    return ret
-
-
 def parse_slice(text):
     """Parse a string into list which can be converted into a slice object.
 
@@ -195,6 +166,46 @@ def parse_slice(text):
         raise ValueError(err_msg)
 
 
+def parse_slice_inv(text):
+    """Parse a string into a slice notation.
+
+    This function inverts the result from 'parse_slice'.
+
+    :param str text: the input string.
+
+    :return str: the slice notation.
+
+    :raise ValueError
+
+    Examples:
+
+    parse_slice_inv('[None, None]') == ":"
+    parse_slice_inv('[1, 2]') == "1:2"
+    parse_slice_inv('[0, 10, 2]') == "0:10:2"
+    """
+    err_msg = f"Failed to convert '{text}' to a slice notation."
+
+    if len(text) > 1:
+        try:
+            parts = [None if v.strip() == 'None' else int(v)
+                     for v in text[1:-1].split(',')]
+        except ValueError:
+            raise ValueError(err_msg)
+
+        if len(parts) == 2:
+            s0 = '' if parts[0] is None else str(parts[0])
+            s1 = '' if parts[1] is None else str(parts[1])
+            return f"{s0}:{s1}"
+
+        if len(parts) == 3:
+            s0 = '' if parts[0] is None else str(parts[0])
+            s1 = '' if parts[1] is None else str(parts[1])
+            s2 = '' if parts[2] is None else str(parts[2])
+            return f"{s0}:{s1}:{s2}"
+
+    raise ValueError(err_msg)
+
+
 def create_icon_button(filename, size):
     """Create a QPushButton with icon.
 
@@ -208,3 +219,11 @@ def create_icon_button(filename, size):
     btn.setIconSize(QSize(size, size))
     btn.setFixedSize(btn.minimumSizeHint())
     return btn
+
+
+def invert_dict(mapping):
+    """Return a dictionary with key and value swapped."""
+    ret = dict()
+    for k, v in mapping.items():
+        ret[v] = k
+    return ret

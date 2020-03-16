@@ -4,7 +4,7 @@ INTRODUCTION
 **EXtra-foam** ( **F**\ ast **O**\ nline **A**\ nalysis **M**\ onitor) is a tool that provides
 real-time and off-line data analysis (**azimuthal integration**, **ROI**, **correlation**,
 **binning**, etc.) and visualization for experiments using **2D area detectors** (*AGIPD*,
-*DSSC* , *FastCCD*, *JungFrau*, *LPD*, etc.) at European XFEL.
+*LPD*, *DSSC* , *FastCCD*, *JungFrau*, *ePix100*, etc.) at European XFEL.
 
 
 +------------+-------------------------+-------------------------+
@@ -21,6 +21,8 @@ real-time and off-line data analysis (**azimuthal integration**, **ROI**, **corr
 | JungFrau   | False      | True       | True       | True       |
 +------------+------------+------------+------------+------------+
 | FastCCD    | True       | True       | True       | True       |
++------------+------------+------------+------------+------------+
+| ePix100    | True       | True       | True       | True       |
 +------------+------------+------------+------------+------------+
 
 
