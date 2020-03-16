@@ -23,7 +23,7 @@ real-time and off-line data analysis (**azimuthal integration**, **ROI**, **corr
 | FastCCD    | True       | True       | True       | True       |
 +------------+------------+------------+------------+------------+
 | ePix100    | True       | True       | True       | True       |
-------------------------------------------------------------------
++------------+------------+------------+------------+------------+
 
 
 Why use **EXtra-foam**
