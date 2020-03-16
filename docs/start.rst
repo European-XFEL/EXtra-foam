@@ -18,7 +18,7 @@ features than the **stable** version.
 
 .. code-block:: bash
 
-    module load exfel EXtra-foam
+    module load exfel EXtra-foam/beta
     extra-foam DETECTOR TOPIC
 
 More info on command line arguments can be obtained as
@@ -78,7 +78,7 @@ To start the **stable** version on online or `Maxwell` clusters:
 
 .. code-block:: bash
 
-    module load exfel EXtra-foam/beta
+    module load exfel EXtra-foam
     extra-foam DETECTOR TOPIC
 
 

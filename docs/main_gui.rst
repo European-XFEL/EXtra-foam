@@ -117,3 +117,51 @@ Statistics analysis
 -------------------
 
 See :ref:`statistics analysis`
+
+
+Configurator
+------------
+
+.. image:: images/configurator.png
+   :width: 640
+
+*Configurator* is a new feature introduced in version 0.8.1, it allows users to save and load
+different analysis setups (a snapshot in the Redis database) conveniently. To apply a setup,
+simply **double-click** the name of the snapshot listed in the table. Please distinguish it
+from :ref:`config file`, which is mainly used for data source management. Due to the historical
+reason, some setups in the :ref:`config file` can also be saved and loaded via the configurator,
+like ``photon energy``, ``sample distance``, etc. :ref:`config file` defines the default setups
+which will be overwritten when a setup snapshot is applied. The default setups can be recovered by
+clicking the ``Reset to default`` button.
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Take snapshot``          | Take a snapshot of the current setup and store in ``Last saved``.  |
++----------------------------+--------------------------------------------------------------------+
+| ``Reset to default``       | Reset the current setup to default. ``Last saved`` will not be     |
+|                            | affected.                                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``Save setups in file``    | Save all the snapshots listed in the table to file. All the        |
+|                            | snapshots in the setup file will be lost.                          |
++----------------------------+--------------------------------------------------------------------+
+| ``Load setups from file``  | Load all the snapshots from file. In case of name conflict, the    |
+|                            | listed snapshot in the table will be overwritten.                  |
++----------------------------+--------------------------------------------------------------------+
+
+When right-clicking the name of a snapshot, a menu will show up:
+
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Copy snapshot``          | Make a copy of the snapshot.                                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Delete snapshot``        | Delete the snapshot.                                               |
++----------------------------+--------------------------------------------------------------------+
+| ``Rename snapshot``        | Rename the snapshot.                                               |
++----------------------------+--------------------------------------------------------------------+
+
+.. warning::
+
+    *Configurator* is still in the testing phase and we are collecting feedbacks from users.
+    It should be noted that there is no backup recovery mechanism for now.
