@@ -10,18 +10,29 @@ PUMP-PROBE ANALYSIS
    :width: 800
 
 
-In the *pump-probe* analysis, the average (nanmean_) images of the on- and off- pulses are
-calculated by
+In the *pump-probe* analysis, the average (nanmean_) images of the on- and off- pulses
+in a train are calculated by
 
 .. math::
 
-   \bar{I}_{on} = \Sigma I_{on} / N_{on}
+   \bar{A}_{on} = \Sigma A_{on} / N_{on}
 
-   \bar{I}_{off} = \Sigma I_{off} / N_{off} .
+   \bar{A}_{off} = \Sigma A_{off} / N_{off}.
 
-Then, moving averages of VFOM (on) and VFOM (off) for :math:`\bar{I}_{on}` and :math:`\bar{I}_{off}`
-will be calculated, respectively, depending on the specified analysis type. The VFOM of *pump-probe*
-analysis is given by VFOM (on) - VFOM (off).
+If the sub-:ref:`Analysis type` has VFOM, the VFOM :math:`K_v` and FOM :math:`K` are
+given by
+
+.. math::
+
+   K_v = f(\bar{A}_{on}) - f(\bar{A}_{off})
+
+   K = \Sigma K_v.
+
+Otherwise, FOM :math:`K` is given by
+
+.. math::
+
+   K = g(\bar{A}_{on}) - g(\bar{A}_{off}).
 
 +------------------------------+--------------------------------------------------------------------+
 | Input                        | Description                                                        |
