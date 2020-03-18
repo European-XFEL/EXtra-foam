@@ -32,6 +32,10 @@ Image control
 | ``Threshold mask``         | An interval that pixel values outside the interval are set to 0.   |
 |                            | Please distinguish *threshold mask* from clipping_.                |
 +----------------------------+--------------------------------------------------------------------+
+| ``Mask tile edges``        | Mask the edge pixel of each tile. *Only applicable for AGIPD, LPD  |
+|                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
+|                            | :ref:`Geometry`.                                                   |
++----------------------------+--------------------------------------------------------------------+
 | ``Save image``             | Save the current image to file. Please also see ImageFileFormat_   |
 +----------------------------+--------------------------------------------------------------------+
 
@@ -259,6 +263,9 @@ aforementioned coordinate system, respectively.
 | ``FOM range (1/A)``        | Integration range when calculating the figure-of-merit of the      |
 |                            | azimuthal integration result.                                      |
 +----------------------------+--------------------------------------------------------------------+
+
+
+.. _Geometry:
 
 
 Geometry

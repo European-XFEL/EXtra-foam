@@ -71,6 +71,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
                                                pulse_resolved=self.gui._pulse_resolved,
+                                               require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
 
@@ -84,7 +85,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testGeneral(self):
         self.assertEqual(10, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
+        self.assertTrue(self.image_tool._require_geometry)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
+        self.assertTrue(self.image_tool._geometry_view._ctrl_widget._require_geometry)
 
     def testUpdateImage(self):
         widget = self.image_tool._image_ctrl_widget
@@ -197,30 +200,38 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # moving average is disabled
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
-    @patch("extra_foam.gui.plot_widgets.image_views.ImageAnalysis."
-           "onThresholdMaskChange")
-    def testThresholdMask(self, on_mask):
+    def testImageCtrlWidget(self):
         widget = self.image_tool._image_ctrl_widget
-
-        with patch.object(widget._mediator, "onImageThresholdMaskChange") as patched:
-            widget.threshold_mask_le.clear()
-            QTest.keyClicks(widget.threshold_mask_le, "1, 10")
-            QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
-            on_mask.assert_called_once_with((1, 10))
-            patched.assert_called_once_with((1, 10))
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onImageThresholdMaskChange((-100, 10000))
-        widget.loadMetaData()
-        self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
-
-    def testAutoLevel(self):
-        widget = self.image_tool._image_ctrl_widget
+        proc = self.pulse_worker._image_proc
+        assembler = self.pulse_worker._assembler
 
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
+
+        # test default
+        proc.update()
+        self.assertEqual((-1e5, 1e5), proc._threshold_mask)
+
+        assembler.update()
+        self.assertEqual(False, assembler._mask_tile)
+
+        # test set new value
+        widget.threshold_mask_le.setText("1, 10")
+        proc.update()
+        self.assertEqual((1, 10), proc._threshold_mask)
+
+        widget.mask_tile_cb.setChecked(True)
+        assembler.update()
+        self.assertEqual(True, assembler._mask_tile)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onImageThresholdMaskChange((-100, 10000))
+        mediator.onImageMaskTileEdgeChange(False)
+        widget.loadMetaData()
+        self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
+        self.assertEqual(False, widget.mask_tile_cb.isChecked())
 
     def testReferenceCtrlWidget(self):
         widget = self.image_tool._reference_view._ctrl_widget
@@ -725,8 +736,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("-5, 5", widget._fom_integ_range_le.text())
 
     def testGeometryCtrlWidget(self):
-        from extra_geom import LPD_1MGeometry as LPD_1MGeometry
-        from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.config import GeomAssembler
         from extra_foam.gui.ctrl_widgets.geometry_ctrl_widget import _parse_table_widget
 
@@ -734,36 +743,45 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
+        image_ctrl_widget = self.image_tool._image_ctrl_widget
 
         proc = self.pulse_worker._assembler
 
         # test default
-        self.assertTrue(widget.updateMetaData())
         proc.update()
-        self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
         self.assertFalse(proc._stack_only)
         self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
         self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], proc._quad_position)
 
-        # test setting new values
-        avail_assemblers = {value: key for key, value in widget._assemblers.items()}
-        widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
+        # prepare for the following test
         widget._stack_only_cb.setChecked(True)
+        image_ctrl_widget.mask_tile_cb.setChecked(True)
+        proc.update()
+        self.assertTrue(proc._stack_only)
+        self.assertTrue(proc._mask_tile)
+
+        # test setting new values
+        assemblers_inv = widget._assemblers_inv
+        widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.EXTRA_GEOM])
+        self.assertFalse(widget._stack_only_cb.isEnabled())
+        self.assertFalse(widget._stack_only_cb.isChecked())
+        self.assertFalse(image_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertFalse(image_ctrl_widget.mask_tile_cb.isChecked())
         widget._geom_file_le.setText("/geometry/file/")
         for i in range(4):
             for j in range(2):
                 widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
-        proc.update()
-        self.assertTrue(proc._stack_only)
-        # when "stack only" is checked, "assembler type" setup will be ignored
-        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
-        self.assertEqual("/geometry/file/", proc._geom_file)
-        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
-
-        widget._stack_only_cb.setChecked(False)
         with patch.object(proc, "_load_geometry"):
             proc.update()
         self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
+        self.assertFalse(proc._stack_only)
+        self.assertFalse(proc._mask_tile)
+        self.assertEqual("/geometry/file/", proc._geom_file)
+        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
+
+        widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
+        self.assertTrue(widget._stack_only_cb.isEnabled())
+        self.assertTrue(image_ctrl_widget.mask_tile_cb.isEnabled())
 
         # test loading meta data
         mediator = widget._mediator
@@ -833,12 +851,15 @@ class TestImageToolTs(unittest.TestCase):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
                                                pulse_resolved=self.gui._pulse_resolved,
+                                               require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
 
     def testGeneral(self):
         self.assertFalse(self.image_tool._pulse_resolved)
+        self.assertFalse(self.image_tool._require_geometry)
         self.assertFalse(self.image_tool._image_ctrl_widget._pulse_resolved)
+        self.assertFalse(self.image_tool._geometry_view._ctrl_widget._require_geometry)
 
     def testMovingAverageQLineEdit(self):
         # TODO: remove it in the future
@@ -850,6 +871,17 @@ class TestImageToolTs(unittest.TestCase):
         cw = self.image_tool._views_tab
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
+
+    def testImageCtrlWidget(self):
+        widget = self.image_tool._image_ctrl_widget
+        self.assertEqual(-1, widget.layout().indexOf(widget.mask_tile_cb))
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onImageMaskTileEdgeChange(True)
+        widget.loadMetaData()
+        self.assertEqual(False, widget.mask_tile_cb.isChecked())
 
     def testCalibrationCtrlWidget(self):
         widget = self.image_tool._gain_offset_view._ctrl_widget

@@ -221,6 +221,8 @@ class ImageAssemblerFactory(ABC):
                 the detector modules.
             _stack_only (bool): whether simply stack all modules seamlessly
                 together.
+            _mask_tile (bool): whether to mask the tile of each module
+                if applicable.
             _assembler_type (GeomAssembler): Type of geometry assembler,
                 which can be EXtra-foam or EXtra-geom.
             _geom_file (str): full path of the geometry file.
@@ -235,6 +237,7 @@ class ImageAssemblerFactory(ABC):
 
             self._require_geom = config['REQUIRE_GEOMETRY']
             self._stack_only = False
+            self._mask_tile = False
             self._assembler_type = None
             self._geom_file = None
             self._quad_position = None
@@ -247,13 +250,21 @@ class ImageAssemblerFactory(ABC):
 
                 assembler_type = GeomAssembler(int(cfg["assembler"]))
                 stack_only = cfg["stack_only"] == 'True'
-                if stack_only:
-                    # ignore "assembler" setup
-                    assembler_type = GeomAssembler.OWN
-
                 geom_file = cfg["geometry_file"]
                 quad_positions = json.loads(cfg["quad_positions"],
                                             encoding='utf8')
+
+                image_proc_cfg = self._meta.hget_all(mt.IMAGE_PROC)
+                mask_tile = image_proc_cfg["mask_tile"] == 'True'
+                if mask_tile != self._mask_tile:
+                    self._mask_tile = mask_tile
+                    if mask_tile:
+                        # Reset the out array when mask_tile is switched from
+                        # False to True. Otherwise, edge pixels from the
+                        # previous train will remain there forever as the
+                        # "mask_tile" here is actually called
+                        # "ignore_tile_edge" in the corresponding function.
+                        self._out_array = None
 
                 # reload geometry if any of the following 4 fields changed
                 if stack_only != self._stack_only or \
@@ -321,9 +332,10 @@ class ImageAssemblerFactory(ABC):
                 if self._out_array is None or self._out_array.shape[0] != n_pulses:
                     self._out_array = self._geom.output_array_for_position_fast(
                         extra_shape=(n_pulses, ), dtype=image_dtype)
-
                 try:
-                    self._geom.position_all_modules(modules, out=self._out_array)
+                    self._geom.position_all_modules(modules,
+                                                    out=self._out_array,
+                                                    ignore_tile_edge=self._mask_tile)
                 # EXtra-foam raises ValueError while EXtra-geom raises
                 # AssertionError if the shape of the output array does not
                 # match the expected one, e.g. after a change of quadrant
@@ -332,7 +344,9 @@ class ImageAssemblerFactory(ABC):
                     # recreate the output array
                     self._out_array = self._geom.output_array_for_position_fast(
                         extra_shape=(n_pulses, ), dtype=image_dtype)
-                    self._geom.position_all_modules(modules, out=self._out_array)
+                    self._geom.position_all_modules(modules,
+                                                    out=self._out_array,
+                                                    ignore_tile_edge=self._mask_tile)
 
                 return self._out_array
 
@@ -460,7 +474,7 @@ class ImageAssemblerFactory(ABC):
 
         def _load_geometry(self, filename, quad_positions):
             """Override."""
-            if self._assembler_type == GeomAssembler.OWN or self._stack_only:
+            if self._assembler_type == GeomAssembler.OWN:
                 from ...geometries import AGIPD_1MGeometryFast
 
                 if self._stack_only:
@@ -474,7 +488,7 @@ class ImageAssemblerFactory(ABC):
                     except Exception as e:
                         raise AssemblingError(e)
             else:
-                from extra_geom import AGIPD_1MGeometry
+                from ...geometries import AGIPD_1MGeometry
 
                 try:
                     # catch any exceptions here since it loads the CFEL
@@ -520,8 +534,7 @@ class ImageAssemblerFactory(ABC):
 
         def _load_geometry(self, filename, quad_positions):
             """Override."""
-            if self._assembler_type == GeomAssembler.OWN \
-                    or self._stack_only:
+            if self._assembler_type == GeomAssembler.OWN:
                 from ...geometries import LPD_1MGeometryFast
 
                 if self._stack_only:
@@ -533,7 +546,7 @@ class ImageAssemblerFactory(ABC):
                     except (OSError, KeyError) as e:
                         raise AssemblingError(f"[Geometry] {e}")
             else:
-                from extra_geom import LPD_1MGeometry
+                from ...geometries import LPD_1MGeometry
 
                 try:
                     self._geom = LPD_1MGeometry.from_h5_file_and_quad_positions(
@@ -577,8 +590,7 @@ class ImageAssemblerFactory(ABC):
 
         def _load_geometry(self, filename, quad_positions):
             """Override."""
-            if self._assembler_type == GeomAssembler.OWN \
-                    or self._stack_only:
+            if self._assembler_type == GeomAssembler.OWN:
                 from ...geometries import DSSC_1MGeometryFast
 
                 if self._stack_only:
@@ -590,7 +602,7 @@ class ImageAssemblerFactory(ABC):
                     except (OSError, KeyError) as e:
                         raise AssemblingError(f"[Geometry] {e}")
             else:
-                from extra_geom import DSSC_1MGeometry
+                from ...geometries import DSSC_1MGeometry
 
                 try:
                     self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(

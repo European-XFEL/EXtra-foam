@@ -109,6 +109,7 @@ class MainGUI(QMainWindow):
         self._input = MpInQueue(self._input_update_ev, pause_ev, close_ev)
 
         self._pulse_resolved = config["PULSE_RESOLVED"]
+        self._require_geometry = config["REQUIRE_GEOMETRY"]
         self._queue = deque(maxlen=1)
 
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -268,6 +269,7 @@ class MainGUI(QMainWindow):
         # control window.
         self._image_tool = ImageToolWindow(queue=self._queue,
                                            pulse_resolved=self._pulse_resolved,
+                                           require_geometry=self._require_geometry,
                                            parent=self)
 
         self.initUI()
@@ -281,7 +283,8 @@ class MainGUI(QMainWindow):
         self.show()
 
     def createCtrlWidget(self, widget_class):
-        widget = widget_class(pulse_resolved=self._pulse_resolved)
+        widget = widget_class(pulse_resolved=self._pulse_resolved,
+                              require_geometry=self._require_geometry)
         self._ctrl_widgets.append(widget)
         return widget
 
