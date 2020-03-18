@@ -13,6 +13,34 @@ from .imageproc_py import mask_image_data
 from .statistics import nanmean, nansum
 
 
+def nanstd(a, axis=None, dtype=None, *, normalized=False):
+    """Faster numpy.nanstd.
+
+    # TODO:
+
+    This is a wrapper over numpy.nanstd. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
+    """
+    if normalized:
+        return np.nanstd(a, axis=axis, dtype=dtype) / \
+               np.nanmean(a, axis=axis, dtype=dtype)
+    return np.nanstd(a, axis=axis, dtype=dtype)
+
+
+def nanvar(a, axis=None, dtype=None, *, normalized=False):
+    """Faster numpy.nanvar.
+
+    # TODO:
+
+    This is a wrapper over numpy.nanvar. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
+    """
+    if normalized:
+        return np.nanvar(a, axis=axis, dtype=dtype) / \
+               np.nanmean(a, axis=axis, dtype=dtype) ** 2
+    return np.nanvar(a, axis=axis, dtype=dtype)
+
+
 def _get_outer_edges(arr, range):
     """Determine the outer bin edges to use.
 

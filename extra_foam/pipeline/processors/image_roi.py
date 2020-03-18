@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import functools
 import math
 
 import numpy as np
@@ -21,7 +22,7 @@ from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom, RoiProjType
 
 from extra_foam.algorithms import (
-    intersection, mask_image_data
+    intersection, mask_image_data, nanstd, nanvar
 )
 
 
@@ -45,7 +46,11 @@ class _RoiProcessorBase(_BaseProcessor):
         RoiFom.MEAN: np.nanmean,
         RoiFom.MEDIAN: np.nanmedian,
         RoiFom.MAX: np.nanmax,
-        RoiFom.MIN: np.nanmin
+        RoiFom.MIN: np.nanmin,
+        RoiFom.STD: nanstd,
+        RoiFom.VAR: nanvar,
+        RoiFom.N_STD: functools.partial(nanstd, normalized=True),
+        RoiFom.N_VAR: functools.partial(nanvar, normalized=True)
     }
 
     def __init__(self):

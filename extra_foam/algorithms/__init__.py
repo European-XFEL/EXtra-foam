@@ -9,7 +9,7 @@ All rights reserved.
 """
 from .statistics_py import (
     hist_with_stats, nanhist_with_stats, compute_statistics,
-    nanmean, nansum
+    nanmean, nansum, nanstd, nanvar
 )
 
 from .miscellaneous import (
