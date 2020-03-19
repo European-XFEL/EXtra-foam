@@ -29,6 +29,9 @@ class Mediator(QObject):
     # geometry assembler
     assembler_change_sgn = pyqtSignal(object)
 
+    connection_change_sgn = pyqtSignal(object)
+    file_stream_initialized_sgn = pyqtSignal()
+
     bin_heatmap_autolevel_sgn = pyqtSignal()
 
     __instance = None
@@ -62,6 +65,8 @@ class Mediator(QObject):
         pipe.delete(mt.CONNECTION)
         pipe.hmset(mt.CONNECTION, connections)
         pipe.execute()
+
+        self.connection_change_sgn.emit(connections)
 
     def onSourceItemToggled(self, checked: bool, item: object):
         if checked:

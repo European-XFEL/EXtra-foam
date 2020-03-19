@@ -30,7 +30,7 @@ from .gui import MainGUI, mkQApp
 from .pipeline import PulseWorker, TrainWorker
 from .processes import register_foam_process
 from .utils import check_system_resource, query_yes_no
-from .gui.windows import FileStreamControllerWindow
+from .gui.windows import FileStreamWindow
 
 _CPU_INFO, _GPU_INFO, _MEMORY_INFO = check_system_resource()
 
@@ -310,15 +310,19 @@ class Foam:
 
 def application():
     parser = argparse.ArgumentParser(prog="extra-foam")
-    parser.add_argument('-V', '--version', action='version',
+    parser.add_argument('-V', '--version',
+                        action='version',
                         version="%(prog)s " + __version__)
-    parser.add_argument("detector", help="detector name (case insensitive)",
+    parser.add_argument("detector",
+                        help="detector name (case insensitive)",
                         choices=[det.upper() for det in config.detectors],
                         type=lambda s: s.upper())
-    parser.add_argument("topic", help="Name of the instrument",
+    parser.add_argument("topic",
+                        help="Name of the instrument",
                         choices=config.topics,
                         type=lambda s: s.upper())
-    parser.add_argument('--debug', action='store_true',
+    parser.add_argument('--debug',
+                        action='store_true',
                         help="Run in debug mode")
     parser.add_argument("--pipeline_slow_policy",
                         help="Pipeline policy when the processing rate is "
@@ -328,7 +332,8 @@ def application():
                         choices=[0, 1],
                         default=1,
                         type=int)
-    parser.add_argument("--redis_address", help="Address of the Redis server",
+    parser.add_argument("--redis_address",
+                        help="Address of the Redis server",
                         default="127.0.0.1",
                         type=lambda s: s.lower())
 
@@ -403,18 +408,15 @@ def kill_application():
 
 
 def stream_file():
-    ap = argparse.ArgumentParser(prog="extra-foam-stream")
-    ap.add_argument("detector", help="detector name (case insensitive)",
-                    choices=[det.upper() for det in config.detectors],
-                    type=lambda s: s.upper())
-    ap.add_argument("port", help="TCP port to run server on")
+    parser = argparse.ArgumentParser(prog="extra-foam-stream")
+    parser.add_argument("--port",
+                        help="TCP port to run server on",
+                        default="45454")
 
-    args = ap.parse_args()
-
-    detector = config.parse_detector_name(args.detector)
+    args = parser.parse_args()
 
     app = mkQApp()
-    streamer = FileStreamControllerWindow(detector=detector, port=args.port)
+    streamer = FileStreamWindow(port=args.port)
     app.exec_()
 
 

@@ -16,7 +16,7 @@ from extra_foam.gui import mkQApp
 from extra_foam.gui.windows import (
     BinningWindow, CorrelationWindow, HistogramWindow,
     PulseOfInterestWindow, PumpProbeWindow,
-    FileStreamControllerWindow, AboutWindow,
+    FileStreamWindow, AboutWindow,
 )
 from extra_foam.config import (
     config, AnalysisType, BinMode, PumpProbeMode,
@@ -720,7 +720,7 @@ class TestMainGuiCtrl(unittest.TestCase):
         self.assertIsInstance(about_window, AboutWindow)
 
         streamer_window = self._check_open_satellite_window(streamer_action)
-        self.assertIsInstance(streamer_window, FileStreamControllerWindow)
+        self.assertIsInstance(streamer_window, FileStreamWindow)
 
         # open one window twice
         self._check_open_satellite_window(about_action, registered=False)
