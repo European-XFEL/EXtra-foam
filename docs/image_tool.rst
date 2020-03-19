@@ -78,10 +78,11 @@ ROI FOM setup
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*,|
-|                            | and *ROI1 / ROI2*.                                                 |
+| ``Combo``                  | ROI combination, including *ROI1*, *ROI2*, *ROI1 + ROI2*,          |
+|                            | *ROI1 - ROI2*, and *ROI1 / ROI2*.                                  |
 +----------------------------+--------------------------------------------------------------------+
-| ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
+| ``FOM``                    | ROI FOM type, including *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.     |
+|                            | *STD*, *VAR*, *STD (norm)* and *VAR (norm)*.                       |
 +----------------------------+--------------------------------------------------------------------+
 | ``Norm``                   | Normalizer of ROI FOM. *Only applicable for train-resolved and     |
 |                            | pump-probe analysis*.                                              |
@@ -92,6 +93,11 @@ ROI FOM setup
 |                            | be plotted in the same correlation plot. For other statistics      |
 |                            | analysis like binning and histogram, only ROI1 FOM will be used.   |
 +----------------------------+--------------------------------------------------------------------+
+
+- *STD (norm)* is defined as the ratio between the standard deviation and the mean.
+
+- *VAR (norm)* is defined as the ratio between the variance and the square of the mean.
+
 
 ROI histogram setup
 """""""""""""""""""

@@ -54,6 +54,10 @@ class RoiFom(IntEnum):
     MEDIAN = 3
     MAX = 4
     MIN = 5
+    STD = 6  # standard deviation
+    VAR = 7  # variance
+    N_STD = 16  # normalized standard deviation (speckle contrast)
+    N_VAR = 17  # normalized variance (speckle contrast)
 
 
 class RoiProjType(IntEnum):

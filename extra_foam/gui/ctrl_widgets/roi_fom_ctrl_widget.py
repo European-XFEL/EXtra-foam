@@ -44,6 +44,10 @@ class RoiFomCtrlWidget(_AbstractGroupBoxCtrlWidget):
         "MEDIAN": RoiFom.MEDIAN,
         "MAX": RoiFom.MAX,
         "MIN": RoiFom.MIN,
+        "STD": RoiFom.STD,
+        "VAR": RoiFom.VAR,
+        "STD (norm)": RoiFom.N_STD,
+        "VAR (norm)": RoiFom.N_VAR,
     })
     _available_types_inv = invert_dict(_available_types)
 
