@@ -26,194 +26,145 @@ PYBIND11_MODULE(imageproc, m)
 
   m.doc() = "A collection of image processing functions.";
 
-  m.def("nanmeanImageArray", [] (const xt::pytensor<double, 3>& src)
-    { return nanmeanImageArray(src); },
-    py::arg("src").noconvert());
-  m.def("nanmeanImageArray", [] (const xt::pytensor<float, 3>& src)
-    { return nanmeanImageArray(src); },
-    py::arg("src").noconvert());
+#define FOAM_NANMEAN_IMAGE_ARRAY_IMPL(VALUE_TYPE)                                      \
+  m.def("nanmeanImageArray", [] (const xt::pytensor<VALUE_TYPE, 3>& src)               \
+    { return nanmeanImageArray(src); }, py::arg("src").noconvert());
 
-  m.def("nanmeanImageArray", [] (const xt::pytensor<double, 3>& src, const std::vector<size_t>& keep)
-    { return nanmeanImageArray(src, keep); },
-    py::arg("src").noconvert(), py::arg("keep"));
-  m.def("nanmeanImageArray", [] (const xt::pytensor<float, 3>& src, const std::vector<size_t>& keep)
-    { return nanmeanImageArray(src, keep); },
-    py::arg("src").noconvert(), py::arg("keep"));
+#define FOAM_NANMEAN_IMAGE_ARRAY_WITH_FILTER_IMPL(VALUE_TYPE)                                   \
+  m.def("nanmeanImageArray",                                                                    \
+    [] (const xt::pytensor<VALUE_TYPE, 3>& src, const std::vector<size_t>& keep)                \
+    { return nanmeanImageArray(src, keep); }, py::arg("src").noconvert(), py::arg("keep"));
 
-  m.def("nanmeanImageArray", [] (const xt::pytensor<double, 2>& src1, const xt::pytensor<double, 2>& src2)
-    { return nanmeanImageArray(src1, src2); },
-    py::arg("src1").noconvert(), py::arg("src2").noconvert());
-  m.def("nanmeanImageArray", [] (const xt::pytensor<float, 2>& src1, const xt::pytensor<float, 2>& src2)
-    { return nanmeanImageArray(src1, src2); },
+#define FOAM_NANMEAN_IMAGE_ARRAY_BINARY_IMPL(VALUE_TYPE)                                        \
+  m.def("nanmeanImageArray",                                                                    \
+    [] (const xt::pytensor<VALUE_TYPE, 2>& src1, const xt::pytensor<VALUE_TYPE, 2>& src2)       \
+    { return nanmeanImageArray(src1, src2); },                                                  \
     py::arg("src1").noconvert(), py::arg("src2").noconvert());
 
-  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<double, 2>>,
-                              py::arg("src").noconvert(), py::arg("data").noconvert(),
-                              py::arg("count"));
-  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<float, 2>>,
-                              py::arg("src").noconvert(), py::arg("data").noconvert(),
-                              py::arg("count"));
+  FOAM_NANMEAN_IMAGE_ARRAY_IMPL(double)
+  FOAM_NANMEAN_IMAGE_ARRAY_IMPL(float)
+  FOAM_NANMEAN_IMAGE_ARRAY_WITH_FILTER_IMPL(double)
+  FOAM_NANMEAN_IMAGE_ARRAY_WITH_FILTER_IMPL(float)
+  FOAM_NANMEAN_IMAGE_ARRAY_BINARY_IMPL(double)
+  FOAM_NANMEAN_IMAGE_ARRAY_BINARY_IMPL(float)
 
-  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<double, 3>>,
-                              py::arg("src").noconvert(), py::arg("data").noconvert(),
-                              py::arg("count"));
-  m.def("movingAvgImageData", &movingAvgImageData<xt::pytensor<float, 3>>,
-                              py::arg("src").noconvert(), py::arg("data").noconvert(),
-                              py::arg("count"));
+#define FOAM_MOVING_AVG_IMAGE_DATA_IMPL(VALUE_TYPE, N_DIM)                                     \
+  m.def("movingAvgImageData",                                                                  \
+    &movingAvgImageData<xt::pytensor<VALUE_TYPE, N_DIM>>,                                      \
+    py::arg("src").noconvert(), py::arg("data").noconvert(), py::arg("count"));
 
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<double, 2>>, py::arg("src").noconvert());
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<float, 2>>, py::arg("src").noconvert());
+  FOAM_MOVING_AVG_IMAGE_DATA_IMPL(double, 2)
+  FOAM_MOVING_AVG_IMAGE_DATA_IMPL(float, 2)
+  FOAM_MOVING_AVG_IMAGE_DATA_IMPL(double, 3)
+  FOAM_MOVING_AVG_IMAGE_DATA_IMPL(float, 3)
 
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<double, 2>&, double, double))
-                             &maskZeroImageData<xt::pytensor<double, 2>, double>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<float, 2>&, float, float))
-                             &maskZeroImageData<xt::pytensor<float, 2>, float>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                 \
+  m.def(#FUNCTOR,                                                                             \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>>, py::arg("src").noconvert());
 
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
-                             &maskZeroImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
-                             &maskZeroImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert());
+#define FOAM_MASK_IMAGE_DATA(FUNCTOR)                                                         \
+  FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, double, 2)                                               \
+  FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, float, 2)                                                \
+  FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, double, 3)                                               \
+  FOAM_MASK_IMAGE_DATA_IMPL(FUNCTOR, float, 3)
 
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&, double, double))
-                             &maskZeroImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert(),
-                             py::arg("lb"), py::arg("ub"));
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&, float, float))
-                             &maskZeroImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert(),
-                             py::arg("lb"), py::arg("ub"));
+  FOAM_MASK_IMAGE_DATA(maskZeroImageData)
+  FOAM_MASK_IMAGE_DATA(maskNanImageData)
 
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<double, 3>>, py::arg("src").noconvert());
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<float, 3>>, py::arg("src").noconvert());
+#define FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                      \
+  m.def(#FUNCTOR,                                                                         \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, VALUE_TYPE, VALUE_TYPE))                     \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, VALUE_TYPE>,                                   \
+    py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<double, 3>, double>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskZeroImageData", &maskZeroImageData<xt::pytensor<float, 3>, float>,
-                             py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_THRESHOLD(FUNCTOR)                                              \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, double, 2)                                    \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, float, 2)                                     \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, double, 3)                                    \
+  FOAM_MASK_IMAGE_DATA_THRESHOLD_IMPL(FUNCTOR, float, 3)
 
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
-                             &maskZeroImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
-                             &maskZeroImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert());
+  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskZeroImageData)
+  FOAM_MASK_IMAGE_DATA_THRESHOLD(maskNanImageData)
 
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&, double, double))
-                             &maskZeroImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>, double>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskZeroImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&, float, float))
-                             &maskZeroImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
-                             py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                        \
+  m.def(#FUNCTOR,                                                                         \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<bool, 2>&))             \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, 2>>,                      \
+    py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, xt::pytensor<bool, 2>&))
-                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
-                         py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, xt::pytensor<bool, 2>&))
-                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
-                         py::arg("src").noconvert(), py::arg("mask").noconvert());
+#define FOAM_MASK_IMAGE_DATA_IMAGE(FUNCTOR)                                                \
+  FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, double, 2)                                      \
+  FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, float, 2)                                       \
+  FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, double, 3)                                      \
+  FOAM_MASK_IMAGE_DATA_IMAGE_IMPL(FUNCTOR, float, 3)
 
-  m.def("maskImageData", (void (*)(xt::pytensor<double, 2>&, xt::pytensor<bool, 2>&, double, double))
-                         &maskImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
-                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskImageData", (void (*)(xt::pytensor<float, 2>&, xt::pytensor<bool, 2>&, float, float))
-                         &maskImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
-                         py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+  FOAM_MASK_IMAGE_DATA_IMAGE(maskZeroImageData)
+  FOAM_MASK_IMAGE_DATA_IMAGE(maskNanImageData)
 
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<double, 2>>, py::arg("src").noconvert());
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<float, 2>>, py::arg("src").noconvert());
+#define FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, VALUE_TYPE, N_DIM)                                      \
+  m.def(#FUNCTOR,                                                                                       \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<bool, 2>&, VALUE_TYPE, VALUE_TYPE))  \
+    &FUNCTOR<xt::pytensor<VALUE_TYPE, N_DIM>, xt::pytensor<bool, 2>, VALUE_TYPE>,                       \
+    py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskNanImageData", (void (*)(xt::pytensor<double, 2>&, double, double))
-                            &maskNanImageData<xt::pytensor<double, 2>, double>,
-                            py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskNanImageData", (void (*)(xt::pytensor<float, 2>&, float, float))
-                            &maskNanImageData<xt::pytensor<float, 2>, float>,
-                            py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_BOTH(FUNCTOR)                                                \
+  FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, double, 2)                                      \
+  FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, float, 2)                                       \
+  FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, double, 3)                                      \
+  FOAM_MASK_IMAGE_DATA_BOTH_IMPL(FUNCTOR, float, 3)
 
-  m.def("maskNanImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&))
-                            &maskNanImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskNanImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&))
-                            &maskNanImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert());
+  FOAM_MASK_IMAGE_DATA_BOTH(maskZeroImageData)
+  FOAM_MASK_IMAGE_DATA_BOTH(maskNanImageData)
 
-  m.def("maskNanImageData", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<bool, 2>&, double, double))
-                            &maskNanImageData<xt::pytensor<double, 2>, xt::pytensor<bool, 2>, double>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert(),
-                            py::arg("lb"), py::arg("ub"));
-  m.def("maskNanImageData", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<bool, 2>&, float, float))
-                            &maskNanImageData<xt::pytensor<float, 2>, xt::pytensor<bool, 2>, float>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert(),
-                            py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(VALUE_TYPE)                                       \
+  m.def("maskImageData",                                                                     \
+    (void (*)(xt::pytensor<VALUE_TYPE, 2>&, xt::pytensor<bool, 2>&))                         \
+    &maskImageData<xt::pytensor<VALUE_TYPE, 2>, xt::pytensor<bool, 2>>,                      \
+    py::arg("src").noconvert(), py::arg("mask").noconvert());
 
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<double, 3>>, py::arg("src").noconvert());
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<float, 3>>, py::arg("src").noconvert());
+  FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(double)
+  FOAM_MASK_IMAGE_DATA_AND_MASK_IMPL(float)
 
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<double, 3>, double>,
-                            py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskNanImageData", &maskNanImageData<xt::pytensor<float, 3>, float>,
-                            py::arg("src").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(VALUE_TYPE)                                  \
+  m.def("maskImageData",                                                                     \
+    (void (*)(xt::pytensor<VALUE_TYPE, 2>&, xt::pytensor<bool, 2>&, VALUE_TYPE, VALUE_TYPE)) \
+    &maskImageData<xt::pytensor<VALUE_TYPE, 2>, xt::pytensor<bool, 2>, VALUE_TYPE>,          \
+    py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
 
-  m.def("maskNanImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&))
-                            &maskNanImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert());
-  m.def("maskNanImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&))
-                            &maskNanImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert());
+  FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(double)
+  FOAM_MASK_IMAGE_DATA_BOTH_AND_MASK_IMPL(float)
 
-  m.def("maskNanImageData", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<bool, 2>&, double, double))
-                            &maskNanImageData<xt::pytensor<double, 3>, xt::pytensor<bool, 2>, double>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
-  m.def("maskNanImageData", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<bool, 2>&, float, float))
-                            &maskNanImageData<xt::pytensor<float, 3>, xt::pytensor<bool, 2>, float>,
-                            py::arg("src").noconvert(), py::arg("mask").noconvert(), py::arg("lb"), py::arg("ub"));
+#define FOAM_CORRECT_OFFSET_IMPL(VALUE_TYPE, N_DIM)                                         \
+  m.def("correctOffset",                                                                    \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))    \
+    &correctImageData<OffsetPolicy, xt::pytensor<VALUE_TYPE, N_DIM>>,                       \
+    py::arg("src").noconvert(), py::arg("offset").noconvert());
 
-  m.def("correctOffset", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
-                         &correctImageData<OffsetPolicy, xt::pytensor<double, 3>>,
-                         py::arg("src").noconvert(), py::arg("offset").noconvert());
-  m.def("correctOffset", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
-                         &correctImageData<OffsetPolicy, xt::pytensor<float, 3>>,
-                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+  FOAM_CORRECT_OFFSET_IMPL(double, 2)
+  FOAM_CORRECT_OFFSET_IMPL(float, 2)
+  FOAM_CORRECT_OFFSET_IMPL(double, 3)
+  FOAM_CORRECT_OFFSET_IMPL(float, 3)
 
-  m.def("correctOffset", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-                         &correctImageData<OffsetPolicy, xt::pytensor<double, 2>>,
-                         py::arg("src").noconvert(), py::arg("offset").noconvert());
-  m.def("correctOffset", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-                         &correctImageData<OffsetPolicy, xt::pytensor<float, 2>>,
-                         py::arg("src").noconvert(), py::arg("offset").noconvert());
+#define FOAM_CORRECT_GAIN_IMPL(VALUE_TYPE, N_DIM)                                           \
+  m.def("correctGain",                                                                      \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))    \
+    &correctImageData<GainPolicy, xt::pytensor<VALUE_TYPE, N_DIM>>,                         \
+    py::arg("src").noconvert(), py::arg("gain").noconvert());
 
-  m.def("correctGain", (void (*)(xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
-                       &correctImageData<GainPolicy, xt::pytensor<double, 3>>,
-                       py::arg("src").noconvert(), py::arg("gain").noconvert());
-  m.def("correctGain", (void (*)(xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
-                       &correctImageData<GainPolicy, xt::pytensor<float, 3>>,
-                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+  FOAM_CORRECT_GAIN_IMPL(double, 2)
+  FOAM_CORRECT_GAIN_IMPL(float, 2)
+  FOAM_CORRECT_GAIN_IMPL(double, 3)
+  FOAM_CORRECT_GAIN_IMPL(float, 3)
 
-  m.def("correctGain", (void (*)(xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-                       &correctImageData<GainPolicy, xt::pytensor<double, 2>>,
-                       py::arg("src").noconvert(), py::arg("gain").noconvert());
-  m.def("correctGain", (void (*)(xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-                       &correctImageData<GainPolicy, xt::pytensor<float, 2>>,
-                       py::arg("src").noconvert(), py::arg("gain").noconvert());
+#define FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(VALUE_TYPE, N_DIM)                                    \
+  m.def("correctGainOffset",                                                                    \
+    (void (*)(xt::pytensor<VALUE_TYPE, N_DIM>&,                                                 \
+              const xt::pytensor<VALUE_TYPE, N_DIM>&, const xt::pytensor<VALUE_TYPE, N_DIM>&))  \
+    &correctImageData<xt::pytensor<VALUE_TYPE, N_DIM>>,                                         \
+    py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
 
-  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 3>&,
-                                       const xt::pytensor<double, 3>&, const xt::pytensor<double, 3>&))
-                             &correctImageData<xt::pytensor<double, 3>>,
-                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
-  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 3>&,
-                                       const xt::pytensor<float, 3>&, const xt::pytensor<float, 3>&))
-                             &correctImageData<xt::pytensor<float, 3>>,
-                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
-
-  m.def("correctGainOffset", (void (*)(xt::pytensor<double, 2>&,
-                                       const xt::pytensor<double, 2>&, const xt::pytensor<double, 2>&))
-                             &correctImageData<xt::pytensor<double, 2>>,
-                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
-  m.def("correctGainOffset", (void (*)(xt::pytensor<float, 2>&,
-                                       const xt::pytensor<float, 2>&, const xt::pytensor<float, 2>&))
-                             &correctImageData<xt::pytensor<float, 2>>,
-                             py::arg("src").noconvert(), py::arg("gain").noconvert(), py::arg("offset").noconvert());
+  FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(double, 2)
+  FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(float, 2)
+  FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(double, 3)
+  FOAM_CORRECT_GAIN_AND_OFFSET_IMPL(float, 3)
 }
