@@ -34,10 +34,8 @@ class _Test1MGeometryMixin:
         out_gt = self.geom.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
         self.geom.position_all_modules(modules, out_gt)
 
-        # FIXME
-        for i in range(2):
-            assert abs(out_fast.shape[i] - out_gt.shape[i]) <= 1
-        # np.testing.assert_equal(out_fast, out)
+        assert out_gt.shape == out_fast.shape
+        np.testing.assert_array_equal(out_fast, out_gt)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
     def testAssemblingFile(self, dtype):
@@ -59,10 +57,8 @@ class _Test1MGeometryMixin:
         out_gt = self.geom.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
         self.geom.position_all_modules(modules, out_gt)
 
-        # FIXME
-        for i in range(2):
-            assert abs(out_fast.shape[i] - out_gt.shape[i]) <= 1
-        # np.testing.assert_equal(out_fast, out_gt)
+        assert out_gt.shape == out_fast.shape
+        np.testing.assert_equal(out_fast, out_gt)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
     def testAssemblingBridgeWithTileEdgeIgnored(self, dtype):

@@ -47,7 +47,6 @@ public:
   using quadOrientType = std::array<std::array<int, 2>, 4>;
   using quadVectorType = xt::xtensor_fixed<double, xt::xshape<n_quads, 3>>;
   using shapeType = std::array<int, 2>;
-  using vector2dType = std::array<double, 2>;
 
   ~Detector1MGeometryBase() = default;
 
@@ -80,8 +79,7 @@ public:
    */
   shapeType assembledShape() const
   {
-    auto size = assembledDim().first;
-    return {static_cast<int>(std::ceil(size[0])), static_cast<int>(std::ceil(size[1]))};
+    return assembledDim().first;
   }
 
 protected:
@@ -91,7 +89,7 @@ protected:
   /**
    * Return the size (y, x) and center (x, y) of the assembled image.
    */
-  std::pair<vector2dType, vector2dType> assembledDim() const;
+  std::pair<shapeType, shapeType> assembledDim() const;
 
   /**
    * Check the src and dst shapes.
@@ -203,19 +201,26 @@ void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_
 }
 
 template<typename G>
-std::pair<typename Detector1MGeometryBase<G>::vector2dType,
-          typename Detector1MGeometryBase<G>::vector2dType>
+std::pair<typename Detector1MGeometryBase<G>::shapeType,
+          typename Detector1MGeometryBase<G>::shapeType>
 Detector1MGeometryBase<G>::assembledDim() const
 {
-  auto min_xyz = xt::amin(static_cast<const G*>(this)->corner_pos_,
-                          {0, 1, 2}) / static_cast<const G*>(this)->pixelSize();
-  auto max_xyz = xt::amax(static_cast<const G*>(this)->corner_pos_,
-                          {0, 1, 2}) / static_cast<const G*>(this)->pixelSize();
+  auto min_xyz = xt::amin(static_cast<const G*>(this)->corner_pos_, {0, 1, 2}) /
+    static_cast<const G*>(this)->pixelSize();
+  auto max_xyz = xt::amax(static_cast<const G*>(this)->corner_pos_, {0, 1, 2}) /
+    static_cast<const G*>(this)->pixelSize();
 
-  return {
-    vector2dType { max_xyz[1] - min_xyz[1], max_xyz[0] - min_xyz[0]},
-    vector2dType {             -min_xyz[0],             -min_xyz[1]}
-  };
+  // We round the min/max x/y first to match the calculation in EXtra-geom in
+  // most cases. However, EXtra-geom uses 'numpy.around' to round the floating
+  // point number to integer and the behavior of 'numpy.around' is bizarre for
+  // values exactly halfway between rounded decimal values. For details, see
+  // https://docs.scipy.org/doc/numpy/reference/generated/numpy.around.html
+  int min_x = static_cast<int>(std::round(min_xyz[0]));
+  int min_y = static_cast<int>(std::round(min_xyz[1]));
+  int max_x = static_cast<int>(std::round(max_xyz[0]));
+  int max_y = static_cast<int>(std::round(max_xyz[1]));
+
+  return {shapeType {max_y - min_y, max_x - min_x}, shapeType {-min_x, -min_y}};
 }
 
 template<typename G>
@@ -436,8 +441,10 @@ void AGIPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_t
     int ix0 = it * wt;
     int iy0 = 0;
 
-    int ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
-    int iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
+                             : static_cast<int>(std::round(x0)) + center[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
+                             : static_cast<int>(std::round(y0)) + center[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
@@ -609,8 +616,10 @@ void LPD_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_til
 
     int ix0 = (it / 8) * wt;
     int iy0 = it < 8 ? (7 - it % 8) * ht : (it % 8) * ht;
-    int ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
-    int iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
+                             : static_cast<int>(std::round(x0)) + center[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
+                             : static_cast<int>(std::round(y0)) + center[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < iy0 + ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
@@ -777,8 +786,10 @@ void DSSC_1MGeometry::positionModuleImp(M&& src, N& dst, T&& pos, bool ignore_ti
 
     int ix0 = it * wt;
     int iy0 = 0;
-    int ix0_dst = ix_dir > 0 ? std::floor(x0 + center[0]) : std::ceil(x0 + center[0]) - 1;
-    int iy0_dst = iy_dir > 0 ? std::floor(y0 + center[1]) : std::ceil(y0 + center[1]) - 1;
+    int ix0_dst = ix_dir > 0 ? static_cast<int>(std::round(x0)) + center[0]
+                             : static_cast<int>(std::round(x0)) + center[0] - 1;
+    int iy0_dst = iy_dir > 0 ? static_cast<int>(std::round(y0)) + center[1]
+                             : static_cast<int>(std::round(y0)) + center[1] - 1;
     for (int iy = iy0 + edge, iy_dst = iy0_dst + iy_dir * edge; iy < ht - edge; ++iy, iy_dst += iy_dir)
     {
       for (int ix = ix0 + edge, ix_dst = ix0_dst + ix_dir * edge; ix < ix0 + wt - edge; ++ix, ix_dst += ix_dir)
