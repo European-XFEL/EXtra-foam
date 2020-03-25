@@ -29,22 +29,24 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
 
   py::class_<GeometryBase> base(m, py_base_class_name.c_str());
 
-  base.def("positionAllModules",
-    (void (GeometryBase::*)(const xt::pytensor<float, 4>&, xt::pytensor<float, 3>&, bool) const)
-    &GeometryBase::positionAllModules,
+#define FOAM_POSITION_ALL_MODULES_IMP(VALUE_TYPE)                                                         \
+  base.def("positionAllModules",                                                                          \
+  (void (GeometryBase::*)(const xt::pytensor<VALUE_TYPE, 4>&, xt::pytensor<float, 3>&, bool) const)       \
+    &GeometryBase::positionAllModules,                                                                    \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
-  base.def("positionAllModules",
-    (void (GeometryBase::*)(const xt::pytensor<uint16_t, 4>&, xt::pytensor<float, 3>&, bool) const)
-    &GeometryBase::positionAllModules,
+
+  FOAM_POSITION_ALL_MODULES_IMP(float)
+  FOAM_POSITION_ALL_MODULES_IMP(uint16_t)
+
+#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(VALUE_TYPE)                                                        \
+  base.def("positionAllModules",                                                                                    \
+    (void (GeometryBase::*)(const std::vector<xt::pytensor<VALUE_TYPE, 3>>&, xt::pytensor<float, 3>&, bool) const)  \
+    &GeometryBase::positionAllModules,                                                                              \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
-  base.def("positionAllModules",
-    (void (GeometryBase::*)(const std::vector<xt::pytensor<float, 3>>&, xt::pytensor<float, 3>&, bool) const)
-    &GeometryBase::positionAllModules,
-    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
-  base.def("positionAllModules",
-    (void (GeometryBase::*)(const std::vector<xt::pytensor<uint16_t, 3>>&, xt::pytensor<float, 3>&, bool) const)
-    &GeometryBase::positionAllModules,
-    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
+
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t)
+
   base.def("assembledShape", &GeometryBase::assembledShape)
     .def_readonly_static("n_quads", &GeometryBase::n_quads)
     .def_readonly_static("n_modules", &GeometryBase::n_modules)
