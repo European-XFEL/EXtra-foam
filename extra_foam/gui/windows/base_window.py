@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QSplitter, QWidget
 
 from ..mediator import Mediator
+from ... import __version__
 
 
 class _AbstractWindowMixin:
@@ -121,15 +122,19 @@ class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
         """Initialization."""
         super().__init__(parent=parent)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
+
         if parent is not None:
             parent.registerSatelliteWindow(self)
-
-        self._mediator = Mediator()
+            self._mediator = Mediator()
+        else:
+            self._mediator = None
 
         try:
             title = parent.title + " - " + self._title
         except AttributeError:
-            title = self._title  # for unit test where parent is None
+            # for unittest in which parent is None and the case when
+            # the window is not opened through the main GUI
+            title = f"EXtra-foam {__version__} - " + self._title
         self.setWindowTitle(title)
 
     def updateWidgetsF(self):

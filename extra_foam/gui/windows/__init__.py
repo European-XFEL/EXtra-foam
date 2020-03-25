@@ -19,10 +19,10 @@ __all__ = [
 ]
 
 
-from .file_stream_controller_w import FileStreamControllerWindow
+from .file_stream_controller_w import FileStreamWindow
 from .about_w import AboutWindow
 
 __all__ += [
-    "FileStreamControllerWindow",
+    "FileStreamWindow",
     "AboutWindow",
 ]

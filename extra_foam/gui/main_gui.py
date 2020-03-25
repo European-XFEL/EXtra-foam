@@ -39,7 +39,7 @@ from .misc_widgets import Configurator, GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
-    PumpProbeWindow, FileStreamControllerWindow, AboutWindow, TrXasWindow
+    PumpProbeWindow, FileStreamWindow, AboutWindow, TrXasWindow
 )
 from .. import __version__
 from ..config import config
@@ -192,9 +192,9 @@ class MainGUI(QMainWindow):
         self._tool_bar.addSeparator()
 
         open_file_stream_window_at = self.addAction(
-            "File streamer", "file_streamer.png")
+            "File stream", "file_stream.png")
         open_file_stream_window_at.triggered.connect(
-            lambda: self.onOpenSatelliteWindow(FileStreamControllerWindow))
+            lambda: self.onOpenSatelliteWindow(FileStreamWindow))
 
         open_about_at = self.addAction("About EXtra-foam", "about.png")
         open_about_at.triggered.connect(
@@ -577,5 +577,15 @@ class MainGUI(QMainWindow):
 
         # shutdown pipeline workers and Redis server
         shutdown_all()
+
+        self._image_tool.close()
+        for window in list(itertools.chain(self._plot_windows,
+                                           self._satellite_windows,
+                                           self._special_windows)):
+            # Close all open child windows to make sure their resources
+            # (any running process etc.) are released gracefully. This
+            # is especially necessary for the case when file stream was
+            # still ongoing when the main GUI was closed.
+            window.close()
 
         super().closeEvent(QCloseEvent)
