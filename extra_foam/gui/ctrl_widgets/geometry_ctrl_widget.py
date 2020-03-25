@@ -55,7 +55,6 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._quad_positions_tb = QTableWidget()
         if config["DETECTOR"] == "AGIPD":
             self._quad_positions_tb.setEnabled(False)
-            self._assembler_cb.setCurrentText("EXtra-geom")
 
         self._geom_file_le = SmartStringLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
