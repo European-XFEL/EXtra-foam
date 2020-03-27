@@ -25,7 +25,7 @@ from .reference_view import ReferenceView
 from .geometry_view import GeometryView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
-from ..ctrl_widgets import ImageCtrlWidget
+from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget
 from ...config import config, MaskState
 
 
@@ -107,6 +107,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._bulletin_view = self.createView(BulletinView)
         self._image_ctrl_widget = self.createCtrlWidget(ImageCtrlWidget)
+        self._mask_ctrl_widget = self.createCtrlWidget(MaskCtrlWidget)
 
         # -----------------------------
         # view panel
@@ -154,6 +155,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         ctrl_panel_layout = QVBoxLayout()
         ctrl_panel_layout.addWidget(self._bulletin_view)
         ctrl_panel_layout.addWidget(self._image_ctrl_widget)
+        ctrl_panel_layout.addWidget(self._mask_ctrl_widget)
         ctrl_panel_layout.addStretch(1)
         ctrl_panel.setLayout(ctrl_panel_layout)
         ctrl_panel.setFixedWidth(ctrl_panel.minimumSizeHint().width() + 10)
@@ -195,7 +197,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             self._corrected_view.imageView.writeImage)
 
         # use lambda here to facilitate unittest of slot call
-        self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
+        self._mask_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)

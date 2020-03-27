@@ -83,7 +83,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.pulse_worker._image_roi = ImageRoiPulse()
 
     def testGeneral(self):
-        self.assertEqual(10, len(self.image_tool._ctrl_widgets))
+        self.assertEqual(11, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
         self.assertTrue(self.image_tool._require_geometry)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
@@ -208,6 +208,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
+
+    def testMaskCtrlWidget(self):
+        widget = self.image_tool._mask_ctrl_widget
+        proc = self.pulse_worker._image_proc
+        assembler = self.pulse_worker._assembler
 
         # test default
         proc.update()
@@ -746,7 +751,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
-        image_ctrl_widget = self.image_tool._image_ctrl_widget
+        mask_ctrl_widget = self.image_tool._mask_ctrl_widget
 
         proc = self.pulse_worker._assembler
 
@@ -758,7 +763,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # prepare for the following test
         widget._stack_only_cb.setChecked(True)
-        image_ctrl_widget.mask_tile_cb.setChecked(True)
+        mask_ctrl_widget.mask_tile_cb.setChecked(True)
         proc.update()
         self.assertTrue(proc._stack_only)
         self.assertTrue(proc._mask_tile)
@@ -768,8 +773,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.EXTRA_GEOM])
         self.assertFalse(widget._stack_only_cb.isEnabled())
         self.assertFalse(widget._stack_only_cb.isChecked())
-        self.assertFalse(image_ctrl_widget.mask_tile_cb.isEnabled())
-        self.assertFalse(image_ctrl_widget.mask_tile_cb.isChecked())
+        self.assertFalse(mask_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertFalse(mask_ctrl_widget.mask_tile_cb.isChecked())
         widget._geom_file_le.setText("/geometry/file/")
         for i in range(4):
             for j in range(2):
@@ -784,7 +789,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
         self.assertTrue(widget._stack_only_cb.isEnabled())
-        self.assertTrue(image_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertTrue(mask_ctrl_widget.mask_tile_cb.isEnabled())
 
         # test loading meta data
         mediator = widget._mediator
@@ -875,8 +880,8 @@ class TestImageToolTs(unittest.TestCase):
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
 
-    def testImageCtrlWidget(self):
-        widget = self.image_tool._image_ctrl_widget
+    def testMaskCtrlWidget(self):
+        widget = self.image_tool._mask_ctrl_widget
         self.assertEqual(-1, widget.layout().indexOf(widget.mask_tile_cb))
 
         # test loading meta data
