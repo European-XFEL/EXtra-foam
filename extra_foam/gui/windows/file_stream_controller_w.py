@@ -45,7 +45,7 @@ class _FileStreamCtrlWidget(QWidget):
     def __init__(self, *, parent=None):
         super().__init__(parent=parent)
 
-        self.load_run_btn = QPushButton("Load Run Folder")
+        self.load_run_btn = QPushButton("Load run")
 
         self.data_folder_le = SmartLineEdit()
 
