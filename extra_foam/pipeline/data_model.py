@@ -807,9 +807,11 @@ class _DigitizerChannelData(collections.abc.Mapping):
     Store Digitizer pipeline data.
     """
 
-    # For a Karabo device, we have maximum 4 boards and each
-    # board has 4 channels.
-    _CHANNEL_NAMES = ('A', 'B', 'C', 'D')
+    # 'A', 'B', 'C' and 'D' are for AdqDigitizer while
+    # 'ADC' is for FastAdc. The final interface for the
+    # digitizer will be determined later based on the
+    # feature requests.
+    _CHANNEL_NAMES = ('A', 'B', 'C', 'D', 'ADC')
 
     __slots__ = ['_pulse_integrals']
 

@@ -11,13 +11,17 @@ import numpy as np
 
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
-from ..exceptions import UnknownParameterError
+from ..exceptions import ProcessingError
 from ...database import Metadata as mt
 from ...utils import profiler
 
 
 class DigitizerProcessor(_BaseProcessor):
     """Digitizer data processor.
+
+    TODO: whether to allow multiple digitizer channels have not been decided
+          yet. For now, only one digitizer source is allowed to be selected
+          in the data source tree.
 
     Process the Digitizer pipeline data.
     """
@@ -26,18 +30,24 @@ class DigitizerProcessor(_BaseProcessor):
     _pulse_integral_b_ma = MovingAverageArray()
     _pulse_integral_c_ma = MovingAverageArray()
     _pulse_integral_d_ma = MovingAverageArray()
+    _fast_adc_peaks_ma = MovingAverageArray()
 
+    # AdqDigitizer has a single output channel for multiple digitizer channels,
+    # while FastAdc has an output channel for each digitizer channel.
     _integ_channels = {
         'digitizers.channel_1_A.apd.pulseIntegral': 'A',
         'digitizers.channel_1_B.apd.pulseIntegral': 'B',
         'digitizers.channel_1_C.apd.pulseIntegral': 'C',
-        'digitizers.channel_1_D.apd.pulseIntegral': 'D'}
+        'digitizers.channel_1_D.apd.pulseIntegral': 'D',
+        'data.peaks': 'ADC'
+    }
 
     _pulse_integral_channels = {
         'A': "_pulse_integral_a_ma",
         'B': "_pulse_integral_b_ma",
         'C': "_pulse_integral_c_ma",
         'D': "_pulse_integral_d_ma",
+        'ADC': "_fast_adc_peaks_ma"
     }
 
     def __init__(self):
@@ -57,6 +67,7 @@ class DigitizerProcessor(_BaseProcessor):
             del self._pulse_integral_b_ma
             del self._pulse_integral_c_ma
             del self._pulse_integral_d_ma
+            del self._fast_adc_peaks_ma
 
             self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_digitizer')
 
@@ -66,6 +77,7 @@ class DigitizerProcessor(_BaseProcessor):
             self.__class__._pulse_integral_b_ma.window = v
             self.__class__._pulse_integral_c_ma.window = v
             self.__class__._pulse_integral_d_ma.window = v
+            self.__class__._fast_adc_peaks_ma.window = v
 
         self._ma_window = v
 
@@ -101,5 +113,7 @@ class DigitizerProcessor(_BaseProcessor):
                 # It is allowed to select only one digitizer channel
                 processed.pulse.digitizer.ch_normalizer = channel
             else:
-                raise UnknownParameterError(
+                # This is not UnknownParameterError since the property input
+                # by the user maybe a valid property for the digitizer device.
+                raise ProcessingError(
                     f'[Digitizer] Unknown property: {ppt}')

@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors.xgm import XgmProcessor
 from extra_foam.database import SourceItem
-from extra_foam.pipeline.exceptions import UnknownParameterError
+from extra_foam.pipeline.exceptions import ProcessingError
 
 
 class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
@@ -35,7 +35,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src = f"{item.name} {item.property}"
         meta[src] = {'tid': 12346}
         raw[src] = [100, 200, 300]
-        with self.assertRaises(UnknownParameterError):
+        with self.assertRaises(ProcessingError):
             proc.process(data)
         catalog.remove_item(src)
 
@@ -62,7 +62,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         src = f"{item.name} {item.property}"
         meta[src] = {'tid': 12346}
         raw[src] = [100, 200, 300]
-        with self.assertRaises(UnknownParameterError):
+        with self.assertRaises(ProcessingError):
             proc.process(data)
         catalog.remove_item(src)
 
@@ -154,6 +154,7 @@ class TestXgmProcessor(_TestDataMixin, unittest.TestCase):
         raw[src_it] = [100, 200, 300]
 
         proc = XgmProcessor()
+        proc._meta.hdel = MagicMock()
         proc._update_moving_average({
             'reset_ma_xgm': 1,
             'ma_window': 5
