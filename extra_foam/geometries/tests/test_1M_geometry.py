@@ -4,7 +4,8 @@ import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.processors.image_assembler import StackView
+from extra_data.stacking import StackView
+
 from extra_foam.geometries import (
     DSSC_1MGeometryFast, LPD_1MGeometryFast, AGIPD_1MGeometryFast
 )
