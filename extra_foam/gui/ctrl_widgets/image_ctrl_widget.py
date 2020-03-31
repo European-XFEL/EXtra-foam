@@ -34,7 +34,9 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
 
         # It is just a placeholder
         self.moving_avg_le = SmartLineEdit(str(1))
-        self.moving_avg_le.setValidator(QIntValidator(1, 9999999))
+        validator = QIntValidator()
+        validator.setBottom(1)
+        self.moving_avg_le.setValidator(validator)
         self.moving_avg_le.setMinimumWidth(60)
         self.moving_avg_le.setEnabled(False)
 

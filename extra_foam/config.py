@@ -22,6 +22,10 @@ from . import ROOT_PATH
 from .logger import logger
 
 
+_MAX_INT32 = np.iinfo(np.int32).max
+_MIN_INT32 = np.iinfo(np.int32).min
+
+
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge

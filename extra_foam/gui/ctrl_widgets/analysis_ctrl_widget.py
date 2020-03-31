@@ -32,7 +32,9 @@ class AnalysisCtrlWidget(_AbstractGroupBoxCtrlWidget):
                 w.setEnabled(False)
 
         self._ma_window_le = SmartLineEdit("1")
-        self._ma_window_le.setValidator(QIntValidator(1, 99999))
+        validator = QIntValidator()
+        validator.setBottom(1)
+        self._ma_window_le.setValidator(validator)
 
         self._reset_ma_btn = QPushButton("Reset")
 
