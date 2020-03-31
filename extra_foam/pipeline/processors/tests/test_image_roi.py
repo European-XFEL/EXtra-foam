@@ -255,8 +255,7 @@ class TestImageRoiTrain(_TestDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         proc = ImageRoiTrain()
-        proc._reset_roi_moving_average()
-        proc._set_roi_moving_average_window(1)
+        proc._set_ma_window(1)
 
         proc._auc_range = (0, 1000)
         proc._fom_integ_range = (0, 1000)
