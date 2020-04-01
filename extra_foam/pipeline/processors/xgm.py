@@ -39,12 +39,19 @@ class XgmProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-        self._ma_window = 1
+        self._set_ma_window(1)
 
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(cfg)
+
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._intensity_ma.window = v
+        self.__class__._x_ma.window = v
+        self.__class__._y_ma.window = v
+        self.__class__._pulse_intensity_ma.window = v
 
     def _update_moving_average(self, cfg):
         if 'reset_ma_xgm' in cfg:
@@ -57,12 +64,7 @@ class XgmProcessor(_BaseProcessor):
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
-            self.__class__._intensity_ma.window = v
-            self.__class__._x_ma.window = v
-            self.__class__._y_ma.window = v
-            self.__class__._pulse_intensity_ma.window = v
-
-        self._ma_window = v
+            self._set_ma_window(v)
 
     @profiler("XGM Processor")
     def process(self, data):

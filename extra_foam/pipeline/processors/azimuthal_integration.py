@@ -209,7 +209,13 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
     def __init__(self):
         super().__init__()
 
-        self._ma_window = 1
+        self._set_ma_window(1)
+
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._intensity_ma.window = v
+        self.__class__._intensity_on_ma.window = v
+        self.__class__._intensity_off_ma.window = v
 
     def _update_moving_average(self, cfg):
         if 'reset_ma_ai' in cfg:
@@ -221,11 +227,7 @@ class AzimuthalIntegProcessorTrain(_AzimuthalIntegProcessorBase):
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
-            self.__class__._intensity_ma.window = v
-            self.__class__._intensity_on_ma.window = v
-            self.__class__._intensity_off_ma.window = v
-
-        self._ma_window = v
+            self._set_ma_window(v)
 
     @profiler("Azimuthal Integration Processor (Train)")
     def process(self, data):

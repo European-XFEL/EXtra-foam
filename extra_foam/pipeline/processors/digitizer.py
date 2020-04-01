@@ -53,12 +53,20 @@ class DigitizerProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-        self._ma_window = 1
+        self._set_ma_window(1)
 
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(cfg)
+
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._pulse_integral_a_ma.window = v
+        self.__class__._pulse_integral_b_ma.window = v
+        self.__class__._pulse_integral_c_ma.window = v
+        self.__class__._pulse_integral_d_ma.window = v
+        self.__class__._fast_adc_peaks_ma.window = v
 
     def _update_moving_average(self, cfg):
         if 'reset_ma_digitizer' in cfg:
@@ -73,13 +81,7 @@ class DigitizerProcessor(_BaseProcessor):
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
-            self.__class__._pulse_integral_a_ma.window = v
-            self.__class__._pulse_integral_b_ma.window = v
-            self.__class__._pulse_integral_c_ma.window = v
-            self.__class__._pulse_integral_d_ma.window = v
-            self.__class__._fast_adc_peaks_ma.window = v
-
-        self._ma_window = v
+            self._set_ma_window(v)
 
     @profiler("Digitizer Processor")
     def process(self, data):
