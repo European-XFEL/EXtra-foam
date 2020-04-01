@@ -77,11 +77,13 @@ class SourceCatalog(abc.Collection):
     def from_category(self, ctg):
         return self._categories.get(ctg, OrderedSet())
 
-    def add_item(self, item):
-        """Add a source item to the catalog.
+    def add_item(self, *args, **kwargs):
+        """Add a source item to the catalog."""
+        if len(args) == 1:
+            item = args[0]  # SourceItem instance
+        else:
+            item = SourceItem(*args, **kwargs)
 
-        :param SourceItem item: new source item.
-        """
         src = f"{item.name} {item.property}"
         self._items[src] = item
 
