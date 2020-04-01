@@ -310,7 +310,8 @@ setup(
         'hiredis>=1.0.0',
         'redis>=3.3.11',
         'psutil>=5.6.2',
-        'imageio>=2.5.0',
+        'imageio==2.8.0',
+        'Pillow==7.0.0',
         'pyyaml>=5.2',
     ],
     extras_require={
