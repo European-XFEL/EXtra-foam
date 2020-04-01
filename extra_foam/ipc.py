@@ -144,7 +144,11 @@ class RedisConnection(metaclass=MetaRedisConnection):
 
 
 class RedisSubscriber(metaclass=MetaRedisConnection):
-    """Lazily evaluated Redis subscriber."""
+    """Lazily evaluated Redis subscriber.
+
+    Read the code of pub/sub in Redis:
+        https://making.pusher.com/redis-pubsub-under-the-hood/
+    """
     def __init__(self, channel, decode_responses=True):
         self._sub = None
         self._decode_responses = decode_responses

@@ -39,6 +39,10 @@ class RefImageCtrlWidget(_AbstractCtrlWidget):
 
         self._pub = ReferencePub()
 
+        self._non_reconfigurable_widgets = [
+            self._load_ref_btn
+        ]
+
         self.initUI()
         self.initConnections()
 

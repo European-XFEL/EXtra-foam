@@ -58,6 +58,11 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
 
         self._pub = CalConstantsPub()
 
+        self._non_reconfigurable_widgets = [
+            self._load_gain_btn,
+            self._load_offset_btn,
+        ]
+
         self.initUI()
         self.initConnections()
 
