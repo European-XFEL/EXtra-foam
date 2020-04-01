@@ -10,7 +10,7 @@ All rights reserved.
 import abc
 
 import numpy as np
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import pyqtSlot, Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
 from .. import pyqtgraph as pg
@@ -95,11 +95,11 @@ class ImageViewF(QWidget):
 
         self._is_initialized = False
         self._image = None
-        self._image_levels = None
+        self._auto_level_quantile = 0.99
 
         self.initUI()
 
-        self._mediator.reset_image_level_sgn.connect(self._updateImage)
+        self._mediator.reset_image_level_sgn.connect(self._onAutoLevel)
 
     def initUI(self):
         layout = QHBoxLayout()
@@ -168,6 +168,7 @@ class ImageViewF(QWidget):
         if not isinstance(img, np.ndarray):
             raise TypeError("Image data must be a numpy array!")
 
+        # set autoLevels manually later
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
 
@@ -179,8 +180,9 @@ class ImageViewF(QWidget):
             self._image_item.setPos(*pos)
 
         if auto_levels:
-            self._image_levels = quick_min_max(self._image)
-            self.setLevels(rgba=[self._image_levels])
+            v_min, v_max = quick_min_max(
+                self._image, q=self._auto_level_quantile)
+            self.setLevels(rgba=[(float(v_min), float(v_max))])
 
         if auto_range:
             self._plot_widget._plot_item.vb.autoRange()
@@ -190,7 +192,12 @@ class ImageViewF(QWidget):
         # FIXME: there is a bug in ImageItem.setImage if the input is None
         self._image_item.clear()
 
-    def _updateImage(self):
+    @pyqtSlot()
+    def _onAutoLevel(self):
+        if self.isVisible():
+            self.updateImageWithAutoLevel()
+
+    def updateImageWithAutoLevel(self):
         """Re-display the current image with auto_levels."""
         if self._image is None:
             return
