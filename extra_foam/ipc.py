@@ -16,7 +16,7 @@ import redis
 
 from .config import config
 from .serialization import deserialize_image, serialize_image
-from .file_io import read_cal_constants
+from .file_io import read_image, read_cal_constants
 
 
 class _RedisQueueBase:
@@ -225,9 +225,9 @@ process_logger = ProcessLogger()
 class ReferencePub:
     _db = RedisConnection()
 
-    def set(self, image):
-        """Publish the reference image in Redis."""
-        self._db.publish("reference_image", serialize_image(image))
+    def set(self, filepath):
+        """Publish the reference image filepath in Redis."""
+        self._db.publish("reference_image", filepath)
 
     def remove(self):
         """Notify to remove the current reference image."""
@@ -235,7 +235,7 @@ class ReferencePub:
 
 
 class ReferenceSub:
-    _sub = RedisSubscriber("reference_image", decode_responses=False)
+    _sub = RedisSubscriber("reference_image")
 
     def update(self, ref):
         """Parse all reference image operations.
@@ -252,7 +252,7 @@ class ReferenceSub:
             if not v:
                 ref = None
             else:
-                ref = deserialize_image(v)
+                ref = read_image(v)
         return ref
 
 

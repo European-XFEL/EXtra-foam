@@ -7,19 +7,27 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtWidgets import QGridLayout, QVBoxLayout
+import os.path as osp
 
-from .base_view import _AbstractImageToolView
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtWidgets import QFileDialog, QGridLayout, QVBoxLayout
+
+from .base_view import _AbstractImageToolView, create_imagetool_view
 from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import CalibrationCtrlWidget
 from ..plot_widgets import ImageViewF, ImageAnalysis
 
 
+@create_imagetool_view(CalibrationCtrlWidget)
 class CalibrationView(_AbstractImageToolView):
     """CalibrationView class.
 
     Widget for visualizing image calibration.
     """
+
+    gain_const_path_sgn = pyqtSignal(str)
+    offset_const_path_sgn = pyqtSignal(str)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -32,10 +40,8 @@ class CalibrationView(_AbstractImageToolView):
         self._offset = ImageViewF(hide_axis=False)
         self._offset.setTitle("Offset")
 
-        self._ctrl_widget = self.parent().createCtrlWidget(
-            CalibrationCtrlWidget)
-
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Override."""
@@ -52,7 +58,18 @@ class CalibrationView(_AbstractImageToolView):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.load_gain_btn.clicked.connect(self._loadGainConst)
+        self._ctrl_widget.load_offset_btn.clicked.connect(
+            self._loadOffsetConst)
+
+        self._ctrl_widget.remove_gain_btn.clicked.connect(self._removeGain)
+        self._ctrl_widget.remove_offset_btn.clicked.connect(
+            self._removeOffset)
+
+        self.gain_const_path_sgn.connect(
+            self._ctrl_widget.onGainConstPathChanged)
+        self.offset_const_path_sgn.connect(
+            self._ctrl_widget.onOffsetConstPathChanged)
 
     def updateF(self, data, auto_update):
         """Override."""
@@ -61,6 +78,31 @@ class CalibrationView(_AbstractImageToolView):
             self._offset.setImage(data.image.offset_mean)
             self._gain.setImage(data.image.gain_mean)
 
+    @pyqtSlot()
+    def _loadGainConst(self):
+        filepath = QFileDialog.getOpenFileName(
+            caption="Load gain", directory=osp.expanduser("~"))[0]
+
+        if filepath:
+            self.gain_const_path_sgn.emit(filepath)
+
+    @pyqtSlot()
+    def _loadOffsetConst(self):
+        filepath = QFileDialog.getOpenFileName(
+            caption="Load offset", directory=osp.expanduser("~"))[0]
+
+        if filepath:
+            self.offset_const_path_sgn.emit(filepath)
+
+    @pyqtSlot()
+    def _removeGain(self):
+        self.gain_const_path_sgn.emit("")
+
+    @pyqtSlot()
+    def _removeOffset(self):
+        self.offset_const_path_sgn.emit("")
+
     def onDeactivated(self):
-        """Override."""
-        self._ctrl_widget.onDeactivated()
+        btn = self._ctrl_widget.record_dark_btn
+        if btn.isChecked():
+            btn.setChecked(False)

@@ -27,6 +27,7 @@ from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
 from ..ctrl_widgets import ImageCtrlWidget
 from ...config import config, MaskState
+from ...ipc import ReferencePub, CalConstantsPub
 
 
 class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
@@ -99,10 +100,11 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._tool_bar.addSeparator()
 
+        self._ctrl_widgets = []
+
         # -----------------------------
         # ctrl panel
         # -----------------------------
-        self._ctrl_widgets = []
 
         self._bulletin_view = self.createView(BulletinView)
         self._image_ctrl_widget = self.createCtrlWidget(ImageCtrlWidget)
@@ -113,13 +115,16 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._views_tab = QTabWidget()
         self._corrected_view = self.createView(CorrectedView)
-        self._gain_offset_view = self.createView(CalibrationView)
+        self._calibration_view = self.createView(CalibrationView)
         self._reference_view = self.createView(ReferenceView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
 
         # Whether the view is updated automatically
         self._auto_update = True
+
+        self._ref_pub = ReferencePub()
+        self._cal_pub = CalConstantsPub()
 
         self._cw = QWidget()
         self.setCentralWidget(self._cw)
@@ -135,7 +140,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         corrected_tab_idx = self._views_tab.addTab(
             self._corrected_view, "Corrected")
         cali_idx = self._views_tab.addTab(
-            self._gain_offset_view, "Gain / offset")
+            self._calibration_view, "Gain / offset")
         ref_idx = self._views_tab.addTab(self._reference_view, "Reference")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
@@ -196,6 +201,14 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # use lambda here to facilitate unittest of slot call
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
+
+        self._reference_view.reference_image_path_sgn.connect(
+            self._onReferenceImageChange)
+
+        self._calibration_view.gain_const_path_sgn.connect(
+            self._onCalGainConstChange)
+        self._calibration_view.offset_const_path_sgn.connect(
+            self._onCalOffsetConstChange)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
@@ -292,3 +305,27 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):
         self._auto_update = state
+
+    @pyqtSlot(str)
+    def _onReferenceImageChange(self, filepath):
+        if not filepath:
+            self._ref_pub.remove()
+            return
+
+        self._ref_pub.set(filepath)
+
+    @pyqtSlot(str)
+    def _onCalGainConstChange(self, filepath):
+        if not filepath:
+            self._cal_pub.remove_gain()
+            return
+
+        self._cal_pub.set_gain(filepath)
+
+    @pyqtSlot(str)
+    def _onCalOffsetConstChange(self, filepath):
+        if not filepath:
+            self._cal_pub.remove_offset()
+            return
+
+        self._cal_pub.set_offset(filepath)
