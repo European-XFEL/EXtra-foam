@@ -30,9 +30,14 @@ class TestImageView(unittest.TestCase):
         widget = ImageViewF(has_roi=False)
         self.assertEqual(1, len(widget._plot_widget._plot_item.items))
 
-        with self.assertRaises(TypeError):
+        with self.assertRaisesRegex(TypeError, "numpy array"):
             widget.setImage([[1, 2, 3], [4, 5, 6]])
 
+        # test setting a valid image
+        widget.setImage(np.random.randn(4, 4))
+        widget.updateImageWithAutoLevel()  # test not raise
+
+        # test setting image to None
         widget.setImage(None)
         self.assertIsNone(widget._image)
         self.assertIsNone(widget._image_item.image)

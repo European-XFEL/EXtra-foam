@@ -9,13 +9,14 @@ All rights reserved.
 """
 from .statistics_py import (
     hist_with_stats, nanhist_with_stats, compute_statistics,
-    nanmean, nansum, nanstd, nanvar
+    nanmean, nansum, nanstd, nanvar,
+    quick_min_max
 )
 
 from .miscellaneous import (
     normalize_auc
 )
-from .sampling import down_sample, quick_min_max, slice_curve, up_sample
+from .sampling import down_sample, slice_curve, up_sample
 from .data_structures import OrderedSet, Stack
 from .azimuthal_integ import compute_q, energy2wavelength
 
