@@ -120,7 +120,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     indices = list(set(range(n_images)) - set(dropped_indices))
                     if not indices:
                         raise DropAllPulsesError(
-                            f"{tid}: all pulses were dropped")
+                            f"[Pump-probe] {tid}: all pulses were dropped")
                     images_mean = nanmean_image_data(assembled, kept=indices)
                 else:
                     # for performance
@@ -186,7 +186,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     # pulse resolved
                     if not indices_on:
                         raise DropAllPulsesError(
-                            f"{tid}: all on pulses were dropped")
+                            f"[Pump-probe] {tid}: all on pulses were dropped")
                     image_on = nanmean_image_data(assembled, kept=indices_on)
 
                     curr_indices.extend(indices_on)
@@ -204,6 +204,11 @@ class PumpProbeProcessor(_BaseProcessor):
                     if reference is None:
                         image_off = np.zeros_like(image_on)
                     else:
+                        if reference.shape != image_on.shape:
+                            raise RuntimeError(
+                                f"[Pump-probe] Shape of the reference image "
+                                f"{reference.shape} is different from the "
+                                f"shape of the image {image_on.shape}!")
                         # do not operate on the original reference image
                         image_off = reference.copy()
 
@@ -217,7 +222,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     # train-resolved data does not have the mode 'SAME_TRAIN'
                     if not indices_off:
                         raise DropAllPulsesError(
-                            f"{tid}: all off pulses were dropped")
+                            f"[Pump-probe] {tid}: all off pulses were dropped")
                     image_off = nanmean_image_data(assembled, kept=indices_off)
                     curr_indices.extend(indices_off)
                     curr_means.append(image_off)
@@ -241,7 +246,7 @@ class PumpProbeProcessor(_BaseProcessor):
                     if assembled.ndim == 3:
                         if not indices_on:
                             raise DropAllPulsesError(
-                                f"{tid}: all on pulses were dropped")
+                                f"[Pump-probe] {tid}: all on pulses were dropped")
                         self._prev_unmasked_on = nanmean_image_data(
                             assembled, kept=indices_on)
                         curr_indices.extend(indices_on)
@@ -265,7 +270,7 @@ class PumpProbeProcessor(_BaseProcessor):
                         if assembled.ndim == 3:
                             if not indices_off:
                                 raise DropAllPulsesError(
-                                    f"{tid}: all off pulses were dropped")
+                                    f"[Pump-probe] {tid}: all off pulses were dropped")
                             image_off = nanmean_image_data(
                                 assembled, kept=indices_off)
                             curr_indices.extend(indices_off)
@@ -298,5 +303,5 @@ class PumpProbeProcessor(_BaseProcessor):
             common = set(indices_on).intersection(indices_off)
             if common:
                 raise PumpProbeIndexError(
-                    "Pulse indices {} are found in both on- and off- pulses.".
-                    format(','.join([str(v) for v in common])))
+                    "[Pump-probe] Pulse indices {} are found in both on- and "
+                    "off- pulses.".format(','.join([str(v) for v in common])))

@@ -35,7 +35,7 @@ class TestFileIO(unittest.TestCase):
 
         # test wrong dimension
         with patch('imageio.imread', return_value=np.ones((2, 2, 2))):
-            with self.assertRaisesRegex(ValueError, '2 dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D array'):
                 read_image('abc')
 
         # test read invalid file format
@@ -74,10 +74,10 @@ class TestFileIO(unittest.TestCase):
 
         # test wrong dimension
         with patch('numpy.load', return_value=np.ones((2, 2, 2, 2))):
-            with self.assertRaisesRegex(ValueError, 'dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
                 read_cal_constants('abc')
         with patch('numpy.load', return_value=np.ones(2)):
-            with self.assertRaisesRegex(ValueError, 'dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
                 read_cal_constants('abc')
 
         # test valid data

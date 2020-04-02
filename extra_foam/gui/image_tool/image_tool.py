@@ -27,7 +27,6 @@ from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
 from ..ctrl_widgets import ImageCtrlWidget
 from ...config import config, MaskState
-from ...ipc import ReferencePub, CalConstantsPub
 
 
 class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
@@ -123,9 +122,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # Whether the view is updated automatically
         self._auto_update = True
 
-        self._ref_pub = ReferencePub()
-        self._cal_pub = CalConstantsPub()
-
         self._cw = QWidget()
         self.setCentralWidget(self._cw)
 
@@ -201,14 +197,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         # use lambda here to facilitate unittest of slot call
         self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
             lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
-
-        self._reference_view.reference_image_path_sgn.connect(
-            self._onReferenceImageChange)
-
-        self._calibration_view.gain_const_path_sgn.connect(
-            self._onCalGainConstChange)
-        self._calibration_view.offset_const_path_sgn.connect(
-            self._onCalOffsetConstChange)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
@@ -305,27 +293,3 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     @pyqtSlot(bool)
     def onAutoUpdateToggled(self, state):
         self._auto_update = state
-
-    @pyqtSlot(str)
-    def _onReferenceImageChange(self, filepath):
-        if not filepath:
-            self._ref_pub.remove()
-            return
-
-        self._ref_pub.set(filepath)
-
-    @pyqtSlot(str)
-    def _onCalGainConstChange(self, filepath):
-        if not filepath:
-            self._cal_pub.remove_gain()
-            return
-
-        self._cal_pub.set_gain(filepath)
-
-    @pyqtSlot(str)
-    def _onCalOffsetConstChange(self, filepath):
-        if not filepath:
-            self._cal_pub.remove_offset()
-            return
-
-        self._cal_pub.set_offset(filepath)

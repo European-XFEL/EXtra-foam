@@ -229,20 +229,15 @@ class ReferencePub:
         """Publish the reference image filepath in Redis."""
         self._db.publish("reference_image", filepath)
 
-    def remove(self):
-        """Notify to remove the current reference image."""
-        self._db.publish("reference_image", '')
-
 
 class ReferenceSub:
     _sub = RedisSubscriber("reference_image")
 
-    def update(self, ref):
-        """Parse all reference image operations.
-
-        :return numpy.ndarray: the updated reference image.
-        """
+    def update(self):
+        """Parse all reference image operations."""
         sub = self._sub
+        updated = False
+        ref = None
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
             if msg is None:
@@ -253,7 +248,8 @@ class ReferenceSub:
                 ref = None
             else:
                 ref = read_image(v)
-        return ref
+            updated = True
+        return updated, ref
 
 
 class ImageMaskPub:
@@ -330,20 +326,12 @@ class CalConstantsPub:
         """
         self._db.publish("cal_constants:gain", filepath)
 
-    def remove_gain(self):
-        """Notify to remove the current gain constants."""
-        self._db.publish("cal_constants:gain", '')
-
     def set_offset(self, filepath):
         """Publish the offset constants filepath in Redis.
 
         ：param str filepath: path of the offset constants file.
         """
         self._db.publish("cal_constants:offset", filepath)
-
-    def remove_offset(self):
-        """Notify to remove the current offset constants."""
-        self._db.publish("cal_constants:offset", '')
 
 
 class CalConstantsSub:

@@ -10,7 +10,7 @@ All rights reserved.
 import os
 import os.path as osp
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGridLayout
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
@@ -18,6 +18,7 @@ from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import RefImageCtrlWidget
 from ..plot_widgets import ImageAnalysis, ImageViewF
 from ...file_io import write_image
+from ...ipc import ReferencePub
 from ...logger import logger
 from ... import ROOT_PATH
 
@@ -29,8 +30,6 @@ class ReferenceView(_AbstractImageToolView):
     Widget for visualizing the reference image.
     """
 
-    reference_image_path_sgn = pyqtSignal(str)
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -38,6 +37,8 @@ class ReferenceView(_AbstractImageToolView):
         self._corrected.setTitle("Corrected")
         self._reference = ImageViewF()
         self._reference.setTitle("Reference")
+
+        self._pub = ReferencePub()
 
         self.initUI()
         self.initConnections()
@@ -56,9 +57,6 @@ class ReferenceView(_AbstractImageToolView):
         self._ctrl_widget.set_current_btn.clicked.connect(self._setReference)
         self._ctrl_widget.remove_btn.clicked.connect(self._removeReference)
 
-        self.reference_image_path_sgn.connect(
-            self._ctrl_widget.onReferencePathChanged)
-
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
@@ -74,8 +72,10 @@ class ReferenceView(_AbstractImageToolView):
             caption="Load reference image",
             directory=osp.expanduser("~"))[0]
 
+        # do not remove reference if the user meant to cancel the selection
         if filepath:
-            self.reference_image_path_sgn.emit(filepath)
+            self._pub.set(filepath)
+            self._ctrl_widget.filepath_le.setText(filepath)
 
     @pyqtSlot()
     def _setReference(self):
@@ -91,9 +91,11 @@ class ReferenceView(_AbstractImageToolView):
             except ValueError as e:
                 logger.error(str(e))
 
-            self.reference_image_path_sgn.emit(filepath)
+            self._pub.set(filepath)
+            self._ctrl_widget.filepath_le.setText(filepath)
 
     @pyqtSlot()
     def _removeReference(self):
         """Remove the reference image."""
-        self.reference_image_path_sgn.emit("")
+        self._pub.set("")
+        self._ctrl_widget.filepath_le.setText("")

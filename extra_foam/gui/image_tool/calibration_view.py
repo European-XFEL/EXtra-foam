@@ -9,13 +9,14 @@ All rights reserved.
 """
 import os.path as osp
 
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGridLayout, QVBoxLayout
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import CalibrationCtrlWidget
 from ..plot_widgets import ImageViewF, ImageAnalysis
+from ...ipc import CalConstantsPub
 
 
 @create_imagetool_view(CalibrationCtrlWidget)
@@ -24,9 +25,6 @@ class CalibrationView(_AbstractImageToolView):
 
     Widget for visualizing image calibration.
     """
-
-    gain_const_path_sgn = pyqtSignal(str)
-    offset_const_path_sgn = pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,6 +37,8 @@ class CalibrationView(_AbstractImageToolView):
         self._gain.setTitle("Gain")
         self._offset = ImageViewF(hide_axis=False)
         self._offset.setTitle("Offset")
+
+        self._pub = CalConstantsPub()
 
         self.initUI()
         self.initConnections()
@@ -66,11 +66,6 @@ class CalibrationView(_AbstractImageToolView):
         self._ctrl_widget.remove_offset_btn.clicked.connect(
             self._removeOffset)
 
-        self.gain_const_path_sgn.connect(
-            self._ctrl_widget.onGainConstPathChanged)
-        self.offset_const_path_sgn.connect(
-            self._ctrl_widget.onOffsetConstPathChanged)
-
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
@@ -83,24 +78,30 @@ class CalibrationView(_AbstractImageToolView):
         filepath = QFileDialog.getOpenFileName(
             caption="Load gain", directory=osp.expanduser("~"))[0]
 
+        # do not remove reference if the user meant to cancel the selection
         if filepath:
-            self.gain_const_path_sgn.emit(filepath)
+            self._pub.set_gain(filepath)
+            self._ctrl_widget.gain_fp_le.setText(filepath)
 
     @pyqtSlot()
     def _loadOffsetConst(self):
         filepath = QFileDialog.getOpenFileName(
             caption="Load offset", directory=osp.expanduser("~"))[0]
 
+        # do not remove reference if the user meant to cancel the selection
         if filepath:
-            self.offset_const_path_sgn.emit(filepath)
+            self._pub.set_offset(filepath)
+            self._ctrl_widget.offset_fp_le.setText(filepath)
 
     @pyqtSlot()
     def _removeGain(self):
-        self.gain_const_path_sgn.emit("")
+        self._pub.set_gain("")
+        self._ctrl_widget.gain_fp_le.setText("")
 
     @pyqtSlot()
     def _removeOffset(self):
-        self.offset_const_path_sgn.emit("")
+        self._pub.set_offset("")
+        self._ctrl_widget.offset_fp_le.setText("")
 
     def onDeactivated(self):
         btn = self._ctrl_widget.record_dark_btn

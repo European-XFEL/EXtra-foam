@@ -16,11 +16,16 @@ from ...database import Metadata as mt
 from ...ipc import (
     CalConstantsSub, ImageMaskSub, ReferenceSub
 )
+from ...ipc import process_logger as logger
 from ...utils import profiler
+from ...config import config
 
 from extra_foam.algorithms import (
     correct_image_data, mask_image_data, nanmean_image_data
 )
+
+
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 
 class ImageProcessor(_BaseProcessor):
@@ -158,7 +163,7 @@ class ImageProcessor(_BaseProcessor):
 
         image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
-        self._update_reference(image_shape)
+        self._update_reference()
 
         # Avoid sending all images around
         image_data.images = [None] * n_sliced
@@ -211,22 +216,24 @@ class ImageProcessor(_BaseProcessor):
 
         self._image_mask = image_mask
 
-    def _update_reference(self, image_shape):
+    def _update_reference(self):
         try:
-            ref = self._ref_sub.update(self._reference)
+            updated, ref = self._ref_sub.update()
         except Exception as e:
             raise ImageProcessingError(str(e))
 
-        # Caveat: set new value before checking shape.
-        self._reference = ref
+        if not updated:
+            return
 
-        if ref is not None and ref.shape != image_shape:
-            # The original reference remains the same. It ensures the error
-            # message if the shape of the image changes (e.g. quadrant
-            # positions change on the fly).
-            raise ImageProcessingError(
-                f"[Image processor] The shape of the reference {ref.shape} is "
-                f"different from the shape of the image {image_shape}!")
+        self._reference = ref
+        if ref is not None:
+            if ref.dtype != _IMAGE_DTYPE:
+                self._reference = ref.astype(_IMAGE_DTYPE)
+
+            logger.info(f"[Image processor] Loaded reference image with "
+                        f"shape = {ref.shape}")
+        else:
+            logger.info(f"[Image processor] Reference image removed")
 
     def _update_gain_offset(self, expected_shape):
         try:

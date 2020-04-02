@@ -243,25 +243,29 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # test setting reference (no image)
         QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(proc._reference)
+        updated, ref = proc._ref_sub.update()
+        self.assertFalse(updated)
         self.assertIsNone(ref)
 
         # test setting reference
         corrected._image = 2 * np.ones((10, 10), np.float32)
         QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(corrected.image.copy())
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         np.testing.assert_array_equal(corrected.image, ref)
 
         # test setting reference multiple times
         for i in range(5):
             corrected._image = np.random.rand(10, 10).astype(np.float32)
             QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(None)
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         np.testing.assert_array_equal(corrected.image, ref)
 
         # test removing reference
         QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(corrected.image.copy())
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         self.assertIsNone(ref)
 
         # ------------------------------
@@ -277,19 +281,19 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             if fn == "reference/file/path":
                 return ref_gt
 
-        # caveat: first establish the connection
-        proc._ref_sub.update(None)
         with patch('extra_foam.ipc.read_image', side_effect=_read_image_side_effect):
             with patch('extra_foam.gui.image_tool.reference_view.QFileDialog.getOpenFileName',
                        return_value=["reference/file/path"]):
                 QTest.mouseClick(widget.load_btn, Qt.LeftButton)
-                self.assertEqual("reference/file/path", widget._filepath_le.text())
-                ref = proc._ref_sub.update(None)
+                self.assertEqual("reference/file/path", widget.filepath_le.text())
+                updated, ref = proc._ref_sub.update()
+                self.assertTrue(updated)
                 np.testing.assert_array_equal(ref, ref_gt)
 
                 QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
-                self.assertEqual("", widget._filepath_le.text())
-                ref = proc._ref_sub.update(ref_gt)
+                self.assertEqual("", widget.filepath_le.text())
+                updated, ref = proc._ref_sub.update()
+                self.assertTrue(updated)
                 self.assertIsNone(ref)
 
     def testDrawMask(self):
@@ -442,7 +446,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                        return_value=["gain/file/path"]):
                 QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)
                 time.sleep(0.1)  # wait to write into redis
-                self.assertEqual("gain/file/path", widget._gain_fp_le.text())
+                self.assertEqual("gain/file/path", widget.gain_fp_le.text())
 
                 n_attempts = 0
                 # repeat to prevent random failure at Travis
@@ -458,7 +462,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 self.assertIsNone(offset)
 
                 QTest.mouseClick(widget.remove_gain_btn, Qt.LeftButton)
-                self.assertEqual("", widget._gain_fp_le.text())
+                self.assertEqual("", widget.gain_fp_le.text())
                 new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
                 self.assertTrue(new_gain)
                 self.assertIsNone(gain)
@@ -471,7 +475,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
                 QTest.mouseClick(widget.load_offset_btn, Qt.LeftButton)
                 time.sleep(0.1)  # wait to write data into redis
-                self.assertEqual("offset/file/path", widget._offset_fp_le.text())
+                self.assertEqual("offset/file/path", widget.offset_fp_le.text())
                 new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
                 self.assertFalse(new_gain)
                 np.testing.assert_array_equal(gain, const_gt)
@@ -479,7 +483,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 np.testing.assert_array_equal(offset, const_gt)
 
                 QTest.mouseClick(widget.remove_offset_btn, Qt.LeftButton)
-                self.assertEqual("", widget._offset_fp_le.text())
+                self.assertEqual("", widget.offset_fp_le.text())
                 new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, const_gt)
                 self.assertFalse(new_gain)
                 np.testing.assert_array_equal(gain, const_gt)

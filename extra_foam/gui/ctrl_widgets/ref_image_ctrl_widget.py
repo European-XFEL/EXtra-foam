@@ -7,7 +7,6 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QGridLayout, QLineEdit, QPushButton
 
 from ..ctrl_widgets import _AbstractCtrlWidget
@@ -17,14 +16,12 @@ from ..gui_helpers import create_icon_button
 class RefImageCtrlWidget(_AbstractCtrlWidget):
     """Widget for manipulating reference image in the ImageToolWindow."""
 
-    reference_image_path_sgn = pyqtSignal()
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.load_btn = QPushButton("Load reference")
-        self._filepath_le = QLineEdit()
-        self._filepath_le.setEnabled(False)
+        self.filepath_le = QLineEdit()
+        self.filepath_le.setEnabled(False)
         self.remove_btn = create_icon_button('remove.png', 20)
 
         self.set_current_btn = QPushButton("Set current as reference")
@@ -41,7 +38,7 @@ class RefImageCtrlWidget(_AbstractCtrlWidget):
         layout = QGridLayout()
 
         layout.addWidget(self.load_btn, 0, 0)
-        layout.addWidget(self._filepath_le, 0, 1)
+        layout.addWidget(self.filepath_le, 0, 1)
         layout.addWidget(self.remove_btn, 0, 3)
 
         layout.addWidget(self.set_current_btn, 1, 0)
@@ -59,7 +56,3 @@ class RefImageCtrlWidget(_AbstractCtrlWidget):
     def loadMetaData(self):
         """Override."""
         pass
-
-    @pyqtSlot(str)
-    def onReferencePathChanged(self, filepath):
-        self._filepath_le.setText(filepath)

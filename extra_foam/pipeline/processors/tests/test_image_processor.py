@@ -12,9 +12,10 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from extra_foam.pipeline.processors.image_processor import ImageProcessor
+from extra_foam.pipeline.processors.image_processor import ImageProcessor, _IMAGE_DTYPE
 from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
 from extra_foam.pipeline.tests import _TestDataMixin
+
 
 
 class TestImageProcessorTr(_TestDataMixin, unittest.TestCase):
@@ -24,7 +25,7 @@ class TestImageProcessorTr(_TestDataMixin, unittest.TestCase):
     """
     def setUp(self):
         self._proc = ImageProcessor()
-        self._proc._ref_sub.update = MagicMock(side_effect=lambda x: x)   # no redis server
+        self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda x, y: (False, x, False, y))   # no redis server
         self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
@@ -98,17 +99,6 @@ class TestImageProcessorTr(_TestDataMixin, unittest.TestCase):
         np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
         proc._image_mask = None
 
-        # assign a reference image
-        proc._reference = np.ones((4, 2), dtype=np.float32)
-        # image shape changes
-        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
-            data, _ = self.data_with_assembled(3, (2, 2))
-            proc.process(data)
-
-        # image mask remains the same, one needs to clear it by hand
-        np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
-        proc._reference = None
-
 
 class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
     """Test pulse-resolved ImageProcessor.
@@ -117,7 +107,7 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
     """
     def setUp(self):
         self._proc = ImageProcessor()
-        self._proc._ref_sub.update = MagicMock(side_effect=lambda x: x)   # no redis server
+        self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda x, y: (False, x, False, y))   # no redis server
         self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
@@ -333,14 +323,32 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
 
-        # test setting reference but the reference shape is different
-        # from the image shape
-        with self.assertRaises(ImageProcessingError):
-            ref_gt = np.ones([3, 2, 2])
-            proc._ref_sub.update = MagicMock(return_value=ref_gt)
-            proc.process(data)
-        # test the reference is set even if the shape is not correct
-        np.testing.assert_array_equal(ref_gt, proc._reference)
+        with patch("extra_foam.ipc.ProcessLogger.info") as info:
+            with patch.object(proc._ref_sub, "update",
+                              return_value=(True, np.ones((2, 2), dtype=_IMAGE_DTYPE))):
+                proc.process(data)
+                info.assert_called_once_with(
+                    "[Image processor] Loaded reference image with shape = (2, 2)")
+                info.reset_mock()
+
+            with patch.object(proc._ref_sub, "update",
+                              return_value=(True, np.zeros((2, 2), dtype=np.bool))):
+                proc.process(data)
+                self.assertEqual(_IMAGE_DTYPE, proc._reference.dtype)
+                np.testing.assert_array_equal(np.zeros((2, 2)), proc._reference)
+                info.reset_mock()
+
+            with patch.object(proc._ref_sub, "update", return_value=(True, None)):
+                proc.process(data)
+                self.assertIsNone(proc._reference)
+                info.assert_called_once_with(
+                    "[Image processor] Reference image removed")
+                info.reset_mock()
+
+            with patch.object(proc._ref_sub, "update", return_value=(False, np.ones((2, 2)))):
+                proc.process(data)
+                self.assertIsNone(proc._reference)
+                info.assert_not_called()
 
     def testPOI(self):
         proc = self._proc
@@ -402,17 +410,6 @@ class TestImageProcessorPr(_TestDataMixin, unittest.TestCase):
         # image mask remains the same, one needs to clear it by hand
         np.testing.assert_array_equal(np.ones((2, 2), dtype=np.bool), proc._image_mask)
         proc._image_mask = None
-
-        # assign a reference image
-        proc._reference = np.ones((4, 2), dtype=np.float32)
-        # image shape changes
-        with self.assertRaisesRegex(ImageProcessingError, 'reference'):
-            data, _ = self.data_with_assembled(3, (4, 2, 2))
-            proc.process(data)
-
-        # image mask remains the same, one needs to clear it by hand
-        np.testing.assert_array_equal(np.ones((4, 2), dtype=np.float32), proc._reference)
-        proc._reference = None
 
         # Number of pulses per train changes, but no exception will be raised
         data, _ = self.data_with_assembled(4, (8, 2, 2))

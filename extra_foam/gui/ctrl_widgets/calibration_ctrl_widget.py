@@ -7,7 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>, Ebad Kamil <ebad.kamil@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton
 )
@@ -30,10 +30,10 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self.load_gain_btn = QPushButton("Load gain")
         self.load_offset_btn = QPushButton("Load offset")
 
-        self._gain_fp_le = QLineEdit()
-        self._gain_fp_le.setEnabled(False)
-        self._offset_fp_le = QLineEdit()
-        self._offset_fp_le.setEnabled(False)
+        self.gain_fp_le = QLineEdit()
+        self.gain_fp_le.setEnabled(False)
+        self.offset_fp_le = QLineEdit()
+        self.offset_fp_le.setEnabled(False)
 
         self.remove_gain_btn = create_icon_button('remove.png', 20)
         self.remove_offset_btn = create_icon_button('remove.png', 20)
@@ -68,7 +68,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._correct_gain_cb, 0, 0)
         layout.addWidget(QLabel("Gain correction"), 0, 1, AR)
         layout.addWidget(self.load_gain_btn, 0, 2)
-        layout.addWidget(self._gain_fp_le, 0, 3)
+        layout.addWidget(self.gain_fp_le, 0, 3)
         layout.addWidget(self.remove_gain_btn, 0, 5)
         layout.addWidget(QLabel("Memory cells: "), 0, 6, AR)
         layout.addWidget(self._gain_slicer_le, 0, 7)
@@ -77,7 +77,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self._correct_offset_cb, 1, 0)
         layout.addWidget(QLabel("Offset correction"), 1, 1, AR)
         layout.addWidget(self.load_offset_btn, 1, 2)
-        layout.addWidget(self._offset_fp_le, 1, 3)
+        layout.addWidget(self.offset_fp_le, 1, 3)
         layout.addWidget(self.remove_offset_btn, 1, 5)
         layout.addWidget(QLabel("Memory cells: "), 1, 6, AR)
         layout.addWidget(self._offset_slicer_le, 1, 7)
@@ -133,11 +133,3 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
                 parse_slice_inv(cfg["gain_slicer"]))
             self._offset_slicer_le.setText(
                 parse_slice_inv(cfg["offset_slicer"]))
-
-    @pyqtSlot(str)
-    def onGainConstPathChanged(self, filepath):
-        self._gain_fp_le.setText(filepath)
-
-    @pyqtSlot(str)
-    def onOffsetConstPathChanged(self, filepath):
-        self._offset_fp_le.setText(filepath)
