@@ -1,7 +1,7 @@
 SPECIAL ANALYSIS SUITE
 ======================
 
-Special analysis is a new concept introduced in the version 0.8.3.
+Special analysis is a new concept introduced in the version 0.8.2.
 
 There are two different work flows for special analysis:
 
