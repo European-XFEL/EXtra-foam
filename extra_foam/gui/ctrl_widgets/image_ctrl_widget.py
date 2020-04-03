@@ -47,6 +47,10 @@ class ImageCtrlWidget(_AbstractCtrlWidget):
         self.auto_level_btn = QPushButton("Auto level")
         self.save_image_btn = QPushButton("Save image")
 
+        self._non_reconfigurable_widgets = [
+            self.save_image_btn
+        ]
+
         self.initUI()
         self.initConnections()
 
