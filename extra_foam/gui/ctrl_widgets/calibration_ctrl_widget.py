@@ -38,11 +38,11 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self.remove_gain_btn = create_icon_button('remove.png', 20)
         self.remove_offset_btn = create_icon_button('remove.png', 20)
 
-        self._gain_slicer_le = SmartSliceLineEdit(":")
-        self._offset_slicer_le = SmartSliceLineEdit(":")
+        self._gain_cells_le = SmartSliceLineEdit(":")
+        self._offset_cells_le = SmartSliceLineEdit(":")
         if not self._pulse_resolved:
-            self._gain_slicer_le.setEnabled(False)
-            self._offset_slicer_le.setEnabled(False)
+            self._gain_cells_le.setEnabled(False)
+            self._offset_cells_le.setEnabled(False)
 
         self._dark_as_offset_cb = QCheckBox("Use dark as offset")
         self._dark_as_offset_cb.setChecked(True)
@@ -71,8 +71,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.gain_fp_le, 0, 3)
         layout.addWidget(self.remove_gain_btn, 0, 5)
         layout.addWidget(QLabel("Memory cells: "), 0, 6, AR)
-        layout.addWidget(self._gain_slicer_le, 0, 7)
-        self._gain_slicer_le.setFixedWidth(100)
+        layout.addWidget(self._gain_cells_le, 0, 7)
+        self._gain_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._correct_offset_cb, 1, 0)
         layout.addWidget(QLabel("Offset correction"), 1, 1, AR)
@@ -80,8 +80,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.offset_fp_le, 1, 3)
         layout.addWidget(self.remove_offset_btn, 1, 5)
         layout.addWidget(QLabel("Memory cells: "), 1, 6, AR)
-        layout.addWidget(self._offset_slicer_le, 1, 7)
-        self._offset_slicer_le.setFixedWidth(100)
+        layout.addWidget(self._offset_cells_le, 1, 7)
+        self._offset_cells_le.setFixedWidth(100)
 
         layout.addWidget(self._dark_as_offset_cb, 2, 2)
         layout.addWidget(self.record_dark_btn, 2, 4)
@@ -98,10 +98,10 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._correct_gain_cb.toggled.connect(mediator.onCalGainCorrection)
         self._correct_offset_cb.toggled.connect(mediator.onCalOffsetCorrection)
 
-        self._gain_slicer_le.value_changed_sgn.connect(
-            mediator.onCalGainSlicerChange)
-        self._offset_slicer_le.value_changed_sgn.connect(
-            mediator.onCalOffsetSlicerChange)
+        self._gain_cells_le.value_changed_sgn.connect(
+            mediator.onCalGainMemoCellsChange)
+        self._offset_cells_le.value_changed_sgn.connect(
+            mediator.onCalOffsetMemoCellsChange)
 
         self._dark_as_offset_cb.toggled.connect(mediator.onCalDarkAsOffset)
         self.record_dark_btn.toggled.connect(mediator.onCalDarkRecording)
@@ -116,8 +116,8 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
             self._correct_offset_cb.isChecked())
         self._dark_as_offset_cb.toggled.emit(
             self._dark_as_offset_cb.isChecked())
-        self._gain_slicer_le.returnPressed.emit()
-        self._offset_slicer_le.returnPressed.emit()
+        self._gain_cells_le.returnPressed.emit()
+        self._offset_cells_le.returnPressed.emit()
         return True
 
     def loadMetaData(self):
@@ -129,7 +129,7 @@ class CalibrationCtrlWidget(_AbstractCtrlWidget):
         self._dark_as_offset_cb.setChecked(cfg["dark_as_offset"] == 'True')
 
         if self._pulse_resolved:
-            self._gain_slicer_le.setText(
-                parse_slice_inv(cfg["gain_slicer"]))
-            self._offset_slicer_le.setText(
-                parse_slice_inv(cfg["offset_slicer"]))
+            self._gain_cells_le.setText(
+                parse_slice_inv(cfg["gain_cells"]))
+            self._offset_cells_le.setText(
+                parse_slice_inv(cfg["offset_cells"]))

@@ -37,12 +37,18 @@ class ImageProcessor(_BaseProcessor):
             and shape = (y, x) for train-resolved
         _correct_gain (bool): whether to apply gain correction.
         _correct_offset (bool): whether to apply offset correction.
-        _gain (numpy.ndarray): gain constants. Shape = (memory cell, y, x)
-        _offset (numpy.ndarray): offset constants. Shape = (memory cell, y, x)
-        _gain_slicer (slice): a slice object used to slice the right memory
+        _full_gain (numpy.ndarray): gain constants loaded from the
+            file/database. Shape = (memory cell, y, x)
+        _full_offset (numpy.ndarray): offset constants loaded from the
+            file/database. Shape = (memory cell, y, x)
+        _gain_cells (slice): a slice object used to slice the right memory
             cells from the gain constants.
-        _offset_slicer (slice): a slice object used to slice the right memory
+        _offset_cells (slice): a slice object used to slice the right memory
             cells from the offset constants.
+        _gain (numpy.ndarray): gain constants of the selected memory
+            cells. Shape = (memory cell, y, x)
+        _offset (numpy.ndarray): offset constants of the selected memory
+            cells. Shape = (memory cell, y, x)
         _gain_mean (numpy.ndarray): average of gain constants over memory
             cell. Shape = (y, x)
         _offset_mean (numpy.ndarray): average of offset constants over memory
@@ -71,12 +77,14 @@ class ImageProcessor(_BaseProcessor):
 
         self._correct_gain = True
         self._correct_offset = True
+        self._full_gain = None
+        self._full_offset = None
+        self._gain_cells = None
+        self._offset_cells = None
+        self._gain_cells_updated = False
+        self._offset_cells_updated = False
         self._gain = None
         self._offset = None
-        self._gain_slicer = slice(None, None)
-        self._offset_slicer = slice(None, None)
-        self._compute_gain_mean = False
-        self._compute_offset_mean = False
         self._gain_mean = None
         self._offset_mean = None
 
@@ -101,18 +109,22 @@ class ImageProcessor(_BaseProcessor):
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
 
-        gain_slicer = self.str2slice(cfg['gain_slicer'])
-        if gain_slicer != self._gain_slicer:
-            self._compute_gain_mean = True
-            self._gain_slicer = gain_slicer
-        offset_slicer = self.str2slice(cfg['offset_slicer'])
-        if offset_slicer != self._offset_slicer:
-            self._compute_offset_mean = True
-            self._offset_slicer = offset_slicer
+        gain_cells = self.str2slice(cfg['gain_cells'])
+        if gain_cells != self._gain_cells:
+            self._gain_cells_updated = True
+            self._gain_cells = gain_cells
+        else:
+            self._gain_cells_updated = False
+
+        offset_cells = self.str2slice(cfg['offset_cells'])
+        if offset_cells != self._offset_cells:
+            self._offset_cells_updated = True
+            self._offset_cells = offset_cells
+        else:
+            self._offset_cells_updated = False
 
         dark_as_offset = cfg['dark_as_offset'] == 'True'
         if dark_as_offset != self._dark_as_offset:
-            self._compute_offset_mean = True
             self._dark_as_offset = dark_as_offset
 
         self._recording_dark = cfg['recording_dark'] == 'True'
@@ -139,22 +151,27 @@ class ImageProcessor(_BaseProcessor):
 
         if assembled.ndim == 3:
             sliced_assembled = assembled[pulse_slicer]
-            sliced_indices = list(range(
+            image_data.sliced_indices = list(range(
                 *(pulse_slicer.indices(assembled.shape[0]))))
-            n_sliced = len(sliced_indices)
+            n_sliced = len(image_data.sliced_indices)
         else:
             sliced_assembled = assembled
-            sliced_indices = [0]
+            image_data.sliced_indices = [0]
             n_sliced = 1
 
         if self._recording_dark:
             self._record_dark(assembled)
+        if self._dark is not None:
+            # default is 0
+            image_data.n_dark_pulses = 1 if self._dark.ndim == 2 \
+                else len(self._dark)
+        image_data.dark_mean = self._dark_mean
+        image_data.dark_count = self.__class__._dark.count
 
-        sliced_gain, sliced_offset = self._update_gain_offset(assembled.shape)
-        correct_image_data(sliced_assembled,
-                           gain=sliced_gain,
-                           offset=sliced_offset,
-                           slicer=pulse_slicer)
+        self._update_gain_offset()
+        image_data.gain_mean = self._gain_mean
+        image_data.offset_mean = self._offset_mean
+        self._correct_image_data(sliced_assembled, pulse_slicer)
 
         # Note: This will be needed by the pump_probe_processor to calculate
         #       the mean of assembled images. Also, the on/off indices are
@@ -163,23 +180,17 @@ class ImageProcessor(_BaseProcessor):
 
         image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
+        image_data.image_mask = self._image_mask
+
         self._update_reference()
+        image_data.reference = self._reference
 
         # Avoid sending all images around
         image_data.images = [None] * n_sliced
         image_data.poi_indices = self._poi_indices
         self._update_pois(image_data, sliced_assembled)
-        image_data.gain_mean = self._gain_mean
-        image_data.offset_mean = self._offset_mean
-        if self._dark is not None:
-            # default is 0
-            image_data.n_dark_pulses = 1 if self._dark.ndim == 2 \
-                                         else len(self._dark)
-        image_data.dark_count = self.__class__._dark.count
-        image_data.image_mask = self._image_mask
+
         image_data.threshold_mask = self._threshold_mask
-        image_data.reference = self._reference
-        image_data.sliced_indices = sliced_indices
 
     def _record_dark(self, assembled):
         if self._dark is None:
@@ -235,65 +246,96 @@ class ImageProcessor(_BaseProcessor):
         else:
             logger.info(f"[Image processor] Reference image removed")
 
-    def _update_gain_offset(self, expected_shape):
+    def _update_gain_offset(self):
         try:
-            new_gain, gain, new_offset, offset = self._cal_sub.update(
-                self._gain, self._offset)
+            gain_updated, gain, offset_updated, offset = self._cal_sub.update()
         except Exception as e:
             raise ImageProcessingError(str(e))
 
-        self._compute_gain_mean |= new_gain
-        self._compute_offset_mean |= new_offset
-
-        # Set new value before checking shape. It avoids loading data once
-        # again due to the wrong slicer.
-        self._gain = gain
-        self._offset = offset
-
-        sliced_gain = None
-        if self._correct_gain:
+        if gain_updated:
             if gain is not None:
-                sliced_gain = gain[self._gain_slicer]
-                if self._compute_gain_mean:
-                    # For visualization of the gain
-                    self._gain_mean = nanmean_image_data(sliced_gain)
-                    self._compute_gain_mean = False
-            else:
-                if self._compute_gain_mean:
-                    self._gain_mean = None
-                    self._compute_gain_mean = False
+                if gain.dtype != _IMAGE_DTYPE:
+                    gain = gain.astype(_IMAGE_DTYPE)
+                self._full_gain = gain
 
-            if sliced_gain is not None and \
-                    sliced_gain.shape != expected_shape:
-                raise ImageProcessingError(
-                    f"[Image processor] Shape of the gain constant "
-                    f"{sliced_gain.shape} is different from the data "
-                    f"{expected_shape}")
+                logger.info(f"[Image processor] Loaded gain constants with "
+                            f"shape = {gain.shape}")
 
-        sliced_offset = None
-        if self._correct_offset:
-            if self._dark_as_offset:
-                sliced_offset = self._dark
-                self._offset_mean = self._dark_mean
-            elif offset is not None:
-                sliced_offset = offset[self._offset_slicer]
-                if self._compute_offset_mean:
-                    # For visualization of the offset
-                    self._offset_mean = nanmean_image_data(sliced_offset)
-                    self._compute_offset_mean = False
+                if gain.ndim == 3:
+                    self._gain = gain[self._gain_cells]
+                    self._gain_mean = nanmean_image_data(self._gain)
+                else:
+                    # no need to copy
+                    self._gain = gain
+                    self._gain_mean = gain
+
             else:
-                if self._compute_offset_mean:
+                self._full_gain = None
+                logger.info(f"[Image processor] Gain constants removed")
+                self._gain = None
+                self._gain_mean = None
+        else:
+            if self._gain_cells_updated and self._full_gain is not None:
+                self._gain = self._full_gain[self._gain_cells]
+                self._gain_mean = nanmean_image_data(self._gain)
+
+        if offset_updated:
+            if offset is not None:
+                if offset.dtype != _IMAGE_DTYPE:
+                    offset = offset.astype(_IMAGE_DTYPE)
+                self._full_offset = offset
+
+                logger.info(f"[Image processor] Loaded offset constants with "
+                            f"shape = {offset.shape}")
+
+                if offset.ndim == 3:
+                    self._offset = offset[self._offset_cells]
+                    self._offset_mean = nanmean_image_data(self._offset)
+                else:
+                    # no need to copy
+                    self._offset = offset
+                    self._offset_mean = offset
+
+            else:
+                self._full_offset = None
+                logger.info(f"[Image processor] Offset constants removed")
+                self._offset = None
+                self._offset_mean = None
+
+        else:
+            if self._offset_cells_updated:
+                if self._full_offset is not None:
+                    self._offset = self._full_offset[self._offset_cells]
+                    self._offset_mean = nanmean_image_data(self._offset)
+                else:
+                    self._offset = None
                     self._offset_mean = None
-                    self._compute_offset_mean = False
 
-            if sliced_offset is not None and \
-                    sliced_offset.shape != expected_shape:
-                raise ImageProcessingError(
-                    f"[Image processor] Shape of the offset constant "
-                    f"{sliced_offset.shape} is different from the data "
-                    f"{expected_shape}")
+    def _correct_image_data(self, sliced_assembled, slicer):
+        gain = self._gain if self._correct_gain else None
 
-        return sliced_gain, sliced_offset
+        if self._correct_offset:
+            offset = self._dark if self._dark_as_offset else self._offset
+        else:
+            offset = None
+
+        if sliced_assembled.ndim == 3:
+            if gain is not None:
+                gain = gain[slicer]
+            if offset is not None:
+                offset = offset[slicer]
+
+        if gain is not None and sliced_assembled.shape != gain.shape:
+            raise ImageProcessingError(
+                f"Assembled shape {sliced_assembled.shape} and "
+                f"gain shape {gain.shape} are different!")
+
+        if offset is not None and sliced_assembled.shape != offset.shape:
+            raise ImageProcessingError(
+                f"Assembled shape {sliced_assembled.shape} and "
+                f"offset shape {offset.shape} are different!")
+
+        correct_image_data(sliced_assembled, gain=gain, offset=offset)
 
     def _update_pois(self, image_data, assembled):
         if assembled.ndim == 2 or image_data.poi_indices is None:

@@ -337,38 +337,40 @@ class CalConstantsPub:
 class CalConstantsSub:
     _sub = RedisPSubscriber("cal_constants:*")
 
-    def update(self, gain, offset):
+    def update(self):
         """Parse all cal constants operations."""
         sub = self._sub
-        new_gain = False
+        gain = None
+        gain_updated = False
         gain_fp = None
-        new_offset = False
+        offset = None
+        offset_updated = False
         offset_fp = None
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
             if msg is None:
                 break
 
-            c = msg['channel'].split(":")[-1]
+            topic = msg['channel'].split(":")[-1]
             v = msg['data']
-            if c == 'gain':
+            if topic == 'gain':
                 if not v:
                     gain = None
-                    new_gain = True
+                    gain_updated = True
                 else:
                     gain_fp = v
-            elif c == 'offset':
+            elif topic == 'offset':
                 if not v:
                     offset = None
-                    new_offset = True
+                    offset_updated = True
                 else:
                     offset_fp = v
 
         if gain_fp is not None:
             gain = read_cal_constants(gain_fp)
-            new_gain = True
+            gain_updated = True
         if offset_fp is not None:
             offset = read_cal_constants(offset_fp)
-            new_offset = True
+            offset_updated = True
 
-        return new_gain, gain, new_offset, offset
+        return gain_updated, gain, offset_updated, offset

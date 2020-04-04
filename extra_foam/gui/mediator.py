@@ -80,11 +80,11 @@ class Mediator(QObject):
     def onCalOffsetCorrection(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "correct_offset", str(value))
 
-    def onCalGainSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "gain_slicer", str(value))
+    def onCalGainMemoCellsChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "gain_cells", str(value))
 
-    def onCalOffsetSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "offset_slicer", str(value))
+    def onCalOffsetMemoCellsChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "offset_cells", str(value))
 
     def onCalDarkAsOffset(self, value:bool):
         self._meta.hset(mt.IMAGE_PROC, "dark_as_offset", str(value))

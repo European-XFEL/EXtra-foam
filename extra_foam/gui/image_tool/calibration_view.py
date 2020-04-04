@@ -29,10 +29,10 @@ class CalibrationView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._raw = ImageViewF(hide_axis=False)
-        self._raw.setTitle("Raw")
         self._corrected = ImageAnalysis(hide_axis=False)
         self._corrected.setTitle("Corrected")
+        self._dark = ImageViewF(hide_axis=False)
+        self._dark.setTitle("Dark")
         self._gain = ImageViewF(hide_axis=False)
         self._gain.setTitle("Gain")
         self._offset = ImageViewF(hide_axis=False)
@@ -46,8 +46,8 @@ class CalibrationView(_AbstractImageToolView):
     def initUI(self):
         """Override."""
         view_splitter = QGridLayout()
-        view_splitter.addWidget(self._raw, 0, 0)
-        view_splitter.addWidget(self._corrected, 1, 0)
+        view_splitter.addWidget(self._corrected, 0, 0)
+        view_splitter.addWidget(self._dark, 1, 0)
         view_splitter.addWidget(self._gain, 0, 1)
         view_splitter.addWidget(self._offset, 1, 1)
 
@@ -70,6 +70,7 @@ class CalibrationView(_AbstractImageToolView):
         """Override."""
         if auto_update or self._corrected.image is None:
             self._corrected.setImageData(_SimpleImageData(data.image))
+            self._dark.setImage(data.image.dark_mean)
             self._offset.setImage(data.image.offset_mean)
             self._gain.setImage(data.image.gain_mean)
 
