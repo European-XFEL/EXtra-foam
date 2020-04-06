@@ -16,7 +16,7 @@ import traceback
 from weakref import WeakKeyDictionary
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
-from PyQt5.QtGui import QIntValidator
+from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QFileDialog, QFrame, QGridLayout, QLabel, QMainWindow,
     QPushButton, QSplitter
@@ -29,7 +29,7 @@ from .. import __version__
 from ..config import config
 from ..gui.ctrl_widgets.smart_widgets import SmartLineEdit
 from ..gui.plot_widgets import ImageViewF
-from ..gui.misc_widgets import GuiLogger
+from ..gui.misc_widgets import GuiLogger, set_button_color
 from ..pipeline.processors.base_processor import _BaseProcessorMixin
 from ..pipeline.f_queue import SimpleQueue
 from ..logger import logger_suite as logger
@@ -79,6 +79,10 @@ class _SharedCtrlWidgetS(QFrame):
         self.setFrameStyle(QFrame.StyledPanel)
 
     def initUI(self):
+        set_button_color(self.start_btn, QColor(Qt.green))
+        set_button_color(self.stop_btn, QColor(Qt.red))
+        set_button_color(self.reset_btn, QColor(Qt.yellow))
+
         layout = QGridLayout()
         AR = Qt.AlignRight
 

@@ -8,7 +8,7 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QPen, QBrush
+from PyQt5.QtGui import QBrush, QColor, QPen, QPalette
 
 from ..pyqtgraph import ColorMap
 from ..pyqtgraph.graphicsItems.GradientEditorItem import Gradients
@@ -151,3 +151,13 @@ colorMapFactory = \
 
 lookupTableFactory = {name: cmap.getLookupTable()
                       for name, cmap in colorMapFactory.items()}
+
+
+def set_button_color(btn, c):
+    palette = btn.palette()
+    if isinstance(c, QColor):
+        palette.setColor(QPalette.Button, c)
+    else:
+        palette.setColor(QPalette.Button, QualitativeColor.mkColor(c))
+    btn.setAutoFillBackground(True)
+    btn.setPalette(palette)
