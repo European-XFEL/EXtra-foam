@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .simple_image_data import _SimpleImageData
-from .base_view import _AbstractImageToolView
+from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..plot_widgets import HistMixin, ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
     RoiProjCtrlWidget, RoiCtrlWidget, RoiFomCtrlWidget,
@@ -80,6 +80,11 @@ class RoiHist(HistMixin, PlotWidgetF):
             self.updateTitle(hist.mean, hist.median, hist.std)
 
 
+@create_imagetool_view(_roi_ctrl_widget=RoiCtrlWidget,
+                       _roi_fom_ctrl_widget=RoiFomCtrlWidget,
+                       _roi_hist_ctrl_widget=RoiHistCtrlWidget,
+                       _roi_norm_ctrl_widget=RoiNormCtrlWidget,
+                       _roi_proj_ctrl_widget=RoiProjCtrlWidget)
 class CorrectedView(_AbstractImageToolView):
     """CorrectedView class.
 
@@ -94,16 +99,7 @@ class CorrectedView(_AbstractImageToolView):
         self._roi_proj_plot = RoiProjPlot()
         self._roi_hist = RoiHist()
 
-        self._roi_ctrl_widget = self.parent().createCtrlWidget(
-            RoiCtrlWidget, self._corrected.rois)
-        self._roi_fom_ctrl_widget = self.parent().createCtrlWidget(
-            RoiFomCtrlWidget)
-        self._roi_hist_ctrl_widget = self.parent().createCtrlWidget(
-            RoiHistCtrlWidget)
-        self._roi_norm_ctrl_widget = self.parent().createCtrlWidget(
-            RoiNormCtrlWidget)
-        self._roi_proj_ctrl_widget = self.parent().createCtrlWidget(
-            RoiProjCtrlWidget)
+        self._roi_ctrl_widget.setRois(self._corrected.rois)
 
         self.initUI()
         self.initConnections()

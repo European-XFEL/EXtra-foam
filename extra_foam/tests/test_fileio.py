@@ -35,14 +35,8 @@ class TestFileIO(unittest.TestCase):
 
         # test wrong dimension
         with patch('imageio.imread', return_value=np.ones((2, 2, 2))):
-            with self.assertRaisesRegex(ValueError, '2 dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D array'):
                 read_image('abc')
-
-        # test dtype
-        with patch('imageio.imread', return_value=np.ones((3, 2), dtype=bool)):
-            img = read_image('abc')
-            self.assertEqual(img.dtype, config['SOURCE_PROC_IMAGE_DTYPE'])
-            self.assertEqual((3, 2), img.shape)
 
         # test read invalid file format
         with tempfile.NamedTemporaryFile(suffix='.txt') as fp:
@@ -80,18 +74,13 @@ class TestFileIO(unittest.TestCase):
 
         # test wrong dimension
         with patch('numpy.load', return_value=np.ones((2, 2, 2, 2))):
-            with self.assertRaisesRegex(ValueError, 'dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
                 read_cal_constants('abc')
         with patch('numpy.load', return_value=np.ones(2)):
-            with self.assertRaisesRegex(ValueError, 'dimensions'):
+            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
                 read_cal_constants('abc')
 
-        # test dtype
-        with patch('numpy.load', return_value=np.ones([3, 2], dtype=bool)):
-            img = read_cal_constants('abc')
-            self.assertEqual(img.dtype, config['SOURCE_PROC_IMAGE_DTYPE'])
-            self.assertEqual((3, 2), img.shape)
-
+        # test valid data
         for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
             fp = tempfile.NamedTemporaryFile(suffix='.npy')
             np.save(fp.name, const_gt)

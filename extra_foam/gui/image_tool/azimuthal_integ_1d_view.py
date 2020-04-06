@@ -10,7 +10,7 @@ All rights reserved.
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
 from .simple_image_data import _SimpleImageData
-from .base_view import _AbstractImageToolView
+from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
 from ..plot_widgets import ImageAnalysis, ImageViewF, PlotWidgetF
@@ -43,6 +43,7 @@ class AzimuthalInteg1dPlot(PlotWidgetF):
         self._plot.setData(momentum, intensity)
 
 
+@create_imagetool_view(AzimuthalIntegCtrlWidget)
 class AzimuthalInteg1dView(_AbstractImageToolView):
     """AzimuthalInteg1dView class.
 
@@ -56,8 +57,6 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
         self._corrected = ImageAnalysis(hide_axis=False)
         self._q_view = ImageViewF(hide_axis=False)
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
-        self._ctrl_widget = self.parent().createCtrlWidget(
-            AzimuthalIntegCtrlWidget)
 
         self.initUI()
 

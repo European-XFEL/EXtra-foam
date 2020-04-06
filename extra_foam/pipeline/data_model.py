@@ -416,10 +416,12 @@ class ImageData:
             to reconstruct the indices of the selected images in the original
             data providing the number of pulses and the slicer are both known.
         poi_indices (list): indices of pulses of interest.
-        gain_mean (numpy.ndarray):
-        offset_mean (numpy.ndarray): average of all the offset data in
-            the dark run. Shape = (y, x)
+        gain_mean (numpy.ndarray): average of all the gain data in the
+            selected memory cells. Shape = (y, x)
+        offset_mean (numpy.ndarray):  average of all the offset data in the
+            selected memory cells. Shape = (y, x)
         n_dark_pulses (int): number of dark pulses in a dark train.
+        dark_mean (numpy.ndarray): average of the dark run. Shape = (y, x)
         dark_count (int): count of collected dark trains.
         image_mask (numpy.ndarray): image mask. For pulse-resolved detectors,
             this image mask is shared by all the pulses in a train. However,
@@ -448,6 +450,7 @@ class ImageData:
         self.offset_mean = None
 
         self.n_dark_pulses = 0
+        self.dark_mean = None
         self.dark_count = 0
 
         self.image_mask = None

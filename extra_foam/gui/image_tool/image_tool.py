@@ -99,10 +99,11 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._tool_bar.addSeparator()
 
+        self._ctrl_widgets = []
+
         # -----------------------------
         # ctrl panel
         # -----------------------------
-        self._ctrl_widgets = []
 
         self._bulletin_view = self.createView(BulletinView)
         self._image_ctrl_widget = self.createCtrlWidget(ImageCtrlWidget)
@@ -113,7 +114,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._views_tab = QTabWidget()
         self._corrected_view = self.createView(CorrectedView)
-        self._gain_offset_view = self.createView(CalibrationView)
+        self._calibration_view = self.createView(CalibrationView)
         self._reference_view = self.createView(ReferenceView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
@@ -135,7 +136,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         corrected_tab_idx = self._views_tab.addTab(
             self._corrected_view, "Corrected")
         cali_idx = self._views_tab.addTab(
-            self._gain_offset_view, "Gain / offset")
+            self._calibration_view, "Gain / offset")
         ref_idx = self._views_tab.addTab(self._reference_view, "Reference")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")

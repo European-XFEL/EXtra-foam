@@ -10,11 +10,12 @@ All rights reserved.
 from PyQt5.QtWidgets import QVBoxLayout
 
 from .simple_image_data import _SimpleImageData
-from .base_view import _AbstractImageToolView
+from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import GeometryCtrlWidget
 from ..plot_widgets import ImageAnalysis
 
 
+@create_imagetool_view(GeometryCtrlWidget)
 class GeometryView(_AbstractImageToolView):
     """GeometryView class.
 
@@ -24,8 +25,6 @@ class GeometryView(_AbstractImageToolView):
         super().__init__(*args, **kwargs)
 
         self._corrected = ImageAnalysis(hide_axis=False)
-        self._ctrl_widget = self.parent().createCtrlWidget(
-            GeometryCtrlWidget)
 
         self.initUI()
 

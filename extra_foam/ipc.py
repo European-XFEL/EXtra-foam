@@ -16,7 +16,7 @@ import redis
 
 from .config import config
 from .serialization import deserialize_image, serialize_image
-from .file_io import read_cal_constants
+from .file_io import read_image, read_cal_constants
 
 
 class _RedisQueueBase:
@@ -144,7 +144,11 @@ class RedisConnection(metaclass=MetaRedisConnection):
 
 
 class RedisSubscriber(metaclass=MetaRedisConnection):
-    """Lazily evaluated Redis subscriber."""
+    """Lazily evaluated Redis subscriber.
+
+    Read the code of pub/sub in Redis:
+        https://making.pusher.com/redis-pubsub-under-the-hood/
+    """
     def __init__(self, channel, decode_responses=True):
         self._sub = None
         self._decode_responses = decode_responses
@@ -221,24 +225,19 @@ process_logger = ProcessLogger()
 class ReferencePub:
     _db = RedisConnection()
 
-    def set(self, image):
-        """Publish the reference image in Redis."""
-        self._db.publish("reference_image", serialize_image(image))
-
-    def remove(self):
-        """Notify to remove the current reference image."""
-        self._db.publish("reference_image", '')
+    def set(self, filepath):
+        """Publish the reference image filepath in Redis."""
+        self._db.publish("reference_image", filepath)
 
 
 class ReferenceSub:
-    _sub = RedisSubscriber("reference_image", decode_responses=False)
+    _sub = RedisSubscriber("reference_image")
 
-    def update(self, ref):
-        """Parse all reference image operations.
-
-        :return numpy.ndarray: the updated reference image.
-        """
+    def update(self):
+        """Parse all reference image operations."""
         sub = self._sub
+        updated = False
+        ref = None
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
             if msg is None:
@@ -248,8 +247,9 @@ class ReferenceSub:
             if not v:
                 ref = None
             else:
-                ref = deserialize_image(v)
-        return ref
+                ref = read_image(v)
+            updated = True
+        return updated, ref
 
 
 class ImageMaskPub:
@@ -326,10 +326,6 @@ class CalConstantsPub:
         """
         self._db.publish("cal_constants:gain", filepath)
 
-    def remove_gain(self):
-        """Notify to remove the current gain constants."""
-        self._db.publish("cal_constants:gain", '')
-
     def set_offset(self, filepath):
         """Publish the offset constants filepath in Redis.
 
@@ -337,46 +333,44 @@ class CalConstantsPub:
         """
         self._db.publish("cal_constants:offset", filepath)
 
-    def remove_offset(self):
-        """Notify to remove the current offset constants."""
-        self._db.publish("cal_constants:offset", '')
-
 
 class CalConstantsSub:
     _sub = RedisPSubscriber("cal_constants:*")
 
-    def update(self, gain, offset):
+    def update(self):
         """Parse all cal constants operations."""
         sub = self._sub
-        new_gain = False
+        gain = None
+        gain_updated = False
         gain_fp = None
-        new_offset = False
+        offset = None
+        offset_updated = False
         offset_fp = None
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
             if msg is None:
                 break
 
-            c = msg['channel'].split(":")[-1]
+            topic = msg['channel'].split(":")[-1]
             v = msg['data']
-            if c == 'gain':
+            if topic == 'gain':
                 if not v:
                     gain = None
-                    new_gain = True
+                    gain_updated = True
                 else:
                     gain_fp = v
-            elif c == 'offset':
+            elif topic == 'offset':
                 if not v:
                     offset = None
-                    new_offset = True
+                    offset_updated = True
                 else:
                     offset_fp = v
 
         if gain_fp is not None:
             gain = read_cal_constants(gain_fp)
-            new_gain = True
+            gain_updated = True
         if offset_fp is not None:
             offset = read_cal_constants(offset_fp)
-            new_offset = True
+            offset_updated = True
 
-        return new_gain, gain, new_offset, offset
+        return gain_updated, gain, offset_updated, offset

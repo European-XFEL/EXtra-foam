@@ -203,19 +203,19 @@ class TestImageProc(unittest.TestCase):
         # offset only
         img = np.array([[1, 2, 3], [3, np.nan, np.nan]], dtype=np.float32)
         offset = np.array([[1, 2, 1], [2, np.nan, np.nan]], dtype=np.float32)
-        correct_image_data(img, offset=offset, slicer=None)
+        correct_image_data(img, offset=offset)
         np.testing.assert_array_equal(
             np.array([[0, 0, 2], [1, np.nan, np.nan]], dtype=np.float32), img)
 
         # gain only
         gain = np.array([[1, 2, 1], [2, 2, 1]], dtype=np.float32)
-        correct_image_data(img, gain=gain, slicer=None)
+        correct_image_data(img, gain=gain)
         np.testing.assert_array_equal(
             np.array([[0, 0, 2], [2, np.nan, np.nan]], dtype=np.float32), img)
 
         # both gain and offset
         img = np.array([[1, 2, 3], [3, np.nan, np.nan]], dtype=np.float32)
-        correct_image_data(img, gain=gain, offset=offset, slicer=None)
+        correct_image_data(img, gain=gain, offset=offset)
         np.testing.assert_array_equal(
             np.array([[0, 0, 2], [2, np.nan, np.nan]], dtype=np.float32), img)
 
