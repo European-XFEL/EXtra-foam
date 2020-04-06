@@ -15,6 +15,8 @@ from threading import Condition
 import traceback
 from weakref import WeakKeyDictionary
 
+import numpy as np
+
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
@@ -30,11 +32,13 @@ from ..config import config
 from ..gui.ctrl_widgets.smart_widgets import SmartLineEdit
 from ..gui.plot_widgets import ImageViewF
 from ..gui.misc_widgets import GuiLogger, set_button_color
-from ..pipeline.processors.base_processor import _BaseProcessorMixin
 from ..pipeline.f_queue import SimpleQueue
 from ..logger import logger_suite as logger
 from ..pipeline.f_zmq import FoamZmqClient
 from ..pipeline.exceptions import ProcessingError
+
+
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 
 class _SharedCtrlWidgetS(QFrame):
@@ -203,7 +207,7 @@ class _ThreadLogger(QObject):
         self.error_sgn.connect(instance.onErrorReceived)
 
 
-class QThreadWorker(_BaseProcessorMixin, QObject):
+class QThreadWorker(QObject):
     """Base class of worker running in a thread.
 
     Attributes:
@@ -244,12 +248,10 @@ class QThreadWorker(_BaseProcessorMixin, QObject):
         except Exception as e:
             self.log.error(repr(e))
 
-    @abc.abstractmethod
     def onLoadDarkRun(self, dirpath):
         """Load the dark from a run folder."""
         raise NotImplementedError
 
-    @abc.abstractmethod
     def onRemoveDark(self):
         """Remove the recorded dark data."""
         raise NotImplementedError
@@ -304,6 +306,78 @@ class QThreadWorker(_BaseProcessorMixin, QObject):
         self._running = False
         with self._cv:
             self._cv.notify()
+
+    def _get_tid(self, meta):
+        """Fetch train ID from meta data.
+
+        :param dict meta: meta data.
+        """
+        try:
+            return next(iter(meta.values()))["timestamp.tid"]
+        except (StopIteration, KeyError) as e:
+            raise ProcessingError(f"Train ID not found in meta data: {str(e)}")
+
+    def _fetch_property_data(self, tid, data, src, ppt):
+        """Fetch property data from raw data.
+
+        :param int tid: train ID.
+        :param dict data: data.
+        :param str src: device ID / output channel.
+        :param str ppt: property.
+
+        :returns (value, error str)
+        """
+        if not src or not ppt:
+            # not activated is not an error
+            return
+
+        if src not in data:
+            self.log.error(f"[{tid}] Source '{src}' not found!")
+            return
+
+        try:
+            return data[src][ppt]
+        except KeyError:
+            try:
+                # slow data saved in file
+                return data[src][f"{ppt}.value"]
+            except KeyError:
+                self.log.error(
+                    f"[{tid}] Property '{ppt}'not found in source '{src}'!")
+
+    def _squeeze_camera_image(self, tid, arr):
+        """Return a 2D image data.
+
+        It attempts to squeeze the input array if its dimension is 3D.
+
+        :param int tid: train ID.
+        :param numpy.ndarray arr: image data.
+        """
+        if arr is None:
+            return
+
+        if arr.ndim not in (2, 3):
+            self.log.error(f"[{tid}] Array dimension must be either 2 or 3! "
+                           f"actual {arr.ndim}!")
+            return
+
+        if arr.ndim == 3:
+            try:
+                img = np.squeeze(arr, axis=0)
+            except ValueError:
+                try:
+                    img = np.squeeze(arr, axis=-1)
+                except ValueError:
+                    self.log.error(
+                        "f[{tid}] Failed to squeeze a 3D array to 2D!")
+                    return
+        else:
+            img = arr
+
+        if img.dtype != _IMAGE_DTYPE:
+            img = img.astype(_IMAGE_DTYPE)
+
+        return img
 
 
 class _BaseQThreadClient(QThread):
@@ -446,7 +520,8 @@ class _SpecialAnalysisBase(QMainWindow):
         self._com_ctrl.load_dark_run_btn.clicked.connect(
             self._onSelectDarkRunDirectory)
 
-        self._com_ctrl.remove_dark_btn.clicked.connect(self._worker.onRemoveDark)
+        self._com_ctrl.remove_dark_btn.clicked.connect(
+            self._worker.onRemoveDark)
 
         self._com_ctrl.dark_subtraction_cb.toggled.connect(
             self._worker.onSubtractDarkToggled)
