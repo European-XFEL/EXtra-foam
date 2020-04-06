@@ -21,7 +21,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QFileDialog, QFrame, QGridLayout, QLabel, QMainWindow,
-    QPushButton, QSplitter
+    QPushButton, QSplitter, QWidget
 )
 
 from extra_data import RunDirectory
@@ -48,15 +48,20 @@ class _SharedCtrlWidgetS(QFrame):
     subtraction control as well as other common GUI controls.
     """
 
-    def __init__(self, parent=None, *, with_dark=True):
+    def __init__(self, parent=None, *, with_dark=True, with_levels=True):
         """Initialization.
 
         :param bool with_dark: whether the dark recording/subtraction control
             widgets are included. For special analysis which makes use of
             the processed data in EXtra-foam, dark recording/subtraction
             control is not needed since it is done in the ImageTool.
+        :param bool with_levels: whether the image levels related control
+            widgets are included.
         """
         super().__init__(parent=parent)
+
+        self._with_dark = with_dark
+        self._with_levels = with_levels
 
         self._hostname_le = SmartLineEdit("127.0.0.1")
         self._hostname_le.setMinimumWidth(100)
@@ -68,7 +73,6 @@ class _SharedCtrlWidgetS(QFrame):
         self.stop_btn.setEnabled(False)
         self.reset_btn = QPushButton("Reset")
 
-        self._with_dark = with_dark
         self.record_dark_btn = QPushButton("Record dark")
         self.record_dark_btn.setCheckable(True)
         self.load_dark_run_btn = QPushButton("Load dark run")
@@ -108,8 +112,9 @@ class _SharedCtrlWidgetS(QFrame):
             layout.addWidget(self.remove_dark_btn, i_row, 2)
             layout.addWidget(self.dark_subtraction_cb, i_row, 3)
 
-        i_row += 1
-        layout.addWidget(self.auto_level_btn, i_row, 3)
+        if self._with_levels:
+            i_row += 1
+            layout.addWidget(self.auto_level_btn, i_row, 3)
 
         self.setLayout(layout)
 
@@ -172,7 +177,10 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
         for name, widget in widgets:
             if name:
                 layout.addWidget(QLabel(f"{name}: "), index, 0, AR)
-            layout.addWidget(widget, index, 1)
+            if isinstance(widget, QWidget):
+                layout.addWidget(widget, index, 1)
+            else:
+                layout.addLayout(widget, index, 1)
             index += 1
 
 
@@ -228,6 +236,10 @@ class QThreadWorker(QObject):
         self._subtract_dark = True
 
         self.log = _ThreadLogger()
+
+    def onReset(self):
+        """Interface method."""
+        pass
 
     def onRecordDarkToggled(self, state: bool):
         self._recording_dark = state
@@ -453,19 +465,15 @@ class _SpecialAnalysisBase(QMainWindow):
     stopped_sgn = pyqtSignal()
     reset_sgn = pyqtSignal()
 
-    def __init__(self, topic, *, with_dark=True):
-        """Initialization.
-
-        :param bool with_dark: argument passed to the constructor of
-            _SharedCtrlWidgetS.
-        """
+    def __init__(self, topic, **kwargs):
+        """Initialization."""
         super().__init__()
 
         self._topic = topic
 
         self.setWindowTitle(f"EXtra-foam {__version__} - {self._title}")
 
-        self._com_ctrl = _SharedCtrlWidgetS(with_dark=with_dark)
+        self._com_ctrl = _SharedCtrlWidgetS(**kwargs)
 
         queue = SimpleQueue(maxsize=1)
         self._cv = Condition()
@@ -573,6 +581,8 @@ class _SpecialAnalysisBase(QMainWindow):
     def _onReset(self):
         for widget in self._plot_widgets:
             widget.reset()
+        self._worker.onReset()
+
         self.reset_sgn.emit()
 
     def updateWidgetsF(self):

@@ -111,7 +111,7 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("SCS")
 
-        # self.addSpecial("xas_tim.png", XasTimWindow)
+        self.addSpecial("xas_tim.png", XasTimWindow)
         self.addSpecial("tr_xas.png", TrxasWindow)
         self.addSpecial("Gotthard.png", GotthardWindow)
         self.addCommonSpecials()
