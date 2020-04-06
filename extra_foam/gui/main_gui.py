@@ -11,7 +11,6 @@ from collections import deque
 import sys
 import traceback
 import time
-import logging
 import os.path as osp
 from queue import Empty
 from weakref import WeakKeyDictionary
@@ -30,16 +29,15 @@ from PyQt5.QtWidgets import (
 from redis import ConnectionError
 
 from .ctrl_widgets import (
-    AnalysisCtrlWidget, BinCtrlWidget,
-    CorrelationCtrlWidget, FomFilterCtrlWidget, DataSourceWidget,
-    HistogramCtrlWidget, PumpProbeCtrlWidget, TrXasCtrlWidget,
+    AnalysisCtrlWidget, BinCtrlWidget, CorrelationCtrlWidget,
+    ExtensionCtrlWidget, FomFilterCtrlWidget, DataSourceWidget,
+    HistogramCtrlWidget, PumpProbeCtrlWidget
 )
-from .gui_helpers import create_icon_button
 from .misc_widgets import Configurator, GuiLogger
 from .image_tool import ImageToolWindow
 from .windows import (
     BinningWindow, CorrelationWindow, HistogramWindow, PulseOfInterestWindow,
-    PumpProbeWindow, FileStreamWindow, AboutWindow, TrXasWindow
+    PumpProbeWindow, FileStreamWindow, AboutWindow
 )
 from .. import __version__
 from ..config import config
@@ -95,8 +93,6 @@ class MainGUI(QMainWindow):
 
     _db = RedisConnection()
 
-    _SPECIAL_ANALYSIS_ICON_WIDTH = 100
-
     _WIDTH, _HEIGHT = config['GUI_MAIN_GUI_SIZE']
 
     def __init__(self, pause_ev, close_ev):
@@ -136,11 +132,11 @@ class MainGUI(QMainWindow):
         self._right_cw.setChildrenCollapsible(False)
 
         self._source_cw = self.createCtrlWidget(DataSourceWidget)
+        self._extension_cw = self.createCtrlWidget(ExtensionCtrlWidget)
 
         self._ctrl_panel_cw = QTabWidget()
         self._analysis_cw = QWidget()
         self._statistics_cw = QWidget()
-        self._special_analysis_cw = QWidget()
 
         self._util_panel_container = QWidget()
         self._util_panel_cw = QTabWidget()
@@ -201,22 +197,15 @@ class MainGUI(QMainWindow):
             lambda: self.onOpenSatelliteWindow(AboutWindow))
 
         # *************************************************************
-        # Special analysis
-        # *************************************************************
-
-        self._trxas_btn = self.addSpecial("tr_xas.png", TrXasWindow)
-
-        # *************************************************************
         # Miscellaneous
         # *************************************************************
 
         # book-keeping opened windows
         self._plot_windows = WeakKeyDictionary()
         self._satellite_windows = WeakKeyDictionary()
-        self._special_windows = WeakKeyDictionary()
 
-        self._logger = GuiLogger(parent=self)
-        logging.getLogger().addHandler(self._logger)
+        self._gui_logger = GuiLogger(parent=self)
+        logger.addHandler(self._gui_logger)
 
         self._configurator = Configurator()
 
@@ -253,9 +242,6 @@ class MainGUI(QMainWindow):
         self.bin_ctrl_widget = self.createCtrlWidget(BinCtrlWidget)
         self.histogram_ctrl_widget = self.createCtrlWidget(HistogramCtrlWidget)
         self.correlation_ctrl_widget = self.createCtrlWidget(CorrelationCtrlWidget)
-
-        # special analysis control widgets (do not register them!!!)
-        self._trxas_ctrl_widget = TrXasCtrlWidget()
 
         # *************************************************************
         # status bar
@@ -303,6 +289,8 @@ class MainGUI(QMainWindow):
         self._left_cw_container.setWidget(self._left_cw)
         self._left_cw_container.setWidgetResizable(True)
 
+        self._left_cw.addTab(self._extension_cw, "Extension")
+
     def initRightUI(self):
         self.initCtrlUI()
         self.initUtilUI()
@@ -319,11 +307,9 @@ class MainGUI(QMainWindow):
     def initCtrlUI(self):
         self.initGeneralAnalysisUI()
         self.initStatisticsAnalysisUI()
-        self.initSpecialAnalysisUI()
 
         self._ctrl_panel_cw.addTab(self._analysis_cw, "General analysis")
         self._ctrl_panel_cw.addTab(self._statistics_cw, "Statistics analysis")
-        self._ctrl_panel_cw.addTab(self._special_analysis_cw, "Special analysis")
 
     def initGeneralAnalysisUI(self):
         layout = QVBoxLayout()
@@ -339,22 +325,8 @@ class MainGUI(QMainWindow):
         layout.addWidget(self.histogram_ctrl_widget)
         self._statistics_cw.setLayout(layout)
 
-    def initSpecialAnalysisUI(self):
-        ctrl_widget = QTabWidget()
-        ctrl_widget.setTabPosition(QTabWidget.TabPosition.East)
-        ctrl_widget.addTab(self._trxas_ctrl_widget, "tr-XAS")
-
-        icon_layout = QVBoxLayout()
-        icon_layout.addWidget(self._trxas_btn)
-        icon_layout.addStretch(1)
-
-        layout = QHBoxLayout()
-        layout.addWidget(ctrl_widget)
-        layout.addLayout(icon_layout)
-        self._special_analysis_cw.setLayout(layout)
-
     def initUtilUI(self):
-        self._util_panel_cw.addTab(self._logger.widget, "Logger")
+        self._util_panel_cw.addTab(self._gui_logger.widget, "Logger")
         self._util_panel_cw.addTab(self._configurator, "Configurator")
         self._util_panel_cw.setTabPosition(QTabWidget.TabPosition.South)
 
@@ -387,7 +359,7 @@ class MainGUI(QMainWindow):
         data = self._queue[0]
 
         self._image_tool.updateWidgetsF()
-        for w in itertools.chain(self._special_windows, self._plot_windows):
+        for w in itertools.chain(self._plot_windows):
             try:
                 w.updateWidgetsF()
             except Exception as e:
@@ -426,12 +398,6 @@ class MainGUI(QMainWindow):
         self._tool_bar.addAction(action)
         return action
 
-    def addSpecial(self, filename, instance_type):
-        btn = create_icon_button(filename, self._SPECIAL_ANALYSIS_ICON_WIDTH)
-        btn.clicked.connect(
-            lambda: self.openSpecialAnalysisWindow(instance_type))
-        return btn
-
     def onOpenPlotWindow(self, instance_type):
         """Open a plot window if it does not exist.
 
@@ -453,15 +419,6 @@ class MainGUI(QMainWindow):
             return
         return instance_type(parent=self)
 
-    def openSpecialAnalysisWindow(self, instance_type):
-        """Open a special analysis window if it does not exist.
-
-        Otherwise bring the opened window to the table top.
-        """
-        if self.checkWindowExistence(instance_type, self._special_windows):
-            return
-        return instance_type(self._queue, parent=self)
-
     def checkWindowExistence(self, instance_type, windows):
         for key in windows:
             if isinstance(key, instance_type):
@@ -480,12 +437,6 @@ class MainGUI(QMainWindow):
 
     def unregisterSatelliteWindow(self, instance):
         del self._satellite_windows[instance]
-
-    def registerSpecialWindow(self, instance):
-        self._special_windows[instance] = 1
-
-    def unregisterSpecialWindow(self, instance):
-        del self._special_windows[instance]
 
     @property
     def input(self):
@@ -565,7 +516,7 @@ class MainGUI(QMainWindow):
 
     def closeEvent(self, QCloseEvent):
         # prevent from logging in the GUI when it has been closed
-        logging.getLogger().removeHandler(self._logger)
+        logger.removeHandler(self._gui_logger)
 
         # tell all processes to close
         self._close_ev.set()
@@ -580,8 +531,7 @@ class MainGUI(QMainWindow):
 
         self._image_tool.close()
         for window in list(itertools.chain(self._plot_windows,
-                                           self._satellite_windows,
-                                           self._special_windows)):
+                                           self._satellite_windows)):
             # Close all open child windows to make sure their resources
             # (any running process etc.) are released gracefully. This
             # is especially necessary for the case when file stream was

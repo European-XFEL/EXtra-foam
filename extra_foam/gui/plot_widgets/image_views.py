@@ -183,4 +183,4 @@ class RoiImageView(ImageViewF):
             data.roi, f"geom{self._index}"), "geometry")
         if w < 0 or h < 0:
             return
-        self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
+        self.setImage(image[y:y+h, x:x+w])

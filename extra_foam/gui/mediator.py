@@ -59,6 +59,9 @@ class Mediator(QObject):
     def unregisterAnalysis(self, analysis_type):
         self._meta.unregister_analysis(analysis_type)
 
+    def onExtensionEndpointChange(self, endpoint: str):
+        self._meta.hset(mt.EXTENSION, "endpoint", endpoint)
+
     def onBridgeConnectionsChange(self, connections: dict):
         # key = endpoint, value = source type
         pipe = self._meta.pipeline()
@@ -293,30 +296,3 @@ class Mediator(QObject):
 
     def onFomFilterPulseResolvedChange(self, value: bool):
         self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
-
-    def onTrXasScanStateToggled(self, value: IntEnum, state: bool):
-        if state:
-            self._meta.hset(mt.TR_XAS_PROC, "analysis_type", int(value))
-        else:
-            self._meta.hdel(mt.TR_XAS_PROC, "analysis_type")
-
-    def onTrXasDelaySourceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_source", value)
-
-    def onTrXasEnergySourceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_source", value)
-
-    def onTrXasNoDelayBinsChange(self, value: int):
-        self._meta.hset(mt.TR_XAS_PROC, "n_delay_bins", value)
-
-    def onTrXasDelayRangeChange(self, value: tuple):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_range", str(value))
-
-    def onTrXasNoEnergyBinsChange(self, value: int):
-        self._meta.hset(mt.TR_XAS_PROC, "n_energy_bins", value)
-
-    def onTrXasEnergyRangeChange(self, value: tuple):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_range", str(value))
-
-    def onTrXasReset(self):
-        self._meta.hset(mt.TR_XAS_PROC, "reset", 1)

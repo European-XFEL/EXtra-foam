@@ -5,7 +5,6 @@ from .binning_w import BinningWindow
 from .correlation_w import CorrelationWindow
 from .histogram_w import HistogramWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
-from .tri_xas_w import TrXasWindow
 
 __all__ = [
     "_AbstractWindowMixin",
@@ -15,7 +14,6 @@ __all__ = [
     "PulseOfInterestWindow",
     "PumpProbeWindow",
     "RoiWindow",
-    "TrXasWindow"
 ]
 
 

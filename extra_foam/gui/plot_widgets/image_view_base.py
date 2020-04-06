@@ -198,7 +198,7 @@ class ImageViewF(QWidget):
             self.updateImageWithAutoLevel()
 
     def updateImageWithAutoLevel(self):
-        """Re-display the current image with auto_levels."""
+        """Re-display the current image with autoLevels == True."""
         if self._image is None:
             return
         self.setImage(self._image, auto_levels=True)

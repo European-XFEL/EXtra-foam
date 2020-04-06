@@ -18,7 +18,7 @@ from ...ipc import (
 )
 from ...ipc import process_logger as logger
 from ...utils import profiler
-from ...config import config
+from ...config import config, _MAX_INT32
 
 from extra_foam.algorithms import (
     correct_image_data, mask_image_data, nanmean_image_data
@@ -68,9 +68,7 @@ class ImageProcessor(_BaseProcessor):
         _poi_indices (list): indices of POI pulses.
     """
 
-    # give it a huge window for now since I don't want to touch the
-    # implementation of the base class for now.
-    _dark = RawImageData(999999)
+    _dark = RawImageData(_MAX_INT32)
 
     def __init__(self):
         super().__init__()
@@ -90,6 +88,7 @@ class ImageProcessor(_BaseProcessor):
 
         self._dark_as_offset = True
         self._recording_dark = False
+        del self._dark
         self._dark_mean = None
 
         self._image_mask = None

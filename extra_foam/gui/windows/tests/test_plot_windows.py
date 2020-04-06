@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from collections import Counter, deque
 
 from PyQt5.QtWidgets import QMainWindow
@@ -118,23 +118,6 @@ class TestPlotWindows(unittest.TestCase):
         self.assertEqual(2, counter[PoiImageView])
         self.assertEqual(2, counter[PoiFomHist])
         self.assertEqual(2, counter[PoiRoiHist])
-
-        win.updateWidgetsF()
-
-    def testTrXasWindow(self):
-        from extra_foam.gui.windows.tri_xas_w import (
-            TrXasWindow, TrXasAbsorptionPlot, TrXasHeatmap
-        )
-        win = TrXasWindow(deque(), pulse_resolved=True, parent=self.gui)
-
-        self.assertEqual(6, len(win._plot_widgets))
-        counter = Counter()
-        for key in win._plot_widgets:
-            counter[key.__class__] += 1
-
-        self.assertEqual(3, counter[RoiImageView])
-        self.assertEqual(2, counter[TrXasAbsorptionPlot])
-        self.assertEqual(1, counter[TrXasHeatmap])
 
         win.updateWidgetsF()
 
@@ -281,15 +264,3 @@ class testHistogramWidgets(_TestDataMixin, unittest.TestCase):
         widget = InTrainFomPlot()
         data = ProcessedData(1)
         widget.updateF(data)
-
-
-class testTriXasWidgets(unittest.TestCase):
-    def testTrXasAbsorptionPlot(self):
-        from extra_foam.gui.windows.tri_xas_w import TrXasAbsorptionPlot
-
-        widget = TrXasAbsorptionPlot()
-
-    def testTrXasHeatmap(self):
-        from extra_foam.gui.windows.tri_xas_w import TrXasHeatmap
-
-        widget = TrXasHeatmap()
