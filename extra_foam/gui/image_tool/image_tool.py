@@ -196,10 +196,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._image_ctrl_widget.save_image_btn.clicked.connect(
             self._corrected_view.imageView.writeImage)
 
-        # use lambda here to facilitate unittest of slot call
-        self._mask_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
-            lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
-
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
 

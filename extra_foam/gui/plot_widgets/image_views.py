@@ -83,13 +83,6 @@ class ImageAnalysis(ImageViewF):
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 
-    def setThresholdMask(self, v):
-        if self._image_data is None:
-            return
-
-        self._image_data.threshold_mask = v
-        self.setImage(self._image_data.masked)
-
     @pyqtSlot(bool)
     def onDrawToggled(self, state, checked):
         self._mask_item.state = state
