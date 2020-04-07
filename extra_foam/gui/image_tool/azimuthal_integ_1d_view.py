@@ -9,11 +9,10 @@ All rights reserved.
 """
 from PyQt5.QtWidgets import QVBoxLayout, QSplitter, QTabWidget
 
-from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import AzimuthalIntegCtrlWidget
 from ..misc_widgets import FColor
-from ..plot_widgets import ImageAnalysis, ImageViewF, PlotWidgetF
+from ..plot_widgets import ImageViewF, PlotWidgetF
 from ...config import AnalysisType, plot_labels
 
 
@@ -54,7 +53,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageViewF(hide_axis=False)
         self._q_view = ImageViewF(hide_axis=False)
         self._q_view.setMouseHoverValueRoundingDecimals(4)
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
@@ -85,8 +84,8 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
-            self._q_view.setImage(data.ai.q_map, auto_range=True, auto_levels=True)
+            self._corrected.setImage(data.image.masked_mean)
+            self._q_view.setImage(data.ai.q_map, auto_levels=True)
             self._azimuthal_integ_1d_curve.updateF(data)
 
     def onActivated(self):

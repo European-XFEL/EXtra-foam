@@ -14,9 +14,8 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGridLayout
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
-from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import RefImageCtrlWidget
-from ..plot_widgets import ImageAnalysis, ImageViewF
+from ..plot_widgets import ImageViewF
 from ...file_io import write_image
 from ...ipc import ReferencePub
 from ...logger import logger
@@ -33,8 +32,7 @@ class ReferenceView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageAnalysis()
-        self._corrected.setTitle("Corrected")
+        self._corrected = ImageViewF()
         self._reference = ImageViewF()
         self._reference.setTitle("Reference")
 
@@ -60,7 +58,7 @@ class ReferenceView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImage(data.image.masked_mean)
             # Removing and displaying of the currently displayed image
             # is deferred.
             self._reference.setImage(data.image.reference)

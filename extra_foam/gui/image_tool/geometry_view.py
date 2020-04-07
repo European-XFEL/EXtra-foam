@@ -9,10 +9,9 @@ All rights reserved.
 """
 from PyQt5.QtWidgets import QVBoxLayout
 
-from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..ctrl_widgets import GeometryCtrlWidget
-from ..plot_widgets import ImageAnalysis
+from ..plot_widgets import ImageViewF
 
 
 @create_imagetool_view(GeometryCtrlWidget)
@@ -24,7 +23,7 @@ class GeometryView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageViewF(hide_axis=False)
 
         self.initUI()
 
@@ -42,4 +41,4 @@ class GeometryView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImage(data.image.masked_mean)

@@ -13,9 +13,8 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QGridLayout, QVBoxLayout
 
 from .base_view import _AbstractImageToolView, create_imagetool_view
-from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import CalibrationCtrlWidget
-from ..plot_widgets import ImageViewF, ImageAnalysis
+from ..plot_widgets import ImageViewF
 from ...ipc import CalConstantsPub
 
 
@@ -29,7 +28,7 @@ class CalibrationView(_AbstractImageToolView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._corrected = ImageAnalysis(hide_axis=False)
+        self._corrected = ImageViewF(hide_axis=False)
         self._corrected.setTitle("Corrected")
         self._dark = ImageViewF(hide_axis=False)
         self._dark.setTitle("Dark")
@@ -69,7 +68,7 @@ class CalibrationView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImage(data.image.masked_mean)
             self._dark.setImage(data.image.dark_mean)
             self._offset.setImage(data.image.offset_mean)
             self._gain.setImage(data.image.gain_mean)
