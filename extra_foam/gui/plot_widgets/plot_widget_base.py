@@ -51,6 +51,8 @@ class PlotWidgetF(pg.GraphicsView):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.enableMouse(False)
 
+        self._title = ""
+
         # pg.PlotItem is a QGraphicsWidget
         self._plot_item = pg.PlotItem(**kargs)
         # set 'centralWidget' for GraphicsView and add the item to
