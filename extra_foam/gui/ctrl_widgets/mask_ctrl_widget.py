@@ -8,10 +8,13 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtWidgets import QCheckBox, QGridLayout, QLabel
+from PyQt5.QtWidgets import (
+    QCheckBox, QGridLayout, QHBoxLayout, QLabel, QPushButton,
+)
 
 from ..ctrl_widgets import _AbstractCtrlWidget
 from ..ctrl_widgets.smart_widgets import SmartBoundaryLineEdit
+from ..gui_helpers import create_icon_button
 from ...config import GeomAssembler
 from ...database import Metadata as mt
 
@@ -27,6 +30,26 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setMinimumWidth(160)
 
         self.mask_tile_cb = QCheckBox("Mask tile edges")
+
+        icon_size = 30
+        self.draw_mask_btn = create_icon_button("draw_mask.png", icon_size)
+        self.draw_mask_btn.setCheckable(True)
+        self.erase_mask_btn = create_icon_button("erase_mask.png", icon_size)
+        self.erase_mask_btn.setCheckable(True)
+        self.remove_btn = create_icon_button("remove_mask.png", icon_size)
+
+        self.load_btn = QPushButton("Load mask")
+        self.save_btn = QPushButton("Save mask")
+        self.mask_io_in_modules_cb = QCheckBox("Save/load mask in modules")
+        self.mask_io_in_modules_cb.setDisabled(True)
+
+        self._exclusive_btns = {self.erase_mask_btn, self.draw_mask_btn}
+
+        self._non_reconfigurable_widgets = [
+            self.save_btn,
+            self.load_btn,
+            self.mask_io_in_modules_cb
+        ]
 
         self.initUI()
         self.initConnections()
@@ -44,6 +67,20 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
             row += 1
             layout.addWidget(self.mask_tile_cb, row, 0, AR)
 
+        row += 1
+        sub_layout = QHBoxLayout()
+        sub_layout.addWidget(self.draw_mask_btn)
+        sub_layout.addWidget(self.erase_mask_btn)
+        sub_layout.addWidget(self.remove_btn)
+        layout.addLayout(sub_layout, row, 0)
+
+        row += 1
+        layout.addWidget(self.load_btn, row, 0)
+        layout.addWidget(self.save_btn, row, 1)
+
+        row += 1
+        layout.addWidget(self.mask_io_in_modules_cb, row, 0, 1, 2, AR)
+
         layout.setVerticalSpacing(20)
         self.setLayout(layout)
 
@@ -52,11 +89,19 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         mediator = self._mediator
 
         self.threshold_mask_le.value_changed_sgn.connect(
-            lambda x: mediator.onImageThresholdMaskChange(x))
+            mediator.onImageThresholdMaskChange)
 
         self.mask_tile_cb.toggled.connect(
             mediator.onImageMaskTileEdgeChange)
         mediator.assembler_change_sgn.connect(self._onAssemblerChange)
+
+        self.erase_mask_btn.toggled.connect(self._updateExclusiveBtns)
+        self.draw_mask_btn.toggled.connect(self._updateExclusiveBtns)
+        self.remove_btn.clicked.connect(
+            lambda: self._updateExclusiveBtns(True))
+
+        self.mask_io_in_modules_cb.toggled.connect(
+            mediator.onImageMaskInModulesToggled)
 
     @pyqtSlot(object)
     def _onAssemblerChange(self, assembler):
@@ -70,6 +115,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         self.threshold_mask_le.returnPressed.emit()
         self.mask_tile_cb.toggled.emit(self.mask_tile_cb.isChecked())
+        self.mask_io_in_modules_cb.toggled.emit(
+            self.mask_io_in_modules_cb.isChecked())
         return True
 
     def loadMetaData(self):
@@ -78,3 +125,11 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])
         if self._require_geometry:
             self.mask_tile_cb.setChecked(cfg["mask_tile"] == 'True')
+        self.mask_io_in_modules_cb.setChecked(cfg["mask_in_modules"] == 'True')
+
+    @pyqtSlot(bool)
+    def _updateExclusiveBtns(self, checked):
+        if checked:
+            for at in self._exclusive_btns:
+                if at != self.sender():
+                    at.setChecked(False)

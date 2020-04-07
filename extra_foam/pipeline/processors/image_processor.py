@@ -206,7 +206,7 @@ class ImageProcessor(_BaseProcessor):
         self._dark_mean = nanmean_image_data(self._dark)
 
     def _update_image_mask(self, image_shape):
-        image_mask = self._mask_sub.update(self._image_mask, image_shape)
+        updated, image_mask = self._mask_sub.update(self._image_mask, image_shape)
         if image_mask is not None and image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically

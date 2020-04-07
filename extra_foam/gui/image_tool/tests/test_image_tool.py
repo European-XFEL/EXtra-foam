@@ -210,7 +210,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(1, len(spy))
 
     def testMaskCtrlWidget(self):
-        widget = self.image_tool._mask_ctrl_widget
+        win = self.image_tool
+        widget = win._mask_ctrl_widget
         proc = self.pulse_worker._image_proc
         assembler = self.pulse_worker._assembler
 
@@ -230,6 +231,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         assembler.update()
         self.assertEqual(True, assembler._mask_tile)
 
+        # test save/load mask
+        with patch.object(win._corrected_view._corrected, "saveImageMask") as patched:
+            QTest.mouseClick(widget.save_btn, Qt.LeftButton)
+            patched.assert_called_once()
+        with patch.object(win._corrected_view._corrected, "loadImageMask") as patched:
+            QTest.mouseClick(widget.load_btn, Qt.LeftButton)
+            patched.assert_called_once()
+
         # test loading meta data
         mediator = widget._mediator
         mediator.onImageThresholdMaskChange((-100, 10000))
@@ -237,6 +246,73 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget.loadMetaData()
         self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
         self.assertEqual(False, widget.mask_tile_cb.isChecked())
+
+    def testDrawMask(self):
+        # TODO: test by really drawing something on ImageTool
+        from extra_foam.ipc import ImageMaskPub
+
+        pub = ImageMaskPub()
+        widget = self.image_tool._mask_ctrl_widget
+        proc = self.pulse_worker._image_proc
+
+        data, _ = self.data_with_assembled(1001, (4, 10, 10))
+
+        # trigger the lazily evaluated subscriber
+        proc.process(data)
+
+        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
+
+        # test default
+        np.testing.assert_array_equal(proc._image_mask, mask_gt)
+
+        # test changing mask
+        pub.add((0, 0, 2, 3))
+        mask_gt[0:3, 0:2] = True
+
+        # test adding mask
+        n_attempts = 0
+        # repeat to prevent random failure
+        while n_attempts < 10:
+            n_attempts += 1
+
+            proc.process(data)
+            # np.testing.assert_array_equal(mask_gt, proc._image_mask)
+            if (mask_gt == proc._image_mask).all():
+                break
+            time.sleep(0.001)
+
+        # add one more mask region
+        pub.add((1, 1, 2, 3))
+        proc.process(data)
+        mask_gt[1:4, 1:3] = True
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test erasing mask
+        pub.erase((2, 2, 3, 3))
+        proc.process(data)
+        mask_gt[2:5, 2:5] = False
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test removing mask
+        QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
+        proc.process(data)
+        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
+
+        # test set mask
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
+
+        # test set a mask which has a different shape from the image
+        mask_gt = np.ones((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        with self.assertRaises(ImageProcessingError):
+            proc.process(data)
+        # an empty image mask with a different shape will be automatically reset
+        mask_gt = np.zeros((2, 2), dtype=np.bool)
+        pub.set(mask_gt)
+        proc.process(data)
+        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
 
     def testReferenceCtrlWidget(self):
         view = self.image_tool._reference_view
@@ -300,73 +376,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
                 updated, ref = proc._ref_sub.update()
                 self.assertTrue(updated)
                 self.assertIsNone(ref)
-
-    def testDrawMask(self):
-        # TODO: test by really drawing something on ImageTool
-        from extra_foam.ipc import ImageMaskPub
-
-        pub = ImageMaskPub()
-        proc = self.pulse_worker._image_proc
-
-        data, _ = self.data_with_assembled(1001, (4, 10, 10))
-
-        # trigger the lazily evaluated subscriber
-        proc.process(data)
-
-        mask_gt = np.zeros(data['assembled']['data'].shape[-2:], dtype=np.bool)
-
-        # test default
-        np.testing.assert_array_equal(proc._image_mask, mask_gt)
-
-        # test changing mask
-        pub.add((0, 0, 2, 3))
-        mask_gt[0:3, 0:2] = True
-
-        # test adding mask
-        n_attempts = 0
-        # repeat to prevent random failure
-        while n_attempts < 10:
-            n_attempts += 1
-
-            proc.process(data)
-            # np.testing.assert_array_equal(mask_gt, proc._image_mask)
-            if (mask_gt == proc._image_mask).all():
-                break
-            time.sleep(0.001)
-
-        # add one more mask region
-        pub.add((1, 1, 2, 3))
-        proc.process(data)
-        mask_gt[1:4, 1:3] = True
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test erasing mask
-        pub.erase((2, 2, 3, 3))
-        proc.process(data)
-        mask_gt[2:5, 2:5] = False
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test trashing mask
-        action = self.image_tool._tool_bar.actions()[2]
-        action.trigger()
-        proc.process(data)
-        np.testing.assert_array_equal(np.zeros_like(mask_gt, dtype=np.bool), proc._image_mask)
-
-        # test set mask
-        pub.set(mask_gt)
-        proc.process(data)
-        np.testing.assert_array_equal(mask_gt, proc._image_mask)
-
-        # test set a mask which has a different shape from the image
-        mask_gt = np.ones((2, 2), dtype=np.bool)
-        pub.set(mask_gt)
-        with self.assertRaises(ImageProcessingError):
-            proc.process(data)
-        # an empty image mask with a different shape will be automatically reset
-        mask_gt = np.zeros((2, 2), dtype=np.bool)
-        pub.set(mask_gt)
-        proc.process(data)
-        np.testing.assert_array_equal(np.zeros((10, 10), dtype=np.bool), proc._image_mask)
 
     def testBulletinView(self):
         processed = ProcessedData(1357)

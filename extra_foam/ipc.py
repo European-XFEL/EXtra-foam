@@ -288,9 +288,7 @@ class ImageMaskSub:
         :return numpy.ndarray: the updated mask.
         """
         sub = self._sub
-        if sub is None:
-            return mask
-
+        updated = False
         # process all messages related to mask
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
@@ -313,7 +311,9 @@ class ImageMaskSub:
             else:  # data == 'remove'
                 mask = None
 
-        return mask
+            updated = True
+
+        return updated, mask
 
 
 class CalConstantsPub:
