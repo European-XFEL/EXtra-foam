@@ -56,6 +56,7 @@ class AzimuthalInteg1dView(_AbstractImageToolView):
 
         self._corrected = ImageAnalysis(hide_axis=False)
         self._q_view = ImageViewF(hide_axis=False)
+        self._q_view.setMouseHoverValueRoundingDecimals(4)
         self._azimuthal_integ_1d_curve = AzimuthalInteg1dPlot()
 
         self.initUI()

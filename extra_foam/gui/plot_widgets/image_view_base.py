@@ -67,6 +67,8 @@ class ImageViewF(QWidget):
 
         self._mediator = Mediator()
 
+        self._mouse_hover_v_rounding_decimals = 1
+
         self._rois = []
         if has_roi:
             self._initializeROIs()
@@ -209,12 +211,17 @@ class ImageViewF(QWidget):
             return
         self.setImage(self._image, auto_levels=True)
 
+    def setMouseHoverValueRoundingDecimals(self, v):
+        self._mouse_hover_v_rounding_decimals = v
+
     @pyqtSlot(int, int, float)
     def onMouseMoved(self, x, y, v):
         if x < 0 or y < 0:
             self._plot_widget.setTitle(self._cached_title)
         else:
-            self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
+            self._plot_widget.setTitle(
+                f'x={x}, y={y}, '
+                f'value={round(v, self._mouse_hover_v_rounding_decimals)}')
 
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
