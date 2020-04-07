@@ -83,20 +83,11 @@ class ImageAnalysis(ImageViewF):
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 
-    @pyqtSlot(float)
-    def onBkgChange(self, bkg):
+    def setThresholdMask(self, v):
         if self._image_data is None:
             return
 
-        self._image_data.background = bkg
-        self.setImage(self._image_data.masked)
-
-    @pyqtSlot(object)
-    def onThresholdMaskChange(self, mask_range):
-        if self._image_data is None:
-            return
-
-        self._image_data.threshold_mask = mask_range
+        self._image_data.threshold_mask = v
         self.setImage(self._image_data.masked)
 
     @pyqtSlot(bool)
