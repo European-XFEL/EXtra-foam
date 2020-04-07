@@ -21,13 +21,13 @@ logger.setLevel("CRITICAL")
 
 class TestImageView(unittest.TestCase):
     def testGeneral(self):
-        widget = ImageViewF()
+        widget = ImageViewF(has_roi=True)
         plot_items = widget._plot_widget._plot_item.items
         self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
         for i in range(1, 5):
             self.assertIsInstance(plot_items[i], RectROI)
 
-        widget = ImageViewF(has_roi=False)
+        widget = ImageViewF()
         self.assertEqual(1, len(widget._plot_widget._plot_item.items))
 
         with self.assertRaisesRegex(TypeError, "numpy array"):

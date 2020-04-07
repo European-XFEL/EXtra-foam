@@ -15,7 +15,7 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
-from .plot_items import ImageItem, MaskItem
+from .plot_items import MaskItem
 from ...file_io import write_image
 from ...logger import logger
 
@@ -29,9 +29,9 @@ class ImageAnalysis(ImageViewF):
 
     IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, has_roi=True, **kwargs):
         """Initialization."""
-        super().__init__(*args, **kwargs)
+        super().__init__(has_roi=has_roi, **kwargs)
 
         self._mask_item = MaskItem(self._image_item)
 
@@ -158,7 +158,7 @@ class RoiImageView(ImageViewF):
     """
     def __init__(self, idx, **kwargs):
         """Initialization."""
-        super().__init__(has_roi=False, **kwargs)
+        super().__init__(**kwargs)
 
         self._index = idx
         self.setTitle(f"ROI{idx}")

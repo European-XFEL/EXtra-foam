@@ -144,7 +144,7 @@ class TrxasRoiImageView(ImageViewF):
     """
     def __init__(self, idx, **kwargs):
         """Initialization."""
-        super().__init__(has_roi=False, **kwargs)
+        super().__init__(**kwargs)
 
         self._index = idx
         self.setTitle(f"ROI{idx}")
@@ -198,7 +198,7 @@ class TrxasHeatmap(TimedImageViewF):
     """
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        super().__init__(hide_axis=False, parent=parent)
         self.invertY(False)
         self.setAspectLocked(False)
 

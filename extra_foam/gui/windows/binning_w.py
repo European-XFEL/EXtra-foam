@@ -71,7 +71,7 @@ class Bin1dHeatmap(TimedImageViewF):
 
     def __init__(self, *, parent=None):
         """Initialization."""
-        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        super().__init__(hide_axis=False, parent=parent)
 
         self.invertY(False)
         self.setAspectLocked(False)
@@ -138,7 +138,7 @@ class Bin2dHeatmap(TimedImageViewF):
 
         :param bool count: True for count plot and False for value plot.
         """
-        super().__init__(has_roi=False, hide_axis=False, parent=parent)
+        super().__init__(hide_axis=False, parent=parent)
 
         self._count = count
 
