@@ -207,7 +207,7 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
+        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: (False, x))
 
         self._proc._threshold_mask = (-100, 100)
 
@@ -260,7 +260,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: x)
+        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: (False, x))
 
         del self._proc._dark
 
@@ -396,7 +396,7 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
         # from the image shape
         with self.assertRaises(ImageProcessingError):
             image_mask = np.ones([3, 2, 2])
-            proc._mask_sub.update = MagicMock(return_value=image_mask)
+            proc._mask_sub.update = MagicMock(return_value=(True, image_mask))
             proc.process(data)
         self.assertIsNone(proc._image_mask)
 

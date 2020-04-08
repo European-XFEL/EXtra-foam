@@ -11,11 +11,10 @@ import os.path as osp
 
 import numpy as np
 
-from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
-from .plot_items import ImageItem, MaskItem
+from .plot_items import MaskItem
 from ...file_io import write_image
 from ...logger import logger
 
@@ -29,9 +28,9 @@ class ImageAnalysis(ImageViewF):
 
     IMAGE_FILE_FILTER = "All supported files (*.tif *.npy)"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, has_roi=True, **kwargs):
         """Initialization."""
-        super().__init__(*args, **kwargs)
+        super().__init__(has_roi=has_roi, **kwargs)
 
         self._mask_item = MaskItem(self._image_item)
 
@@ -83,72 +82,47 @@ class ImageAnalysis(ImageViewF):
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
 
-    @pyqtSlot(float)
-    def onBkgChange(self, bkg):
-        if self._image_data is None:
-            return
-
-        self._image_data.background = bkg
-        self.setImage(self._image_data.masked)
-
-    @pyqtSlot(object)
-    def onThresholdMaskChange(self, mask_range):
-        if self._image_data is None:
-            return
-
-        self._image_data.threshold_mask = mask_range
-        self.setImage(self._image_data.masked)
-
-    @pyqtSlot(bool)
-    def onDrawToggled(self, state, checked):
+    def setMaskingState(self, state, checked):
         self._mask_item.state = state
         self._image_item.drawing = checked
 
-    @pyqtSlot()
-    def onClearImageMask(self):
+    def removeMask(self):
         self._mask_item.removeMask()
 
     def saveImageMask(self):
+        if self._image is None:
+            logger.error("No image is available!")
+            return
+
         filepath = QFileDialog.getSaveFileName()[0]
         if not filepath:
-            logger.error("Please specify the image mask file!")
             return
 
-        self._saveImageMaskImp(filepath)
-
-    def _saveImageMaskImp(self, filepath):
-        if self._image_data is None:
-            logger.error("Image is not found!")
-            return
-
-        np.save(filepath, self._mask_item.toNDArray())
+        np.save(filepath, self._mask_item.mask())
         logger.info(f"Image mask saved in {filepath}.npy")
 
     def loadImageMask(self):
-        filepath = QFileDialog.getOpenFileName()[0]
-        if not filepath:
-            logger.error("Please specify the image mask file!")
-            return
-
-        self._loadImageMaskImp(filepath)
-
-    def _loadImageMaskImp(self, filepath):
         if self._image is None:
             logger.error("Cannot load image mask without image!")
             return
 
+        filepath = QFileDialog.getOpenFileName()[0]
+        if not filepath:
+            return
+
         try:
             image_mask = np.load(filepath)
-            if image_mask.shape != self._image.shape:
-                logger.error(f"The shape of image mask {image_mask.shape} is "
-                             f"different from the image {self._image.shape}!")
-                return
-
-            logger.info(f"Image mask loaded from {filepath}!")
-            self._mask_item.loadMask(image_mask)
-
         except (IOError, OSError) as e:
             logger.error(f"Cannot load mask from {filepath}")
+            return
+
+        if image_mask.shape != self._image.shape:
+            logger.error(f"The shape of image mask {image_mask.shape} is "
+                         f"different from the image {self._image.shape}!")
+            return
+
+        logger.info(f"Loaded image mask from {filepath}")
+        self._mask_item.setMask(image_mask)
 
 
 class RoiImageView(ImageViewF):
@@ -158,7 +132,7 @@ class RoiImageView(ImageViewF):
     """
     def __init__(self, idx, **kwargs):
         """Initialization."""
-        super().__init__(has_roi=False, **kwargs)
+        super().__init__(**kwargs)
 
         self._index = idx
         self.setTitle(f"ROI{idx}")

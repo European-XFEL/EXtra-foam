@@ -44,7 +44,7 @@ class ImageViewF(QWidget):
 
     def __init__(self, *,
                  level_mode='mono',
-                 has_roi=True,
+                 has_roi=False,
                  hide_axis=True,
                  color_map=None,
                  parent=None):

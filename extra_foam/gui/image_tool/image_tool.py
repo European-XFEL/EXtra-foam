@@ -9,12 +9,10 @@ All rights reserved.
 """
 from enum import IntEnum
 import os.path as osp
-import functools
 
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import (
-    QAction, QHBoxLayout, QMainWindow, QTabWidget, QVBoxLayout, QWidget
+    QHBoxLayout, QMainWindow, QTabWidget, QVBoxLayout, QWidget
 )
 
 from .azimuthal_integ_1d_view import AzimuthalInteg1dView
@@ -25,8 +23,8 @@ from .reference_view import ReferenceView
 from .geometry_view import GeometryView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
-from ..ctrl_widgets import ImageCtrlWidget
-from ...config import config, MaskState
+from ..ctrl_widgets import ImageCtrlWidget, MaskCtrlWidget
+from ...config import config
 
 
 class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
@@ -41,6 +39,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
     _root_dir = osp.dirname(osp.abspath(__file__))
 
     _WIDTH, _HEIGHT = config['GUI_IMAGE_TOOL_SIZE']
+
+    mask_file_path_sgn = pyqtSignal(str)
 
     class TabIndex(IntEnum):
         CORRECTED = 0
@@ -73,32 +73,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             title = self._title  # for unit test where parent is None
         self.setWindowTitle(title)
 
-        # --------
-        # tool bar
-        # --------
-
-        # ***************
-        # masking actions
-        # ***************
-
-        self._tool_bar = self.addToolBar("tools")
-
-        self._mask_at = self._addAction(self._tool_bar, "Mask", "mask.png")
-        self._mask_at.setCheckable(True)
-        self._unmask_at = self._addAction(
-            self._tool_bar, "Unmask", "un_mask.png")
-        self._unmask_at.setCheckable(True)
-        self._clear_mask_at = self._addAction(
-            self._tool_bar, "Clear mask", "clear_mask.png")
-        self._save_img_mask_at = self._addAction(
-            self._tool_bar, "Save image mask", "save_mask.png")
-        self._load_img_mask_at = self._addAction(
-            self._tool_bar, "Load image mask", "load_mask.png")
-
-        self._exclusive_actions = {self._mask_at, self._unmask_at}
-
-        self._tool_bar.addSeparator()
-
         self._ctrl_widgets = []
 
         # -----------------------------
@@ -107,6 +81,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         self._bulletin_view = self.createView(BulletinView)
         self._image_ctrl_widget = self.createCtrlWidget(ImageCtrlWidget)
+        self._mask_ctrl_widget = self.createCtrlWidget(MaskCtrlWidget)
 
         # -----------------------------
         # view panel
@@ -154,6 +129,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         ctrl_panel_layout = QVBoxLayout()
         ctrl_panel_layout.addWidget(self._bulletin_view)
         ctrl_panel_layout.addWidget(self._image_ctrl_widget)
+        ctrl_panel_layout.addWidget(self._mask_ctrl_widget)
         ctrl_panel_layout.addStretch(1)
         ctrl_panel.setLayout(ctrl_panel_layout)
         ctrl_panel.setFixedWidth(ctrl_panel.minimumSizeHint().width() + 10)
@@ -170,33 +146,23 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
 
         mediator = self._mediator
 
-        # Note: the sequence of the following two 'connect'
-        self._mask_at.toggled.connect(self._exclude_actions)
-        self._mask_at.toggled.connect(functools.partial(
-            self._corrected_view.imageView.onDrawToggled, MaskState.MASK))
-
-        # Note: the sequence of the following two 'connect'
-        self._unmask_at.toggled.connect(self._exclude_actions)
-        self._unmask_at.toggled.connect(functools.partial(
-            self._corrected_view.imageView.onDrawToggled, MaskState.UNMASK))
-
-        self._clear_mask_at.triggered.connect(
-            self._corrected_view.imageView.onClearImageMask)
-        self._save_img_mask_at.triggered.connect(
-            self._corrected_view.imageView.saveImageMask)
-        self._load_img_mask_at.triggered.connect(
-            self._corrected_view.imageView.loadImageMask)
-
         self._image_ctrl_widget.update_image_btn.clicked.connect(
             self.onUpdateWidgets)
         self._image_ctrl_widget.auto_level_btn.clicked.connect(
             mediator.reset_image_level_sgn)
         self._image_ctrl_widget.save_image_btn.clicked.connect(
-            self._corrected_view.imageView.writeImage)
+            self._corrected_view.onSaveImage)
 
-        # use lambda here to facilitate unittest of slot call
-        self._image_ctrl_widget.threshold_mask_le.value_changed_sgn.connect(
-            lambda x: self._corrected_view.imageView.onThresholdMaskChange(x))
+        self._mask_ctrl_widget.draw_mask_btn.toggled.connect(
+            self._corrected_view.onDrawMask)
+        self._mask_ctrl_widget.erase_mask_btn.toggled.connect(
+            self._corrected_view.onEraseMask)
+        self._mask_ctrl_widget.remove_btn.clicked.connect(
+            self._corrected_view.onRemoveMask)
+        self._mask_ctrl_widget.load_btn.clicked.connect(
+            self._corrected_view.onLoadMask)
+        self._mask_ctrl_widget.save_btn.clicked.connect(
+            self._corrected_view.onSaveMask)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)
@@ -210,8 +176,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             widget.onStop()
 
     def createView(self, view_class):
-        view = view_class(pulse_resolved=self._pulse_resolved, parent=self)
-        return view
+        return view_class(pulse_resolved=self._pulse_resolved, parent=self)
 
     def createCtrlWidget(self, widget_class, *args, **kwargs):
         """Register a ctrl widget.
@@ -265,19 +230,6 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._bulletin_view.updateF(data, auto_update)
         # update other ImageView/PlotWidget in the activated tab
         self._views_tab.currentWidget().updateF(data, auto_update)
-
-    @pyqtSlot(bool)
-    def _exclude_actions(self, checked):
-        if checked:
-            for at in self._exclusive_actions:
-                if at != self.sender():
-                    at.setChecked(False)
-
-    def _addAction(self, tool_bar, description, filename):
-        icon = QIcon(osp.join(self._root_dir, "../icons/" + filename))
-        action = QAction(icon, description, tool_bar)
-        tool_bar.addAction(action)
-        return action
 
     @pyqtSlot(int)
     def onViewsTabClicked(self, idx):

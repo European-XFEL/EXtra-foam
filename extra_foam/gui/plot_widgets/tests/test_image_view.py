@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import tempfile
 
 import numpy as np
@@ -21,13 +21,13 @@ logger.setLevel("CRITICAL")
 
 class TestImageView(unittest.TestCase):
     def testGeneral(self):
-        widget = ImageViewF()
+        widget = ImageViewF(has_roi=True)
         plot_items = widget._plot_widget._plot_item.items
         self.assertIsInstance(plot_items[0], pyqtgraph.ImageItem)
         for i in range(1, 5):
             self.assertIsInstance(plot_items[i], RectROI)
 
-        widget = ImageViewF(has_roi=False)
+        widget = ImageViewF()
         self.assertEqual(1, len(widget._plot_widget._plot_item.items))
 
         with self.assertRaisesRegex(TypeError, "numpy array"):
@@ -91,36 +91,44 @@ class TestImageAnalysis(unittest.TestCase):
         for i in range(2, 6):
             self.assertIsInstance(plot_items[i], RectROI)
 
-    def testSaveLoadImageMask(self):
+    @patch('extra_foam.gui.image_tool.corrected_view.QFileDialog.getSaveFileName')
+    @patch('extra_foam.gui.image_tool.corrected_view.QFileDialog.getOpenFileName')
+    @patch("extra_foam.gui.plot_widgets.plot_items.MaskItem.setMask")
+    @patch("extra_foam.gui.plot_widgets.plot_items.ImageMaskPub")
+    def testSaveLoadImageMask(self, patched_pub, patched_setMask, patched_open, patched_save):
         widget = ImageAnalysis()
-        widget._mask_item.loadMask = MagicMock()
 
-        fp = tempfile.TemporaryFile()
         # if image_data is None, it does not raise but only logger.error()
-        with self.assertLogs(logger, level="ERROR"):
-            widget._saveImageMaskImp(fp)
+        with self.assertLogs(logger, level="ERROR") as cm:
+            widget.saveImageMask()
+            self.assertEqual(cm.output[0].split(':')[-1],
+                             'No image is available!')
 
         with self.assertLogs(logger, level="ERROR") as cm:
-            widget._loadImageMaskImp(fp)
-        self.assertEqual(cm.output[0].split(':')[-1],
-                         'Cannot load image mask without image!')
+            widget.loadImageMask()
+            self.assertEqual(cm.output[0].split(':')[-1],
+                             'Cannot load image mask without image!')
 
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         mask = np.zeros_like(imgs, dtype=bool)
         widget.setImageData(_SimpleImageData.from_array(imgs))
 
         # the IOError
+        patched_open.return_value = ['abc']
         with self.assertLogs(logger, level="ERROR") as cm:
-            widget._loadImageMaskImp('abc')
-        self.assertEqual(cm.output[0].split(':')[-1],
-                         'Cannot load mask from abc')
+            widget.loadImageMask()
+        self.assertEqual(cm.output[0].split(':')[-1], 'Cannot load mask from abc')
 
-        widget._saveImageMaskImp(fp)
+        fp = tempfile.TemporaryFile()
+
+        patched_save.return_value = [fp]
+        widget.saveImageMask()
 
         fp.seek(0)
-        widget._loadImageMaskImp(fp)
-        widget._mask_item.loadMask.assert_called_once()
-        widget._mask_item.loadMask.reset_mock()
+        patched_open.return_value = [fp]
+        widget.loadImageMask()
+        patched_setMask.assert_called_once()
+        patched_setMask.reset_mock()
 
         # save and load another mask
         mask[0, 0] = 1
@@ -129,11 +137,11 @@ class TestImageAnalysis(unittest.TestCase):
         mask_item._mask.setPixelColor(0, 0, mask_item._OPAQUE)
         mask_item._mask.setPixelColor(5, 5, mask_item._OPAQUE)
         fp.seek(0)
-        widget._saveImageMaskImp(fp)
+        widget.saveImageMask()
         fp.seek(0)
-        widget._loadImageMaskImp(fp)
-        widget._mask_item.loadMask.assert_called_once()
-        widget._mask_item.loadMask.reset_mock()
+        widget.loadImageMask()
+        patched_setMask.assert_called_once()
+        patched_setMask.reset_mock()
 
         # load a mask with different shape
         new_mask = np.array((3, 3), dtype=bool)
@@ -141,6 +149,6 @@ class TestImageAnalysis(unittest.TestCase):
         np.save(fp, new_mask)
         fp.seek(0)
         with self.assertLogs(logger, level='ERROR'):
-            widget._loadImageMaskImp(fp)
+            widget.loadImageMask()
 
         fp.close()

@@ -9,11 +9,9 @@ All rights reserved.
 """
 from string import Template
 
-import numpy as np
-
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import (
-    QHBoxLayout, QSplitter, QVBoxLayout, QWidget
+    QFileDialog, QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 )
 
 from .simple_image_data import _SimpleImageData
@@ -24,7 +22,7 @@ from ..ctrl_widgets import (
     RoiNormCtrlWidget, RoiHistCtrlWidget
 )
 from ..misc_widgets import FColor
-from ...config import AnalysisType, plot_labels
+from ...config import AnalysisType, MaskState, plot_labels
 
 
 class RoiProjPlot(PlotWidgetF):
@@ -149,3 +147,27 @@ class CorrectedView(_AbstractImageToolView):
     @property
     def imageView(self):
         return self._corrected
+
+    @pyqtSlot()
+    def onSaveImage(self):
+        self._corrected.writeImage()
+
+    @pyqtSlot(bool)
+    def onDrawMask(self, state):
+        self._corrected.setMaskingState(MaskState.MASK, state)
+
+    @pyqtSlot(bool)
+    def onEraseMask(self, state):
+        self._corrected.setMaskingState(MaskState.UNMASK, state)
+
+    @pyqtSlot()
+    def onLoadMask(self):
+        self._corrected.loadImageMask()
+
+    @pyqtSlot()
+    def onSaveMask(self):
+        self._corrected.saveImageMask()
+
+    @pyqtSlot()
+    def onRemoveMask(self):
+        self._corrected.removeMask()

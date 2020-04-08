@@ -184,7 +184,7 @@ class MaskItem(pg.GraphicsObject):
         p.drawImage(self.boundingRect(), self._mask)
         p.drawRect(self._selectedRect())
 
-    def toNDArray(self):
+    def mask(self):
         w = self._mask.width()
         h = self._mask.height()
 
@@ -195,8 +195,8 @@ class MaskItem(pg.GraphicsObject):
 
         return mask_array
 
-    def loadMask(self, mask):
-        """Load a given image mask.
+    def setMask(self, mask):
+        """Set a given image mask.
 
         :param np.ndarray mask: mask in ndarray. shape = (h, w)
         """
