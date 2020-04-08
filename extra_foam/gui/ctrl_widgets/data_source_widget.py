@@ -733,7 +733,9 @@ class DataSourceWidget(_AbstractCtrlWidget):
 
     def initConnections(self):
         """Override."""
-        pass
+        mediator = self._mediator
+
+        mediator.file_stream_initialized_sgn.connect(self.updateMetaData)
 
     def updateMetaData(self):
         """Override."""

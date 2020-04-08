@@ -1,6 +1,40 @@
 CHANGELOG
 =========
 
+0.8.2 (8 April 2020)
+------------------------
+
+- **Bug Fix**
+
+    - Fix not able to close file stream process when closing, if the file stream window
+      is opened through the main GUI. #122
+    - Fix offset correction switch between dark and offset. #141
+
+- **Improvement**
+
+    - Move mouse hover (x, y, v) display implementation to ImageViewF. #148
+    - Visualize dark and offset separately. #141
+    - Improve loading reference image and calibration constants. #141
+    - Implement smart auto levels of image. #138
+    - Enhance SourceCatalog.add_item. #137
+    - Improve class init with moving average descriptor. #136
+    - Bump EXtra-data version and remove duplicated code. #131
+    - Tweak assembling code in C++ to make the result exactly the same as EXtra-geom. #129
+    - Simplify ImageProc binding code. #125
+    - Update dependencies. #118
+    - Update documentation. #115 #130
+    - Move tr-XAS analysis to special suite. #89
+
+- **New Feature**
+
+    - Generalize file stream. #122
+    - Add standard deviation, variance and speckle contrast into ROI FOM. #119
+    - Implement tile edge mask for modular detectors. #110
+    - Add support for fast ADC as a digitizer source. #101
+    - Implement Camera view (special suite). #89
+    - Implement Gotthard analysis (special suite) for MID. #89
+    - Implement interface and examples for special analysis suite. #89
+
 0.8.1 (16 March 2020)
 ------------------------
 

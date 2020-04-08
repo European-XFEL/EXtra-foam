@@ -10,25 +10,22 @@ All rights reserved.
 import numpy as np
 from scipy import stats
 
-from .base_processor import _BaseProcessor, SimpleSequence
-from .binning import _BinMixin
-from ...algorithms import nansum
-from ..exceptions import ProcessingError
-from ...config import AnalysisType
-from ...utils import profiler
-from ...database import Metadata as mt
-from ...ipc import process_logger as logger
+from .special_analysis_base import QThreadWorker
+from ..algorithms import nansum
+from ..pipeline.processors.base_processor import SimpleSequence
+from ..pipeline.processors.binning import _BinMixin
+from ..pipeline.exceptions import ProcessingError
+from ..utils import profiler
 
 
-class TrXasProcessor(_BaseProcessor, _BinMixin):
-    """Tr-XAS processor.
+class TrxasProcessor(QThreadWorker, _BinMixin):
+    """Time-resolved XAS processor.
 
     The implementation of tr-XAS processor is easier than bin processor
     since it cannot have empty device ID or property. Moreover, it does
     not include VFOM heatmap.
 
     Attributes:
-        analysis_type (AnalysisType): TrXAS analysis type.
         _delays (SimpleSequence): train-resolved time delays.
         _energies (SimpleSequence): train-resolved photon energies.
         _a13 (SimpleSequence): train-resolved -log(sum(ROI1)/sum(ROI3)).
@@ -48,8 +45,10 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
             delay/energy bin.
         _a21_heatcount (numpy.array): count of data points in each
             delay/energy bin.
-        _delay_src (str): delay data source.
-        _energy_src (str): energy data source.
+        _delay_device (str): delay data device ID.
+        _delay_ppt (str): delay data property name.
+        _energy_device (str): energy data device ID.
+        _energy_ppt (str): energy data property name.
         _n_delay_bins (int): number of delay bins.
         _delay_range (tuple): (lower boundary, upper boundary) of energy bins.
         _n_energy_bins (int): number of energy bins.
@@ -64,10 +63,8 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
     # 10 pulses/train * 60 seconds * 30 minutes = 18,000
     _MAX_POINTS = 100 * 60 * 60
 
-    def __init__(self):
-        super().__init__()
-
-        self.analysis_type = AnalysisType.UNDEFINED
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self._delays = SimpleSequence(max_len=self._MAX_POINTS)
         self._energies = SimpleSequence(max_len=self._MAX_POINTS)
@@ -84,8 +81,10 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
         self._a21_heat = None
         self._a21_heatcount = None
 
-        self._delay_src = ""
-        self._energy_src = ""
+        self._delay_device = ""
+        self._delay_ppt = ""
+        self._energy_device = ""
+        self._energy_ppt = ""
 
         self._n_delay_bins = None
         self._delay_range = None
@@ -97,53 +96,49 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
 
         self._reset = False
 
-    def update(self):
-        """Override."""
-        cfg = self._meta.hget_all(mt.TR_XAS_PROC)
+    def onDelayDeviceChanged(self, value: str):
+        self._delay_device = value
 
-        try:
-            self._update_analysis(AnalysisType(int(cfg['analysis_type'])))
-        except KeyError:
-            self._update_analysis(AnalysisType.UNDEFINED)
+    def onDelayPropertyChanged(self, value: str):
+        self._delay_ppt = value
 
-        # TODO: should we reset when device ID or property change
+    def onEnergyDeviceChanged(self, value: str):
+        self._energy_device = value
 
-        self._delay_src = cfg["delay_source"]
-        self._energy_src = cfg["energy_source"]
+    def onEnergyPropertyChanged(self, value: str):
+        self._energy_ppt = value
 
-        n_delay_bins = int(cfg["n_delay_bins"])
-        if n_delay_bins != self._n_delay_bins:
-            self._n_delay_bins = n_delay_bins
+    def onNoDelayBinsChanged(self, value: str):
+        n_bins = int(value)
+        if n_bins != self._n_delay_bins:
+            self._n_delay_bins = n_bins
             self._bin1d = True
             self._bin2d = True
 
-        delay_range = self.str2tuple(cfg["delay_range"])
-        if delay_range != self._delay_range:
-            self._delay_range = delay_range
+    def onDelayRangeChanged(self, value: tuple):
+        if value != self._delay_range:
+            self._delay_range = value
             self._bin1d = True
             self._bin2d = True
 
-        n_energy_bins = int(cfg["n_energy_bins"])
-        if n_energy_bins != self._n_energy_bins:
-            self._n_energy_bins = n_energy_bins
+    def onNoEnergyBinsChanged(self, value: str):
+        n_bins = int(value)
+        if n_bins != self._n_energy_bins:
+            self._n_energy_bins = n_bins
             self._bin2d = True
 
-        energy_range = self.str2tuple(cfg["energy_range"])
-        if energy_range != self._energy_range:
-            self._energy_range = energy_range
+    def onEnergyRangeChanged(self, value: tuple):
+        if value != self._energy_range:
+            self._energy_range = value
             self._bin2d = True
 
-        if 'reset' in cfg:
-            self._meta.hdel(mt.TR_XAS_PROC, 'reset')
-            self._reset = True
+    def onReset(self):
+        self._reset = True
 
     @profiler("tr-XAS Processor")
     def process(self, data):
         """Override."""
-        if not self._meta.has_analysis(AnalysisType.TR_XAS):
-            return
-
-        processed = data['processed']
+        processed = data["processed"]
 
         if self._reset:
             self._clear_history()
@@ -155,9 +150,10 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
         if self._bin2d:
             self._new_2d_binning()
 
+        roi1, roi2, roi3 = None, None, None
         try:
-            sum1, sum2, sum3, delay, energy = self._get_data_point(
-                processed, data['raw'])
+            roi1, roi2, roi3, sum1, sum2, sum3, delay, energy = \
+                self._get_data_point(processed, data['raw'])
 
             a13 = -np.log(sum1 / sum3)
             a23 = -np.log(sum2 / sum3)
@@ -173,18 +169,23 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
             self._update_2d_binning(a21, energy, delay)
 
         except ProcessingError as e:
-            logger.error(f"[tr-XAS] {str(e)}!")
+            self.log.error(repr(e))
 
-        # update processed
-        xas = processed.trxas
-        xas.delay_bin_centers, _ = self.edges2centers(self._delay_bin_edges)
-        xas.delay_bin_counts = self._delay_bin_counts
-        xas.a13_stats = self._a13_stats
-        xas.a23_stats = self._a23_stats
-        xas.a21_stats = self._a21_stats
-        xas.energy_bin_centers, _ = self.edges2centers(self._energy_bin_edges)
-        xas.a21_heat = self._a21_heat
-        xas.a21_heatcount = self._a21_heatcount
+        self.log.info(f"Train {processed.tid} processed")
+
+        return {
+            "roi1": roi1,
+            "roi2": roi2,
+            "roi3": roi3,
+            "delay_bin_centers": self.edges2centers(self._delay_bin_edges)[0],
+            "delay_bin_counts": self._delay_bin_counts,
+            "energy_bin_centers": self.edges2centers(self._energy_bin_edges)[0],
+            "a13_stats": self._a13_stats,
+            "a23_stats": self._a23_stats,
+            "a21_stats": self._a21_stats,
+            "a21_heat": self._a21_heat,
+            "a21_heatcount": self._a21_heatcount
+        }
 
     def _get_data_point(self, processed, raw):
         tid = processed.tid
@@ -213,16 +214,19 @@ class TrXasProcessor(_BaseProcessor, _BinMixin):
         if sum3 <= 0:
             raise ProcessingError("ROI3 sum <= 0!")
 
-        delay, err = self._fetch_property_data(tid, raw, self._delay_src)
-        if err:
-            raise ProcessingError(err)
-
         # fetch energy and delay
-        energy, err = self._fetch_property_data(tid, raw, self._energy_src)
+
+        delay_src = f"{self._delay_device} {self._delay_ppt}"
+        delay, err = self._fetch_property_data(tid, raw, delay_src)
         if err:
             raise ProcessingError(err)
 
-        return sum1, sum2, sum3, delay, energy
+        energy_src = f"{self._energy_device} {self._energy_ppt}"
+        energy, err = self._fetch_property_data(tid, raw, energy_src)
+        if err:
+            raise ProcessingError(err)
+
+        return roi1, roi2, roi3, sum1, sum2, sum3, delay, energy
 
     def _new_1d_binning(self):
         self._a13_stats, self._delay_bin_edges, _ = \

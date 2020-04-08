@@ -10,13 +10,13 @@ All rights reserved.
 import abc
 
 import numpy as np
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import pyqtSlot, Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
 from .. import pyqtgraph as pg
 
 from .plot_widget_base import PlotWidgetF
-from .plot_items import RectROI
+from .plot_items import ImageItem, RectROI
 from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
@@ -67,16 +67,24 @@ class ImageViewF(QWidget):
 
         self._mediator = Mediator()
 
+        self._mouse_hover_v_rounding_decimals = 1
+
         self._rois = []
         if has_roi:
             self._initializeROIs()
 
         self._plot_widget = PlotWidgetF()
+
+        self._cached_title = None
+        # use the public interface for caching
+        self.setTitle("")  # reserve space for display
+
         if hide_axis:
             self._plot_widget.hideAxis()
 
-        self._image_item = pg.ImageItem()
+        self._image_item = ImageItem()
         self._plot_widget.addItem(self._image_item)
+        self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
 
         for roi in self._rois:
             self._plot_widget.addItem(roi)
@@ -95,11 +103,11 @@ class ImageViewF(QWidget):
 
         self._is_initialized = False
         self._image = None
-        self._image_levels = None
+        self._auto_level_quantile = 0.99
 
         self.initUI()
 
-        self._mediator.reset_image_level_sgn.connect(self._updateImage)
+        self._mediator.reset_image_level_sgn.connect(self._onAutoLevel)
 
     def initUI(self):
         layout = QHBoxLayout()
@@ -168,6 +176,7 @@ class ImageViewF(QWidget):
         if not isinstance(img, np.ndarray):
             raise TypeError("Image data must be a numpy array!")
 
+        # set autoLevels manually later
         self._image_item.setImage(img, autoLevels=False)
         self._image = img
 
@@ -179,8 +188,9 @@ class ImageViewF(QWidget):
             self._image_item.setPos(*pos)
 
         if auto_levels:
-            self._image_levels = quick_min_max(self._image)
-            self.setLevels(rgba=[self._image_levels])
+            v_min, v_max = quick_min_max(
+                self._image, q=self._auto_level_quantile)
+            self.setLevels(rgba=[(float(v_min), float(v_max))])
 
         if auto_range:
             self._plot_widget._plot_item.vb.autoRange()
@@ -190,11 +200,28 @@ class ImageViewF(QWidget):
         # FIXME: there is a bug in ImageItem.setImage if the input is None
         self._image_item.clear()
 
-    def _updateImage(self):
-        """Re-display the current image with auto_levels."""
+    @pyqtSlot()
+    def _onAutoLevel(self):
+        if self.isVisible():
+            self.updateImageWithAutoLevel()
+
+    def updateImageWithAutoLevel(self):
+        """Re-display the current image with autoLevels == True."""
         if self._image is None:
             return
         self.setImage(self._image, auto_levels=True)
+
+    def setMouseHoverValueRoundingDecimals(self, v):
+        self._mouse_hover_v_rounding_decimals = v
+
+    @pyqtSlot(int, int, float)
+    def onMouseMoved(self, x, y, v):
+        if x < 0 or y < 0:
+            self._plot_widget.setTitle(self._cached_title)
+        else:
+            self._plot_widget.setTitle(
+                f'x={x}, y={y}, '
+                f'value={round(v, self._mouse_hover_v_rounding_decimals)}')
 
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
@@ -219,8 +246,11 @@ class ImageViewF(QWidget):
     def setLabel(self, *args, **kwargs):
         self._plot_widget.setLabel(*args, **kwargs)
 
-    def setTitle(self, *args, **kwargs):
-        self._plot_widget.setTitle(*args, **kwargs)
+    def setTitle(self, title, *args, **kwargs):
+        # This is the public interface. Therefore, we ought to cache
+        # the title.
+        self._cached_title = title
+        self._plot_widget.setTitle(title, *args, **kwargs)
 
     def invertY(self, *args, **kwargs):
         self._plot_widget._plot_item.invertY(*args, **kwargs)

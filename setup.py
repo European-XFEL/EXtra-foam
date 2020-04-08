@@ -270,6 +270,7 @@ setup(
     entry_points={
         'console_scripts': [
             'extra-foam=extra_foam.services:application',
+            'extra-foam-special-suite=extra_foam.special_services:application',
             'extra-foam-kill=extra_foam.services:kill_application',
             'extra-foam-stream=extra_foam.services:stream_file',
             'extra-foam-redis-cli=extra_foam.services:start_redis_client',
@@ -302,7 +303,7 @@ setup(
         'pyzmq>=17.1.2',
         'pyFAI>=0.15.0',
         'PyQt5>=5.12.0',
-        'EXtra-data>=0.8.0',
+        'EXtra-data>=1.0.0',
         'EXtra-geom>=0.8.0',
         'karabo-bridge>=0.3.0',
         'toolz>=0.9.0',
@@ -310,7 +311,8 @@ setup(
         'hiredis>=1.0.0',
         'redis>=3.3.11',
         'psutil>=5.6.2',
-        'imageio>=2.5.0',
+        'imageio==2.8.0',
+        'Pillow==7.0.0',
         'pyyaml>=5.2',
     ],
     extras_require={

@@ -17,6 +17,8 @@ class _TestDataMixin:
             imgs = np.random.randn(*shape).astype(dtype)
         elif gen == 'ones':
             imgs = np.ones(shape, dtype=dtype)
+        elif gen == 'range':
+            imgs = np.arange(np.prod(shape), dtype=dtype).reshape(*shape)
         else:
             raise ValueError
 

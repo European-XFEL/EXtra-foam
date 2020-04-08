@@ -4,7 +4,8 @@ import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.processors.image_assembler import StackView
+from extra_data.stacking import StackView
+
 from extra_foam.geometries import (
     DSSC_1MGeometryFast, LPD_1MGeometryFast, AGIPD_1MGeometryFast
 )
@@ -20,7 +21,7 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 
 class _Test1MGeometryMixin:
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
-    def testAssemblingOnline(self, dtype):
+    def testAssemblingBridge(self, dtype):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
 
         out_stack = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
@@ -34,10 +35,8 @@ class _Test1MGeometryMixin:
         out_gt = self.geom.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
         self.geom.position_all_modules(modules, out_gt)
 
-        # FIXME
-        for i in range(2):
-            assert abs(out_fast.shape[i] - out_gt.shape[i]) <= 1
-        # np.testing.assert_equal(out_fast, out)
+        assert out_gt.shape == out_fast.shape
+        np.testing.assert_array_equal(out_fast, out_gt)
 
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
     def testAssemblingFile(self, dtype):
@@ -59,10 +58,21 @@ class _Test1MGeometryMixin:
         out_gt = self.geom.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
         self.geom.position_all_modules(modules, out_gt)
 
-        # FIXME
-        for i in range(2):
-            assert abs(out_fast.shape[i] - out_gt.shape[i]) <= 1
-        # np.testing.assert_equal(out_fast, out_gt)
+        assert out_gt.shape == out_fast.shape
+        np.testing.assert_equal(out_fast, out_gt)
+
+    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
+    def testAssemblingBridgeWithTileEdgeIgnored(self, dtype):
+        modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
+
+        out_stack = self.geom_stack.output_array_for_position_fast((self.n_pulses,), _IMAGE_DTYPE)
+        # TODO: test ignore_tile_edge = False
+        self.geom_stack.position_all_modules(modules, out_stack, ignore_tile_edge=True)
+
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, 0::self.tile_shape[1]]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, :, 0::self.tile_shape[1]]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, 0::self.tile_shape[0], :]))
+        assert 0 == np.count_nonzero(~np.isnan(out_stack[:, 0::self.tile_shape[0], :]))
 
 
 class TestDSSC_1MGeometryFast(_Test1MGeometryMixin):
@@ -84,6 +94,7 @@ class TestDSSC_1MGeometryFast(_Test1MGeometryMixin):
         cls.n_pulses = 2
         cls.n_modules = DSSC_1MGeometryFast.n_modules
         cls.module_shape = DSSC_1MGeometryFast.module_shape
+        cls.tile_shape = DSSC_1MGeometryFast.tile_shape
 
     def test_ill_quad_positions(self):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), _RAW_IMAGE_DTYPE)
@@ -122,6 +133,7 @@ class TestLPD_1MGeometryFast(_Test1MGeometryMixin):
         cls.n_pulses = 2
         cls.n_modules = LPD_1MGeometryFast.n_modules
         cls.module_shape = LPD_1MGeometryFast.module_shape
+        cls.tile_shape = LPD_1MGeometryFast.tile_shape
 
 
 class TestAGIPD_1MGeometryFast(_Test1MGeometryMixin):
@@ -136,3 +148,4 @@ class TestAGIPD_1MGeometryFast(_Test1MGeometryMixin):
         cls.n_pulses = 2
         cls.n_modules = AGIPD_1MGeometryFast.n_modules
         cls.module_shape = AGIPD_1MGeometryFast.module_shape
+        cls.tile_shape = AGIPD_1MGeometryFast.tile_shape

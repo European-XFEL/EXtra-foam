@@ -146,60 +146,7 @@ class MetaProcessor(type):
         return cls
 
 
-class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
-    """Data processor interface."""
-
-    def __init__(self):
-        self._pulse_resolved = config["PULSE_RESOLVED"]
-
-        self._meta = MetaProxy()
-
-    def _update_analysis(self, analysis_type, *, register=True):
-        """Update analysis type.
-
-        :param AnalysisType analysis_type: analysis type.
-        :param bool register: True for (un)register the analysis type.
-
-        :return: True if the analysis type has changed and False for not.
-        """
-        if not isinstance(analysis_type, AnalysisType):
-            raise UnknownParameterError(
-                f"Unknown analysis type: {str(analysis_type)}")
-
-        if analysis_type != self.analysis_type:
-            if register:
-                # unregister the old
-                if self.analysis_type is not None:
-                    self._meta.unregister_analysis(self.analysis_type)
-
-                # register the new one
-                if analysis_type != AnalysisType.UNDEFINED:
-                    self._meta.register_analysis(analysis_type)
-
-            self.analysis_type = analysis_type
-            return True
-
-        return False
-
-    def run_once(self, data):
-        """Composition interface.
-
-        :param dict data: data which contains raw and processed data, etc.
-        """
-        self.update()
-        self.process(data)
-
-    def update(self):
-        """Update metadata."""
-        raise NotImplementedError
-
-    def process(self, data):
-        """Process data.
-
-        :param dict data: data which contains raw and processed data, etc.
-        """
-        raise NotImplementedError
-
+class _BaseProcessorMixin:
     @staticmethod
     def _normalize_fom(processed, y, normalizer, *, x=None, auc_range=None):
         """Normalize FOM/VFOM.
@@ -395,6 +342,62 @@ class _BaseProcessor(_RedisParserMixin, metaclass=MetaProcessor):
                 for i, v in enumerate(arr):
                     if v > ub:
                         index_mask.mask(i)
+
+
+class _BaseProcessor(_BaseProcessorMixin, _RedisParserMixin,
+                     metaclass=MetaProcessor):
+    """Data processor interface."""
+
+    def __init__(self):
+        self._pulse_resolved = config["PULSE_RESOLVED"]
+
+        self._meta = MetaProxy()
+
+    def _update_analysis(self, analysis_type, *, register=True):
+        """Update analysis type.
+
+        :param AnalysisType analysis_type: analysis type.
+        :param bool register: True for (un)register the analysis type.
+
+        :return: True if the analysis type has changed and False for not.
+        """
+        if not isinstance(analysis_type, AnalysisType):
+            raise UnknownParameterError(
+                f"Unknown analysis type: {str(analysis_type)}")
+
+        if analysis_type != self.analysis_type:
+            if register:
+                # unregister the old
+                if self.analysis_type is not None:
+                    self._meta.unregister_analysis(self.analysis_type)
+
+                # register the new one
+                if analysis_type != AnalysisType.UNDEFINED:
+                    self._meta.register_analysis(analysis_type)
+
+            self.analysis_type = analysis_type
+            return True
+
+        return False
+
+    def run_once(self, data):
+        """Composition interface.
+
+        :param dict data: data which contains raw and processed data, etc.
+        """
+        self.update()
+        self.process(data)
+
+    def update(self):
+        """Update metadata."""
+        raise NotImplementedError
+
+    def process(self, data):
+        """Process data.
+
+        :param dict data: data which contains raw and processed data, etc.
+        """
+        raise NotImplementedError
 
 
 class _AbstractSequence(Sequence):

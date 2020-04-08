@@ -12,8 +12,6 @@ import os.path as osp
 import numpy as np
 import imageio
 
-from .config import config
-
 
 def write_image(img, filepath):
     """Write an image to file.
@@ -64,11 +62,7 @@ def read_image(filepath, *, expected_shape=None):
             raise ValueError(f"Shape of image {img.shape} differs from "
                              f"expected {expected_shape}!")
         elif img.ndim != 2:
-            raise ValueError("Image must be an array with 2 dimensions!")
-
-        image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
-        if img.dtype != image_dtype:
-            img = img.astype(image_dtype)
+            raise ValueError("Image must be a 2D array!")
 
         return img
 
@@ -94,10 +88,6 @@ def read_cal_constants(filepath):
         raise ValueError(f"Failed to load constants from {filepath}: {str(e)}")
 
     if c.ndim not in (2, 3):
-        raise ValueError("Constants must be an array with 2 or 3 dimensions!")
-
-    image_dtype = config["SOURCE_PROC_IMAGE_DTYPE"]
-    if c.dtype != image_dtype:
-        c = c.astype(image_dtype)
+        raise ValueError("Constants must be a 2D or 3D array!")
 
     return c

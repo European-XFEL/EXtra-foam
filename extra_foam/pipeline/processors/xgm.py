@@ -11,7 +11,7 @@ import numpy as np
 
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, MovingAverageScalar
-from ..exceptions import UnknownParameterError
+from ..exceptions import ProcessingError
 from ...utils import profiler
 from ...database import Metadata as mt
 from ...ipc import process_logger as logger
@@ -39,12 +39,19 @@ class XgmProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
-        self._ma_window = 1
+        self._set_ma_window(1)
 
     def update(self):
         """Override."""
         cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._update_moving_average(cfg)
+
+    def _set_ma_window(self, v):
+        self._ma_window = v
+        self.__class__._intensity_ma.window = v
+        self.__class__._x_ma.window = v
+        self.__class__._y_ma.window = v
+        self.__class__._pulse_intensity_ma.window = v
 
     def _update_moving_average(self, cfg):
         if 'reset_ma_xgm' in cfg:
@@ -57,12 +64,7 @@ class XgmProcessor(_BaseProcessor):
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
-            self.__class__._intensity_ma.window = v
-            self.__class__._x_ma.window = v
-            self.__class__._y_ma.window = v
-            self.__class__._pulse_intensity_ma.window = v
-
-        self._ma_window = v
+            self._set_ma_window(v)
 
     @profiler("XGM Processor")
     def process(self, data):
@@ -99,7 +101,9 @@ class XgmProcessor(_BaseProcessor):
                 self._y_ma = v
                 processed.xgm.y = self._y_ma
             else:
-                raise UnknownParameterError(f'[XGM] Unknown property: {ppt}')
+                # This is not UnknownParameterError since the property input
+                # by the user maybe a valid property for the digitizer device.
+                raise ProcessingError(f'[XGM] Unknown property: {ppt}')
 
             self.filter_train_by_vrange(v, catalog.get_vrange(src), src)
 
@@ -127,7 +131,9 @@ class XgmProcessor(_BaseProcessor):
                     arr[catalog.get_slicer(src)], dtype=np.float32)
                 processed.pulse.xgm.intensity = self._pulse_intensity_ma
             else:
-                raise UnknownParameterError(f'[XGM] Unknown property: {ppt}')
+                # This is not UnknownParameterError since the property input
+                # by the user maybe a valid property for the digitizer device.
+                raise ProcessingError(f'[XGM] Unknown property: {ppt}')
 
             # apply pulse filter
             self.filter_pulse_by_vrange(self._pulse_intensity_ma,

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 
 from PyQt5.QtWidgets import QMainWindow, QWidget
 
@@ -19,7 +19,9 @@ class TestViews(_TestDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.gui = QMainWindow()  # dummy MainGUI
-        cls.gui.createCtrlWidget = MagicMock(return_value=QWidget())
+        widget = QWidget()
+        widget.setRois = MagicMock()
+        cls.gui.createCtrlWidget = MagicMock(return_value=widget)
 
     @classmethod
     def tearDownClass(cls):

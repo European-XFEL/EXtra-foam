@@ -13,6 +13,66 @@ from .imageproc_py import mask_image_data
 from .statistics import nanmean, nansum
 
 
+def quick_min_max(x, q=None):
+    """Estimate the min/max values of input by down-sampling.
+
+    :param numpy.ndarray x: data, 2D array for now.
+    :param float/None q: quantile when calculating the min/max, which
+        must be within [0, 1].
+
+    :return tuple: (min, max)
+    """
+    if not isinstance(x, np.ndarray):
+        raise TypeError("Input must be a numpy.ndarray!")
+
+    if x.ndim != 2:
+        raise ValueError("Input must be a 2D array!")
+
+    while x.size > 1e5:
+        sl = [slice(None)] * x.ndim
+        sl[np.argmax(x.shape)] = slice(None, None, 2)
+        x = x[tuple(sl)]
+
+    if q is None:
+        return np.nanmin(x), np.nanmax(x)
+
+    if q < 0.5:
+        q = 1 - q
+
+    # Let np.nanquantile to handle the case when q is outside [0, 1]
+    # caveat: nanquantile is about 30 times slower than nanmin/nanmax
+    return np.nanquantile(x, 1 - q, interpolation='nearest'), \
+           np.nanquantile(x, q, interpolation='nearest')
+
+
+def nanstd(a, axis=None, dtype=None, *, normalized=False):
+    """Faster numpy.nanstd.
+
+    # TODO:
+
+    This is a wrapper over numpy.nanstd. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
+    """
+    if normalized:
+        return np.nanstd(a, axis=axis, dtype=dtype) / \
+               np.nanmean(a, axis=axis, dtype=dtype)
+    return np.nanstd(a, axis=axis, dtype=dtype)
+
+
+def nanvar(a, axis=None, dtype=None, *, normalized=False):
+    """Faster numpy.nanvar.
+
+    # TODO:
+
+    This is a wrapper over numpy.nanvar. It uses the C++ implementation
+    in EXtra-foam when applicable. Otherwise, it falls back to numpy.nansum.
+    """
+    if normalized:
+        return np.nanvar(a, axis=axis, dtype=dtype) / \
+               np.nanmean(a, axis=axis, dtype=dtype) ** 2
+    return np.nanvar(a, axis=axis, dtype=dtype)
+
+
 def _get_outer_edges(arr, range):
     """Determine the outer bin edges to use.
 

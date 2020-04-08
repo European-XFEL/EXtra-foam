@@ -22,6 +22,10 @@ from . import ROOT_PATH
 from .logger import logger
 
 
+_MAX_INT32 = np.iinfo(np.int32).max
+_MIN_INT32 = np.iinfo(np.int32).min
+
+
 class DataSource(IntEnum):
     FILE = 0  # data from files (run directory)
     BRIDGE = 1  # real-time data from the bridge
@@ -54,6 +58,10 @@ class RoiFom(IntEnum):
     MEDIAN = 3
     MAX = 4
     MIN = 5
+    STD = 6  # standard deviation
+    VAR = 7  # variance
+    N_STD = 16  # normalized standard deviation (speckle contrast)
+    N_VAR = 17  # normalized variance (speckle contrast)
 
 
 class RoiProjType(IntEnum):
@@ -64,7 +72,6 @@ class RoiProjType(IntEnum):
 class AnalysisType(IntEnum):
     UNDEFINED = 0
     PUMP_PROBE = 1
-    TR_XAS = 2
     ROI_FOM = 11
     ROI_NORM = 12
     ROI_PROJ = 21
@@ -84,6 +91,10 @@ class GeomAssembler(IntEnum):
 class PipelineSlowPolicy(IntEnum):
     DROP = 0
     WAIT = 1
+
+
+class StreamerMode(IntEnum):
+    CONTINUOUS = 1
 
 
 def list_azimuthal_integ_methods(detector):
@@ -216,6 +227,8 @@ class _Config(dict):
         "BRIDGE_TIMEOUT": 0.1,
         # maximum length of the cache used in data correlation by train ID
         "CORRELATION_QUEUE_CACHE_SIZE": 20,
+        # default extension port
+        "EXTENSION_PORT": 5555,
         # -------------------------------------------------------------
         # Source of data
         # -------------------------------------------------------------
@@ -267,6 +280,8 @@ class _Config(dict):
         "GUI_IMAGE_TOOL_SIZE": (1680, 1080),
         # initial (width, height) of a large plot window
         "GUI_PLOT_WINDOW_SIZE": (1440, 1080),
+        # initial (width, height) of a special analysis window
+        "GUI_SPECIAL_WINDOW_SIZE": (1680, 1080),
         # color map in contour plots, valid options are: thermal, flame,
         # yellowy, bipolar, spectrum, cyclic, greyclip, grey
         "GUI_COLOR_MAP": 'thermal',

@@ -33,11 +33,6 @@ class ImageAnalysis(ImageViewF):
         """Initialization."""
         super().__init__(*args, **kwargs)
 
-        self._plot_widget.setTitle('')  # reserve space for displaying
-
-        # set the customized ImageItem
-        self._image_item = ImageItem()
-        self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
         self._mask_item = MaskItem(self._image_item)
 
         # re-add items to keep the order
@@ -87,13 +82,6 @@ class ImageAnalysis(ImageViewF):
             logger.info(f"[Image tool] Image saved in {filepath}")
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
-
-    @pyqtSlot(int, int, float)
-    def onMouseMoved(self, x, y, v):
-        if x < 0 or y < 0:
-            self._plot_widget.setTitle('')
-        else:
-            self._plot_widget.setTitle(f'x={x}, y={y}, value={round(v, 1)}')
 
     @pyqtSlot(float)
     def onBkgChange(self, bkg):
@@ -183,4 +171,4 @@ class RoiImageView(ImageViewF):
             data.roi, f"geom{self._index}"), "geometry")
         if w < 0 or h < 0:
             return
-        self.setImage(image[y:y+h, x:x+w], auto_range=True, auto_levels=True)
+        self.setImage(image[y:y+h, x:x+w])

@@ -7,47 +7,29 @@ Author: Ebad Kamil <ebad.kamil@xfel.eu> and Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtCore import Qt
+from collections import OrderedDict
+from multiprocessing import Process
+
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QIntValidator, QValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QFileDialog, QGridLayout, QHBoxLayout, QGroupBox, QListWidget,
-    QListWidgetItem, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+    QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout,
+    QHeaderView, QGroupBox, QLabel, QSplitter, QTableWidget,
+    QTableWidgetItem, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 )
 
 from zmq.error import ZMQError
 
 from .base_window import _AbstractSatelliteWindow
-from ..ctrl_widgets.smart_widgets import SmartLineEdit
+from ..ctrl_widgets.smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ...config import StreamerMode
 from ...logger import logger
-from ...database import Metadata as mt
-from ...database import MetaProxy
-from ...offline import gather_sources, FileServer
+from ...offline import gather_sources, load_runs, run_info, serve_files
 
 
 class _FileStreamCtrlWidget(QWidget):
 
-    def __init__(self, *, parent=None):
-        super().__init__(parent=parent)
-
-        self._load_run_btn = QPushButton("Load Run Folder")
-
-        self._data_folder_le = SmartLineEdit()
-
-        self._serve_start_btn = QPushButton("Stream files")
-        self._serve_terminate_btn = QPushButton("Terminate")
-        self._serve_terminate_btn.setEnabled(False)
-
-        self._stream_files_once_cb = QCheckBox("Repeat Stream")
-        self._stream_files_once_cb.setChecked(False)
-        self._slow_source_list_widget = QListWidget()
-        self._run_info_te = QPlainTextEdit()
-        self._run_info_te.setReadOnly(True)
-
-        self._slow_source_list_widget.setMinimumHeight(60)
-        self.initCtrlUI()
-
-    def initCtrlUI(self):
-        """Override."""
-        GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {'\
+    GROUP_BOX_STYLE_SHEET = 'QGroupBox:title {' \
                             'color: #8B008B;' \
                             'border: 1px;' \
                             'subcontrol-origin: margin;' \
@@ -55,175 +37,287 @@ class _FileStreamCtrlWidget(QWidget):
                             'padding-left: 10px;' \
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
+
+    _available_modes = OrderedDict({
+        "continuous": StreamerMode.CONTINUOUS,
+    })
+
+    def __init__(self, *, parent=None):
+        super().__init__(parent=parent)
+
+        self.load_run_btn = QPushButton("Load run")
+
+        self.data_folder_le = SmartLineEdit()
+
+        self.serve_start_btn = QPushButton("Start")
+        self.serve_terminate_btn = QPushButton("Terminate")
+        self.serve_terminate_btn.setEnabled(False)
+
+        self.mode_cb = QComboBox()
+        for v in self._available_modes:
+            self.mode_cb.addItem(v)
+        self.port_le = SmartLineEdit("*")
+        self.port_le.setValidator(QIntValidator(0, 65535))
+
+        self.tid_range_le = SmartBoundaryLineEdit("-Inf, Inf")
+        self.tid_range_le.setReadOnly(True)
+
+        self.repeat_stream_cb = QCheckBox("Repeat Stream")
+        self.repeat_stream_cb.setChecked(False)
+
+        self._run = None
+        self._detector_src_tb = QTableWidget()
+        self._instrument_src_tb = QTableWidget()
+        self._control_src_tb = QTableWidget()
+        for tb in (self._detector_src_tb, self._instrument_src_tb, self._control_src_tb):
+            tb.setColumnCount(2)
+            header = tb.horizontalHeader()
+            header.setSectionResizeMode(0, QHeaderView.Interactive)
+            header.setSectionResizeMode(1, QHeaderView.Stretch)
+            tb.verticalHeader().hide()
+            tb.setHorizontalHeaderLabels(['Device ID', 'Property'])
+            header.resizeSection(0, int(0.6 * header.length()))
+
+        self._run_info_te = QPlainTextEdit()
+        self._run_info_te.setReadOnly(True)
+
+        self._non_reconfigurable_widgets = [
+            self.data_folder_le,
+            self._detector_src_tb ,
+            self._instrument_src_tb,
+            self._control_src_tb,
+            self.load_run_btn,
+            self.repeat_stream_cb,
+            self.mode_cb,
+            self.port_le,
+            self.tid_range_le,
+        ]
+
+        self.initUI()
+        self.initConnections()
+
+    def initUI(self):
+        """Override."""
+        AR = Qt.AlignRight
+
+        ls_layout = QGridLayout()
+        ls_gb = QGroupBox("Load and Stream")
+        ls_gb.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
+        ls_layout.addWidget(self.load_run_btn, 0, 0)
+        ls_layout.addWidget(self.data_folder_le, 0, 1, 1, 9)
+        ls_layout.addWidget(QLabel("Mode: "), 1, 1, AR)
+        ls_layout.addWidget(self.mode_cb, 1, 2)
+        ls_layout.addWidget(QLabel("Train ID range: "), 1, 3, AR)
+        ls_layout.addWidget(self.tid_range_le, 1, 4)
+        ls_layout.addWidget(QLabel("Port: "), 1, 5, AR)
+        ls_layout.addWidget(self.port_le, 1, 6)
+        ls_layout.addWidget(self.serve_start_btn, 1, 7)
+        ls_layout.addWidget(self.serve_terminate_btn, 1, 8)
+        ls_layout.addWidget(self.repeat_stream_cb, 1, 9)
+        ls_gb.setLayout(ls_layout)
+        ls_gb.setFixedHeight(ls_gb.minimumSizeHint().height())
+
+        table_area = QSplitter()
+        sp_sub = QSplitter(Qt.Vertical)
+        sp_sub.addWidget(self._createListGroupBox(
+            self._detector_src_tb, "Detector sources"))
+        sp_sub.addWidget(self._createListGroupBox(
+            self._instrument_src_tb,
+            "Instrument sources (excluding detector sources)"))
+        table_area.addWidget(sp_sub)
+        table_area.addWidget(self._createListGroupBox(
+            self._control_src_tb, "Control sources"))
+
         layout = QVBoxLayout()
-
-        load_stream_layout = QGridLayout()
-        load_stream_gb = QGroupBox("Load and Stream")
-        load_stream_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
-
-        load_stream_layout.addWidget(self._load_run_btn, 0, 0)
-        load_stream_layout.addWidget(self._data_folder_le, 0, 1, 1, 2)
-
-        load_stream_layout.addWidget(self._stream_files_once_cb, 1, 0)
-        load_stream_layout.addWidget(self._serve_start_btn, 1, 1)
-        load_stream_layout.addWidget(self._serve_terminate_btn, 1, 2)
-
-        load_stream_gb.setLayout(load_stream_layout)
-
-        run_info_gb = QGroupBox("Data Sources and Run Info")
-        run_info_gb.setStyleSheet(GROUP_BOX_STYLE_SHEET)
-
-        run_info_layout = QHBoxLayout()
-        run_info_layout.addWidget(self._slow_source_list_widget)
-        run_info_layout.addWidget(self._run_info_te)
-
-        run_info_gb.setLayout(run_info_layout)
-
-        layout.addWidget(load_stream_gb)
-        layout.addWidget(run_info_gb)
+        layout.addWidget(ls_gb)
+        layout.addWidget(self._run_info_te)
+        layout.addWidget(table_area)
         self.setLayout(layout)
 
+        self._run_info_te.setFixedHeight(60)
+
     def initConnections(self):
-        self._data_folder_le.returnPressed.connect(
-            lambda: self.populateSources(
-                self._data_folder_le.text()))
-
-        self._data_folder_le.returnPressed.emit()
-
-        self._serve_start_btn.clicked.connect(
-            self.onFileServerStarted)
-        self._serve_terminate_btn.clicked.connect(
-            self.onFileServerStopped)
-
-        self._load_run_btn.clicked.connect(self.onRunFolderLoad)
+        self.load_run_btn.clicked.connect(self.onRunFolderLoad)
 
     def onRunFolderLoad(self):
         folder_name = QFileDialog.getExistingDirectory(
             options=QFileDialog.ShowDirsOnly)
+
         if folder_name:
-            self._slow_source_list_widget.clear()
-            self._data_folder_le.setText(folder_name)
+            self.data_folder_le.setText(folder_name)
 
-    def populateSources(self, path):
-        self._slow_source_list_widget.clear()
-        self._run_info_te.clear()
-        if path:
-            sources, info = gather_sources(path)
-            for src in sources:
-                item = QListWidgetItem()
-                item.setCheckState(Qt.Unchecked)
-                item.setText(src)
-                self._slow_source_list_widget.addItem(item)
+    def fillRunInfo(self, text):
+        self._run_info_te.setPlainText(text)
 
-            self._slow_source_list_widget.sortItems()
-            self._run_info_te.appendPlainText(info)
+    def fillSourceTables(self, run_dir_cal, run_dir_raw):
+        detector_srcs, instrument_srcs, control_srcs = gather_sources(
+            run_dir_cal, run_dir_raw)
+        self._fillSourceTable(detector_srcs, self._detector_src_tb )
+        self._fillSourceTable(instrument_srcs, self._instrument_src_tb)
+        self._fillSourceTable(control_srcs, self._control_src_tb)
+
+    def _fillSourceTable(self, srcs, table):
+        table.setRowCount(len(srcs))
+        for i, key in enumerate(sorted(srcs)):
+            item = QTableWidgetItem()
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Unchecked)
+            item.setText(key)
+            table.setItem(i, 0, item)
+            cb = QComboBox()
+            cb.addItems(srcs[key])
+            table.setCellWidget(i, 1, cb)
 
     def onFileServerStarted(self):
         logger.info("File server started")
-        self._serve_start_btn.setEnabled(False)
-        self._serve_terminate_btn.setEnabled(True)
-        self._data_folder_le.setEnabled(False)
-        self._slow_source_list_widget.setEnabled(False)
-        self._load_run_btn.setEnabled(False)
-        self._stream_files_once_cb.setEnabled(False)
+        self.serve_start_btn.setEnabled(False)
+        self.serve_terminate_btn.setEnabled(True)
+        for w in self._non_reconfigurable_widgets:
+            w.setEnabled(False)
 
     def onFileServerStopped(self):
-        self._serve_start_btn.setEnabled(True)
-        self._serve_terminate_btn.setEnabled(False)
-        self._data_folder_le.setEnabled(True)
-        self._slow_source_list_widget.setEnabled(True)
-        self._load_run_btn.setEnabled(True)
-        self._stream_files_once_cb.setEnabled(True)
+        self.serve_start_btn.setEnabled(True)
+        self.serve_terminate_btn.setEnabled(False)
+        for w in self._non_reconfigurable_widgets:
+            w.setEnabled(True)
+
+    def _createListGroupBox(self, widget, title):
+        gb = QGroupBox(title)
+        gb.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
+        layout = QHBoxLayout()
+        layout.addWidget(widget)
+        gb.setLayout(layout)
+        return gb
+
+    def getSourceLists(self):
+        return (self._getSourceListFromTable(self._detector_src_tb),
+                self._getSourceListFromTable(self._instrument_src_tb),
+                self._getSourceListFromTable(self._control_src_tb))
+
+    def _getSourceListFromTable(self, table):
+        ret = []
+        for i in range(table.rowCount()):
+            item = table.item(i, 0)
+            if item.checkState() == Qt.Checked:
+                ret.append((table.item(i, 0).text(),
+                            table.cellWidget(i, 1).currentText()))
+        return ret
 
 
-class FileStreamControllerWindow(_AbstractSatelliteWindow):
+class FileStreamWindow(_AbstractSatelliteWindow):
 
     _title = "File Streamer"
 
-    def __init__(self, *args, detector=None, port=None, **kwargs):
+    file_server_started_sgn = pyqtSignal()
+    file_server_stopped_sgn = pyqtSignal()
+
+    def __init__(self, *args, port=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._detector = detector
-        self._port = port
-        self._data_folder = None
         self._file_server = None
-        self._repeat_stream = False
-        self._slow_devices = set()
 
-        self._meta = MetaProxy()
+        self._port = None
+
+        self._rd_cal = None
+        self._rd_raw = None
 
         self._cw = QWidget()
-        self._file_stream_ctrl_widget = _FileStreamCtrlWidget(parent=self)
-        self._widget = self._file_stream_ctrl_widget
+
+        self._ctrl_widget = _FileStreamCtrlWidget(parent=self)
+        port_le = self._ctrl_widget.port_le
+        if self.parent() is None:
+            # opened from the terminal
+            if port_le.validator().validate(str(port), 0)[0] == \
+                    QValidator.Acceptable:
+                port_le.setText(str(port))
+            else:
+                raise ValueError(f"Invalid TCP port: {port}")
+        else:
+            # opened from the main GUI
+            port_le.setReadOnly(True)
 
         self.initUI()
-        self.setMinimumSize(800, 500)
-        self.setCentralWidget(self._cw)
-
         self.initConnections()
+
+        self.setMinimumSize(1440, 960)
+        self.setCentralWidget(self._cw)
 
         self.show()
 
     def initUI(self):
+        """Override"""
         layout = QVBoxLayout()
-        layout.addWidget(self._widget)
+        layout.addWidget(self._ctrl_widget)
         self._cw.setLayout(layout)
 
     def initConnections(self):
         """Override"""
-        self._widget._data_folder_le.returnPressed.connect(
-            lambda: self.onFileServerDataFolderChange(
-                self._widget._data_folder_le.text()))
-
-        self._widget._serve_start_btn.clicked.connect(
+        self._ctrl_widget.serve_start_btn.clicked.connect(
             self.startFileServer)
-        self._widget._serve_terminate_btn.clicked.connect(
+        self.file_server_started_sgn.connect(
+            self._ctrl_widget.onFileServerStarted)
+        self._ctrl_widget.serve_terminate_btn.clicked.connect(
             self.stopFileServer)
+        self.file_server_stopped_sgn.connect(
+            self._ctrl_widget.onFileServerStopped)
 
-        self._widget._slow_source_list_widget.itemClicked.connect(
-            lambda x: self.onSlowDeviceChange(
-                x.checkState(), x.text()))
+        self._ctrl_widget.data_folder_le.value_changed_sgn.connect(
+            self._populateSources)
 
-        self._widget._stream_files_once_cb.toggled.connect(
-            self.onRepeatStreamChange)
+        if self._mediator is not None:
+            self._mediator.connection_change_sgn.connect(
+                self._onTcpPortChange)
+            self._mediator.file_stream_initialized_sgn.emit()
 
-        self._widget.initConnections()
+    def _populateSources(self, path):
+        # reset old DataCollections
+        self._rd_cal, self._rd_raw = None, None
 
-    def onFileServerDataFolderChange(self, path):
-        self._slow_devices.clear()
-        self._data_folder = path if path else None
+        try:
+            self._rd_cal, self._rd_raw = load_runs(path)
+        except Exception as e:
+            logger.error(str(e))
+        finally:
+            self._ctrl_widget.fillRunInfo(run_info(self._rd_cal))
+            self._ctrl_widget.fillSourceTables(self._rd_cal, self._rd_raw)
+
+    def _onTcpPortChange(self, connections):
+        endpoint = list(connections.keys())[0]
+        self._port = int(endpoint.split(":")[-1])
 
     def startFileServer(self):
-        folder = self._data_folder
-
-        if folder is None:
-            logger.error("No run folder specified")
+        if self._rd_cal is None:
+            logger.error("Please load a valid run first!")
             return
 
-        if self._port is not None:
-            port = self._port
-        else:
-            cfg = self._meta.hget_all(mt.CONNECTION)
-            try:
-                port = list(cfg.keys())[0].split(':')[-1]
-            except KeyError as e:
-                logger.error(repr(e))
-                return
+        folder = self._ctrl_widget.data_folder_le.text()
 
-        slow_devices = list(self._slow_devices)
-        repeat_stream = self._repeat_stream
-        # process can only be start once
-        self._file_server = FileServer(folder, port,
-                                       detector=self._detector,
-                                       slow_devices=slow_devices,
-                                       repeat_stream=repeat_stream)
+        if self._port is None:
+            port = int(self._ctrl_widget.port_le.text())
+        else:
+            port = self._port
+
+        detector_srcs, instrument_srcs, control_srcs = \
+            self._ctrl_widget.getSourceLists()
+
+        repeat_stream = self._ctrl_widget.repeat_stream_cb.isChecked()
+
+        self._file_server = Process(
+            target=serve_files,
+            args=((self._rd_cal, self._rd_raw), port),
+            kwargs={
+                'detector_sources': detector_srcs,
+                'instrument_sources': instrument_srcs,
+                'control_sources': control_srcs,
+                'repeat_stream': repeat_stream,
+                'require_all': False,
+            })
+
         try:
             self._file_server.start()
-
+            self.file_server_started_sgn.emit()
             logger.info("Serving file in the folder {} through port {}"
                         .format(folder, port))
-        except FileNotFoundError:
-            logger.info("{} does not exist!".format(folder))
         except ZMQError:
             logger.info("Port {} is already in use!".format(port))
 
@@ -237,12 +331,7 @@ class FileStreamControllerWindow(_AbstractSatelliteWindow):
             # this join may be redundant
             self._file_server.join()
 
-    def onSlowDeviceChange(self, state, source):
-        self._slow_devices.add((source, '*')) if state \
-            else self._slow_devices.discard((source, '*'))
-
-    def onRepeatStreamChange(self, state):
-        self._repeat_stream = state
+        self.file_server_stopped_sgn.emit()
 
     def closeEvent(self, QCloseEvent):
         """Override"""

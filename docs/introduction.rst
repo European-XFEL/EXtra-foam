@@ -69,10 +69,6 @@ can be preprocessed and analysed per second.
     |                 | pulse-resolved/multi-frame detectors | train-resolved/single-frame detectors |
     +=================+======================================+=======================================+
     | processing rate | > 10 Hz with 64 pulses/train         | > 10 Hz                               |
-    |                 | (DSSC and LPD)                       |                                       |
-    |                 +--------------------------------------+                                       |
-    |                 | > 2 Hz with 64 pulses/train          |                                       |
-    |                 | (AGIPD)                              |                                       |
     +-----------------+--------------------------------------+---------------------------------------+
 
 .. note::

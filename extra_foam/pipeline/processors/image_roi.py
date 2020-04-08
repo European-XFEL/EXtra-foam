@@ -7,6 +7,7 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
+import functools
 import math
 
 import numpy as np
@@ -21,7 +22,7 @@ from ...utils import profiler
 from ...config import AnalysisType, Normalizer, RoiCombo, RoiFom, RoiProjType
 
 from extra_foam.algorithms import (
-    intersection, mask_image_data
+    intersection, mask_image_data, nanstd, nanvar
 )
 
 
@@ -45,7 +46,11 @@ class _RoiProcessorBase(_BaseProcessor):
         RoiFom.MEAN: np.nanmean,
         RoiFom.MEDIAN: np.nanmedian,
         RoiFom.MAX: np.nanmax,
-        RoiFom.MIN: np.nanmin
+        RoiFom.MIN: np.nanmin,
+        RoiFom.STD: nanstd,
+        RoiFom.VAR: nanvar,
+        RoiFom.N_STD: functools.partial(nanstd, normalized=True),
+        RoiFom.N_VAR: functools.partial(nanvar, normalized=True)
     }
 
     def __init__(self):
@@ -339,7 +344,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         self._proj_auc_range = (0, math.inf)
         self._proj_fom_integ_range = (0, math.inf)
 
-        self._ma_window = 1
+        self._set_ma_window(1)
 
     def update(self):
         """Override."""
@@ -357,7 +362,7 @@ class ImageRoiTrain(_RoiProcessorBase):
         self._proj_auc_range = self.str2tuple((cfg['proj:auc_range']))
         self._proj_fom_integ_range = self.str2tuple((cfg['proj:fom_integ_range']))
 
-    def _reset_roi_moving_average(self):
+    def _reset_ma(self):
         del self._roi1
         del self._roi2
         del self._roi3
@@ -373,7 +378,9 @@ class ImageRoiTrain(_RoiProcessorBase):
         del self._roi3_off
         del self._roi4_off
 
-    def _set_roi_moving_average_window(self, v):
+    def _set_ma_window(self, v):
+        self._ma_window = v
+
         self.__class__._roi1.window = v
         self.__class__._roi2.window = v
         self.__class__._roi3.window = v
@@ -392,13 +399,12 @@ class ImageRoiTrain(_RoiProcessorBase):
     def _update_moving_average(self, cfg):
         """Overload."""
         if 'reset_ma_roi' in cfg:
-            self._reset_roi_moving_average()
+            self._reset_ma()
             self._meta.hdel(mt.GLOBAL_PROC, 'reset_ma_roi')
 
         v = int(cfg['ma_window'])
         if self._ma_window != v:
-            self._set_roi_moving_average_window(v)
-        self._ma_window = v
+            self._set_ma_window(v)
 
     @profiler("ROI Processor (train)")
     def process(self, data):

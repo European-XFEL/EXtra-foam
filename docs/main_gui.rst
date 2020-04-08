@@ -7,6 +7,8 @@ by functionality and a log window.
 .. image:: images/MainGUI.png
    :width: 800
 
+.. _Data source:
+
 Data source
 -----------
 

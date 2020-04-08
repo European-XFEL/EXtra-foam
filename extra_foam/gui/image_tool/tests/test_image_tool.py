@@ -71,6 +71,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
                                                pulse_resolved=self.gui._pulse_resolved,
+                                               require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
 
@@ -84,7 +85,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testGeneral(self):
         self.assertEqual(10, len(self.image_tool._ctrl_widgets))
         self.assertTrue(self.image_tool._pulse_resolved)
+        self.assertTrue(self.image_tool._require_geometry)
         self.assertTrue(self.image_tool._image_ctrl_widget._pulse_resolved)
+        self.assertTrue(self.image_tool._geometry_view._ctrl_widget._require_geometry)
 
     def testUpdateImage(self):
         widget = self.image_tool._image_ctrl_widget
@@ -197,59 +200,72 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # moving average is disabled
         self.assertFalse(widget.moving_avg_le.isEnabled())
 
-    @patch("extra_foam.gui.plot_widgets.image_views.ImageAnalysis."
-           "onThresholdMaskChange")
-    def testThresholdMask(self, on_mask):
+    def testImageCtrlWidget(self):
         widget = self.image_tool._image_ctrl_widget
-
-        with patch.object(widget._mediator, "onImageThresholdMaskChange") as patched:
-            widget.threshold_mask_le.clear()
-            QTest.keyClicks(widget.threshold_mask_le, "1, 10")
-            QTest.keyPress(widget.threshold_mask_le, Qt.Key_Enter)
-            on_mask.assert_called_once_with((1, 10))
-            patched.assert_called_once_with((1, 10))
-
-        # test loading meta data
-        mediator = widget._mediator
-        mediator.onImageThresholdMaskChange((-100, 10000))
-        widget.loadMetaData()
-        self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
-
-    def testAutoLevel(self):
-        widget = self.image_tool._image_ctrl_widget
+        proc = self.pulse_worker._image_proc
+        assembler = self.pulse_worker._assembler
 
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
         self.assertEqual(1, len(spy))
 
+        # test default
+        proc.update()
+        self.assertEqual((-1e5, 1e5), proc._threshold_mask)
+
+        assembler.update()
+        self.assertEqual(False, assembler._mask_tile)
+
+        # test set new value
+        widget.threshold_mask_le.setText("1, 10")
+        proc.update()
+        self.assertEqual((1, 10), proc._threshold_mask)
+
+        widget.mask_tile_cb.setChecked(True)
+        assembler.update()
+        self.assertEqual(True, assembler._mask_tile)
+
+        # test loading meta data
+        mediator = widget._mediator
+        mediator.onImageThresholdMaskChange((-100, 10000))
+        mediator.onImageMaskTileEdgeChange(False)
+        widget.loadMetaData()
+        self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
+        self.assertEqual(False, widget.mask_tile_cb.isChecked())
+
     def testReferenceCtrlWidget(self):
-        widget = self.image_tool._reference_view._ctrl_widget
-        corrected = self.image_tool._reference_view._corrected
+        view = self.image_tool._reference_view
+        widget = view._ctrl_widget
+        corrected = view._corrected
         proc = self.pulse_worker._image_proc
 
         data, _ = self.data_with_assembled(1001, (4, 10, 10))
 
         # test setting reference (no image)
-        QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(proc._reference)
+        QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
+        updated, ref = proc._ref_sub.update()
+        self.assertFalse(updated)
         self.assertIsNone(ref)
 
         # test setting reference
         corrected._image = 2 * np.ones((10, 10), np.float32)
-        QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(corrected.image.copy())
+        QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         np.testing.assert_array_equal(corrected.image, ref)
 
         # test setting reference multiple times
         for i in range(5):
             corrected._image = np.random.rand(10, 10).astype(np.float32)
-            QTest.mouseClick(widget._set_ref_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(None)
+            QTest.mouseClick(widget.set_current_btn, Qt.LeftButton)
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         np.testing.assert_array_equal(corrected.image, ref)
 
         # test removing reference
-        QTest.mouseClick(widget._remove_ref_btn, Qt.LeftButton)
-        ref = proc._ref_sub.update(corrected.image.copy())
+        QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
+        updated, ref = proc._ref_sub.update()
+        self.assertTrue(updated)
         self.assertIsNone(ref)
 
         # ------------------------------
@@ -265,21 +281,19 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             if fn == "reference/file/path":
                 return ref_gt
 
-        # caveat: first establish the connection
-        proc._cal_sub.update(None, None)
-
-        with patch('extra_foam.gui.ctrl_widgets.ref_image_ctrl_widget.read_image',
-                   side_effect=_read_image_side_effect):
-            with patch('extra_foam.gui.ctrl_widgets.ref_image_ctrl_widget.QFileDialog.getOpenFileName',
+        with patch('extra_foam.ipc.read_image', side_effect=_read_image_side_effect):
+            with patch('extra_foam.gui.image_tool.reference_view.QFileDialog.getOpenFileName',
                        return_value=["reference/file/path"]):
-                QTest.mouseClick(widget._load_ref_btn, Qt.LeftButton)
-                self.assertEqual("reference/file/path", widget._ref_fp_le.text())
-                ref = proc._ref_sub.update(None)
+                QTest.mouseClick(widget.load_btn, Qt.LeftButton)
+                self.assertEqual("reference/file/path", widget.filepath_le.text())
+                updated, ref = proc._ref_sub.update()
+                self.assertTrue(updated)
                 np.testing.assert_array_equal(ref, ref_gt)
 
-                QTest.mouseClick(widget._remove_ref_btn, Qt.LeftButton)
-                self.assertEqual("", widget._ref_fp_le.text())
-                ref = proc._ref_sub.update(ref_gt)
+                QTest.mouseClick(widget.remove_btn, Qt.LeftButton)
+                self.assertEqual("", widget.filepath_le.text())
+                updated, ref = proc._ref_sub.update()
+                self.assertTrue(updated)
                 self.assertIsNone(ref)
 
     def testDrawMask(self):
@@ -371,34 +385,38 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             reset.assert_called_once()
 
     def testCalibrationCtrlWidget(self):
-        widget = self.image_tool._gain_offset_view._ctrl_widget
+        widget = self.image_tool._calibration_view._ctrl_widget
 
         proc = self.pulse_worker._image_proc
 
         proc.update()
         self.assertFalse(proc._correct_gain)
         self.assertFalse(proc._correct_offset)
-        self.assertEqual(slice(None), proc._gain_slicer)
-        self.assertEqual(slice(None), proc._offset_slicer)
+        self.assertEqual(slice(None), proc._gain_cells)
+        self.assertEqual(slice(None), proc._offset_cells)
+        self.assertTrue(proc._gain_cells_updated)
+        self.assertTrue(proc._offset_cells_updated)
         self.assertTrue(proc._dark_as_offset)
         self.assertFalse(proc._recording_dark)
 
         widget._correct_gain_cb.setChecked(True)
         widget._correct_offset_cb.setChecked(True)
-        widget._gain_slicer_le.setText(":70")
-        widget._offset_slicer_le.setText("2:120:4")
+        widget._gain_cells_le.setText(":70")
+        widget._offset_cells_le.setText("2:120:4")
         widget._dark_as_offset_cb.setChecked(False)
-        QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
+        QTest.mouseClick(widget.record_dark_btn, Qt.LeftButton)
         proc.update()
         self.assertTrue(proc._correct_gain)
         self.assertTrue(proc._correct_offset)
-        self.assertEqual(slice(None, 70), proc._gain_slicer)
-        self.assertEqual(slice(2, 120, 4), proc._offset_slicer)
+        self.assertEqual(slice(None, 70), proc._gain_cells)
+        self.assertEqual(slice(2, 120, 4), proc._offset_cells)
+        self.assertTrue(proc._gain_cells_updated)
+        self.assertTrue(proc._offset_cells_updated)
         self.assertFalse(proc._dark_as_offset)
         self.assertTrue(proc._recording_dark)
 
         # test stop dark recording
-        QTest.mouseClick(widget._record_dark_btn, Qt.LeftButton)
+        QTest.mouseClick(widget.record_dark_btn, Qt.LeftButton)
         proc.update()
         self.assertFalse(proc._recording_dark)
 
@@ -418,62 +436,58 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # Here we test that "proc._cal_sub.update()" works properly. The rest
         # is done in the unittests of ImageProcessor.
 
-        const_gt = np.ones([2, 2])
+        gain_gt = np.random.randn(2, 2)
+        offset_gt = np.random.randn(2, 2)
 
         def _read_constants_side_effect(fn):
-            if fn in ["gain/file/path", "offset/file/path"]:
-                return const_gt
+            if fn == "gain/file/path":
+                return gain_gt
+            if fn == "offset/file/path":
+                return offset_gt
 
         # caveat: first establish the connection
-        proc._cal_sub.update(None, None)
-
+        proc._cal_sub.update()
         with patch('extra_foam.ipc.read_cal_constants', side_effect=_read_constants_side_effect):
-            with patch('extra_foam.gui.ctrl_widgets.calibration_ctrl_widget.QFileDialog.getOpenFileName',
+            with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["gain/file/path"]):
-                QTest.mouseClick(widget._load_gain_btn, Qt.LeftButton)
+                QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)
                 time.sleep(0.1)  # wait to write into redis
-                self.assertEqual("gain/file/path", widget._gain_fp_le.text())
+                self.assertEqual("gain/file/path", widget.gain_fp_le.text())
 
                 n_attempts = 0
                 # repeat to prevent random failure at Travis
                 while n_attempts < 10:
                     n_attempts += 1
-                    new_gain, gain, new_offset, offset = proc._cal_sub.update(None, None)
-                    if new_gain:
+                    gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                    if gain_updated:
                         break
                     time.sleep(0.001)
 
-                np.testing.assert_array_equal(gain, const_gt)
-                self.assertFalse(new_offset)
+                np.testing.assert_array_equal(gain, gain_gt)
+                self.assertFalse(offset_updated)
                 self.assertIsNone(offset)
 
-                QTest.mouseClick(widget._remove_gain_btn, Qt.LeftButton)
-                self.assertEqual("", widget._gain_fp_le.text())
-                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
-                self.assertTrue(new_gain)
+                QTest.mouseClick(widget.remove_gain_btn, Qt.LeftButton)
+                self.assertEqual("", widget.gain_fp_le.text())
+                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                self.assertTrue(gain_updated)
                 self.assertIsNone(gain)
-                self.assertFalse(new_offset)
-                self.assertIsNone(offset)
 
-            with patch('extra_foam.gui.ctrl_widgets.calibration_ctrl_widget.QFileDialog.getOpenFileName',
+            with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["offset/file/path"]):
-                proc._gain = const_gt
-
-                QTest.mouseClick(widget._load_offset_btn, Qt.LeftButton)
+                QTest.mouseClick(widget.load_offset_btn, Qt.LeftButton)
                 time.sleep(0.1)  # wait to write data into redis
-                self.assertEqual("offset/file/path", widget._offset_fp_le.text())
-                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, None)
-                self.assertFalse(new_gain)
-                np.testing.assert_array_equal(gain, const_gt)
-                self.assertTrue(new_offset)
-                np.testing.assert_array_equal(offset, const_gt)
+                self.assertEqual("offset/file/path", widget.offset_fp_le.text())
+                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                self.assertFalse(gain_updated)
+                self.assertIsNone(gain)
+                self.assertTrue(offset_updated)
+                np.testing.assert_array_equal(offset, offset_gt)
 
-                QTest.mouseClick(widget._remove_offset_btn, Qt.LeftButton)
-                self.assertEqual("", widget._offset_fp_le.text())
-                new_gain, gain, new_offset, offset = proc._cal_sub.update(const_gt, const_gt)
-                self.assertFalse(new_gain)
-                np.testing.assert_array_equal(gain, const_gt)
-                self.assertTrue(new_offset)
+                QTest.mouseClick(widget.remove_offset_btn, Qt.LeftButton)
+                self.assertEqual("", widget.offset_fp_le.text())
+                gain_updated, gain, offset_updated, offset = proc._cal_sub.update()
+                self.assertTrue(offset_updated)
                 self.assertIsNone(offset)
 
         # test loading meta data
@@ -481,14 +495,14 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator.onCalDarkAsOffset(True)
         mediator.onCalGainCorrection(False)
         mediator.onCalOffsetCorrection(False)
-        mediator.onCalGainSlicerChange([0, None, 2])
-        mediator.onCalOffsetSlicerChange([0, None, 4])
+        mediator.onCalGainMemoCellsChange([0, None, 2])
+        mediator.onCalOffsetMemoCellsChange([0, None, 4])
         widget.loadMetaData()
         self.assertEqual(True, widget._dark_as_offset_cb.isChecked())
         self.assertEqual(False, widget._correct_gain_cb.isChecked())
         self.assertEqual(False, widget._correct_offset_cb.isChecked())
-        self.assertEqual("0::2", widget._gain_slicer_le.text())
-        self.assertEqual("0::4", widget._offset_slicer_le.text())
+        self.assertEqual("0::2", widget._gain_cells_le.text())
+        self.assertEqual("0::4", widget._offset_cells_le.text())
 
     def testAzimuthalInteg1dCtrlWidget(self):
         from extra_foam.pipeline.processors.azimuthal_integration import energy2wavelength
@@ -725,8 +739,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("-5, 5", widget._fom_integ_range_le.text())
 
     def testGeometryCtrlWidget(self):
-        from extra_geom import LPD_1MGeometry as LPD_1MGeometry
-        from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.config import GeomAssembler
         from extra_foam.gui.ctrl_widgets.geometry_ctrl_widget import _parse_table_widget
 
@@ -734,36 +746,45 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         view = self.image_tool._geometry_view
         self.assertTrue(cw.isTabEnabled(cw.indexOf(view)))
         widget = view._ctrl_widget
+        image_ctrl_widget = self.image_tool._image_ctrl_widget
 
         proc = self.pulse_worker._assembler
 
         # test default
-        self.assertTrue(widget.updateMetaData())
         proc.update()
-        self.assertIsInstance(proc._geom, LPD_1MGeometryFast)
         self.assertFalse(proc._stack_only)
         self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
         self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], proc._quad_position)
 
-        # test setting new values
-        avail_assemblers = {value: key for key, value in widget._assemblers.items()}
-        widget._assembler_cb.setCurrentText(avail_assemblers[GeomAssembler.EXTRA_GEOM])
+        # prepare for the following test
         widget._stack_only_cb.setChecked(True)
+        image_ctrl_widget.mask_tile_cb.setChecked(True)
+        proc.update()
+        self.assertTrue(proc._stack_only)
+        self.assertTrue(proc._mask_tile)
+
+        # test setting new values
+        assemblers_inv = widget._assemblers_inv
+        widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.EXTRA_GEOM])
+        self.assertFalse(widget._stack_only_cb.isEnabled())
+        self.assertFalse(widget._stack_only_cb.isChecked())
+        self.assertFalse(image_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertFalse(image_ctrl_widget.mask_tile_cb.isChecked())
         widget._geom_file_le.setText("/geometry/file/")
         for i in range(4):
             for j in range(2):
                 widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
-        proc.update()
-        self.assertTrue(proc._stack_only)
-        # when "stack only" is checked, "assembler type" setup will be ignored
-        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
-        self.assertEqual("/geometry/file/", proc._geom_file)
-        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
-
-        widget._stack_only_cb.setChecked(False)
         with patch.object(proc, "_load_geometry"):
             proc.update()
         self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
+        self.assertFalse(proc._stack_only)
+        self.assertFalse(proc._mask_tile)
+        self.assertEqual("/geometry/file/", proc._geom_file)
+        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
+
+        widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
+        self.assertTrue(widget._stack_only_cb.isEnabled())
+        self.assertTrue(image_ctrl_widget.mask_tile_cb.isEnabled())
 
         # test loading meta data
         mediator = widget._mediator
@@ -785,7 +806,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         TabIndex = self.image_tool.TabIndex
 
         # switch to "gain / offset"
-        record_btn = self.image_tool._gain_offset_view._ctrl_widget._record_dark_btn
+        record_btn = self.image_tool._calibration_view._ctrl_widget.record_dark_btn
         tab.tabBarClicked.emit(TabIndex.GAIN_OFFSET)
         tab.setCurrentIndex(TabIndex.GAIN_OFFSET)
         QTest.mouseClick(record_btn, Qt.LeftButton)  # start recording
@@ -833,12 +854,15 @@ class TestImageToolTs(unittest.TestCase):
         # construct a fresh ImageToolWindow for each test
         self.gui._image_tool = ImageToolWindow(queue=self.gui._queue,
                                                pulse_resolved=self.gui._pulse_resolved,
+                                               require_geometry=self.gui._require_geometry,
                                                parent=self.gui)
         self.image_tool = self.gui._image_tool
 
     def testGeneral(self):
         self.assertFalse(self.image_tool._pulse_resolved)
+        self.assertFalse(self.image_tool._require_geometry)
         self.assertFalse(self.image_tool._image_ctrl_widget._pulse_resolved)
+        self.assertFalse(self.image_tool._geometry_view._ctrl_widget._require_geometry)
 
     def testMovingAverageQLineEdit(self):
         # TODO: remove it in the future
@@ -851,19 +875,30 @@ class TestImageToolTs(unittest.TestCase):
         view = self.image_tool._geometry_view
         self.assertFalse(cw.isTabEnabled(cw.indexOf(view)))
 
-    def testCalibrationCtrlWidget(self):
-        widget = self.image_tool._gain_offset_view._ctrl_widget
-        self.assertFalse(widget._gain_slicer_le.isEnabled())
-        self.assertFalse(widget._offset_slicer_le.isEnabled())
+    def testImageCtrlWidget(self):
+        widget = self.image_tool._image_ctrl_widget
+        self.assertEqual(-1, widget.layout().indexOf(widget.mask_tile_cb))
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
-        mediator.onCalGainSlicerChange([0, None, 2])
-        mediator.onCalOffsetSlicerChange([0, None, 2])
+        mediator.onImageMaskTileEdgeChange(True)
         widget.loadMetaData()
-        self.assertEqual(":", widget._gain_slicer_le.text())
-        self.assertEqual(":", widget._offset_slicer_le.text())
+        self.assertEqual(False, widget.mask_tile_cb.isChecked())
+
+    def testCalibrationCtrlWidget(self):
+        widget = self.image_tool._calibration_view._ctrl_widget
+        self.assertFalse(widget._gain_cells_le.isEnabled())
+        self.assertFalse(widget._offset_cells_le.isEnabled())
+
+        # test loading meta data
+        # test if the meta data is invalid
+        mediator = widget._mediator
+        mediator.onCalGainMemoCellsChange([0, None, 2])
+        mediator.onCalOffsetMemoCellsChange([0, None, 2])
+        widget.loadMetaData()
+        self.assertEqual(":", widget._gain_cells_le.text())
+        self.assertEqual(":", widget._offset_cells_le.text())
 
 
 if __name__ == '__main__':

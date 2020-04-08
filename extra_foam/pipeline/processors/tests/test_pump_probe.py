@@ -76,12 +76,19 @@ class TestPumpProbeProcessorTr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         proc._mode = PumpProbeMode.REFERENCE_AS_OFF
 
         data, processed = self._gen_data(1001)
-        proc.process(data)
+
+        # test invalid shape of the reference
+        processed.image.reference = np.zeros((9, 9), dtype=np.float32)
+        with self.assertRaisesRegex(RuntimeError, "Shape"):
+            proc.process(data)
+
+        processed.image.reference = None
         image_on_gt = data['assembled']['sliced'].copy()
         image_on_gt[1, 1] = np.nan
-        np.testing.assert_array_almost_equal(processed.pp.image_on, image_on_gt)
         image_off_gt = np.zeros_like(image_on_gt)
         image_off_gt[1, 1] = np.nan
+        proc.process(data)
+        np.testing.assert_array_almost_equal(processed.pp.image_on, image_on_gt)
         np.testing.assert_array_almost_equal(processed.pp.image_off, image_off_gt)
         self.check_xgm(processed, "on", [0])
         self.check_digitizer(processed, "on", [0])
@@ -255,13 +262,21 @@ class TestPumpProbeProcessorPr(_PumpProbeTestMixin, _TestDataMixin, unittest.Tes
         proc._indices_off = slice(1, None, 2)
 
         data, processed = self._gen_data(1001)
-        proc.process(data)
+
+        # test invalid shape of the reference
+        processed.image.reference = np.zeros((9, 9), dtype=np.float32)
+        with self.assertRaisesRegex(RuntimeError, "Shape"):
+            proc.process(data)
+
+        processed.image.reference = None
         image_on_gt = np.mean(data['assembled']['sliced'][::2, :, :], axis=0)
         image_on_gt[1, 1] = np.nan
-        np.testing.assert_array_almost_equal(processed.pp.image_on, image_on_gt)
         image_off_gt = np.zeros_like(image_on_gt)
         image_off_gt[1, 1] = np.nan
+        proc.process(data)
+        np.testing.assert_array_almost_equal(processed.pp.image_on, image_on_gt)
         np.testing.assert_array_almost_equal(processed.pp.image_off, image_off_gt)
+
         # XGM and digitizer
         self.check_xgm(processed, "on", [0, 2])
         self.check_digitizer(processed, "on", [0, 2])

@@ -8,33 +8,51 @@ STREAM DATA FROM RUN DIRECTORY
    :width: 500
 
 
-File streamer
-"""""""""""""
+File stream
+"""""""""""
 
-**EXtra-foam** can be used to replay experiments with stored files. To start streaming,
-click on the *Offline* window on the tool bar that opens the following window.
+**EXtra-foam** can be used to replay experiments with stored files. To start,
+click on the *File stream* icon on the tool bar to opens the following window:
 
-.. image:: images/file_stream_control.png
-
-The run folder is browsed through the ``Load Run Folder`` button. The corrected image
-data will be streamed from the run folder. If the run folder has path structure
-as on `Maxwell GPFS` (/gpfs/exfel/exp/instrument/cycle/proposal/proc/runnumber) then once
-the run folder is loaded, all the  slow/control sources available in the
-corresponding *raw* folder (or same data folder if no corresponding raw
-folder is found) are listed. Users can then choose slow data sources to stream
-along with the fast image data.
-
-The data is streamed from files after the ``Stream files`` button is clicked.
+.. image:: images/file_stream.png
 
 *Alternatively*, one can type
 
 .. code-block:: bash
 
-    extra-foam-stream DETECTOR_NAME port
+    extra-foam-stream
 
 in another terminal to open the above window. This is useful for development since one
 does not have to set up the streamer again when restarting **EXtra-foam**.
 
++----------------------------+--------------------------------------------------------------------+
+| Input                      | Description                                                        |
++============================+====================================================================+
+| ``Load run``               | Click to select a run folder. The run folder can also be specified |
+|                            | via entering the full path.                                        |
++----------------------------+--------------------------------------------------------------------+
+| ``Port``                   | The TCP port from which the data is streamed. If the GUI is not    |
+|                            | opened from the terminal, the ``Port`` is readonly and internally  |
+|                            | it is the same as the port specified in the :ref:`Data source`     |
+|                            | panel in the main GUI.                                             |
++----------------------------+--------------------------------------------------------------------+
+| ``Start``                  | Press to start streaming.                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``Terminate``              | Press to terminate streaming. If ``Start`` is pressed again,       |
+|                            | the data will be streamed from the beginning                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Repeat stream``          | When checked, if the stream reaches the end of the data, the       |
+|                            | stream will restart from the beginning with a faked *train ID*,    |
+|                            | which ensures that the *train ID* continuously increases in the    |
+|                            | new cycle. This feature is only useful for developers.             |
++----------------------------+--------------------------------------------------------------------+
+
+.. note::
+    If the specified run folder has a path structure as on `Maxwell GPFS` (*.../proc/runnumber/*).
+    The loader will try to load the data (e.g. control data) other than the
+    detector data from *.../raw/runnumber/* first and fall back to *.../proc/runnumber/* if
+    *.../raw/runnumber/* is not a valid run directory. This is needed for large multi-module
+    detectors, as the folder *.../proc/runnumber/* only stores the calibrated detector data.
 
 Sample run directories
 """"""""""""""""""""""
@@ -48,6 +66,8 @@ Sample run directories
 |            | Run directory                                     | Description                              |
 +============+===================================================+==========================================+
 | AGIPD      | /gpfs/exfel/d/raw/SPB/201931/p900086/r0009        | 250 pulses                               |
++------------+---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/SPB/201831/p900039/proc/r0273     | Nice ring, 176 pulses                    |
 +------------+---------------------------------------------------+------------------------------------------+
 | LPD        | /gpfs/exfel/exp/FXE/201802/p002218/raw/r0229      | ring, 100 pulses                         |
 |            +---------------------------------------------------+------------------------------------------+
@@ -64,4 +84,8 @@ Sample run directories
 | FastCCD    | /gpfs/exfel/exp/SCS/201802/p002170/proc/r0141     |                                          |
 |            +---------------------------------------------------+------------------------------------------+
 |            | /gpfs/exfel/exp/SCS/201802/p002170/raw/r0141      |                                          |
++------------+---------------------------------------------------+------------------------------------------+
+| Gotthard   | /gpfs/exfel/exp/MID/201931/p900090/raw/r0395      | Test data                                |
+|            +---------------------------------------------------+------------------------------------------+
+|            | /gpfs/exfel/exp/MID/201931/p900090/raw/r0300      | Test data (dark)                         |
 +------------+---------------------------------------------------+------------------------------------------+

@@ -26,6 +26,11 @@ class Mediator(QObject):
     # POI index, pulse index
     poi_index_change_sgn = pyqtSignal(int, int)
     poi_window_initialized_sgn = pyqtSignal()
+    # geometry assembler
+    assembler_change_sgn = pyqtSignal(object)
+
+    connection_change_sgn = pyqtSignal(object)
+    file_stream_initialized_sgn = pyqtSignal()
 
     bin_heatmap_autolevel_sgn = pyqtSignal()
 
@@ -54,12 +59,17 @@ class Mediator(QObject):
     def unregisterAnalysis(self, analysis_type):
         self._meta.unregister_analysis(analysis_type)
 
+    def onExtensionEndpointChange(self, endpoint: str):
+        self._meta.hset(mt.EXTENSION, "endpoint", endpoint)
+
     def onBridgeConnectionsChange(self, connections: dict):
         # key = endpoint, value = source type
         pipe = self._meta.pipeline()
         pipe.delete(mt.CONNECTION)
         pipe.hmset(mt.CONNECTION, connections)
         pipe.execute()
+
+        self.connection_change_sgn.emit(connections)
 
     def onSourceItemToggled(self, checked: bool, item: object):
         if checked:
@@ -73,11 +83,11 @@ class Mediator(QObject):
     def onCalOffsetCorrection(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "correct_offset", str(value))
 
-    def onCalGainSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "gain_slicer", str(value))
+    def onCalGainMemoCellsChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "gain_cells", str(value))
 
-    def onCalOffsetSlicerChange(self, value: list):
-        self._meta.hset(mt.IMAGE_PROC, "offset_slicer", str(value))
+    def onCalOffsetMemoCellsChange(self, value: list):
+        self._meta.hset(mt.IMAGE_PROC, "offset_cells", str(value))
 
     def onCalDarkAsOffset(self, value:bool):
         self._meta.hset(mt.IMAGE_PROC, "dark_as_offset", str(value))
@@ -91,11 +101,15 @@ class Mediator(QObject):
     def onImageThresholdMaskChange(self, value: tuple):
         self._meta.hset(mt.IMAGE_PROC, "threshold_mask", str(value))
 
+    def onImageMaskTileEdgeChange(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "mask_tile", str(value))
+
     def onGeomStackOnlyChange(self, value: bool):
         self._meta.hset(mt.GEOMETRY_PROC, "stack_only", str(value))
 
     def onGeomAssemblerChange(self, value: IntEnum):
         self._meta.hset(mt.GEOMETRY_PROC, "assembler", int(value))
+        self.assembler_change_sgn.emit(value)
 
     def onGeomFileChange(self, value: str):
         self._meta.hset(mt.GEOMETRY_PROC, "geometry_file", value)
@@ -282,30 +296,3 @@ class Mediator(QObject):
 
     def onFomFilterPulseResolvedChange(self, value: bool):
         self._meta.hset(mt.FOM_FILTER_PROC, "pulse_resolved", str(value))
-
-    def onTrXasScanStateToggled(self, value: IntEnum, state: bool):
-        if state:
-            self._meta.hset(mt.TR_XAS_PROC, "analysis_type", int(value))
-        else:
-            self._meta.hdel(mt.TR_XAS_PROC, "analysis_type")
-
-    def onTrXasDelaySourceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_source", value)
-
-    def onTrXasEnergySourceChange(self, value: str):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_source", value)
-
-    def onTrXasNoDelayBinsChange(self, value: int):
-        self._meta.hset(mt.TR_XAS_PROC, "n_delay_bins", value)
-
-    def onTrXasDelayRangeChange(self, value: tuple):
-        self._meta.hset(mt.TR_XAS_PROC, "delay_range", str(value))
-
-    def onTrXasNoEnergyBinsChange(self, value: int):
-        self._meta.hset(mt.TR_XAS_PROC, "n_energy_bins", value)
-
-    def onTrXasEnergyRangeChange(self, value: tuple):
-        self._meta.hset(mt.TR_XAS_PROC, "energy_range", str(value))
-
-    def onTrXasReset(self):
-        self._meta.hset(mt.TR_XAS_PROC, "reset", 1)

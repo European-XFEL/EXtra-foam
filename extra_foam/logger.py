@@ -18,10 +18,9 @@ from . import ROOT_PATH
 logging.getLogger("pyFAI").setLevel(logging.CRITICAL)
 
 
-def create_logger():
+def create_logger(name):
     """Create the logger object for the whole API."""
-    name = "EXtra-foam"
-    logger = logging.getLogger(name)
+    _logger = logging.getLogger(name)
 
     log_file = os.path.join(ROOT_PATH, name + ".log")
     fh = TimedRotatingFileHandler(log_file, when='midnight')
@@ -39,11 +38,14 @@ def create_logger():
 
     ch.setFormatter(formatter)
 
-    logger.addHandler(fh)
-    logger.addHandler(ch)
+    _logger.addHandler(fh)
+    _logger.addHandler(ch)
 
-    return logger
+    return _logger
 
 
-logger = create_logger()
+logger = create_logger("EXtra-foam")
 logger.setLevel(logging.INFO)
+
+logger_suite = create_logger("EXtra-foam-special-suite")
+logger_suite.setLevel(logging.INFO)

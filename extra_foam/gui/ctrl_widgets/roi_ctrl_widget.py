@@ -35,6 +35,7 @@ class _SingleRoiCtrlWidget(QWidget):
 
     def __init__(self, roi: RectROI, *, parent=None):
         super().__init__(parent=parent)
+
         self._roi = roi
 
         self._activate_cb = QCheckBox("On")
@@ -207,31 +208,21 @@ class _SingleRoiCtrlWidget(QWidget):
 class RoiCtrlWidget(_AbstractCtrlWidget):
     """Widget for controlling all the ROIs in the ImageToolWindow."""
 
-    def __init__(self, rois, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._roi_ctrls = []
-        for roi in rois:
-            widget = _SingleRoiCtrlWidget(roi)
-            self._roi_ctrls.append(widget)
 
         self.initUI()
         self.initConnections()
 
     def initUI(self):
         """Override."""
-        layout = QVBoxLayout()
-        for i, roi_ctrl in enumerate(self._roi_ctrls):
-            layout.addWidget(roi_ctrl)
-        self.setLayout(layout)
+        pass
 
     def initConnections(self):
         """Override."""
-        mediator = self._mediator
-
-        for widget in self._roi_ctrls:
-            widget.roi_geometry_change_sgn.connect(
-                mediator.onRoiGeometryChange)
+        pass
 
     def updateMetaData(self):
         """Override."""
@@ -244,3 +235,15 @@ class RoiCtrlWidget(_AbstractCtrlWidget):
         cfg = self._meta.hget_all(mt.ROI_PROC)
         for i, widget in enumerate(self._roi_ctrls, 1):
             widget.reloadRoiParams(cfg[f"geom{i}"][1:-1])
+
+    def setRois(self, rois):
+        mediator = self._mediator
+        layout = QVBoxLayout()
+        for roi in rois:
+            widget = _SingleRoiCtrlWidget(roi)
+            self._roi_ctrls.append(widget)
+            widget.roi_geometry_change_sgn.connect(
+                mediator.onRoiGeometryChange)
+
+            layout.addWidget(widget)
+        self.setLayout(layout)

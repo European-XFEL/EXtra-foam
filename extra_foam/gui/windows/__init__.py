@@ -5,7 +5,6 @@ from .binning_w import BinningWindow
 from .correlation_w import CorrelationWindow
 from .histogram_w import HistogramWindow
 from .pulse_of_interest_w import PulseOfInterestWindow
-from .tri_xas_w import TrXasWindow
 
 __all__ = [
     "_AbstractWindowMixin",
@@ -15,14 +14,13 @@ __all__ = [
     "PulseOfInterestWindow",
     "PumpProbeWindow",
     "RoiWindow",
-    "TrXasWindow"
 ]
 
 
-from .file_stream_controller_w import FileStreamControllerWindow
+from .file_stream_controller_w import FileStreamWindow
 from .about_w import AboutWindow
 
 __all__ += [
-    "FileStreamControllerWindow",
+    "FileStreamWindow",
     "AboutWindow",
 ]

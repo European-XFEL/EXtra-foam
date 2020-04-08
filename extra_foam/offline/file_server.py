@@ -7,231 +7,223 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-import datetime
 import os.path as osp
-from multiprocessing import Process
 import re
 from time import time
 
 from extra_data import RunDirectory
 from extra_data.export import ZMQStreamer
 
-from ..config import config
 from ..utils import profiler
-from ..logger import logger
 
 
-def get_info(run):
-    """karabo data info method"""
-    DETECTOR_SOURCE_RE = re.compile(r'(.+)/DET/(\d+)CH')
-    info = ""
-    first_train = run.train_ids[0]
-    last_train = run.train_ids[-1]
-    train_count = len(run.train_ids)
-    span_sec = (last_train - first_train) / 10
-    span_txt = str(datetime.timedelta(seconds=span_sec))
+_ALL_PROPERTIES = "*"
 
-    detector_modules = {}
-    for source in run.detector_sources:
-        name, modno = DETECTOR_SOURCE_RE.match(source).groups((1, 2))
-        detector_modules[(name, modno)] = source
 
-    # A run should only have one detector, but if that changes, don't hide it
-    detector_name = ','.join(sorted(set(k[0] for k in detector_modules)))
+def run_info(rd):
+    """Return the basic information of a run.
 
-    info += f'\n# of trains:   {train_count}'
-    info += f'\nDuration:      {span_txt}'
-    info += f'\nFirst train ID: {first_train}'
-    info += f'\nLast train ID: {last_train}\n'
+    :param DataCollection rd: the run data.
+    """
+    if rd is None:
+        return ""
 
-    info += f'\n{len(run.detector_sources)} detector modules ({detector_name})'
-    if len(detector_modules) > 0:
-        # Show detail on the first module (the others should be similar)
-        mod_key = sorted(detector_modules)[0]
-        mod_source = detector_modules[mod_key]
-        dinfo = run.detector_info(mod_source)
-        module = ' '.join(mod_key)
-        dims = ' x '.join(str(d) for d in dinfo['dims'])
-        info += f"\n  e.g. module {module} : {dims} pixels"
-        info += (f"\n  {dinfo['frames_per_train']} frames per train, "
-                 f" {dinfo['total_frames']} total frames")
+    first_train = rd.train_ids[0]
+    last_train = rd.train_ids[-1]
+    train_count = len(rd.train_ids)
 
-    info += "\n"
-    non_detector_inst_srcs = run.instrument_sources - run.detector_sources
-    info += (f"\n{len(non_detector_inst_srcs)} instrument sources "
-             f"(excluding detectors):")
+    info = f'First train ID: {first_train} ' \
+           f'/ Last train ID: {last_train} ' \
+           f'/ Train ID span: {train_count}'
 
-    for d in sorted(non_detector_inst_srcs):
-        info += f"\n  -{d}"
-    info += "\n"
-    info += f"\n{len(run.control_sources)} control sources:"
-    for d in sorted(run.control_sources):
-        info += f"\n  -{d}"
     return info
 
 
-@profiler("Gather sources")
-def gather_sources(path):
-    """Gather slow sources from a run
+@profiler("Load run directories")
+def load_runs(path):
+    """Load data from both calibrated and raw run directories.
 
-    Parameters:
-    -----------
-    path: str
-          Path to HDF5 run folder
+    :param str path: path of the calibrated run directory.
 
-    Return:
-    -------
-    Slow sources: Frozenset
-        Set of slow sources available. Empty if none found.
-    Run info: string
-        Information about the run. Empty string if no info found
+    :raises (ValueError, Exception)
     """
-    DETECTOR_SOURCE_RE = re.compile(r'(.+)/DET/(.+):(.+)')
-    sources = frozenset()
-    info = ""
-    if osp.isdir(path):
-        try:
-            # This will work in case users are using data stored
-            # in /gpfs/exfel/exp/<INSTRUMENT>/cycle/proposal/proc/runumber
-            # or they have raw folder with same path instead of 'proc'
-            # in it in the end.
-            run = RunDirectory(path.replace('/proc/', '/raw/'))
-            sources = frozenset(src for src in run.control_sources.union(
-                run.instrument_sources) if not DETECTOR_SOURCE_RE.match(src))
-            info = get_info(run)
-        except Exception as ex:
-            # Will be raised if no folder with 'raw' exist or no files
-            # found in raw folder.
-            logger.info("Failed to find 'raw' folder! "
-                        "Looking for slow data in current folder")
-            # Fallback to corrected datapath. Will return empty
-            # frozenset if no control source found.
-            try:
-                run = RunDirectory(path)
-                sources = frozenset(src for src in run.control_sources.union(
-                    run.instrument_sources) if not DETECTOR_SOURCE_RE.match(src))
-                info = get_info(run)
-            except Exception as ex:
-                logger.error(repr(ex))
+    if not path:
+        raise ValueError(f"Empty path!")
+    if not osp.isdir(path):
+        raise ValueError(f"{path} is not an existing directory!")
 
-    return sources, info
+    rd_cal = RunDirectory(path)
+
+    try:
+        rd_raw = RunDirectory(path.replace('/proc/', '/raw/'))
+    except Exception:
+        rd_raw = None
+
+    return rd_cal, rd_raw
 
 
-def generate_meta(sources, tid):
-    """Generate metadata in case of repeat stream"""
+def _sorted_properties(orig, prioritized):
+    """Return the sorted properties.
 
+    :param set orig: original properties.
+    :param list prioritized: properties to be prioritized.
+
+    The properties will be sorted by:
+    1. sorted prioritized properties;
+    2. "*";
+    3. the rest properties.
+    """
+    ret = []
+    for ppt in prioritized:
+        if ppt in orig:
+            ret.append(ppt)
+    ret.append('*')
+    for ppt in sorted(orig):
+        if ppt not in ret:
+            ret.append(ppt)
+
+    return ret
+
+
+def gather_sources(rd_cal, rd_raw):
+    """Gather device IDs and properties from run data.
+
+    :param DataCollection rd_cal: Calibrated run data.
+    :param DataCollection rd_raw: Raw run data.
+
+    :return: A tuple of dictionaries with keys being the device IDs /
+        output channels and values being a list of available properties.
+        (detector sources, instrument sources, control sources)
+    """
+    _prioritized_detector_ppts = sorted([
+        "image.data",  # "AGIPD", "LPD", "DSSC"
+        "data.adc",  # JungFrau
+        "data.image.pixels",  # FastCCD, ePix100
+    ])
+
+    _prioritized_instrument_ppts = sorted([
+        "data.intensityTD",
+        "data.intensitySa1TD",
+        "data.intensitySa2TD",
+        "data.intensitySa3TD",
+        "data.image.pixels",  # Basler camera
+    ])
+
+    _prioritized_control_ppts = sorted([
+        "actualPosition.value",
+        "actualCurrent.value",
+        "pulseEnergy.photonFlux.value",
+        "beamPosition.ixPos.value",
+        "beamPosition.iyPos.value",
+    ])
+
+    detector_srcs, instrument_srcs, control_srcs = dict(), dict(), dict()
+    if rd_cal is not None:
+        for src in rd_cal.instrument_sources:
+            if re.compile(r'(.+)/DET/(.+):(.+)').match(src):
+                detector_srcs[src] = _sorted_properties(
+                    rd_cal.keys_for_source(src), _prioritized_detector_ppts)
+
+        rd = rd_cal if rd_raw is None else rd_raw
+
+        for src in rd.instrument_sources:
+            if src not in detector_srcs:
+                instrument_srcs[src] = _sorted_properties(
+                    rd.keys_for_source(src), _prioritized_instrument_ppts)
+
+        for src in rd.control_sources:
+            filtered_ppts = set()
+            for ppt in rd.keys_for_source(src):
+                # ignore *.timestamp properties and remove ".value" suffix
+                if ppt[-5:] == "value":
+                    filtered_ppts.add(ppt)
+            control_srcs[src] = _sorted_properties(
+                filtered_ppts, _prioritized_control_ppts)
+
+    return detector_srcs, instrument_srcs, control_srcs
+
+
+def generate_meta(devices, tid):
+    """Generate metadata in case of repeating stream.
+
+    :param iterable devices: a list of device IDs.
+    :param int tid: train ID.
+    """
     time_now = int(time() * 10**18)
     sec = time_now // 10**18
     frac = time_now % 10**18
     meta = {key:
             {'source': key, 'timestamp.sec': sec, 'timestamp.frac': frac,
-             'timestamp.tid': tid} for key in sources}
+             'timestamp.tid': tid} for key in devices}
     return meta
 
 
-def serve_files(path, port, slow_devices=None, fast_devices=None,
-                require_all=False, repeat_stream=False, **kwargs):
+def serve_files(run_data, port, *,
+                detector_sources=None,
+                instrument_sources=None,
+                control_sources=None,
+                require_all=True,
+                repeat_stream=False, **kwargs):
     """Stream data from files through a TCP socket.
 
     Parameters
     ----------
-    path: str
-        Path to the HDF5 file or file folder.
+    run_data: list/tuple
+        A list/tuple of calibrated and raw run data.
     port: int
         Local TCP port to bind socket to.
-    slow_devices: list of tuples
-        [('src', 'prop')]
-    fast_devices: list of tuples
-        [('src', 'prop')]
+    detector_sources: list of tuples
+        [('device ID/output channel name', 'property')]
+    instrument_sources: list of tuples
+        [('device ID/output channel name', 'property')]
+    control_sources: list of tuples
+        [('device ID/output channel name', 'property')]
     require_all: bool
         If set to True, will stream only trainIDs that has data
-        corresponding to keys specified in fast_devices.
-        Default: False
+        corresponding to keys specified in detector_sources.
+        Default: True
     repeat_stream: bool
         If set to True, will continue streaming when trains()
         iterator is empty. Trainids will be monotonically increasing.
         Default: False
     """
-    raw_data = None
-    try:
-        corr_data = RunDirectory(path)
-        num_trains = len(corr_data.train_ids)
-    except Exception as ex:
-        logger.error(repr(ex))
-        return
+    rd_cal, rd_raw = run_data
+    num_trains = len(rd_cal.train_ids)
 
-    if slow_devices:
-        # slow_devices is not None only when some slow data source was
-        # selected. That means raw_data atleast was same as corr_data
-        try:
-            raw_data = RunDirectory(path.replace('/proc/', '/raw/'))
-        except Exception as ex:
-            raw_data = corr_data
+    if rd_raw is None:
+        rd_raw = rd_cal
 
     streamer = ZMQStreamer(port, **kwargs)
     streamer.start()
 
     counter = 0
-
     while True:
-        for tid, train_data in corr_data.trains(devices=fast_devices,
-                                                require_all=require_all):
-            # loop over corrected DataCollection
-            if raw_data is not None:
+        for tid, train_data in rd_cal.trains(devices=detector_sources,
+                                             require_all=require_all):
+            if rd_raw is not None:
                 try:
-                    # get raw data corresponding to the train id : tid
-                    _, raw_train_data = raw_data.train_from_id(
-                        tid, devices=slow_devices)
-                    # Merge corrected and raw data for train id: tid
-                    train_data = {**raw_train_data, **train_data}
+                    # get raw data corresponding to the train id
+                    _, raw_train_data = rd_raw.train_from_id(
+                        tid, devices=instrument_sources + control_sources)
+                    # Merge calibrated and raw data
+                    train_data.update(raw_train_data)
                 except ValueError:
-                    # Value Error is raised by karabo data when raw data
-                    # corresponding to slow devices is not found.
+                    # Value Error is raised by EXtra-data when any raw data
+                    # is not found.
                     pass
+
             if train_data:
-                # Generate fake meta data with monotically increasing
-                # trainids only after the actual trains in corrected data
+                # Generate fake meta data with monotonically increasing
+                # train IDs only after the actual trains in corrected data
                 # are exhausted
                 meta = generate_meta(
                     train_data.keys(), tid+counter) if counter > 0 else None
                 streamer.feed(train_data, metadata=meta)
+
         if not repeat_stream:
             break
+
         # increase the counter by total number of trains in a run
         counter += num_trains
 
     streamer.stop()
-
-
-class FileServer(Process):
-    """Stream the file data in another process."""
-
-    def __init__(self, folder, port, detector=None,
-                 slow_devices=None, repeat_stream=False):
-        """Initialization."""
-        super().__init__()
-        self._detector = detector
-        self._folder = folder
-        self._port = port
-        self._slow_devices = slow_devices
-        self._repeat_stream = repeat_stream
-
-    def run(self):
-        """Override."""
-        detector = \
-            self._detector if self._detector is not None else config["DETECTOR"]
-
-        if detector in ["LPD", "AGIPD", "DSSC"]:
-            fast_devices = [("*DET/*CH0:xtdf", "image.data")]
-        elif detector == "JungFrau":
-            fast_devices = [("*/DET/*:daqOutput", "data.adc")]
-        elif detector in ["FastCCD"]:
-            fast_devices = [("*/DAQ/*:daqOutput", "data.image.pixels")]
-        elif detector in ["ePix100"]:
-            fast_devices = [("*/DET/*:daqOutput", "data.image.pixels")]
-        else:
-            raise NotImplementedError(f"Unknown Detector: {detector}")
-
-        serve_files(self._folder, self._port, slow_devices=self._slow_devices,
-                    fast_devices=fast_devices, require_all=True,
-                    repeat_stream=self._repeat_stream)

@@ -52,11 +52,16 @@ class _AbstractCtrlWidgetMixin:
 
 class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
 
-    def __init__(self, *, pulse_resolved=True, parent=None):
+    def __init__(self, *,
+                 pulse_resolved=True,
+                 require_geometry=True,
+                 parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
+        :param bool require_geometry: whether the detector requires a
+            geometry to assemble its modules.
         """
         super().__init__(parent=parent)
 
@@ -67,8 +72,8 @@ class _AbstractCtrlWidget(QFrame, _AbstractCtrlWidgetMixin):
         # button is clicked
         self._non_reconfigurable_widgets = []
 
-        # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
+        self._require_geometry = require_geometry
 
         self.setFrameStyle(QFrame.StyledPanel)
 
@@ -91,11 +96,14 @@ class _AbstractGroupBoxCtrlWidget(QGroupBox, _AbstractCtrlWidgetMixin):
                             'padding-top: 10px;' \
                             'margin-top: 0.0em;}'
 
-    def __init__(self, title, *, pulse_resolved=True, parent=None):
+    def __init__(self, title, *,
+                 pulse_resolved=True, require_geometry=True, parent=None):
         """Initialization.
 
         :param bool pulse_resolved: whether the related data is
             pulse-resolved or not.
+        :param bool require_geometry: whether the detector requires a
+            geometry to assemble its modules.
         """
         super().__init__(title, parent=parent)
         self.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
@@ -107,8 +115,8 @@ class _AbstractGroupBoxCtrlWidget(QGroupBox, _AbstractCtrlWidgetMixin):
         # button is clicked
         self._non_reconfigurable_widgets = []
 
-        # whether the related detector is pulse resolved or not
         self._pulse_resolved = pulse_resolved
+        self._require_geometry = require_geometry
 
     def onStart(self):
         for widget in self._non_reconfigurable_widgets:

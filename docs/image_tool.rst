@@ -32,6 +32,10 @@ Image control
 | ``Threshold mask``         | An interval that pixel values outside the interval are set to 0.   |
 |                            | Please distinguish *threshold mask* from clipping_.                |
 +----------------------------+--------------------------------------------------------------------+
+| ``Mask tile edges``        | Mask the edge pixel of each tile. *Only applicable for AGIPD, LPD  |
+|                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
+|                            | :ref:`Geometry`.                                                   |
++----------------------------+--------------------------------------------------------------------+
 | ``Save image``             | Save the current image to file. Please also see ImageFileFormat_   |
 +----------------------------+--------------------------------------------------------------------+
 
@@ -74,9 +78,11 @@ ROI FOM setup
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Combo``                  | ROI combination, e.g. *ROI1*, *ROI2*, *ROI1 + ROI2*, *ROI1 - ROI2*.|
+| ``Combo``                  | ROI combination, including *ROI1*, *ROI2*, *ROI1 + ROI2*,          |
+|                            | *ROI1 - ROI2*, and *ROI1 / ROI2*.                                  |
 +----------------------------+--------------------------------------------------------------------+
-| ``FOM``                    | ROI FOM type, e.g. *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.          |
+| ``FOM``                    | ROI FOM type, including *SUM*, *MEAN*, *MEDIAN*, *MIN*, *MAX*.     |
+|                            | *STD*, *VAR*, *STD (norm)* and *VAR (norm)*.                       |
 +----------------------------+--------------------------------------------------------------------+
 | ``Norm``                   | Normalizer of ROI FOM. *Only applicable for train-resolved and     |
 |                            | pump-probe analysis*.                                              |
@@ -87,6 +93,11 @@ ROI FOM setup
 |                            | be plotted in the same correlation plot. For other statistics      |
 |                            | analysis like binning and histogram, only ROI1 FOM will be used.   |
 +----------------------------+--------------------------------------------------------------------+
+
+- *STD (norm)* is defined as the ratio between the standard deviation and the mean.
+
+- *VAR (norm)* is defined as the ratio between the variance and the square of the mean.
+
 
 ROI histogram setup
 """""""""""""""""""
@@ -143,9 +154,10 @@ Gain / offset
 .. _nanmean: https://docs.scipy.org/doc/numpy/reference/generated/numpy.nanmean.html
 
 Apply pixel-wised gain and offset correction, where
+
 .. math::
 
-   A_{corrected} = (A_{raw} - I_{offset}) * I_{gain}
+   A_{corrected} = (A_{raw} - I_{offset}) \cdot I_{gain}
 
 Users can record a "dark run" whenever data is available. The dark run consists of a number
 of trains. The moving average of the each "dark pulse" in the train will be calculated,
@@ -259,6 +271,9 @@ aforementioned coordinate system, respectively.
 +----------------------------+--------------------------------------------------------------------+
 
 
+.. _Geometry:
+
+
 Geometry
 --------
 
@@ -279,8 +294,7 @@ about geometries of those detectors, please refer to the
 |                            | corresponding to data channels 0, 4, 8 and 12.                     |
 +----------------------------+--------------------------------------------------------------------+
 | ``Load geometry file``     | Open a *FileDialog* window to choose a geometry file from the      |
-|                            | local file system. For LPD and DSSC, *Extra-foam* provides a       |
-|                            | default geometry file.                                             |
+|                            | local file system.                                                 |
 +----------------------------+--------------------------------------------------------------------+
 | ``Assembler``              | There are two assemblers available in *EXtra-foam*. One is         |
 |                            | EXtra-geom_ implemented in Python and the other is the local C++   |
@@ -293,7 +307,3 @@ about geometries of those detectors, please refer to the
 |                            | be faster than assembling with a geometry. It simply provides an   |
 |                            | alternative to check the data from different modules.              |
 +----------------------------+--------------------------------------------------------------------+
-
-.. Note::
-
-    The C++ implementation for *AGIPD* is still ongoing.

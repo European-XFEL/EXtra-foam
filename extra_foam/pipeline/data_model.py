@@ -416,10 +416,12 @@ class ImageData:
             to reconstruct the indices of the selected images in the original
             data providing the number of pulses and the slicer are both known.
         poi_indices (list): indices of pulses of interest.
-        gain_mean (numpy.ndarray):
-        offset_mean (numpy.ndarray): average of all the offset data in
-            the dark run. Shape = (y, x)
+        gain_mean (numpy.ndarray): average of all the gain data in the
+            selected memory cells. Shape = (y, x)
+        offset_mean (numpy.ndarray):  average of all the offset data in the
+            selected memory cells. Shape = (y, x)
         n_dark_pulses (int): number of dark pulses in a dark train.
+        dark_mean (numpy.ndarray): average of the dark run. Shape = (y, x)
         dark_count (int): count of collected dark trains.
         image_mask (numpy.ndarray): image mask. For pulse-resolved detectors,
             this image mask is shared by all the pulses in a train. However,
@@ -448,6 +450,7 @@ class ImageData:
         self.offset_mean = None
 
         self.n_dark_pulses = 0
+        self.dark_mean = None
         self.dark_count = 0
 
         self.image_mask = None
@@ -746,23 +749,6 @@ class PulseIndexMask:
         self._indices = np.array([True] * self.LENGTH)
 
 
-class XasData:
-
-    __slots__ = ['delay_bin_centers', 'delay_bin_counts',
-                 'a13_stats', 'a23_stats', 'a21_stats',
-                 'energy_bin_centers', 'a21_heat', 'a21_heatcount']
-
-    def __init__(self):
-        self.delay_bin_centers = None
-        self.delay_bin_counts = None
-        self.a13_stats = None
-        self.a23_stats = None
-        self.a21_stats = None
-        self.energy_bin_centers = None
-        self.a21_heat = None
-        self.a21_heatcount = None
-
-
 class _XgmDataItem:
     """_XgmDataItem class.
 
@@ -807,9 +793,11 @@ class _DigitizerChannelData(collections.abc.Mapping):
     Store Digitizer pipeline data.
     """
 
-    # For a Karabo device, we have maximum 4 boards and each
-    # board has 4 channels.
-    _CHANNEL_NAMES = ('A', 'B', 'C', 'D')
+    # 'A', 'B', 'C' and 'D' are for AdqDigitizer while
+    # 'ADC' is for FastAdc. The final interface for the
+    # digitizer will be determined later based on the
+    # feature requests.
+    _CHANNEL_NAMES = ('A', 'B', 'C', 'D', 'ADC')
 
     __slots__ = ['_pulse_integrals']
 
@@ -885,7 +873,6 @@ class ProcessedData:
     __slots__ = ['_tid', 'pidx', 'image',
                  'xgm', 'roi', 'ai', 'pp',
                  'hist', 'corr', 'bin',
-                 'trxas',
                  'pulse']
 
     def __init__(self, tid):
@@ -905,8 +892,6 @@ class ProcessedData:
         self.hist = HistogramDataTrain()
         self.corr = CorrelationData()
         self.bin = BinData()
-
-        self.trxas = XasData()
 
         self.pulse = self.PulseData()
 

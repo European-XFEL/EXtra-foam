@@ -7,19 +7,29 @@ Author: Jun Zhu <jun.zhu@xfel.eu>
 Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
-from PyQt5.QtWidgets import QGridLayout
+import os
+import os.path as osp
 
-from .base_view import _AbstractImageToolView
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QFileDialog, QGridLayout
+
+from .base_view import _AbstractImageToolView, create_imagetool_view
 from .simple_image_data import _SimpleImageData
 from ..ctrl_widgets import RefImageCtrlWidget
 from ..plot_widgets import ImageAnalysis, ImageViewF
+from ...file_io import write_image
+from ...ipc import ReferencePub
+from ...logger import logger
+from ... import ROOT_PATH
 
 
+@create_imagetool_view(RefImageCtrlWidget)
 class ReferenceView(_AbstractImageToolView):
     """ReferenceView class.
 
     Widget for visualizing the reference image.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -28,8 +38,7 @@ class ReferenceView(_AbstractImageToolView):
         self._reference = ImageViewF()
         self._reference.setTitle("Reference")
 
-        self._ctrl_widget = self.parent().createCtrlWidget(
-            RefImageCtrlWidget, self._corrected)
+        self._pub = ReferencePub()
 
         self.initUI()
         self.initConnections()
@@ -44,7 +53,9 @@ class ReferenceView(_AbstractImageToolView):
 
     def initConnections(self):
         """Override."""
-        pass
+        self._ctrl_widget.load_btn.clicked.connect(self._loadReference)
+        self._ctrl_widget.set_current_btn.clicked.connect(self._setReference)
+        self._ctrl_widget.remove_btn.clicked.connect(self._removeReference)
 
     def updateF(self, data, auto_update):
         """Override."""
@@ -53,3 +64,38 @@ class ReferenceView(_AbstractImageToolView):
             # Removing and displaying of the currently displayed image
             # is deferred.
             self._reference.setImage(data.image.reference)
+
+    @pyqtSlot()
+    def _loadReference(self):
+        """Load the reference image from a file."""
+        filepath = QFileDialog.getOpenFileName(
+            caption="Load reference image",
+            directory=osp.expanduser("~"))[0]
+
+        # do not remove reference if the user meant to cancel the selection
+        if filepath:
+            self._pub.set(filepath)
+            self._ctrl_widget.filepath_le.setText(filepath)
+
+    @pyqtSlot()
+    def _setReference(self):
+        """Set the current corrected image as reference."""
+        img = self._corrected.image
+        if img is not None:
+            filepath = osp.join(ROOT_PATH, "tmp", ".reference.npy")
+            if not osp.exists(osp.dirname(filepath)):
+                os.mkdir(osp.dirname(filepath))
+
+            try:
+                write_image(img, filepath)
+            except ValueError as e:
+                logger.error(str(e))
+
+            self._pub.set(filepath)
+            self._ctrl_widget.filepath_le.setText(filepath)
+
+    @pyqtSlot()
+    def _removeReference(self):
+        """Remove the reference image."""
+        self._pub.set("")
+        self._ctrl_widget.filepath_le.setText("")

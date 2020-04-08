@@ -64,7 +64,7 @@ def _benchmark_1m_imp(geom_fast_cls, geom_cls, geom_file, quad_positions=None):
 
 def benchmark_dssc_1m():
     from extra_foam.geometries import DSSC_1MGeometryFast
-    from extra_geom import DSSC_1MGeometry
+    from extra_foam.geometries import DSSC_1MGeometry
 
     geom_file = osp.join(_geom_path, "dssc_geo_june19.h5")
     quad_positions = [
@@ -79,7 +79,7 @@ def benchmark_dssc_1m():
 
 def benchmark_lpd_1m():
     from extra_foam.geometries import LPD_1MGeometryFast
-    from extra_geom import LPD_1MGeometry
+    from extra_foam.geometries import LPD_1MGeometry
 
     geom_file = osp.join(_geom_path, "lpd_mar_18_axesfixed.h5")
     quad_positions = [
@@ -94,7 +94,7 @@ def benchmark_lpd_1m():
 
 def benchmark_agipd_1m():
     from extra_foam.geometries import AGIPD_1MGeometryFast
-    from extra_geom import AGIPD_1MGeometry
+    from extra_foam.geometries import AGIPD_1MGeometry
 
     geom_file = osp.join(_geom_path, "agipd_mar18_v11.geom")
 

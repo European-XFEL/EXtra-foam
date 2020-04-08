@@ -55,7 +55,6 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._quad_positions_tb = QTableWidget()
         if config["DETECTOR"] == "AGIPD":
             self._quad_positions_tb.setEnabled(False)
-            self._assembler_cb.setCurrentText("EXtra-geom")
 
         self._geom_file_le = SmartStringLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
@@ -104,6 +103,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._assembler_cb.currentTextChanged.connect(
             lambda x: mediator.onGeomAssemblerChange(
                 self._assemblers[x]))
+        self._assembler_cb.currentTextChanged.connect(
+            lambda x: self._onAssemblerChange(self._assemblers[x]))
 
         self._geom_file_le.value_changed_sgn.connect(
             mediator.onGeomFileChange)
@@ -152,9 +153,16 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._mediator.onGeomQuadPositionsChange(
             _parse_table_widget(self._quad_positions_tb))
 
+    def _onAssemblerChange(self, assembler):
+        if assembler == GeomAssembler.EXTRA_GEOM:
+            self._stack_only_cb.setChecked(False)
+            self._stack_only_cb.setEnabled(False)
+        else:
+            self._stack_only_cb.setEnabled(True)
+
     def updateMetaData(self):
         """Override"""
-        if not config['REQUIRE_GEOMETRY']:
+        if not self._require_geometry:
             return True
 
         self._stack_only_cb.toggled.emit(self._stack_only_cb.isChecked())
@@ -170,8 +178,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
     def loadMetaData(self):
         """Override."""
-        if not config['REQUIRE_GEOMETRY']:
-            return
+        if not self._require_geometry:
+            return True
 
         cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
 

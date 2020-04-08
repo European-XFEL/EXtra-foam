@@ -16,7 +16,7 @@ Contents:
    image_tool
    pump_probe
    statistics
-   special
+   special_suite
    stream_data
 
 .. toctree::

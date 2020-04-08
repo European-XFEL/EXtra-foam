@@ -14,6 +14,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QMainWindow, QSplitter, QWidget
 
 from ..mediator import Mediator
+from ... import __version__
 
 
 class _AbstractWindowMixin:
@@ -121,15 +122,19 @@ class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
         """Initialization."""
         super().__init__(parent=parent)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
+
         if parent is not None:
             parent.registerSatelliteWindow(self)
-
-        self._mediator = Mediator()
+            self._mediator = Mediator()
+        else:
+            self._mediator = None
 
         try:
             title = parent.title + " - " + self._title
         except AttributeError:
-            title = self._title  # for unit test where parent is None
+            # for unittest in which parent is None and the case when
+            # the window is not opened through the main GUI
+            title = f"EXtra-foam {__version__} - " + self._title
         self.setWindowTitle(title)
 
     def updateWidgetsF(self):
@@ -146,67 +151,4 @@ class _AbstractSatelliteWindow(QMainWindow, _AbstractWindowMixin):
         parent = self.parent()
         if parent is not None:
             parent.unregisterSatelliteWindow(self)
-        super().closeEvent(QCloseEvent)
-
-
-class _AbstractSpecialAnalysisWindow(QMainWindow, _AbstractWindowMixin):
-    """Base class for special analysis windows."""
-    title = ""
-
-    _SPLITTER_HANDLE_WIDTH = 5
-
-    def __init__(self, queue, *, pulse_resolved=True, parent=None):
-        """Initialization.
-
-        :param deque queue: data queue.
-        :param bool pulse_resolved: whether the related data is
-            pulse-resolved or not.
-        """
-        super().__init__(parent=parent)
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        if parent is not None:
-            parent.registerSpecialWindow(self)
-
-        self._mediator = Mediator()
-
-        self._queue = queue
-        self._pulse_resolved = pulse_resolved
-
-        try:
-            title = parent.title + " - " + self._title
-        except AttributeError:
-            title = self._title  # for unit test where parent is None
-        self.setWindowTitle(title)
-
-        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
-
-        self._cw = QSplitter()
-        self.setCentralWidget(self._cw)
-
-        self.show()
-
-    def reset(self):
-        """Override."""
-        for widget in self._plot_widgets:
-            widget.reset()
-
-    def updateWidgetsF(self):
-        """Override."""
-        if len(self._queue) == 0:
-            return
-
-        data = self._queue[0]
-        for widget in self._plot_widgets:
-            widget.updateF(data)
-
-    def registerPlotWidget(self, instance):
-        self._plot_widgets[instance] = 1
-
-    def unregisterPlotWidget(self, instance):
-        del self._plot_widgets[instance]
-
-    def closeEvent(self, QCloseEvent):
-        parent = self.parent()
-        if parent is not None:
-            parent.unregisterSpecialWindow(self)
         super().closeEvent(QCloseEvent)

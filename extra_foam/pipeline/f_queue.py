@@ -90,6 +90,7 @@ class CorrelateQueue(SimpleQueue):
     def __init__(self, catalog, maxsize=0):
         """Initialization.
 
+        :param SourceCatalog catalog: data source catalog.
         :param int maxsize: max number of items allowed in the queue. If
             it is less than or equal to zero, the size is infinite.
         """
