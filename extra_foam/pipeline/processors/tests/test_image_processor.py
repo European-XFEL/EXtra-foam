@@ -15,6 +15,7 @@ import numpy as np
 from extra_foam.pipeline.processors.image_processor import ImageProcessor, _IMAGE_DTYPE
 from extra_foam.pipeline.exceptions import ImageProcessingError, ProcessingError
 from extra_foam.pipeline.tests import _TestDataMixin
+from extra_foam.pipeline.processors.image_processor import config
 
 
 class _ImageProcessorTestBase(_TestDataMixin, unittest.TestCase):
@@ -200,10 +201,13 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
     For train-resolved data.
     """
     def setUp(self):
-        self._proc = ImageProcessor()
+        with patch.dict(config._data, {"DETECTOR": "LPD"}):
+            self._proc = ImageProcessor()
+
         self._proc._gain_cells = slice(None, None)
         self._proc._offset_cells = slice(None, None)
 
+        self._proc._assembler.process = MagicMock(side_effect=lambda x: x)
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
@@ -253,10 +257,13 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
     For pulse-resolved data.
     """
     def setUp(self):
-        self._proc = ImageProcessor()
+        with patch.dict(config._data, {"DETECTOR": "LPD"}):
+            self._proc = ImageProcessor()
+
         self._proc._gain_cells = slice(None, None)
         self._proc._offset_cells = slice(None, None)
 
+        self._proc._assembler.process = MagicMock(side_effect=lambda x: x)
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server

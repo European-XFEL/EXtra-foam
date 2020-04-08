@@ -265,74 +265,61 @@ class TestLpdAssembler(_AssemblerGeometryTest):
         import json
         from extra_foam.geometries import LPD_1MGeometryFast
         from extra_foam.geometries import LPD_1MGeometry
-        from extra_foam.database.metadata import Metadata as mt
 
-        base_geom_cfg = {
+        geom_cfg = {
             'stack_only': 'False',
             'assembler': '2',
             'geometry_file': self._geom_file,
             'quad_positions': json.dumps([[0, 1], [1, 1], [1, 0], [0, 0]]),
         }
-        base_imgproc_cfg = {
-            'mask_tile': 'False',
-        }
-
-        def return_side_effect(k):
-            if k == mt.GEOMETRY_PROC:
-                return base_geom_cfg
-            elif k == mt.IMAGE_PROC:
-                return base_imgproc_cfg
 
         # Note: this test does not need to repeat for each detector
-        proc = self._assembler
-        proc._meta.hget_all = MagicMock(side_effect=return_side_effect)
+        assembler = self._assembler
 
-        proc.update()
-        assert isinstance(proc._geom, LPD_1MGeometry)
+        assembler.update(geom_cfg)
+        assert isinstance(assembler._geom, LPD_1MGeometry)
 
         # test assembler switching
-        base_geom_cfg.update({'assembler': 1})
-        proc.update()
-        assert isinstance(proc._geom, LPD_1MGeometryFast)
-        base_geom_cfg.update({'assembler': 2})
-        proc.update()
-        assert isinstance(proc._geom, LPD_1MGeometry)
+        geom_cfg.update({'assembler': 1})
+        assembler.update(geom_cfg)
+        assert isinstance(assembler._geom, LPD_1MGeometryFast)
+        geom_cfg.update({'assembler': 2})
+        assembler.update(geom_cfg)
+        assert isinstance(assembler._geom, LPD_1MGeometry)
 
         # test file and quad position change
-        proc._load_geometry = MagicMock()
-        base_geom_cfg.update({'geometry_file': '/New/File'})
-        proc.update()
-        proc._load_geometry.assert_called_once()
-        proc._load_geometry.reset_mock()
-        base_geom_cfg.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
-        proc.update()
-        proc._load_geometry.assert_called_once()
-        proc._load_geometry.reset_mock()
+        assembler._load_geometry = MagicMock()
+        geom_cfg.update({'geometry_file': '/New/File'})
+        assembler.update(geom_cfg)
+        assembler._load_geometry.assert_called_once()
+        assembler._load_geometry.reset_mock()
+        geom_cfg.update({'quad_positions':  json.dumps([[1, 1], [1, 1], [1, 0], [0, 0]])})
+        assembler.update(geom_cfg)
+        assembler._load_geometry.assert_called_once()
+        assembler._load_geometry.reset_mock()
 
         # test stack only change
         info.reset_mock()
-        proc._load_geometry = MagicMock()
-        base_geom_cfg.update({'stack_only': 'True'})
-        proc.update()
-        proc._load_geometry.assert_called_once()
-        proc._load_geometry.reset_mock()
-        base_geom_cfg.update({'stack_only': 'False'})
-        proc.update()
-        proc._load_geometry.assert_called_once()
-        proc._load_geometry.reset_mock()
+        assembler._load_geometry = MagicMock()
+        geom_cfg.update({'stack_only': 'True'})
+        assembler.update(geom_cfg)
+        assembler._load_geometry.assert_called_once()
+        assembler._load_geometry.reset_mock()
+        geom_cfg.update({'stack_only': 'False'})
+        assembler.update(geom_cfg)
+        assembler._load_geometry.assert_called_once()
+        assembler._load_geometry.reset_mock()
         info.assert_called_once()
 
         # test mask tile switching
-        proc._out_array = np.ones((2, 2)).astype(_IMAGE_DTYPE)  # any value except None
-        base_imgproc_cfg.update({'mask_tile': 'True'})
-        proc.update()
-        assert proc._mask_tile
-        assert proc._out_array is None
-        proc._out_array = np.ones((2, 2)).astype(_IMAGE_DTYPE)  # any value except None
-        base_imgproc_cfg.update({'mask_tile': 'False'})
-        proc.update()
-        assert not proc._mask_tile
-        assert proc._out_array is not None
+        assembler._out_array = np.ones((2, 2)).astype(_IMAGE_DTYPE)  # any value except None
+        assembler.update(geom_cfg, mask_tile=True)
+        assert assembler._mask_tile
+        assert assembler._out_array is None
+        assembler._out_array = np.ones((2, 2)).astype(_IMAGE_DTYPE)  # any value except None
+        assembler.update(geom_cfg,  mask_tile=False)
+        assert not assembler._mask_tile
+        assert assembler._out_array is not None
 
     @pytest.mark.parametrize("assembler_type", [GeomAssembler.EXTRA_GEOM, GeomAssembler.OWN])
     def testAssembleFileCal(self, assembler_type):

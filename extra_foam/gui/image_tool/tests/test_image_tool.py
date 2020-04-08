@@ -202,8 +202,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
     def testImageCtrlWidget(self):
         widget = self.image_tool._image_ctrl_widget
-        proc = self.pulse_worker._image_proc
-        assembler = self.pulse_worker._assembler
 
         spy = QSignalSpy(self.image_tool._mediator.reset_image_level_sgn)
         widget.auto_level_btn.clicked.emit()
@@ -213,22 +211,18 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         win = self.image_tool
         widget = win._mask_ctrl_widget
         proc = self.pulse_worker._image_proc
-        assembler = self.pulse_worker._assembler
+        assembler = proc._assembler
 
         # test default
         proc.update()
         self.assertEqual((-1e5, 1e5), proc._threshold_mask)
-
-        assembler.update()
         self.assertEqual(False, assembler._mask_tile)
 
         # test set new value
         widget.threshold_mask_le.setText("1, 10")
+        widget.mask_tile_cb.setChecked(True)
         proc.update()
         self.assertEqual((1, 10), proc._threshold_mask)
-
-        widget.mask_tile_cb.setChecked(True)
-        assembler.update()
         self.assertEqual(True, assembler._mask_tile)
 
         # test save/load mask
@@ -247,7 +241,9 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
         self.assertEqual(False, widget.mask_tile_cb.isChecked())
 
-    def testDrawMask(self):
+    @patch("extra_foam.pipeline.processors.image_assembler.ImageAssemblerFactory.BaseAssembler.process",
+           side_effect=lambda x: x)
+    def testDrawMask(self, patched_process):
         # TODO: test by really drawing something on ImageTool
         from extra_foam.ipc import ImageMaskPub
 
@@ -762,20 +758,21 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget = view._ctrl_widget
         mask_ctrl_widget = self.image_tool._mask_ctrl_widget
 
-        proc = self.pulse_worker._assembler
+        image_proc = self.pulse_worker._image_proc
+        assembler = image_proc._assembler
 
         # test default
-        proc.update()
-        self.assertFalse(proc._stack_only)
-        self.assertEqual(GeomAssembler.OWN, proc._assembler_type)
-        self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], proc._quad_position)
+        image_proc.update()
+        self.assertFalse(assembler._stack_only)
+        self.assertEqual(GeomAssembler.OWN, assembler._assembler_type)
+        self.assertListEqual([list(v) for v in config["QUAD_POSITIONS"]], assembler._quad_position)
 
         # prepare for the following test
         widget._stack_only_cb.setChecked(True)
         mask_ctrl_widget.mask_tile_cb.setChecked(True)
-        proc.update()
-        self.assertTrue(proc._stack_only)
-        self.assertTrue(proc._mask_tile)
+        image_proc.update()
+        self.assertTrue(assembler._stack_only)
+        self.assertTrue(assembler._mask_tile)
 
         # test setting new values
         assemblers_inv = widget._assemblers_inv
@@ -788,13 +785,13 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         for i in range(4):
             for j in range(2):
                 widget._quad_positions_tb.cellWidget(j, i).setText("0.0")
-        with patch.object(proc, "_load_geometry"):
-            proc.update()
-        self.assertEqual(GeomAssembler.EXTRA_GEOM, proc._assembler_type)
-        self.assertFalse(proc._stack_only)
-        self.assertFalse(proc._mask_tile)
-        self.assertEqual("/geometry/file/", proc._geom_file)
-        self.assertListEqual([[0., 0.] for i in range(4)], proc._quad_position)
+        with patch.object(assembler, "_load_geometry"):
+            image_proc.update()
+        self.assertEqual(GeomAssembler.EXTRA_GEOM, assembler._assembler_type)
+        self.assertFalse(assembler._stack_only)
+        self.assertFalse(assembler._mask_tile)
+        self.assertEqual("/geometry/file/", assembler._geom_file)
+        self.assertListEqual([[0., 0.] for i in range(4)], assembler._quad_position)
 
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
         self.assertTrue(widget._stack_only_cb.isEnabled())

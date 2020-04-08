@@ -20,9 +20,7 @@ from .processors import (
     DigitizerProcessor,
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
     BinningProcessor,
-    Broker,
     CorrelationProcessor,
-    ImageAssemblerFactory,
     ImageProcessor,
     CtrlDataProcessor,
     FomPulseFilter, FomTrainFilter,
@@ -69,6 +67,18 @@ class ProcessWorker(mp.Process):
         self._prev_processed_time = None
 
         self._mon = MonProxy()
+
+    def _set_processors(self, opts):
+        for opt in opts:
+            args = ()
+            if len(opt) == 2:
+                name, instance_type = opt
+            else:
+                name, instance_type, args = opt
+
+            instance = instance_type(*args)
+            self.__setattr__(f"_{name}", instance)
+            self._tasks.append(instance)
 
     @property
     def name(self):
@@ -191,34 +201,16 @@ class PulseWorker(ProcessWorker):
         self._input = KaraboBridge(self._input_update_ev, pause_ev, close_ev)
         self._output = MpOutQueue(self._output_update_ev, pause_ev, close_ev)
 
-        self._broker = Broker()
-
-        self._xgm_proc = XgmProcessor()
-        self._digitizer_proc = DigitizerProcessor()
-        self._ctrl_data_proc = CtrlDataProcessor()
-
-        self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
-        self._image_proc = ImageProcessor()
-
-        self._image_roi = ImageRoiPulse()
-        self._ai_proc = AzimuthalIntegProcessorPulse()
-
-        self._filter = FomPulseFilter()
-
-        self._pp_proc = PumpProbeProcessor()
-
-        self._tasks = [
-            self._broker,
-            self._xgm_proc,
-            self._digitizer_proc,
-            self._ctrl_data_proc,
-            self._assembler,
-            self._image_proc,
-            self._image_roi,
-            self._ai_proc,
-            self._filter,
-            self._pp_proc,
-        ]
+        self._set_processors([
+            ('xgm_proc', XgmProcessor),
+            ('digitizer_proc', DigitizerProcessor),
+            ('ctrl_data_proc', CtrlDataProcessor),
+            ('image_proc', ImageProcessor),
+            ('image_roi', ImageRoiPulse),
+            ('ai_proc', AzimuthalIntegProcessorPulse),
+            ('filter', FomPulseFilter),
+            ('pp_proc', PumpProbeProcessor)
+        ])
 
 
 class TrainWorker(ProcessWorker):
@@ -233,22 +225,12 @@ class TrainWorker(ProcessWorker):
         self._extension = ZmqOutQueue(
             self._extension_update_ev, pause_ev, close_ev)
 
-        self._image_roi = ImageRoiTrain()
-        self._ai_proc = AzimuthalIntegProcessorTrain()
-
-        self._filter = FomTrainFilter()
-
-        self._histogram = HistogramProcessor()
-        self._correlation1_proc = CorrelationProcessor(1)
-        self._correlation2_proc = CorrelationProcessor(2)
-        self._binning_proc = BinningProcessor()
-
-        self._tasks = [
-            self._image_roi,
-            self._ai_proc,
-            self._filter,
-            self._histogram,
-            self._correlation1_proc,
-            self._correlation2_proc,
-            self._binning_proc,
-        ]
+        self._set_processors([
+            ('image_roi', ImageRoiTrain),
+            ('ai_proc', AzimuthalIntegProcessorTrain),
+            ('filter', FomTrainFilter),
+            ('histogram', HistogramProcessor),
+            ('correlation1_proc', CorrelationProcessor, (1,)),
+            ('correlation2_proc', CorrelationProcessor, (2,)),
+            ('binning_proc', BinningProcessor)
+        ])
