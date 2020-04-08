@@ -21,6 +21,24 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 
 class _Test1MGeometryMixin:
     @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
+    def testAssemblingSinglePulse(self, dtype):
+        modules = np.ones((self.n_modules, *self.module_shape), dtype=dtype)
+
+        out_stack = self.geom_stack.output_array_for_position_fast(dtype=_IMAGE_DTYPE)
+        self.geom_stack.position_all_modules(modules, out_stack)
+
+        assert (1024, 1024) == out_stack.shape[-2:]
+
+        out_fast = self.geom_fast.output_array_for_position_fast(dtype=_IMAGE_DTYPE)
+        self.geom_fast.position_all_modules(modules, out_fast)
+
+        out_gt = self.geom.output_array_for_position_fast(dtype=_IMAGE_DTYPE)
+        self.geom.position_all_modules(modules, out_gt)
+
+        assert out_gt.shape == out_fast.shape
+        np.testing.assert_array_equal(out_fast, out_gt)
+
+    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
     def testAssemblingBridge(self, dtype):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
 

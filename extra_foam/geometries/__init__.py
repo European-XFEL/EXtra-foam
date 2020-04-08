@@ -19,10 +19,14 @@ from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
 from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
 from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
 from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
+from ..config import config
+
+
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 
 class _1MGeometryPyMixin:
-    def output_array_for_position_fast(self, extra_shape, dtype):
+    def output_array_for_position_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
         """Match the EXtra-geom signature."""
         shape = extra_shape + tuple(self.assembledShape())
         return np.full(shape, np.nan, dtype=dtype)

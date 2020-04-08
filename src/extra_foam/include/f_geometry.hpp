@@ -51,6 +51,18 @@ public:
   ~Detector1MGeometryBase() = default;
 
   /**
+ * Position all the modules at the correct area of the given assembled image.
+ *
+ * @param src: data in modules. shape=(modules, y, x)
+ * @param dst: assembled image. shape=(y, x)
+ * @param ignore_tile_edge: true for ignoring the pixels at the edges of tiles. If dst
+ *    is pre-filled with nan, it it equivalent to masking the tile edges.
+ */
+  template<typename M, typename E,
+    EnableIf<std::decay_t<M>, IsImageArray> = false, EnableIf<E, IsImage> = false>
+  void positionAllModules(M&& src, E& dst, bool ignore_tile_edge=false) const;
+
+  /**
    * Position all the modules at the correct area of the given assembled image.
    *
    * @param src: multi-pulse, multiple-module data. shape=(memory cells, modules, y, x)
@@ -117,6 +129,29 @@ template<typename G>
 constexpr int Detector1MGeometryBase<G>::n_modules_per_quad;
 template<typename G>
 constexpr int Detector1MGeometryBase<G>::n_modules;
+
+template<typename G>
+template<typename M, typename E, EnableIf<std::decay_t<M>, IsImageArray>, EnableIf<E, IsImage>>
+void Detector1MGeometryBase<G>::positionAllModules(M&& src, E& dst, bool ignore_tile_edge) const
+{
+  auto ss = src.shape();
+  auto ds = dst.shape();
+  this->checkShape(
+    std::array<int, 4>({1, static_cast<int>(ss[0]), static_cast<int>(ss[1]), static_cast<int>(ss[2])}),
+    std::array<int, 4>({1, static_cast<int>(ds[0]), static_cast<int>(ds[1])}));
+
+  auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
+
+  for (int im = 0; im < n_modules; ++im)
+  {
+      positionModule(
+        xt::view(src, im, xt::all(), xt::all()),
+        dst,
+        xt::view(norm_pos, im, xt::all(), xt::all(), xt::all()),
+        ignore_tile_edge
+      );
+  }
+}
 
 template<typename G>
 template<typename M, typename E, EnableIf<std::decay_t<M>, IsModulesArray>, EnableIf<E, IsImageArray>>
