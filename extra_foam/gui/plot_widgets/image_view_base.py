@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import QHBoxLayout, QWidget
 from .. import pyqtgraph as pg
 
 from .plot_widget_base import PlotWidgetF
-from .plot_items import RectROI
+from .plot_items import ImageItem, RectROI
 from ..misc_widgets import colorMapFactory, FColor
 from ..mediator import Mediator
 from ...algorithms import quick_min_max
@@ -67,16 +67,24 @@ class ImageViewF(QWidget):
 
         self._mediator = Mediator()
 
+        self._mouse_hover_v_rounding_decimals = 1
+
         self._rois = []
         if has_roi:
             self._initializeROIs()
 
         self._plot_widget = PlotWidgetF()
+
+        self._cached_title = None
+        # use the public interface for caching
+        self.setTitle("")  # reserve space for display
+
         if hide_axis:
             self._plot_widget.hideAxis()
 
-        self._image_item = pg.ImageItem()
+        self._image_item = ImageItem()
         self._plot_widget.addItem(self._image_item)
+        self._image_item.mouse_moved_sgn.connect(self.onMouseMoved)
 
         for roi in self._rois:
             self._plot_widget.addItem(roi)
@@ -203,6 +211,18 @@ class ImageViewF(QWidget):
             return
         self.setImage(self._image, auto_levels=True)
 
+    def setMouseHoverValueRoundingDecimals(self, v):
+        self._mouse_hover_v_rounding_decimals = v
+
+    @pyqtSlot(int, int, float)
+    def onMouseMoved(self, x, y, v):
+        if x < 0 or y < 0:
+            self._plot_widget.setTitle(self._cached_title)
+        else:
+            self._plot_widget.setTitle(
+                f'x={x}, y={y}, '
+                f'value={round(v, self._mouse_hover_v_rounding_decimals)}')
+
     def setLevels(self, *args, **kwargs):
         """Set the min/max (bright and dark) levels.
 
@@ -226,8 +246,11 @@ class ImageViewF(QWidget):
     def setLabel(self, *args, **kwargs):
         self._plot_widget.setLabel(*args, **kwargs)
 
-    def setTitle(self, *args, **kwargs):
-        self._plot_widget.setTitle(*args, **kwargs)
+    def setTitle(self, title, *args, **kwargs):
+        # This is the public interface. Therefore, we ought to cache
+        # the title.
+        self._cached_title = title
+        self._plot_widget.setTitle(title, *args, **kwargs)
 
     def invertY(self, *args, **kwargs):
         self._plot_widget._plot_item.invertY(*args, **kwargs)
