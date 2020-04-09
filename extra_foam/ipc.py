@@ -16,7 +16,7 @@ import redis
 
 from .config import config
 from .serialization import deserialize_image, serialize_image
-from .file_io import read_image, read_cal_constants
+from .file_io import read_image, read_numpy_array
 
 
 class _RedisQueueBase:
@@ -367,10 +367,10 @@ class CalConstantsSub:
                     offset_fp = v
 
         if gain_fp is not None:
-            gain = read_cal_constants(gain_fp)
+            gain = read_numpy_array(gain_fp)
             gain_updated = True
         if offset_fp is not None:
-            offset = read_cal_constants(offset_fp)
+            offset = read_numpy_array(offset_fp)
             offset_updated = True
 
         return gain_updated, gain, offset_updated, offset

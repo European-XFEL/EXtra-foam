@@ -70,14 +70,15 @@ def read_image(filepath, *, expected_shape=None):
         raise ValueError(f"Failed to load image from {filepath}: {str(e)}")
 
 
-def read_cal_constants(filepath):
-    """Read calibration constant from the given file.
+def read_numpy_array(filepath, *, dimensions=None):
+    """Read numpy array from the given file.
 
     The file must be a '.npy' file.
 
     :param str filepath: path of the constant file.
+    :param tuple/None dimensions: expected dimensions of the numpy array.
 
-    :return numpy.ndarray: constant array.
+    :return numpy.ndarray: numpy array.
     """
     if not filepath:
         raise ValueError("Please specify the image file!")
@@ -85,9 +86,11 @@ def read_cal_constants(filepath):
     try:
         c = np.load(filepath)
     except Exception as e:
-        raise ValueError(f"Failed to load constants from {filepath}: {str(e)}")
+        raise ValueError(
+            f"Failed to read numpy array from {filepath}: {str(e)}")
 
-    if c.ndim not in (2, 3):
-        raise ValueError("Constants must be a 2D or 3D array!")
+    if dimensions is not None and c.ndim not in dimensions:
+        raise ValueError(f"Expect array with dimensions "
+                         f"{dimensions}: actual {c.ndim}")
 
     return c

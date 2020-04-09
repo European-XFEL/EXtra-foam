@@ -457,7 +457,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # caveat: first establish the connection
         proc._cal_sub.update()
-        with patch('extra_foam.ipc.read_cal_constants', side_effect=_read_constants_side_effect):
+        with patch('extra_foam.ipc.read_numpy_array', side_effect=_read_constants_side_effect):
             with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["gain/file/path"]):
                 QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)

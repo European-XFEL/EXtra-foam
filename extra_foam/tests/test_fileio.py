@@ -16,7 +16,7 @@ import numpy as np
 
 from extra_foam.config import config
 from extra_foam.logger import logger
-from extra_foam.file_io import read_cal_constants, read_image, write_image
+from extra_foam.file_io import read_numpy_array, read_image, write_image
 
 logger.setLevel("CRITICAL")
 
@@ -67,29 +67,32 @@ class TestFileIO(unittest.TestCase):
             ref = read_image(fp.name)
             np.testing.assert_array_equal(scale * img, ref)
 
-    def testReadCalConstants(self):
+    def testReadNumpyArray(self):
         # test read empty input
         with self.assertRaisesRegex(ValueError, 'Please specify'):
             read_image('')
 
         # test wrong dimension
         with patch('numpy.load', return_value=np.ones((2, 2, 2, 2))):
-            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
-                read_cal_constants('abc')
+            with self.assertRaisesRegex(ValueError, 'Expect array with dimensions (.*?): actual 4'):
+                read_numpy_array('abc', dimensions=(2, 3))
         with patch('numpy.load', return_value=np.ones(2)):
-            with self.assertRaisesRegex(ValueError, '2D or 3D array'):
-                read_cal_constants('abc')
+            with self.assertRaisesRegex(ValueError, 'Expect array with dimensions (.*?): actual 1'):
+                read_numpy_array('abc', dimensions=(2,))
 
         # test valid data
-        for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
+        with patch('numpy.load', return_value=np.ones((2, 2, 2, 2))):
+            read_numpy_array('abc')
+
+        for arr in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
             fp = tempfile.NamedTemporaryFile(suffix='.npy')
-            np.save(fp.name, const_gt)
-            ret = read_cal_constants(fp)
-            np.testing.assert_array_equal(const_gt, ret)
+            np.save(fp.name, arr)
+            ret = read_numpy_array(fp, dimensions=(2, 3))
+            np.testing.assert_array_equal(arr, ret)
 
         # file does not have suffix '.npy'
         with self.assertRaises(ValueError):
-            for const_gt in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
+            for arr in [np.ones([2, 2]), np.ones([4, 2, 2], dtype=np.float32)]:
                 fp = tempfile.NamedTemporaryFile()
-                np.save(fp.name, const_gt)
-                read_cal_constants(fp)
+                np.save(fp.name, arr)
+                read_numpy_array(fp)
