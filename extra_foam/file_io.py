@@ -13,14 +13,14 @@ import numpy as np
 import imageio
 
 
-def write_image(img, filepath):
+def write_image(filepath, img):
     """Write an image to file.
 
-    :param numpy.ndarray img: image data.
     :param str filepath: path of the image file.
+    :param numpy.ndarray img: image data.
     """
     if not filepath:
-        raise ValueError("Please specify a file to save current image!")
+        raise ValueError("Empty filepath!")
 
     try:
         suffix = osp.splitext(filepath)[-1]
@@ -46,9 +46,6 @@ def read_image(filepath, *, expected_shape=None):
 
     :return numpy.ndarray: image data.
     """
-    if not filepath:
-        raise ValueError("Please specify the image file!")
-
     try:
         suffix = osp.splitext(filepath)[-1]
         if '.npy' == suffix:
@@ -70,18 +67,36 @@ def read_image(filepath, *, expected_shape=None):
         raise ValueError(f"Failed to load image from {filepath}: {str(e)}")
 
 
-def read_numpy_array(filepath, *, dimensions=None):
-    """Read numpy array from the given file.
+def write_numpy_array(filepath, arr):
+    """Write numpy array to file.
 
     The file must be a '.npy' file.
 
-    :param str filepath: path of the constant file.
+    :param str filepath: path of the .npy file.
+    :param numpy.ndarray arr: array data.
+    """
+    if not filepath:
+        raise ValueError("Empty filepath!")
+
+    try:
+        np.save(filepath, arr)
+    except Exception as e:
+        raise ValueError(
+            f"Failed to write numpy array to {filepath}: {str(e)}")
+
+
+def read_numpy_array(filepath, *, dimensions=None):
+    """Read numpy array from file.
+
+    The file must be a '.npy' file.
+
+    :param str filepath: path of the .npy file.
     :param tuple/None dimensions: expected dimensions of the numpy array.
 
     :return numpy.ndarray: numpy array.
     """
-    if not filepath:
-        raise ValueError("Please specify the image file!")
+    if '.npy' != osp.splitext(filepath)[-1]:
+        raise ValueError("Input must be a .npy file!")
 
     try:
         c = np.load(filepath)

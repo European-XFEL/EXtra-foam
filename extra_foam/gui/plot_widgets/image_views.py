@@ -81,7 +81,7 @@ class ImageAnalysis(ImageViewF):
             filter=self.IMAGE_FILE_FILTER)[0]
 
         try:
-            write_image(self._image, filepath)
+            write_image(filepath, self._image)
             logger.info(f"[Image tool] Image saved in {filepath}")
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")

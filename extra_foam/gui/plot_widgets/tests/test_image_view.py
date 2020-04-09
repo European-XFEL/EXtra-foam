@@ -124,13 +124,13 @@ class TestImageAnalysis(unittest.TestCase):
             widget.loadImageMask()
             self.assertIn('Cannot load mask from abc', cm.output[0])
 
-        fp = tempfile.TemporaryFile()
+        fp = tempfile.NamedTemporaryFile(suffix=".npy")
 
-        patched_save.return_value = [fp]
+        patched_save.return_value = [fp.name]
         widget.saveImageMask()
 
         fp.seek(0)
-        patched_open.return_value = [fp]
+        patched_open.return_value = [fp.name]
         with self.assertLogs(logger, level="INFO"):
             widget.loadImageMask()
         patched_setMask.assert_called_once()
