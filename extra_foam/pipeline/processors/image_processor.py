@@ -227,19 +227,15 @@ class ImageProcessor(_BaseProcessor):
         if image_mask is not None and image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically
-                image_mask = None
+                image_mask = np.zeros(image_shape, dtype=np.bool)
             else:
                 # This could if the image shapes in the ImageTool is
                 # different from the shape of in the pipeline, i.e. the
                 # shape of the image just changed.
                 raise ImageProcessingError(
                     f"[Image processor] The shape of the image mask "
-                    f"{image_mask.shape} is different from the shape of the image "
-                    f"{image_shape}!")
-
-        # caveat: "else" is not used here intentionally
-        if image_mask is None:
-            image_mask = np.zeros(image_shape, dtype=np.bool)
+                    f"{image_mask.shape} is different from the shape of "
+                    f"the image {image_shape}!")
 
         self._image_mask = image_mask
 

@@ -257,27 +257,24 @@ class ImageMaskPub:
 
     def draw(self, mask_region):
         """Add a region to the current mask."""
-        self._db.publish("image_mask", 'add')
-        self._db.publish("image_mask", str(mask_region))
+        self._db.publish("image_mask:draw", str(mask_region))
 
     def erase(self, mask_region):
         """Erase a region from the current mask."""
-        self._db.publish("image_mask", 'erase')
-        self._db.publish("image_mask", str(mask_region))
+        self._db.publish("image_mask:erase", str(mask_region))
 
     def set(self, mask):
         """Set the whole mask."""
-        self._db.publish("image_mask", 'set')
-        self._db.publish("image_mask",
+        self._db.publish("image_mask:set",
                          serialize_image(mask, is_mask=True))
 
     def remove(self):
         """Completely remove all the mask."""
-        self._db.publish("image_mask", 'remove')
+        self._db.publish("image_mask:remove", '')
 
 
 class ImageMaskSub:
-    _sub = RedisSubscriber("image_mask", decode_responses=False)
+    _sub = RedisPSubscriber("image_mask:*", decode_responses=False)
 
     def update(self, mask, shape):
         """Parse all masking operations.
@@ -289,27 +286,30 @@ class ImageMaskSub:
         """
         sub = self._sub
         updated = False
+
+        if mask is None:
+            mask = np.zeros(shape, dtype=np.bool)
+
         # process all messages related to mask
         while True:
             msg = sub.get_message(ignore_subscribe_messages=True)
             if msg is None:
                 break
 
-            action = msg['data']
-            if action == b'set':
-                mask = deserialize_image(sub.get_message()['data'], is_mask=True)
-            elif action in [b'add', b'erase']:
-                if mask is None:
-                    mask = np.zeros(shape, dtype=np.bool)
+            topic = msg['channel'].decode("utf-8").split(":")[-1]
+            data = msg['data']
+            if topic == 'set':
+                mask = deserialize_image(data, is_mask=True)
+            elif topic in ['draw', 'erase']:
+                x, y, w, h = [int(v) for v
+                              in data.decode("utf-8")[1:-1].split(',')]
 
-                data = sub.get_message()['data'].decode("utf-8")
-                x, y, w, h = [int(v) for v in data[1:-1].split(',')]
-                if action == b'add':
+                if topic == 'draw':
                     mask[y:y+h, x:x+w] = True
                 else:
                     mask[y:y+h, x:x+w] = False
             else:  # data == 'remove'
-                mask = None
+                mask = np.zeros(shape, dtype=np.bool)
 
             updated = True
 

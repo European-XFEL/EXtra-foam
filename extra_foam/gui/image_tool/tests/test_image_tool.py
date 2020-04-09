@@ -282,6 +282,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             if (mask_gt == proc._image_mask).all():
                 break
             time.sleep(0.001)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
 
         # add one more mask region
         pub.draw((1, 1, 2, 3))
