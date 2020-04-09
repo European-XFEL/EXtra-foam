@@ -29,35 +29,41 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
 
   py::class_<GeometryBase> base(m, py_base_class_name.c_str());
 
-#define FOAM_POSITION_ALL_MODULES_SINGLE_IMP(VALUE_TYPE)                                                  \
+#define FOAM_POSITION_ALL_MODULES_SINGLE_IMP(SRC_TYPE, DST_TYPE)                                      \
+  base.def("positionAllModules",                                                                      \
+  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 3>&, xt::pytensor<DST_TYPE, 2>&, bool) const)  \
+    &GeometryBase::positionAllModules,                                                                \
+    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
+
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool, bool)
+
+#define FOAM_POSITION_ALL_MODULES_IMP(SRC_TYPE, DST_TYPE)                                                         \
   base.def("positionAllModules",                                                                          \
-  (void (GeometryBase::*)(const xt::pytensor<VALUE_TYPE, 3>&, xt::pytensor<float, 2>&, bool) const)       \
+  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 4>&, xt::pytensor<DST_TYPE, 3>&, bool) const)       \
     &GeometryBase::positionAllModules,                                                                    \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
 
-  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(float)
-  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t)
-  FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool)
+  FOAM_POSITION_ALL_MODULES_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_IMP(bool, bool)
 
-#define FOAM_POSITION_ALL_MODULES_IMP(VALUE_TYPE)                                                         \
-  base.def("positionAllModules",                                                                          \
-  (void (GeometryBase::*)(const xt::pytensor<VALUE_TYPE, 4>&, xt::pytensor<float, 3>&, bool) const)       \
-    &GeometryBase::positionAllModules,                                                                    \
-    py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
-
-  FOAM_POSITION_ALL_MODULES_IMP(float)
-  FOAM_POSITION_ALL_MODULES_IMP(uint16_t)
-  FOAM_POSITION_ALL_MODULES_IMP(bool)
-
-#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(VALUE_TYPE)                                                        \
+#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(SRC_TYPE, DST_TYPE)                                                        \
   base.def("positionAllModules",                                                                                    \
-    (void (GeometryBase::*)(const std::vector<xt::pytensor<VALUE_TYPE, 3>>&, xt::pytensor<float, 3>&, bool) const)  \
+    (void (GeometryBase::*)(const std::vector<xt::pytensor<SRC_TYPE, 3>>&, xt::pytensor<DST_TYPE, 3>&, bool) const)  \
     &GeometryBase::positionAllModules,                                                                              \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
 
-  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(float)
-  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t)
-  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(float, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, float)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t, uint16_t)
+  FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, bool)
 
   base.def("assembledShape", &GeometryBase::assembledShape)
     .def_readonly_static("n_quads", &GeometryBase::n_quads)
