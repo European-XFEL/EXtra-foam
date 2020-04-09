@@ -14,12 +14,10 @@ import numpy as np
 
 from extra_data import stack_detector_data
 
-from .base_processor import _BaseProcessor, _RedisParserMixin
+from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, GeomAssembler, DataSource
-from ...database import Metadata as mt
 from ...ipc import process_logger as logger
-from ...utils import profiler
 
 
 _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
@@ -28,12 +26,10 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 
 class ImageAssemblerFactory(ABC):
 
-    class BaseAssembler(_BaseProcessor, _RedisParserMixin):
+    class BaseAssembler(_RedisParserMixin):
         """Abstract ImageAssembler class.
 
         Attributes:
-            _require_geom (bool): whether a Geometry is required to assemble
-                the detector modules.
             _stack_only (bool): whether simply stack all modules seamlessly
                 together.
             _mask_tile (bool): whether to mask the tile of each module
@@ -50,7 +46,6 @@ class ImageAssemblerFactory(ABC):
             """Initialization."""
             super().__init__()
 
-            self._require_geom = config['REQUIRE_GEOMETRY']
             self._stack_only = False
             self._mask_tile = False
             self._assembler_type = None
@@ -59,48 +54,42 @@ class ImageAssemblerFactory(ABC):
             self._geom = None
             self._out_array = None
 
-        def update(self):
-            if self._require_geom:
-                cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
+        def update(self, cfg, *, mask_tile=False):
+            assembler_type = GeomAssembler(int(cfg["assembler"]))
+            stack_only = cfg["stack_only"] == 'True'
+            geom_file = cfg["geometry_file"]
+            quad_positions = json.loads(cfg["quad_positions"], encoding='utf8')
 
-                assembler_type = GeomAssembler(int(cfg["assembler"]))
-                stack_only = cfg["stack_only"] == 'True'
-                geom_file = cfg["geometry_file"]
-                quad_positions = json.loads(cfg["quad_positions"],
-                                            encoding='utf8')
+            if mask_tile != self._mask_tile:
+                self._mask_tile = mask_tile
+                if mask_tile:
+                    # Reset the out array when mask_tile is switched from
+                    # False to True. Otherwise, edge pixels from the
+                    # previous train will remain there forever as the
+                    # "mask_tile" here is actually called
+                    # "ignore_tile_edge" in the corresponding function.
+                    self._out_array = None
 
-                image_proc_cfg = self._meta.hget_all(mt.IMAGE_PROC)
-                mask_tile = image_proc_cfg["mask_tile"] == 'True'
-                if mask_tile != self._mask_tile:
-                    self._mask_tile = mask_tile
-                    if mask_tile:
-                        # Reset the out array when mask_tile is switched from
-                        # False to True. Otherwise, edge pixels from the
-                        # previous train will remain there forever as the
-                        # "mask_tile" here is actually called
-                        # "ignore_tile_edge" in the corresponding function.
-                        self._out_array = None
+            # reload geometry if any of the following 4 fields changed
+            if stack_only != self._stack_only or \
+                    assembler_type != self._assembler_type or \
+                    geom_file != self._geom_file or \
+                    quad_positions != self._quad_position:
 
-                # reload geometry if any of the following 4 fields changed
-                if stack_only != self._stack_only or \
-                        assembler_type != self._assembler_type or \
-                        geom_file != self._geom_file or \
-                        quad_positions != self._quad_position:
+                self._stack_only = stack_only
+                self._assembler_type = assembler_type
+                self._quad_position = quad_positions
 
-                    self._stack_only = stack_only
-                    self._assembler_type = assembler_type
-                    self._quad_position = quad_positions
+                self._geom = None  # reset first
+                self._load_geometry(geom_file, quad_positions)
+                # caveat: if _load_geometry raises, _geom_file will not
+                #         be set. Therefore, _load_geometry will raise
+                #         AssemblingError in the next train.
+                self._geom_file = geom_file
 
-                    self._geom = None  # reset first
-                    self._load_geometry(geom_file, quad_positions)
-                    # caveat: if _load_geometry raises, _geom_file will not
-                    #         be set. Therefore, _load_geometry will raise
-                    #         AssemblingError in the next train.
-                    self._geom_file = geom_file
-
-                    if not stack_only:
-                        logger.info(f"Loaded geometry from {geom_file} with "
-                                    f"quadrant positions {quad_positions}")
+                if not stack_only:
+                    logger.info(f"Loaded geometry from {geom_file} with "
+                                f"quadrant positions {quad_positions}")
 
         @abstractmethod
         def _get_modules_bridge(self, data, src):
@@ -179,7 +168,6 @@ class ImageAssemblerFactory(ABC):
             # FIXME: why once a while this takes a few ms???
             return modules.astype(image_dtype)
 
-        @profiler("Image Assembler")
         def process(self, data):
             """Override."""
             meta = data['meta']

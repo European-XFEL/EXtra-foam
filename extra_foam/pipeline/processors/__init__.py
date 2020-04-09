@@ -5,7 +5,6 @@ from .digitizer import DigitizerProcessor
 from .azimuthal_integration import (
     AzimuthalIntegProcessorPulse, AzimuthalIntegProcessorTrain,
 )
-from .broker import Broker
 from .binning import BinningProcessor
 from .correlation import CorrelationProcessor
 from .image_processor import ImageProcessor

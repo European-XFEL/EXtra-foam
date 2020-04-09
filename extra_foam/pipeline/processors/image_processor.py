@@ -10,6 +10,7 @@ All rights reserved.
 import numpy as np
 
 from .base_processor import _BaseProcessor
+from .image_assembler import ImageAssemblerFactory
 from ..data_model import RawImageData
 from ..exceptions import ImageProcessingError, ProcessingError
 from ...database import Metadata as mt
@@ -32,6 +33,8 @@ class ImageProcessor(_BaseProcessor):
     """ImageProcessor class.
 
     Attributes:
+        _require_geom (bool): whether a Geometry is required to assemble
+            the detector modules.
         _dark (RawImageData): store the moving average of dark
             images in a train. Shape = (indices, y, x) for pulse-resolved
             and shape = (y, x) for train-resolved
@@ -73,6 +76,9 @@ class ImageProcessor(_BaseProcessor):
     def __init__(self):
         super().__init__()
 
+        self._assembler = ImageAssemblerFactory.create(config['DETECTOR'])
+        self._require_geom = config['REQUIRE_GEOMETRY']
+
         self._correct_gain = True
         self._correct_offset = True
         self._full_gain = None
@@ -102,8 +108,13 @@ class ImageProcessor(_BaseProcessor):
         self._cal_sub = CalConstantsSub()
 
     def update(self):
-        # image
         cfg = self._meta.hget_all(mt.IMAGE_PROC)
+        geom_cfg = self._meta.hget_all(mt.GEOMETRY_PROC)
+        global_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
+
+        if self._require_geom:
+            self._assembler.update(
+                geom_cfg, mask_tile=cfg["mask_tile"] == 'True')
 
         self._correct_gain = cfg['correct_gain'] == 'True'
         self._correct_offset = cfg['correct_offset'] == 'True'
@@ -135,13 +146,14 @@ class ImageProcessor(_BaseProcessor):
         self._threshold_mask = self.str2tuple(
             cfg['threshold_mask'], handler=float)
 
-        # global
-        gp_cfg = self._meta.hget_all(mt.GLOBAL_PROC)
         self._poi_indices = [
-            int(gp_cfg['poi1_index']), int(gp_cfg['poi2_index'])]
+            int(global_cfg['poi1_index']), int(global_cfg['poi2_index'])]
 
-    @profiler("Image Processor (pulse)")
+    @profiler("Image processor")
     def process(self, data):
+
+        self._assembler.process(data)
+
         image_data = data['processed'].image
         assembled = data['assembled']['data']
         catalog = data['catalog']
