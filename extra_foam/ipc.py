@@ -255,7 +255,7 @@ class ReferenceSub:
 class ImageMaskPub:
     _db = RedisConnection()
 
-    def add(self, mask_region):
+    def draw(self, mask_region):
         """Add a region to the current mask."""
         self._db.publish("image_mask", 'add')
         self._db.publish("image_mask", str(mask_region))
@@ -367,10 +367,10 @@ class CalConstantsSub:
                     offset_fp = v
 
         if gain_fp is not None:
-            gain = read_numpy_array(gain_fp)
+            gain = read_numpy_array(gain_fp, dimensions=(2, 3))
             gain_updated = True
         if offset_fp is not None:
-            offset = read_numpy_array(offset_fp)
+            offset = read_numpy_array(offset_fp, dimensions=(2, 3))
             offset_updated = True
 
         return gain_updated, gain, offset_updated, offset

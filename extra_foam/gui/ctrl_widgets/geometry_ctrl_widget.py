@@ -23,6 +23,7 @@ from .smart_widgets import SmartLineEdit, SmartStringLineEdit
 from ..gui_helpers import invert_dict
 from ...config import config, GeomAssembler
 from ...database import Metadata as mt
+from ..items import GeometryItem
 
 
 def _parse_table_widget(widget):
@@ -45,6 +46,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self._geom = GeometryItem()
+
         self._assembler_cb = QComboBox()
         for item in self._assemblers:
             self._assembler_cb.addItem(item)
@@ -58,7 +61,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         self._geom_file_le = SmartStringLineEdit(config["GEOMETRY_FILE"])
         self._geom_file_open_btn = QPushButton("Load geometry file")
-        self._geom_file_open_btn.clicked.connect(self._loadGeometryFile)
+        self._geom_file_open_btn.clicked.connect(self._setGeometryFile)
 
         self._non_reconfigurable_widgets = [
             self
@@ -97,8 +100,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         """Overload."""
         mediator = self._mediator
 
-        self._stack_only_cb.toggled.connect(
-            mediator.onGeomStackOnlyChange)
+        self._stack_only_cb.toggled.connect(self._onStackOnlyChange)
 
         self._assembler_cb.currentTextChanged.connect(
             lambda x: mediator.onGeomAssemblerChange(
@@ -106,8 +108,10 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         self._assembler_cb.currentTextChanged.connect(
             lambda x: self._onAssemblerChange(self._assemblers[x]))
 
+        self._geom_file_open_btn.clicked.connect(self._setGeometryFile)
+
         self._geom_file_le.value_changed_sgn.connect(
-            mediator.onGeomFileChange)
+            self._onGeometryFileChange)
 
     def initQuadTable(self):
         n_row = 2
@@ -124,7 +128,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
                 else:
                     widget = SmartLineEdit('0')
                 widget.setValidator(QDoubleValidator(-999, 999, 6))
-                widget.value_changed_sgn.connect(self._updateQuadPositions)
+                widget.value_changed_sgn.connect(self._onQuadPositionsChange)
                 table.setCellWidget(i, j, widget)
 
         table.move(0, 0)
@@ -144,14 +148,23 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
         table.setMinimumHeight(header_height * (n_row + 1.5))
         table.setMaximumHeight(header_height * (n_row + 2.0))
 
-    def _loadGeometryFile(self):
-        filename = QFileDialog.getOpenFileName()[0]
-        if filename:
-            self._geom_file_le.setText(filename)
+    def _setGeometryFile(self):
+        filepath = QFileDialog.getOpenFileName()[0]
+        if filepath:
+            self._geom_file_le.setText(filepath)
 
-    def _updateQuadPositions(self):
-        self._mediator.onGeomQuadPositionsChange(
-            _parse_table_widget(self._quad_positions_tb))
+    def _onGeometryFileChange(self, filepath):
+        self._mediator.onGeomFileChange(filepath)
+        self._geom.setFilepath(filepath)
+
+    def _onStackOnlyChange(self, state):
+        self._mediator.onGeomStackOnlyChange(state)
+        self._geom.setStackOnly(state)
+
+    def _onQuadPositionsChange(self):
+        v = _parse_table_widget(self._quad_positions_tb)
+        self._mediator.onGeomQuadPositionsChange(v)
+        self._geom.setQuadPositions(v)
 
     def _onAssemblerChange(self, assembler):
         if assembler == GeomAssembler.EXTRA_GEOM:
@@ -159,6 +172,8 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
             self._stack_only_cb.setEnabled(False)
         else:
             self._stack_only_cb.setEnabled(True)
+
+        self._geom.setAssembler(assembler)
 
     def updateMetaData(self):
         """Override"""
@@ -172,7 +187,7 @@ class GeometryCtrlWidget(_AbstractCtrlWidget):
 
         self._geom_file_le.returnPressed.emit()
 
-        self._updateQuadPositions()
+        self._onQuadPositionsChange()
 
         return True
 

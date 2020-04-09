@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 import tempfile
 
 import numpy as np
@@ -12,6 +12,7 @@ from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
 )
 from extra_foam.pipeline.data_model import ProcessedData, RectRoiGeom
+from extra_foam.config import config
 from extra_foam.logger import logger
 
 app = mkQApp()
@@ -91,23 +92,27 @@ class TestImageAnalysis(unittest.TestCase):
         for i in range(2, 6):
             self.assertIsInstance(plot_items[i], RectROI)
 
-    @patch('extra_foam.gui.image_tool.corrected_view.QFileDialog.getSaveFileName')
-    @patch('extra_foam.gui.image_tool.corrected_view.QFileDialog.getOpenFileName')
+    @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getSaveFileName')
+    @patch('extra_foam.gui.plot_widgets.image_views.QFileDialog.getOpenFileName')
     @patch("extra_foam.gui.plot_widgets.plot_items.MaskItem.setMask")
     @patch("extra_foam.gui.plot_widgets.plot_items.ImageMaskPub")
     def testSaveLoadImageMask(self, patched_pub, patched_setMask, patched_open, patched_save):
+
+        def save_mask_in_file(_fp, arr):
+            fp.seek(0)
+            np.save(_fp, arr)
+            fp.seek(0)
+
         widget = ImageAnalysis()
 
         # if image_data is None, it does not raise but only logger.error()
         with self.assertLogs(logger, level="ERROR") as cm:
             widget.saveImageMask()
-            self.assertEqual(cm.output[0].split(':')[-1],
-                             'No image is available!')
+            self.assertEqual('No image is available!', cm.output[0].split(':')[-1])
 
         with self.assertLogs(logger, level="ERROR") as cm:
             widget.loadImageMask()
-            self.assertEqual(cm.output[0].split(':')[-1],
-                             'Cannot load image mask without image!')
+            self.assertEqual(cm.output[0].split(':')[-1], 'Cannot load image mask without image!')
 
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
         mask = np.zeros_like(imgs, dtype=bool)
@@ -117,7 +122,7 @@ class TestImageAnalysis(unittest.TestCase):
         patched_open.return_value = ['abc']
         with self.assertLogs(logger, level="ERROR") as cm:
             widget.loadImageMask()
-        self.assertEqual(cm.output[0].split(':')[-1], 'Cannot load mask from abc')
+            self.assertIn('Cannot load mask from abc', cm.output[0])
 
         fp = tempfile.TemporaryFile()
 
@@ -126,7 +131,8 @@ class TestImageAnalysis(unittest.TestCase):
 
         fp.seek(0)
         patched_open.return_value = [fp]
-        widget.loadImageMask()
+        with self.assertLogs(logger, level="INFO"):
+            widget.loadImageMask()
         patched_setMask.assert_called_once()
         patched_setMask.reset_mock()
 
@@ -143,12 +149,52 @@ class TestImageAnalysis(unittest.TestCase):
         patched_setMask.assert_called_once()
         patched_setMask.reset_mock()
 
-        # load a mask with different shape
-        new_mask = np.array((3, 3), dtype=bool)
-        fp.seek(0)
-        np.save(fp, new_mask)
-        fp.seek(0)
-        with self.assertLogs(logger, level='ERROR'):
+        # test mask data with dimension not equal to 2 or 3
+        new_mask = np.ones(3, dtype=bool)
+        save_mask_in_file(fp, new_mask)
+        with self.assertLogs(logger, level='ERROR') as cm:
             widget.loadImageMask()
+            self.assertIn('Expect array with dimensions (2, 3): actual 1', cm.output[0])
+            patched_setMask.assert_not_called()
+
+        # test loading a mask in modules without geometry
+        new_mask = np.ones((3, 3, 3), dtype=bool)
+        save_mask_in_file(fp, new_mask)
+        with self.assertLogs(logger, level='ERROR') as cm:
+            with patch("extra_foam.gui.items.GeometryItem._detector",
+                       new_callable=PropertyMock, create=True) as mocked:
+                mocked.return_value = "LPD"
+                widget.loadImageMask()
+                self.assertIn('Failed to create geometry to assemble mask', cm.output[0])
+                patched_setMask.assert_not_called()
+
+        fp.seek(0)
+        with self.assertLogs(logger, level='ERROR') as cm:
+            with patch("extra_foam.gui.items.GeometryItem.geometry",
+                       new_callable=PropertyMock, create=True) as mocked:
+                mocked.return_value = None
+                widget.loadImageMask()
+                self.assertIn('Mask in modules requires a geometry', cm.output[0])
+                patched_setMask.assert_not_called()
+
+        fp.seek(0)
+        with self.assertLogs(logger, level='ERROR') as cm:
+            with patch("extra_foam.gui.items.GeometryItem.geometry",
+                       new_callable=PropertyMock, create=True) as mocked:
+                mocked.return_value = None
+                widget.loadImageMask()
+                self.assertIn('Mask in modules requires a geometry', cm.output[0])
+                patched_setMask.assert_not_called()
+
+        # TODO: test position_all_modules fail
+
+        # test (assembled) mask shape is different from the image
+        new_mask = np.ones((3, 3), dtype=bool)
+        save_mask_in_file(fp, new_mask)
+        with self.assertLogs(logger, level='ERROR') as cm:
+            widget.loadImageMask()
+            self.assertIn('Shape of the image mask (3, 3) is different from the image (10, 10)',
+                          cm.output[0])
+            patched_setMask.assert_not_called()
 
         fp.close()

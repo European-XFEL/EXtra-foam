@@ -218,21 +218,26 @@ class ImageProcessor(_BaseProcessor):
         self._dark_mean = nanmean_image_data(self._dark)
 
     def _update_image_mask(self, image_shape):
-        updated, image_mask = self._mask_sub.update(self._image_mask, image_shape)
+        try:
+            updated, image_mask = self._mask_sub.update(
+                self._image_mask, image_shape)
+        except Exception as e:
+            raise ImageProcessingError(str(e))
+
         if image_mask is not None and image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically
                 image_mask = None
             else:
-                # This could only happen when the mask is loaded from the files
-                # and the image shapes in the ImageTool is different from the
-                # shape of the live images.
-                # The original image mask remains the same.
+                # This could if the image shapes in the ImageTool is
+                # different from the shape of in the pipeline, i.e. the
+                # shape of the image just changed.
                 raise ImageProcessingError(
                     f"[Image processor] The shape of the image mask "
                     f"{image_mask.shape} is different from the shape of the image "
                     f"{image_shape}!")
 
+        # caveat: "else" is not used here intentionally
         if image_mask is None:
             image_mask = np.zeros(image_shape, dtype=np.bool)
 

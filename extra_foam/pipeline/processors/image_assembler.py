@@ -117,7 +117,13 @@ class ImageAssemblerFactory(ABC):
             :param str filepath: path of the geometry file.
             :param tuple quad_positions: quadrant coordinates.
             """
-            raise NotImplementedError
+            try:
+                self._geom = load_geometry(config["DETECTOR"], filepath,
+                                           assembler=self._assembler_type,
+                                           quad_positions=quad_positions,
+                                           stack_only=self._stack_only)
+            except Exception as e:
+                raise AssemblingError(f"[Geometry] {e}")
 
         def _assemble(self, modules):
             """Assemble modules data into assembled image data.
@@ -280,18 +286,6 @@ class ImageAssemblerFactory(ABC):
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
-        def _load_geometry(self, filepath, quad_positions):
-            """Override."""
-            try:
-                self._geom = load_geometry('AGIPD', filepath,
-                                           assembler=self._assembler_type,
-                                           quad_positions=quad_positions,
-                                           stack_only=self._stack_only)
-            except Exception as e:
-                # catch any exceptions here since it loads the CFEL
-                # geometry file with a CFEL function
-                raise AssemblingError(f"[Geometry] {e}")
-
     class LpdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):
             """Override.
@@ -327,16 +321,6 @@ class ImageAssemblerFactory(ABC):
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
-        def _load_geometry(self, filepath, quad_positions):
-            """Override."""
-            try:
-                self._geom = load_geometry('LPD', filepath,
-                                           assembler=self._assembler_type,
-                                           quad_positions=quad_positions,
-                                           stack_only=self._stack_only)
-            except (OSError, KeyError) as e:
-                raise AssemblingError(f"[Geometry] {e}")
-
     class DsscImageAssembler(BaseAssembler):
 
         def _get_modules_bridge(self, data, src):
@@ -370,16 +354,6 @@ class ImageAssemblerFactory(ABC):
                 return modules_data.squeeze(axis=1)
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
-
-        def _load_geometry(self, filepath, quad_positions):
-            """Override."""
-            try:
-                self._geom = load_geometry('DSSC', filepath,
-                                           assembler=self._assembler_type,
-                                           quad_positions=quad_positions,
-                                           stack_only=self._stack_only)
-            except (OSError, KeyError) as e:
-                raise AssemblingError(f"[Geometry] {e}")
 
     class JungFrauImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):

@@ -40,15 +40,14 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
 
         self.load_btn = QPushButton("Load mask")
         self.save_btn = QPushButton("Save mask")
-        self.mask_io_in_modules_cb = QCheckBox("Save/load mask in modules")
-        self.mask_io_in_modules_cb.setDisabled(True)
+        self.mask_save_in_modules_cb = QCheckBox("Save mask in modules")
 
         self._exclusive_btns = {self.erase_mask_btn, self.draw_mask_btn}
 
         self._non_reconfigurable_widgets = [
             self.save_btn,
             self.load_btn,
-            self.mask_io_in_modules_cb
+            self.mask_save_in_modules_cb
         ]
 
         self.initUI()
@@ -79,7 +78,7 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(self.save_btn, row, 1)
 
         row += 1
-        layout.addWidget(self.mask_io_in_modules_cb, row, 0, 1, 2, AR)
+        layout.addWidget(self.mask_save_in_modules_cb, row, 0, 1, 2, AR)
 
         layout.setVerticalSpacing(20)
         self.setLayout(layout)
@@ -100,8 +99,9 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.remove_btn.clicked.connect(
             lambda: self._updateExclusiveBtns(True))
 
-        self.mask_io_in_modules_cb.toggled.connect(
-            mediator.onImageMaskInModulesToggled)
+        # required for loading metadata
+        self.mask_save_in_modules_cb.toggled.connect(
+            mediator.onImageMaskSaveInModulesToggled)
 
     @pyqtSlot(object)
     def _onAssemblerChange(self, assembler):
@@ -115,8 +115,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         """Override."""
         self.threshold_mask_le.returnPressed.emit()
         self.mask_tile_cb.toggled.emit(self.mask_tile_cb.isChecked())
-        self.mask_io_in_modules_cb.toggled.emit(
-            self.mask_io_in_modules_cb.isChecked())
+        self.mask_save_in_modules_cb.toggled.emit(
+            self.mask_save_in_modules_cb.isChecked())
         return True
 
     def loadMetaData(self):
@@ -125,7 +125,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])
         if self._require_geometry:
             self.mask_tile_cb.setChecked(cfg["mask_tile"] == 'True')
-        self.mask_io_in_modules_cb.setChecked(cfg["mask_in_modules"] == 'True')
+        self.mask_save_in_modules_cb.setChecked(
+            cfg["mask_save_in_modules"] == 'True')
 
     @pyqtSlot(bool)
     def _updateExclusiveBtns(self, checked):
