@@ -98,6 +98,7 @@ class ImageProcessor(_BaseProcessor):
         self._dark_mean = None
 
         self._image_mask = None
+        self._image_mask_in_modules = None
         self._threshold_mask = None
         self._reference = None
 
@@ -192,6 +193,7 @@ class ImageProcessor(_BaseProcessor):
         image_shape = sliced_assembled.shape[-2:]
         self._update_image_mask(image_shape)
         image_data.image_mask = self._image_mask
+        image_data.image_mask_in_modules = self._image_mask_in_modules
 
         self._update_reference()
         image_data.reference = self._reference
@@ -224,12 +226,27 @@ class ImageProcessor(_BaseProcessor):
         except Exception as e:
             raise ImageProcessingError(str(e))
 
+        if updated and self._require_geom:
+            # keep a mask in modules for assembling later
+            geom = self._assembler.geometry
+            self._image_mask_in_modules = geom.output_array_for_dismantle_fast(
+                dtype=np.bool)
+            geom.dismantle_all_modules(image_mask,
+                                       out=self._image_mask_in_modules)
+
         if image_mask is not None and image_mask.shape != image_shape:
             if np.sum(image_mask) == 0:
                 # reset the empty image mask automatically
                 image_mask = np.zeros(image_shape, dtype=np.bool)
+            elif self._require_geom:
+                # reassemble a mask
+                geom = self._assembler.geometry
+                image_mask = geom.output_array_for_position_fast(dtype=np.bool)
+                # self._image_mask_in_modules cannot be None here
+                geom.position_all_modules(
+                    self._image_mask_in_modules, image_mask)
             else:
-                # This could if the image shapes in the ImageTool is
+                # This can happen if the image shapes in the ImageTool is
                 # different from the shape of in the pipeline, i.e. the
                 # shape of the image just changed.
                 raise ImageProcessingError(

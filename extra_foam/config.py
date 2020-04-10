@@ -294,6 +294,8 @@ class _Config(dict):
         "GUI_CORRELATION_COLORS": (('b', 'r'), ('g', 'p')),
         # color of the image mask bounding box while drawing
         "GUI_MASK_BOUNDING_BOX_COLOR": 'b',
+        # color of the masked area for MaskItem
+        "GUI_MASK_FILL_COLOR": 'g',
         # -------------------------------------------------------------
         # Misc
         # -------------------------------------------------------------

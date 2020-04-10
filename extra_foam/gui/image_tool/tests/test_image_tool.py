@@ -76,7 +76,6 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.image_tool = self.gui._image_tool
 
         self.view = self.image_tool._corrected_view.imageView
-        self.view.setImageData(None)
         self.view._image = None
 
         self.pulse_worker._image_proc = ImageProcessor()

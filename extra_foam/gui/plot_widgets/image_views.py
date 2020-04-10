@@ -15,9 +15,10 @@ from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
 from .plot_items import MaskItem
+from ..items import GeometryItem
 from ...file_io import write_image, read_numpy_array
 from ...logger import logger
-from ..items import GeometryItem
+from ...pipeline.data_model import ImageData
 
 
 class ImageAnalysis(ImageViewF):
@@ -49,22 +50,18 @@ class ImageAnalysis(ImageViewF):
         self.setAspectLocked(True)
         self._hist_widget.setImageItem(self._image_item)
 
-        self._image_data = None
+        self._mask_in_modules = None
         self._mask_save_in_modules = False
 
-    def setImage(self, *args, **kwargs):
+    def setImage(self, image_data, **kwargs):
         """Overload."""
-        super().setImage(*args, **kwargs)
+        if not isinstance(image_data, ImageData):
+            raise TypeError(
+                "The first argument must be an ImageData instance!")
+
+        self._mask_in_modules = image_data.image_mask_in_modules
+        super().setImage(image_data.masked_mean, **kwargs)
         self._mask_item.onSetImage()
-
-    def setImageData(self, image_data, **kwargs):
-        """Set the ImageData.
-
-        :param _SimpleImageData image_data: _SimpleImageData instance.
-        """
-        self._image_data = image_data
-        if image_data is not None:
-            self.setImage(image_data.masked)
 
     def writeImage(self):
         """Write the current detector image to file.
@@ -105,12 +102,20 @@ class ImageAnalysis(ImageViewF):
         if not filepath:
             return
 
-        mask = self._mask_item.mask()
+        image_mask = self._mask_item.mask()
         if self._mask_save_in_modules:
-            # TODO: convert assembled mask to mask in modules
-            raise NotImplementedError
+            try:
+                geom = self._geom.geometry
+            except Exception as e:
+                logger.error(f"Failed to create geometry to assemble mask: "
+                             f"{str(e)}")
+                return
 
-        np.save(filepath, mask)
+            modules = geom.output_array_for_dismantle_fast(dtype=np.bool)
+            geom.dismantle_all_modules(image_mask, out=modules)
+            image_mask = modules
+
+        np.save(filepath, image_mask)
 
         logger.info(f"Image mask saved in {filepath}.npy")
 

@@ -27,13 +27,24 @@ _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 class _1MGeometryPyMixin:
     def output_array_for_position_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
-        """Match the EXtra-geom signature."""
+        """Make an array with the shape of assembled data filled with nan.
+
+        Match the EXtra-geom signature.
+        """
         shape = extra_shape + tuple(self.assembledShape())
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
         return np.full(shape, np.nan, dtype=dtype)
 
     def position_all_modules(self, modules, out, *, ignore_tile_edge=False):
-        """Match the EXtra-geom signature.
+        """Assemble data in modules according to where the pixels are.
 
+        Match the EXtra-geom signature.
+
+        :param numpy.ndarray/list modules: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
         :param ignore_tile_edge: True for ignoring the pixels at the edges
             of tiles. If 'out' is pre-filled with nan, it it equivalent to
             masking the tile edges. This is an extra feature which does not
@@ -46,6 +57,23 @@ class _1MGeometryPyMixin:
             for i in range(self.n_modules):
                 ml.append(modules[:, i, ...])
             self.positionAllModules(ml, out, ignore_tile_edge)
+
+    def output_array_for_dismantle_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
+        """Make an array with the shape of data in modules filled with nan."""
+        shape = extra_shape + (self.n_modules, *self.module_shape)
+        if dtype == np.bool:
+            return np.full(shape, 0, dtype=dtype)
+        return np.full(shape, np.nan, dtype=dtype)
+
+    def dismantle_all_modules(self, assembled, out):
+        """Dismantle assembled data into data in modules.
+
+        :param numpy.ndarray out: assembled data.
+            Shape = (memory cells, y, x) / (y, x)
+        :param numpy.ndarray out: data in modules.
+            Shape = (memory cells, modules, y x) / (modules, y, x)
+        """
+        self.dismantleAllModules(assembled, out)
 
 
 class DSSC_1MGeometryFast(_DSSC_1MGeometry, _1MGeometryPyMixin):

@@ -426,6 +426,9 @@ class ImageData:
             this image mask is shared by all the pulses in a train. However,
             their overall mask could still be different after applying the
             threshold mask. Shape = (y, x), dtype = np.bool
+        image_mask_in_modules (numpy.ndarray): image mask in modules. Only
+            used for detectors which require geometry to assemble multiple
+            modules.
         threshold_mask (tuple): (lower, upper) of the threshold.
             It should be noted that a pixel with value outside of the boundary
             will be masked as Nan/0, depending on the masking policy.
@@ -453,6 +456,7 @@ class ImageData:
         self.dark_count = 0
 
         self.image_mask = None
+        self.image_mask_in_modules = None
         self.threshold_mask = None
 
         self.reference = None

@@ -5,14 +5,12 @@ import tempfile
 import numpy as np
 
 from extra_foam.gui import mkQApp, pyqtgraph
-from extra_foam.gui.image_tool.simple_image_data import _SimpleImageData
 from extra_foam.gui.plot_widgets.plot_items import ImageItem, MaskItem, RectROI
 from extra_foam.gui.plot_widgets.image_view_base import ImageViewF, TimedImageViewF
 from extra_foam.gui.plot_widgets.image_views import (
     ImageAnalysis, RoiImageView,
 )
-from extra_foam.pipeline.data_model import ProcessedData, RectRoiGeom
-from extra_foam.config import config
+from extra_foam.pipeline.data_model import ImageData, ProcessedData, RectRoiGeom
 from extra_foam.logger import logger
 
 app = mkQApp()
@@ -80,9 +78,6 @@ class TestTimedImageView(unittest.TestCase):
 
 
 class TestImageAnalysis(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        MaskItem.resetMask()
 
     def testGeneral(self):
         widget = ImageAnalysis()
@@ -115,8 +110,7 @@ class TestImageAnalysis(unittest.TestCase):
             self.assertEqual(cm.output[0].split(':')[-1], 'Cannot load image mask without image!')
 
         imgs = np.arange(100, dtype=np.float).reshape(10, 10)
-        mask = np.zeros_like(imgs, dtype=bool)
-        widget.setImageData(_SimpleImageData.from_array(imgs))
+        widget.setImage(ImageData.from_array(imgs))
 
         # the IOError
         patched_open.return_value = ['abc']
@@ -137,11 +131,9 @@ class TestImageAnalysis(unittest.TestCase):
         patched_setMask.reset_mock()
 
         # save and load another mask
-        mask[0, 0] = 1
-        mask[5, 5] = 1
         mask_item = widget._mask_item
-        mask_item._mask.setPixelColor(0, 0, mask_item._OPAQUE)
-        mask_item._mask.setPixelColor(5, 5, mask_item._OPAQUE)
+        mask_item._mask.setPixelColor(0, 0, mask_item._fill_color)
+        mask_item._mask.setPixelColor(5, 5, mask_item._fill_color)
         fp.seek(0)
         widget.saveImageMask()
         fp.seek(0)

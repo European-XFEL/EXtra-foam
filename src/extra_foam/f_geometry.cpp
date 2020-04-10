@@ -41,9 +41,9 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
   FOAM_POSITION_ALL_MODULES_SINGLE_IMP(uint16_t, uint16_t)
   FOAM_POSITION_ALL_MODULES_SINGLE_IMP(bool, bool)
 
-#define FOAM_POSITION_ALL_MODULES_IMP(SRC_TYPE, DST_TYPE)                                                         \
+#define FOAM_POSITION_ALL_MODULES_IMP(SRC_TYPE, DST_TYPE)                                                 \
   base.def("positionAllModules",                                                                          \
-  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 4>&, xt::pytensor<DST_TYPE, 3>&, bool) const)       \
+  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 4>&, xt::pytensor<DST_TYPE, 3>&, bool) const)      \
     &GeometryBase::positionAllModules,                                                                    \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
 
@@ -53,9 +53,9 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
   FOAM_POSITION_ALL_MODULES_IMP(uint16_t, uint16_t)
   FOAM_POSITION_ALL_MODULES_IMP(bool, bool)
 
-#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(SRC_TYPE, DST_TYPE)                                                        \
+#define FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(SRC_TYPE, DST_TYPE)                                                \
   base.def("positionAllModules",                                                                                    \
-    (void (GeometryBase::*)(const std::vector<xt::pytensor<SRC_TYPE, 3>>&, xt::pytensor<DST_TYPE, 3>&, bool) const)  \
+    (void (GeometryBase::*)(const std::vector<xt::pytensor<SRC_TYPE, 3>>&, xt::pytensor<DST_TYPE, 3>&, bool) const) \
     &GeometryBase::positionAllModules,                                                                              \
     py::arg("src").noconvert(), py::arg("dst").noconvert(), py::arg("ignore_tile_edge") = false);
 
@@ -64,6 +64,26 @@ void declare_1MGeometry(py::module &m, std::string&& detector)
   FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, float)
   FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(uint16_t, uint16_t)
   FOAM_POSITION_ALL_MODULES_VECTOR_SRC_IMP(bool, bool)
+
+#define FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(SRC_TYPE, DST_TYPE)                                      \
+  base.def("dismantleAllModules",                                                                      \
+  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 2>&, xt::pytensor<DST_TYPE, 3>&) const)         \
+    &GeometryBase::dismantleAllModules,                                                                \
+    py::arg("src").noconvert(), py::arg("dst").noconvert());
+
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(float, float)
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(uint16_t, uint16_t)
+  FOAM_DISMANTLE_ALL_MODULES_SINGLE_IMP(bool, bool)
+
+#define FOAM_DISMANTLE_ALL_MODULES(SRC_TYPE, DST_TYPE)                                                 \
+  base.def("dismantleAllModules",                                                                      \
+  (void (GeometryBase::*)(const xt::pytensor<SRC_TYPE, 3>&, xt::pytensor<DST_TYPE, 4>&) const)         \
+    &GeometryBase::dismantleAllModules,                                                                \
+    py::arg("src").noconvert(), py::arg("dst").noconvert());
+
+  FOAM_DISMANTLE_ALL_MODULES(float, float)
+  FOAM_DISMANTLE_ALL_MODULES(uint16_t, uint16_t)
+  FOAM_DISMANTLE_ALL_MODULES(bool, bool)
 
   base.def("assembledShape", &GeometryBase::assembledShape)
     .def_readonly_static("n_quads", &GeometryBase::n_quads)

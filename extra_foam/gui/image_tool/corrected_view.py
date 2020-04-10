@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 )
 
-from .simple_image_data import _SimpleImageData
 from .base_view import _AbstractImageToolView, create_imagetool_view
 from ..plot_widgets import HistMixin, ImageAnalysis, PlotWidgetF
 from ..ctrl_widgets import (
@@ -140,7 +139,7 @@ class CorrectedView(_AbstractImageToolView):
     def updateF(self, data, auto_update):
         """Override."""
         if auto_update or self._corrected.image is None:
-            self._corrected.setImageData(_SimpleImageData(data.image))
+            self._corrected.setImage(data.image)
             self._roi_proj_plot.updateF(data)
             self._roi_hist.updateF(data)
 

@@ -75,11 +75,8 @@ class ImageItem(pg.ImageItem):
 class MaskItem(pg.GraphicsObject):
     """Mask item used for drawing mask on an ImageItem."""
 
-    _mask = None  # QImage
-    _mask_rect = QRectF(0, 0, 0, 0)
-
     _TRANSPARENT = QColor(0, 0, 0, 0)
-    _OPAQUE = QColor(255, 255, 255, 180)
+    _COLOR_FORMAT = QImage.Format_ARGB32
 
     def __init__(self, item):
         """Initialization.
@@ -96,18 +93,18 @@ class MaskItem(pg.GraphicsObject):
         item.draw_finished_sgn.connect(self.onDrawFinished)
 
         # pen for drawing the bounding box
-        self._pen = FColor.mkPen(config['GUI_MASK_BOUNDING_BOX_COLOR'])
+        self._boundary_color = FColor.mkPen(
+            config['GUI_MASK_BOUNDING_BOX_COLOR'])
+        self._fill_color = FColor.mkColor(
+            config['GUI_MASK_FILL_COLOR'], alpha=180)
 
         self.state = MaskState.UNMASK
+        self._mask = None  # QImage
+        self._mask_rect = QRectF(0, 0, 0, 0)
         self._mask_pub = ImageMaskPub()
 
         self._p1 = None
         self._p2 = None
-
-    @classmethod
-    def resetMask(cls):
-        cls._mask = None
-        cls._mask_rect = QRectF(0, 0, 0, 0)
 
     def boundingRect(self):
         """Override."""
@@ -148,7 +145,7 @@ class MaskItem(pg.GraphicsObject):
         for i in range(x, x+w):
             for j in range(y, y+h):
                 if self.state == MaskState.MASK:
-                    self._mask.setPixelColor(i, j, self._OPAQUE)
+                    self._mask.setPixelColor(i, j, self._fill_color)
                 elif self.state == MaskState.UNMASK:
                     self._mask.setPixelColor(i, j, self._TRANSPARENT)
 
@@ -170,16 +167,16 @@ class MaskItem(pg.GraphicsObject):
     def onSetImage(self):
         h, w = self._image_item.image.shape
         if self._mask is None:
-            self.__class__._mask = QImage(w, h, QImage.Format_Alpha8)
+            self._mask = QImage(w, h, self._COLOR_FORMAT)
             self._mask.fill(self._TRANSPARENT)
-            self.__class__._mask_rect = QRectF(0, 0, w, h)
+            self._mask_rect = QRectF(0, 0, w, h)
 
     def paint(self, p, *args):
         if self._mask is None:
             return
 
         p.setRenderHint(QPainter.Antialiasing)
-        p.setPen(self._pen)
+        p.setPen(self._boundary_color)
 
         p.drawImage(self.boundingRect(), self._mask)
         p.drawRect(self._selectedRect())
@@ -191,7 +188,8 @@ class MaskItem(pg.GraphicsObject):
         mask_array = np.zeros((h, w), dtype=bool)
         for i in range(w):
             for j in range(h):
-                mask_array[j, i] = self._mask.pixelColor(i, j) == self._OPAQUE
+                mask_array[j, i] = \
+                    self._mask.pixelColor(i, j) == self._fill_color
 
         return mask_array
 
@@ -203,15 +201,15 @@ class MaskItem(pg.GraphicsObject):
         self._mask_pub.set(mask)
 
         h, w = mask.shape
-        self.__class__._mask = QImage(w, h, QImage.Format_Alpha8)
+        self._mask = QImage(w, h, self._COLOR_FORMAT)
 
         for i in range(w):
             for j in range(h):
                 if mask[j, i]:
-                    self._mask.setPixelColor(i, j, self._OPAQUE)
+                    self._mask.setPixelColor(i, j, self._fill_color)
                 else:
                     self._mask.setPixelColor(i, j, self._TRANSPARENT)
-        self.__class__._mask_rect = QRectF(0, 0, w, h)
+        self._mask_rect = QRectF(0, 0, w, h)
         self._image_item.update()
 
 
