@@ -106,6 +106,13 @@ class MaskItem(pg.GraphicsObject):
         self._p1 = None
         self._p2 = None
 
+    def maybeInitializeMask(self, shape):
+        h, w = shape
+        if self._mask is None:
+            self._mask = QImage(w, h, self._COLOR_FORMAT)
+            self._mask.fill(self._TRANSPARENT)
+            self._mask_rect = QRectF(0, 0, w, h)
+
     def boundingRect(self):
         """Override."""
         return self._mask_rect
@@ -163,13 +170,6 @@ class MaskItem(pg.GraphicsObject):
 
         self._mask.fill(self._TRANSPARENT)
         self._image_item.update()
-
-    def onSetImage(self):
-        h, w = self._image_item.image.shape
-        if self._mask is None:
-            self._mask = QImage(w, h, self._COLOR_FORMAT)
-            self._mask.fill(self._TRANSPARENT)
-            self._mask_rect = QRectF(0, 0, w, h)
 
     def paint(self, p, *args):
         if self._mask is None:

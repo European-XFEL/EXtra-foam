@@ -211,7 +211,8 @@ class TestImageProcessorTr(_ImageProcessorTestBase):
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: (False, x))
+        self._proc._mask_sub.update = MagicMock(
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
 
         self._proc._threshold_mask = (-100, 100)
 
@@ -267,7 +268,8 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
         self._proc._ref_sub.update = MagicMock(return_value=(False, None))   # no redis server
         self._proc._cal_sub.update = MagicMock(
             side_effect=lambda: (False, None, False, None))   # no redis server
-        self._proc._mask_sub.update = MagicMock(side_effect=lambda x, y: (False, x))
+        self._proc._mask_sub.update = MagicMock(
+            side_effect=lambda x, y: (False, np.zeros(y, dtype=np.bool) if x is None else x))
 
         del self._proc._dark
 
@@ -399,13 +401,32 @@ class TestImageProcessorPr(_ImageProcessorTestBase):
 
         data, processed = self.data_with_assembled(1, (4, 2, 2))
 
-        # test setting mask but the mask shape is different
-        # from the image shape
-        with self.assertRaises(ImageProcessingError):
-            image_mask = np.ones([3, 2, 2])
-            proc._mask_sub.update = MagicMock(return_value=(True, image_mask))
-            proc.process(data)
-        self.assertIsNone(proc._image_mask)
+        with patch.object(proc._assembler, "_geom") as geom:
+            with patch.object(proc._mask_sub, "update") as update:
+                # test generation of image_mask_in_modules
+                proc._require_geom = True
+                update.return_value = (True, np.ones([2, 2], dtype=bool))
+                proc.process(data)
+                geom.output_array_for_dismantle_fast.assert_called_once()
+                geom.dismantle_all_modules.assert_called_once()
+
+                # for invalid mask with all zeros, a new mask will be generated automatically
+                update.return_value = (True, np.zeros([3, 2], dtype=bool))
+                proc.process(data)
+                np.testing.assert_array_equal(np.zeros([2, 2], dtype=bool), proc._image_mask)
+
+                # test setting mask but the mask shape is different from the image shape
+
+                # reassemble if there is a geometry
+                update.return_value = (True, np.ones([4, 2], dtype=bool))
+                proc.process(data)
+                geom.output_array_for_position_fast.assert_called_once()
+                geom.position_all_modules.assert_called_once()
+                # otherwise, exception will be raised
+                proc._require_geom = False
+                with self.assertRaises(ImageProcessingError):
+                    update.return_value = (True, np.ones([4, 2], dtype=bool))
+                    proc.process(data)
 
     @patch("extra_foam.ipc.ProcessLogger.info")
     def testReferenceUpdate(self, info):

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, PropertyMock
 import math
 import os
 import tempfile
@@ -246,9 +246,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertEqual(False, widget.mask_tile_cb.isChecked())
         self.assertEqual(False, widget.mask_save_in_modules_cb.isChecked())
 
+    @patch("extra_foam.pipeline.processors.ImageProcessor._require_geom",
+           new_callable=PropertyMock, create=True, return_value=False)
     @patch("extra_foam.pipeline.processors.image_assembler.ImageAssemblerFactory.BaseAssembler.process",
            side_effect=lambda x: x)
-    def testDrawMask(self, patched_process):
+    def testDrawMask(self, patched_process, require_geometry):
         # TODO: test by really drawing something on ImageTool
         from extra_foam.ipc import ImageMaskPub
 
@@ -776,6 +778,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         # prepare for the following test
         widget._stack_only_cb.setChecked(True)
         mask_ctrl_widget.mask_tile_cb.setChecked(True)
+        mask_ctrl_widget.mask_save_in_modules_cb.setChecked(True)
         image_proc.update()
         self.assertTrue(assembler._stack_only)
         self.assertTrue(assembler._mask_tile)
@@ -787,6 +790,8 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         self.assertFalse(widget._stack_only_cb.isChecked())
         self.assertFalse(mask_ctrl_widget.mask_tile_cb.isEnabled())
         self.assertFalse(mask_ctrl_widget.mask_tile_cb.isChecked())
+        self.assertFalse(mask_ctrl_widget.mask_save_in_modules_cb.isEnabled())
+        self.assertFalse(mask_ctrl_widget.mask_save_in_modules_cb.isChecked())
         widget._geom_file_le.setText("/geometry/file/")
         for i in range(4):
             for j in range(2):
@@ -802,6 +807,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         widget._assembler_cb.setCurrentText(assemblers_inv[GeomAssembler.OWN])
         self.assertTrue(widget._stack_only_cb.isEnabled())
         self.assertTrue(mask_ctrl_widget.mask_tile_cb.isEnabled())
+        self.assertTrue(mask_ctrl_widget.mask_save_in_modules_cb.isEnabled())
 
         # test loading meta data
         mediator = widget._mediator
@@ -894,14 +900,18 @@ class TestImageToolTs(unittest.TestCase):
 
     def testMaskCtrlWidget(self):
         widget = self.image_tool._mask_ctrl_widget
-        self.assertEqual(-1, widget.layout().indexOf(widget.mask_tile_cb))
+
+        self.assertFalse(widget.mask_tile_cb.isEnabled())
+        self.assertFalse(widget.mask_save_in_modules_cb.isEnabled())
 
         # test loading meta data
         # test if the meta data is invalid
         mediator = widget._mediator
         mediator.onImageMaskTileEdgeChange(True)
+        mediator.onImageMaskSaveInModulesToggled(True)
         widget.loadMetaData()
-        self.assertEqual(False, widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_tile_cb.isChecked())
+        self.assertFalse(widget.mask_save_in_modules_cb.isChecked())
 
     def testCalibrationCtrlWidget(self):
         widget = self.image_tool._calibration_view._ctrl_widget

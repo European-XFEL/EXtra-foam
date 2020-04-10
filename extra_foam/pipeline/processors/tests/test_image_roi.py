@@ -281,7 +281,7 @@ class TestImageRoiTrain(_TestDataMixin):
         # set processed.roi.geom{1, 2, 3, 4}
         proc._process_hist = MagicMock()  # it does not affect train-resolved analysis
         proc.process(data)
-        processed.pp.image_on = 100 * np.random.randn(*shape).astype(np.float32)
+        processed.pp.image_on = 100 * np.random.randn(*shape).astype(np.float32) + 1.
         processed.pp.image_off = 100 * np.random.randn(*shape).astype(np.float32)
         return data, processed
 

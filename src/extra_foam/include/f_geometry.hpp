@@ -307,19 +307,32 @@ void Detector1MGeometryBase<G>::dismantleAllModules(M&& src, E& dst) const
 
   int n_pulses = ss[0];
   auto norm_pos = static_cast<const G*>(this)->corner_pos_ / static_cast<const G*>(this)->pixelSize();
-
-  for (int im = 0; im < n_modules; ++im)
-  {
-    for (int ip = 0; ip < n_pulses; ++ip)
+#if defined(FOAM_WITH_TBB)
+  tbb::parallel_for(tbb::blocked_range2d<int>(0, n_modules, 0, n_pulses),
+    [&src, &dst, &norm_pos, this] (const tbb::blocked_range2d<int> &block)
     {
-      auto&& dst_view = xt::view(dst, ip, im, xt::all(), xt::all());
-      dismantleModule(
-        xt::view(src, ip, xt::all(), xt::all()),
-        dst_view,
-        xt::view(norm_pos, im, xt::all(), xt::all(), xt::all())
-      );
+      for(int im=block.rows().begin(); im != block.rows().end(); ++im)
+      {
+        for(int ip=block.cols().begin(); ip != block.cols().end(); ++ip)
+        {
+#else
+      for (int im = 0; im < n_modules; ++im)
+      {
+        for (int ip = 0; ip < n_pulses; ++ip)
+        {
+#endif
+          auto&& dst_view = xt::view(dst, ip, im, xt::all(), xt::all());
+          dismantleModule(
+            xt::view(src, ip, xt::all(), xt::all()),
+            dst_view,
+            xt::view(norm_pos, im, xt::all(), xt::all(), xt::all())
+          );
+        }
+      }
+#if defined(FOAM_WITH_TBB)
     }
-  }
+  );
+#endif
 }
 
 template<typename G>
