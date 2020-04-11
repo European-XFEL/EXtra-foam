@@ -360,8 +360,7 @@ class ImageProcessor(_BaseProcessor):
                 image_data.images[i] = assembled[i].copy()
                 mask_image_data(image_data.images[i],
                                 image_mask=self._image_mask,
-                                threshold_mask=self._threshold_mask,
-                                keep_nan=True)
+                                threshold_mask=self._threshold_mask)
             else:
                 out_of_bound_indices.append(i)
 

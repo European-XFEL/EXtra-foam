@@ -7,7 +7,7 @@ from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.pipeline.processors import (
     AzimuthalIntegProcessorTrain, AzimuthalIntegProcessorPulse
 )
-from extra_foam.algorithms import image_with_mask
+from extra_foam.algorithms import mask_image_data
 from extra_foam.config import AnalysisType, list_azimuthal_integ_methods
 
 
@@ -66,12 +66,18 @@ class TestAzimuthalIntegProcessorTrain(_TestDataMixin):
                                                    threshold_mask=threshold_mask)
 
         image_on = np.nanmean(data['assembled']['sliced'][::2, ...], axis=0)
-        mask_on = image_mask.copy()
-        image_with_mask(image_on, mask_on, threshold_mask=threshold_mask)
+        mask_on = np.zeros_like(image_mask)
+        mask_image_data(image_on,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask,
+                        out=mask_on)
 
         image_off = np.nanmean(data['assembled']['sliced'][1::2, ...], axis=0)
-        mask_off = image_mask.copy()
-        image_with_mask(image_off, mask_off, threshold_mask=threshold_mask)
+        mask_off = np.zeros_like(image_mask)
+        mask_image_data(image_off,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask,
+                        out=mask_off)
 
         pp = processed.pp
         pp.analysis_type = AnalysisType.AZIMUTHAL_INTEG

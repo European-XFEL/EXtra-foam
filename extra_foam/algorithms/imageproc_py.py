@@ -11,7 +11,7 @@ import numpy as np
 
 from .imageproc import (
     nanmeanImageArray, movingAvgImageData,
-    maskImageData, maskNanImageData, maskZeroImageData,
+    imageDataNanMask, maskImageDataNan, maskImageDataZero,
     correctGain, correctOffset, correctGainOffset
 )
 
@@ -52,53 +52,52 @@ def correct_image_data(data, *, gain=None, offset=None):
         correctGain(data, gain)
 
 
-def mask_image_data(image_data, *,
-                    image_mask=None, threshold_mask=None, keep_nan=False):
+def mask_image_data(arr, *,
+                    image_mask=None,
+                    threshold_mask=None,
+                    keep_nan=True,
+                    out=None):
     """Mask image data by image mask and/or threshold mask.
 
-    :param numpy.ndarray image_data: image to be masked.
+    :param numpy.ndarray arr: image data to be masked.
         Shape = (y, x) or (indices, y, x)
-    :param numpy.ndarray/None image_mask: image mask, which has the same
-        shape as the image.
+    :param numpy.ndarray image_mask: image mask. If provided, it must have
+        the same shape as a single image, and the type must be bool.
+        Shape = (y, x)
     :param tuple/None threshold_mask: (min, max) of the threshold mask.
     :param bool keep_nan: True for masking all pixels in nan and False for
-        masking all pixels to zero (including the existing nan).
+        masking all pixels to zero.
+    :param numpy.ndarray out: Optional output array in which to mark the
+        union of all pixels being masked. The default is None; if provided,
+        it must have the same shape as the image, and the dtype must be bool.
+        Only available if the image data is a 2D array. Shape = (y, x)
     """
-    f = maskNanImageData if keep_nan else maskZeroImageData
+    f = maskImageDataNan if keep_nan else maskImageDataZero
 
-    if image_mask is None and threshold_mask is None:
-        f(image_data)
-    elif image_mask is None:
-        f(image_data, *threshold_mask)
-    elif threshold_mask is None:
-        f(image_data, image_mask)
+    if out is None:
+        if image_mask is None and threshold_mask is None:
+            f(arr)
+        elif image_mask is None:
+            f(arr, *threshold_mask)
+        elif threshold_mask is None:
+            f(arr, image_mask)
+        else:
+            f(arr, image_mask, *threshold_mask)
     else:
-        f(image_data, image_mask, *threshold_mask)
+        if arr.ndim == 3:
+            raise ValueError("'arr' must be 2D when 'out' is specified!")
 
+        if out.dtype != np.bool:
+            raise ValueError("Type of 'out' must be bool!")
 
-def image_with_mask(image_data, mask=None, *, threshold_mask=None):
-    """Mask both image data and mask.
-
-    :param numpy.ndarray image_data: image to be masked.
-        Shape = (y, x) or (indices, y, x)
-    :param numpy.ndarray/None mask: image mask, which has the same
-        shape as the image. If image mask is given, it will be modified
-        inplace.
-    :param tuple/None threshold_mask: (min, max) of the threshold mask.
-    """
-    if mask is None and threshold_mask is None:
-        mask = np.zeros_like(image_data, dtype=np.bool)
-        maskImageData(image_data, mask)
-        return mask
-
-    if threshold_mask is None:
-        maskImageData(image_data, mask)
-        return mask
-
-    if mask is None:
-        mask = np.zeros_like(image_data, dtype=np.bool)
-        maskImageData(image_data, mask, *threshold_mask)
-        return mask
-
-    maskImageData(image_data, mask, *threshold_mask)
-    return mask
+        if image_mask is None:
+            if threshold_mask is None:
+                imageDataNanMask(arr, out)  # get the mask
+                f(arr)  # mask nan (only for keep_nan = False)
+            else:
+                f(arr, *threshold_mask, out)
+        else:
+            if threshold_mask is None:
+                f(arr, image_mask, out)
+            else:
+                f(arr, image_mask, *threshold_mask, out)
