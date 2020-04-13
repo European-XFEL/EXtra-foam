@@ -12,7 +12,8 @@
 
 #include <type_traits>
 
-#include "xtensor/xreducer.hpp"
+#include "xtensor/xview.hpp"
+#include "xtensor/xmath.hpp"
 
 #if defined(FOAM_WITH_TBB)
 #include "tbb/parallel_for.h"
@@ -25,18 +26,6 @@
 
 namespace foam
 {
-
-template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-inline auto nansum(E&& src)
-{
-  return xt::nansum(std::forward<E>(src), xt::evaluation_strategy::immediate)[0];
-}
-
-template<typename E, EnableIf<std::decay_t<E>, IsImage> = false>
-inline auto nanmean(E&& src)
-{
-  return xt::nanmean(std::forward<E>(src), xt::evaluation_strategy::immediate)[0];
-}
 
 } // foam
 

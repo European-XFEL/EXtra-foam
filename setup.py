@@ -83,10 +83,19 @@ class BuildExt(build_ext):
     def initialize_options(self):
         super().initialize_options()
 
-        self.with_tbb = strtobool(os.environ.get('FOAM_WITH_TBB', '1'))
-        self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
-        self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
-        self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
+        self.serial_only = strtobool(os.environ.get('BUILD_SERIAL_FOAM', '0'))
+
+        if self.serial_only:
+            self.with_tbb = False
+            self.xtensor_with_tbb = False
+            self.with_xsimd = False
+            self.xtensor_with_xsimd = False
+        else:
+            self.with_tbb = strtobool(os.environ.get('FOAM_WITH_TBB', '1'))
+            self.xtensor_with_tbb = strtobool(os.environ.get('XTENSOR_WITH_TBB', '1'))
+            self.with_xsimd = strtobool(os.environ.get('FOAM_WITH_XSIMD', '1'))
+            self.xtensor_with_xsimd = strtobool(os.environ.get('XTENSOR_WITH_XSIMD', '1'))
+
         self.with_tests = strtobool(os.environ.get('BUILD_FOAM_TESTS', '0'))
 
     def run(self):

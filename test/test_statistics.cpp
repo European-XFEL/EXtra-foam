@@ -25,23 +25,5 @@ using ::testing::ElementsAreArray;
 using ::testing::NanSensitiveFloatEq;
 using ::testing::FloatEq;
 
-TEST(TestNanmean, TestGeneral)
-{
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
-  xt::xtensor<float, 2> img {{1.f, -1.f, 1.f}, {4.f, 5.f, nan}};
-  EXPECT_EQ(2.f, foam::nanmean(img));
-}
-
-TEST(TestNansum, TestGeneral)
-{
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
-  xt::xtensor<float, 2> img {{1.f, -1.f, 1.f}, {4.f, 5.f, nan}};
-  EXPECT_EQ(10.f, foam::nansum(img));
-}
-
 } //test
 } //foam

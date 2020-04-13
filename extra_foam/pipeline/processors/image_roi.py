@@ -12,10 +12,10 @@ import math
 
 import numpy as np
 
-from ...algorithms import nanhist_with_stats, slice_curve
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray, RectRoiGeom
 from ..exceptions import ProcessingError, UnknownParameterError
+from ...algorithms import nanhist_with_stats, nanmean, nansum, slice_curve
 from ...ipc import process_logger as logger
 from ...database import Metadata as mt
 from ...utils import profiler
@@ -42,8 +42,8 @@ class _RoiProcessorBase(_BaseProcessor):
     """
 
     _fom_handlers = {
-        RoiFom.SUM: np.nansum,
-        RoiFom.MEAN: np.nanmean,
+        RoiFom.SUM: nansum,
+        RoiFom.MEAN: nanmean,
         RoiFom.MEDIAN: np.nanmedian,
         RoiFom.MAX: np.nanmax,
         RoiFom.MIN: np.nanmin,
@@ -172,7 +172,7 @@ class ImageRoiPulse(_RoiProcessorBase):
         mask_image_data(roi,
                         image_mask=image_mask,
                         threshold_mask=threshold_mask)
-        return handler(roi, axis=(-1, -2))
+        return handler(roi, axis=(-2, -1))
 
     def _process_norm(self, assembled, processed):
         """Calculate pulse-resolved ROI normalizers.

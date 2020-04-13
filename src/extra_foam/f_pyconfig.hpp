@@ -9,9 +9,13 @@
  */
 #define FORCE_IMPORT_ARRAY
 #include "xtensor-python/pytensor.hpp"
+#include "xtensor-python/pyarray.hpp"
 
 namespace foam
 {
+
+template<typename T, xt::layout_type L>
+struct IsArray<xt::pyarray<T, L>> : std::true_type {};
 
 template<typename T, xt::layout_type L>
 struct IsImage<xt::pytensor<T, 2, L>> : std::true_type {};
