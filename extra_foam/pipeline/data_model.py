@@ -438,6 +438,7 @@ class ImageData:
         mask (numpy.ndarray): overall mask for the average image.
             Shape = (y, x), dtype = np.bool
         reference (numpy.ndarray): reference image.
+        transformed (numpy.ndarray): transformed masked mean. Shape = (y, x)
     """
 
     __slots__ = ["_pixel_size",
@@ -446,7 +447,7 @@ class ImageData:
                  "gain_mean", "offset_mean",
                  "n_dark_pulses", "dark_mean", "dark_count",
                  "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
-                 "reference"]
+                 "reference", "transformed"]
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
@@ -471,6 +472,7 @@ class ImageData:
         self.mask = None
 
         self.reference = None
+        self.transformed = None
 
     @property
     def pixel_size(self):

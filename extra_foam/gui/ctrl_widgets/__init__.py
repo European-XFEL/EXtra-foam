@@ -19,29 +19,4 @@ from .roi_fom_ctrl_widget import RoiFomCtrlWidget
 from .roi_hist_ctrl_widget import RoiHistCtrlWidget
 from .roi_norm_ctrl_widget import RoiNormCtrlWidget
 from .roi_proj_ctrl_widget import RoiProjCtrlWidget
-
-
-# add control widgets
-__all__ = [
-    "_AbstractCtrlWidget",
-    "AzimuthalIntegCtrlWidget",
-    "AnalysisCtrlWidget",
-    "BinCtrlWidget",
-    "CalibrationCtrlWidget",
-    "CorrelationCtrlWidget",
-    "RefImageCtrlWidget",
-    "DataSourceWidget",
-    "GeometryCtrlWidget",
-    "ImageCtrlWidget",
-    "ExtensionCtrlWidget",
-    "FomFilterCtrlWidget",
-    "PumpProbeCtrlWidget",
-    "RoiCtrlWidget",
-    "RoiFomCtrlWidget",
-    "RoiHistCtrlWidget",
-    "RoiNormCtrlWidget",
-    "RoiProjCtrlWidget",
-    "SmartLineEdit",
-    "SmartStringLineEdit",
-    "HistogramCtrlWidget",
-]
+from .image_transform_ctrl_widget import ImageTransformCtrlWidget

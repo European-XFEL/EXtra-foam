@@ -20,6 +20,7 @@ from .corrected_view import CorrectedView
 from .calibration_view import CalibrationView
 from .bulletin_view import BulletinView
 from .reference_view import ReferenceView
+from .image_transform_view import ImageTransformView
 from .geometry_view import GeometryView
 from ..mediator import Mediator
 from ..windows import _AbstractWindowMixin
@@ -46,8 +47,9 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         CORRECTED = 0
         GAIN_OFFSET = 1
         REFERENCE = 2
-        AZIMUTHAL_INTEG_1D = 3
-        GEOMETRY = 4
+        TRANSFORM = 3
+        AZIMUTHAL_INTEG_1D = 4
+        GEOMETRY = 5
 
     def __init__(self, queue, *,
                  pulse_resolved=True, require_geometry=True, parent=None):
@@ -91,6 +93,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         self._corrected_view = self.createView(CorrectedView)
         self._calibration_view = self.createView(CalibrationView)
         self._reference_view = self.createView(ReferenceView)
+        self._transform_view = self.createView(ImageTransformView)
         self._azimuthal_integ_1d_view = self.createView(AzimuthalInteg1dView)
         self._geometry_view = self.createView(GeometryView)
 
@@ -113,6 +116,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         cali_idx = self._views_tab.addTab(
             self._calibration_view, "Gain / offset")
         ref_idx = self._views_tab.addTab(self._reference_view, "Reference")
+        trans_idx = self._views_tab.addTab(self._transform_view, "Transform")
         azimuthal_integ_tab_idx = self._views_tab.addTab(
             self._azimuthal_integ_1d_view, "Azimuthal integration 1D")
         geom_tab_idx = self._views_tab.addTab(self._geometry_view, "Geometry")
@@ -122,6 +126,7 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
         assert(corrected_tab_idx == self.TabIndex.CORRECTED)
         assert(cali_idx == self.TabIndex.GAIN_OFFSET)
         assert(ref_idx == self.TabIndex.REFERENCE)
+        assert(trans_idx == self.TabIndex.TRANSFORM)
         assert(azimuthal_integ_tab_idx == self.TabIndex.AZIMUTHAL_INTEG_1D)
         assert(geom_tab_idx == self.TabIndex.GEOMETRY)
 
