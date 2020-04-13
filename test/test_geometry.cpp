@@ -85,6 +85,16 @@ TYPED_TEST(Geometry1M, testAssembledShapeCheck)
   EXPECT_THROW(this->geom_->positionAllModules(modules, dst), std::invalid_argument);
 }
 
+TYPED_TEST(Geometry1M, testPositionAllModulesSinglePulse)
+{
+  xt::xtensor<float, 2> dst {
+    xt::empty<float>({static_cast<int>(this->shape[0]), static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 3> modules { xt::ones<float>({this->nm_, this->mh_, this->mw_}) };
+
+  this->geom_->positionAllModules(modules, dst); // test no throw
+  EXPECT_THAT(dst, ::testing::Each(1.f));
+}
+
 TYPED_TEST(Geometry1M, testPositionAllModulesBridge)
 {
   xt::xtensor<float, 3> dst {

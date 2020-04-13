@@ -163,6 +163,8 @@ class ImageToolWindow(QMainWindow, _AbstractWindowMixin):
             self._corrected_view.onLoadMask)
         self._mask_ctrl_widget.save_btn.clicked.connect(
             self._corrected_view.onSaveMask)
+        self._mask_ctrl_widget.mask_save_in_modules_cb.toggled.connect(
+            self._corrected_view.onMaskSaveInModulesChange)
 
         self._views_tab.tabBarClicked.connect(self.onViewsTabClicked)
         self._views_tab.currentChanged.connect(self.onViewsTabChanged)

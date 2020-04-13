@@ -19,10 +19,14 @@ from extra_geom import DSSC_1MGeometry as _geom_DSSC_1MGeometry
 from ..algorithms.geometry import AGIPD_1MGeometry as _AGIPD_1MGeometry
 from ..algorithms.geometry import LPD_1MGeometry as _LPD_1MGeometry
 from ..algorithms.geometry import DSSC_1MGeometry as _DSSC_1MGeometry
+from ..config import config, GeomAssembler
+
+
+_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 
 class _1MGeometryPyMixin:
-    def output_array_for_position_fast(self, extra_shape, dtype):
+    def output_array_for_position_fast(self, extra_shape=(), dtype=_IMAGE_DTYPE):
         """Match the EXtra-geom signature."""
         shape = extra_shape + tuple(self.assembledShape())
         return np.full(shape, np.nan, dtype=dtype)
@@ -154,3 +158,43 @@ class LPD_1MGeometry(_geom_LPD_1MGeometry):
 class DSSC_1MGeometry(_geom_DSSC_1MGeometry):
     def position_all_modules(self, modules, out, *args, **kwargs):
         super().position_all_modules(modules, out)
+
+
+def load_geometry(detector, filepath, *,
+                  assembler=GeomAssembler.OWN,
+                  quad_positions=None,
+                  stack_only=False):
+    if detector == 'AGIPD':
+        if assembler == GeomAssembler.OWN:
+            if stack_only:
+                return AGIPD_1MGeometryFast()
+
+            return AGIPD_1MGeometryFast.from_crystfel_geom(filepath)
+
+        else:
+            return AGIPD_1MGeometry.from_crystfel_geom(filepath)
+
+    if detector == 'LPD':
+        if assembler == GeomAssembler.OWN:
+
+            if stack_only:
+                return LPD_1MGeometryFast()
+            return LPD_1MGeometryFast.from_h5_file_and_quad_positions(
+                filepath, quad_positions)
+
+        else:
+            return LPD_1MGeometry.from_h5_file_and_quad_positions(
+                filepath, quad_positions)
+
+    if detector == 'DSSC':
+        if assembler == GeomAssembler.OWN:
+            if stack_only:
+                return DSSC_1MGeometryFast()
+
+            return DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
+                filepath, quad_positions)
+        else:
+            return DSSC_1MGeometry.from_h5_file_and_quad_positions(
+                filepath, quad_positions)
+
+    raise ValueError(f"Unknown detector {detector}!")

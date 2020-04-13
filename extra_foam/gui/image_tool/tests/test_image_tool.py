@@ -210,20 +210,24 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
     def testMaskCtrlWidget(self):
         win = self.image_tool
         widget = win._mask_ctrl_widget
+        view = win._corrected_view._corrected
         proc = self.pulse_worker._image_proc
         assembler = proc._assembler
 
         # test default
         proc.update()
         self.assertEqual((-1e5, 1e5), proc._threshold_mask)
-        self.assertEqual(False, assembler._mask_tile)
+        self.assertFalse(assembler._mask_tile)
+        self.assertFalse(view._mask_save_in_modules)
 
         # test set new value
         widget.threshold_mask_le.setText("1, 10")
         widget.mask_tile_cb.setChecked(True)
+        widget.mask_save_in_modules_cb.setChecked(True)
         proc.update()
         self.assertEqual((1, 10), proc._threshold_mask)
-        self.assertEqual(True, assembler._mask_tile)
+        self.assertTrue(assembler._mask_tile)
+        self.assertTrue(view._mask_save_in_modules)
 
         # test save/load mask
         with patch.object(win._corrected_view._corrected, "saveImageMask") as patched:
@@ -237,9 +241,11 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         mediator = widget._mediator
         mediator.onImageThresholdMaskChange((-100, 10000))
         mediator.onImageMaskTileEdgeChange(False)
+        mediator.onImageMaskSaveInModulesToggled(False)
         widget.loadMetaData()
         self.assertEqual("-100, 10000", widget.threshold_mask_le.text())
         self.assertEqual(False, widget.mask_tile_cb.isChecked())
+        self.assertEqual(False, widget.mask_save_in_modules_cb.isChecked())
 
     @patch("extra_foam.pipeline.processors.image_assembler.ImageAssemblerFactory.BaseAssembler.process",
            side_effect=lambda x: x)
@@ -262,7 +268,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         np.testing.assert_array_equal(proc._image_mask, mask_gt)
 
         # test changing mask
-        pub.add((0, 0, 2, 3))
+        pub.draw((0, 0, 2, 3))
         mask_gt[0:3, 0:2] = True
 
         # test adding mask
@@ -276,9 +282,10 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
             if (mask_gt == proc._image_mask).all():
                 break
             time.sleep(0.001)
+        np.testing.assert_array_equal(mask_gt, proc._image_mask)
 
         # add one more mask region
-        pub.add((1, 1, 2, 3))
+        pub.draw((1, 1, 2, 3))
         proc.process(data)
         mask_gt[1:4, 1:3] = True
         np.testing.assert_array_equal(mask_gt, proc._image_mask)
@@ -449,7 +456,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
         gain_gt = np.random.randn(2, 2)
         offset_gt = np.random.randn(2, 2)
 
-        def _read_constants_side_effect(fn):
+        def _read_constants_side_effect(fn, **kwargs):
             if fn == "gain/file/path":
                 return gain_gt
             if fn == "offset/file/path":
@@ -457,7 +464,7 @@ class TestImageTool(unittest.TestCase, _TestDataMixin):
 
         # caveat: first establish the connection
         proc._cal_sub.update()
-        with patch('extra_foam.ipc.read_cal_constants', side_effect=_read_constants_side_effect):
+        with patch('extra_foam.ipc.read_numpy_array', side_effect=_read_constants_side_effect):
             with patch('extra_foam.gui.image_tool.calibration_view.QFileDialog.getOpenFileName',
                        return_value=["gain/file/path"]):
                 QTest.mouseClick(widget.load_gain_btn, Qt.LeftButton)

@@ -17,6 +17,7 @@ from extra_data import stack_detector_data
 from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, GeomAssembler, DataSource
+from ...geometries import load_geometry
 from ...ipc import process_logger as logger
 
 
@@ -53,6 +54,10 @@ class ImageAssemblerFactory(ABC):
             self._quad_position = None
             self._geom = None
             self._out_array = None
+
+        @property
+        def geometry(self):
+            return self._geom
 
         def update(self, cfg, *, mask_tile=False):
             assembler_type = GeomAssembler(int(cfg["assembler"]))
@@ -112,7 +117,13 @@ class ImageAssemblerFactory(ABC):
             :param str filepath: path of the geometry file.
             :param tuple quad_positions: quadrant coordinates.
             """
-            raise NotImplementedError
+            try:
+                self._geom = load_geometry(config["DETECTOR"], filepath,
+                                           assembler=self._assembler_type,
+                                           quad_positions=quad_positions,
+                                           stack_only=self._stack_only)
+            except Exception as e:
+                raise AssemblingError(f"[Geometry] {e}")
 
         def _assemble(self, modules):
             """Assemble modules data into assembled image data.
@@ -275,31 +286,6 @@ class ImageAssemblerFactory(ABC):
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
-        def _load_geometry(self, filename, quad_positions):
-            """Override."""
-            if self._assembler_type == GeomAssembler.OWN:
-                from ...geometries import AGIPD_1MGeometryFast
-
-                if self._stack_only:
-                    self._geom = AGIPD_1MGeometryFast()
-                else:
-                    try:
-                        # catch any exceptions here since it loads the CFEL
-                        # geometry file with a CFEL function
-                        self._geom = AGIPD_1MGeometryFast.from_crystfel_geom(
-                            filename)
-                    except Exception as e:
-                        raise AssemblingError(e)
-            else:
-                from ...geometries import AGIPD_1MGeometry
-
-                try:
-                    # catch any exceptions here since it loads the CFEL
-                    # geometry file with a CFEL function
-                    self._geom = AGIPD_1MGeometry.from_crystfel_geom(filename)
-                except Exception as e:
-                    raise AssemblingError(e)
-
     class LpdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):
             """Override.
@@ -335,28 +321,6 @@ class ImageAssemblerFactory(ABC):
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
 
-        def _load_geometry(self, filename, quad_positions):
-            """Override."""
-            if self._assembler_type == GeomAssembler.OWN:
-                from ...geometries import LPD_1MGeometryFast
-
-                if self._stack_only:
-                    self._geom = LPD_1MGeometryFast()
-                else:
-                    try:
-                        self._geom = LPD_1MGeometryFast.from_h5_file_and_quad_positions(
-                            filename, quad_positions)
-                    except (OSError, KeyError) as e:
-                        raise AssemblingError(f"[Geometry] {e}")
-            else:
-                from ...geometries import LPD_1MGeometry
-
-                try:
-                    self._geom = LPD_1MGeometry.from_h5_file_and_quad_positions(
-                        filename, quad_positions)
-                except (OSError, KeyError) as e:
-                    raise AssemblingError(f"[Geometry] {e}")
-
     class DsscImageAssembler(BaseAssembler):
 
         def _get_modules_bridge(self, data, src):
@@ -390,28 +354,6 @@ class ImageAssemblerFactory(ABC):
                 return modules_data.squeeze(axis=1)
 
             raise AssemblingError(f"Unknown detector data type: {dtype}!")
-
-        def _load_geometry(self, filename, quad_positions):
-            """Override."""
-            if self._assembler_type == GeomAssembler.OWN:
-                from ...geometries import DSSC_1MGeometryFast
-
-                if self._stack_only:
-                    self._geom = DSSC_1MGeometryFast()
-                else:
-                    try:
-                        self._geom = DSSC_1MGeometryFast.from_h5_file_and_quad_positions(
-                            filename, quad_positions)
-                    except (OSError, KeyError) as e:
-                        raise AssemblingError(f"[Geometry] {e}")
-            else:
-                from ...geometries import DSSC_1MGeometry
-
-                try:
-                    self._geom = DSSC_1MGeometry.from_h5_file_and_quad_positions(
-                        filename, quad_positions)
-                except (OSError, KeyError) as e:
-                    raise AssemblingError(f"[Geometry] {e}")
 
     class JungFrauImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):

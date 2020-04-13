@@ -104,8 +104,8 @@ class Mediator(QObject):
     def onImageMaskTileEdgeChange(self, value: bool):
         self._meta.hset(mt.IMAGE_PROC, "mask_tile", str(value))
 
-    def onImageMaskInModulesToggled(self, value: bool):
-        self._meta.hset(mt.IMAGE_PROC, "mask_in_modules", str(value))
+    def onImageMaskSaveInModulesToggled(self, value: bool):
+        self._meta.hset(mt.IMAGE_PROC, "mask_save_in_modules", str(value))
 
     def onGeomStackOnlyChange(self, value: bool):
         self._meta.hset(mt.GEOMETRY_PROC, "stack_only", str(value))

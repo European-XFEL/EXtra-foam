@@ -79,7 +79,7 @@ class MaskItem(pg.GraphicsObject):
     _mask_rect = QRectF(0, 0, 0, 0)
 
     _TRANSPARENT = QColor(0, 0, 0, 0)
-    _OPAQUE = QColor(0, 0, 0, 255)
+    _OPAQUE = QColor(255, 255, 255, 180)
 
     def __init__(self, item):
         """Initialization.
@@ -138,7 +138,7 @@ class MaskItem(pg.GraphicsObject):
         h = int(rect.height())
 
         if self.state == MaskState.MASK:
-            self._mask_pub.add((x, y, w, h))
+            self._mask_pub.draw((x, y, w, h))
         elif self.state == MaskState.UNMASK:
             self._mask_pub.erase((x, y, w, h))
 

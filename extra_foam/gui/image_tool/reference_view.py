@@ -85,7 +85,7 @@ class ReferenceView(_AbstractImageToolView):
                 os.mkdir(osp.dirname(filepath))
 
             try:
-                write_image(img, filepath)
+                write_image(filepath, img)
             except ValueError as e:
                 logger.error(str(e))
 

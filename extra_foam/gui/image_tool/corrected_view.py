@@ -11,7 +11,7 @@ from string import Template
 
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtWidgets import (
-    QFileDialog, QHBoxLayout, QSplitter, QVBoxLayout, QWidget
+    QHBoxLayout, QSplitter, QVBoxLayout, QWidget
 )
 
 from .simple_image_data import _SimpleImageData
@@ -171,3 +171,7 @@ class CorrectedView(_AbstractImageToolView):
     @pyqtSlot()
     def onRemoveMask(self):
         self._corrected.removeMask()
+
+    @pyqtSlot(bool)
+    def onMaskSaveInModulesChange(self, state):
+        self._corrected.setMaskSaveInModules(state)

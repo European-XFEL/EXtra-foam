@@ -26,6 +26,7 @@ class GeometryView(_AbstractImageToolView):
         self._corrected = ImageViewF(hide_axis=False)
 
         self.initUI()
+        self.initConnections()
 
     def initUI(self):
         """Override."""

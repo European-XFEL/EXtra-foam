@@ -15,8 +15,9 @@ from PyQt5.QtWidgets import QFileDialog
 
 from .image_view_base import ImageViewF
 from .plot_items import MaskItem
-from ...file_io import write_image
+from ...file_io import write_image, read_numpy_array
 from ...logger import logger
+from ..items import GeometryItem
 
 
 class ImageAnalysis(ImageViewF):
@@ -31,6 +32,8 @@ class ImageAnalysis(ImageViewF):
     def __init__(self, has_roi=True, **kwargs):
         """Initialization."""
         super().__init__(has_roi=has_roi, **kwargs)
+
+        self._geom = GeometryItem()
 
         self._mask_item = MaskItem(self._image_item)
 
@@ -47,6 +50,7 @@ class ImageAnalysis(ImageViewF):
         self._hist_widget.setImageItem(self._image_item)
 
         self._image_data = None
+        self._mask_save_in_modules = False
 
     def setImage(self, *args, **kwargs):
         """Overload."""
@@ -77,7 +81,7 @@ class ImageAnalysis(ImageViewF):
             filter=self.IMAGE_FILE_FILTER)[0]
 
         try:
-            write_image(self._image, filepath)
+            write_image(filepath, self._image)
             logger.info(f"[Image tool] Image saved in {filepath}")
         except ValueError as e:
             logger.error(f"[Image tool] {str(e)}")
@@ -89,6 +93,9 @@ class ImageAnalysis(ImageViewF):
     def removeMask(self):
         self._mask_item.removeMask()
 
+    def setMaskSaveInModules(self, state):
+        self._mask_save_in_modules = state
+
     def saveImageMask(self):
         if self._image is None:
             logger.error("No image is available!")
@@ -98,7 +105,13 @@ class ImageAnalysis(ImageViewF):
         if not filepath:
             return
 
-        np.save(filepath, self._mask_item.mask())
+        mask = self._mask_item.mask()
+        if self._mask_save_in_modules:
+            # TODO: convert assembled mask to mask in modules
+            raise NotImplementedError
+
+        np.save(filepath, mask)
+
         logger.info(f"Image mask saved in {filepath}.npy")
 
     def loadImageMask(self):
@@ -111,17 +124,39 @@ class ImageAnalysis(ImageViewF):
             return
 
         try:
-            image_mask = np.load(filepath)
-        except (IOError, OSError) as e:
-            logger.error(f"Cannot load mask from {filepath}")
+            image_mask = read_numpy_array(filepath, dimensions=(2, 3))
+        except ValueError as e:
+            logger.error(f"Cannot load mask from {filepath}: {str(e)}")
             return
 
+        logger.info(f"Loaded mask data with shape = {image_mask.shape}, "
+                    f"dtype = {image_mask.dtype}")
+
+        if image_mask.ndim == 3:
+            try:
+                geom = self._geom.geometry
+            except Exception as e:
+                logger.error(f"Failed to create geometry to assemble mask: "
+                             f"{str(e)}")
+                return
+
+            if geom is None:
+                logger.error(f"Mask in modules requires a geometry!")
+                return
+
+            try:
+                assembled = geom.output_array_for_position_fast(dtype=bool)
+                geom.position_all_modules(image_mask, out=assembled)
+                image_mask = assembled
+            except Exception as e:
+                logger.error(f"Failed to assemble mask in modules: {str(e)}")
+                return
+
         if image_mask.shape != self._image.shape:
-            logger.error(f"The shape of image mask {image_mask.shape} is "
+            logger.error(f"Shape of the image mask {image_mask.shape} is "
                          f"different from the image {self._image.shape}!")
             return
 
-        logger.info(f"Loaded image mask from {filepath}")
         self._mask_item.setMask(image_mask)
 
 
