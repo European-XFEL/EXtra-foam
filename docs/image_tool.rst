@@ -9,12 +9,11 @@ IMAGE TOOL
 The *ImageTool* window is the second control window which provides various image-related
 information and controls.
 
+.. image:: images/ImageTool.png
+   :width: 800
 
 Image control
 -------------
-
-.. image:: images/ImageTool.png
-   :width: 800
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
@@ -40,24 +39,45 @@ Image control
 +----------------------------+--------------------------------------------------------------------+
 
 
-Mask image
+Mask panel
 """"""""""
 
-The action bar provides several actions for real-time masking operation. The pixel values in the
-masked region will be set to 0.
+.. image:: images/mask_panel.png
+
+Besides the nan pixels inherited from the calibration pipeline, users are allowed to mask additional
+pixels to nan in this panel with threshold mask, tile edge mask and image mask.
+
+It should be noted that image mask is treated differently in **EXtra-foam**. One can draw and erase
+image mask at run time as well as save/load it as an assembled image or in modules if the detector
+has a geometry. Nan pixels outside the masked region of the image mask will not be saved and thus
+will also not be overwritten after loading an image mask from file.
 
 +----------------------------+--------------------------------------------------------------------+
 | Input                      | Description                                                        |
 +============================+====================================================================+
-| ``Mask``                   | Mask a rectangular region.                                         |
+| ``Threshold mask``         | An interval that pixels with values outside the interval will be   |
+|                            | masked. Please distinguish *threshold mask* from clipping_.        |
 +----------------------------+--------------------------------------------------------------------+
-| ``Unmask``                 | Remove mask in a rectangular region.                               |
+| ``Mask tile edges``        | Mask the edge pixel of each tile. *Only applicable for AGIPD, LPD  |
+|                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
+|                            | :ref:`Geometry`.                                                   |
 +----------------------------+--------------------------------------------------------------------+
-| ``Trash mask``             | Remove all the mask.                                               |
+| ``Draw``                   | Draw mask in a rectangular region.                                 |
 +----------------------------+--------------------------------------------------------------------+
-| ``Save image mask``        | Save the current image mask in `.npy` format.                      |
+| ``Erase``                  | Erase mask in a rectangular region.                                |
 +----------------------------+--------------------------------------------------------------------+
-| ``Load image mask``        | Load a image mask in `.npy` format.                                |
+| ``Remove mask``            | Remove the image mask.                                             |
++----------------------------+--------------------------------------------------------------------+
+| ``Load mask``              | Load an image mask in `.npy` format. The dtype of the loaded       |
+|                            | numpy array will be casted into bool if it is not. For detectors   |
+|                            | with a geometry, it is allowed to load an image mask in modules,   |
+|                            | i.e., an array which has the shape (modules, ss, fs).              |
++----------------------------+--------------------------------------------------------------------+
+| ``Save mask``              | Save the current image mask in `.npy` format.                      |
++----------------------------+--------------------------------------------------------------------+
+| ``Save mask in modules``   | Save image mask in modules. *Only applicable for AGIPD, LPD        |
+|                            | and DSSC if EXtra-foam is selected as the* ``Assembler`` *in*      |
+|                            | :ref:`Geometry`.                                                   |
 +----------------------------+--------------------------------------------------------------------+
 
 
