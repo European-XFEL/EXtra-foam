@@ -74,7 +74,9 @@ class _SimpleImageData:
     @cached_property
     def masked(self):
         img = self._image.copy()
-        mask_image_data(img, threshold_mask=self._threshold_mask)
+        mask_image_data(img,
+                        threshold_mask=self._threshold_mask,
+                        keep_nan=False)
         return img
 
     @classmethod

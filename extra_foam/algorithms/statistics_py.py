@@ -148,7 +148,7 @@ def nanhist_with_stats(roi, bin_range=(-np.inf, np.inf), n_bins=10):
     # TODO: the following three steps can be merged into one to improve
     #       the performance.
     filtered = roi.copy()
-    mask_image_data(filtered, threshold_mask=bin_range, keep_nan=True)
+    mask_image_data(filtered, threshold_mask=bin_range)
     filtered = filtered[~np.isnan(filtered)]
 
     outer_edges = _get_outer_edges(filtered, bin_range)

@@ -171,8 +171,7 @@ class ImageRoiPulse(_RoiProcessorBase):
 
         mask_image_data(roi,
                         image_mask=image_mask,
-                        threshold_mask=threshold_mask,
-                        keep_nan=True)
+                        threshold_mask=threshold_mask)
         return handler(roi, axis=(-1, -2))
 
     def _process_norm(self, assembled, processed):

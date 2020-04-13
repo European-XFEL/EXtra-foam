@@ -26,11 +26,13 @@ using ::testing::ElementsAreArray;
 using ::testing::NanSensitiveFloatEq;
 using ::testing::FloatEq;
 
+auto nan = std::numeric_limits<float>::quiet_NaN();
+auto zero_mt = NanSensitiveFloatEq(0.f);
+auto nan_mt = NanSensitiveFloatEq(nan);
+
 
 TEST(TestNanmeanImageArray, TestGeneral)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
   auto inf = std::numeric_limits<float>::infinity();
 
   // lvalue
@@ -48,8 +50,6 @@ TEST(TestNanmeanImageArray, TestGeneral)
 
 TEST(TestNanmeanImageArray, TestTwoImages)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
   auto inf = std::numeric_limits<float>::infinity();
 
   // lvalue
@@ -65,211 +65,202 @@ TEST(TestNanmeanImageArray, TestTwoImages)
   EXPECT_THAT(nanmeanImageArray(std::move(img1), std::move(img2)), ElementsAreArray(ret_gt));
 }
 
+TEST(TestImageDataMask, TestGeneral)
+{
+  xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
+  xt::xtensor<bool, 2> out {{false, false, false}, {false, false, false}};
+
+  xt::xtensor<bool, 2> out_w {{false, false}, {false, false}};
+  EXPECT_THROW(imageDataNanMask(img, out_w), std::invalid_argument);
+
+  imageDataNanMask(img, out);
+  EXPECT_THAT(out, ElementsAre(false, true, false, false, false, true));
+}
+
 TEST(TestMaskImageData, Test2DRaw)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
     xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
     f(img);
-    EXPECT_THAT(img, ElementsAre(1.f, nan_mt, 3.f, 4.f, 5.f, nan_mt));
+    EXPECT_THAT(img, ElementsAre(1.f, mt, 3.f, 4.f, 5.f, mt));
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 2>>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 2>>, nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test2DThresholdMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
     xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, 6.f}};
     f(img, 2, 4);
-    EXPECT_THAT(img, ElementsAre(nan_mt, nan_mt, 3.f, 4.f, nan_mt, nan_mt));
+    EXPECT_THAT(img, ElementsAre(mt, mt, 3.f, 4.f, mt, mt));
+
+    f(img, 2, 4);
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 2>, float>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 2>, float>, nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>, float>, NanSensitiveFloatEq(0.f));
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>, float>, NanSensitiveFloatEq(nan));
+
+  auto testMaskImageDataWithOutput = [](auto f, auto mt)
+  {
+    xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, 6.f}};
+    xt::xtensor<bool, 2> out {{false, false, false}, {false, false, false}};
+    f(img, 2, 4, out);
+    EXPECT_THAT(img, ElementsAre(mt, mt, 3.f, 4.f, mt, mt));
+    EXPECT_THAT(out, ElementsAre(true, true, false, false, true, true));
+  };
+
+  testMaskImageDataWithOutput(maskImageDataZero<xt::xtensor<float, 2>, float, xt::xtensor<bool, 2>>, zero_mt);
+  testMaskImageDataWithOutput(maskImageDataNan<xt::xtensor<float, 2>, float, xt::xtensor<bool, 2>>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test2DImageMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](float v)
+  auto testMaskImageData = [](auto func, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-
     xt::xtensor<float, 2> img {{1.f, 2.f, nan}, {4.f, 5.f, 6.f}};
 
     xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
-    if (v == 0.)
-      EXPECT_THROW(maskZeroImageData(img, mask_w), std::invalid_argument);
-    else EXPECT_THROW(maskNanImageData(img, mask_w), std::invalid_argument);
+    EXPECT_THROW(func(img, mask_w), std::invalid_argument);
 
     xt::xtensor<bool, 2> mask {{true, true, false}, {true, false, false}};
-    if (v == 0.)
-      maskZeroImageData(img, mask);
-    else maskNanImageData(img, mask);
-    EXPECT_THAT(img, ElementsAre(nan_mt, nan_mt, nan_mt, nan_mt, 5.f, 6.f));
+    func(img, mask);
+    EXPECT_THAT(img, ElementsAre(mt, mt, mt, mt, 5.f, 6.f));
   };
 
-  testMaskImageData(0.);
-  testMaskImageData(nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>, xt::xtensor<bool, 2>>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>, xt::xtensor<bool, 2>>, nan_mt);
+
+  auto testMaskImageDataWithOutput = [](auto func, auto mt)
+  {
+    xt::xtensor<float, 2> img {{1.f, 2.f, nan}, {4.f, 5.f, 6.f}};
+    xt::xtensor<bool, 2> out {{false, false, false}, {false, false, false}};
+    xt::xtensor<bool, 2> mask {{true, true, false}, {true, false, false}};
+
+    xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+    EXPECT_THROW(func(img, mask_w, out), std::invalid_argument);
+
+    xt::xtensor<bool, 2> out_w {{false, false}, {false, false}};
+    EXPECT_THROW(func(img, mask, out_w), std::invalid_argument);
+
+    func(img, mask, out);
+    EXPECT_THAT(img, ElementsAre(mt, mt, mt, mt, 5.f, 6.f));
+    EXPECT_THAT(out, ElementsAre(true, true, true, true, false, false));
+  };
+
+  testMaskImageDataWithOutput(maskImageDataZero<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, xt::xtensor<bool, 2>>,
+                              zero_mt);
+  testMaskImageDataWithOutput(maskImageDataNan<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, xt::xtensor<bool, 2>>,
+                              nan_mt);
 }
 
 TEST(TestMaskImageData, Test2DBothMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-
     xt::xtensor<float, 2> img {{1.f, 2.f, 3.f}, {4.f, nan, 6.f}};
+    xt::xtensor<bool, 2> mask {{true, true,  false}, {true, false, false}};
 
     xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
     EXPECT_THROW(f(img, mask_w, 2, 4), std::invalid_argument);
 
-    xt::xtensor<bool, 2> mask {{true, true,  false}, {true, false, false}};
     f(img, mask, 2, 4);
-    EXPECT_THAT(img, ElementsAre(nan_mt, nan_mt, 3.f, nan_mt, nan_mt, nan_mt));
+    EXPECT_THAT(img, ElementsAre(mt, mt, 3.f, mt, mt, mt));
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, nan);
-}
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float>, nan_mt);
 
-TEST(TestMaskImageDataAndReturnMask, TestWithoutThreshold)
-{
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
+  auto testMaskImageDataWithOutput = [](auto func, auto mt)
+  {
+    xt::xtensor<float, 2> img {{1.f, 2.f, 3.f}, {4.f, nan, 6.f}};
+    xt::xtensor<bool, 2> out {{false, false, false}, {false, false, false}};
+    xt::xtensor<bool, 2> mask {{true, true,  false}, {true, false, false}};
 
-  xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
+    xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
+    EXPECT_THROW(func(img, mask_w, 2, 4, out), std::invalid_argument);
 
-  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
-  EXPECT_THROW(maskImageData(img, mask_w), std::invalid_argument);
+    xt::xtensor<bool, 2> out_w {{false, false}, {false, false}};
+    EXPECT_THROW(func(img, mask, 2, 4, out_w), std::invalid_argument);
 
-  xt::xtensor<bool, 2> mask {{false, true, true}, {false, true, false}};
-  maskImageData(img, mask);
-  EXPECT_THAT(img, ElementsAre(1.f, nan_mt, nan_mt, 4.f, nan_mt, nan_mt));
-  EXPECT_THAT(mask, ElementsAre(false, true, true, false, true, true));
-}
+    func(img, mask, 2, 4, out);
+    EXPECT_THAT(img, ElementsAre(mt, mt, 3.f, mt, mt, mt));
+    EXPECT_THAT(out, ElementsAre(true, true, false, true, true, true));
+  };
 
-TEST(TestMaskImageDataAndReturnMask, TestWithThreshold)
-{
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
-  xt::xtensor<float, 2> img {{1.f, nan, 3.f}, {4.f, 5.f, nan}};
-
-  xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
-  EXPECT_THROW(maskImageData(img, mask_w, 2, 4), std::invalid_argument);
-
-  xt::xtensor<bool, 2> mask {{false, true, true}, {false, true, false}};
-  maskImageData(img, mask, 2, 4);
-  EXPECT_THAT(img, ElementsAre(nan_mt, nan_mt, nan_mt, 4.f, nan_mt, nan_mt));
-  EXPECT_THAT(mask, ElementsAre(true, true, true, false, true, true));
+  testMaskImageDataWithOutput(
+    maskImageDataZero<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float, xt::xtensor<bool, 2>>, zero_mt);
+  testMaskImageDataWithOutput(
+    maskImageDataNan<xt::xtensor<float, 2>, xt::xtensor<bool, 2>, float, xt::xtensor<bool, 2>>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test3DRaw)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-    xt::xtensor<float, 3> imgs {{{1.f, 2.f, nan}, {4.f, nan, 6.f}},
-                                {{nan, 2.f, 3.f}, {4.f, nan, 6.f}}};
+    xt::xtensor<float, 3> imgs {{{1.f, 2.f, nan}, {4.f, nan, 6.f}}, {{nan, 2.f, 3.f}, {4.f, nan, 6.f}}};
     f(imgs);
-    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()), ElementsAre(1.f, 2.f, nan_mt, 4.f, nan_mt, 6.f));
-    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()), ElementsAre(nan_mt, 2.f, 3.f, 4.f, nan_mt, 6.f));
+    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()), ElementsAre(1.f, 2.f, mt, 4.f, mt, 6.f));
+    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()), ElementsAre(mt, 2.f, 3.f, 4.f, mt, 6.f));
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 3>>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 3>>, nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 3>>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 3>>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test3DThresholdMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-
-    xt::xtensor<float, 3> imgs{{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}},
-                               {{2.f, nan, 4.f}, {5.f, 6.f, 7.f}}};
+    xt::xtensor<float, 3> imgs{{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}}, {{2.f, nan, 4.f}, {5.f, 6.f, 7.f}}};
     f(imgs, 2, 4);
-    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
-                ElementsAre(nan_mt, 2.f, 3.f, 4.f, nan_mt, nan_mt));
-    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
-                ElementsAre(2.f, nan_mt, 4.f, nan_mt, nan_mt, nan_mt));
+    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()), ElementsAre(mt, 2.f, 3.f, 4.f, mt, mt));
+    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()), ElementsAre(2.f, mt, 4.f, mt, mt, mt));
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 3>, float>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 3>, float>, nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 3>, float>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 3>, float>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test3DImageMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-
-    xt::xtensor<float, 3> imgs {{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}},
-                               {{2.f, 3.f, 4.f}, {5.f, 6.f, 7.f}}};
+    xt::xtensor<float, 3> imgs {{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}}, {{2.f, 3.f, 4.f}, {5.f, 6.f, 7.f}}};
 
     xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
-    if (v == 0.)
-      EXPECT_THROW(maskZeroImageData(imgs, mask_w), std::invalid_argument);
-    else EXPECT_THROW(maskNanImageData(imgs, mask_w), std::invalid_argument);
+    EXPECT_THROW(f(imgs, mask_w), std::invalid_argument);
 
     xt::xtensor<bool, 2> mask {{true, true,  false}, {true, false, false}};
-    if (v == 0.)
-      maskZeroImageData(imgs, mask);
-    else maskNanImageData(imgs, mask);
-    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
-                ElementsAre(nan_mt, nan_mt, 3.f, nan_mt, 5.f, 6.f));
-    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
-                ElementsAre(nan_mt, nan_mt, 4.f, nan_mt, 6.f, 7.f));
+    f(imgs, mask);
+    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()), ElementsAre(mt, mt, 3.f, mt, 5.f, 6.f));
+    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()), ElementsAre(mt, mt, 4.f, mt, 6.f, 7.f));
   };
 
-  testMaskImageData(0.0);
-  testMaskImageData(nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 3>, xt::xtensor<bool, 2>>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 3>, xt::xtensor<bool, 2>>, nan_mt);
 }
 
 TEST(TestMaskImageData, Test3DBothMask)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
-  auto testMaskImageData = [nan](auto f, float v)
+  auto testMaskImageData = [](auto f, auto mt)
   {
-    auto nan_mt = NanSensitiveFloatEq(v);
-
-    xt::xtensor<float, 3> imgs {{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}},
-                                {{2.f, 3.f, nan}, {5.f, 6.f, 7.f}}};
+    xt::xtensor<float, 3> imgs {{{1.f, 2.f, 3.f}, {4.f, 5.f, 6.f}}, {{2.f, 3.f, nan}, {5.f, 6.f, 7.f}}};
 
     xt::xtensor<bool, 2> mask_w {{true, true}, {true, true}};
     EXPECT_THROW(f(imgs, mask_w, 2, 4), std::invalid_argument);
 
     xt::xtensor<bool, 2> mask {{true, true,  false}, {true, false, false}};
     f(imgs, mask, 2, 4);
-    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()),
-                ElementsAre(nan_mt, nan_mt, 3.f, nan_mt, nan_mt, nan_mt));
-    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()),
-                ElementsAre(nan_mt, nan_mt, nan_mt, nan_mt, nan_mt, nan_mt));
+    EXPECT_THAT(xt::view(imgs, 0, xt::all(), xt::all()), ElementsAre(mt, mt, 3.f, mt, mt, mt));
+    EXPECT_THAT(xt::view(imgs, 1, xt::all(), xt::all()), ElementsAre(mt, mt, mt, mt, mt, mt));
   };
 
-  testMaskImageData(maskZeroImageData<xt::xtensor<float, 3>, xt::xtensor<bool, 2>, float>, 0.0);
-  testMaskImageData(maskNanImageData<xt::xtensor<float, 3>, xt::xtensor<bool, 2>, float>, nan);
+  testMaskImageData(maskImageDataZero<xt::xtensor<float, 3>, xt::xtensor<bool, 2>, float>, zero_mt);
+  testMaskImageData(maskImageDataNan<xt::xtensor<float, 3>, xt::xtensor<bool, 2>, float>, nan_mt);
 }
 
 TEST(TestMovingAvgImageData, Test2D)
@@ -288,9 +279,6 @@ TEST(TestMovingAvgImageData, Test2D)
 
 TEST(TestMovingAvgImageData, Test2DWithNan)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 2> img1 {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
   xt::xtensor<float, 2> img2 {{2.f, 3.f, nan}, {4.f, 5.f, 6.f}};
 
@@ -300,8 +288,6 @@ TEST(TestMovingAvgImageData, Test2DWithNan)
 
 TEST(TestMovingAvgImageData, Test3D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-
   xt::xtensor<float, 3> imgs1 {{{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}},
                                {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
   xt::xtensor<float, 3> imgs2 {{{2.f, 3.f, 4.f}, {4.f, 5.f, 6.f}},
@@ -320,9 +306,6 @@ TEST(TestMovingAvgImageData, Test3D)
 
 TEST(TestMovingAvgImageData, Test3DWithNaN)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 3> imgs1 {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
                                {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
   xt::xtensor<float, 3> imgs2 {{{2.f, 3.f, nan}, {4.f, 5.f, 6.f}},
@@ -340,9 +323,6 @@ TEST(TestMovingAvgImageData, Test3DWithNaN)
 
 TEST(correctImageData, TestOffset3D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
                               {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
   xt::xtensor<float, 3> offset {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
@@ -357,9 +337,6 @@ TEST(correctImageData, TestOffset3D)
 
 TEST(correctImageData, TestOffset2D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
   xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
   correctImageData<OffsetPolicy>(img, offset);
@@ -369,9 +346,6 @@ TEST(correctImageData, TestOffset2D)
 
 TEST(correctImageData, TestGain3D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
                               {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
   xt::xtensor<float, 3> gain {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
@@ -386,9 +360,6 @@ TEST(correctImageData, TestGain3D)
 
 TEST(correctImageData, TestGain2D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
   xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
   correctImageData<GainPolicy>(img, offset);
@@ -398,9 +369,6 @@ TEST(correctImageData, TestGain2D)
 
 TEST(correctImageData, TestGainOffset3D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 3> imgs {{{nan, 2.f, nan}, {3.f, 4.f, 5.f}},
                               {{1.f, 2.f, 3.f}, {3.f, 4.f, 5.f}}};
   xt::xtensor<float, 3> offset {{{2.f, 4.f, nan}, {4.f, 5.f, 6.f}},
@@ -417,9 +385,6 @@ TEST(correctImageData, TestGainOffset3D)
 
 TEST(correctImageData, TestGainOffset2D)
 {
-  auto nan = std::numeric_limits<float>::quiet_NaN();
-  auto nan_mt = NanSensitiveFloatEq(nan);
-
   xt::xtensor<float, 2> img {{nan, 2.f, nan}, {3.f, 4.f, 5.f}};
   xt::xtensor<float, 2> offset {{2.f, 4.f, nan}, {4.f, 4.f, 6.f}};
   xt::xtensor<float, 2> gain {{2.f, 1.f, 2.f}, {1.f, 2.f, 2.f}};

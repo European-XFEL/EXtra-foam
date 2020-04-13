@@ -16,8 +16,7 @@ import numpy as np
 from ..config import config, AnalysisType, PumpProbeMode
 
 from extra_foam.algorithms import (
-    intersection, movingAvgImageData, image_with_mask,
-    mask_image_data, nanmean_image_data
+    intersection, movingAvgImageData, mask_image_data, nanmean_image_data
 )
 
 
@@ -529,16 +528,17 @@ class ImageData:
         instance.masked_mean = instance.mean.copy()
         if image_mask is None:
             image_mask = np.zeros(arr.shape[-2:], dtype=np.bool)
-        mask = image_mask.copy()
-        image_with_mask(instance.masked_mean, mask,
-                        threshold_mask=threshold_mask)
+        mask = np.zeros_like(image_mask)
+        mask_image_data(instance.masked_mean,
+                        image_mask=image_mask,
+                        threshold_mask=threshold_mask,
+                        out=mask)
 
         if arr.ndim == 3:
             for idx in poi_indices:
                 mask_image_data(instance.images[idx],
                                 image_mask=image_mask,
-                                threshold_mask=threshold_mask,
-                                keep_nan=True)
+                                threshold_mask=threshold_mask)
 
         instance.mask = mask
         instance.image_mask = image_mask
