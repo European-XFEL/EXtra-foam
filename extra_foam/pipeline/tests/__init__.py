@@ -1,4 +1,5 @@
 import random
+import time
 
 import numpy as np
 
@@ -147,3 +148,36 @@ class _TestDataMixin:
             pass
 
         return processed
+
+
+class _RawDataMixin:
+    """Generate raw data used in test."""
+    @staticmethod
+    def _update_metadata(meta, src, timestamp, tid):
+        sec, frac = str(timestamp).split('.')
+        meta[src] = {
+            'source': src,
+            'timestamp': timestamp,
+            'timestamp.tid': tid,
+            'timestamp.sec': sec,
+            'timestamp.frac': frac.ljust(18, '0')  # attosecond resolution
+        }
+        return meta
+
+    def _gen_data(self, tid, mapping):
+        """Generate empty in European XFEL data format.
+
+        :param int tid: train ID.
+        :param dict mapping: a diction with keys being the device IDs /
+            output channels and values being the list of (property, value).
+        """
+        meta, data = {}, {}
+
+        for src, ppts in mapping.items():
+            self._update_metadata(meta, src, time.time(), tid)
+
+            data[src] = dict()
+            for ppt in ppts:
+                data[src][ppt[0]] = ppt[1]
+
+        return data, meta

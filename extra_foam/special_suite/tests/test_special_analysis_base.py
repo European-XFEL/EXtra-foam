@@ -1,5 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
+import functools
+
+import numpy as np
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtTest import QSignalSpy, QTest
@@ -12,6 +15,7 @@ from extra_foam.special_suite.special_analysis_base import (
     _BaseAnalysisCtrlWidgetS, _SpecialAnalysisBase, create_special,
     QThreadKbClient, QThreadFoamClient, QThreadWorker
 )
+from extra_foam.pipeline.tests import _RawDataMixin
 
 
 app = mkQApp()
@@ -19,7 +23,7 @@ app = mkQApp()
 logger.setLevel('CRITICAL')
 
 
-class testSpecialAnalysisBase(unittest.TestCase):
+class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         class DummyCtrlWidget(_BaseAnalysisCtrlWidgetS):
@@ -198,3 +202,40 @@ class testSpecialAnalysisBase(unittest.TestCase):
         self.assertTrue(worker._subtract_dark)  # default value
         widget.dark_subtraction_cb.setChecked(False)
         self.assertFalse(worker._subtract_dark)
+
+    def testFetchPropertData(self):
+        func = self._win._worker._fetch_property_data
+
+        data, _ = self._gen_data(1234, {
+            "src1": [("ppt1", 1)],
+            "src2:output": [("ppt2", 2)],
+            "src3": [("ppt3.value", 3)]
+        })
+
+        assert func(1234, data, "", "") is None
+        assert 1 == func(1234, data, "src1", "ppt1")
+        assert func(1234, data, "src2", "ppt2") is None
+        assert func(1234, data, "src2:output", "ppt2222") is None
+        assert 3 == func(1234, data, "src3", "ppt3")
+
+    def testSqueezeCameraImage(self):
+        a1d = np.ones((4, ))
+        a2d = np.ones((2, 2))
+        a3d = np.ones((3, 3, 1))
+        a3d_f = np.ones((3, 3, 2))
+        a4d = np.ones((2, 2, 2, 2))
+
+        func = functools.partial(self._win._worker._squeeze_camera_image, 1234)
+
+        assert func(None) is None
+        assert func(a1d) is None
+        assert func(a4d) is None
+
+        ret_2d = func(a2d)
+        np.testing.assert_array_equal(a2d, ret_2d)
+        assert np.float32 == ret_2d.dtype
+
+        ret_3d = func(a3d)
+        np.testing.assert_array_equal(a3d.squeeze(axis=-1), ret_3d)
+        assert np.float32 == ret_3d.dtype
+        assert func(a3d_f) is None

@@ -78,7 +78,7 @@ class CamViewProcessor(QThreadWorker):
                 self.log.error(f"Unexpect exception when getting data array: "
                                f"{repr(e)}")
 
-    @profiler("Module scan Processor")
+    @profiler("Camera view processor")
     def process(self, data):
         """Override."""
         data, _ = data

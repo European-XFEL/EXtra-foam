@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
 )
 
 from .cam_view_w import CamViewWindow
+from .multicam_view_w import MultiCamViewWindow
 from .gotthard_w import GotthardWindow
 from .trxas_w import TrxasWindow
 from .xas_tim_w import XasTimWindow
@@ -91,12 +92,16 @@ class _SpecialSuiteFacadeBase(QMainWindow):
             raise RuntimeError(f"Duplicated special analysis title: {title}")
         self._buttons[title] = btn
 
+    def addCommonSpecials(self):
+        self.addSpecial("cam_view.png", CamViewWindow)
+        self.addSpecial("multi_cam_view.png", MultiCamViewWindow)
+
 
 class FxeSpecialSuiteFacade(_SpecialSuiteFacadeBase):
     def __init__(self):
         super().__init__("FXE")
 
-        self.addSpecial("cam_view.png", CamViewWindow)
+        self.addCommonSpecials()
 
         self.initUI()
         self.show()
@@ -109,7 +114,7 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         # self.addSpecial("xas_tim.png", XasTimWindow)
         self.addSpecial("tr_xas.png", TrxasWindow)
         self.addSpecial("Gotthard.png", GotthardWindow)
-        self.addSpecial("cam_view.png", CamViewWindow)
+        self.addCommonSpecials()
 
         self.initUI()
         self.show()
@@ -120,7 +125,7 @@ class MidSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("MID")
 
         self.addSpecial("Gotthard.png", GotthardWindow)
-        self.addSpecial("cam_view.png", CamViewWindow)
+        self.addCommonSpecials()
 
         self.initUI()
         self.show()
@@ -131,7 +136,7 @@ class DetSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("DET")
 
         self.addSpecial("module_scan.png", ModuleScanWindow)
-        self.addSpecial("cam_view.png", CamViewWindow)
+        self.addCommonSpecials()
 
         self.initUI()
         self.show()
