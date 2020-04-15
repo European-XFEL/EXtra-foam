@@ -47,8 +47,14 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self._non_reconfigurable_widgets = [
             self.save_btn,
             self.load_btn,
-            self.mask_save_in_modules_cb
         ]
+
+        if not self._require_geometry:
+            self.mask_tile_cb.setDisabled(True)
+            self.mask_save_in_modules_cb.setDisabled(True)
+        else:
+            self._non_reconfigurable_widgets.append(
+                self.mask_save_in_modules_cb)
 
         self.initUI()
         self.initConnections()
@@ -62,9 +68,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         layout.addWidget(QLabel("Threshold mask: "), row, 0, AR)
         layout.addWidget(self.threshold_mask_le, row, 1)
 
-        if self._require_geometry:
-            row += 1
-            layout.addWidget(self.mask_tile_cb, row, 0, AR)
+        row += 1
+        layout.addWidget(self.mask_tile_cb, row, 0, AR)
 
         row += 1
         sub_layout = QHBoxLayout()
@@ -108,8 +113,12 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         if assembler == GeomAssembler.EXTRA_GEOM:
             self.mask_tile_cb.setChecked(False)
             self.mask_tile_cb.setEnabled(False)
+
+            self.mask_save_in_modules_cb.setChecked(False)
+            self.mask_save_in_modules_cb.setEnabled(False)
         else:
             self.mask_tile_cb.setEnabled(True)
+            self.mask_save_in_modules_cb.setEnabled(True)
 
     def updateMetaData(self):
         """Override."""
@@ -125,8 +134,8 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         self.threshold_mask_le.setText(cfg["threshold_mask"][1:-1])
         if self._require_geometry:
             self.mask_tile_cb.setChecked(cfg["mask_tile"] == 'True')
-        self.mask_save_in_modules_cb.setChecked(
-            cfg["mask_save_in_modules"] == 'True')
+            self.mask_save_in_modules_cb.setChecked(
+                cfg["mask_save_in_modules"] == 'True')
 
     @pyqtSlot(bool)
     def _updateExclusiveBtns(self, checked):

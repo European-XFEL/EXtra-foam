@@ -408,6 +408,9 @@ class ImageData:
         images (list): a list of pulse images in the train. A value of
             None only indicates that the corresponding pulse image is
             not needed (in the main process).
+        mean (numpy.ndarray): average image over the train.
+        masked_mean (numpy.ndarray): average image over the train with
+            both image mask and threshold mask applied.
         n_images (int): number of images in the train.
         sliced_indices (list): a list of indices which is selected by
             pulse slicer. The slicing is applied before applying any pulse
@@ -426,21 +429,31 @@ class ImageData:
             this image mask is shared by all the pulses in a train. However,
             their overall mask could still be different after applying the
             threshold mask. Shape = (y, x), dtype = np.bool
+        image_mask_in_modules (numpy.ndarray): image mask in modules. Only
+            used for detectors which require geometry to assemble multiple
+            modules.
         threshold_mask (tuple): (lower, upper) of the threshold.
             It should be noted that a pixel with value outside of the boundary
             will be masked as Nan/0, depending on the masking policy.
-        reference (numpy.ndarray): reference image.
-        mean (numpy.ndarray): average image over the train.
         mask (numpy.ndarray): overall mask for the average image.
             Shape = (y, x), dtype = np.bool
-        masked_mean (numpy.ndarray): average image over the train with
-            threshold mask applied.
+        reference (numpy.ndarray): reference image.
     """
+
+    __slots__ = ["_pixel_size",
+                 "images", "mean", "masked_mean",
+                 "sliced_indices", "poi_indices",
+                 "gain_mean", "offset_mean",
+                 "n_dark_pulses", "dark_mean", "dark_count",
+                 "image_mask", "image_mask_in_modules", "threshold_mask", "mask",
+                 "reference"]
 
     def __init__(self):
         self._pixel_size = config['PIXEL_SIZE']
 
         self.images = None
+        self.mean = None
+        self.masked_mean = None
 
         self.sliced_indices = None
         self.poi_indices = None
@@ -453,13 +466,11 @@ class ImageData:
         self.dark_count = 0
 
         self.image_mask = None
+        self.image_mask_in_modules = None
         self.threshold_mask = None
+        self.mask = None
 
         self.reference = None
-
-        self.mean = None
-        self.mask = None
-        self.masked_mean = None
 
     @property
     def pixel_size(self):
@@ -528,11 +539,13 @@ class ImageData:
         instance.masked_mean = instance.mean.copy()
         if image_mask is None:
             image_mask = np.zeros(arr.shape[-2:], dtype=np.bool)
-        mask = np.zeros_like(image_mask)
+        instance.image_mask = image_mask
+
+        instance.mask = np.zeros_like(image_mask)
         mask_image_data(instance.masked_mean,
                         image_mask=image_mask,
                         threshold_mask=threshold_mask,
-                        out=mask)
+                        out=instance.mask)
 
         if arr.ndim == 3:
             for idx in poi_indices:
@@ -540,8 +553,6 @@ class ImageData:
                                 image_mask=image_mask,
                                 threshold_mask=threshold_mask)
 
-        instance.mask = mask
-        instance.image_mask = image_mask
         instance.threshold_mask = threshold_mask
 
         return instance

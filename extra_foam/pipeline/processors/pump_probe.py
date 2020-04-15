@@ -138,7 +138,6 @@ class PumpProbeProcessor(_BaseProcessor):
                         out=mask)
 
         processed.image.mean = images_mean
-        processed.image.mask = mask
         processed.image.masked_mean = masked_mean
 
         # apply mask to the averaged on/off images

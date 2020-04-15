@@ -121,7 +121,11 @@ class ImageViewF(QWidget):
         self.clear()
 
     def updateF(self, data):
-        """This method is called by the parent window."""
+        """This method is called by the parent window.
+
+        The subclass should re-implement this method and call self.setImage
+        in this method.
+        """
         pass
 
     def _initializeROIs(self):
@@ -156,9 +160,13 @@ class ImageViewF(QWidget):
     def rois(self):
         return self._rois
 
-    def setImage(self, img, *, auto_range=False, auto_levels=False,
-                 scale=None, pos=None):
-        """Set the current displayed image.
+    def setImage(self, *args, **kwargs):
+        """Interface method."""
+        self._updateImage(*args, **kwargs)
+
+    def _updateImage(self, img, *, auto_range=False, auto_levels=False,
+                     scale=None, pos=None):
+        """Update the current displayed image.
 
         :param np.ndarray img: the image to be displayed.
         :param bool auto_range: whether to scale/pan the view to fit
@@ -209,7 +217,7 @@ class ImageViewF(QWidget):
         """Re-display the current image with autoLevels == True."""
         if self._image is None:
             return
-        self.setImage(self._image, auto_levels=True)
+        self._updateImage(self._image, auto_levels=True)
 
     def setMouseHoverValueRoundingDecimals(self, v):
         self._mouse_hover_v_rounding_decimals = v

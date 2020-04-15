@@ -17,7 +17,7 @@ from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from .base_processor import _BaseProcessor
 from ..data_model import MovingAverageArray
 from ...algorithms import slice_curve
-from ...config import AnalysisType, Normalizer, list_azimuthal_integ_methods
+from ...config import AnalysisType, Normalizer
 from ...database import Metadata as mt
 from ...utils import profiler
 

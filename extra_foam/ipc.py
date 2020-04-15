@@ -309,7 +309,7 @@ class ImageMaskSub:
                 else:
                     mask[y:y+h, x:x+w] = False
             else:  # data == 'remove'
-                mask = np.zeros(shape, dtype=np.bool)
+                mask.fill(False)
 
             updated = True
 

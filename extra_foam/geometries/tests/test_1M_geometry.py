@@ -20,7 +20,7 @@ _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
 
 
 class _Test1MGeometryMixin:
-    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
+    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
     def testAssemblingSinglePulse(self, dtype):
         modules = np.ones((self.n_modules, *self.module_shape), dtype=dtype)
 
@@ -38,7 +38,13 @@ class _Test1MGeometryMixin:
         assert out_gt.shape == out_fast.shape
         np.testing.assert_array_equal(out_fast, out_gt)
 
-    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
+        # test dismantle
+        dismantled_out = self.geom_fast.output_array_for_dismantle_fast(dtype=_IMAGE_DTYPE)
+        self.geom_fast.dismantle_all_modules(out_fast, dismantled_out)
+
+        np.testing.assert_array_equal(modules, dismantled_out)
+
+    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
     def testAssemblingBridge(self, dtype):
         modules = np.ones((self.n_pulses, self.n_modules, *self.module_shape), dtype=dtype)
 
@@ -56,7 +62,13 @@ class _Test1MGeometryMixin:
         assert out_gt.shape == out_fast.shape
         np.testing.assert_array_equal(out_fast, out_gt)
 
-    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE])
+        # test dismantle
+        dismantled_out = self.geom_fast.output_array_for_dismantle_fast((self.n_pulses,), dtype=_IMAGE_DTYPE)
+        self.geom_fast.dismantle_all_modules(out_fast, dismantled_out)
+
+        np.testing.assert_array_equal(modules, dismantled_out)
+
+    @pytest.mark.parametrize("dtype", [_IMAGE_DTYPE, _RAW_IMAGE_DTYPE, bool])
     def testAssemblingFile(self, dtype):
         modules = StackView(
             {i: np.ones((self.n_pulses, *self.module_shape), dtype=dtype) for i in range(self.n_modules)},

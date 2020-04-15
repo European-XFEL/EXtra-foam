@@ -140,5 +140,50 @@ TYPED_TEST(Geometry1M, testIgnoreTileEdge)
   }
 }
 
+TYPED_TEST(Geometry1M, testDismanleShapeCheck)
+{
+  // src and dst have different memory cells
+  xt::xtensor<float, 3> src1 {
+    xt::ones<float>({3, static_cast<int>(this->shape[0]), static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 4> dst1 { xt::empty<float>({2, this->nm_, this->mh_, this->mw_}) };
+  EXPECT_THROW(this->geom_->dismantleAllModules(src1, dst1), std::invalid_argument);
+
+  // src has incorrect shape
+  xt::xtensor<float, 3> src2 {
+    xt::ones<float>({2, static_cast<int>(this->shape[0]) + 1, static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 4> dst2 { xt::empty<float>({2, this->nm_, this->mh_, this->mw_}) };
+  EXPECT_THROW(this->geom_->dismantleAllModules(src2, dst2), std::invalid_argument);
+
+  // dst has incorrect shape
+  xt::xtensor<float, 3> src3 {
+    xt::ones<float>({2, static_cast<int>(this->shape[0]), static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 4> dst3 { xt::empty<float>({2, this->nm_ + 1, this->mh_, this->mw_}) };
+  EXPECT_THROW(this->geom_->dismantleAllModules(src3, dst3), std::invalid_argument);
+}
+
+TYPED_TEST(Geometry1M, testDismentalAllModulesSinglePulse)
+{
+  xt::xtensor<float, 3> src { xt::ones<float>({this->nm_, this->mh_, this->mw_}) };
+  xt::xtensor<float, 2> dst {
+    xt::zeros<float>({static_cast<int>(this->shape[0]), static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 3> dst_src { xt::zeros<float>(src.shape()) };
+
+  this->geom_->positionAllModules(src, dst);
+  this->geom_->dismantleAllModules(dst, dst_src); // test no throw
+  EXPECT_THAT(dst_src, ::testing::Each(1.f));
+}
+
+TYPED_TEST(Geometry1M, testDismentalAllModules)
+{
+  xt::xtensor<float, 4> src { xt::ones<float>({2, this->nm_, this->mh_, this->mw_}) };
+  xt::xtensor<float, 3> dst {
+    xt::zeros<float>({2, static_cast<int>(this->shape[0]), static_cast<int>(this->shape[1])}) };
+  xt::xtensor<float, 4> dst_src { xt::zeros<float>(src.shape()) };
+
+  this->geom_->positionAllModules(src, dst);
+  this->geom_->dismantleAllModules(dst, dst_src); // test no throw
+  EXPECT_THAT(dst_src, ::testing::Each(1.f));
+}
+
 } //test
 } //foam
