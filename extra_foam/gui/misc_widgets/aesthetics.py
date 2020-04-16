@@ -33,6 +33,7 @@ class QualitativeColor:
     p = (106, 61, 154)  # purple
     d = (202, 178, 214)  # orchid
     w = (177, 89, 40)  # brown
+    i = (192, 192, 192)  # silver
 
     @classmethod
     def mkColor(cls, c, *, alpha=255):

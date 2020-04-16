@@ -9,7 +9,7 @@ All rights reserved.
 """
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QGridLayout, QSplitter
+from PyQt5.QtWidgets import QSplitter
 
 from extra_foam.gui.plot_widgets import ImageViewF, PlotWidgetF
 from extra_foam.gui.misc_widgets import FColor
@@ -60,19 +60,15 @@ class GotthardPpCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
+        layout = self.layout()
 
-        self.addRows(layout, [
-            ("Output channel", self.output_ch_le),
-            ("M.A. window", self.ma_window_le),
-            ("On-pulse slicer ", self.on_slicer_le),
-            ("Off-pulse slicer ", self.off_slicer_le),
-            ("Pump-probe P.O.I.", self.poi_index_le),
-            ("Dark-pulse slicer ", self.dark_slicer_le),
-            ("Dark P.O.I.", self.dark_poi_index_le),
-        ])
-
-        self.setLayout(layout)
+        layout.addRow("Output channel: ", self.output_ch_le)
+        layout.addRow("M.A. window: ", self.ma_window_le)
+        layout.addRow("On-pulse slicer: ", self.on_slicer_le)
+        layout.addRow("Off-pulse slicer: ", self.off_slicer_le)
+        layout.addRow("Pump-probe P.O.I.: ", self.poi_index_le)
+        layout.addRow("Dark-pulse slicer: ", self.dark_slicer_le)
+        layout.addRow("Dark P.O.I.: ", self.dark_poi_index_le)
 
     def initConnections(self):
         """Override."""
@@ -183,9 +179,8 @@ class GotthardPpDarkPulsePlot(PlotWidgetF):
         self._updateTitle()
         self.setLabel('left', "ADU")
         self.setLabel('bottom', "Pixel")
-        self.addLegend(offset=(10, 5))
 
-        self._plot = self.plotCurve(name="Dark", pen=FColor.mkPen("k"))
+        self._plot = self.plotCurve(pen=FColor.mkPen("k"))
 
     def _updateTitle(self):
         self.setTitle(f"Pulse of interest (dark): {self._idx}")

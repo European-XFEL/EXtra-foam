@@ -29,11 +29,10 @@ logger.setLevel('CRITICAL')
 class TestGotthard(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with patch("extra_foam.special_suite.special_analysis_base._SpecialAnalysisBase.startWorker"):
-            cls._win = GotthardWindow('MID')
+        cls._win = GotthardWindow('MID')
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
 

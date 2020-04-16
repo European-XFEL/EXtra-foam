@@ -20,6 +20,7 @@ from .gotthard_w import GotthardWindow
 from .gotthard_pump_probe_w import GotthardPumpProbeWindow
 from .trxas_w import TrxasWindow
 from .xas_tim_w import XasTimWindow
+from .xas_tim_xmcd_w import XasTimXmcdWindow
 from .module_scan_w import ModuleScanWindow
 from ..gui.gui_helpers import create_icon_button
 from .. import __version__
@@ -125,9 +126,10 @@ class ScsSpecialSuiteFacade(_SpecialSuiteFacadeBase):
         super().__init__("SCS")
 
         self.addSpecial(XasTimWindow)
+        self.addSpecial(XasTimXmcdWindow)
         self.addSpecial(TrxasWindow)
-        self.addSpecial(GotthardPumpProbeWindow)
         self.addSpecial(GotthardWindow)
+        self.addSpecial(GotthardPumpProbeWindow)
         self.addCommonSpecials()
 
         self.initUI()

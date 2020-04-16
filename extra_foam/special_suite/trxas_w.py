@@ -9,19 +9,21 @@ All rights reserved.
 """
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QGridLayout, QLabel, QPushButton, QSplitter
+from PyQt5.QtWidgets import QPushButton, QSplitter
+
+from extra_foam.gui.plot_widgets import (
+    ImageViewF, TimedImageViewF, TimedPlotWidgetF
+)
+from extra_foam.gui.misc_widgets import FColor
+from extra_foam.gui.ctrl_widgets.smart_widgets import (
+    SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
+)
 
 from .trxas_proc import TrxasProcessor
 from .special_analysis_base import (
     create_special, QThreadFoamClient, _BaseAnalysisCtrlWidgetS,
     _SpecialAnalysisBase
 )
-from ..gui.plot_widgets import ImageViewF, TimedImageViewF, TimedPlotWidgetF
-from ..gui.misc_widgets import FColor
-from ..gui.ctrl_widgets.smart_widgets import (
-    SmartBoundaryLineEdit, SmartLineEdit, SmartStringLineEdit
-)
-from ..config import config
 
 
 _DEFAULT_N_BINS = "10"
@@ -69,45 +71,17 @@ class TrxasCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
-        AR = Qt.AlignRight
+        layout = self.layout()
 
-        i_row = 0
-        layout.addWidget(QLabel("Delay device ID: "), i_row, 0, AR)
-        layout.addWidget(self.delay_device_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("Delay device property: "), i_row, 0, AR)
-        layout.addWidget(self.delay_ppt_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("Mono device ID: "), i_row, 0, AR)
-        layout.addWidget(self.energy_device_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("Mono device property: "), i_row, 0, AR)
-        layout.addWidget(self.energy_ppt_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("Delay range: "), i_row, 0, AR)
-        layout.addWidget(self.delay_range_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("# of delay bins: "), i_row, 0, AR)
-        layout.addWidget(self.n_delay_bins_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("Energy range: "), i_row, 0, AR)
-        layout.addWidget(self.energy_range_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(QLabel("# of energy bins: "), i_row, 0, AR)
-        layout.addWidget(self.n_energy_bins_le, i_row, 1)
-
-        i_row += 1
-        layout.addWidget(self.swap_btn, i_row, 1)
-
-        self.setLayout(layout)
+        layout.addRow("Delay device ID: ", self.delay_device_le)
+        layout.addRow("Delay device property: ", self.delay_ppt_le)
+        layout.addRow("Mono device ID: ", self.energy_device_le)
+        layout.addRow("Mono device property: ", self.energy_ppt_le)
+        layout.addRow("Delay range: ", self.delay_range_le)
+        layout.addRow("# of delay bins: ", self.n_delay_bins_le)
+        layout.addRow("Energy range: ", self.energy_range_le)
+        layout.addRow("# of energy bins: ", self.n_energy_bins_le)
+        layout.addRow("", self.swap_btn)
 
     def initConnections(self):
         """Override."""
@@ -171,9 +145,10 @@ class TrxasAbsorptionPlot(TimedPlotWidgetF):
         if diff:
             self._a21 = self.plotCurve(name="ROI2/ROI1", pen=FColor.mkPen("g"))
         else:
-            c = config['GUI_ROI_COLORS']
-            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=FColor.mkPen(c[0]))
-            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=FColor.mkPen(c[1]))
+            # same color as ROI1
+            self._a13 = self.plotCurve(name="ROI1/ROI3", pen=FColor.mkPen("b"))
+            # same color as ROI2
+            self._a23 = self.plotCurve(name="ROI2/ROI3", pen=FColor.mkPen("r"))
 
     def refresh(self):
         """Override."""

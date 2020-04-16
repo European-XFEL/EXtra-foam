@@ -11,15 +11,12 @@ import numpy as np
 
 from extra_foam.algorithms import hist_with_stats
 from extra_foam.pipeline.data_model import MovingAverageArray
-from extra_foam.utils import profiler
-from extra_foam.config import config, _MAX_INT32
 
-from .special_analysis_base import QThreadWorker
+from .config import _IMAGE_DTYPE, _MAX_INT32
+from .special_analysis_base import profiler, QThreadWorker
 
 _DEFAULT_N_BINS = 10
 _DEFAULT_BIN_RANGE = "-inf, inf"
-
-_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 
 
 class CamViewProcessor(QThreadWorker):
@@ -103,8 +100,6 @@ class CamViewProcessor(QThreadWorker):
 
         tid = self.getTrainId(meta)
 
-        if not self._output_channel or not self._ppt:
-            return
         img = self.squeezeToImage(
             tid, self.getPropertyData(data, self._output_channel, self._ppt))
         if img is None:

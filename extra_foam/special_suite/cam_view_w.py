@@ -11,7 +11,7 @@ from string import Template
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import QGridLayout, QSplitter
+from PyQt5.QtWidgets import QSplitter
 
 from extra_foam.gui.plot_widgets import HistMixin, ImageViewF, PlotWidgetF
 from extra_foam.gui.ctrl_widgets.smart_widgets import (
@@ -62,17 +62,13 @@ class CamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
+        layout = self.layout()
 
-        self.addRows(layout, [
-            ("Output channel", self.output_ch_le),
-            ("Property", self.property_le),
-            ("M.A. window", self.ma_window_le),
-            ("Bin range", self.bin_range_le),
-            ("# of bins", self.n_bins_le),
-        ])
-
-        self.setLayout(layout)
+        layout.addRow("Output channel: ", self.output_ch_le)
+        layout.addRow("Property: ", self.property_le)
+        layout.addRow("M.A. window: ", self.ma_window_le)
+        layout.addRow("Bin range: ", self.bin_range_le)
+        layout.addRow("# of bins: ", self.n_bins_le)
 
     def initConnections(self):
         """Override."""

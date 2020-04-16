@@ -10,9 +10,8 @@ All rights reserved.
 import numpy as np
 
 from extra_foam.pipeline.data_model import MovingAverageArray
-from extra_foam.utils import profiler
 
-from .special_analysis_base import ProcessingError, QThreadWorker
+from .special_analysis_base import profiler, ProcessingError, QThreadWorker
 from .config import _PIXEL_DTYPE
 
 
@@ -80,8 +79,6 @@ class GotthardPpProcessor(QThreadWorker):
         data, meta = data["raw"], data["meta"]
         tid = self.getTrainId(meta)
 
-        if not self._output_channel or not self._ppt:
-            return
         raw = self.getPropertyData(data, self._output_channel, self._ppt)
 
         # check data shape

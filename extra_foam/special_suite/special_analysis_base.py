@@ -12,6 +12,7 @@ import functools
 from queue import Empty
 import sys
 from threading import Condition
+import time
 import traceback
 from weakref import WeakKeyDictionary
 
@@ -20,8 +21,8 @@ import numpy as np
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QObject, Qt, QThread, QTimer
 from PyQt5.QtGui import QColor, QIntValidator
 from PyQt5.QtWidgets import (
-    QCheckBox, QFileDialog, QFrame, QGridLayout, QLabel, QMainWindow,
-    QPushButton, QSizePolicy, QSplitter, QWidget
+    QCheckBox, QFileDialog, QFormLayout, QFrame, QGridLayout, QLabel,
+    QMainWindow, QPushButton, QSizePolicy, QSplitter, QWidget
 )
 
 from extra_data import RunDirectory
@@ -29,7 +30,7 @@ from karabo_bridge import Client as KaraboBridgeClient
 
 from extra_foam import __version__
 from extra_foam.algorithms import intersection
-from extra_foam.config import config
+from extra_foam.config import config as __core_config
 from extra_foam.database import SourceCatalog
 from extra_foam.gui.ctrl_widgets import _SingleRoiCtrlWidget, SmartLineEdit
 from extra_foam.gui.plot_widgets import ImageViewF
@@ -40,7 +41,12 @@ from extra_foam.pipeline.f_transformer import DataTransformer
 from extra_foam.pipeline.f_zmq import FoamZmqClient
 from extra_foam.pipeline.exceptions import ProcessingError
 
-_IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
+_EXTENSION_PORT = __core_config["EXTENSION_PORT"]
+
+from .config import (
+    _IMAGE_DTYPE, _DEFAULT_CLIENT_PORT, _CLIENT_TIME_OUT,
+    _GUI_PLOT_UPDATE_TIMER, _GUI_SPECIAL_WINDOW_SIZE
+)
 
 
 class _SharedCtrlWidgetS(QFrame):
@@ -69,7 +75,7 @@ class _SharedCtrlWidgetS(QFrame):
 
         self._hostname_le = SmartLineEdit("127.0.0.1")
         self._hostname_le.setMinimumWidth(100)
-        self._port_le = SmartLineEdit(str(config["BRIDGE_PORT"]))
+        self._port_le = SmartLineEdit(str(_DEFAULT_CLIENT_PORT))
         self._port_le.setValidator(QIntValidator(0, 65535))
 
         self.start_btn = QPushButton("Start")
@@ -189,6 +195,11 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
 
         self.setFrameStyle(QFrame.StyledPanel)
 
+        # set default layout
+        layout = QFormLayout()
+        layout.setLabelAlignment(Qt.AlignRight)
+        self.setLayout(layout)
+
     ###################################################################
     # Interface start
     ###################################################################
@@ -207,19 +218,6 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
         """Initialization of signal-slot connections."""
         raise NotImplementedError
 
-    def addRows(self, layout, widgets):
-        """Add controls in ctrl widget line by line."""
-        AR = Qt.AlignRight
-        index = 0
-        for name, widget in widgets:
-            if name:
-                layout.addWidget(QLabel(f"{name}: "), index, 0, AR)
-            if isinstance(widget, QWidget):
-                layout.addWidget(widget, index, 1)
-            else:
-                layout.addLayout(widget, index, 1)
-            index += 1
-
     ###################################################################
     # Interface end
     ###################################################################
@@ -231,6 +229,19 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
     def onStopST(self):
         for widget in self._non_reconfigurable_widgets:
             widget.setEnabled(True)
+
+
+def profiler(info):
+    def wrap(f):
+        @functools.wraps(f)
+        def timed_f(*args, **kwargs):
+            t0 = time.perf_counter()
+            result = f(*args, **kwargs)
+            logger.debug(f"Process time spent on {info}: "
+                         f"{1000 * (time.perf_counter() - t0):.3f} ms")
+            return result
+        return timed_f
+    return wrap
 
 
 class _ThreadLogger(QObject):
@@ -577,7 +588,7 @@ class QThreadFoamClient(_BaseQThreadClient):
         self.onResetST()
 
         with self._client_instance_type(
-                self._endpoint_st, timeout=config["BRIDGE_TIMEOUT"]) as client:
+                self._endpoint_st, timeout=_CLIENT_TIME_OUT) as client:
 
             self.log.info(f"Connected to {self._endpoint_st}")
 
@@ -618,7 +629,7 @@ class QThreadKbClient(_BaseQThreadClient):
         self.onResetST()
 
         with self._client_instance_type(
-                self._endpoint_st, timeout=config["BRIDGE_TIMEOUT"]) as client:
+                self._endpoint_st, timeout=_CLIENT_TIME_OUT) as client:
             self.log.info(f"Connected to {self._endpoint_st}")
             while not self.isInterruptionRequested():
 
@@ -659,7 +670,7 @@ class _SpecialAnalysisBase(QMainWindow):
     It should be inherited by all concrete windows.
     """
 
-    _TOTAL_W, _TOTAL_H = config['GUI_SPECIAL_WINDOW_SIZE']
+    _TOTAL_W, _TOTAL_H = _GUI_SPECIAL_WINDOW_SIZE
 
     started_sgn = pyqtSignal()
     stopped_sgn = pyqtSignal()
@@ -686,7 +697,7 @@ class _SpecialAnalysisBase(QMainWindow):
         self._ctrl_widget_st = self._ctrl_instance_type(topic)
 
         if isinstance(self._client_st, QThreadFoamClient):
-            self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
+            self._com_ctrl_st.updateDefaultPort(_EXTENSION_PORT)
 
         self._plot_widgets_st = WeakKeyDictionary()  # book-keeping plot widgets
         self._image_views_st = WeakKeyDictionary()  # book-keeping ImageView widget
@@ -701,7 +712,7 @@ class _SpecialAnalysisBase(QMainWindow):
         self.setCentralWidget(self._cw_st)
 
         self._plot_timer_st = QTimer()
-        self._plot_timer_st.setInterval(config["GUI_PLOT_UPDATE_TIMER"])
+        self._plot_timer_st.setInterval(_GUI_PLOT_UPDATE_TIMER)
         self._plot_timer_st.timeout.connect(self.updateWidgetsST)
 
         # init UI

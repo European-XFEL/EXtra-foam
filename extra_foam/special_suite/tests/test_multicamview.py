@@ -24,11 +24,10 @@ logger.setLevel('CRITICAL')
 class TestMultiCamView(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        with patch("extra_foam.special_suite.special_analysis_base._SpecialAnalysisBase.startWorker"):
-            cls._win = MultiCamViewWindow('SCS')
+        cls._win = MultiCamViewWindow('SCS')
 
     @classmethod
-    def tearDown(cls):
+    def tearDownClass(cls):
         # explicitly close the MainGUI to avoid error in GuiLogger
         cls._win.close()
 

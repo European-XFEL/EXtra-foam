@@ -11,7 +11,7 @@ from string import Template
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator, QIntValidator
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QGridLayout, QSplitter
+from PyQt5.QtWidgets import QCheckBox, QSplitter
 
 from extra_foam.gui.plot_widgets import (
     HistMixin, ImageViewF, PlotWidgetF
@@ -75,21 +75,17 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
 
     def initUI(self):
         """Override."""
-        layout = QGridLayout()
+        layout = self.layout()
 
-        self.addRows(layout, [
-            ("Output channel", self.output_ch_le),
-            ("M.A. window", self.ma_window_le),
-            ("Pulse slicer ", self.pulse_slicer_le),
-            ("P.O.I. (sliced)", self.poi_index_le),
-            ("Bin range", self.bin_range_le),
-            ("# of bins", self.n_bins_le),
-            ("Scale (eV/pixel)", self.scale_le),
-            ("Offset (eV)", self.offset_le),
-            ("", self.hist_over_ma_cb),
-        ])
-
-        self.setLayout(layout)
+        layout.addRow("Output channel: ", self.output_ch_le)
+        layout.addRow("M.A. window: ", self.ma_window_le)
+        layout.addRow("Pulse slicer: ", self.pulse_slicer_le)
+        layout.addRow("P.O.I. (sliced): ", self.poi_index_le)
+        layout.addRow("Bin range: ", self.bin_range_le)
+        layout.addRow("# of bins: ", self.n_bins_le)
+        layout.addRow("Scale (eV/pixel): ", self.scale_le)
+        layout.addRow("Offset (eV): ", self.offset_le)
+        layout.addRow("", self.hist_over_ma_cb)
 
     def initConnections(self):
         """Override."""
