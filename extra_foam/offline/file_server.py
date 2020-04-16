@@ -111,6 +111,7 @@ def gather_sources(rd_cal, rd_raw):
 
     _prioritized_control_ppts = sorted([
         "actualPosition.value",
+        "actualEnergy.value",
         "actualCurrent.value",
         "pulseEnergy.photonFlux.value",
         "beamPosition.ixPos.value",

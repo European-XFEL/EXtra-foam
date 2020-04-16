@@ -33,5 +33,7 @@ from .datamodel import (
     MovingAverageFloat, MovingAverageDouble
 )
 
-
+from .spectrum import (
+    compute_spectrum_1d
+)
 
