@@ -192,10 +192,8 @@ class ImageAssemblerFactory(ABC):
             try:
                 if src_type == DataSource.FILE:
                     modules_data = self._get_modules_file(raw, src)
-                elif src_type == DataSource.BRIDGE:
-                    modules_data = self._get_modules_bridge(raw, src)
                 else:
-                    raise ValueError(f"Unknown source type: {src_type}")
+                    modules_data = self._get_modules_bridge(raw, src)
 
                 # Remove raw detector data since we do not want to serialize
                 # it and send around.
@@ -240,7 +238,7 @@ class ImageAssemblerFactory(ABC):
             }
             # Assign the global train ID once the main detector was
             # successfully assembled.
-            raw[_TRAIN_ID] = meta[src]["tid"]
+            raw[_TRAIN_ID] = meta[src]["train_id"]
 
     class AgipdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):

@@ -18,6 +18,7 @@ from extra_foam.special_suite.cam_view_w import (
 from extra_foam.special_suite.special_analysis_base import (
     ProcessingError
 )
+from extra_foam.pipeline.tests import _RawDataMixin
 
 app = mkQApp()
 
@@ -81,7 +82,7 @@ class TestCamView(unittest.TestCase):
         self.assertEqual(9, proc.__class__._raw_ma.window)
 
 
-class TestCamViewProcessor:
+class TestCamViewProcessor(_RawDataMixin):
     @pytest.fixture(autouse=True)
     def setUp(self):
         self._proc = CamViewProcessor(object(), object())
@@ -90,37 +91,27 @@ class TestCamViewProcessor:
         self._proc._ppt = "data.image"
         self._img_data = np.random.randint(0, 100, size=(4, 4), dtype=np.uint16)
 
-    def _get_data(self, times=1):
+    def _get_data(self, tid, times=1):
         # data, meta
-        return (
-            {
-                self._proc._output_channel: {
-                    "metadata": {"timestamp.tid": 12345},
-                    self._proc._ppt: self._img_data * times,
-                    "data.3d": np.ones((4, 2, 2)),
-                },
-            },
-            {}
-        )
+        return self._gen_data(tid, {
+            "camera:output": [
+                ("data.image", times * self._img_data),
+                ("data.squeezable.3d", np.ones((2, 2, 1))),
+                ("data.3d", np.ones((4, 2, 2)))
+        ]})
 
     def testPreProcessing(self):
         proc = self._proc
-        data = self._get_data()
+        data = self._get_data(12345)
 
-        with pytest.raises(KeyError, match='false:output'):
-            with patch.object(CamViewProcessor, "_output_channel",
-                              new_callable=PropertyMock, create=True, return_value='false:output'):
-                proc.process(data)
+        with patch.object(CamViewProcessor, "_ppt",
+                          new_callable=PropertyMock, create=True, return_value="data.3d"):
+            assert(proc.process(data) is None)
 
-        with pytest.raises(KeyError, match="false_ppt"):
-            with patch.object(CamViewProcessor, "_ppt",
-                              new_callable=PropertyMock, create=True, return_value="false_ppt"):
-                proc.process(data)
-
-        with pytest.raises(ProcessingError, match="actual 3D"):
-            with patch.object(CamViewProcessor, "_ppt",
-                              new_callable=PropertyMock, create=True, return_value="data.3d"):
-                proc.process(data)
+        with patch.object(CamViewProcessor, "_ppt",
+                          new_callable=PropertyMock, create=True, return_value="data.squeezable.3d"):
+            np.testing.assert_array_equal(np.ones((2, 2), dtype=np.float32),
+                                          proc.process(data)['displayed'])
 
     @patch("extra_foam.special_suite.special_analysis_base.QThreadWorker._loadRunDirectory")
     def testLoadDarkRun(self, load_run):
@@ -160,17 +151,17 @@ class TestCamViewProcessor:
         imgdata_gt_avg = 1.5 * self._img_data
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         np.testing.assert_array_almost_equal(imgdata_gt, proc._dark_ma)
         np.testing.assert_array_almost_equal(imgdata_gt, processed["displayed"])
 
         # 2nd train
-        processed = proc.process(self._get_data(2))
+        processed = proc.process(self._get_data(12346, 2))
         np.testing.assert_array_almost_equal(imgdata_gt_avg, proc._dark_ma)
         np.testing.assert_array_almost_equal(imgdata_gt_avg, processed["displayed"])
 
         # 3nd train
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         np.testing.assert_array_almost_equal(imgdata_gt2, proc._dark_ma)
         np.testing.assert_array_almost_equal(imgdata_gt2, processed["displayed"])
 
@@ -195,14 +186,14 @@ class TestCamViewProcessor:
             imgdata_gt_avg -= offset
 
         # 1st train
-        processed = proc.process(self._get_data())
+        processed = proc.process(self._get_data(12345))
         np.testing.assert_array_almost_equal(imgdata_gt, processed["displayed"])
 
         # 2nd train
         proc._setMaWindow(3)
-        processed = proc.process(self._get_data(2))
+        processed = proc.process(self._get_data(12346, 2))
         np.testing.assert_array_almost_equal(imgdata_gt_avg, processed["displayed"])
 
         # 3nd train
-        processed = proc.process(self._get_data(3))
+        processed = proc.process(self._get_data(12347, 3))
         np.testing.assert_array_almost_equal(imgdata_gt2, processed["displayed"])

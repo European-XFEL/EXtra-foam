@@ -85,7 +85,7 @@ class TestMultiCamViewProcessor(_RawDataMixin):
 
         data = self._gen_data(1234, {
             "camera1:output": [("data.pixel", np.ones((2, 2)))],
-            "camera2:output": [("data.pixel.data", np.ones((3, 3)))],
+            "camera2:output": [("data.pixel", np.ones((3, 3)))],
             "camera3:output": [("data.adc", np.ones((4, 4, 1)))]
         })
 
@@ -95,6 +95,6 @@ class TestMultiCamViewProcessor(_RawDataMixin):
 
         assert processed["images"][0] is None
         assert processed["images"][1] is None
-        assert processed["images"][2] is None
+        np.testing.assert_array_equal(np.ones((3, 3)), processed["images"][2])
         np.testing.assert_array_equal(np.ones((4, 4)), processed["images"][3])
         assert np.float32 == processed["images"][3].dtype

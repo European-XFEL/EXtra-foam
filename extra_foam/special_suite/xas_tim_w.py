@@ -220,6 +220,7 @@ class XasTimAbsorpSpectraPlot(TimedPlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent, show_indicator=True)
 
+        self.setTitle("MCP spectra")
         self.setLabel('left', "Absorption (arb.)")
         self.setLabel('bottom', "Energy (eV)")
         self.addLegend(offset=(-40, 20))
@@ -249,6 +250,7 @@ class XasTimXgmSpectrumPlot(TimedPlotWidgetF):
         """Initialization."""
         super().__init__(parent=parent, show_indicator=True)
 
+        self.setTitle("XGM spectrum")
         self.setLabel('left', "I0 (micro J)")
         self.setLabel('bottom', "Energy (eV)")
 

@@ -46,7 +46,7 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
                           slice(None, None), (0, 1000))
         catalog.add_item(item)
         src = f"{item.name} {item.property}"
-        meta[src] = {'tid': 12346}
+        meta[src] = {'train_id': 12346}
         raw[src] = [100, 200, 300]
         with self.assertRaises(ProcessingError):
             proc.process(data)
@@ -69,7 +69,7 @@ class TestDigitizer(_TestDataMixin, unittest.TestCase):
 
             catalog.add_item(item)
             src = f"{item.name} {item.property}"
-            meta[src] = {'tid': 12346}
+            meta[src] = {'train_id': 12346}
             pulse_integral_gt = np.random.randn(n_pulses)
             raw[src] = pulse_integral_gt
             proc.process(data)

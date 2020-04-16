@@ -21,13 +21,18 @@ class ModuleScanProcessor(QThreadWorker):
 
         pass
 
+    def sources(self):
+        """Override."""
+        return {
+
+        }
+
     @profiler("Module scan Processor")
     def process(self, data):
         """Override."""
+        data, meta = data["raw"], data["meta"]
 
-        data, _ = data
-
-        tid = data['metadata']["timestamp.tid"]
+        tid = self._get_tid(meta)
 
         self.log.info(f"Train {tid} processed")
 

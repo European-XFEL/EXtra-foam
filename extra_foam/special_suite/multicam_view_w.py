@@ -33,11 +33,14 @@ class MultiCamViewCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self.properties = []
         for i in range(_N_CAMERAS):
             # TODO: remove the default value in the future
+            # Here the output channel is allowed to be empty.
             self.output_channels.append(
                 SmartLineEdit("FXE_OGT1_BIU/CAM/CAMERA:daqOutput"))
             self.properties.append(SmartLineEdit("data.image.pixels"))
 
         self._non_reconfigurable_widgets = [
+            *self.output_channels,
+            *self.properties,
         ]
 
         self.initUI()

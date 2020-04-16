@@ -12,8 +12,6 @@ import pytest
 
 import numpy as np
 
-from extra_foam.pipeline.data_model import ProcessedData
-from extra_foam.pipeline.exceptions import ProcessingError
 from extra_foam.pipeline.processors.histogram import HistogramProcessor
 from extra_foam.pipeline.tests import _TestDataMixin
 from extra_foam.config import AnalysisType
@@ -30,20 +28,6 @@ class TestHistogramProcessor(_TestDataMixin):
     def setUp(self):
         self._proc = HistogramProcessor()
         self._proc._n_bins = 5
-
-    def _get_data(self, pulse_resolved=True):
-        processed = ProcessedData(1001)
-
-        if pulse_resolved:
-            processed.pulse.roi.roi1.fom = [10, 20, 30, 40, 20,
-                                            30, 20, 10, 40, 10]
-        else:
-            processed.roi.roi1.fom = 10
-
-        data = {'tid': 1001,
-                'processed': processed,
-                'raw': dict()}
-        return data, processed
 
     def testUndefined(self):
         # Test Undefined analysis type

@@ -162,9 +162,18 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
                 client_stop.assert_called_once()
                 timer_stop.assert_called_once()
 
-        spy = QSignalSpy(win.reset_sgn)
-        QTest.mouseClick(com_ctrl_widget.reset_btn, Qt.LeftButton)
-        self.assertEqual(1, len(spy))
+        with patch.object(win._client, "reset") as client_reset:
+            with patch.object(win._worker, "reset") as worker_reset:
+                with patch.object(win._line, "reset") as line_reset:
+                    with patch.object(win._view, "reset") as view_reset:
+                        spy = QSignalSpy(win.reset_sgn)
+                        QTest.mouseClick(com_ctrl_widget.reset_btn, Qt.LeftButton)
+                        self.assertEqual(1, len(spy))
+
+                        client_reset.assert_called_once()
+                        worker_reset.assert_called_once()
+                        line_reset.assert_called_once()
+                        view_reset.assert_called_once()
 
     def testCommonDarkOperation(self):
         win = self._win
@@ -202,21 +211,6 @@ class testSpecialAnalysisBase(_RawDataMixin, unittest.TestCase):
         self.assertTrue(worker._subtract_dark)  # default value
         widget.dark_subtraction_cb.setChecked(False)
         self.assertFalse(worker._subtract_dark)
-
-    def testFetchPropertData(self):
-        func = self._win._worker._fetch_property_data
-
-        data, _ = self._gen_data(1234, {
-            "src1": [("ppt1", 1)],
-            "src2:output": [("ppt2", 2)],
-            "src3": [("ppt3.value", 3)]
-        })
-
-        assert func(1234, data, "", "") is None
-        assert 1 == func(1234, data, "src1", "ppt1")
-        assert func(1234, data, "src2", "ppt2") is None
-        assert func(1234, data, "src2:output", "ppt2222") is None
-        assert 3 == func(1234, data, "src3", "ppt3")
 
     def testSqueezeCameraImage(self):
         a1d = np.ones((4, ))

@@ -164,12 +164,24 @@ class _RawDataMixin:
         }
         return meta
 
-    def _gen_data(self, tid, mapping):
-        """Generate empty in European XFEL data format.
+    def _create_catalog(self, mapping):
+        """Generate source catalog.
+
+        :param dict mapping: a dictionary with keys being the device categories
+            and values being a list of (device ID, property).
+        """
+        catalog = SourceCatalog()
+        for ctg, srcs in mapping.items():
+            for src, ppt in srcs:
+                catalog.add_item(SourceItem(ctg, src, [], ppt, None, None))
+        return catalog
+
+    def _gen_kb_data(self, tid, mapping):
+        """Generate empty data in European XFEL data format.
 
         :param int tid: train ID.
-        :param dict mapping: a diction with keys being the device IDs /
-            output channels and values being the list of (property, value).
+        :param dict mapping: a dictionary with keys being the device IDs /
+            output channels and values being a list of (property, value).
         """
         meta, data = {}, {}
 
@@ -177,7 +189,32 @@ class _RawDataMixin:
             self._update_metadata(meta, src, time.time(), tid)
 
             data[src] = dict()
-            for ppt in ppts:
-                data[src][ppt[0]] = ppt[1]
+            for ppt, value in ppts:
+                data[src][ppt] = value
 
         return data, meta
+
+    def _gen_data(self, tid, mapping, *, source_type=None):
+        """Generate empty data in EXtra-foam data format.
+
+        :param int tid: train ID.
+        :param dict mapping: a dictionary with keys being the device IDs /
+            output channels and values being the list of (property, value).
+        """
+        meta, data = {}, {}
+
+        for name, ppts in mapping.items():
+            for ppt, value in ppts:
+                if ".value" in ppt:
+                    # slow data from files
+                    ppt = ppt[:-6]
+                src = f"{name} {ppt}"
+                data[src] = value
+                meta[src] = {"train_id": tid, "source_type": source_type}
+
+        return {
+            "raw": data,
+            "processed": None,
+            "meta": meta,
+            "catalog": None,
+        }

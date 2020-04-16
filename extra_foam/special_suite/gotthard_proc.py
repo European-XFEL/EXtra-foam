@@ -42,8 +42,6 @@ class GotthardProcessor(QThreadWorker):
             Shape=(pixels,)
     """
 
-    _DATA_PROPERTY = "data.adc"
-
     _raw_ma = MovingAverageArray()
     _dark_ma = MovingAverageArray(_MAX_INT32)
 
@@ -51,6 +49,7 @@ class GotthardProcessor(QThreadWorker):
         super().__init__(*args, **kwargs)
 
         self._output_channel = ""
+        self._ppt = "data.adc"
 
         self._pulse_slicer = slice(None, None)
         self._poi_index = 0
@@ -96,7 +95,7 @@ class GotthardProcessor(QThreadWorker):
         run = self._loadRunDirectory(dirpath)
         if run is not None:
             try:
-                arr = run.get_array(self._output_channel, self._DATA_PROPERTY)
+                arr = run.get_array(self._output_channel, self._ppt)
                 shape = arr.shape
                 if arr.ndim != 3:
                     self.log.error(f"Data must be a 3D array! "
@@ -119,24 +118,28 @@ class GotthardProcessor(QThreadWorker):
         del self._dark_ma
         self._dark_mean_ma = None
 
+    def sources(self):
+        """Override."""
+        return [
+            (self._output_channel, self._ppt),
+        ]
+
     @profiler("Gotthard Processor")
     def process(self, data):
         """Override."""
-        data, _ = data
+        data, meta = data["raw"], data["meta"]
+        tid = self._get_tid(meta)
 
-        data = data[self._output_channel]
-        tid = data['metadata']["timestamp.tid"]
-
-        try:
-            raw = data[self._DATA_PROPERTY].astype(_PIXEL_DTYPE)
-        except KeyError:
-            raise ProcessingError(f"Gotthard data must contain property "
-                                  f"'{self._DATA_PROPERTY}'")
+        if not self._output_channel or not self._ppt:
+            return
+        raw = self._get_property_data(data, self._output_channel, self._ppt)
 
         # check data shape
         if raw.ndim != 2:
             raise ProcessingError(f"Gotthard data must be a 2D array: "
                                   f"actual {raw.ndim}D")
+
+        raw = raw.astype(_PIXEL_DTYPE)
 
         # check POI index
         max_idx = raw[self._pulse_slicer].shape[0]
