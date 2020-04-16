@@ -164,19 +164,19 @@ class TestTrXasProcessor(_TestDataMixin):
         proc._new_1d_binning()
         assert not proc._bin1d
         assert proc._bin2d
-        assert 4 == len(proc._a13_stats)
-        assert 4 == len(proc._a23_stats)
-        assert 4 == len(proc._a21_stats)
-        assert [1, 0, 1, 1] == proc._delay_bin_counts.tolist()
-        assert [1., 1.5, 2., 2.5, 3.] == proc._delay_bin_edges.tolist()
+        assert len(proc._a13_stats) == 4
+        assert len(proc._a23_stats) == 4
+        assert len(proc._a21_stats) == 4
+        assert proc._delay_bin_counts.tolist() == [1, 0, 1, 1]
+        assert proc._delay_bin_edges.tolist() == [1., 1.5, 2., 2.5, 3.]
 
         # new outsider data point
         proc._update_1d_binning(0.1, 0.2, 0.3, 3.5)  # index 3
-        assert [1, 0, 1, 1] == proc._delay_bin_counts.tolist()
+        assert proc._delay_bin_counts.tolist() == [1, 0, 1, 1]
 
         # new valid data point
         proc._update_1d_binning(0.1, 0.2, 0.3, 2)  # index 2
-        assert [1, 0, 2, 1] == proc._delay_bin_counts.tolist()
+        assert proc._delay_bin_counts.tolist() == [1, 0, 2, 1]
 
         # TODO: test moving average calculation
 

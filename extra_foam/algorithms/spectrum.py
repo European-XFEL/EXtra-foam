@@ -10,8 +10,11 @@ All rights reserved.
 from scipy.stats import binned_statistic
 
 
-def compute_spectrum_1d(x, y, n_bins=10):
+def compute_spectrum_1d(x, y, n_bins=10, *,
+                        bin_range=None, edge2center=True):
     """Compute spectrum."""
-    stats, edges, _ = binned_statistic(x, y, 'mean', n_bins)
-    counts, _, _ = binned_statistic(x, y, 'count', n_bins)
-    return stats, (edges[1:] + edges[:-1]) / 2., counts
+    stats, edges, _ = binned_statistic(x, y, 'mean', n_bins, range=bin_range)
+    counts, _, _ = binned_statistic(x, y, 'count', n_bins, range=bin_range)
+    if edge2center:
+        return stats, (edges[1:] + edges[:-1]) / 2., counts
+    return stats, edges, counts
