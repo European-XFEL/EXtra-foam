@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats
 
 from .special_analysis_base import QThreadWorker
-from ..algorithms import nansum
+from ..algorithms import compute_spectrum_1d, nansum
 from ..pipeline.processors.base_processor import SimpleSequence
 from ..pipeline.processors.binning import _BinMixin
 from ..pipeline.exceptions import ProcessingError
@@ -229,37 +229,19 @@ class TrxasProcessor(QThreadWorker, _BinMixin):
         return roi1, roi2, roi3, sum1, sum2, sum3, delay, energy
 
     def _new_1d_binning(self):
-        self._a13_stats, self._delay_bin_edges, _ = \
-            stats.binned_statistic(self._delays.data(),
-                                   self._a13.data(),
-                                   'mean',
-                                   self._n_delay_bins,
-                                   self._delay_range)
-        np.nan_to_num(self._a13_stats, copy=False)
+        stats_list, self._delay_bin_edges, counts_list = compute_spectrum_1d(
+            self._delays.data(),
+            [self._a13.data(), self._a23.data(), self._a21.data()],
+            n_bins=self._n_delay_bins,
+            bin_range =self._delay_range,
+            edge2center=False,
+        )
 
-        self._delay_bin_counts, _, _ = \
-            stats.binned_statistic(self._delays.data(),
-                                   self._a13.data(),
-                                   'count',
-                                   self._n_delay_bins,
-                                   self._delay_range)
+        for item in stats_list:
+            np.nan_to_num(item, copy=False)
+        self._a13_stats, self._a23_stats, self._a21_stats = stats_list
+        self._delay_bin_counts = counts_list[0]
         np.nan_to_num(self._delay_bin_counts, copy=False)
-
-        self._a23_stats, _, _ = \
-            stats.binned_statistic(self._delays.data(),
-                                   self._a23.data(),
-                                   'mean',
-                                   self._n_delay_bins,
-                                   self._delay_range)
-        np.nan_to_num(self._a23_stats, copy=False)
-
-        self._a21_stats, _, _ = \
-            stats.binned_statistic(self._delays.data(),
-                                   self._a21.data(),
-                                   'mean',
-                                   self._n_delay_bins,
-                                   self._delay_range)
-        np.nan_to_num(self._a21_stats, copy=False)
 
         self._bin1d = False
 
