@@ -66,7 +66,7 @@ class TestFileStreamWindow(unittest.TestCase):
         # test populate sources
         with patch("extra_foam.gui.windows.file_stream_controller_w.load_runs") as lr:
             with patch("extra_foam.gui.windows.file_stream_controller_w.gather_sources") as gs:
-                with patch.object(widget, "fillRunInfo") as fri:
+                with patch.object(widget, "initProgressBar") as fpb:
                     with patch.object(widget, "fillSourceTables") as fst:
                         # test load_runs return (None, None)
                         win._rd_cal, win._rd_raw = object(), object()
@@ -74,17 +74,44 @@ class TestFileStreamWindow(unittest.TestCase):
                         lr.return_value = (None, None)
                         widget.data_folder_le.setText("abc")
                         lr.assert_called_with("abc")
-                        fri.assert_called_with("")
-                        fst.assert_called_with(None, None)  # test _rd_cal and _rd_raw were reset
+                        fpb.assert_called_once_with(0, 0)
+                        fpb.reset_mock()
+                        fst.assert_called_once_with(None, None)  # test _rd_cal and _rd_raw were reset
+                        fst.reset_mock()
 
                         # test load_runs raises
                         lr.side_effect = ValueError
-                        fri.assert_called_with("")
-                        fst.assert_called_with(None, None)
-
-                        # test load_runs return
-                        lr.side_effect = None
-                        gs.return_value = ({"DET1", "DET2"},
-                                           {"output1", "output2"},
-                                           {"motor1", "motor2"})
                         widget.data_folder_le.setText("efg")
+                        fpb.assert_called_once_with(0, 0)
+                        fpb.reset_mock()
+                        fst.assert_called_once_with(None, None)
+                        fst.reset_mock()
+
+                    # test load_runs return
+                    lr.side_effect = None
+                    gs.return_value = ({"DET1": ["data.adc"]},
+                                       {"output1": ["x", "y"]},
+                                       {"motor1": ["actualPosition"], "motor2": ["actualCurrent"]})
+                    widget.data_folder_le.setText("hij")
+                    self.assertEqual("DET1", widget._detector_src_tb.item(0, 0).text())
+                    cell_widget = widget._detector_src_tb.cellWidget(0, 1)
+                    self.assertEqual(1, cell_widget.count())
+                    self.assertEqual("data.adc", cell_widget.currentText())
+
+                    self.assertEqual("output1", widget._instrument_src_tb.item(0, 0).text())
+                    cell_widget = widget._instrument_src_tb.cellWidget(0, 1)
+                    self.assertEqual(2, cell_widget.count())
+                    self.assertEqual("x", cell_widget.currentText())
+
+                    self.assertEqual("motor1", widget._control_src_tb.item(0, 0).text())
+                    cell_widget = widget._control_src_tb.cellWidget(0, 1)
+                    self.assertEqual(1, cell_widget.count())
+                    self.assertEqual("actualPosition", cell_widget.currentText())
+
+                    self.assertEqual("motor2", widget._control_src_tb.item(1, 0).text())
+                    cell_widget = widget._control_src_tb.cellWidget(1, 1)
+                    self.assertEqual(1, cell_widget.count())
+                    self.assertEqual("actualCurrent", cell_widget.currentText())
+
+                    # None is selected.
+                    self.assertEqual(([], [], []), widget.getSourceLists())

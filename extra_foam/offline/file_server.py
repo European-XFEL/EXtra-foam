@@ -26,17 +26,13 @@ def run_info(rd):
     :param DataCollection rd: the run data.
     """
     if rd is None:
-        return ""
+        return 0, 0, 0
 
     first_train = rd.train_ids[0]
     last_train = rd.train_ids[-1]
-    train_count = len(rd.train_ids)
+    n_trains = len(rd.train_ids)
 
-    info = f'First train ID: {first_train} ' \
-           f'/ Last train ID: {last_train} ' \
-           f'/ Train ID span: {train_count}'
-
-    return info
+    return n_trains, first_train, last_train
 
 
 @profiler("Load run directories")
@@ -159,7 +155,7 @@ def generate_meta(devices, tid):
     return meta
 
 
-def serve_files(run_data, port, *,
+def serve_files(run_data, port, shared_tid, *,
                 detector_sources=None,
                 instrument_sources=None,
                 control_sources=None,
@@ -173,6 +169,8 @@ def serve_files(run_data, port, *,
         A list/tuple of calibrated and raw run data.
     port: int
         Local TCP port to bind socket to.
+    shared_tid: int
+        The latest streamed train ID shared between processes.
     detector_sources: list of tuples
         [('device ID/output channel name', 'property')]
     instrument_sources: list of tuples
@@ -220,6 +218,8 @@ def serve_files(run_data, port, *,
                 meta = generate_meta(
                     train_data.keys(), tid+counter) if counter > 0 else None
                 streamer.feed(train_data, metadata=meta)
+
+            shared_tid.value = tid
 
         if not repeat_stream:
             break

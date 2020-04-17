@@ -8,20 +8,20 @@ Copyright (C) European X-Ray Free-Electron Laser Facility GmbH.
 All rights reserved.
 """
 from collections import OrderedDict
-from multiprocessing import Process
+from multiprocessing import Process, Value
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QIntValidator, QValidator
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QColor, QIntValidator, QValidator
 from PyQt5.QtWidgets import (
     QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout,
-    QHeaderView, QGroupBox, QLabel, QSplitter, QTableWidget,
-    QTableWidgetItem, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+    QHeaderView, QGroupBox, QLabel, QLCDNumber, QSplitter, QTableWidget,
+    QTableWidgetItem, QProgressBar, QPushButton, QVBoxLayout, QWidget
 )
 
 from zmq.error import ZMQError
 
 from .base_window import _AbstractSatelliteWindow
-from ..ctrl_widgets.smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
+from ..ctrl_widgets.smart_widgets import SmartLineEdit
 from ...config import StreamerMode
 from ...logger import logger
 from ...offline import gather_sources, load_runs, run_info, serve_files
@@ -59,8 +59,16 @@ class _FileStreamCtrlWidget(QWidget):
         self.port_le = SmartLineEdit("*")
         self.port_le.setValidator(QIntValidator(0, 65535))
 
-        self.tid_range_le = SmartBoundaryLineEdit("-Inf, Inf")
-        self.tid_range_le.setReadOnly(True)
+        lcd = QLCDNumber(12)
+        lcd.setSegmentStyle(QLCDNumber.Flat)
+        palette = lcd.palette()
+        palette.setColor(palette.WindowText, QColor(0, 0, 0))
+        palette.setColor(palette.Background, QColor(0, 170, 255))
+        lcd.setPalette(palette)
+        lcd.setAutoFillBackground(True)
+        lcd.display(None)
+        self.curr_tid_lcd = lcd
+        self.tid_progress_br = QProgressBar()
 
         self.repeat_stream_cb = QCheckBox("Repeat Stream")
         self.repeat_stream_cb.setChecked(False)
@@ -78,9 +86,6 @@ class _FileStreamCtrlWidget(QWidget):
             tb.setHorizontalHeaderLabels(['Device ID', 'Property'])
             header.resizeSection(0, int(0.6 * header.length()))
 
-        self._run_info_te = QPlainTextEdit()
-        self._run_info_te.setReadOnly(True)
-
         self._non_reconfigurable_widgets = [
             self.data_folder_le,
             self._detector_src_tb ,
@@ -90,7 +95,6 @@ class _FileStreamCtrlWidget(QWidget):
             self.repeat_stream_cb,
             self.mode_cb,
             self.port_le,
-            self.tid_range_le,
         ]
 
         self.initUI()
@@ -107,15 +111,17 @@ class _FileStreamCtrlWidget(QWidget):
         ls_layout.addWidget(self.data_folder_le, 0, 1, 1, 9)
         ls_layout.addWidget(QLabel("Mode: "), 1, 1, AR)
         ls_layout.addWidget(self.mode_cb, 1, 2)
-        ls_layout.addWidget(QLabel("Train ID range: "), 1, 3, AR)
-        ls_layout.addWidget(self.tid_range_le, 1, 4)
-        ls_layout.addWidget(QLabel("Port: "), 1, 5, AR)
-        ls_layout.addWidget(self.port_le, 1, 6)
-        ls_layout.addWidget(self.serve_start_btn, 1, 7)
-        ls_layout.addWidget(self.serve_terminate_btn, 1, 8)
-        ls_layout.addWidget(self.repeat_stream_cb, 1, 9)
+        ls_layout.addWidget(QLabel("Port: "), 1, 3, AR)
+        ls_layout.addWidget(self.port_le, 1, 4)
+        ls_layout.addWidget(self.serve_start_btn, 1, 5)
+        ls_layout.addWidget(self.serve_terminate_btn, 1, 6)
+        ls_layout.addWidget(self.repeat_stream_cb, 1, 7)
         ls_gb.setLayout(ls_layout)
         ls_gb.setFixedHeight(ls_gb.minimumSizeHint().height())
+
+        progress_layout = QGridLayout()
+        progress_layout.addWidget(self.curr_tid_lcd, 0, 0)
+        progress_layout.addWidget(self.tid_progress_br, 0, 1)
 
         table_area = QSplitter()
         sp_sub = QSplitter(Qt.Vertical)
@@ -130,11 +136,9 @@ class _FileStreamCtrlWidget(QWidget):
 
         layout = QVBoxLayout()
         layout.addWidget(ls_gb)
-        layout.addWidget(self._run_info_te)
+        layout.addLayout(progress_layout)
         layout.addWidget(table_area)
         self.setLayout(layout)
-
-        self._run_info_te.setFixedHeight(60)
 
     def initConnections(self):
         self.load_run_btn.clicked.connect(self.onRunFolderLoad)
@@ -146,8 +150,8 @@ class _FileStreamCtrlWidget(QWidget):
         if folder_name:
             self.data_folder_le.setText(folder_name)
 
-    def fillRunInfo(self, text):
-        self._run_info_te.setPlainText(text)
+    def initProgressBar(self, first_tid, last_tid):
+        self.tid_progress_br.setRange(first_tid, last_tid)
 
     def fillSourceTables(self, run_dir_cal, run_dir_raw):
         detector_srcs, instrument_srcs, control_srcs = gather_sources(
@@ -221,6 +225,8 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         self._rd_cal = None
         self._rd_raw = None
 
+        self._latest_tid = Value('i', -1)
+
         self._cw = QWidget()
 
         self._ctrl_widget = _FileStreamCtrlWidget(parent=self)
@@ -235,6 +241,10 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         else:
             # opened from the main GUI
             port_le.setReadOnly(True)
+
+        self._timer = QTimer()
+        self._timer.setInterval(100)  # update progress bar every 100 ms
+        self._timer.timeout.connect(self._updateProgress)
 
         self.initUI()
         self.initConnections()
@@ -278,12 +288,19 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         except Exception as e:
             logger.error(str(e))
         finally:
-            self._ctrl_widget.fillRunInfo(run_info(self._rd_cal))
+            n_trains, first_tid, last_tid = run_info(self._rd_cal)
             self._ctrl_widget.fillSourceTables(self._rd_cal, self._rd_raw)
+            self._ctrl_widget.initProgressBar(first_tid, last_tid)
 
     def _onTcpPortChange(self, connections):
         endpoint = list(connections.keys())[0]
         self._port = int(endpoint.split(":")[-1])
+
+    def _updateProgress(self):
+        tid = self._latest_tid.value
+        if tid > 0:
+            self._ctrl_widget.curr_tid_lcd.display(tid)
+            self._ctrl_widget.tid_progress_br.setValue(tid)
 
     def startFileServer(self):
         if self._rd_cal is None:
@@ -304,7 +321,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
         self._file_server = Process(
             target=serve_files,
-            args=((self._rd_cal, self._rd_raw), port),
+            args=((self._rd_cal, self._rd_raw), port, self._latest_tid),
             kwargs={
                 'detector_sources': detector_srcs,
                 'instrument_sources': instrument_srcs,
@@ -321,6 +338,8 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         except ZMQError:
             logger.info("Port {} is already in use!".format(port))
 
+        self._timer.start()
+
     def stopFileServer(self):
         if self._file_server is not None and self._file_server.is_alive():
             # a file_server does not have any shared object
@@ -332,6 +351,9 @@ class FileStreamWindow(_AbstractSatelliteWindow):
             self._file_server.join()
 
         self.file_server_stopped_sgn.emit()
+        self._latest_tid.value = -1
+        self._ctrl_widget.curr_tid_lcd.display(None)
+        self._ctrl_widget.tid_progress_br.reset()
 
     def closeEvent(self, QCloseEvent):
         """Override"""

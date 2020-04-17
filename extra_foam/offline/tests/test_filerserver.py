@@ -9,7 +9,7 @@ from extra_foam.offline import (
 
 class TestFileServer:
     def testRunInfo(self):
-        assert run_info(None) == ""
+        assert run_info(None) == (0, 0, 0)
 
     def testLoadRuns(self):
         with pytest.raises(ValueError):
