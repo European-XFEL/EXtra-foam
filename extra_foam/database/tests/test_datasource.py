@@ -14,6 +14,8 @@ class TestSourceCatalog(unittest.TestCase):
         catalog = SourceCatalog()
         item = SourceItem('DSSC', 'dssc_device_id', [], 'image.data', None, None)
 
+        self.assertIn("META timestamp.tid", catalog)
+
         src = f"{item.name} {item.property}"
         catalog.add_item(item)
         self.assertEqual(src, catalog.main_detector)

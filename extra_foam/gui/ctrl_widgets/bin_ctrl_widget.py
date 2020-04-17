@@ -21,6 +21,7 @@ from .smart_widgets import SmartBoundaryLineEdit, SmartLineEdit
 from ..gui_helpers import invert_dict
 from ...config import AnalysisType, BinMode, config
 from ...database import Metadata as mt
+from ...database import SourceCatalog
 
 
 _N_PARAMS = 2
@@ -50,6 +51,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
     _user_defined_key = config["SOURCE_USER_DEFINED_CATEGORY"]
 
     _UNDEFINED_CATEGORY = ''
+    _META_CATEGORY = 'Metadata'
 
     def __init__(self, *args, **kwargs):
         super().__init__("Binning setup", *args, **kwargs)
@@ -67,7 +69,12 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
         self._auto_level_btn = QPushButton("Auto level")
 
         self._src_instrument = config.control_sources
-        self._src_metadata = config.meta_sources
+        tid_key_split = SourceCatalog.TRAIN_ID.split(" ")
+        self._src_metadata = {
+            self._META_CATEGORY: {
+                tid_key_split[0]: [tid_key_split[1]],
+            }
+        }
 
         self.initUI()
         self.initConnections()
@@ -199,7 +206,7 @@ class BinCtrlWidget(_AbstractGroupBoxCtrlWidget):
 
             self.onBinParamChangeLe(i_row)
         else:
-            srcs = self._src_metadata if category in config.meta_sources \
+            srcs = self._src_metadata if category in self._src_metadata \
                 else self._src_instrument
             category_srcs = srcs.get(category, dict())
             device_id_cb = QComboBox()
