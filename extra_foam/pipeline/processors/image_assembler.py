@@ -17,12 +17,14 @@ from extra_data import stack_detector_data
 from .base_processor import _RedisParserMixin
 from ..exceptions import AssemblingError
 from ...config import config, GeomAssembler, DataSource
+from ...database import SourceCatalog
 from ...geometries import load_geometry
 from ...ipc import process_logger as logger
 
 
 _IMAGE_DTYPE = config['SOURCE_PROC_IMAGE_DTYPE']
 _RAW_IMAGE_DTYPE = config['SOURCE_RAW_IMAGE_DTYPE']
+_TRAIN_ID = SourceCatalog.TRAIN_ID
 
 
 class ImageAssemblerFactory(ABC):
@@ -238,7 +240,7 @@ class ImageAssemblerFactory(ABC):
             }
             # Assign the global train ID once the main detector was
             # successfully assembled.
-            raw["META timestamp.tid"] = meta[src]["tid"]
+            raw[_TRAIN_ID] = meta[src]["tid"]
 
     class AgipdImageAssembler(BaseAssembler):
         def _get_modules_bridge(self, data, src):

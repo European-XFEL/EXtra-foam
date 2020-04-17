@@ -29,6 +29,10 @@ class SourceCatalog(abc.Collection):
 
     Served as a catalog for searching data sources.
     """
+
+    TRAIN_ID = "META timestamp.tid"
+    _meta = (TRAIN_ID,)
+
     def __init__(self):
         super().__init__()
 
@@ -40,9 +44,9 @@ class SourceCatalog(abc.Collection):
         self._main_detector_category = config["DETECTOR"]
         self._main_detector = ''
 
-    def __contains__(self, item):
+    def __contains__(self, src):
         """Override."""
-        return self._items.__contains__(item)
+        return self._items.__contains__(src) or self._meta.__contains__(src)
 
     def __len__(self):
         """Override."""

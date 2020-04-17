@@ -389,13 +389,6 @@ class _Config(dict):
         self.control_sources = dict()
         # pipeline data sources listed in the DataSourceWidget
         self.pipeline_sources = dict()
-        # meta data sources which is not listed in the DataSourceWidget but
-        # is used in statistics analysis
-        self.meta_sources = {
-            "Metadata": {
-                "META": ["timestamp.tid"],
-            }
-        }
 
         self.appendix_streamers = []
 
@@ -553,10 +546,6 @@ class ConfigWrapper(abc.Mapping):
     @property
     def pipeline_sources(self):
         return self._data.pipeline_sources
-
-    @property
-    def meta_sources(self):
-        return self._data.meta_sources
 
     @property
     def appendix_streamers(self):
