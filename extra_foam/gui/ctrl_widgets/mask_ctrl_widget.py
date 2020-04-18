@@ -34,9 +34,12 @@ class MaskCtrlWidget(_AbstractCtrlWidget):
         icon_size = 30
         self.draw_mask_btn = create_icon_button("draw_mask.png", icon_size)
         self.draw_mask_btn.setCheckable(True)
+        self.draw_mask_btn.setToolTip("Draw mask")
         self.erase_mask_btn = create_icon_button("erase_mask.png", icon_size)
         self.erase_mask_btn.setCheckable(True)
+        self.erase_mask_btn.setToolTip("Erase mask")
         self.remove_btn = create_icon_button("remove_mask.png", icon_size)
+        self.remove_btn.setToolTip("Remove mask")
 
         self.load_btn = QPushButton("Load mask")
         self.save_btn = QPushButton("Save mask")

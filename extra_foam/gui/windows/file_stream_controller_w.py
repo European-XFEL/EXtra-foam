@@ -23,6 +23,7 @@ from zmq.error import ZMQError
 from .base_window import _AbstractSatelliteWindow
 from ..ctrl_widgets.smart_widgets import SmartLineEdit
 from ...config import StreamerMode
+from ...gui.gui_helpers import create_icon_button
 from ...logger import logger
 from ...offline import gather_sources, load_runs, run_info, serve_files
 
@@ -49,8 +50,12 @@ class _FileStreamCtrlWidget(QWidget):
 
         self.data_folder_le = SmartLineEdit()
 
-        self.serve_start_btn = QPushButton("Start")
-        self.serve_terminate_btn = QPushButton("Terminate")
+        self.serve_start_btn = create_icon_button("start.png", 25)
+        self.serve_start_btn.setToolTip("Stream once")
+        self.repeat_serve_start_btn = create_icon_button("repeat.png", 25)
+        self.repeat_serve_start_btn.setToolTip("Stream repeatedly")
+        self.serve_terminate_btn = create_icon_button("stop.png", 25)
+        self.serve_terminate_btn.setToolTip("Stop stream")
         self.serve_terminate_btn.setEnabled(False)
 
         self.mode_cb = QComboBox()
@@ -92,7 +97,6 @@ class _FileStreamCtrlWidget(QWidget):
             self._instrument_src_tb,
             self._control_src_tb,
             self.load_run_btn,
-            self.repeat_stream_cb,
             self.mode_cb,
             self.port_le,
         ]
@@ -109,13 +113,13 @@ class _FileStreamCtrlWidget(QWidget):
         ls_gb.setStyleSheet(self.GROUP_BOX_STYLE_SHEET)
         ls_layout.addWidget(self.load_run_btn, 0, 0)
         ls_layout.addWidget(self.data_folder_le, 0, 1, 1, 9)
-        ls_layout.addWidget(QLabel("Mode: "), 1, 1, AR)
-        ls_layout.addWidget(self.mode_cb, 1, 2)
-        ls_layout.addWidget(QLabel("Port: "), 1, 3, AR)
-        ls_layout.addWidget(self.port_le, 1, 4)
-        ls_layout.addWidget(self.serve_start_btn, 1, 5)
-        ls_layout.addWidget(self.serve_terminate_btn, 1, 6)
-        ls_layout.addWidget(self.repeat_stream_cb, 1, 7)
+        ls_layout.addWidget(QLabel("Port: "), 1, 1, AR)
+        ls_layout.addWidget(self.port_le, 1, 2)
+        ls_layout.addWidget(self.serve_start_btn, 1, 3)
+        ls_layout.addWidget(self.repeat_serve_start_btn, 1, 4)
+        ls_layout.addWidget(self.serve_terminate_btn, 1, 5)
+        ls_layout.addWidget(QLabel("Mode: "), 1, 6, AR)
+        ls_layout.addWidget(self.mode_cb, 1, 7)
         ls_gb.setLayout(ls_layout)
         ls_gb.setFixedHeight(ls_gb.minimumSizeHint().height())
 
@@ -175,12 +179,14 @@ class _FileStreamCtrlWidget(QWidget):
     def onFileServerStarted(self):
         logger.info("File server started")
         self.serve_start_btn.setEnabled(False)
+        self.repeat_serve_start_btn.setEnabled(False)
         self.serve_terminate_btn.setEnabled(True)
         for w in self._non_reconfigurable_widgets:
             w.setEnabled(False)
 
     def onFileServerStopped(self):
         self.serve_start_btn.setEnabled(True)
+        self.repeat_serve_start_btn.setEnabled(True)
         self.serve_terminate_btn.setEnabled(False)
         for w in self._non_reconfigurable_widgets:
             w.setEnabled(True)
@@ -263,7 +269,9 @@ class FileStreamWindow(_AbstractSatelliteWindow):
     def initConnections(self):
         """Override"""
         self._ctrl_widget.serve_start_btn.clicked.connect(
-            self.startFileServer)
+            lambda: self.startFileServer(False))
+        self._ctrl_widget.repeat_serve_start_btn.clicked.connect(
+            lambda: self.startFileServer(True))
         self.file_server_started_sgn.connect(
             self._ctrl_widget.onFileServerStarted)
         self._ctrl_widget.serve_terminate_btn.clicked.connect(
@@ -302,7 +310,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
             self._ctrl_widget.curr_tid_lcd.display(tid)
             self._ctrl_widget.tid_progress_br.setValue(tid)
 
-    def startFileServer(self):
+    def startFileServer(self, repeat=False):
         if self._rd_cal is None:
             logger.error("Please load a valid run first!")
             return
@@ -317,8 +325,6 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         detector_srcs, instrument_srcs, control_srcs = \
             self._ctrl_widget.getSourceLists()
 
-        repeat_stream = self._ctrl_widget.repeat_stream_cb.isChecked()
-
         self._file_server = Process(
             target=serve_files,
             args=((self._rd_cal, self._rd_raw), port, self._latest_tid),
@@ -326,7 +332,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
                 'detector_sources': detector_srcs,
                 'instrument_sources': instrument_srcs,
                 'control_sources': control_srcs,
-                'repeat_stream': repeat_stream,
+                'repeat_stream': repeat,
                 'require_all': False,
             })
 
