@@ -9,6 +9,8 @@ All rights reserved.
 """
 from collections import OrderedDict
 from multiprocessing import Process, Value
+from contextlib import closing
+import socket
 
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFontMetrics, QIntValidator, QValidator
@@ -430,6 +432,14 @@ class FileStreamWindow(_AbstractSatelliteWindow):
         else:
             port = self._port
 
+        # Since it is not possible to catch the exception in ZMQStreamer which
+        # runs in a thread of the file server process, we check the port
+        # availability here.
+        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+            if sock.connect_ex(('127.0.0.1', port)) == 0:
+                logger.info("Port {} is already in use!".format(port))
+                return
+
         detector_srcs, instrument_srcs, control_srcs = \
             ctrl_widget.getSourceLists()
 
@@ -447,13 +457,10 @@ class FileStreamWindow(_AbstractSatelliteWindow):
                 'require_all': False,
             })
 
-        try:
-            self._file_server.start()
-            self.file_server_started_sgn.emit()
-            logger.info("Streaming file in the folder {} through port {}"
-                        .format(folder, port))
-        except ZMQError:
-            logger.info("Port {} is already in use!".format(port))
+        self._file_server.start()
+        self.file_server_started_sgn.emit()
+        logger.info("Streaming file in the folder {} through port {}"
+                    .format(folder, port))
 
     def stopFileServer(self):
         if self._file_server is not None and self._file_server.is_alive():
