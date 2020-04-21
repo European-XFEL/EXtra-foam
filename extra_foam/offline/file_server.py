@@ -9,11 +9,14 @@ All rights reserved.
 """
 import os.path as osp
 import re
+import random
 from time import time
+from collections import deque
 
-from extra_data import RunDirectory
+from extra_data import by_id, RunDirectory
 from extra_data.export import ZMQStreamer
 
+from .offline_config import StreamMode
 from ..utils import profiler
 
 
@@ -26,17 +29,13 @@ def run_info(rd):
     :param DataCollection rd: the run data.
     """
     if rd is None:
-        return ""
+        return 0, -1, -1
 
     first_train = rd.train_ids[0]
     last_train = rd.train_ids[-1]
-    train_count = len(rd.train_ids)
+    n_trains = len(rd.train_ids)
 
-    info = f'First train ID: {first_train} ' \
-           f'/ Last train ID: {last_train} ' \
-           f'/ Train ID span: {train_count}'
-
-    return info
+    return n_trains, first_train, last_train
 
 
 @profiler("Load run directories")
@@ -159,12 +158,16 @@ def generate_meta(devices, tid):
     return meta
 
 
-def serve_files(run_data, port, *,
+def serve_files(run_data, port, shared_tid, shared_rate, *,
+                tid_range=None,
+                mode=StreamMode.NORMAL,
                 detector_sources=None,
                 instrument_sources=None,
                 control_sources=None,
                 require_all=True,
-                repeat_stream=False, **kwargs):
+                repeat_stream=False,
+                buffer_size=2,
+                **kwargs):
     """Stream data from files through a TCP socket.
 
     Parameters
@@ -173,6 +176,18 @@ def serve_files(run_data, port, *,
         A list/tuple of calibrated and raw run data.
     port: int
         Local TCP port to bind socket to.
+    shared_tid: Value
+        The latest streamed train ID shared between processes.
+    shared_rate: Value
+        The stream rate in Hz.
+    tid_range: tuple
+        (start, end, step) train ID.
+    mode: StreamMode
+        The stream mode:
+        - Normal: sources in a train are streamed together;
+        - Random shuffle: sources in a train are streamed one by one
+                          and the order is random.
+
     detector_sources: list of tuples
         [('device ID/output channel name', 'property')]
     instrument_sources: list of tuples
@@ -187,6 +202,8 @@ def serve_files(run_data, port, *,
         If set to True, will continue streaming when trains()
         iterator is empty. Trainids will be monotonically increasing.
         Default: False
+    buffer_size: int
+        ZMQStreamer buffer size.
     """
     rd_cal, rd_raw = run_data
     num_trains = len(rd_cal.train_ids)
@@ -194,13 +211,17 @@ def serve_files(run_data, port, *,
     if rd_raw is None:
         rd_raw = rd_cal
 
-    streamer = ZMQStreamer(port, **kwargs)
-    streamer.start()
+    streamer = ZMQStreamer(port, maxlen=buffer_size, **kwargs)
+    streamer.start()  # run "REP" socket in a thread
 
     counter = 0
+    n_buffered = 0
+    t_sent = deque(maxlen=10)
     while True:
-        for tid, train_data in rd_cal.trains(devices=detector_sources,
-                                             require_all=require_all):
+        for tid, train_data in rd_cal.trains(
+                devices=detector_sources,
+                train_range=by_id[tid_range[0]:tid_range[1]:tid_range[2]],
+                require_all=require_all):
             if rd_raw is not None:
                 try:
                     # get raw data corresponding to the train id
@@ -214,12 +235,35 @@ def serve_files(run_data, port, *,
                     pass
 
             if train_data:
-                # Generate fake meta data with monotonically increasing
-                # train IDs only after the actual trains in corrected data
-                # are exhausted
-                meta = generate_meta(
-                    train_data.keys(), tid+counter) if counter > 0 else None
-                streamer.feed(train_data, metadata=meta)
+                if mode == StreamMode.NORMAL:
+                    # Generate fake meta data with monotonically increasing
+                    # train IDs only after the actual trains in corrected data
+                    # are exhausted
+                    meta = generate_meta(
+                        train_data.keys(), tid+counter) if counter > 0 else None
+                    streamer.feed(train_data, metadata=meta)
+                elif mode == StreamMode.RANDOM_SHUFFLE:
+                    keys = list(train_data.keys())
+                    random.shuffle(keys)
+                    for k in keys:
+                        meta = generate_meta(
+                            [k], tid+counter) if counter > 0 else None
+                        streamer.feed({k: train_data[k]}, metadata=meta)
+
+            if n_buffered <= buffer_size:
+                # Do not count the first trains which are buffered immediately but
+                # may not be sent.
+                n_buffered += 1
+            else:
+                t_sent.append(time())
+
+            # update processing rate
+            n = len(t_sent) - 1
+            if n > 0:
+                shared_rate.value = n / (t_sent[-1] - t_sent[0])
+
+            # update the train ID just sent
+            shared_tid.value = tid
 
         if not repeat_stream:
             break

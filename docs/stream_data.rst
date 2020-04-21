@@ -36,15 +36,32 @@ does not have to set up the streamer again when restarting **EXtra-foam**.
 |                            | it is the same as the port specified in the :ref:`Data source`     |
 |                            | panel in the main GUI.                                             |
 +----------------------------+--------------------------------------------------------------------+
-| ``Start``                  | Press to start streaming.                                          |
+| ``Stream once``            | Press to stream the data in the run folder once.                   |
 +----------------------------+--------------------------------------------------------------------+
-| ``Terminate``              | Press to terminate streaming. If ``Start`` is pressed again,       |
-|                            | the data will be streamed from the beginning                       |
-+----------------------------+--------------------------------------------------------------------+
-| ``Repeat stream``          | When checked, if the stream reaches the end of the data, the       |
+| ``Stream repeatedly``      | Press to stream the data in the run folder repeatedly.             |
+|                            | If the stream reaches the end of the data, the                     |
 |                            | stream will restart from the beginning with a faked *train ID*,    |
 |                            | which ensures that the *train ID* continuously increases in the    |
 |                            | new cycle. This feature is only useful for developers.             |
++----------------------------+--------------------------------------------------------------------+
+| ``Stop stream``            | Press to stop streaming.                                           |
++----------------------------+--------------------------------------------------------------------+
+| ``Mode``                   | Stream mode:                                                       |
+|                            |                                                                    |
+|                            | - ``Normal``:                                                      |
+|                            |                                                                    |
+|                            |   Sources in a train are streamed together.                        |
+|                            |                                                                    |
+|                            | - ``Random shuffle``:                                              |
+|                            |                                                                    |
+|                            |   Sources in a train are streamed one by one and the order is      |
+|                            |   random.                                                          |
++----------------------------+--------------------------------------------------------------------+
+| ``First train ID``         | Slide to change the first train ID to stream.                      |
++----------------------------+--------------------------------------------------------------------+
+| ``Last train ID``          | Slide to change the last train ID to stream.                       |
++----------------------------+--------------------------------------------------------------------+
+| ``Stride``                 | Train ID stride used to slice trains to stream.                    |
 +----------------------------+--------------------------------------------------------------------+
 
 .. note::
