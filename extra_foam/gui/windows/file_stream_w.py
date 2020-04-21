@@ -304,6 +304,11 @@ class _FileStreamCtrlWidget(QWidget):
         self.curr_tid_lcd.display(None)
         self.tid_progress_br.reset()
 
+    def close(self):
+        """Override."""
+        logger.removeHandler(self._gui_logger)
+        return super().close()
+
 
 class FileStreamWindow(_AbstractSatelliteWindow):
 
@@ -468,5 +473,7 @@ class FileStreamWindow(_AbstractSatelliteWindow):
 
     def closeEvent(self, QCloseEvent):
         """Override"""
+        # remove the logger handler first
+        self._ctrl_widget.close()
         self.stopFileServer()
         super().closeEvent(QCloseEvent)

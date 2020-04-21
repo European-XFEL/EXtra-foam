@@ -43,6 +43,10 @@ class TestFileStreamWindow(unittest.TestCase):
         })
         self.assertEqual(1234, win._port)
 
+        with patch.object(win._ctrl_widget, "close") as mocked_close:
+            win.close()
+            mocked_close.assert_called_once()
+
     def testStandAlone(self):
         with self.assertRaises(ValueError):
             FileStreamWindow(port=454522)
