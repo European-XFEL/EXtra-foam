@@ -287,6 +287,7 @@ class XasTimWindow(_SpecialAnalysisBase):
         self.startWorker()
 
     def initUI(self):
+        """Override."""
         right_panel = QTabWidget()
 
         right_panel1 = QSplitter(Qt.Vertical)
@@ -309,50 +310,51 @@ class XasTimWindow(_SpecialAnalysisBase):
         right_panel.addTab(right_panel2, "Correlation and spectra")
         right_panel.setTabPosition(QTabWidget.TabPosition.South)
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
+        cw = self.centralWidget()
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 4, 3 * self._TOTAL_W / 4])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
-        self._ctrl_widget.xgm_output_ch_le.value_changed_sgn.connect(
-            self._worker.onXgmOutputChannelChanged)
-        self._ctrl_widget.xgm_output_ch_le.returnPressed.emit()
+        """Override."""
+        self._ctrl_widget_st.xgm_output_ch_le.value_changed_sgn.connect(
+            self._worker_st.onXgmOutputChannelChanged)
+        self._ctrl_widget_st.xgm_output_ch_le.returnPressed.emit()
 
-        self._ctrl_widget.digitizer_output_ch_le.value_changed_sgn.connect(
-            self._worker.onDigitizerOutputChannelChanged)
-        self._ctrl_widget.digitizer_output_ch_le.returnPressed.emit()
+        self._ctrl_widget_st.digitizer_output_ch_le.value_changed_sgn.connect(
+            self._worker_st.onDigitizerOutputChannelChanged)
+        self._ctrl_widget_st.digitizer_output_ch_le.returnPressed.emit()
 
-        self._ctrl_widget.mono_device_le.value_changed_sgn.connect(
-            self._worker.onMonoDeviceChanged)
-        self._ctrl_widget.mono_device_le.returnPressed.emit()
+        self._ctrl_widget_st.mono_device_le.value_changed_sgn.connect(
+            self._worker_st.onMonoDeviceChanged)
+        self._ctrl_widget_st.mono_device_le.returnPressed.emit()
 
-        self._ctrl_widget.n_pulses_per_train_le.value_changed_sgn.connect(
-            self._worker.onNPulsesPerTrainChanged)
-        self._ctrl_widget.n_pulses_per_train_le.returnPressed.emit()
+        self._ctrl_widget_st.n_pulses_per_train_le.value_changed_sgn.connect(
+            self._worker_st.onNPulsesPerTrainChanged)
+        self._ctrl_widget_st.n_pulses_per_train_le.returnPressed.emit()
 
-        self._ctrl_widget.apd_stride_le.value_changed_sgn.connect(
-            self._worker.onApdStrideChanged)
-        self._ctrl_widget.apd_stride_le.returnPressed.emit()
+        self._ctrl_widget_st.apd_stride_le.value_changed_sgn.connect(
+            self._worker_st.onApdStrideChanged)
+        self._ctrl_widget_st.apd_stride_le.returnPressed.emit()
 
-        for i, cb in enumerate(self._ctrl_widget.spectra_displayed):
+        for i, cb in enumerate(self._ctrl_widget_st.spectra_displayed):
             cb.toggled.connect(
-                partial(self._worker.onSpectraDisplayedChanged, i))
+                partial(self._worker_st.onSpectraDisplayedChanged, i))
             cb.toggled.emit(cb.isChecked())
 
-        self._ctrl_widget.xgm_threshold_le.value_changed_sgn.connect(
-            self._worker.onXgmThresholdChanged)
-        self._ctrl_widget.xgm_threshold_le.returnPressed.emit()
+        self._ctrl_widget_st.xgm_threshold_le.value_changed_sgn.connect(
+            self._worker_st.onXgmThresholdChanged)
+        self._ctrl_widget_st.xgm_threshold_le.returnPressed.emit()
 
-        self._ctrl_widget.pulse_window_le.value_changed_sgn.connect(
-            self._worker.onPulseWindowChanged)
-        self._ctrl_widget.pulse_window_le.returnPressed.emit()
+        self._ctrl_widget_st.pulse_window_le.value_changed_sgn.connect(
+            self._worker_st.onPulseWindowChanged)
+        self._ctrl_widget_st.pulse_window_le.returnPressed.emit()
 
-        self._ctrl_widget.correlation_window_le.value_changed_sgn.connect(
-            self._worker.onCorrelationWindowChanged)
-        self._ctrl_widget.correlation_window_le.returnPressed.emit()
+        self._ctrl_widget_st.correlation_window_le.value_changed_sgn.connect(
+            self._worker_st.onCorrelationWindowChanged)
+        self._ctrl_widget_st.correlation_window_le.returnPressed.emit()
 
-        self._ctrl_widget.n_bins_le.value_changed_sgn.connect(
-            self._worker.onNoBinsChanged)
-        self._ctrl_widget.n_bins_le.returnPressed.emit()
+        self._ctrl_widget_st.n_bins_le.value_changed_sgn.connect(
+            self._worker_st.onNoBinsChanged)
+        self._ctrl_widget_st.n_bins_le.returnPressed.emit()

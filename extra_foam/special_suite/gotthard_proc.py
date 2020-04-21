@@ -92,7 +92,7 @@ class GotthardProcessor(QThreadWorker):
 
     def onLoadDarkRun(self, dirpath):
         """Override."""
-        run = self._loadRunDirectory(dirpath)
+        run = self._loadRunDirectoryST(dirpath)
         if run is not None:
             try:
                 arr = run.get_array(self._output_channel, self._ppt)
@@ -128,11 +128,11 @@ class GotthardProcessor(QThreadWorker):
     def process(self, data):
         """Override."""
         data, meta = data["raw"], data["meta"]
-        tid = self._get_tid(meta)
+        tid = self.getTrainId(meta)
 
         if not self._output_channel or not self._ppt:
             return
-        raw = self._get_property_data(data, self._output_channel, self._ppt)
+        raw = self.getPropertyData(data, self._output_channel, self._ppt)
 
         # check data shape
         if raw.ndim != 2:
@@ -151,7 +151,7 @@ class GotthardProcessor(QThreadWorker):
         # process data
         # ------------
 
-        if self._recording_dark:
+        if self.recordingDark():
             # update the moving average of dark data
             self._dark_ma = raw
 
@@ -166,7 +166,7 @@ class GotthardProcessor(QThreadWorker):
             # update the moving average of raw data
             self._raw_ma = raw
 
-            if self._subtract_dark and self._dark_mean_ma is not None:
+            if self.subtractDark() and self._dark_mean_ma is not None:
                 displayed = raw[self._pulse_slicer] - self._dark_mean_ma
                 displayed_ma = self._raw_ma[self._pulse_slicer] - self._dark_mean_ma
             else:

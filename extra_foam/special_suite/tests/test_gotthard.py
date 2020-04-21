@@ -40,9 +40,9 @@ class TestGotthard(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(4, len(win._plot_widgets))
+        self.assertEqual(4, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[GotthardImageView])
@@ -50,7 +50,7 @@ class TestGotthard(unittest.TestCase):
         self.assertEqual(1, counter[GotthardPulsePlot])
         self.assertEqual(1, counter[GotthardHist])
 
-        win.updateWidgetsF()
+        win.updateWidgetsST()
 
     def testCtrl(self):
         from extra_foam.special_suite.gotthard_w import _DEFAULT_N_BINS, _DEFAULT_BIN_RANGE
@@ -58,8 +58,8 @@ class TestGotthard(unittest.TestCase):
         default_bin_range = tuple(float(v) for v in _DEFAULT_BIN_RANGE.split(','))
 
         win = self._win
-        ctrl_widget = win._ctrl_widget
-        proc = win._worker
+        ctrl_widget = win._ctrl_widget_st
+        proc = win._worker_st
 
         # test default values
         self.assertTrue(proc._output_channel)
@@ -156,7 +156,7 @@ class TestGotthardProcessor(_RawDataMixin):
             proc._pulse_slicer = slice(None, None, 2)
             proc.process(data)
 
-    @patch("extra_foam.special_suite.special_analysis_base.QThreadWorker._loadRunDirectory")
+    @patch("extra_foam.special_suite.special_analysis_base.QThreadWorker._loadRunDirectoryST")
     def testLoadDarkRun(self, load_run):
         proc = self._proc
 
@@ -187,8 +187,8 @@ class TestGotthardProcessor(_RawDataMixin):
 
         proc = self._proc
         assert 2147483647 == proc.__class__._dark_ma.window
-        proc._recording_dark = True
-        proc._subtract_dark = True  # take no effect
+        proc._recording_dark_st = True
+        proc._subtract_dark_st = True  # take no effect
         proc._poi_index = 0
 
         adc_gt = self._adc.astype(_PIXEL_DTYPE)

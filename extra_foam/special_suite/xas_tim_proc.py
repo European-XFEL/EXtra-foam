@@ -132,24 +132,24 @@ class XasTimProcessor(QThreadWorker):
         """Override."""
         data, meta = data["raw"], data["meta"]
 
-        tid = self._get_tid(meta)
+        tid = self.getTrainId(meta)
 
         if not self._xgm_output_channel:
             return
-        xgm_intensity = self._get_property_data(
+        xgm_intensity = self.getPropertyData(
             data, self._xgm_output_channel, self._xgm_ppt)
 
         if not self._digitizer_output_channel:
             return
         digitizer_apds = []
         for i, ppt in enumerate(self._digitizer_ppts):
-            apd = self._get_property_data(
+            apd = self.getPropertyData(
                 data, self._digitizer_output_channel, ppt)
             digitizer_apds.append(apd)
 
         if not self._mono_device_id:
             return
-        energy = self._get_property_data(
+        energy = self.getPropertyData(
             data, self._mono_device_id, self._mono_ppt)
 
         # check and slice XGM intensity
@@ -221,7 +221,7 @@ class XasTimProcessor(QThreadWorker):
             "spectra": (stats, centers, counts),
         }
 
-    def onReset(self):
+    def reset(self):
         """Override."""
         self._i0.reset()
         for q in self._i1:

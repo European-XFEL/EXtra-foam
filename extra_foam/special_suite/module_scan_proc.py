@@ -32,7 +32,7 @@ class ModuleScanProcessor(QThreadWorker):
         """Override."""
         data, meta = data["raw"], data["meta"]
 
-        tid = self._get_tid(meta)
+        tid = self.getTrainId(meta)
 
         self.log.info(f"Train {tid} processed")
 

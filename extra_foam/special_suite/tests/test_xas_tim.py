@@ -37,9 +37,9 @@ class TestXasTimWindow(unittest.TestCase):
     def testWindow(self):
         win = self._win
 
-        self.assertEqual(9, len(win._plot_widgets))
+        self.assertEqual(9, len(win._plot_widgets_st))
         counter = Counter()
-        for key in win._plot_widgets:
+        for key in win._plot_widgets_st:
             counter[key.__class__] += 1
 
         self.assertEqual(1, counter[XasTimXgmPulsePlot])
@@ -49,7 +49,7 @@ class TestXasTimWindow(unittest.TestCase):
         self.assertEqual(1, counter[XasTimAbsorpSpectraPlot])
         self.assertEqual(1, counter[XasTimXgmSpectrumPlot])
 
-        win.updateWidgetsF()
+        win.updateWidgetsST()
 
     def testCtrl(self):
         from extra_foam.special_suite.xas_tim_w import (
@@ -58,8 +58,8 @@ class TestXasTimWindow(unittest.TestCase):
         )
 
         win = self._win
-        ctrl_widget = win._ctrl_widget
-        proc = win._worker
+        ctrl_widget = win._ctrl_widget_st
+        proc = win._worker_st
 
         # test default values
         self.assertTrue(proc._xgm_output_channel)

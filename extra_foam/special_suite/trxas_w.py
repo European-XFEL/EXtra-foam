@@ -128,7 +128,6 @@ class TrxasCtrlWidget(_BaseAnalysisCtrlWidgetS):
         self._swapLineEditContent(self._delay_ppt_le, self._energy_ppt_le)
         self._swapLineEditContent(self._delay_range_le, self._energy_range_le)
         self._swapLineEditContent(self._n_delay_bins_le, self._n_energy_bins_le)
-        self._scan_btn_set.reset_sgn.emit()
 
     def _swapLineEditContent(self, edit1, edit2):
         text1 = edit1.text()
@@ -261,44 +260,42 @@ class TrxasWindow(_SpecialAnalysisBase):
         right_panel.addWidget(self._a21_heatmap)
         right_panel.setSizes([self._TOTAL_H / 3.0] * 3)
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(middle_panel)
-        self._cw.addWidget(right_panel)
+        cw = self.centralWidget()
+        cw.addWidget(middle_panel)
+        cw.addWidget(right_panel)
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
         """Override."""
-        self._ctrl_widget.delay_device_le.value_changed_sgn.connect(
-            self._worker.onDelayDeviceChanged)
-        self._ctrl_widget.delay_ppt_le.value_changed_sgn.connect(
-            self._worker.onDelayPropertyChanged)
+        self._ctrl_widget_st.delay_device_le.value_changed_sgn.connect(
+            self._worker_st.onDelayDeviceChanged)
+        self._ctrl_widget_st.delay_ppt_le.value_changed_sgn.connect(
+            self._worker_st.onDelayPropertyChanged)
 
-        self._ctrl_widget.delay_device_le.returnPressed.emit()
-        self._ctrl_widget.delay_ppt_le.returnPressed.emit()
+        self._ctrl_widget_st.delay_device_le.returnPressed.emit()
+        self._ctrl_widget_st.delay_ppt_le.returnPressed.emit()
 
-        self._ctrl_widget.energy_device_le.value_changed_sgn.connect(
-            self._worker.onEnergyDeviceChanged)
-        self._ctrl_widget.energy_ppt_le.value_changed_sgn.connect(
-            self._worker.onEnergyPropertyChanged)
+        self._ctrl_widget_st.energy_device_le.value_changed_sgn.connect(
+            self._worker_st.onEnergyDeviceChanged)
+        self._ctrl_widget_st.energy_ppt_le.value_changed_sgn.connect(
+            self._worker_st.onEnergyPropertyChanged)
 
-        self._ctrl_widget.energy_device_le.returnPressed.emit()
-        self._ctrl_widget.energy_ppt_le.returnPressed.emit()
+        self._ctrl_widget_st.energy_device_le.returnPressed.emit()
+        self._ctrl_widget_st.energy_ppt_le.returnPressed.emit()
 
-        self._ctrl_widget.n_delay_bins_le.value_changed_sgn.connect(
-            self._worker.onNoDelayBinsChanged)
-        self._ctrl_widget.delay_range_le.value_changed_sgn.connect(
-            self._worker.onDelayRangeChanged)
+        self._ctrl_widget_st.n_delay_bins_le.value_changed_sgn.connect(
+            self._worker_st.onNoDelayBinsChanged)
+        self._ctrl_widget_st.delay_range_le.value_changed_sgn.connect(
+            self._worker_st.onDelayRangeChanged)
 
-        self._ctrl_widget.n_delay_bins_le.returnPressed.emit()
-        self._ctrl_widget.delay_range_le.returnPressed.emit()
+        self._ctrl_widget_st.n_delay_bins_le.returnPressed.emit()
+        self._ctrl_widget_st.delay_range_le.returnPressed.emit()
 
-        self._ctrl_widget.n_energy_bins_le.value_changed_sgn.connect(
-            self._worker.onNoEnergyBinsChanged)
-        self._ctrl_widget.energy_range_le.value_changed_sgn.connect(
-            self._worker.onEnergyRangeChanged)
+        self._ctrl_widget_st.n_energy_bins_le.value_changed_sgn.connect(
+            self._worker_st.onNoEnergyBinsChanged)
+        self._ctrl_widget_st.energy_range_le.value_changed_sgn.connect(
+            self._worker_st.onEnergyRangeChanged)
 
-        self._ctrl_widget.n_energy_bins_le.returnPressed.emit()
-        self._ctrl_widget.energy_range_le.returnPressed.emit()
-
-        self.reset_sgn.connect(self._worker.onReset)
+        self._ctrl_widget_st.n_energy_bins_le.returnPressed.emit()
+        self._ctrl_widget_st.energy_range_le.returnPressed.emit()

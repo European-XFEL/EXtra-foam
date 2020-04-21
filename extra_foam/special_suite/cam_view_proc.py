@@ -61,7 +61,7 @@ class CamViewProcessor(QThreadWorker):
 
     def onLoadDarkRun(self, dirpath):
         """Override."""
-        run = self._loadRunDirectory(dirpath)
+        run = self._loadRunDirectoryST(dirpath)
         if run is not None:
             try:
                 arr = run.get_array(self._output_channel, self._ppt)
@@ -89,22 +89,22 @@ class CamViewProcessor(QThreadWorker):
         """Override."""
         data, meta = data["raw"], data["meta"]
 
-        tid = self._get_tid(meta)
+        tid = self.getTrainId(meta)
 
         if not self._output_channel or not self._ppt:
             return
-        img = self._squeeze_camera_image(
-            tid, self._get_property_data(data, self._output_channel, self._ppt))
+        img = self.squeezeToImage(
+            tid, self.getPropertyData(data, self._output_channel, self._ppt))
         if img is None:
             return
 
-        if self._recording_dark:
+        if self.recordingDark():
             self._dark_ma = img
             displayed = self._dark_ma
         else:
             self._raw_ma = img
             displayed = self._raw_ma
-            if self._subtract_dark and self._dark_ma is not None:
+            if self.subtractDark() and self._dark_ma is not None:
                 # caveat: cannot subtract inplace
                 displayed = displayed - self._dark_ma
 

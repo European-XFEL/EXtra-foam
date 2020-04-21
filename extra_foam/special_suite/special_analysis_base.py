@@ -9,7 +9,7 @@ All rights reserved.
 """
 import abc
 import functools
-from queue import Empty, Full
+from queue import Empty
 import sys
 from threading import Condition
 import traceback
@@ -126,14 +126,14 @@ class _SharedCtrlWidgetS(QFrame):
     def updateDefaultPort(self, port: int):
         self._port_le.setText(str(port))
 
-    def onStart(self):
+    def onStartST(self):
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
         self._hostname_le.setEnabled(False)
         self._port_le.setEnabled(False)
         self.load_dark_run_btn.setEnabled(False)
 
-    def onStop(self):
+    def onStopST(self):
         self.stop_btn.setEnabled(False)
         self.start_btn.setEnabled(True)
         self._hostname_le.setEnabled(True)
@@ -142,18 +142,33 @@ class _SharedCtrlWidgetS(QFrame):
 
 
 class _BaseAnalysisCtrlWidgetS(QFrame):
-    """The base class should be inherited by all concrete ctrl widgets."""
+    """Base class of control widget.
+
+    It should be inherited by all concrete ctrl widgets. Also, each special
+    suite app should have only one ctrl widget.
+    """
     def __init__(self, topic, *, parent=None):
-        """Initialization."""
+        """Initialization.
+
+        :param str topic: topic, e.g. SCS, MID, DET, etc.
+        """
         super().__init__(parent=parent)
 
-        self._topic = topic
+        self._topic_st = topic
 
         # widgets whose values are not allowed to change after the "start"
         # button is clicked
         self._non_reconfigurable_widgets = []
 
         self.setFrameStyle(QFrame.StyledPanel)
+
+    ###################################################################
+    # Interface start
+    ###################################################################
+
+    @property
+    def topic(self):
+        return self._topic_st
 
     @abc.abstractmethod
     def initUI(self):
@@ -165,15 +180,8 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
         """Initialization of signal-slot connections."""
         raise NotImplementedError
 
-    def onStart(self):
-        for widget in self._non_reconfigurable_widgets:
-            widget.setEnabled(False)
-
-    def onStop(self):
-        for widget in self._non_reconfigurable_widgets:
-            widget.setEnabled(True)
-
     def addRows(self, layout, widgets):
+        """Add controls in ctrl widget line by line."""
         AR = Qt.AlignRight
         index = 0
         for name, widget in widgets:
@@ -184,6 +192,18 @@ class _BaseAnalysisCtrlWidgetS(QFrame):
             else:
                 layout.addLayout(widget, index, 1)
             index += 1
+
+    ###################################################################
+    # Interface end
+    ###################################################################
+
+    def onStartST(self):
+        for widget in self._non_reconfigurable_widgets:
+            widget.setEnabled(False)
+
+    def onStopST(self):
+        for widget in self._non_reconfigurable_widgets:
+            widget.setEnabled(True)
 
 
 class _ThreadLogger(QObject):
@@ -211,51 +231,49 @@ class _ThreadLogger(QObject):
         self.error_sgn.emit(msg)
 
     def logOnMainThread(self, instance):
-        self.debug_sgn.connect(instance.onDebugReceived)
-        self.info_sgn.connect(instance.onInfoReceived)
-        self.warning_sgn.connect(instance.onWarningReceived)
-        self.error_sgn.connect(instance.onErrorReceived)
+        self.debug_sgn.connect(instance.onDebugReceivedST)
+        self.info_sgn.connect(instance.onInfoReceivedST)
+        self.warning_sgn.connect(instance.onWarningReceivedST)
+        self.error_sgn.connect(instance.onErrorReceivedST)
 
 
 class QThreadWorker(QObject):
     """Base class of worker running in a thread.
 
+    It should be inherited by all concrete workers.
+
     Attributes:
-        _recording_dark (bool): True for recording dark.
-        _subtract_dark (bool): True for applying dark subtraction.
+        _recording_dark_st (bool): True for recording dark.
+        _subtract_dark_st (bool): True for applying dark subtraction.
     """
 
     def __init__(self, queue, condition, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._input = queue
-        self._cv = condition
+        self._input_st = queue
+        self._cv_st = condition
 
-        self._output = SimpleQueue(maxsize=1)
-        self._running = False
+        self._output_st = SimpleQueue(maxsize=1)
+        self._running_st = False
 
-        self._recording_dark = False
-        self._subtract_dark = True
+        self._recording_dark_st = False
+        self._subtract_dark_st = True
 
         self.log = _ThreadLogger()
 
-    def reset(self):
+    def onResetST(self):
         """Reset the internal state of process worker."""
-        self._input.clear()
-        self._output.clear()
-        self.onReset()
+        self._input_st.clear()
+        self._output_st.clear()
+        self.reset()
 
-    def onReset(self):
-        """Interface method."""
-        pass
+    def onRecordDarkToggledST(self, state: bool):
+        self._recording_dark_st = state
 
-    def onRecordDarkToggled(self, state: bool):
-        self._recording_dark = state
+    def onSubtractDarkToggledST(self, state: bool):
+        self._subtract_dark_st = state
 
-    def onSubtractDarkToggled(self, state: bool):
-        self._subtract_dark = state
-
-    def _loadRunDirectory(self, dirpath):
+    def _loadRunDirectoryST(self, dirpath):
         """Load a run directory.
 
         This method should be called inside the onLoadDarkRun
@@ -268,21 +286,17 @@ class QThreadWorker(QObject):
         except Exception as e:
             self.log.error(repr(e))
 
-    def onLoadDarkRun(self, dirpath):
-        """Load the dark from a run folder."""
-        raise NotImplementedError
+    def getOutputDataST(self):
+        """Get data from the output queue."""
+        return self._output_st.get_nowait()
 
-    def onRemoveDark(self):
-        """Remove the recorded dark data."""
-        raise NotImplementedError
-
-    def run(self):
-        """Override."""
-        self._running = True
+    def runForeverST(self):
+        """Run processing in an infinite loop unless interrupted."""
+        self._running_st = True
         self.reset()
-        while self._running:
+        while self._running_st:
             try:
-                data = self._input.get_nowait()
+                data = self._input_st.get_nowait()
                 try:
                     processed = self.process(data)
 
@@ -303,22 +317,56 @@ class QThreadWorker(QObject):
 
                 if processed is not None:
                     # keep the latest processed data in the output
-                    self._output.put_pop(processed)
+                    self._output_st.put_pop(processed)
 
             except Empty:
-                with self._cv:
-                    self._cv.wait()
+                with self._cv_st:
+                    self._cv_st.wait()
 
-                if not self._running:
+                if not self._running_st:
                     break
 
+    def terminateRunST(self):
+        """Terminate processing and notify other waiting threads."""
+        self._running_st = False
+        with self._cv_st:
+            self._cv_st.notify()
+
+    ###################################################################
+    # Interface start
+    ###################################################################
+
+    def subtractDark(self) -> bool:
+        """Return whether to apply dark subtraction."""
+        return self._subtract_dark_st
+
+    def recordingDark(self) -> bool:
+        """Return the state of dark recording."""
+        return self._recording_dark_st
+
+    def onLoadDarkRun(self, dirpath):
+        """Load the dark from a run folder."""
+        raise NotImplementedError
+
+    def onRemoveDark(self):
+        """Remove the recorded dark data."""
+        raise NotImplementedError
+
+    def reset(self):
+        """Interface method.
+
+        Concrete child class should re-implement this method to reset
+        any internal state when the 'Reset' button is clicked.
+        """
+        pass
+
     def sources(self):
-        """Return a list of (device ID/output channel, property).
+        """Interface method.
 
-        Interface method.
+        Return a list of (device ID/output channel, property).
 
-        Child class should implement this method in order to receive data
-        from the bridge.
+        Concrete child class should re-implement this method in order to
+        receive data from the bridge, transform and correlate them.
         """
         return []
 
@@ -337,16 +385,8 @@ class QThreadWorker(QObject):
         """
         raise NotImplementedError
 
-    def get(self):
-        return self._output.get_nowait()
-
-    def terminate(self):
-        self._running = False
-        with self._cv:
-            self._cv.notify()
-
-    def _get_tid(self, meta):
-        """Fetch train ID from meta data.
+    def getTrainId(self, meta):
+        """Get train ID from meta data.
 
         :param dict meta: meta data.
         """
@@ -355,19 +395,17 @@ class QThreadWorker(QObject):
         except (StopIteration, KeyError) as e:
             raise ProcessingError(f"Train ID not found in meta data: {str(e)}")
 
-    def _get_property_data(self, data, name, ppt):
+    def getPropertyData(self, data, name, ppt):
         """Convenience method to get property data from raw data.
 
         :param dict data: data.
         :param str name: device ID / output channel.
         :param str ppt: property.
-
-        :returns (value, error str)
         """
         return data[f"{name} {ppt}"]
 
-    def _squeeze_camera_image(self, tid, arr):
-        """Return a 2D image data.
+    def squeezeToImage(self, tid, arr):
+        """Try to squeeze an array to get a 2D image data.
 
         It attempts to squeeze the input array if its dimension is 3D.
 
@@ -400,45 +438,41 @@ class QThreadWorker(QObject):
 
         return img
 
+    ###################################################################
+    # Interface end
+    ###################################################################
+
 
 class _BaseQThreadClient(QThread):
     def __init__(self, queue, condition, catalog, *args, **kwargs):
-        """Initialization.
-
-        :param queue:
-        :param Condition condition:
-        :param SourceCatalog catalog:
-        """
         super().__init__(*args, **kwargs)
 
-        self._output = queue
-        self._cv = condition
-        self._catalog = catalog
-        self._transformer = DataTransformer(catalog)
+        self._output_st = queue
+        self._cv_st = condition
+        self._catalog_st = catalog
+        self._transformer_st = DataTransformer(catalog)
 
-        self._endpoint = None
+        self._endpoint_st = None
 
         self.log = _ThreadLogger()
 
-    @abc.abstractmethod
     def run(self):
         """Override."""
         raise NotImplementedError
 
-    def get(self):
-        return self._cache.get_nowait()
-
-    def stop(self):
+    def terminateRunST(self):
+        """Terminate running of the thread."""
         self.requestInterruption()
 
-    def reset(self):
+    def onResetST(self):
         """Reset the internal state of the client."""
-        self._transformer.reset()
-        self._output.clear()
+        self._transformer_st.reset()
+        self._output_st.clear()
 
-    def updateParams(self, params):
-        self._endpoint = params["endpoint"]
-        ctl = self._catalog
+    def updateParamsST(self, params):
+        """Update internal states of the client."""
+        self._endpoint_st = params["endpoint"]
+        ctl = self._catalog_st
 
         ctl.clear()
         for name, ppt in params["sources"]:
@@ -450,12 +484,12 @@ class QThreadFoamClient(_BaseQThreadClient):
 
     def run(self):
         """Override."""
-        self.reset()
+        self.onResetST()
 
         with self._client_instance_type(
-                self._endpoint, timeout=config["BRIDGE_TIMEOUT"]) as client:
+                self._endpoint_st, timeout=config["BRIDGE_TIMEOUT"]) as client:
 
-            self.log.info(f"Connected to {self._endpoint}")
+            self.log.info(f"Connected to {self._endpoint_st}")
 
             while not self.isInterruptionRequested():
                 try:
@@ -470,7 +504,7 @@ class QThreadFoamClient(_BaseQThreadClient):
 
                 # check whether all the requested sources are in the data
                 not_found = False
-                for src in self._catalog:
+                for src in self._catalog_st:
                     if src not in data["catalog"]:
                         self.log.error(f"{src} not found in the data!")
                         not_found = True
@@ -479,11 +513,11 @@ class QThreadFoamClient(_BaseQThreadClient):
                     continue
 
                 # keep the latest processed data in the output
-                self._output.put_pop(data)
-                with self._cv:
-                    self._cv.notify()
+                self._output_st.put_pop(data)
+                with self._cv_st:
+                    self._cv_st.notify()
 
-        self.log.info(f"Disconnected with {self._endpoint}")
+        self.log.info(f"Disconnected with {self._endpoint_st}")
 
 
 class QThreadKbClient(_BaseQThreadClient):
@@ -491,12 +525,11 @@ class QThreadKbClient(_BaseQThreadClient):
 
     def run(self):
         """Override."""
-        self.reset()
+        self.onResetST()
 
-        correlated = None
         with self._client_instance_type(
-                self._endpoint, timeout=config["BRIDGE_TIMEOUT"]) as client:
-            self.log.info(f"Connected to {self._endpoint}")
+                self._endpoint_st, timeout=config["BRIDGE_TIMEOUT"]) as client:
+            self.log.info(f"Connected to {self._endpoint_st}")
             while not self.isInterruptionRequested():
 
                 try:
@@ -504,22 +537,18 @@ class QThreadKbClient(_BaseQThreadClient):
                 except TimeoutError:
                     continue
 
-                try:
-                    correlated, dropped = self._transformer.correlate(data)
-                except RuntimeError as e:
-                    self.log.error(str(e))
-
+                correlated, dropped = self._transformer_st.correlate(data)
                 for tid in dropped:
                     self.log.error(f"Unable to correlate all data sources "
                                    f"for train {tid}")
 
                 if correlated is not None:
                     # keep the latest processed data in the output
-                    self._output.put_pop(correlated)
-                    with self._cv:
-                        self._cv.notify()
+                    self._output_st.put_pop(correlated)
+                    with self._cv_st:
+                        self._cv_st.notify()
 
-        self.log.info(f"Disconnected with {self._endpoint}")
+        self.log.info(f"Disconnected with {self._endpoint_st}")
 
 
 def create_special(ctrl_klass, worker_klass, client_klass):
@@ -536,90 +565,98 @@ def create_special(ctrl_klass, worker_klass, client_klass):
 
 
 class _SpecialAnalysisBase(QMainWindow):
-    """Base class for special analysis windows."""
+    """Base class for special analysis windows.
 
-    _SPLITTER_HANDLE_WIDTH = 5
+    It should be inherited by all concrete windows.
+    """
 
     _TOTAL_W, _TOTAL_H = config['GUI_SPECIAL_WINDOW_SIZE']
 
     started_sgn = pyqtSignal()
     stopped_sgn = pyqtSignal()
-    reset_sgn = pyqtSignal()
 
     def __init__(self, topic, **kwargs):
-        """Initialization."""
+        """Initialization.
+
+        :param str topic: topic, e.g. SCS, MID, DET, etc.
+        """
         super().__init__()
 
-        self._topic = topic
+        self._topic_st = topic
 
         self.setWindowTitle(f"EXtra-foam {__version__} - {self._title}")
 
-        self._com_ctrl = _SharedCtrlWidgetS(**kwargs)
+        self._com_ctrl_st = _SharedCtrlWidgetS(**kwargs)
 
         cv = Condition()
         catalog = SourceCatalog()
         queue = SimpleQueue(maxsize=1)
-        self._client = self._client_instance_type(queue, cv, catalog)
-        self._worker = self._worker_instance_type(queue, cv)
-        self._worker_thread = QThread()
-        self._ctrl_widget = self._ctrl_instance_type(topic)
+        self._client_st = self._client_instance_type(queue, cv, catalog)
+        self._worker_st = self._worker_instance_type(queue, cv)
+        self._worker_thread_st = QThread()
+        self._ctrl_widget_st = self._ctrl_instance_type(topic)
 
-        if isinstance(self._client, QThreadFoamClient):
-            self._com_ctrl.updateDefaultPort(config["EXTENSION_PORT"])
+        if isinstance(self._client_st, QThreadFoamClient):
+            self._com_ctrl_st.updateDefaultPort(config["EXTENSION_PORT"])
 
-        self._plot_widgets = WeakKeyDictionary()  # book-keeping plot widgets
-        self._image_views = WeakKeyDictionary()  # book-keeping ImageView widget
+        self._plot_widgets_st = WeakKeyDictionary()  # book-keeping plot widgets
+        self._image_views_st = WeakKeyDictionary()  # book-keeping ImageView widget
 
-        self._data = None
+        self._data_st = None
 
-        self._gui_logger = GuiLogger(parent=self)
-        logger.addHandler(self._gui_logger)
+        self._gui_logger_st = GuiLogger(parent=self)
+        logger.addHandler(self._gui_logger_st)
 
-        self._cw = QSplitter()
-        self._cw.setChildrenCollapsible(False)
-        self.setCentralWidget(self._cw)
+        self._cw_st = QSplitter()
+        self._cw_st.setChildrenCollapsible(False)
+        self.setCentralWidget(self._cw_st)
 
-        self._plot_timer = QTimer()
-        self._plot_timer.setInterval(config["GUI_PLOT_UPDATE_TIMER"])
-        self._plot_timer.timeout.connect(self.updateWidgetsF)
+        self._plot_timer_st = QTimer()
+        self._plot_timer_st.setInterval(config["GUI_PLOT_UPDATE_TIMER"])
+        self._plot_timer_st.timeout.connect(self.updateWidgetsST)
 
         # init UI
 
-        self._left_panel = QSplitter(Qt.Vertical)
-        self._left_panel.addWidget(self._com_ctrl)
-        self._left_panel.addWidget(self._ctrl_widget)
-        self._left_panel.addWidget(self._gui_logger.widget)
-        self._left_panel.setChildrenCollapsible(False)
+        self._left_panel_st = QSplitter(Qt.Vertical)
+        self._left_panel_st.addWidget(self._com_ctrl_st)
+        self._left_panel_st.addWidget(self._ctrl_widget_st)
+        self._left_panel_st.addWidget(self._gui_logger_st.widget)
+        self._left_panel_st.setChildrenCollapsible(False)
+        self._cw_st.addWidget(self._left_panel_st)
 
         # init Connections
 
-        self._client.log.logOnMainThread(self)
-        self._worker.log.logOnMainThread(self)
+        self._client_st.log.logOnMainThread(self)
+        self._worker_st.log.logOnMainThread(self)
 
         # start/stop/reset
-        self._com_ctrl.start_btn.clicked.connect(self._onStart)
-        self._com_ctrl.stop_btn.clicked.connect(self._onStop)
-        self._com_ctrl.reset_btn.clicked.connect(self._onReset)
+        self._com_ctrl_st.start_btn.clicked.connect(self._onStartST)
+        self._com_ctrl_st.stop_btn.clicked.connect(self._onStopST)
+        self._com_ctrl_st.reset_btn.clicked.connect(self._onResetST)
 
         # dark operation
-        self._com_ctrl.record_dark_btn.toggled.connect(
-            self._worker.onRecordDarkToggled)
-        self._com_ctrl.record_dark_btn.toggled.emit(
-            self._com_ctrl.record_dark_btn.isChecked())
+        self._com_ctrl_st.record_dark_btn.toggled.connect(
+            self._worker_st.onRecordDarkToggledST)
+        self._com_ctrl_st.record_dark_btn.toggled.emit(
+            self._com_ctrl_st.record_dark_btn.isChecked())
 
-        self._com_ctrl.load_dark_run_btn.clicked.connect(
-            self._onSelectDarkRunDirectory)
+        self._com_ctrl_st.load_dark_run_btn.clicked.connect(
+            self._onSelectDarkRunDirectoryST)
 
-        self._com_ctrl.remove_dark_btn.clicked.connect(
-            self._worker.onRemoveDark)
+        self._com_ctrl_st.remove_dark_btn.clicked.connect(
+            self._worker_st.onRemoveDark)
 
-        self._com_ctrl.dark_subtraction_cb.toggled.connect(
-            self._worker.onSubtractDarkToggled)
-        self._com_ctrl.dark_subtraction_cb.toggled.emit(
-            self._com_ctrl.dark_subtraction_cb.isChecked())
+        self._com_ctrl_st.dark_subtraction_cb.toggled.connect(
+            self._worker_st.onSubtractDarkToggledST)
+        self._com_ctrl_st.dark_subtraction_cb.toggled.emit(
+            self._com_ctrl_st.dark_subtraction_cb.isChecked())
 
-        self._com_ctrl.auto_level_btn.clicked.connect(
-            self._onAutoLevel)
+        self._com_ctrl_st.auto_level_btn.clicked.connect(
+            self._onAutoLevelST)
+
+    ###################################################################
+    # Interface start
+    ###################################################################
 
     @abc.abstractmethod
     def initUI(self):
@@ -631,100 +668,112 @@ class _SpecialAnalysisBase(QMainWindow):
         """Initialization of signal-slot connections."""
         raise NotImplementedError
 
-    def startWorker(self):
-        self._worker.moveToThread(self._worker_thread)
-        self._worker_thread.started.connect(self._worker.run)
-        self._worker_thread.start()
+    def centralWidget(self):
+        """Return the central widget."""
+        return self._cw_st
 
-    def _onStart(self):
-        self._client.updateParams({
-            "endpoint": self._com_ctrl.endpoint(),
-            "sources": self._worker.sources()
+    def startWorker(self):
+        """Start worker in thread.
+
+        Concrete child class should call this method at the end of
+        initialization.
+        """
+        self._worker_st.moveToThread(self._worker_thread_st)
+        self._worker_thread_st.started.connect(self._worker_st.runForeverST)
+        self._worker_thread_st.start()
+
+    ###################################################################
+    # Interface end
+    ###################################################################
+
+    def _onStartST(self):
+        self._client_st.updateParamsST({
+            "endpoint": self._com_ctrl_st.endpoint(),
+            "sources": self._worker_st.sources()
         })
 
-        self._com_ctrl.onStart()
-        self._ctrl_widget.onStart()
+        self._com_ctrl_st.onStartST()
+        self._ctrl_widget_st.onStartST()
 
-        self._client.start()
-        self._plot_timer.start()
+        self._client_st.start()
+        self._plot_timer_st.start()
 
         self.started_sgn.emit()
         logger.info("Processing started")
 
-    def _onStop(self):
-        self._com_ctrl.onStop()
-        self._ctrl_widget.onStop()
+    def _onStopST(self):
+        self._com_ctrl_st.onStopST()
+        self._ctrl_widget_st.onStopST()
 
-        self._client.stop()
-        self._plot_timer.stop()
+        self._client_st.terminateRunST()
+        self._plot_timer_st.stop()
 
         self.stopped_sgn.emit()
         logger.info("Processing stopped")
 
-    def _onReset(self):
-        for widget in self._plot_widgets:
+    def _onResetST(self):
+        for widget in self._plot_widgets_st:
             widget.reset()
-        self._worker.reset()
-        self._client.reset()
+        self._worker_st.onResetST()
+        self._client_st.onResetST()
 
-        self.reset_sgn.emit()
-
-    def updateWidgetsF(self):
-        """Override."""
+    def updateWidgetsST(self):
         try:
-            self._data = self._worker.get()
+            self._data_st = self._worker_st.getOutputDataST()
         except Empty:
             return
 
-        for widget in self._plot_widgets:
-            widget.updateF(self._data)
-
-    def registerPlotWidget(self, instance):
-        self._plot_widgets[instance] = 1
-        if isinstance(instance, ImageViewF):
-            self._image_views[instance] = 1
-
-    def unregisterPlotWidget(self, instance):
-        del self._plot_widgets[instance]
-        if instance in self._image_views:
-            del self._image_views[instance]
+        for widget in self._plot_widgets_st:
+            widget.updateF(self._data_st)
 
     @pyqtSlot()
-    def _onAutoLevel(self):
-        """Override."""
-        for view in self._image_views:
+    def _onAutoLevelST(self):
+        for view in self._image_views_st:
             view.updateImageWithAutoLevel()
 
     @pyqtSlot()
-    def _onSelectDarkRunDirectory(self):
+    def _onSelectDarkRunDirectoryST(self):
         dirpath = QFileDialog.getExistingDirectory(
             options=QFileDialog.ShowDirsOnly)
 
         if dirpath:
-            self._worker.onLoadDarkRun(dirpath)
+            self._worker_st.onLoadDarkRun(dirpath)
 
     @pyqtSlot(str)
-    def onDebugReceived(self, msg):
+    def onDebugReceivedST(self, msg):
         logger.debug(msg)
 
     @pyqtSlot(str)
-    def onInfoReceived(self, msg):
+    def onInfoReceivedST(self, msg):
         logger.info(msg)
 
     @pyqtSlot(str)
-    def onWarningReceived(self, msg):
+    def onWarningReceivedST(self, msg):
         logger.warning(msg)
 
     @pyqtSlot(str)
-    def onErrorReceived(self, msg):
+    def onErrorReceivedST(self, msg):
         logger.error(msg)
 
-    def closeEvent(self, QCloseEvent):
-        # prevent from logging in the GUI when it has been closed
-        logger.removeHandler(self._gui_logger)
+    def registerPlotWidget(self, instance):
+        """EXtra-foam interface method."""
+        self._plot_widgets_st[instance] = 1
+        if isinstance(instance, ImageViewF):
+            self._image_views_st[instance] = 1
 
-        self._worker.terminate()
-        self._worker_thread.quit()
-        self._worker_thread.wait()
+    def unregisterPlotWidget(self, instance):
+        """EXtra-foam interface method."""
+        del self._plot_widgets_st[instance]
+        if instance in self._image_views_st:
+            del self._image_views_st[instance]
+
+    def closeEvent(self, QCloseEvent):
+        """Override."""
+        # prevent from logging in the GUI when it has been closed
+        logger.removeHandler(self._gui_logger_st)
+
+        self._worker_st.terminateRunST()
+        self._worker_thread_st.quit()
+        self._worker_thread_st.wait()
 
         super().closeEvent(QCloseEvent)

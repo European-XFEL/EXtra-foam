@@ -40,7 +40,7 @@ class GotthardCtrlWidget(_BaseAnalysisCtrlWidgetS):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self._topic == "MID":
+        if self.topic == "MID":
             default_output_ch = "MID_EXP_DES/DET/GOTTHARD_RECEIVER:daqOutput"
         else:
             default_output_ch = "Gotthard:output"
@@ -227,41 +227,40 @@ class GotthardWindow(_SpecialAnalysisBase):
         right_panel.addWidget(self._heatmap)
         right_panel.setSizes([self._TOTAL_H / 2, self._TOTAL_H / 2])
 
-        self._cw.addWidget(self._left_panel)
-        self._cw.addWidget(middle_panel)
-        self._cw.addWidget(right_panel)
-        self._cw.setSizes(
-            [self._TOTAL_W / 3, self._TOTAL_W / 3, self._TOTAL_W / 3])
+        cw = self.centralWidget()
+        cw.addWidget(middle_panel)
+        cw.addWidget(right_panel)
+        cw.setSizes([self._TOTAL_W / 3, self._TOTAL_W / 3, self._TOTAL_W / 3])
 
         self.resize(self._TOTAL_W, self._TOTAL_H)
 
     def initConnections(self):
         """Override."""
-        self._ctrl_widget.output_ch_le.value_changed_sgn.connect(
-            self._worker.onOutputChannelChanged)
-        self._ctrl_widget.output_ch_le.returnPressed.emit()
+        self._ctrl_widget_st.output_ch_le.value_changed_sgn.connect(
+            self._worker_st.onOutputChannelChanged)
+        self._ctrl_widget_st.output_ch_le.returnPressed.emit()
 
-        self._ctrl_widget.poi_index_le.value_changed_sgn.connect(
-            lambda x: self._worker.onPoiIndexChanged(int(x)))
-        self._ctrl_widget.poi_index_le.returnPressed.emit()
+        self._ctrl_widget_st.poi_index_le.value_changed_sgn.connect(
+            lambda x: self._worker_st.onPoiIndexChanged(int(x)))
+        self._ctrl_widget_st.poi_index_le.returnPressed.emit()
 
-        self._ctrl_widget.pulse_slicer_le.value_changed_sgn.connect(
-            self._worker.onPulseSlicerChanged)
-        self._ctrl_widget.pulse_slicer_le.returnPressed.emit()
+        self._ctrl_widget_st.pulse_slicer_le.value_changed_sgn.connect(
+            self._worker_st.onPulseSlicerChanged)
+        self._ctrl_widget_st.pulse_slicer_le.returnPressed.emit()
 
-        self._ctrl_widget.ma_window_le.value_changed_sgn.connect(
-            self._worker.onMaWindowChanged)
-        self._ctrl_widget.ma_window_le.returnPressed.emit()
+        self._ctrl_widget_st.ma_window_le.value_changed_sgn.connect(
+            self._worker_st.onMaWindowChanged)
+        self._ctrl_widget_st.ma_window_le.returnPressed.emit()
 
-        self._ctrl_widget.bin_range_le.value_changed_sgn.connect(
-            self._worker.onBinRangeChanged)
-        self._ctrl_widget.bin_range_le.returnPressed.emit()
+        self._ctrl_widget_st.bin_range_le.value_changed_sgn.connect(
+            self._worker_st.onBinRangeChanged)
+        self._ctrl_widget_st.bin_range_le.returnPressed.emit()
 
-        self._ctrl_widget.n_bins_le.value_changed_sgn.connect(
-            self._worker.onNoBinsChanged)
-        self._ctrl_widget.n_bins_le.returnPressed.emit()
+        self._ctrl_widget_st.n_bins_le.value_changed_sgn.connect(
+            self._worker_st.onNoBinsChanged)
+        self._ctrl_widget_st.n_bins_le.returnPressed.emit()
 
-        self._ctrl_widget.hist_over_ma_cb.toggled.connect(
-            self._worker.onHistOverMaChanged)
-        self._ctrl_widget.hist_over_ma_cb.toggled.emit(
-            self._ctrl_widget.hist_over_ma_cb.isChecked())
+        self._ctrl_widget_st.hist_over_ma_cb.toggled.connect(
+            self._worker_st.onHistOverMaChanged)
+        self._ctrl_widget_st.hist_over_ma_cb.toggled.emit(
+            self._ctrl_widget_st.hist_over_ma_cb.isChecked())
